@@ -82,6 +82,20 @@ cd scripts
 python ingest_judgments.py --polish 100 --uk 100
 ```
 
+## 📚 Documentation
+
+For detailed documentation, see the **[docs/](docs/)** directory:
+
+- **[Getting Started](docs/getting-started/)** - Setup guides and quick start
+- **[Guides](docs/guides/)** - How-to guides for common tasks
+- **[Architecture](docs/architecture/)** - System design and technical decisions
+- **[Features](docs/features/)** - Feature-specific documentation
+- **[Frontend](docs/frontend/)** - Frontend development guide
+- **[Migration](docs/migration/)** - AI-Tax → Juddges transition docs
+- **[API](docs/api/)** - API reference documentation
+
+For Claude Code development instructions, see **[CLAUDE.md](CLAUDE.md)**.
+
 ## Project Structure
 
 ```
@@ -102,6 +116,12 @@ juddges-app/
 │   ├── ingest_judgments.py
 │   └── requirements.txt
 └── docs/                 # Documentation
+    ├── getting-started/  # Setup guides
+    ├── guides/           # How-to guides
+    ├── architecture/     # System design
+    ├── features/         # Feature docs
+    ├── frontend/         # Frontend docs
+    └── migration/        # Migration docs
 ```
 
 ## Database Schema
