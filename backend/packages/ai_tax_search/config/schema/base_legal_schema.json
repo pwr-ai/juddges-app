@@ -1,0 +1,561 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "universal_legal_document_base_schema",
+  "description": "Unified schema for extracting structured data from legal documents (EN/PL). All fields are filterable/searchable.",
+  "type": "object",
+  "required": [
+    "keywords",
+    "neutral_citation_number",
+    "case_number",
+    "date_of_appeal_court_judgment",
+    "appeal_court_judges_names",
+    "case_name",
+    "offender_representative_name",
+    "crown_attorney_general_representative_name",
+    "conv_court_names",
+    "convict_plea_dates",
+    "convict_offences",
+    "acquit_offences",
+    "did_offender_confess",
+    "plea_point",
+    "remand_decision",
+    "remand_custody_time",
+    "sent_court_name",
+    "sentences_received",
+    "sentence_serve",
+    "what_ancilliary_orders",
+    "offender_gender",
+    "offender_age_offence",
+    "offender_job_offence",
+    "offender_home_offence",
+    "offender_mental_offence",
+    "offender_intox_offence",
+    "offender_victim_relationship",
+    "victim_type",
+    "num_victims",
+    "victim_gender",
+    "victim_age_offence",
+    "victim_job_offence",
+    "victim_home_offence",
+    "victim_mental_offence",
+    "victim_intox_offence",
+    "pros_evid_type_trial",
+    "def_evid_type_trial",
+    "pre_sent_report",
+    "agg_fact_sent",
+    "mit_fact_sent",
+    "vic_impact_statement",
+    "appellant",
+    "co_def_acc_num",
+    "appeal_against",
+    "appeal_ground",
+    "sent_guide_which",
+    "appeal_outcome",
+    "reason_quash_conv",
+    "reason_sent_excessive",
+    "reason_sent_lenient",
+    "reason_dismiss"
+  ],
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Keywords found in case used for sampling",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Keywords",
+      "x-ui-order": 1
+    },
+    "neutral_citation_number": {
+      "type": "string",
+      "description": "Neutral Citation Number (including year)",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Citation Number",
+      "x-ui-order": 2
+    },
+    "case_number": {
+      "type": "number",
+      "description": "Case Number",
+      "x-filter-type": "range",
+      "x-ui-label": "Case Number",
+      "x-ui-order": 3
+    },
+    "date_of_appeal_court_judgment": {
+      "type": "string",
+      "description": "Date of Appeal Court Judgment",
+      "x-filter-type": "date_range",
+      "x-ui-label": "Appeal Judgment Date",
+      "x-ui-order": 4
+    },
+    "appeal_court_judges_names": {
+      "type": "string",
+      "description": "Appeal Court Judges Names",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Appeal Judges",
+      "x-ui-order": 5
+    },
+    "case_name": {
+      "type": "string",
+      "description": "Case Name",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Case Name",
+      "x-ui-order": 6
+    },
+    "offender_representative_name": {
+      "type": "string",
+      "description": "Offender Representative Name",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Defense Attorney",
+      "x-ui-order": 7
+    },
+    "crown_attorney_general_representative_name": {
+      "type": "string",
+      "description": "Crown/Attorney General Representative Name",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Prosecutor",
+      "x-ui-order": 8
+    },
+    "conv_court_names": {
+      "type": "string",
+      "description": "Court Name(s) where Offender Convicted/Pled Guilty",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Conviction Court",
+      "x-ui-order": 9
+    },
+    "convict_plea_dates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Conviction/Guilty Plea Date(s)",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Plea Dates",
+      "x-ui-order": 10
+    },
+    "convict_offences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What Offence(s) was Offender Convicted of?",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Convicted Offences",
+      "x-ui-order": 11
+    },
+    "acquit_offences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What Offence(s) was Offender Acquitted of?",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Acquitted Offences",
+      "x-ui-order": 12
+    },
+    "did_offender_confess": {
+      "type": "boolean",
+      "description": "Did Offender Confess/Plead Guilty?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Confession/Guilty Plea",
+      "x-ui-order": 13
+    },
+    "plea_point": {
+      "type": "string",
+      "enum": [
+        "police_presence",
+        "first_court_appearance",
+        "before_trial",
+        "first_day_of_trial",
+        "after_first_day_of_trial",
+        "dont_know"
+      ],
+      "description": "Plea Point",
+      "x-filter-type": "facet",
+      "x-ui-label": "Plea Point",
+      "x-ui-order": 14
+    },
+    "remand_decision": {
+      "type": "string",
+      "enum": [
+        "unconditional_bail",
+        "conditional_bail",
+        "remanded_in_custody",
+        "dont_know"
+      ],
+      "description": "What was the Remand Decision for Offender?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Remand Decision",
+      "x-ui-order": 15
+    },
+    "remand_custody_time": {
+      "type": "string",
+      "description": "If REMANDED in CUSTODY, duration?",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Custody Duration",
+      "x-ui-order": 16
+    },
+    "sent_court_name": {
+      "type": "string",
+      "description": "Court Name where Offender Sentenced",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Sentencing Court",
+      "x-ui-order": 17
+    },
+    "sentences_received": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Sentence(s) Received",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Sentences",
+      "x-ui-order": 18
+    },
+    "sentence_serve": {
+      "type": "string",
+      "enum": [
+        "concurrent",
+        "consecutive",
+        "combination",
+        "dont_know"
+      ],
+      "description": "How are sentences to be served?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Sentence Type",
+      "x-ui-order": 19
+    },
+    "what_ancilliary_orders": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ancillary orders applied",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Ancillary Orders",
+      "x-ui-order": 20
+    },
+    "offender_gender": {
+      "type": "string",
+      "enum": [
+        "all_male",
+        "all_female",
+        "male_and_female"
+      ],
+      "description": "Offender(s) Gender",
+      "x-filter-type": "facet",
+      "x-ui-label": "Offender Gender",
+      "x-ui-order": 21
+    },
+    "offender_age_offence": {
+      "type": "string",
+      "description": "Offenders(s) Age at Time of Offence",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Offender Age",
+      "x-ui-order": 22
+    },
+    "offender_job_offence": {
+      "type": "string",
+      "enum": [
+        "employed",
+        "self_employed",
+        "unemployed",
+        "student",
+        "retired",
+        "other",
+        "dont_know"
+      ],
+      "description": "Offender(s) Employment Status at Time of Offence",
+      "x-filter-type": "facet",
+      "x-ui-label": "Offender Employment",
+      "x-ui-order": 23
+    },
+    "offender_home_offence": {
+      "type": "string",
+      "enum": [
+        "fixed_address",
+        "homeless",
+        "temporary_accommodation",
+        "dont_know"
+      ],
+      "description": "Offender(s) Accommodation Status at Time of Offence",
+      "x-filter-type": "facet",
+      "x-ui-label": "Offender Housing",
+      "x-ui-order": 24
+    },
+    "offender_mental_offence": {
+      "type": "string",
+      "description": "Offender(s) Mental Health at Time of Offence",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Offender Mental Health",
+      "x-ui-order": 25
+    },
+    "offender_intox_offence": {
+      "type": "string",
+      "enum": [
+        "yes_drinking",
+        "yes_drugs",
+        "yes_drinking_and_drugs",
+        "no",
+        "dont_know"
+      ],
+      "description": "Was Offender Intoxicated at Time of Offence?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Offender Intoxication",
+      "x-ui-order": 26
+    },
+    "offender_victim_relationship": {
+      "type": "string",
+      "enum": [
+        "stranger",
+        "relative",
+        "acquaintance",
+        "dont_know"
+      ],
+      "description": "Offender-Victim Relationship",
+      "x-filter-type": "facet",
+      "x-ui-label": "Relationship",
+      "x-ui-order": 27
+    },
+    "victim_type": {
+      "type": "string",
+      "enum": [
+        "individual_person",
+        "organisation"
+      ],
+      "description": "Victim Type",
+      "x-filter-type": "facet",
+      "x-ui-label": "Victim Type",
+      "x-ui-order": 28
+    },
+    "num_victims": {
+      "type": "number",
+      "description": "Number of Victims",
+      "x-filter-type": "range",
+      "x-ui-label": "Number of Victims",
+      "x-ui-order": 29
+    },
+    "victim_gender": {
+      "type": "string",
+      "enum": [
+        "all_male",
+        "all_female",
+        "male_and_female"
+      ],
+      "description": "Victim(s) Gender",
+      "x-filter-type": "facet",
+      "x-ui-label": "Victim Gender",
+      "x-ui-order": 30
+    },
+    "victim_age_offence": {
+      "type": "number",
+      "description": "Victim(s) Age at Time of Offence",
+      "x-filter-type": "range",
+      "x-ui-label": "Victim Age",
+      "x-ui-order": 31
+    },
+    "victim_job_offence": {
+      "type": "string",
+      "description": "Victim(s) Employment Status at Time of Offence",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Victim Employment",
+      "x-ui-order": 32
+    },
+    "victim_home_offence": {
+      "type": "string",
+      "description": "Victim(s) Accommodation Status at Time of Offence",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Victim Housing",
+      "x-ui-order": 33
+    },
+    "victim_mental_offence": {
+      "type": "string",
+      "description": "Victim(s) Mental Health at Time of Offence",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Victim Mental Health",
+      "x-ui-order": 34
+    },
+    "victim_intox_offence": {
+      "type": "string",
+      "enum": [
+        "yes_drinking",
+        "yes_drugs",
+        "yes_drinking_and_drugs",
+        "no",
+        "dont_know"
+      ],
+      "description": "Was Victim Intoxicated at Time of Offence?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Victim Intoxication",
+      "x-ui-order": 35
+    },
+    "pros_evid_type_trial": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Types of Evidence Prosecution Presented at Trial",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Prosecution Evidence",
+      "x-ui-order": 36
+    },
+    "def_evid_type_trial": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Types of Evidence Defence Presented at Trial",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Defence Evidence",
+      "x-ui-order": 37
+    },
+    "pre_sent_report": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "dont_know"
+      ],
+      "description": "Pre-sentence Report Assessment Presented to Sentencing Court",
+      "x-filter-type": "facet",
+      "x-ui-label": "Pre-Sentence Report",
+      "x-ui-order": 38
+    },
+    "agg_fact_sent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Aggravating Factors Mentioned When Sentencing Offender",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Aggravating Factors",
+      "x-ui-order": 39
+    },
+    "mit_fact_sent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Mitigating Factors Mentioned When Sentencing Offender",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Mitigating Factors",
+      "x-ui-order": 40
+    },
+    "vic_impact_statement": {
+      "type": "boolean",
+      "description": "Was Victim Impact Statement Given at Original Sentencing?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Victim Impact Statement",
+      "x-ui-order": 41
+    },
+    "appellant": {
+      "type": "string",
+      "enum": [
+        "offender",
+        "attorney_general",
+        "other"
+      ],
+      "description": "Who is Appellant?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Appellant",
+      "x-ui-order": 42
+    },
+    "co_def_acc_num": {
+      "type": "number",
+      "description": "If Offender is Appellant, how many Co-defendants/co-accused in Case?",
+      "x-filter-type": "range",
+      "x-ui-label": "Co-Defendants",
+      "x-ui-order": 43
+    },
+    "appeal_against": {
+      "type": "string",
+      "enum": [
+        "conviction_unsafe",
+        "sentence_unduly_excessive",
+        "sentence_unduly_lenient",
+        "both",
+        "other"
+      ],
+      "description": "Appeal Against",
+      "x-filter-type": "facet",
+      "x-ui-label": "Appeal Against",
+      "x-ui-order": 44
+    },
+    "appeal_ground": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ground(s) for Appeal",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Appeal Grounds",
+      "x-ui-order": 45
+    },
+    "sent_guide_which": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Sentencing Guideline/Law/Act Mentioned by Appeal Court",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Sentencing Guidelines",
+      "x-ui-order": 46
+    },
+    "appeal_outcome": {
+      "type": "string",
+      "enum": [
+        "dismissed_failed_refused",
+        "allowed_conviction_quashed",
+        "allowed_replaced_by_more_excessive_sentence",
+        "allowed_replaced_by_more_lenient_sentence",
+        "mixed_decision"
+      ],
+      "description": "Outcome of Appeal",
+      "x-filter-type": "facet",
+      "x-ui-label": "Appeal Outcome",
+      "x-ui-order": 47
+    },
+    "reason_quash_conv": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Appeal Court Basis for Why Conviction is Quashed",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Quash Reasons",
+      "x-ui-order": 48
+    },
+    "reason_sent_excessive": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Appeal Court Basis for Why Sentence is Unduly Excessive",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Excessive Sentence Reasons",
+      "x-ui-order": 49
+    },
+    "reason_sent_lenient": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Appeal Court Basis for Why Sentence is Unduly Lenient",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Lenient Sentence Reasons",
+      "x-ui-order": 50
+    },
+    "reason_dismiss": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Appeal Court Basis for Why Appeal Dismissed",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Dismissal Reasons",
+      "x-ui-order": 51
+    }
+  },
+  "additionalProperties": false
+}

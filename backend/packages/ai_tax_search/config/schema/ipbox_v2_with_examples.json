@@ -1,0 +1,961 @@
+{
+  "title": "Interpretacja_Ulg_Innowacyjnych_Final",
+  "description": "Schemat ekstrakcji informacji z interpretacji podatkowych dotyczących ulgi IP Box (Innovation Box).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "interpretation_id",
+    "issue_date",
+    "request_date",
+    "supplement_date",
+    "issuing_authority",
+    "source_url",
+    "tax_incentive_type",
+    "taxpayer",
+    "kpwi",
+    "nexus",
+    "qualified_income",
+    "br_projects",
+    "qualified_costs",
+    "documentation_system",
+    "questions_asked",
+    "taxpayer_position",
+    "decision",
+    "expert_opinion",
+    "accounting_compliance",
+    "combined_application",
+    "exclusions",
+    "legal_references",
+    "related_interpretations",
+    "comments"
+  ],
+  "properties": {
+    "interpretation_id": {
+      "type": "string",
+      "description": "Sygnatura interpretacji indywidualnej nadana przez organ (np. KIS). Przepisz identycznie jak w źródle, łącznie z kropkami i myślnikami. Przykłady: 0111-KDIB1-3.4010.123.2024.1.AB; 0113-KDIPT2-3.4011.180.2024.2.MS."
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data wydania interpretacji (RRRR-MM-DD). Użyj daty z nagłówka/końcówki dokumentu. Jeżeli w treści jest kilka dat, wybierz datę rozstrzygnięcia (wydania). Przykład: 2024-07-15."
+    },
+    "request_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data wpływu wniosku o interpretację do organu (RRRR-MM-DD). Jeżeli podano jedynie miesiąc/rok – pomiń pole. Przykład: 2024-05-22."
+    },
+    "supplement_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data uzupełnienia wniosku (RRRR-MM-DD), jeżeli w sprawie wskazano wezwanie do uzupełnienia i odpowiedź wnioskodawcy. Przykład: 2024-06-10."
+    },
+    "issuing_authority": {
+      "type": "string",
+      "enum": [
+        "KIS",
+        "US",
+        "IUS"
+      ],
+      "description": "Organ wydający interpretację. 'KIS' – Dyrektor Krajowej Informacji Skarbowej; 'US' – właściwy urząd skarbowy (rzadkie przypadki pism); 'IUS' – inny organ interpretacyjny/instancyjny wskazany w piśmie. Wybierz wartość odpowiadającą nagłówkowi dokumentu. Przykład: KIS."
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Pełny adres URL do oficjalnej publikacji (np. wyszukiwarka interpretacji KIS, baza orzeczeń). Upewnij się, że zaczyna się od 'http' lub 'https'. Przykład: https://sip.mf.gov.pl/interpretacje-indywidualne/0113-KDIPT2-3.4011.180.2024.2.MS"
+    },
+    "tax_incentive_type": {
+      "type": "string",
+      "enum": [
+        "ip_box",
+        "br_incentive",
+        "combined"
+      ],
+      "description": "Zakres preferencji podatkowej będącej przedmiotem interpretacji: 'ip_box' – tylko IP Box (art. 30ca ustawy o PIT/odpowiednie w CIT); 'br_incentive' – tylko ulga badawczo‑rozwojowa; 'combined' – zagadnienia łącznego stosowania IP Box i ulgi B+R. Przykład: combined."
+    },
+    "taxpayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "legal_form",
+        "tax_regime",
+        "tax_regime_change_date",
+        "industry",
+        "pkd_code",
+        "company_size",
+        "special_economic_zone",
+        "accounting_books",
+        "iso_certification"
+      ],
+      "description": "Dane identyfikujące status podatnika/wnioskodawcy wynikające z treści interpretacji.",
+      "properties": {
+        "legal_form": {
+          "type": "string",
+          "enum": [
+            "JDG",
+            "Sp. z o.o.",
+            "SA",
+            "Spółka jawna",
+            "Spółka komandytowa",
+            "Spółka komandytowo-akcyjna",
+            "Partner spółki",
+            "Inna"
+          ],
+          "description": "Forma prawna działalności wnioskodawcy. Wybierz wartość odpowiadającą treści interpretacji. Dla jednoosobowej działalności gospodarczej wybierz 'JDG'; dla spółki z ograniczoną odpowiedzialnością – 'Sp. z o.o.'; w pozostałych przypadkach wybierz najbliższą formę lub 'Inna', jeżeli nie pasuje żadna. Przykład: JDG."
+        },
+        "tax_regime": {
+          "type": "string",
+          "enum": [
+            "PIT",
+            "CIT",
+            "PIT_then_CIT"
+          ],
+          "description": "Reżim podatkowy, w którym rozlicza się podatnik w okresie objętym interpretacją: 'PIT' – osoby fizyczne; 'CIT' – podatnicy podatku dochodowego od osób prawnych; 'PIT_then_CIT' – przypadek przekształcenia z PIT do CIT w badanym okresie. Przykład: PIT."
+        },
+        "tax_regime_change_date": {
+          "type": "string",
+          "format": "date",
+          "description": "Jeżeli wskazano przekształcenie/zmianę formy opodatkowania (np. przekształcenie JDG w spółkę kapitałową), podaj datę skutku podatkowego (RRRR-MM-DD). W przeciwnym razie pomiń. Przykład: 2023-12-01."
+        },
+        "industry": {
+          "type": "string",
+          "description": "Branża działalności przedstawiona w interpretacji (np. 'automatyka przemysłowa', 'IT – oprogramowanie medyczne'). Użyj maks. 6 słów, język polski, bez skrótów wewnętrznych. Przykład: IT – oprogramowanie przemysłowe."
+        },
+        "pkd_code": {
+          "type": "string",
+          "description": "Kod PKD głównej działalności, jeżeli wprost podany (np. '62.01.Z'). Nie inferuj – jeżeli brak w tekście, pomiń. Przykład: 62.01.Z."
+        },
+        "company_size": {
+          "type": "string",
+          "enum": [
+            "mały",
+            "średni",
+            "duży"
+          ],
+          "description": "Wielkość przedsiębiorstwa, jeśli wprost wynika z materiału (np. status MŚP). Nie ustalaj samodzielnie na podstawie liczby pracowników, jeżeli nie jest to jasno podane. Przykład: mały."
+        },
+        "special_economic_zone": {
+          "type": "boolean",
+          "description": "Czy działalność jest prowadzona na terenie specjalnej strefy ekonomicznej / PSI (jeśli wprost wskazano). true – tak; false – brak takiej informacji lub wprost wyłączono. Przykład: false."
+        },
+        "accounting_books": {
+          "type": "string",
+          "enum": [
+            "księgi_rachunkowe",
+            "książka_przychodów",
+            "ewidencja_przychodów"
+          ],
+          "description": "Rodzaj prowadzonej ewidencji księgowej wskazany w interpretacji: pełne księgi rachunkowe, podatkowa książka przychodów i rozchodów (KPiR) lub ewidencja przychodów (ryczałt). Wybierz tylko, jeśli jasno wynika z treści. Przykład: księgi_rachunkowe."
+        },
+        "iso_certification": {
+          "type": "string",
+          "description": "Pełne oznaczenie certyfikatu/normy ISO, jeżeli podano (np. 'PN-EN ISO 9001:2015-10'). Przepisz dokładnie lub pomiń, jeżeli brak w źródle. Przykład: PN-EN ISO 9001:2015-10."
+        }
+      }
+    },
+    "kpwi": {
+      "type": "array",
+      "description": "Lista kwalifikowanych praw własności intelektualnej (wyłącznie w kontekście IP Box). Dodaj jeden obiekt na każde KPWI opisane w interpretacji. Jeżeli interpretacja nie dotyczy IP Box – pomiń całe pole.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ip_type",
+          "title",
+          "description",
+          "registration_no",
+          "link_or_document",
+          "ownership",
+          "protected_since"
+        ],
+        "properties": {
+          "ip_type": {
+            "type": "string",
+            "enum": [
+              "patent",
+              "utility_model",
+              "industrial_design",
+              "topography",
+              "spc",
+              "med_product_registration",
+              "plant_variety",
+              "software_copyright"
+            ],
+            "description": "Rodzaj KPWI. Dla oprogramowania wybierz 'software_copyright'. Dla pozostałych – dopasuj do opisu ochrony/karty prawa. Przykład: software_copyright."
+          },
+          "title": {
+            "type": "string",
+            "description": "Tytuł/nazwa prawa lub modułu/rozwiązania (zwięźle, do 15 słów). Jeżeli brak formalnego tytułu – krótko nazwij funkcjonalność. Przykład: System harmonogramowania zleceń robotów."
+          },
+          "description": {
+            "type": "string",
+            "description": "Zwięzły opis istoty rozwiązania lub jego funkcji biznesowo‑technicznej (1–2 zdania, bez wdawania się w pełen opis projektu). Przykład: Algorytm optymalizacji tras wózków AGV w halach produkcyjnych, implementacja w module MES."
+          },
+          "registration_no": {
+            "type": "string",
+            "description": "Numer prawa (patentu/wzoru/zgłoszenia), jeżeli został wprost podany. Przepisz dokładnie; w przeciwnym razie pomiń. Przykład: P.424242."
+          },
+          "link_or_document": {
+            "type": "string",
+            "format": "uri",
+            "description": "Publiczny link do bazy/ogłoszenia/Repo (o ile wprost podano). Nie twórz linków samodzielnie. Przykład: https://ewyszukiwarka.pue.uprp.gov.pl/"
+          },
+          "ownership": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "co-owner",
+              "licensee"
+            ],
+            "description": "Status prawny podatnika względem KPWI: właściciel, współwłaściciel lub licencjobiorca – zgodnie z opisem stanu faktycznego. Przykład: owner."
+          },
+          "protected_since": {
+            "type": "string",
+            "format": "date",
+            "description": "Data uzyskania ochrony/zgłoszenia/objęcia prawem autorskim, jeżeli podana (RRRR-MM-DD). Przykład: 2022-03-01."
+          }
+        }
+      }
+    },
+    "nexus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "costs_a",
+        "costs_b",
+        "costs_c",
+        "costs_d",
+        "ratio"
+      ],
+      "description": "Wskaźnik nexus dla KPWI (IP Box). Kwoty w PLN, liczby JSON z kropką jako separatorem. Jeżeli podano przedziały/rok – przyjmij dane z roku, którego dotyczy pytanie/rozstrzygnięcie (najczęściej rok podatkowy wskazany w interpretacji).",
+      "properties": {
+        "costs_a": {
+          "type": "number",
+          "description": "A – Koszty działalności B+R poniesione bezpośrednio przez podatnika (np. wynagrodzenia twórców, materiały do wytworzenia KPWI)."
+        },
+        "costs_b": {
+          "type": "number",
+          "description": "B – Koszty nabycia wyników prac B+R od podmiotów NIEPOWIĄZANYCH (związane z danym KPWI)."
+        },
+        "costs_c": {
+          "type": "number",
+          "description": "C – Koszty zlecenia prac B+R podmiotom NIEPOWIĄZANYM (outsourcing), związane z KPWI."
+        },
+        "costs_d": {
+          "type": "number",
+          "description": "D – Całkowite koszty związane z wytworzeniem/rozwojem/udoskonaleniem KPWI (mianownik wskaźnika)."
+        },
+        "ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Wskaźnik nexus, liczony jako (A + B + C) / D, zaokrąglony do dwóch miejsc po przecinku (np. 0.87). Wpisz tylko, jeśli wszystkie potrzebne składniki są znane. Przykład: 0.87."
+        }
+      }
+    },
+    "qualified_income": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "licence_fees",
+        "sale_of_ip",
+        "embedded_income",
+        "damages"
+      ],
+      "description": "Źródła dochodów kwalifikowanych do IP Box (w PLN, liczby JSON). Podaj tylko pozycje wskazane w interpretacji i dotyczące rozpatrywanego KPWI/okresu.",
+      "properties": {
+        "licence_fees": {
+          "type": "number",
+          "description": "Przychody z tytułu udzielenia licencji do KPWI."
+        },
+        "sale_of_ip": {
+          "type": "number",
+          "description": "Przychody ze sprzedaży KPWI (zbycie prawa)."
+        },
+        "embedded_income": {
+          "type": "number",
+          "description": "Przychody ze sprzedaży produktów/usług, w których KPWI jest wbudowane (alokowana część)."
+        },
+        "damages": {
+          "type": "number",
+          "description": "Odszkodowania/kontraktowe świadczenia uzyskane za naruszenie KPWI."
+        }
+      }
+    },
+    "br_projects": {
+      "type": "array",
+      "description": "Projekty badawczo‑rozwojowe wskazane w interpretacji na potrzeby ulgi B+R. Dodaj jeden obiekt na każdy projekt wyraźnie opisany przez wnioskodawcę lub organ.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "internal_number",
+          "project_type",
+          "period",
+          "goal",
+          "detailed_description",
+          "activities",
+          "technologies_used",
+          "project_stages",
+          "outcomes",
+          "innovation_level",
+          "client_involvement",
+          "technical_challenges",
+          "systematic_approach",
+          "creative_character",
+          "knowledge_increase",
+          "unique_enterprise_scale"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nazwa projektu używana w dokumentacji wewnętrznej/interpretacji. Jeśli brak, zwięźle nazwij projekt (do 12 słów)."
+          },
+          "internal_number": {
+            "type": "string",
+            "description": "Wewnętrzny numer/oznaczenie projektu, jeżeli został podany."
+          },
+          "project_type": {
+            "type": "string",
+            "enum": [
+              "zakres_A",
+              "zakres_B",
+              "zakres_C",
+              "zakres_D",
+              "badania_podstawowe",
+              "badania_aplikacyjne",
+              "prace_rozwojowe"
+            ],
+            "description": "Klasyfikacja projektu B+R zgodnie z opisem: 'badania_podstawowe', 'badania_aplikacyjne', 'prace_rozwojowe' lub jeden z zakresów, jeżeli wprost tak określono. Wybierz najbardziej precyzyjną kategorię. Przykład: prace_rozwojowe."
+          },
+          "period": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "start",
+              "end"
+            ],
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date",
+                "description": "Data rozpoczęcia projektu (RRRR-MM-DD)."
+              },
+              "end": {
+                "type": "string",
+                "format": "date",
+                "description": "Data zakończenia projektu (RRRR-MM-DD). Jeżeli projekt trwa, użyj daty granicznej wskazanej w interpretacji (np. rok podatkowy)."
+              }
+            }
+          },
+          "goal": {
+            "type": "string",
+            "description": "Cel projektu – czego miał dokonać/ulepszyć. Jedno zwięzłe zdanie."
+          },
+          "detailed_description": {
+            "type": "string",
+            "description": "Skrótowy opis przebiegu/zakresu prac (2–4 zdania, bez powtórzeń)."
+          },
+          "activities": {
+            "type": "string",
+            "description": "Najważniejsze czynności/działania B+R (lista w zdaniu lub wypunktowanie w tekście ciągłym)."
+          },
+          "technologies_used": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Technologie, języki, narzędzia i platformy istotne dla B+R (np. 'PLC', 'HMI', 'Python', 'robotyka', 'MES'). Wstaw tylko to, co wymieniono w interpretacji."
+          },
+          "project_stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "stage_name",
+                "description",
+                "duration"
+              ],
+              "properties": {
+                "stage_name": {
+                  "type": "string",
+                  "description": "Nazwa etapu, jeśli została wskazana."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Krótki opis czynności w etapie (1–2 zdania)."
+                },
+                "duration": {
+                  "type": "string",
+                  "description": "Czas trwania etapu, jeśli podano (np. '2 miesiące', 'Q2 2023')."
+                }
+              }
+            },
+            "description": "Etapy projektu, jeżeli rozpisano je w treści pisma."
+          },
+          "outcomes": {
+            "type": "string",
+            "description": "Rezultaty projektu (np. prototyp, moduł, wdrożenie u klienta). Użyj 1–2 zdań."
+          },
+          "innovation_level": {
+            "type": "string",
+            "enum": [
+              "nowatorski",
+              "ulepszający",
+              "modernizacyjny"
+            ],
+            "description": "Poziom innowacyjności deklarowany/opisany w interpretacji. Nie przypisuj samodzielnie, jeżeli brak jednoznacznych sformułowań."
+          },
+          "client_involvement": {
+            "type": "string",
+            "enum": [
+              "własna_koncepcja",
+              "specyfikacja_klienta",
+              "dokumentacja_klienta",
+              "modernizacja"
+            ],
+            "description": "Dominujący model współpracy: praca według własnej koncepcji, zgodnie ze specyfikacją klienta, na podstawie dokumentacji klienta lub modernizacja istniejących rozwiązań – zgodnie z opisem."
+          },
+          "technical_challenges": {
+            "type": "string",
+            "description": "Najistotniejsze wyzwania techniczne (1–2 zdania, tylko to, co wprost opisano)."
+          },
+          "systematic_approach": {
+            "type": "boolean",
+            "description": "Czy działania B+R miały charakter systematyczny/metodyczny (np. plan, harmonogram, etapy) – tylko jeżeli tak wynika z treści."
+          },
+          "creative_character": {
+            "type": "boolean",
+            "description": "Czy prace miały charakter twórczy (tworzenie nowych rozwiązań/ulepszeń) – zaznacz true wyłącznie, gdy tekst to potwierdza."
+          },
+          "knowledge_increase": {
+            "type": "boolean",
+            "description": "Czy projekt zwiększał zasoby wiedzy i wykorzystywał je do tworzenia nowych zastosowań – tylko jeżeli tak stwierdzono."
+          },
+          "unique_enterprise_scale": {
+            "type": "boolean",
+            "description": "Czy rezultat jest unikalny co najmniej w skali przedsiębiorstwa wnioskodawcy (true tylko, gdy jest to wyraźnie powiedziane lub jednoznacznie wynika z opisu)."
+          }
+        }
+      }
+    },
+    "qualified_costs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "employee_costs",
+        "social_security",
+        "materials_supplies",
+        "external_services_total",
+        "equipment_depreciation"
+      ],
+      "description": "Koszty kwalifikowane do ulgi B+R. Kwoty w PLN (liczby JSON). Podawaj wyłącznie pozycje, które są wprost wymienione i dotyczą projektów B+R z interpretacji.",
+      "properties": {
+        "employee_costs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "basic_salary",
+            "discretionary_bonuses",
+            "overtime",
+            "other_allowances",
+            "time_allocation_method"
+          ],
+          "description": "Koszty pracownicze w części przypisanej do prac B+R (alokacja czasu pracy zgodnie z metodą opisaną w interpretacji).",
+          "properties": {
+            "basic_salary": {
+              "type": "number",
+              "description": "Wynagrodzenie zasadnicze (część przypisana do B+R)."
+            },
+            "discretionary_bonuses": {
+              "type": "number",
+              "description": "Premie/uznaniowe składniki wynagrodzeń (część B+R)."
+            },
+            "overtime": {
+              "type": "number",
+              "description": "Nadgodziny (część B+R)."
+            },
+            "other_allowances": {
+              "type": "number",
+              "description": "Inne dodatki (np. dodatki projektowe) przypisane do B+R."
+            },
+            "time_allocation_method": {
+              "type": "string",
+              "description": "Opis sposobu alokacji czasu pracy do B+R (np. ewidencja czasu, wskaźnik procentowy, karty pracy) – przepisz z interpretacji w 1–2 zdaniach."
+            }
+          }
+        },
+        "social_security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "employer_contributions",
+            "calculation_basis"
+          ],
+          "description": "Składki ZUS finansowane przez pracodawcę przypisane do prac B+R.",
+          "properties": {
+            "employer_contributions": {
+              "type": "number",
+              "description": "Łączna kwota składek pracodawcy ujęta jako koszt B+R."
+            },
+            "calculation_basis": {
+              "type": "string",
+              "description": "Podstawa/zasady kalkulacji – jak przypisano składki do B+R (1–2 zdania)."
+            }
+          }
+        },
+        "materials_supplies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "steel_frame_elements",
+            "control_panels",
+            "wiring",
+            "electric_drives",
+            "position_sensors",
+            "metals_paints_compounds",
+            "fasteners",
+            "other_equipment",
+            "external_services"
+          ],
+          "description": "Materiały i surowce wykorzystane bezpośrednio w B+R (wg kategorii, jeżeli podano).",
+          "properties": {
+            "steel_frame_elements": {
+              "type": "number",
+              "description": "Elementy konstrukcji stalowych (jeśli wprost wskazano)."
+            },
+            "control_panels": {
+              "type": "number",
+              "description": "Szafy/ pulpity sterownicze."
+            },
+            "wiring": {
+              "type": "number",
+              "description": "Okablowanie/przewody."
+            },
+            "electric_drives": {
+              "type": "number",
+              "description": "Napędy elektryczne/serwonapędy."
+            },
+            "position_sensors": {
+              "type": "number",
+              "description": "Czujniki położenia/inne czujniki."
+            },
+            "metals_paints_compounds": {
+              "type": "number",
+              "description": "Metale/farby/chemia techniczna wykorzystane w B+R."
+            },
+            "fasteners": {
+              "type": "number",
+              "description": "Elementy złączne (śruby, nakrętki itp.)."
+            },
+            "other_equipment": {
+              "type": "number",
+              "description": "Inny drobny sprzęt i części zużywalne związane z B+R."
+            },
+            "external_services": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "service_type",
+                  "description",
+                  "cost"
+                ],
+                "properties": {
+                  "service_type": {
+                    "type": "string",
+                    "enum": [
+                      "oksydacja",
+                      "cynkowanie",
+                      "anodowanie",
+                      "malowanie_proszkowe",
+                      "cięcie_laserem",
+                      "inne"
+                    ],
+                    "description": "Typ usługi zewnętrznej, jak wprost wskazano w dokumentach."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Krótki opis zakresu/partii/elementów objętych usługą."
+                  },
+                  "cost": {
+                    "type": "number",
+                    "description": "Koszt usługi ujęty jako koszt B+R (PLN)."
+                  }
+                }
+              },
+              "description": "Usługi obróbki/wykończenia i inne zewnętrzne, jeśli zostały wskazane jako koszty B+R."
+            }
+          }
+        },
+        "external_services_total": {
+          "type": "number",
+          "description": "Suma kosztów usług zewnętrznych (jeśli wprost podano łączną kwotę)."
+        },
+        "equipment_depreciation": {
+          "type": "number",
+          "description": "Odpisy amortyzacyjne od aparatury/środków trwałych wykorzystywanych w B+R (część przypisana do B+R)."
+        }
+      }
+    },
+    "documentation_system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "separate_records",
+        "project_numbering",
+        "excel_sheets",
+        "invoice_assignment",
+        "multi_project_invoices",
+        "documents",
+        "records_since",
+        "cost_allocation_method"
+      ],
+      "description": "Opis sposobu prowadzenia ewidencji i dokumentacji na potrzeby ulgi B+R/IP Box – tylko to, co potwierdzono w interpretacji.",
+      "properties": {
+        "separate_records": {
+          "type": "boolean",
+          "description": "Czy prowadzona jest odrębna ewidencja kosztów B+R (true/false)."
+        },
+        "project_numbering": {
+          "type": "boolean",
+          "description": "Czy funkcjonuje system wewnętrznych numerów/oznaczeń projektów (true/false)."
+        },
+        "excel_sheets": {
+          "type": "boolean",
+          "description": "Czy stosowane są arkusze kalkulacyjne (Excel/arkusze) do ewidencji (true/false)."
+        },
+        "invoice_assignment": {
+          "type": "boolean",
+          "description": "Czy faktury są przypisywane do projektów B+R (true/false)."
+        },
+        "multi_project_invoices": {
+          "type": "boolean",
+          "description": "Czy zdarzają się faktury rozdzielane na wiele projektów (true/false)."
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "oferta",
+              "dokumentacja_projektowa",
+              "faktury",
+              "instrukcje_obsługi",
+              "protokoły_odbioru",
+              "zdjęcia",
+              "przewodnik_projektu",
+              "DTR",
+              "deklaracja_zgodności"
+            ]
+          },
+          "description": "Jakie rodzaje dokumentów są gromadzone dla projektów B+R (z listy, jeżeli wprost wymieniono)."
+        },
+        "records_since": {
+          "type": "string",
+          "format": "date",
+          "description": "Data, od której prowadzona jest ewidencja w wymaganym kształcie (RRRR-MM-DD), jeśli wskazano."
+        },
+        "cost_allocation_method": {
+          "type": "string",
+          "description": "Zwięzły opis metody wyodrębniania kosztów kwalifikowanych (np. algorytm alokacji, klucze podziału, opis narzędzi)."
+        }
+      }
+    },
+    "questions_asked": {
+      "type": "array",
+      "description": "Pytania zadane przez wnioskodawcę w interpretacji – każdy wpis odpowiada jednemu pytaniu z numeracją z pisma (jeżeli występuje).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "question_number",
+          "question_text",
+          "question_category"
+        ],
+        "properties": {
+          "question_number": {
+            "type": "integer",
+            "description": "Numer pytania z wniosku/interpretacji. Jeżeli brak numeracji – pomiń."
+          },
+          "question_text": {
+            "type": "string",
+            "description": "Treść pytania zacytowana lub wiernie sparafrazowana (1–2 zdania)."
+          },
+          "question_category": {
+            "type": "string",
+            "enum": [
+              "działalność_BR_status",
+              "koszty_osobowe",
+              "składki_ZUS",
+              "materiały_surowce",
+              "usługi_zewnętrzne",
+              "amortyzacja",
+              "kpwi_status",
+              "dochody_kwalifikowane",
+              "nexus"
+            ],
+            "description": "Kategoria merytoryczna pytania – przypisz najbardziej trafną na podstawie treści."
+          }
+        }
+      }
+    },
+    "taxpayer_position": {
+      "type": "array",
+      "description": "Stanowisko wnioskodawcy do poszczególnych pytań (jeżeli przedstawiono).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "question_number",
+          "position",
+          "legal_justification"
+        ],
+        "properties": {
+          "question_number": {
+            "type": "integer",
+            "description": "Numer pytania, którego dotyczy stanowisko (zgodny z questions_asked.question_number)."
+          },
+          "position": {
+            "type": "string",
+            "description": "Zwięzłe stanowisko wnioskodawcy (1–2 zdania, bez argumentacji)."
+          },
+          "legal_justification": {
+            "type": "string",
+            "description": "Najważniejsze podstawy prawne cytowane przez wnioskodawcę (artykuły/akty) – w jednym akapicie."
+          }
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "detailed_answers",
+        "reasoning",
+        "legal_justification_omitted",
+        "additional_information",
+        "applicable_period",
+        "legislative_changes_noted"
+      ],
+      "description": "Rozstrzygnięcie organu w sprawie wraz z odpowiedziami na pytania.",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "positive",
+            "negative",
+            "partial"
+          ],
+          "description": "Wynik ogólny interpretacji: 'positive' – stanowisko wnioskodawcy uznano w całości; 'negative' – w całości nie uznano; 'partial' – uznano częściowo."
+        },
+        "detailed_answers": {
+          "type": "array",
+          "description": "Lista odpowiedzi na pojedyncze pytania, jeżeli organ rozstrzygał odrębnie każde pytanie.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "question_number",
+              "answer",
+              "outcome"
+            ],
+            "properties": {
+              "question_number": {
+                "type": "integer",
+                "description": "Numer pytania, którego dotyczy odpowiedź."
+              },
+              "answer": {
+                "type": "string",
+                "description": "Zwięzła odpowiedź organu (1–2 zdania)."
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "positive",
+                  "negative"
+                ],
+                "description": "Czy stanowisko wnioskodawcy w tym pytaniu uznano (positive) czy nie (negative)."
+              }
+            }
+          }
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "Kluczowa część uzasadnienia (esencja argumentacji organu w 2–4 zdaniach, bez cytowania długich fragmentów)."
+        },
+        "legal_justification_omitted": {
+          "type": "boolean",
+          "description": "Zaznacz true, jeżeli organ wprost wskazał, że odstępuje od uzasadnienia prawnego (art. 14c § 1 Ordynacji podatkowej)."
+        },
+        "additional_information": {
+          "type": "string",
+          "description": "Inne istotne pouczenia/uwagi (np. tryb zaskarżenia, wskazanie zmian przepisów)."
+        },
+        "applicable_period": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "from",
+            "to"
+          ],
+          "description": "Okres, którego dotyczy interpretacja (jeżeli wskazano wprost ramy czasowe).",
+          "properties": {
+            "from": {
+              "type": "string",
+              "format": "date",
+              "description": "Data początkowa okresu obowiązywania oceny (RRRR-MM-DD)."
+            },
+            "to": {
+              "type": "string",
+              "format": "date",
+              "description": "Data końcowa okresu obowiązywania oceny (RRRR-MM-DD)."
+            }
+          }
+        },
+        "legislative_changes_noted": {
+          "type": "boolean",
+          "description": "Czy organ wyraźnie zwrócił uwagę na zmiany przepisów wpływające na ocenę (true/false)."
+        }
+      }
+    },
+    "expert_opinion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "university",
+        "opinion_exists",
+        "opinion_subject"
+      ],
+      "description": "Informacje o ewentualnej opinii jednostki naukowej lub eksperta, jeżeli była przywoływana.",
+      "properties": {
+        "university": {
+          "type": "string",
+          "description": "Nazwa jednostki naukowej/uczelni, jeżeli wskazano (przepisz dokładnie)."
+        },
+        "opinion_exists": {
+          "type": "boolean",
+          "description": "Czy opinia była sporządzona i stanowiła element materiału (true/false)."
+        },
+        "opinion_subject": {
+          "type": "string",
+          "description": "Czego dotyczyła opinia (1 zdanie)."
+        }
+      }
+    },
+    "accounting_compliance": {
+      "type": "boolean",
+      "description": "Czy – według organu/opisu – prowadzona jest ewidencja spełniająca wymogi dla danej ulgi (true/false). Zaznacz true tylko, gdy wynika to wprost z uzasadnienia lub sentencji."
+    },
+    "combined_application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "simultaneous_use",
+        "cost_allocation_method"
+      ],
+      "description": "Informacje o łącznym stosowaniu IP Box i ulgi B+R (od 2022 r.), jeśli dotyczy interpretacji.",
+      "properties": {
+        "simultaneous_use": {
+          "type": "boolean",
+          "description": "Czy organ potwierdził możliwość równoczesnego korzystania (true/false)."
+        },
+        "cost_allocation_method": {
+          "type": "string",
+          "description": "Opis metody rozdziału kosztów/przychodów między IP Box a ulgę B+R, jeżeli ją wskazano (1–2 zdania)."
+        }
+      }
+    },
+    "exclusions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "no_basic_research",
+        "no_sse_activity",
+        "no_car_depreciation",
+        "no_building_depreciation"
+      ],
+      "description": "Wykluczenia i ograniczenia wskazane w interpretacji (zaznacz tylko, gdy wprost wynika).",
+      "properties": {
+        "no_basic_research": {
+          "type": "boolean",
+          "description": "Wprost stwierdzono, że nie prowadzono badań podstawowych (true/false)."
+        },
+        "no_sse_activity": {
+          "type": "boolean",
+          "description": "Wprost wskazano, że działalność nie jest prowadzona w SSE/PSI (true/false)."
+        },
+        "no_car_depreciation": {
+          "type": "boolean",
+          "description": "Wprost wyłączono amortyzację samochodów z kosztów kwalifikowanych (true/false)."
+        },
+        "no_building_depreciation": {
+          "type": "boolean",
+          "description": "Wprost wyłączono amortyzację budynków z kosztów kwalifikowanych (true/false)."
+        }
+      }
+    },
+    "legal_references": {
+      "type": "array",
+      "description": "Powołane przepisy prawa w interpretacji – każdy wpis to jedno odesłanie do aktu prawnego/artykułu.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "regulation",
+          "article",
+          "description"
+        ],
+        "properties": {
+          "regulation": {
+            "type": "string",
+            "description": "Nazwa aktu prawnego (np. 'ustawa o PIT', 'ustawa o CIT', 'Ordynacja podatkowa', 'Prawo własności przemysłowej')."
+          },
+          "article": {
+            "type": "string",
+            "description": "Jednostka redakcyjna (np. 'art. 30ca ust. 2 pkt 8'). Przepisz dokładnie jak w źródle."
+          },
+          "description": {
+            "type": "string",
+            "description": "Krótki kontekst zastosowania przepisu w sprawie (1 zdanie)."
+          }
+        }
+      }
+    },
+    "related_interpretations": {
+      "type": "array",
+      "description": "Interpretacje/orzeczenia powiązane, jeżeli organ/wnioskodawca się na nie powołuje.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interpretation_id",
+          "date",
+          "relevance"
+        ],
+        "properties": {
+          "interpretation_id": {
+            "type": "string",
+            "description": "Sygnatura powiązanej interpretacji/wyroku (przepisz dokładnie)."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Data wydania dokumentu powiązanego (RRRR-MM-DD), jeżeli podano."
+          },
+          "relevance": {
+            "type": "string",
+            "description": "Krótko, dlaczego dokument jest powiązany (1 zdanie)."
+          }
+        }
+      }
+    },
+    "comments": {
+      "type": "string",
+      "description": "Uwagi techniczne/kuratorskie do rekordu (informacje pomocnicze niepojawiające się w treści interpretacji)."
+    }
+  }
+}

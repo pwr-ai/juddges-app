@@ -1,0 +1,2189 @@
+[
+  {
+    "id": "c5ae1a61-3bd4-4731-9dc2-a6baf4b638dd",
+    "name": "similar_cases_precedents",
+    "description": "Finding similar cases and legal precedents for case research",
+    "type": "extraction",
+    "category": "litigation",
+    "text": {
+      "case_summary": {
+        "type": "string",
+        "description": "Brief summary of the case facts and legal issues",
+        "required": true
+      },
+      "legal_issue": {
+        "type": "string",
+        "description": "Main legal question or issue at stake",
+        "required": true
+      },
+      "court_level": {
+        "type": "string",
+        "description": "Court level (e.g., NSA, WSA, Sąd Rejonowy)",
+        "required": false
+      },
+      "court_chamber": {
+        "type": "string",
+        "description": "Court chamber or division that heard the case",
+        "required": false
+      },
+      "judgment_date": {
+        "type": "string",
+        "description": "Date of the judgment (YYYY-MM-DD)",
+        "required": false
+      },
+      "case_signature": {
+        "type": "string",
+        "description": "Case signature/reference number",
+        "required": false
+      },
+      "outcome": {
+        "type": "string",
+        "description": "Case outcome (e.g., 'granted', 'dismissed', 'partially granted')",
+        "required": true
+      },
+      "key_arguments": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Key legal arguments that were successful in the case",
+        "required": true
+      },
+      "legal_basis": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Legal provisions cited (e.g., 'art. 15 ustawy o VAT')",
+        "required": true
+      },
+      "precedential_value": {
+        "type": "string",
+        "description": "Assessment of precedential value (high, medium, low)",
+        "required": false
+      },
+      "similar_case_ids": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "IDs or signatures of similar cases mentioned",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191203",
+    "updated_at": "2025-10-20T11:17:14.191213",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 11
+  },
+  {
+    "id": "aa189e11-65ec-48f1-b645-01c9b59cfa41",
+    "name": "case_outcome_prediction",
+    "description": "Predictive analytics for estimating case outcomes and duration",
+    "type": "extraction",
+    "category": "litigation",
+    "text": {
+      "case_type": {
+        "type": "string",
+        "description": "Type of legal case (e.g., tax dispute, administrative appeal)",
+        "required": true
+      },
+      "dispute_amount": {
+        "type": "number",
+        "description": "Amount in dispute (in PLN)",
+        "required": false
+      },
+      "court_level": {
+        "type": "string",
+        "description": "Court level where case will be heard",
+        "required": true
+      },
+      "factual_circumstances": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Key factual circumstances affecting the case",
+        "required": true
+      },
+      "favorable_factors": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Factors that favor the client's position",
+        "required": true
+      },
+      "unfavorable_factors": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Factors that may weaken the client's position",
+        "required": true
+      },
+      "win_probability_estimate": {
+        "type": "string",
+        "description": "Estimated probability of success (e.g., '65-75%')",
+        "required": false
+      },
+      "estimated_duration_months": {
+        "type": "integer",
+        "description": "Estimated case duration in months",
+        "required": false
+      },
+      "key_legal_arguments": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Most important legal arguments to pursue",
+        "required": true
+      },
+      "similar_cases_outcome": {
+        "type": "string",
+        "description": "Pattern of outcomes in similar cases",
+        "required": false
+      },
+      "recommendation": {
+        "type": "string",
+        "description": "Strategic recommendation (proceed, settle, negotiate)",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191226",
+    "updated_at": "2025-10-20T11:17:14.191227",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 11
+  },
+  {
+    "id": "95c08203-1688-4876-b0a6-8c8a9662e1a9",
+    "name": "tax_due_diligence_ma",
+    "description": "Tax due diligence checklist and risk assessment for M&A transactions",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "company_name": {
+        "type": "string",
+        "description": "Name of the target company",
+        "required": true
+      },
+      "company_tax_id": {
+        "type": "string",
+        "description": "NIP (tax identification number)",
+        "required": true
+      },
+      "review_period": {
+        "type": "string",
+        "description": "Period covered by due diligence (e.g., '2020-2024')",
+        "required": true
+      },
+      "outstanding_tax_liabilities": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "tax_type": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "tax_type",
+            "amount"
+          ]
+        },
+        "description": "List of outstanding tax obligations",
+        "required": true
+      },
+      "pending_tax_disputes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "case_number": {
+              "type": "string"
+            },
+            "dispute_amount": {
+              "type": "number"
+            },
+            "issue_description": {
+              "type": "string"
+            },
+            "stage": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "issue_description"
+          ]
+        },
+        "description": "Active tax disputes and their status",
+        "required": true
+      },
+      "tax_interpretations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "interpretation_number": {
+              "type": "string"
+            },
+            "issue": {
+              "type": "string"
+            },
+            "validity_status": {
+              "type": "string"
+            },
+            "expiry_date": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "issue",
+            "validity_status"
+          ]
+        },
+        "description": "Tax interpretations obtained by the company",
+        "required": false
+      },
+      "identified_risks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "risk_type": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "estimated_exposure": {
+              "type": "number"
+            },
+            "probability": {
+              "type": "string"
+            },
+            "mitigation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "risk_type",
+            "description"
+          ]
+        },
+        "description": "Identified tax risks and potential liabilities",
+        "required": true
+      },
+      "transfer_pricing_compliance": {
+        "type": "object",
+        "properties": {
+          "has_documentation": {
+            "type": "boolean"
+          },
+          "completeness_assessment": {
+            "type": "string"
+          },
+          "gaps_identified": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Transfer pricing documentation status",
+        "required": false
+      },
+      "total_risk_exposure": {
+        "type": "number",
+        "description": "Total estimated tax risk exposure in PLN",
+        "required": false
+      },
+      "overall_risk_rating": {
+        "type": "string",
+        "description": "Overall tax risk rating (low, medium, high, critical)",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191248",
+    "updated_at": "2025-10-20T11:17:14.191249",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 10
+  },
+  {
+    "id": "58ddf158-cd1f-4193-9d2e-9ffc5351b427",
+    "name": "legal_changes_monitoring",
+    "description": "Monitoring and alerting for legal changes affecting clients",
+    "type": "extraction",
+    "category": "compliance",
+    "text": {
+      "change_type": {
+        "type": "string",
+        "description": "Type of legal change (new law, amendment, court ruling, interpretation)",
+        "required": true
+      },
+      "source": {
+        "type": "string",
+        "description": "Source of change (Sejm, NSA, KIS, TSUE, etc.)",
+        "required": true
+      },
+      "publication_date": {
+        "type": "string",
+        "description": "Date of publication (YYYY-MM-DD)",
+        "required": true
+      },
+      "effective_date": {
+        "type": "string",
+        "description": "Date when change becomes effective (YYYY-MM-DD)",
+        "required": true
+      },
+      "legal_reference": {
+        "type": "string",
+        "description": "Official reference (e.g., 'Ustawa z dnia...', 'Wyrok NSA...')",
+        "required": true
+      },
+      "affected_areas": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Legal areas affected (VAT, CIT, labor law, etc.)",
+        "required": true
+      },
+      "change_summary": {
+        "type": "string",
+        "description": "Brief summary of what changed",
+        "required": true
+      },
+      "impact_assessment": {
+        "type": "string",
+        "description": "Assessment of practical impact (major, moderate, minor)",
+        "required": true
+      },
+      "affected_client_types": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Types of clients affected (IT companies, manufacturers, etc.)",
+        "required": true
+      },
+      "action_required": {
+        "type": "string",
+        "description": "What clients need to do (update contracts, file declarations, etc.)",
+        "required": false
+      },
+      "deadline_for_action": {
+        "type": "string",
+        "description": "Deadline for taking required action (YYYY-MM-DD)",
+        "required": false
+      },
+      "related_client_cases": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Client cases or matters that may be affected",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191258",
+    "updated_at": "2025-10-20T11:17:14.191259",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 12
+  },
+  {
+    "id": "2e4ceb25-13a3-41b0-87bd-a697a35f8dba",
+    "name": "automatic_tax_risk_analysis",
+    "description": "Automated analysis of client's tax risk profile",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "client_name": {
+        "type": "string",
+        "description": "Client company name",
+        "required": true
+      },
+      "client_tax_id": {
+        "type": "string",
+        "description": "NIP (tax identification number)",
+        "required": true
+      },
+      "analysis_period": {
+        "type": "string",
+        "description": "Period analyzed (e.g., '2024 Q1-Q4')",
+        "required": true
+      },
+      "identified_risks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "risk_category": {
+              "type": "string"
+            },
+            "risk_description": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string"
+            },
+            "potential_penalty": {
+              "type": "number"
+            },
+            "legal_basis": {
+              "type": "string"
+            },
+            "remediation_steps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "risk_category",
+            "risk_description",
+            "severity"
+          ]
+        },
+        "description": "List of identified tax risks",
+        "required": true
+      },
+      "vat_risks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "issue": {
+              "type": "string"
+            },
+            "affected_invoices": {
+              "type": "integer"
+            },
+            "risk_amount": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "issue"
+          ]
+        },
+        "description": "VAT-specific risks identified",
+        "required": false
+      },
+      "transfer_pricing_risks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "issue": {
+              "type": "string"
+            },
+            "affected_transactions": {
+              "type": "integer"
+            },
+            "potential_adjustment": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "issue"
+          ]
+        },
+        "description": "Transfer pricing compliance risks",
+        "required": false
+      },
+      "compliance_gaps": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requirement": {
+              "type": "string"
+            },
+            "gap_description": {
+              "type": "string"
+            },
+            "urgency": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "requirement",
+            "gap_description"
+          ]
+        },
+        "description": "Compliance requirements not being met",
+        "required": true
+      },
+      "risk_score": {
+        "type": "integer",
+        "description": "Overall risk score (0-100)",
+        "required": false
+      },
+      "priority_actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string"
+            },
+            "deadline": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "priority"
+          ]
+        },
+        "description": "Prioritized actions to address risks",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191285",
+    "updated_at": "2025-10-20T11:17:14.191286",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 9
+  },
+  {
+    "id": "504005c9-11ef-433f-94eb-4cafea6a60c5",
+    "name": "tax_interpretation_request",
+    "description": "Automated preparation of tax interpretation requests",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "taxpayer_name": {
+        "type": "string",
+        "description": "Name of the taxpayer requesting interpretation",
+        "required": true
+      },
+      "taxpayer_tax_id": {
+        "type": "string",
+        "description": "NIP (tax identification number)",
+        "required": true
+      },
+      "taxpayer_address": {
+        "type": "string",
+        "description": "Full address of the taxpayer",
+        "required": true
+      },
+      "factual_state": {
+        "type": "string",
+        "description": "Detailed description of the factual situation",
+        "required": true
+      },
+      "planned_transaction": {
+        "type": "string",
+        "description": "Description of planned transaction (if applicable)",
+        "required": false
+      },
+      "legal_question": {
+        "type": "string",
+        "description": "Specific legal question requiring interpretation",
+        "required": true
+      },
+      "taxpayer_position": {
+        "type": "string",
+        "description": "Taxpayer's position on how the law should be applied",
+        "required": true
+      },
+      "legal_basis": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Relevant legal provisions cited",
+        "required": true
+      },
+      "supporting_case_law": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "case_signature": {
+              "type": "string"
+            },
+            "court": {
+              "type": "string"
+            },
+            "relevance": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "case_signature"
+          ]
+        },
+        "description": "Court cases supporting the taxpayer's position",
+        "required": false
+      },
+      "similar_interpretations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Similar tax interpretations issued by authorities",
+        "required": false
+      },
+      "interpretation_type": {
+        "type": "string",
+        "description": "Type of interpretation (individual, general)",
+        "required": true
+      },
+      "urgency": {
+        "type": "string",
+        "description": "Urgency level (standard, urgent)",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191298",
+    "updated_at": "2025-10-20T11:17:14.191299",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 12
+  },
+  {
+    "id": "7863feea-ead6-4f87-bb82-ff43e079a86e",
+    "name": "business_language_search",
+    "description": "Search engine for non-lawyers using plain business language",
+    "type": "extraction",
+    "category": "compliance",
+    "text": {
+      "user_question": {
+        "type": "string",
+        "description": "User's question in plain language",
+        "required": true
+      },
+      "extracted_intent": {
+        "type": "string",
+        "description": "Extracted legal intent from the question",
+        "required": true
+      },
+      "legal_area": {
+        "type": "string",
+        "description": "Identified legal area (VAT, CIT, labor law, etc.)",
+        "required": true
+      },
+      "simple_answer": {
+        "type": "string",
+        "description": "Answer in plain, business-friendly language",
+        "required": true
+      },
+      "relevant_provisions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "provision": {
+              "type": "string"
+            },
+            "explanation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provision",
+            "explanation"
+          ]
+        },
+        "description": "Relevant legal provisions with explanations",
+        "required": true
+      },
+      "examples": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Practical examples illustrating the answer",
+        "required": false
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Important warnings or exceptions",
+        "required": false
+      },
+      "complexity_level": {
+        "type": "string",
+        "description": "Complexity assessment (simple, moderate, complex)",
+        "required": true
+      },
+      "needs_expert": {
+        "type": "boolean",
+        "description": "Whether the case requires expert consultation",
+        "required": true
+      },
+      "expert_consultation_reason": {
+        "type": "string",
+        "description": "Why expert consultation is needed (if applicable)",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191311",
+    "updated_at": "2025-10-20T11:17:14.191312",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 10
+  },
+  {
+    "id": "efe53a5c-f614-4cc6-98f2-6d769be2250d",
+    "name": "cost_benefit_litigation",
+    "description": "Cost-benefit analysis for litigation decisions",
+    "type": "extraction",
+    "category": "litigation",
+    "text": {
+      "case_description": {
+        "type": "string",
+        "description": "Brief description of the legal case",
+        "required": true
+      },
+      "amount_in_dispute": {
+        "type": "number",
+        "description": "Amount in dispute (PLN)",
+        "required": true
+      },
+      "current_stage": {
+        "type": "string",
+        "description": "Current stage of proceedings",
+        "required": true
+      },
+      "estimated_costs": {
+        "type": "object",
+        "properties": {
+          "court_fees": {
+            "type": "number"
+          },
+          "legal_representation": {
+            "type": "number"
+          },
+          "expert_opinions": {
+            "type": "number"
+          },
+          "other_costs": {
+            "type": "number"
+          },
+          "total_estimated_costs": {
+            "type": "number"
+          }
+        },
+        "description": "Breakdown of estimated litigation costs",
+        "required": true
+      },
+      "win_probability": {
+        "type": "number",
+        "description": "Estimated probability of winning (0.0-1.0)",
+        "required": true
+      },
+      "estimated_duration_months": {
+        "type": "integer",
+        "description": "Estimated duration of proceedings in months",
+        "required": true
+      },
+      "possible_outcomes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "type": "string"
+            },
+            "probability": {
+              "type": "number"
+            },
+            "financial_result": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "outcome",
+            "probability"
+          ]
+        },
+        "description": "Possible case outcomes with probabilities",
+        "required": true
+      },
+      "expected_value": {
+        "type": "number",
+        "description": "Expected value calculation (probability-weighted outcome)",
+        "required": true
+      },
+      "settlement_options": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "settlement_amount": {
+              "type": "number"
+            },
+            "feasibility": {
+              "type": "string"
+            },
+            "net_benefit": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "settlement_amount"
+          ]
+        },
+        "description": "Potential settlement options",
+        "required": false
+      },
+      "recommendation": {
+        "type": "string",
+        "description": "Strategic recommendation (continue, settle, negotiate)",
+        "required": true
+      },
+      "recommendation_rationale": {
+        "type": "string",
+        "description": "Reasoning behind the recommendation",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191324",
+    "updated_at": "2025-10-20T11:17:14.191325",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 11
+  },
+  {
+    "id": "62af21bb-bf1c-42a9-9c4a-ff55d31daace",
+    "name": "document_compliance_checking",
+    "description": "Automated compliance checking for legal documents and contracts",
+    "type": "extraction",
+    "category": "compliance",
+    "text": {
+      "document_type": {
+        "type": "string",
+        "description": "Type of document (contract, terms of service, privacy policy, etc.)",
+        "required": true
+      },
+      "document_title": {
+        "type": "string",
+        "description": "Title or name of the document",
+        "required": true
+      },
+      "compliance_checks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requirement": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "details": {
+              "type": "string"
+            },
+            "severity": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "requirement",
+            "status"
+          ]
+        },
+        "description": "List of compliance checks performed",
+        "required": true
+      },
+      "missing_clauses": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "clause_name": {
+              "type": "string"
+            },
+            "legal_requirement": {
+              "type": "string"
+            },
+            "consequence": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "clause_name",
+            "legal_requirement"
+          ]
+        },
+        "description": "Required clauses that are missing",
+        "required": true
+      },
+      "invalid_clauses": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "clause_reference": {
+              "type": "string"
+            },
+            "issue": {
+              "type": "string"
+            },
+            "legal_basis": {
+              "type": "string"
+            },
+            "suggested_revision": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "clause_reference",
+            "issue"
+          ]
+        },
+        "description": "Clauses that may be invalid or unenforceable",
+        "required": false
+      },
+      "gdpr_compliance": {
+        "type": "object",
+        "properties": {
+          "compliant": {
+            "type": "boolean"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "missing_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "GDPR compliance assessment",
+        "required": false
+      },
+      "consumer_protection_issues": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "issue": {
+              "type": "string"
+            },
+            "legal_provision": {
+              "type": "string"
+            },
+            "recommendation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "issue"
+          ]
+        },
+        "description": "Consumer protection compliance issues",
+        "required": false
+      },
+      "overall_compliance_score": {
+        "type": "integer",
+        "description": "Overall compliance score (0-100)",
+        "required": false
+      },
+      "priority_fixes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "fix": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            },
+            "urgency": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "fix",
+            "priority"
+          ]
+        },
+        "description": "Prioritized list of fixes needed",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191346",
+    "updated_at": "2025-10-20T11:17:14.191347",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 9
+  },
+  {
+    "id": "a0f53436-c992-4f18-95b7-2872c7903415",
+    "name": "tax_declaration_data_extraction",
+    "description": "Automated data extraction from invoices and documents for tax declarations",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "tax_period": {
+        "type": "string",
+        "description": "Tax period (e.g., '2024-01', '2024 Q1')",
+        "required": true
+      },
+      "taxpayer_name": {
+        "type": "string",
+        "description": "Name of the taxpayer",
+        "required": true
+      },
+      "taxpayer_tax_id": {
+        "type": "string",
+        "description": "NIP (tax identification number)",
+        "required": true
+      },
+      "income_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "invoice_number": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            },
+            "counterparty": {
+              "type": "string"
+            },
+            "gross_amount": {
+              "type": "number"
+            },
+            "net_amount": {
+              "type": "number"
+            },
+            "vat_amount": {
+              "type": "number"
+            },
+            "vat_rate": {
+              "type": "string"
+            },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "invoice_number",
+            "gross_amount",
+            "net_amount"
+          ]
+        },
+        "description": "List of income items from invoices",
+        "required": true
+      },
+      "expense_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "invoice_number": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            },
+            "supplier": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "gross_amount": {
+              "type": "number"
+            },
+            "net_amount": {
+              "type": "number"
+            },
+            "vat_amount": {
+              "type": "number"
+            },
+            "deductible_vat": {
+              "type": "number"
+            },
+            "expense_category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "invoice_number",
+            "gross_amount",
+            "expense_category"
+          ]
+        },
+        "description": "List of expense items from invoices",
+        "required": true
+      },
+      "detected_anomalies": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "anomaly_type": {
+              "type": "string"
+            },
+            "affected_invoice": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "suggested_action": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "anomaly_type",
+            "description"
+          ]
+        },
+        "description": "Anomalies or inconsistencies detected",
+        "required": false
+      },
+      "summary": {
+        "type": "object",
+        "properties": {
+          "total_income": {
+            "type": "number"
+          },
+          "total_expenses": {
+            "type": "number"
+          },
+          "total_vat_input": {
+            "type": "number"
+          },
+          "total_vat_output": {
+            "type": "number"
+          },
+          "vat_balance": {
+            "type": "number"
+          }
+        },
+        "description": "Summary of extracted data",
+        "required": true
+      },
+      "data_quality_score": {
+        "type": "integer",
+        "description": "Data quality score (0-100)",
+        "required": false
+      },
+      "items_requiring_review": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "item_reference": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "item_reference",
+            "reason"
+          ]
+        },
+        "description": "Items flagged for manual review",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191364",
+    "updated_at": "2025-10-20T11:17:14.191365",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 9
+  },
+  {
+    "id": "042b5fa2-260e-480a-b007-9577980f8d67",
+    "name": "tax_benchmarking_optimization",
+    "description": "Tax benchmarking against industry peers and optimization recommendations",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "company_name": {
+        "type": "string",
+        "description": "Name of the company being analyzed",
+        "required": true
+      },
+      "industry_sector": {
+        "type": "string",
+        "description": "Industry sector classification",
+        "required": true
+      },
+      "annual_revenue": {
+        "type": "number",
+        "description": "Annual revenue in PLN",
+        "required": true
+      },
+      "company_size": {
+        "type": "string",
+        "description": "Company size category (micro, small, medium, large)",
+        "required": true
+      },
+      "current_tax_metrics": {
+        "type": "object",
+        "properties": {
+          "effective_tax_rate": {
+            "type": "number"
+          },
+          "cit_paid": {
+            "type": "number"
+          },
+          "vat_efficiency": {
+            "type": "number"
+          },
+          "total_tax_burden": {
+            "type": "number"
+          }
+        },
+        "description": "Current tax metrics for the company",
+        "required": true
+      },
+      "industry_benchmarks": {
+        "type": "object",
+        "properties": {
+          "average_effective_tax_rate": {
+            "type": "number"
+          },
+          "median_effective_tax_rate": {
+            "type": "number"
+          },
+          "percentile_25": {
+            "type": "number"
+          },
+          "percentile_75": {
+            "type": "number"
+          }
+        },
+        "description": "Industry benchmark statistics",
+        "required": true
+      },
+      "benchmark_comparison": {
+        "type": "string",
+        "description": "How company compares to industry (above average, below average, etc.)",
+        "required": true
+      },
+      "potential_savings_identified": {
+        "type": "number",
+        "description": "Total potential tax savings identified (PLN)",
+        "required": false
+      },
+      "optimization_opportunities": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "opportunity": {
+              "type": "string"
+            },
+            "estimated_savings": {
+              "type": "number"
+            },
+            "legal_basis": {
+              "type": "string"
+            },
+            "implementation_complexity": {
+              "type": "string"
+            },
+            "implementation_timeline": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "opportunity",
+            "estimated_savings"
+          ]
+        },
+        "description": "Tax optimization opportunities identified",
+        "required": true
+      },
+      "unused_reliefs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "relief_name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "estimated_benefit": {
+              "type": "number"
+            },
+            "eligibility_criteria": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "relief_name",
+            "description"
+          ]
+        },
+        "description": "Tax reliefs and deductions not currently utilized",
+        "required": false
+      },
+      "priority_recommendations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Prioritized recommendations for tax optimization",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191379",
+    "updated_at": "2025-10-20T11:17:14.191380",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 11
+  },
+  {
+    "id": "8be0c281-351f-4676-a06b-0f7d1c65f3d9",
+    "name": "government_communication_analysis",
+    "description": "Analysis of communication history with tax and government authorities",
+    "type": "extraction",
+    "category": "compliance",
+    "text": {
+      "client_name": {
+        "type": "string",
+        "description": "Name of the client",
+        "required": true
+      },
+      "client_tax_id": {
+        "type": "string",
+        "description": "NIP (tax identification number)",
+        "required": true
+      },
+      "analysis_period": {
+        "type": "string",
+        "description": "Period covered by analysis (e.g., 'last 5 years')",
+        "required": true
+      },
+      "communications_summary": {
+        "type": "object",
+        "properties": {
+          "total_communications": {
+            "type": "integer"
+          },
+          "by_authority": {
+            "type": "object",
+            "properties": {
+              "tax_office": {
+                "type": "integer"
+              },
+              "zus": {
+                "type": "integer"
+              },
+              "other": {
+                "type": "integer"
+              }
+            }
+          },
+          "by_type": {
+            "type": "object",
+            "properties": {
+              "inquiries": {
+                "type": "integer"
+              },
+              "notices": {
+                "type": "integer"
+              },
+              "decisions": {
+                "type": "integer"
+              },
+              "penalties": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "description": "Summary statistics of communications",
+        "required": true
+      },
+      "active_obligations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "obligation_type": {
+              "type": "string"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "due_date": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "obligation_type",
+            "status"
+          ]
+        },
+        "description": "Current active tax obligations",
+        "required": true
+      },
+      "dispute_history": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "case_reference": {
+              "type": "string"
+            },
+            "issue": {
+              "type": "string"
+            },
+            "start_date": {
+              "type": "string"
+            },
+            "resolution_date": {
+              "type": "string"
+            },
+            "outcome": {
+              "type": "string"
+            },
+            "financial_impact": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "issue",
+            "outcome"
+          ]
+        },
+        "description": "History of disputes and their outcomes",
+        "required": false
+      },
+      "upcoming_deadlines": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "deadline_date": {
+              "type": "string"
+            },
+            "action_required": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "deadline_date",
+            "action_required"
+          ]
+        },
+        "description": "Upcoming deadlines and required actions",
+        "required": true
+      },
+      "inconsistencies_detected": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "inconsistency_type": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "affected_periods": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "recommended_action": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "inconsistency_type",
+            "description"
+          ]
+        },
+        "description": "Inconsistencies found in declarations or communications",
+        "required": false
+      },
+      "compliance_timeline": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string"
+            },
+            "event": {
+              "type": "string"
+            },
+            "event_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "date",
+            "event"
+          ]
+        },
+        "description": "Chronological timeline of all significant events",
+        "required": true
+      },
+      "risk_flags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Red flags or areas requiring immediate attention",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191399",
+    "updated_at": "2025-10-20T11:17:14.191400",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 10
+  },
+  {
+    "id": "e72ebf36-92b5-4612-95e1-fc6e1b70df65",
+    "name": "tax_audit_assistant",
+    "description": "Assistant for preparing and managing tax audits",
+    "type": "extraction",
+    "category": "compliance",
+    "text": {
+      "audit_notice_date": {
+        "type": "string",
+        "description": "Date of audit notice (YYYY-MM-DD)",
+        "required": true
+      },
+      "audit_type": {
+        "type": "string",
+        "description": "Type of audit (VAT, CIT, transfer pricing, comprehensive)",
+        "required": true
+      },
+      "audit_scope": {
+        "type": "string",
+        "description": "Description of audit scope and focus areas",
+        "required": true
+      },
+      "audit_period": {
+        "type": "string",
+        "description": "Period being audited (e.g., '2022-2023')",
+        "required": true
+      },
+      "auditing_authority": {
+        "type": "string",
+        "description": "Name and location of auditing tax office",
+        "required": true
+      },
+      "areas_under_review": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Specific areas or transactions under review",
+        "required": true
+      },
+      "risk_analysis": {
+        "type": "object",
+        "properties": {
+          "likely_focus_areas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "potential_issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk_level": {
+            "type": "string"
+          }
+        },
+        "description": "Analysis of audit risks based on notice and historical data",
+        "required": true
+      },
+      "similar_audits_data": {
+        "type": "object",
+        "properties": {
+          "common_issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "typical_duration": {
+            "type": "string"
+          },
+          "average_adjustment": {
+            "type": "number"
+          }
+        },
+        "description": "Data from similar audits for context",
+        "required": false
+      },
+      "documents_to_prepare": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "document_type": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "document_type",
+            "priority"
+          ]
+        },
+        "description": "Checklist of documents to prepare for audit",
+        "required": true
+      },
+      "defense_strategy": {
+        "type": "object",
+        "properties": {
+          "key_arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supporting_documentation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "potential_weaknesses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Recommended defense strategy",
+        "required": false
+      },
+      "timeline_milestones": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "milestone": {
+              "type": "string"
+            },
+            "deadline": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "milestone"
+          ]
+        },
+        "description": "Key milestones and deadlines during audit process",
+        "required": true
+      },
+      "immediate_actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string"
+            },
+            "urgency": {
+              "type": "string"
+            },
+            "responsible": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action",
+            "urgency"
+          ]
+        },
+        "description": "Immediate actions to take upon receiving audit notice",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191420",
+    "updated_at": "2025-10-20T11:17:14.191421",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 12
+  },
+  {
+    "id": "fd826665-77c7-432d-99bd-31484cf157eb",
+    "name": "management_investor_tax_report",
+    "description": "Executive summary of tax position for management and investors",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "report_period": {
+        "type": "string",
+        "description": "Reporting period (e.g., '2024 Q3', 'FY 2024')",
+        "required": true
+      },
+      "company_name": {
+        "type": "string",
+        "description": "Company name",
+        "required": true
+      },
+      "executive_summary": {
+        "type": "string",
+        "description": "High-level summary of tax position and key developments",
+        "required": true
+      },
+      "key_tax_metrics": {
+        "type": "object",
+        "properties": {
+          "effective_tax_rate": {
+            "type": "number"
+          },
+          "total_tax_paid": {
+            "type": "number"
+          },
+          "total_tax_accrued": {
+            "type": "number"
+          },
+          "change_from_previous_period": {
+            "type": "number"
+          }
+        },
+        "description": "Key tax performance metrics",
+        "required": true
+      },
+      "current_tax_liabilities": {
+        "type": "object",
+        "properties": {
+          "current_liabilities": {
+            "type": "number"
+          },
+          "deferred_liabilities": {
+            "type": "number"
+          },
+          "contingent_liabilities": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "description": "Summary of tax liabilities",
+        "required": true
+      },
+      "active_tax_disputes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "dispute_description": {
+              "type": "string"
+            },
+            "amount_at_stake": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string"
+            },
+            "expected_resolution": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "dispute_description",
+            "status"
+          ]
+        },
+        "description": "Overview of ongoing tax disputes",
+        "required": false
+      },
+      "significant_developments": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "development": {
+              "type": "string"
+            },
+            "impact": {
+              "type": "string"
+            },
+            "financial_effect": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "development",
+            "impact"
+          ]
+        },
+        "description": "Significant tax developments during the period",
+        "required": true
+      },
+      "risk_summary": {
+        "type": "object",
+        "properties": {
+          "overall_risk_level": {
+            "type": "string"
+          },
+          "key_risks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk_mitigation_actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Summary of tax risks",
+        "required": true
+      },
+      "compliance_status": {
+        "type": "object",
+        "properties": {
+          "all_filings_current": {
+            "type": "boolean"
+          },
+          "outstanding_obligations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "upcoming_deadlines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Tax compliance status overview",
+        "required": true
+      },
+      "year_over_year_comparison": {
+        "type": "object",
+        "properties": {
+          "current_period": {
+            "type": "number"
+          },
+          "previous_period": {
+            "type": "number"
+          },
+          "change_amount": {
+            "type": "number"
+          },
+          "change_percentage": {
+            "type": "number"
+          }
+        },
+        "description": "Comparison with previous period",
+        "required": false
+      },
+      "action_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "item": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            },
+            "owner": {
+              "type": "string"
+            },
+            "deadline": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "item",
+            "priority"
+          ]
+        },
+        "description": "Action items requiring board/management attention",
+        "required": false
+      },
+      "outlook": {
+        "type": "string",
+        "description": "Forward-looking outlook on tax position",
+        "required": false
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191441",
+    "updated_at": "2025-10-20T11:17:14.191442",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 12
+  },
+  {
+    "id": "82d9daef-ff96-482d-9560-5cda624a9da7",
+    "name": "smart_contract_tax_analysis",
+    "description": "Tax analysis and classification of cryptocurrency and smart contract transactions",
+    "type": "extraction",
+    "category": "tax",
+    "text": {
+      "transaction_type": {
+        "type": "string",
+        "description": "Type of crypto transaction (DeFi, NFT, staking, yield farming, etc.)",
+        "required": true
+      },
+      "smart_contract_address": {
+        "type": "string",
+        "description": "Blockchain address of the smart contract",
+        "required": false
+      },
+      "blockchain": {
+        "type": "string",
+        "description": "Blockchain platform (Ethereum, BSC, Polygon, etc.)",
+        "required": true
+      },
+      "transaction_summary": {
+        "type": "string",
+        "description": "Plain-language summary of what the transaction does",
+        "required": true
+      },
+      "tax_classification": {
+        "type": "string",
+        "description": "Polish tax classification of the transaction",
+        "required": true
+      },
+      "tax_event_type": {
+        "type": "string",
+        "description": "Type of taxable event (income, capital gain, exchange, etc.)",
+        "required": true
+      },
+      "taxable_moment": {
+        "type": "string",
+        "description": "When the tax obligation arises (e.g., 'at claim', 'at receipt', 'at sale')",
+        "required": true
+      },
+      "applicable_tax_provisions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "provision": {
+              "type": "string"
+            },
+            "interpretation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provision",
+            "interpretation"
+          ]
+        },
+        "description": "Applicable Polish tax law provisions",
+        "required": true
+      },
+      "income_calculation_method": {
+        "type": "string",
+        "description": "How to calculate taxable income from this transaction",
+        "required": true
+      },
+      "valuation_method": {
+        "type": "string",
+        "description": "Method for valuing crypto assets (e.g., market price at transaction time)",
+        "required": true
+      },
+      "comparable_precedents": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "case_description": {
+              "type": "string"
+            },
+            "ruling": {
+              "type": "string"
+            },
+            "relevance": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "case_description"
+          ]
+        },
+        "description": "Similar cases or interpretations from Poland or abroad",
+        "required": false
+      },
+      "uncertainty_areas": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "issue": {
+              "type": "string"
+            },
+            "risk_level": {
+              "type": "string"
+            },
+            "recommended_approach": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "issue",
+            "risk_level"
+          ]
+        },
+        "description": "Areas of legal uncertainty and risk",
+        "required": false
+      },
+      "reporting_requirements": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "requirement": {
+              "type": "string"
+            },
+            "form": {
+              "type": "string"
+            },
+            "deadline": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "requirement"
+          ]
+        },
+        "description": "Tax reporting requirements for this transaction type",
+        "required": true
+      },
+      "documentation_needed": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Documentation that should be retained for tax purposes",
+        "required": true
+      },
+      "international_considerations": {
+        "type": "string",
+        "description": "Cross-border or international tax considerations",
+        "required": false
+      },
+      "risk_assessment": {
+        "type": "string",
+        "description": "Overall risk assessment for this tax treatment (low, medium, high)",
+        "required": true
+      },
+      "recommendations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Recommendations for tax treatment and compliance",
+        "required": true
+      }
+    },
+    "dates": {},
+    "created_at": "2025-10-20T11:17:14.191459",
+    "updated_at": "2025-10-20T11:17:14.191460",
+    "user_id": null,
+    "schema_version": 1,
+    "visual_metadata": {},
+    "last_edited_mode": "ai",
+    "field_count": 17
+  }
+]

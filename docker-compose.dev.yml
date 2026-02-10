@@ -1,0 +1,204 @@
+# docker-compose.dev.yml
+# Development Legal AI / AI-Tax Application Services
+#
+# This file contains only application-specific services for development.
+# Shared infrastructure (PostgreSQL, Redis, ClickHouse, MinIO, Langfuse) is in docker-compose.shared.yml
+#
+# CHANGE: Application services now JOIN the external shared_network for direct infrastructure access
+#
+# INDEPENDENT STACK USAGE:
+#   1. Create external network (one-time):
+#      docker network create ai-tax-shared-network
+#
+#   2. Start shared services once:
+#      docker compose -f docker-compose.shared.yml up -d
+#
+#   3. Start development services independently:
+#      docker compose -f docker-compose.dev.yml up -d
+#
+#   4. Stop development without affecting shared services:
+#      docker compose -f docker-compose.dev.yml down
+#
+# COMBINED USAGE (legacy):
+#   docker compose -f docker-compose.shared.yml -f docker-compose.dev.yml up -d
+#
+# Features:
+# - Hot reload for frontend and backend
+# - Development-specific volumes for code mounting
+# - Exposed ports for direct access
+# - Development environment variables
+# - Direct infrastructure access via shared_network
+
+services:
+  # ============================================================================
+  # Application Services (Development)
+  # ============================================================================
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: ai-tax-frontend-dev
+    ports:
+      - "3007:3000"
+    restart: unless-stopped
+    user: "1000:1000"  # Run as host user for proper file permissions
+    entrypoint: []
+    command: ["npx", "next", "dev"]
+    env_file:
+      - .env
+      - .env.secrets
+      - .env.dev
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8004}
+      - API_BASE_URL=http://backend-dev:8080
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next  # Keep .next in container to avoid permission issues
+    labels:
+      - "com.legal-ai.service=application"
+      - "com.legal-ai.service.type=frontend"
+      - "com.legal-ai.environment=development"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-dev-network
+      # Frontend doesn't need shared_network - only talks to backend
+
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: ai-tax-backend-dev
+    ports:
+      - "8004:8080"
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.secrets
+      - .env.dev
+    environment:
+      - PYTHON_ENV=development
+      # Langfuse connection settings
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+      # Redis Configuration - uses native Docker DNS via shared_network
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_AUTH=${REDIS_AUTH}
+      # All credentials and connection strings loaded from env_file:
+      # - .env (structure/placeholders)
+      # - .env.secrets (actual credentials)
+      # - .env.dev (development overrides)
+      #
+      # Note: Supabase is external service (not in docker)
+      - HF_HOME=/tmp/hf
+      - HF_HUB_CACHE=/tmp/hf/hub
+      - TRANSFORMERS_CACHE=/tmp/hf/transformers
+    tty: true
+    volumes:
+      - ./backend:/app
+      - hf-cache-dev:/tmp/hf
+    labels:
+      - "com.legal-ai.service=application"
+      - "com.legal-ai.service.type=backend-api"
+      - "com.legal-ai.environment=development"
+    depends_on:
+      - backend-worker-dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-dev-network
+      - shared_network  # CHANGE: Added to access Redis, DB, etc. directly
+
+  backend-worker-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: ai-tax-backend-worker-dev
+    command: celery -A app.workers worker --loglevel=info
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.secrets
+      - .env.dev
+    environment:
+      - PYTHON_ENV=development
+      # Langfuse connection settings
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+      # Redis Configuration - uses native Docker DNS via shared_network
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_AUTH=${REDIS_AUTH}
+      # All credentials and connection strings loaded from env_file:
+      # - .env (structure/placeholders)
+      # - .env.secrets (actual credentials)
+      # - .env.dev (development overrides)
+      #
+      # Note: Supabase is external service (not in docker)
+      - HF_HOME=/tmp/hf
+      - HF_HUB_CACHE=/tmp/hf/hub
+      - TRANSFORMERS_CACHE=/tmp/hf/transformers
+    volumes:
+      - ./backend:/app
+      - hf-cache-dev:/tmp/hf
+    labels:
+      - "com.legal-ai.service=application"
+      - "com.legal-ai.service.type=worker"
+      - "com.legal-ai.environment=development"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-dev-network
+      - shared_network  # CHANGE: Added to access Redis directly for Celery
+
+# ==============================================================================
+# Volumes (Development-Specific)
+# ==============================================================================
+
+volumes:
+  # Development cache volumes
+  next-cache-dev:
+    name: ai-tax-next-cache-dev
+    driver: local
+  hf-cache-dev:
+    name: ai-tax-hf-cache-dev
+    driver: local
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+
+networks:
+  # Development application network for inter-service communication
+  app-dev-network:
+    name: ai-tax-app-dev-network
+    driver: bridge
+
+  # CHANGE: Join external shared network for infrastructure access
+  # Must be created manually: docker network create ai-tax-shared-network
+  shared_network:
+    name: ai-tax-shared-network
+    external: true
+
+# ==============================================================================
+# Notes
+# ==============================================================================
+# IMPORTANT CHANGES:
+# - backend and backend-worker now join shared_network
+# - Can access Redis, PostgreSQL, etc. via native Docker DNS (hostname: redis, db)
+# - No more host.docker.internal workaround needed
+# - .env.shared.override is NO LONGER NEEDED
+# - Use standard .env variables (REDIS_HOST=redis, not host.docker.internal)
+#
+# NETWORK ARCHITECTURE:
+# - frontend: app-dev-network only (talks to backend)
+# - backend: app-dev-network + shared_network (talks to frontend + infrastructure)
+# - backend-worker: app-dev-network + shared_network (talks to Redis for Celery)
+# - Redis/DB/etc: shared_network only (infrastructure isolation)
+# ==============================================================================

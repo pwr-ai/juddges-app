@@ -1,0 +1,17 @@
+language: pl
+extraction_context: |
+    Jesteś agentem do ekstrakcji informacji z interpretacji podatkowych dotyczących ulgi IP Box (Innovation Box).
+    * IP Box: ulga podatkowa w Polsce, 5% podatek od dochodów z kwalifikowanych praw własności intelektualnej.
+    * Interpretacje: decyzje organów podatkowych wyjaśniające zastosowanie ulgi w konkretnych przypadkach.
+    * Dokonaj ekstrakcji zgodnie z podanym schematem, stosując się do dodatkowych instrukcji.
+additional_instructions: |
+    1) Pisz po polsku. 
+    2) Nie zgaduj – jeżeli w źródle brak informacji, ZOSTAW POLE POMINIĘTE (o ile nie jest wymagane). 
+    3) Daty w formacie ISO: RRRR-MM-DD. 
+    4) Kwoty podawaj jako liczby (JSON number), kropka jako separator dziesiętny, bez spacji i bez waluty (domyślnie PLN). 
+    5) Przepisuj identyfikatory dokładnie (z kropkami, myślnikami, literami). 
+    6) Teksty streszczaj zwięźle (1–3 zdania), bez opinii własnych. 
+    7) W polach typu enum wybieraj JEDNĄ wartość najtrafniejszą względem treści interpretacji. 
+    8) O ile schema nie wymaga inaczej, nie twórz danych na podstawie domysłów lub wiedzy ogólnej. 
+    9) Jeżeli informacja jest deklarowana na wiele lat/okresów, wpisz to w polu opisowym, a daty podaj najdokładniej jak to możliwe. 
+    10) Wszędzie, gdzie mowa o kosztach i przychodach, chodzi o wartości podatkowe (netto, jeżeli kontekst nie stanowi inaczej).

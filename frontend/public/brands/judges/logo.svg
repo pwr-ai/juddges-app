@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- Scales of Justice for Judges brand -->
+  <circle cx="24" cy="24" r="22" fill="oklch(0.55 0.22 200)" fill-opacity="0.1"/>
+  <g stroke="oklch(0.55 0.22 200)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Left scale -->
+    <path d="M10 28l4-10 4 10c-1.1.8-2.4 1.2-4 1.2s-2.9-.4-4-1.2z"/>
+    <!-- Right scale -->
+    <path d="M30 28l4-10 4 10c-1.1.8-2.4 1.2-4 1.2s-2.9-.4-4-1.2z"/>
+    <!-- Base -->
+    <path d="M16 40h16"/>
+    <!-- Pillar -->
+    <path d="M24 8v32"/>
+    <!-- Beam -->
+    <path d="M8 14h4c2.5 0 6-1.2 12-3 6 1.8 9.5 3 12 3h4"/>
+  </g>
+</svg>

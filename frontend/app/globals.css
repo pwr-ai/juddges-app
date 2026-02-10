@@ -1,0 +1,1335 @@
+@import "tailwindcss";
+@import "../styles/tiptap.css";
+@import "../lib/styles/components.css";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+
+:root {
+  /* Core Colors - Enhanced */
+  --background: oklch(1.00 0 0);
+  --foreground: oklch(0.32 0 0);
+
+  --card: oklch(1.00 0 0);
+  --card-foreground: oklch(0.32 0 0);
+
+  --popover: oklch(1.00 0 0);
+  --popover-foreground: oklch(0.32 0 0);
+
+  /* Primary - More authoritative */
+  --primary: oklch(0.58 0.24 265.00);
+  --primary-foreground: oklch(1.00 0 0);
+
+  --secondary: oklch(0.97 0.00 264.54);
+  --secondary-foreground: oklch(0.45 0.03 256.80);
+
+  --muted: oklch(0.98 0.00 247.84);
+  /* Enhanced Muted - Better contrast */
+  --muted-foreground: oklch(0.60 0.02 264.36);
+
+  --accent: oklch(0.95 0.03 236.82);
+  --accent-foreground: oklch(0.38 0.14 265.52);
+
+  /* Functional Colors - Better contrast */
+  --destructive: oklch(0.64 0.21 25.33);
+  --destructive-foreground: oklch(1.00 0 0);
+
+  --success: oklch(0.65 0.18 145.00);
+  --warning: oklch(0.75 0.15 85.00);
+  --error: oklch(0.62 0.23 25.00);
+  --info: oklch(0.60 0.20 230.00);
+
+  --border: oklch(0.93 0.01 264.53);
+  --input: oklch(0.93 0.01 264.53);
+  --ring: oklch(0.62 0.19 259.81);
+
+  /* Document Type Colors */
+  --judgment: oklch(0.55 0.20 260.00);
+  --interpretation: oklch(0.58 0.18 45.00);
+  --document: oklch(0.52 0.12 180.00);
+
+  /* Chart Colors - More distinct */
+  --chart-1: oklch(0.62 0.19 259.81);
+  --chart-2: oklch(0.65 0.22 150.00);
+  --chart-3: oklch(0.70 0.20 45.00);
+  --chart-4: oklch(0.55 0.22 25.00);
+  --chart-5: oklch(0.60 0.15 200.00);
+  --chart-6: oklch(0.68 0.18 320.00);
+
+  --sidebar: oklch(0.98 0.00 247.84);
+  --sidebar-foreground: oklch(0.32 0 0);
+  --sidebar-primary: oklch(0.62 0.19 259.81);
+  --sidebar-primary-foreground: oklch(1.00 0 0);
+  --sidebar-accent: oklch(0.95 0.03 236.82);
+  --sidebar-accent-foreground: oklch(0.38 0.14 265.52);
+  --sidebar-border: oklch(0.93 0.01 264.53);
+  --sidebar-ring: oklch(0.62 0.19 259.81);
+
+  --font-sans: Inter, sans-serif;
+  --font-serif: Source Serif 4, serif;
+  --font-mono: JetBrains Mono, monospace;
+  --radius: 0.375rem;
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+}
+
+.dark {
+  --background: oklch(0.20 0 0);
+  --foreground: oklch(0.92 0 0);
+
+  --card: oklch(0.25 0 0);
+  --card-foreground: oklch(0.92 0 0);
+
+  --popover: oklch(0.27 0 0);
+  --popover-foreground: oklch(0.92 0 0);
+
+  --primary: oklch(0.65 0.24 265.00);
+  --primary-foreground: oklch(1.00 0 0);
+
+  --secondary: oklch(0.27 0 0);
+  --secondary-foreground: oklch(0.92 0 0);
+
+  --muted: oklch(0.27 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+
+  --accent: oklch(0.38 0.14 265.52);
+  --accent-foreground: oklch(0.88 0.06 254.13);
+
+  --destructive: oklch(0.64 0.21 25.33);
+  --destructive-foreground: oklch(1.00 0 0);
+
+  --success: oklch(0.70 0.18 145.00);
+  --warning: oklch(0.78 0.15 85.00);
+  --error: oklch(0.68 0.23 25.00);
+  --info: oklch(0.65 0.20 230.00);
+
+  /* Enhanced border visibility in dark mode */
+  --border: oklch(0.40 0 0);
+  --input: oklch(0.40 0 0);
+  --ring: oklch(0.62 0.19 259.81);
+
+  --chart-1: oklch(0.71 0.14 254.62);
+  --chart-2: oklch(0.62 0.19 259.81);
+  --chart-3: oklch(0.55 0.22 262.88);
+  --chart-4: oklch(0.49 0.22 264.38);
+  --chart-5: oklch(0.42 0.18 265.64);
+
+  --sidebar: oklch(0.20 0 0);
+  --sidebar-foreground: oklch(0.92 0 0);
+  --sidebar-primary: oklch(0.62 0.19 259.81);
+  --sidebar-primary-foreground: oklch(1.00 0 0);
+  --sidebar-accent: oklch(0.38 0.14 265.52);
+  --sidebar-accent-foreground: oklch(0.88 0.06 254.13);
+  --sidebar-border: oklch(0.37 0 0);
+  --sidebar-ring: oklch(0.62 0.19 259.81);
+
+  --font-sans: Inter, sans-serif;
+  --font-serif: Source Serif 4, serif;
+  --font-mono: JetBrains Mono, monospace;
+  --radius: 0.375rem;
+
+  /* Better shadow definition in dark mode */
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.20);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.20);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.20), 0 1px 2px -1px hsl(0 0% 0% / 0.20);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.20), 0 2px 4px -1px hsl(0 0% 0% / 0.20);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.25), 0 4px 6px -1px hsl(0 0% 0% / 0.25);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.30), 0 8px 10px -1px hsl(0 0% 0% / 0.30);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.30), 0 12px 16px -1px hsl(0 0% 0% / 0.30);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.40);
+}
+
+/* ============================================
+   BRAND-SPECIFIC CSS VARIABLE OVERRIDES
+   ============================================
+   Each brand has its own primary color scheme.
+   Set via NEXT_PUBLIC_BRAND env variable and
+   applied via data-brand attribute on <html>.
+   ============================================ */
+
+/* Judges Brand - Teal Theme */
+[data-brand="judges"] {
+  --primary: oklch(0.55 0.22 200.00);
+  --ring: oklch(0.55 0.22 200.00);
+  --accent: oklch(0.90 0.05 200.00);
+  --accent-foreground: oklch(0.35 0.15 200.00);
+  --sidebar-primary: oklch(0.55 0.22 200.00);
+  --sidebar-ring: oklch(0.55 0.22 200.00);
+  --chart-1: oklch(0.55 0.22 200.00);
+}
+
+[data-brand="judges"].dark,
+.dark[data-brand="judges"] {
+  --primary: oklch(0.62 0.22 200.00);
+  --ring: oklch(0.55 0.22 200.00);
+  --accent: oklch(0.32 0.12 200.00);
+  --accent-foreground: oklch(0.85 0.08 200.00);
+  --sidebar-primary: oklch(0.55 0.22 200.00);
+  --sidebar-ring: oklch(0.55 0.22 200.00);
+  --chart-1: oklch(0.62 0.18 200.00);
+}
+
+/* AI-Tax Brand - Purple Theme (Default) */
+/* Already the default in :root, but explicit for clarity */
+[data-brand="ai-tax"] {
+  --primary: oklch(0.58 0.24 265.00);
+  --ring: oklch(0.62 0.19 259.81);
+  --accent: oklch(0.95 0.03 236.82);
+  --accent-foreground: oklch(0.38 0.14 265.52);
+  --sidebar-primary: oklch(0.62 0.19 259.81);
+  --sidebar-ring: oklch(0.62 0.19 259.81);
+  --chart-1: oklch(0.62 0.19 259.81);
+}
+
+[data-brand="ai-tax"].dark,
+.dark[data-brand="ai-tax"] {
+  --primary: oklch(0.65 0.24 265.00);
+  --ring: oklch(0.62 0.19 259.81);
+  --accent: oklch(0.38 0.14 265.52);
+  --accent-foreground: oklch(0.88 0.06 254.13);
+  --sidebar-primary: oklch(0.62 0.19 259.81);
+  --sidebar-ring: oklch(0.62 0.19 259.81);
+  --chart-1: oklch(0.71 0.14 254.62);
+}
+
+/* Legal AI Brand - Deep Blue Theme */
+[data-brand="legal-ai"] {
+  --primary: oklch(0.60 0.20 240.00);
+  --ring: oklch(0.60 0.20 240.00);
+  --accent: oklch(0.92 0.04 240.00);
+  --accent-foreground: oklch(0.38 0.14 240.00);
+  --sidebar-primary: oklch(0.60 0.20 240.00);
+  --sidebar-ring: oklch(0.60 0.20 240.00);
+  --chart-1: oklch(0.60 0.20 240.00);
+}
+
+[data-brand="legal-ai"].dark,
+.dark[data-brand="legal-ai"] {
+  --primary: oklch(0.68 0.20 240.00);
+  --ring: oklch(0.60 0.20 240.00);
+  --accent: oklch(0.35 0.12 240.00);
+  --accent-foreground: oklch(0.85 0.08 240.00);
+  --sidebar-primary: oklch(0.60 0.20 240.00);
+  --sidebar-ring: oklch(0.60 0.20 240.00);
+  --chart-1: oklch(0.68 0.16 240.00);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Functional colors */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  --color-judgment: var(--judgment);
+  --color-interpretation: var(--interpretation);
+  --color-document: var(--document);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+
+  /* Semantic Page Width Tokens (2025 Best Practices) */
+  --max-width-page-narrow: 48rem;    /* 768px - For chat, forms, focused content */
+  --max-width-page-compact: 60rem;   /* 960px - For profiles, narrow content */
+  --max-width-page-medium: 75rem;    /* 1200px - For search pages, medium content */
+  --max-width-page: 100rem;          /* 1600px - Standard page width */
+  --max-width-page-wide: 112.5rem;   /* 1800px - For data tables, statistics */
+  --max-width-page-full: 125rem;     /* 2000px - For search results, wide layouts */
+  --max-width-page-xl: 120rem;       /* 1920px - For visualizations */
+}
+
+
+/* Resizable Panel Constraints - Prevent overflow between panels */
+[data-slot="resizable-panel"] {
+  overflow: hidden !important;
+  max-width: 100% !important;
+  position: relative !important;
+}
+
+[data-slot="resizable-panel"] > * {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Enhanced typography utilities */
+  h1 {
+    @apply scroll-m-20 text-4xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply scroll-m-20 text-3xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply scroll-m-20 text-2xl font-semibold tracking-tight;
+  }
+
+  h4 {
+    @apply scroll-m-20 text-xl font-semibold tracking-tight;
+  }
+
+  p {
+    @apply leading-7;
+  }
+
+  /* Legal-specific typography */
+  .text-legal {
+    @apply font-mono tracking-tight;
+  }
+
+  .text-case-number {
+    @apply font-mono text-sm tracking-tighter;
+  }
+
+  /* Display text for hero sections */
+  .text-display {
+    @apply text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight;
+  }
+
+  /* Better line heights for dense legal text */
+  .text-legal-dense {
+    @apply text-sm leading-relaxed;
+  }
+
+  .text-legal-expanded {
+    @apply text-base leading-loose;
+  }
+
+  /* Enhanced focus states */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Button focus enhancement */
+  button:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2;
+  }
+
+  /* Input focus enhancement */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply ring-2 ring-primary/50 ring-offset-0 border-primary;
+  }
+
+  /* Link focus enhancement */
+  a:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2 rounded;
+  }
+
+  /* Card focus enhancement */
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 rounded-lg;
+  }
+}
+
+/* Landing page animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Glassmorphism styles for search page */
+@layer components {
+  /* Page background for glassmorphism effect */
+  .glass-page-background {
+    position: relative;
+    min-height: 100vh;
+    /* Refined gradient background with extremely subtle color blobs - barely visible, no purple, slightly darker */
+    background:
+      radial-gradient(circle at 85% 15%, rgba(219, 234, 254, 0.015) 0, transparent 55%),
+      radial-gradient(circle at 80% 85%, rgba(199, 210, 254, 0.01) 0, transparent 55%),
+      linear-gradient(135deg, #fefefe 0%, #fbfbfc 50%, #f9f9fa 100%);
+    background-attachment: fixed;
+  }
+
+  .dark .glass-page-background {
+    /* Dark mode version with refined colors - extremely subtle, no purple, slightly darker */
+    background:
+      radial-gradient(circle at 85% 15%, rgba(30, 58, 138, 0.015) 0, transparent 55%),
+      radial-gradient(circle at 80% 85%, rgba(55, 48, 163, 0.01) 0, transparent 55%),
+      linear-gradient(135deg, #0e0c16 0%, #14121e 50%, #191722 100%);
+    background-attachment: fixed;
+  }
+
+  /* Optional noise overlay */
+  .app-noise-overlay {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    opacity: 0.05;
+    mix-blend-mode: soft-light;
+    z-index: 0;
+  }
+
+  /* Glassmorphism card base - Enhanced 2.0 */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 
+      0 20px 50px rgba(15, 23, 42, 0.12),
+      0 10px 25px rgba(99, 102, 241, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+  }
+
+  .dark .glass-card {
+    background: rgba(30, 27, 46, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+      0 20px 50px rgba(0, 0, 0, 0.5),
+      0 10px 25px rgba(99, 102, 241, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
+  }
+
+
+  /* Hero card (Search Configuration) */
+  .glass-card--hero {
+    padding: 20px 24px;
+  }
+
+  /* Tile cards (Example queries) */
+  .glass-card--tile {
+    padding: 18px 20px;
+  }
+
+  /* Neomorphic chips */
+  .neo-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow:
+      4px 4px 10px rgba(15, 23, 42, 0.09),
+      -3px -3px 8px rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    font-weight: 500;
+    color: #111827;
+    cursor: pointer;
+    transition: box-shadow 0.18s ease, transform 0.18s ease,
+                background 0.18s ease, color 0.18s ease;
+  }
+
+  .dark .neo-chip {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      4px 4px 10px rgba(0, 0, 0, 0.3),
+      -3px -3px 8px rgba(255, 255, 255, 0.05);
+    color: #f3f4f6;
+  }
+
+  .neo-chip:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      6px 6px 14px rgba(15, 23, 42, 0.12),
+      -4px -4px 10px rgba(255, 255, 255, 0.95);
+  }
+
+  .dark .neo-chip:hover {
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.4),
+      -4px -4px 10px rgba(255, 255, 255, 0.08);
+  }
+
+  /* Active/pressed state - "Tinted Ink" Style (Precision Indicator) */
+  .neo-chip--active {
+    /* 1. Faint Blue Tint Background (not solid white - removes "Input Field" look) */
+    background-color: rgba(59, 130, 246, 0.1) !important; /* 10% Blue Tint */
+    
+    /* 2. The Precision Edge */
+    border-color: #3B82F6 !important; /* Royal Blue */
+    border-width: 1px;
+    
+    /* 3. High Contrast Text */
+    color: #1E3A8A !important; /* Deep Navy Blue (Authority) */
+    font-weight: 600;
+    
+    /* 4. Remove Shadows - Active chips are "locked in", not floating */
+    box-shadow: none !important;
+    
+    /* Remove scale transform */
+    transform: none;
+  }
+
+  /* Fix the Checkmark Icon color to match text */
+  .neo-chip--active svg {
+    color: #2563EB !important; /* Slightly brighter blue for the icon */
+  }
+
+  .dark .neo-chip--active {
+    /* Dark mode: Slightly brighter blue tint for visibility */
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    border-color: #3B82F6 !important;
+    color: #93C5FD !important; /* Lighter blue for dark mode readability */
+    font-weight: 600;
+    box-shadow: none !important;
+    transform: none;
+  }
+
+  .dark .neo-chip--active svg {
+    color: #60A5FA !important; /* Brighter blue for dark mode icons */
+  }
+
+  /* Compact chips for popular searches */
+  .neo-chip--compact {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Glass search input */
+  .glass-search-input {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 14px;
+    outline: none;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+    transition: all 0.18s ease;
+  }
+
+  .dark .glass-search-input {
+    background: rgba(30, 27, 46, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .glass-search-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .glass-search-input:focus-visible {
+    border-color: #a855f7;
+    box-shadow:
+      0 0 0 1px rgba(168, 85, 247, 0.4),
+      0 12px 32px rgba(168, 85, 247, 0.25);
+  }
+
+  .dark .glass-search-input:focus-visible {
+    border-color: #a855f7;
+    box-shadow:
+      0 0 0 1px rgba(168, 85, 247, 0.5),
+      0 12px 32px rgba(168, 85, 247, 0.3);
+  }
+
+  /* Clean Blue Button - Simple and Effective */
+  .glass-button {
+    /* 1. GEOMETRY */
+    padding: 0 24px;
+    min-height: 48px;
+    height: 48px;
+    border-radius: 12px;
+    outline: none;
+    cursor: pointer;
+    
+    /* 2. THE MATERIAL (Clean Blue Gradient) */
+    background: linear-gradient(
+      180deg, 
+      #3B82F6 0%,   /* Blue 500 */
+      #2563EB 100%  /* Blue 600 */
+    );
+    
+    /* 3. SIMPLE SHADOWS */
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+      0 4px 12px rgba(37, 99, 235, 0.3);
+    
+    /* 4. THE EDGE */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    
+    /* Typography */
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    
+    /* Physics */
+    transition: all 0.2s ease;
+  }
+
+  .dark .glass-button {
+    background: linear-gradient(
+      180deg, 
+      #2563EB 0%,   /* Blue 600 */
+      #1E40AF 100%  /* Blue 700 */
+    );
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+      0 4px 12px rgba(30, 64, 175, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  /* Size variants for glass-button */
+  .glass-button.h-9 {
+    min-height: 36px;
+    height: 36px;
+    padding: 0 20px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  .glass-button.h-12 {
+    min-height: 48px;
+    height: 48px;
+    padding: 0 24px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  .glass-button.h-14 {
+    min-height: 56px;
+    height: 56px;
+    padding: 0 28px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+
+  .glass-button.h-16 {
+    min-height: 64px;
+    height: 64px;
+    padding: 0 32px;
+    font-size: 17px;
+    border-radius: 16px;
+  }
+
+  /* Full width variant */
+  .glass-button.w-full {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  /* HOVER STATE */
+  .glass-button:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(
+      180deg, 
+      #60A5FA 0%,   /* Blue 400 */
+      #3B82F6 100%  /* Blue 500 */
+    );
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
+      0 6px 16px rgba(37, 99, 235, 0.4);
+  }
+
+  .dark .glass-button:hover {
+    background: linear-gradient(
+      180deg, 
+      #3B82F6 0%, 
+      #2563EB 100%
+    );
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+      0 6px 16px rgba(30, 64, 175, 0.5);
+  }
+
+  /* ACTIVE STATE */
+  .glass-button:active {
+    transform: translateY(0) scale(0.98);
+    background: #2563EB;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .glass-button:active {
+    background: #1E40AF;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .glass-button:focus-visible {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.4),
+      inset 0 -2px 0 0 rgba(0, 0, 0, 0.1),
+      0 0 0 2px #ffffff,
+      0 0 0 4px rgba(29, 78, 216, 0.5),
+      0 10px 20px -5px rgba(29, 78, 216, 0.4),
+      0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .glass-button:disabled,
+  .glass-button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Example card hover */
+  .example-card {
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .example-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+  }
+
+  .dark .example-card:hover {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes text-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Search loading animations */
+@keyframes shuffle-front {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0px);
+    opacity: 1;
+  }
+  50% {
+    transform: rotate(2deg) translateY(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes shuffle-mid {
+  0%, 100% {
+    transform: rotate(1deg) translateX(4px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: rotate(-1deg) translateX(2px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes shuffle-back {
+  0%, 100% {
+    transform: rotate(-3deg) translateX(8px);
+    opacity: 0.4;
+  }
+  50% {
+    transform: rotate(-2deg) translateX(6px);
+    opacity: 0.5;
+  }
+}
+
+@keyframes progress-shimmer {
+  0% {
+    width: 0%;
+    background-position: -200% 0;
+  }
+  90% {
+    width: 85%;
+  }
+  100% {
+    width: 90%;
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Floating Crystal Prism Dropdown Animation */
+@keyframes dropdown-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes dropdown-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.6s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    to right,
+    oklch(var(--muted) / 0.5) 0%,
+    oklch(var(--muted-foreground) / 0.2) 50%,
+    oklch(var(--muted) / 0.5) 100%
+  );
+  background-size: 1000px 100%;
+}
+
+.animate-shimmer-slide {
+  animation: shimmer-slide 3s ease-in-out infinite;
+}
+
+.animate-text-shimmer {
+  animation: text-shimmer 3s ease-in-out infinite;
+}
+
+/* Search loading animation classes */
+.animate-shuffle-front {
+  animation: shuffle-front 2.5s ease-in-out infinite;
+}
+
+.animate-shuffle-mid {
+  animation: shuffle-mid 2.5s ease-in-out infinite 0.3s;
+}
+
+.animate-shuffle-back {
+  animation: shuffle-back 2.5s ease-in-out infinite 0.6s;
+}
+
+.animate-progress-shimmer {
+  animation: progress-shimmer 15s ease-out forwards;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.animate-fade-out-down {
+  animation: fade-out-down 300ms ease-in forwards;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer::after,
+  .animate-shuffle-front,
+  .animate-shuffle-mid,
+  .animate-shuffle-back,
+  .animate-pulse-ring {
+    animation: none;
+  }
+  
+  .animate-shimmer {
+    opacity: 0.7;
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ============================================
+   RTL (RIGHT-TO-LEFT) LANGUAGE SUPPORT
+   ============================================
+   Applied when html[dir="rtl"] is set by LanguageProvider
+   Supports Arabic, Hebrew, and other RTL languages
+   ============================================ */
+
+/* Base RTL text alignment */
+html[dir="rtl"] {
+  text-align: right;
+}
+
+/* RTL-aware margin and padding utilities */
+html[dir="rtl"] .ml-auto { margin-right: auto; margin-left: 0; }
+html[dir="rtl"] .mr-auto { margin-left: auto; margin-right: 0; }
+
+/* Flip directional icons in RTL mode */
+html[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* RTL-aware flexbox */
+html[dir="rtl"] .flex-row { flex-direction: row-reverse; }
+html[dir="rtl"] .rtl-flex-row-reverse { flex-direction: row; }
+
+/* Sidebar RTL adjustments */
+html[dir="rtl"] [data-sidebar="sidebar"] {
+  border-left: 1px solid var(--sidebar-border);
+  border-right: 0;
+}
+
+html[dir="rtl"] [data-sidebar="menu-button"] {
+  text-align: right;
+}
+
+/* Search input RTL */
+html[dir="rtl"] .glass-search-input {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Dropdown menu RTL positioning */
+html[dir="rtl"] [data-slot="dropdown-menu-content"] {
+  text-align: right;
+}
+
+/* Card and panel RTL adjustments */
+html[dir="rtl"] .glass-card {
+  text-align: right;
+}
+
+/* Icon positioning in RTL */
+html[dir="rtl"] .icon-left {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+html[dir="rtl"] .icon-right {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* Navigation arrows flip in RTL */
+html[dir="rtl"] .nav-arrow,
+html[dir="rtl"] .chevron-right,
+html[dir="rtl"] .arrow-right {
+  transform: scaleX(-1);
+}
+
+/* List markers RTL */
+html[dir="rtl"] ul,
+html[dir="rtl"] ol {
+  padding-right: 1.5rem;
+  padding-left: 0;
+}
+
+/* Form elements RTL */
+html[dir="rtl"] input,
+html[dir="rtl"] textarea,
+html[dir="rtl"] select {
+  text-align: right;
+}
+
+/* Table RTL */
+html[dir="rtl"] table {
+  direction: rtl;
+}
+
+html[dir="rtl"] th,
+html[dir="rtl"] td {
+  text-align: right;
+}
+
+/* Breadcrumb separator flip */
+html[dir="rtl"] .breadcrumb-separator {
+  transform: scaleX(-1);
+}
+
+/* Progress bar RTL */
+html[dir="rtl"] [role="progressbar"] {
+  direction: rtl;
+}
+
+/* Tooltip positioning RTL */
+html[dir="rtl"] [data-slot="tooltip-content"][data-side="right"] {
+  left: auto;
+  right: 100%;
+}
+
+html[dir="rtl"] [data-slot="tooltip-content"][data-side="left"] {
+  right: auto;
+  left: 100%;
+}
+
+/* Chat bubbles RTL */
+html[dir="rtl"] .chat-message-user {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+html[dir="rtl"] .chat-message-assistant {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+/* Smooth RTL transition */
+html {
+  transition: direction 0.3s ease;
+}
+
+/* RTL transition for layout elements */
+.rtl-transition {
+  transition: transform 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+}
+
+/* Ensure proper text rendering for RTL languages */
+html[dir="rtl"] {
+  font-feature-settings: "rtla" 1;
+}
+
+/* RTL scrollbar positioning (webkit) */
+html[dir="rtl"]::-webkit-scrollbar {
+  direction: rtl;
+}
+
+/* Fix button icon alignment in RTL */
+html[dir="rtl"] button svg + span,
+html[dir="rtl"] button span + svg {
+  margin-right: 0.5rem;
+  margin-left: 0;
+}
+
+html[dir="rtl"] button svg:first-child:not(:only-child) {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+/* Badge positioning RTL */
+html[dir="rtl"] .badge-right {
+  left: 0;
+  right: auto;
+}
+
+html[dir="rtl"] .badge-left {
+  right: 0;
+  left: auto;
+}
+
+/* Modal/Dialog RTL close button */
+html[dir="rtl"] [data-slot="dialog-close"] {
+  left: 1rem;
+  right: auto;
+}
+
+/* Notification/Toast RTL */
+html[dir="rtl"] [data-slot="toast"] {
+  text-align: right;
+}
+
+/* Command palette RTL */
+html[dir="rtl"] [data-slot="command-input"] {
+  text-align: right;
+  direction: rtl;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: oklch(var(--muted) / 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--muted-foreground) / 0.3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--muted-foreground) / 0.5);
+}
+
+/* Modern Dropdown Menu Item Styles */
+[data-slot="dropdown-menu-item"][data-highlighted],
+[data-slot="dropdown-menu-item"][data-highlighted]:focus,
+[data-slot="dropdown-menu-item"]:focus,
+[data-slot="dropdown-menu-item"]:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Print styles for extraction results */
+@media print {
+  /* Ensure extraction components print properly */
+  [class*="ExtractionDataViewer"],
+  [class*="ExtractionFieldRenderer"],
+  [class*="ExtractionArrayRenderer"],
+  [class*="ExtractionObjectRenderer"] {
+    page-break-inside: avoid;
+  }
+
+  /* Hide interactive buttons in extraction components */
+  [class*="Extraction"] button,
+  [class*="Extraction"] [role="button"] {
+    display: none !important;
+  }
+
+  /* Ensure tables print properly */
+  [class*="DataTable"] table {
+    page-break-inside: auto;
+  }
+
+  [class*="DataTable"] thead {
+    display: table-header-group !important;
+  }
+
+  [class*="DataTable"] tbody {
+    display: table-row-group !important;
+  }
+
+  [class*="DataTable"] tr {
+    page-break-inside: avoid;
+  }
+}
+
+/* ============================================
+   LEGAL GLASS 2.0 - ICON PROTOCOL (STROKE-BASED RENDERING)
+   ============================================ */
+
+/* Legal Glass 2.0: All sidebar icons must be stroke-based */
+/* Canvas Size: 1.25rem x 1.25rem (20px) - handled by [&>svg]:size-5 */
+/* Fill Rule: fill="none" (MANDATORY) */
+/* Color Rule: stroke="currentColor" (inherits text color) */
+
+/* Idle State: Stroke Width = 1.5 (Thin/Elegant) */
+[data-sidebar="menu-button"] svg,
+[data-sidebar="menu-button"] > a svg {
+  fill: none !important; /* MANDATORY: No fill allowed */
+  stroke: currentColor !important; /* Inherits text color */
+  stroke-width: 1.5 !important; /* Idle: Thin/Elegant */
+}
+
+/* Active State: Stroke Width = 2.5 (Bold/Emphasized) */
+[data-sidebar="menu-button"][data-active="true"] svg,
+[data-sidebar="menu-button"][data-active="true"] > a svg,
+[data-sidebar="menu-button"][data-active="true"]:hover svg,
+[data-sidebar="menu-button"][data-active="true"]:hover > a svg,
+[data-sidebar="menu-button"][data-active="true"] > a:hover svg {
+  fill: none !important; /* MANDATORY: No fill allowed */
+  stroke: currentColor !important; /* Inherits text color (active state) */
+  stroke-width: 2.5 !important; /* Active: Bold/Emphasized */
+}
+
+/* Light mode active state colors */
+[data-sidebar="menu-button"][data-active="true"] svg,
+[data-sidebar="menu-button"][data-active="true"] > a svg {
+  stroke: #1E40AF !important; /* Royal Blue */
+}
+
+/* Dark mode active state colors */
+.dark [data-sidebar="menu-button"][data-active="true"] svg,
+.dark [data-sidebar="menu-button"][data-active="true"] > a svg {
+  stroke: #60A5FA !important; /* Light Blue */
+}
+
+/* ============================================
+   LEGAL GLASS 2.0 - ICON MODE OVERFLOW FIX
+   ============================================ */
+
+/* Fix disappearing icons in collapsed/icon mode */
+/* SVG overflow must be visible to prevent clipping when stroke width increases on hover */
+[data-sidebar="menu-button"] svg,
+[data-sidebar="menu-button"] > a svg,
+[data-sidebar="menu-item"] svg {
+  overflow: visible !important;
+}
+
+/* Menu items in icon mode need overflow visible and z-index on hover */
+[data-sidebar="menu-item"] {
+  overflow: visible !important;
+}
+
+/* Ensure hovered menu items sit above neighbors */
+[data-sidebar="menu-item"]:hover {
+  z-index: 10;
+  position: relative;
+}
+
+/* Menu button container in icon mode needs overflow visible */
+[data-sidebar="menu-button"] {
+  overflow: visible !important;
+}
+
+/* Force overflow visible on all sidebar containers in icon mode */
+.group[data-collapsible="icon"] [data-sidebar="sidebar"],
+.group[data-collapsible="icon"] [data-sidebar="content"],
+.group[data-collapsible="icon"] [data-sidebar="group"] {
+  overflow: visible !important;
+}
+
+/* Ensure menu items and buttons can overflow on hover with proper z-index */
+[data-sidebar="menu-item"]:hover,
+[data-sidebar="menu-button"]:hover {
+  overflow: visible !important;
+  z-index: 20 !important;
+  position: relative;
+}
+
+/* Ensure icons can overflow their containers on hover */
+[data-sidebar="menu-item"]:hover svg,
+[data-sidebar="menu-button"]:hover svg,
+[data-sidebar="menu-item"]:hover a svg,
+[data-sidebar="menu-button"]:hover a svg {
+  overflow: visible !important;
+}

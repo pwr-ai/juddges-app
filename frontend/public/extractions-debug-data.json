@@ -1,0 +1,198 @@
+[
+  {
+    "document_type": "interpretacja indywidualna",
+    "document_status": "stanowisko w części prawidłowe i w części nieprawidłowe",
+    "application_date": "2022-09-16",
+    "supplement_dates": [
+      "2022-11-23",
+      "2022-12-09",
+      "2022-12-07",
+      "2022-12-13"
+    ],
+    "tax_type": "podatek dochodowy od osób fizycznych (PIT)",
+    "relief_type": "preferencyjne opodatkowanie dochodów z kwalifikowanego prawa własności intelektualnej (IP Box)",
+    "taxpayer_activity": "jednoosobowa działalność gospodarcza w obszarze tworzenia oprogramowania oraz świadczenia usług programistycznych",
+    "activity_start_date": "2022-08",
+    "legal_questions": [
+      {
+        "question_number": 1,
+        "question": "Czy prawa autorskie do Oprogramowania tworzonego samodzielnie w ramach prowadzonej działalności gospodarczej, przedstawione we wniosku, są kwalifikowanymi prawami własności intelektualnej w rozumieniu art. 30ca ust. 2 pkt 8 ustawy o PIT?",
+        "taxpayer_position": "Tak, prawa autorskie do programów komputerowych tworzonych samodzielnie w ramach prowadzonej działalności gospodarczej zaliczają się do kwalifikowanych praw własności intelektualnej",
+        "authority_assessment": "prawidłowe",
+        "legal_basis": [
+          "art. 30ca ust. 2 pkt 8 ustawy o PIT",
+          "art. 74 ustawy o prawie autorskim i prawach pokrewnych",
+          "art. 1 ust. 1 i ust. 2 pkt 1 ustawy o prawie autorskim"
+        ]
+      },
+      {
+        "question_number": 2,
+        "question": "Czy odpłatne przeniesienie przez Wnioskodawcę prawa autorskiego do Oprogramowania w ramach wykonywanych usług programistycznych stanowi sprzedaż kwalifikowanego prawa własności intelektualnej w rozumieniu art. 30ca ust. 7 pkt 2 ustawy o PIT?",
+        "taxpayer_position": "Tak, odpłatne przeniesienie prawa autorskiego do oprogramowania w ramach wykonywanych usług programistycznych stanowi sprzedaż kwalifikowanego prawa własności intelektualnej",
+        "authority_assessment": "prawidłowe",
+        "legal_basis": [
+          "art. 30ca ust. 7 pkt 2 ustawy o PIT"
+        ]
+      },
+      {
+        "question_number": 3,
+        "question": "Czy wydatki ponoszone przez Wnioskodawcę w ramach prowadzonej działalności gospodarczej, w przedstawionym we wniosku opisie, w celu osiągnięcia przychodów lub zachowania albo zabezpieczenia źródła przychodów w rozumieniu art. 22 ust. 1 w zw. z art. 23 ust. 1 ustawy o PIT, należy uznać za koszty do obliczenia wskaźnika Nexus, o których mowa w art. 30ca ust. 4 w zw. z art. 30ca ust. 5 ww. ustawy, na potrzeby wyliczenia kwalifikowanego dochodu z kwalifikowanego prawa własności intelektualnej?",
+        "taxpayer_position": "Tak, ponoszone wydatki, w zakresie w jakim przeznaczane są na wytworzenie danego programu komputerowego, należy uznać za koszty do obliczenia wskaźnika Nexus",
+        "authority_assessment": "nieprawidłowe w części dotyczącej zaliczenia kosztu najmu biura do wskaźnika nexus, prawidłowe w pozostałej części",
+        "legal_basis": [
+          "art. 30ca ust. 4 ustawy o PIT",
+          "art. 30ca ust. 5 ustawy o PIT",
+          "art. 22 ust. 1 ustawy o PIT",
+          "art. 23 ust. 1 ustawy o PIT"
+        ]
+      },
+      {
+        "question_number": 4,
+        "question": "Czy możliwe jest zastosowanie stawki opodatkowania 5% do osiągniętego kwalifikowanego dochodu z kwalifikowanych praw własności intelektualnej, wyliczonego zgodnie z art. 30ca ustawy o PIT w przedstawionym przez Wnioskodawcę opisie?",
+        "taxpayer_position": "Tak, sprzedaż autorskich praw do programu komputerowego w ramach prowadzonej działalności pozwala na opodatkowanie preferencyjną 5% stawką podatkową",
+        "authority_assessment": "prawidłowe",
+        "legal_basis": [
+          "art. 30ca ust. 1 ustawy o PIT"
+        ]
+      }
+    ],
+    "cost_categories": [
+      {
+        "category": "transport",
+        "description": "koszty napraw i eksploatacji roweru, skutera i samochodu",
+        "nexus_eligible": true,
+        "notes": "Koszty paliwa, opon, przeglądu samochodu. Planowane koszty roweru i skutera w przyszłości."
+      },
+      {
+        "category": "najem biura",
+        "description": "czynsz najmu i opłaty za media",
+        "nexus_eligible": false,
+        "notes": "Wydatki związane z nieruchomościami nie mogą być zaliczane do kosztów wskaźnika nexus zgodnie z art. 30ca ust. 5 ustawy o PIT"
+      },
+      {
+        "category": "serwery, domeny i usługi internetowe",
+        "description": "koszty związane z zakupem przestrzeni dyskowej, serwerów, mocy obliczeniowej",
+        "nexus_eligible": true,
+        "notes": "Możliwe wydatki w przyszłości"
+      },
+      {
+        "category": "oprogramowanie biurowe i specjalistyczne",
+        "description": "system operacyjny oraz oprogramowanie specjalistyczne umożliwiające tworzenie, modyfikacje oraz testowanie oprogramowania",
+        "nexus_eligible": true,
+        "notes": "Nie poniesiono jeszcze wydatków z tej kategorii"
+      },
+      {
+        "category": "wyjazdy służbowe",
+        "description": "koszty zakwaterowania oraz wyżywienia",
+        "nexus_eligible": true,
+        "notes": "Nie odbyto jeszcze wyjazdu służbowego, możliwość w przyszłości"
+      },
+      {
+        "category": "usługi telekomunikacyjne i telefon komórkowy",
+        "description": "abonament telefoniczny i Internet",
+        "nexus_eligible": true,
+        "notes": "Nabyto telefon komórkowy dla celów prowadzonych prac rozwojowych"
+      },
+      {
+        "category": "koszty zakupu bibliotek programistycznych",
+        "description": "narzędzia do pracy ze zbiorami danych i uczeniem maszynowym (sztuczną inteligencją)",
+        "nexus_eligible": true,
+        "notes": "Nie poniesiono jeszcze omawianych wydatków"
+      },
+      {
+        "category": "prowadzenie księgowości",
+        "description": "koszty prowadzenia księgowości oraz bieżącej i odrębnej ewidencji ipbox",
+        "nexus_eligible": true,
+        "notes": "Ponoszono co miesiąc koszty prowadzenia księgowości"
+      },
+      {
+        "category": "sprzęt komputerowy i urządzenia peryferyjne",
+        "description": "laptop, myszka, klawiatura, smartwatch, monitor, słuchawki, mikrofon, kamera internetowa, pamięć zewnętrzna",
+        "nexus_eligible": true,
+        "notes": "Poniesiono koszty zakupu słuchawek oraz przełączników do klawiatury"
+      },
+      {
+        "category": "urządzenia i materiały biurowe",
+        "description": "papier do drukarki, długopisy, notatniki, kartki samoprzylepne, organizery na biurko, segregatory, koszulki i wkłady do segregatora",
+        "nexus_eligible": true,
+        "notes": "Poniesiono koszty zakupu drukarki oraz tonerów do niej"
+      },
+      {
+        "category": "książki branżowe i szkolenia",
+        "description": "książki specjalistyczne oraz udział w szkoleniach branżowych służących podniesieniu kwalifikacji",
+        "nexus_eligible": true,
+        "notes": "Planowane wydatki w przyszłości"
+      }
+    ],
+    "nexus_calculation": {
+      "formula": "(a + b) x 1.3 / (a + b + c + d)",
+      "components": {
+        "a": "prowadzona bezpośrednio przez podatnika działalność badawczo-rozwojowa związana z kwalifikowanym prawem własności intelektualnej",
+        "b": "nabycie wyników prac badawczo-rozwojowych związanych z kwalifikowanym prawem własności intelektualnej, innych niż wymienione w lit. d, od podmiotu niepowiązanego",
+        "c": "nabycie wyników prac badawczo-rozwojowych związanych z kwalifikowanym prawem własności intelektualnej, innych niż wymienione w lit. d, od podmiotu powiązanego",
+        "d": "nabycie przez podatnika kwalifikowanego prawa własności intelektualnej"
+      },
+      "excluded_costs": [
+        "odsetki",
+        "opłaty finansowe",
+        "koszty związane z nieruchomościami (w tym najem biura)"
+      ],
+      "maximum_value": 1.0
+    },
+    "tax_rate": {
+      "preferential_rate": "5%",
+      "legal_basis": "art. 30ca ust. 1 ustawy o PIT",
+      "conditions": [
+        "wytwarzanie, rozwijanie lub ulepszanie w ramach pozarolniczej działalności gospodarczej, spełniającej kryteria działalności badawczo-rozwojowej kwalifikowanych praw własności intelektualnej",
+        "uzyskiwanie dochodu z kwalifikowanych prawa własności intelektualnej, które podlegają ochronie prawnej",
+        "określenie wysokości dochodu jaki może być objęty preferencyjną stawką podatku za pomocą wskaźnika Nexus dla każdego kwalifikowanego IP odrębnie",
+        "prowadzenie odrębnej ewidencji związanej z kwalifikowanymi prawami własności intelektualnej"
+      ]
+    },
+    "accounting_requirements": {
+      "separate_records_start_date": "2022-08-02",
+      "requirements": [
+        "wyodrębnienie każdego kwalifikowanego prawa własności intelektualnej",
+        "ustalenie przychodów, kosztów uzyskania przychodów i dochodu (straty) przypadających na każde kwalifikowane prawo",
+        "wyodrębnienie kosztów przypadających na każde prawo w sposób zapewniający określenie kwalifikowanego dochodu"
+      ]
+    },
+    "software_characteristics": {
+      "type": "oprogramowanie komputerowe - sztuczna inteligencja, algorytmy statystyczne i uczące się",
+      "creation_process": "indywidualne, autorskie pomysły opracowywane w odpowiedzi na zgłaszane zapotrzebowanie kontrahenta",
+      "development_stages": [
+        "zapoznanie się z wymaganiami kontrahenta, zbieranie danych oraz ich eksploracyjna analiza, planowanie prac",
+        "praca nad przygotowaniem Oprogramowania",
+        "implementacja jednego lub więcej algorytmów lub modeli oraz wybór ostatecznej ramowej architektury rozwiązania",
+        "optymalizacja, w tym zmiany oraz poprawki związane z wytworzeniem Oprogramowania",
+        "test jakości, sprawności, funkcjonalności i awaryjności Oprogramowania",
+        "przyjęcie przez kontrahenta danego elementu wytworzonego Oprogramowania (wraz z przeniesieniem majątkowych praw autorskich)"
+      ],
+      "copyright_protection": "art. 74 ust. 1 i 2 ustawy o prawie autorskim i prawach pokrewnych",
+      "rights_transfer": "przeniesienie autorskich praw majątkowych na kontrahenta poprzez wgranie kodu źródłowego do repozytorium wskazanego przez kontrahenta"
+    },
+    "research_development_activity": {
+      "qualifies_as_rd": true,
+      "characteristics": [
+        "nowatorskość i twórczość - tworzenie oprogramowania lub jego komponentów od podstaw",
+        "metodyczność - prowadzenie działalności systematycznie oraz uporządkowanie"
+      ],
+      "legal_basis": "art. 4 ust. 3 ustawy Prawo o szkolnictwie wyższym i nauce"
+    },
+    "overall_assessment": {
+      "summary": "Stanowisko wnioskodawcy jest nieprawidłowe w części dotyczącej zaliczenia kosztu najmu biura do wskaźnika nexus, prawidłowe w pozostałej części",
+      "tax_rate_applicable": true,
+      "applicable_from": "2022",
+      "legal_basis_interpretation": "art. 13 § 2a oraz art. 14b § 1 ustawy z dnia 29 sierpnia 1997 r. – Ordynacja podatkowa"
+    },
+    "key_legal_provisions": [
+      "art. 30ca ustawy o podatku dochodowym od osób fizycznych",
+      "art. 30cb ustawy o podatku dochodowym od osób fizycznych",
+      "art. 74 ustawy o prawie autorskim i prawach pokrewnych",
+      "art. 4 ust. 3 ustawy Prawo o szkolnictwie wyższym i nauce",
+      "art. 5a pkt 38, 39, 40 ustawy o PIT",
+      "art. 22 ust. 1 ustawy o PIT",
+      "art. 23 ust. 1 ustawy o PIT"
+    ]
+  }
+]

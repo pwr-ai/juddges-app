@@ -1,0 +1,74 @@
+[
+    {
+        "id": "wyrok_karny_v1",
+        "name": "wyrok_karny",
+        "description": "Schemat ekstrakcji informacji z wyroków karnych, uwzględniający liczbę ofiar i sprawców.",
+        "type": "extraction",
+        "category": "litigation",
+        "text": {
+            "sygnatura": {
+                "type": "string",
+                "description": "Sygnatura akt sprawy",
+                "required": true
+            },
+            "instancja": {
+                "type": "string",
+                "description": "Instancja sądu (np. I instancja, II instancja)",
+                "required": false
+            },
+            "sad": {
+                "type": "string",
+                "description": "Nazwa sądu orzekającego",
+                "required": false
+            },
+            "data_wyroku": {
+                "type": "string",
+                "description": "Data wydania wyroku (RRRR-MM-DD)",
+                "required": false
+            },
+            "kwalifikacja_prawna": {
+                "type": "array",
+                "description": "Lista artykułów kodeksu karnego lub innych ustaw, stanowiących podstawę skazania",
+                "required": true
+            },
+            "opis_czynu": {
+                "type": "string",
+                "description": "Zwięzły opis czynu zabronionego",
+                "required": false
+            },
+            "wymiar_kary": {
+                "type": "string",
+                "description": "Orzeczona kara (np. pozbawienie wolności, grzywna)",
+                "required": false
+            },
+            "liczba_ofiar": {
+                "type": "number",
+                "description": "Liczba ofiar przestępstwa (jeśli wynika z treści)",
+                "required": false
+            },
+            "liczba_sprawcow": {
+                "type": "number",
+                "description": "Liczba oskarżonych/skazanych w danej sprawie (jeśli wynika z treści)",
+                "required": false
+            },
+            "czy_zorganizowana_grupa": {
+                "type": "boolean",
+                "description": "Czy przestępstwo popełniono w zorganizowanej grupie przestępczej",
+                "required": false
+            },
+            "wartosc_szkody": {
+                "type": "string",
+                "description": "Wartość szkody wyrządzonej przestępstwem (np. kwota wyłudzenia)",
+                "required": false
+            }
+        },
+        "dates": {},
+        "created_at": "2025-01-01T12:00:00Z",
+        "updated_at": "2025-01-01T12:00:00Z",
+        "user_id": null,
+        "schema_version": 1,
+        "visual_metadata": {},
+        "last_edited_mode": "manual",
+        "field_count": 11
+    }
+]

@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "juddges"
+version = "0.1.0"
+description = "Juddges App - AI-powered judicial decision search for Polish and UK courts"
+authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+readme = "README.md"
+packages = [
+    { include = "app" },
+    { include = "packages/ai_tax_search" },
+    { include = "packages/schema_generator_agent" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+uvicorn = "^0.23.2"
+gunicorn = "^23.0.0"
+langserve = { extras = ["server"], version = "^0.3.2" }
+langchain = "^0.3"
+langchain-community = "^0.3.19"
+langchain-openai = "^0.3.7"
+ai_tax_search = { path = "packages/ai_tax_search", develop = true }
+schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
+langfuse = "^3.2.3"
+aiohttp = "^3.11.14"
+weaviate-client = "^4.11.1"
+httpx = "^0.27.0"
+supabase = "^2.20.0"
+langgraph-checkpoint-postgres = "^2.0.23"
+psycopg-binary = "^3.2.10"
+celery = { extras = ["redis"], version = "^5.5.3" }
+werkzeug = "^3.1.3"
+slowapi = "^0.1.9"
+redis = "^5.2.0"
+pydantic = "<2.11"
+litellm = "^1.78.0"
+pandas = "^2.2.0"
+openpyxl = "^3.1.0"
+strawberry-graphql = {extras = ["fastapi"], version = "^0.291.3"}
+
+[tool.poetry.group.dev.dependencies]
+langchain-cli = ">=0.0.36"
+jupyterlab = "^4.3.6"
+ruff = "^0.11.0"
+pytest = "^8.3.4"
+pytest-asyncio = "^0.24.0"
+pytest-cov = "^6.0.0"
+poethepoet = "^0.29.0"
+
+[tool.poe.tasks]
+# Test commands
+test = "pytest tests/ -v"
+test-unit = "pytest tests/ -v -m unit"
+test-integration = "pytest tests/ -v -m integration"
+test-search = "pytest tests/test_weaviate_search.py -v"
+test-language = "pytest tests/test_language_search.py -v"
+test-pool = "pytest tests/test_weaviate_pool.py -v"
+test-endpoints = "pytest tests/test_endpoints_pool.py -v"
+test-cov = "pytest tests/ --cov=ai_tax_search --cov-report=html --cov-report=term-missing"
+test-cov-html = "pytest tests/ --cov=ai_tax_search --cov-report=html"
+
+# Code quality commands
+lint = "ruff check ."
+lint-fix = "ruff check . --fix"
+format = "ruff format ."
+format-check = "ruff format . --check"
+
+# Combined commands
+check = ["lint", "format-check"]
+check-all = ["lint", "format-check", "test"]
+ci = ["lint", "format-check"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-ra -q --strict-markers"
+markers = [
+    "integration: marks tests as integration tests (require external services)",
+    "unit: marks tests as unit tests",
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

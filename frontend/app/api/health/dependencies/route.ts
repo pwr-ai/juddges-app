@@ -1,0 +1,50 @@
+/**
+ * Next.js API Route: Health Dependencies Proxy
+ * This route proxies requests to the backend health dependencies endpoint
+ * with server-side API key authentication
+ */
+
+import { NextResponse } from 'next/server';
+
+const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
+const API_KEY = process.env.BACKEND_API_KEY;
+
+export async function GET() {
+  try {
+    if (!API_KEY) {
+      console.error('BACKEND_API_KEY not configured');
+      return NextResponse.json(
+        { error: 'Server configuration error: API key not set' },
+        { status: 500 }
+      );
+    }
+
+    const response = await fetch(`${BACKEND_URL}/health/dependencies`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY,
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Backend error: ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: 200 });
+  } catch (error) {
+    console.error('Failed to fetch dependencies:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to connect to backend',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

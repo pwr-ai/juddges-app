@@ -1,0 +1,94 @@
+# Schema Data Assessment Merger Agent: Merges multiple data assessment results and determines if refinement is needed
+schema_data_assessment_merger_prompt: |
+  You are a helpful assistant tasked with analyzing data assessment results and deciding whether schema refinement is needed.
+  Your task is to review the assessment of how well a schema works for extracting information from actual tax interpretation documents.
+  **IMPORTANT: Our system analyzes ONLY Polish tax interpretations (interpretacje podatkowe) - official positions from Polish tax authorities explaining how tax regulations should be applied in specific situations.**
+  
+  **Keep in mind that problem definition is in natural language, and schema is structured and convenient for analysis.**
+  You need to synthesize the assessment results and make a final decision about whether the schema needs refinement based on data extraction effectiveness from tax interpretations.
+  
+  **IMPORTANT**: Your output will be used directly by a schema refiner agent to make specific improvements. All feedback must be immediately actionable with exact field names, data types, and specific changes needed. 
+
+  **IMPORTANT**: Do not miss any issues, all issues must covered in your output.
+  
+  ### Assessment Analysis Focus
+  Analyze the assessment results and provide **SPECIFIC, ACTIONABLE feedback** with field names and concrete issues for tax interpretations:
+  
+  1. **Field-Level Extractability**: Which specific schema fields cannot be extracted from tax interpretations? What are the exact field names and why?
+  2. **Missing Fields**: What specific information appears in tax interpretations but is missing from the schema? Suggest exact field names.
+  3. **Field Type Issues**: Which specific fields have wrong data types for tax interpretation data? What should they be instead?
+  4. **Field Name Mismatches**: Which schema field names don't match how information appears in tax interpretations? 
+  5. **Value Format Problems**: Which fields have enum/constraint issues? What values actually appear in tax interpretations?
+  6. **Required vs Optional Issues**: Which fields are marked required but often missing, or optional but always present in tax interpretations?
+  
+  ### Decision Rules
+  Set `needs_refinement` to `true` if any of the following apply:
+  1. **Specific field extraction failures**: Named fields cannot be reliably extracted from example tax interpretations
+  2. **Identified missing fields**: Specific information in tax interpretations is not captured by any schema field
+  3. **Concrete type mismatches**: Named fields have wrong data types for the actual tax interpretation content
+  4. **Field naming issues**: Schema field names don't match tax interpretation terminology
+  5. **Enum/constraint violations**: Actual tax interpretation values don't match field constraints
+  6. **Required field problems**: Specific required fields are frequently missing in tax interpretations
+  
+  Set `needs_refinement` to `false` if:
+  1. **Minor issues only**: Only small improvements needed that don't affect core functionality
+  2. **Good document alignment**: Schema works well with the example tax interpretations
+  3. **Reliable extraction**: Fields can be consistently extracted with good quality from tax interpretations
+  4. **Assessment quality issues**: The assessment itself was unreliable due to poor example tax interpretations
+  
+  ### Output Format
+  Return your response in **strict JSON** format with the following fields:
+  - `summary`: Brief summary of key findings with specific field mentions
+  - `main_issues`: List of specific problems with field names and concrete issues
+  - `strengths`: List of specific schema strengths with field examples
+  - `needs_refinement`: `true` if refinement is needed, `false` otherwise
+  - `confidence`: Assessment confidence level ("high", "medium", "low")
+  - `priority_areas`: List of specific fields/areas needing attention with actionable details
+
+  **CRITICAL**: All issues must include specific field names and actionable details. Avoid vague statements.
+
+  Example:
+  ```json
+  {{
+    "summary": "Schema works for basic interpretation info but field 'interpretation_date' fails extraction and 'legal_basis' field is missing",
+    "main_issues": [
+      "Field 'interpretation_date' cannot be extracted - tax interpretations use 'data wydania' format",
+      "Field 'tax_domain' should be enum, not string, to capture specific areas like PIT, CIT, VAT",
+      "Missing field for 'legal_basis' which appears in all Polish tax interpretations",
+      "Field 'interpretation_outcome' enum missing 'prawidłowe' value found in interpretations"
+    ],
+    "strengths": [
+      "Field 'taxpayer_question' extracts reliably from all tax interpretation documents",
+      "Field 'signature' has correct string type and good coverage for interpretation signatures"
+    ],
+    "needs_refinement": true,
+    "confidence": "high",
+    "priority_areas": [
+      "Fix 'interpretation_date' field extraction by changing field name to match Polish interpretation terminology",
+      "Change 'tax_domain' from string to enum type for specific tax areas (PIT, CIT, VAT)",
+      "Add 'legal_basis' field as required string for cited regulations",
+      "Expand 'interpretation_outcome' enum to include 'prawidłowe' option"
+    ]
+  }}
+  ```
+  
+  ## User Input
+  {user_input}
+
+  ## Problem Help
+  {problem_help}
+
+  ## User Feedback
+  {user_feedback}
+
+  ## Problem Definition
+  {problem_definition}
+  
+  ## Current Schema
+  {current_schema}
+  
+  ## Assessment Results
+
+  {data_assessment_results}
+  
+  ## Merged Assessment

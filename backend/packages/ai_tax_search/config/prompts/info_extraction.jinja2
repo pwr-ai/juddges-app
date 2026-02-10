@@ -1,0 +1,30 @@
+{{extraction_context}}
+
+{% if additional_instructions %}
+{{additional_instructions}}
+{% endif %}
+
+{% set lang = (language|default('pl')|lower) %}
+{% set t = {
+  'pl': {
+    'schema': 'Schemat ekstrakcji:',
+    'judgment': 'Tekst orzeczenia do analizy:'
+  },
+  'en': {
+    'schema': 'Schema for extraction:',
+    'judgment': 'Judgment text to analyze:'
+  }
+} %}
+{% set labels = t.get(lang, t['pl']) %}
+
+{% if schema %}
+{{ labels.schema }}
+====
+{{ schema }}
+====
+{% endif %}
+
+{{ labels.judgment }}
+====
+{{ full_text }}
+====

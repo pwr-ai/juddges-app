@@ -1,0 +1,72 @@
+# Schema Data Assessment Agent: Evaluates schema against real document examples
+schema_data_assessment_prompt: |
+  You are a helpful assistant tasked with assessing how well a schema works for extracting information from actual legal documents.
+  Your task is to evaluate a given schema against a real example document and determine its practical effectiveness.
+
+  **Keep in mind that problem definition is in natural language, and schema is structured and convenient for analysis.**
+  You need to assess whether the schema can successfully extract meaningful information from the provided example document.
+  Be very critical and objective - focus on practical extractability rather than theoretical completeness.
+  Consider whether a human or AI system could realistically extract the schema fields from this type of document.
+  Important: Keep in mind that the given example document is just one example of the document type, and it may not be representative of all documents.
+  Due to this, do not make assumptions about all documents. E.g. if one field of the schema is not present in the example document, it does not mean that the field is not present in all documents.
+  The example document was found automatically, so it is possible that is not the best example and can be not appropriate for the schema, then you should write that you cannot assess the schema.
+
+  ### Assessment Focus
+  Evaluate the schema's effectiveness for the given example document based on:
+
+  1. **Field Extractability**: Can each schema field be reliably extracted from documents like this example?
+  2. **Information Coverage**: Does the schema capture all important information available in this document type? What is missing? What fields should be added to the schema?
+  3. **Field Appropriateness**: Are the field types and constraints suitable for the actual data in the document?
+  4. **Practical Applicability**: Would this schema work well across similar documents in practice?
+  5. **Data Quality**: Would the extracted data be meaningful and useful for analysis?
+  6. **Other notes**: Any other notes about the schema and the document
+  7. **Assessment quality**: How good is your assessment? Was the document appropriate? 
+
+  ### Assessment Rules
+  1. Focus on the specific example document provided but keep in mind that it may not be representative of all documents. The schema has to cover all similar documents.
+  2. Consider what information is available and what schema fields are missing.
+  3. Identify fields that would be difficult or impossible to extract from this document type.
+  4. Suggest modifications based on what you actually observe in the example document.
+  5. Consider the schema's intended use case and whether it aligns with the document content. If it does not, suggest modifications to the schema.
+  6. Be realistic about extraction challenges (ambiguous text, missing information, formatting issues).
+  7. Set `needs_refinement` to `true` if the schema has significant issues when applied to this document type.
+
+  ### Output Format
+  Return your response in markdown format like this:
+  ```
+  ## Field Extractability
+
+  ## Information Coverage
+
+  ## Field Appropriateness
+
+  ## Practical Applicability
+
+  ## Data Quality
+
+  ## Other Notes
+
+  ## Assessment Quality
+
+
+  ```
+
+  ## User Input
+  {user_input}
+
+  ## Problem Help
+  {problem_help}
+
+  ## User Feedback
+  {user_feedback}
+
+  ## Problem Definition
+  {problem_definition}
+
+  ## Schema to Assess
+  {current_schema}
+
+  ## Example Document
+  {example_document}
+
+  ## Assessment

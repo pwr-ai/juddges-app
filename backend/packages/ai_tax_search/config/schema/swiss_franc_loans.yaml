@@ -1,0 +1,267 @@
+# Source: JUDDGES/configs/ie_schema/swiss_franc_loans_refined.yaml
+# Note: Schema must be compliant with the OpenAI JSON Schema format
+sprawa_frankowiczow:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Sprawa frankowa to proces sądowy, w którym kredytobiorcy dochodzą unieważnienia umów kredytowych denominowanych lub indeksowanych do franka szwajcarskiego (CHF) oraz zwrotu nadpłaconych rat, powołując się na niedozwolone klauzule umowne. Typowo dotyczy kredytów hipotecznych (mieszkaniowych). Kryteria identyfikacji: sygnatura sprawy zawiera literę C; sprawa dotyczy kredytu frankowego (a nie alimentów, spraw karnych, eksmisji, podziału majątku); data wniesienia pozwu — preferencyjnie po 2017 roku."
+  required: true
+
+apelacja:
+  type: string
+  description: "Określenie apelacji (okręgu sądowego drugiej instancji), w której znajduje się sąd rozpoznający sprawę."
+  required: false
+
+data_wyroku:
+  type: string
+  description: "Data ogłoszenia lub wydania wyroku, zgodnie z treścią orzeczenia. Format: YYYY-MM-DD."
+  required: false
+
+typ_sadu:
+  type: string
+  enum: ['Sąd Rejonowy', 'Sąd Okręgowy', 'Sąd Frankowy', 'Sąd Ochrony Konkurencji i Konsumentów']
+  description: "Rodzaj sądu powszechnego lub wyspecjalizowanego, który rozpoznaje sprawę w danej instancji."
+  required: false
+
+instancja_sadu:
+  type: string
+  enum: ['Sąd I instancji', 'Sąd odwoławczy']
+  description: "Instancja sądowa, w której toczy się postępowanie – pierwsza lub druga instancja."
+  required: false
+
+podstawa_prawna_podana:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy powód podał podstawę prawną?"
+  required: false
+
+podstawa_prawna:
+  type: string
+  description: "Przepis lub przepisy prawa materialnego, na których oparto roszczenie. Należy stosować jednolity skrócony format cytowania:
+    '(art. [numer artykułu], § [numer paragrafu] [skrót aktu prawnego], z dnia [data])',
+    np. '(art. 385(1), § 1 k.c.)' lub '(art. 3 ustawy o gospodarce nieruchomościami z dnia 21 sierpnia 1997 r.)'"
+  required: false
+
+rodzaj_roszczenia:
+  type: string
+  enum: ['O ustalenie istnienia/nieistnienia stosunku prawnego', 'O ukształtowanie stosunku prawnego', 'O zapłatę', 'Roszczenia dodatkowe', 'Dotyczy wzorca umownego']
+  description: "Rodzaj roszczenia zgłaszanego przez powoda:
+  - 'O ustalenie istnienia/nieistnienia stosunku prawnego' – roszczenie o stwierdzenie ważności lub nieważności umowy;
+  - 'O ukształtowanie stosunku prawnego' – żądanie zmiany lub unieważnienia stosunku prawnego, np. stwierdzenie nieważności umowy;
+  - 'O zapłatę' – roszczenie o zapłatę określonej kwoty;
+  - 'Roszczenia dodatkowe' – np. o zwrot kosztów, odsetki, inne świadczenia poboczne;
+  - 'Dotyczy wzorca umownego' – powództwo zmierzające do kontroli wzorców umownych (np. klauzul abuzywnych)."
+  required: false
+
+modyfikacje_powodztwa:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy w toku postępowania doszło do formalnej zmiany powództwa – zgodnie z art. 193 Kodeksu postępowania cywilnego. Modyfikacja może obejmować zmianę podstawy faktycznej lub prawnej żądania, jego zakresu (np. wartości przedmiotu sporu), albo charakteru roszczenia."
+  required: false
+
+typ_modyfikacji:
+  type: string
+  enum: ['Rodzaj roszczenia', 'Kwoty roszczenia']
+  description: "Wskaż charakter modyfikacji powództwa:
+  - 'Rodzaj roszczenia' – zmiana żądania z jednego rodzaju na inny (np. z ustalenia nieważności na zapłatę);
+  - 'Kwoty roszczenia' – zmiana wartości żądanej kwoty pieniężnej (np. zwiększenie lub zmniejszenie żądania zapłaty)."
+  required: false
+
+status_kredytobiorcy:
+  type: string
+  enum: ['Konsument', 'Przedsiębiorca', 'Nie sprawdzano']
+  description: "Status kredytobiorcy oceniany według kryteriów z art. 22(1) Kodeksu cywilnego: 'Konsument' to osoba fizyczna dokonująca czynności prawnej niezwiązanej bezpośrednio z jej działalnością gospodarczą lub zawodową; 'Przedsiębiorca' to osoba działająca w ramach prowadzonej działalności gospodarczej. Wybierz 'Nie sprawdzano', jeśli status nie został wyraźnie ustalony przez sąd."
+  required: false
+
+wspoluczestnictwo_powodowe:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy po stronie powodowej (strony wnoszącej powództwo) występowało współuczestnictwo materialne lub formalne."
+  required: false
+
+wspoluczestnictwo_pozwanego:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy po stronie pozwanej (strony przeciwko której wniesiono powództwo) występowało współuczestnictwo materialne lub formalne."
+  required: false
+
+typ_wspoluczestnictwa:
+  type: string
+  enum: ['Małżeństwo', 'Konkubinat', 'Spadkodawcy', 'Inny rodzaj']
+  description: "Rodzaj więzi łączącej współuczestników po jednej stronie sporu."
+  required: false
+
+strony_umowy:
+  type: string
+  enum: ['Strona umowy', 'Następca prawny']
+  description: "Status powoda względem umowy: bezpośrednia strona kontraktu lub następca prawny (np. spadkobierca, cesjonariusz)."
+  required: false
+
+wczesniejsze_skargi_do_rzecznika:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy przed wniesieniem powództwa złożono skargę do Rzecznika Finansowego."
+  required: false
+
+umowa_kredytowa:
+  type: string
+  enum: ['Zawarta bezpośrednio w banku', 'Z udziałem pośrednika']
+  description: "Okoliczność zawarcia umowy kredytowej – bezpośrednio w banku lub za pośrednictwem osoby trzeciej."
+  required: false
+
+klauzula_niedozwolona:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy umowa kredytowa zawierała postanowienia uznane za niedozwolone (klauzule abuzywne) w rozumieniu art. 385(1) Kodeksu cywilnego."
+  required: false
+
+wpisana_do_rejestru_uokik:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy sporna klauzula została wpisana do rejestru klauzul niedozwolonych prowadzonego przez Prezesa UOKiK."
+  required: false
+
+waluta_splaty:
+  type: string
+  enum: ['PLN', 'CHF']
+  description: "Waluta, w której faktycznie dokonywano spłaty zobowiązania kredytowego."
+  required: false
+
+aneks_do_umowy:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy w toku wykonywania umowy został zawarty aneks (zmieniający warunki pierwotnej umowy kredytowej)."
+  required: false
+
+data_aneksu:
+  type: string
+  description: "Data podpisania aneksu do umowy kredytowej. Format: YYYY-MM-DD."
+  required: false
+
+przedmiot_aneksu:
+  type: string
+  enum: ['Zmiana waluty spłaty', 'Inne kwestie']
+  description: "Zakres przedmiotowy aneksu do umowy: zmiana waluty spłaty lub inne postanowienia umowne."
+  required: false
+
+status_splaty_kredytu:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy kredyt został w całości spłacony (również w toku procesu)."
+  required: false
+
+rozstrzygniecie_sadu:
+  type: string
+  description: "Pełne brzmienie rozstrzygnięcia zawartego w sentencji wyroku."
+  required: false
+
+typ_rozstrzygniecia:
+  type: string
+  enum: ['Uwzględnienie powództwa w całości', 'Uwzględnienie powództwa w części', 'Oddalenie powództwa', 'Oddalenie apelacji', 'Zmiana wyroku', 'Przekazanie do ponownego rozpoznania']
+  description: "Kategoryzacja rozstrzygnięcia sądu według przyjętych typów orzeczenia."
+  required: false
+
+sesja_sadowa:
+  type: string
+  enum: ['Rozprawa', 'Posiedzenie niejawne']
+  description: "Forma posiedzenia sądowego, na którym zapadł wyrok."
+  required: false
+
+dowody:
+  type: array
+  items:
+    type: string
+    enum: ['Przesłuchanie stron', 'Przesłuchanie świadków', 'Dowód z opinii biegłego', 'Dowód z dokumentów']
+  description: "Rodzaje dowodów przeprowadzonych przez sąd."
+  required: false
+
+oswiadczenie_niewaznosci:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy powód złożył oświadczenie o skutkach nieważności umowy."
+  required: false
+
+odwolanie_do_sn:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy w uzasadnieniu powołano się na orzecznictwo Sądu Najwyższego."
+  required: false
+
+odwolanie_do_tsue:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy w uzasadnieniu powołano się na orzecznictwo Trybunału Sprawiedliwości Unii Europejskiej (TSUE)."
+  required: false
+
+teoria_prawna:
+  type: string
+  enum: ['Teoria dwóch kondykcji', 'Teoria salda']
+  description: "Teoria prawna, na której oparto rozliczenie świadczeń stron w wyroku."
+  required: false
+
+zarzut_zatrzymania:
+  type: string
+  enum: ['Tak', 'Nie', 'Nie podniesiono takiego zarzutu']
+  description: "Czy został podniesiony i/lub uwzględniony zarzut zatrzymania świadczenia."
+  required: false
+
+zarzut_potracenia:
+  type: string
+  enum: ['Tak', 'Nie', 'Nie podniesiono takiego zarzutu']
+  description: "Czy został podniesiony i/lub uwzględniony zarzut potrącenia wierzytelności."
+  required: false
+
+odsetki_ustawowe:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy sąd zasądził odsetki ustawowe od zasądzonej kwoty."
+  required: false
+
+data_rozpoczecia_odsetek:
+  type: string
+  enum: ['Od dnia wezwania do zapłaty', 'Od daty wytoczenia powództwa', 'Od daty wydania wyroku', 'Od innej daty']
+  description: "Data, od której naliczono odsetki ustawowe zgodnie z sentencją wyroku."
+  required: false
+
+koszty_postepowania:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy sąd zasądził zwrot kosztów postępowania."
+  required: false
+
+beneficjent_kosztow:
+  type: string
+  description: "Na rzecz której strony sąd zasądził zwrot kosztów postępowania."
+  required: false
+
+zabezpieczenie_udzielone:
+  type: string
+  enum: ['Tak', 'Nie', 'Nie było wniosku o zabezpieczenie']
+  description: "Czy sąd udzielił zabezpieczenia roszczenia."
+  required: false
+
+rodzaj_zabezpieczenia:
+  type: string
+  description: "Rodzaj zabezpieczenia zastosowanego przez sąd."
+  required: false
+
+zabezpieczenie_pierwsza_instancja:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy zabezpieczenia udzielił sąd I instancji."
+  required: false
+
+czas_trwania_sprawy:
+  type: string
+  description: "Czas rozpoznania sprawy: od daty złożenia pozwu do wydania wyroku (np. w miesiącach lub latach)."
+  required: false
+
+wynik_sprawy:
+  type: string
+  enum: ['Wygrana kredytobiorcy', 'Wygrana banku', 'Częściowe uwzględnienie roszczeń obu stron']
+  description: "Ogólny wynik sprawy z perspektywy stron (na podstawie sentencji wyroku)."
+  required: false
+
+szczegoly_wyniku_sprawy:
+  type: string
+  description: "Dodatkowe szczegóły dotyczące wyniku sprawy (opcjonalne, dla uściślenia wyniku opisanego w polu 'wynik_sprawy')."
+  required: false

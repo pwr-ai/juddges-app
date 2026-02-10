@@ -1,0 +1,531 @@
+import asyncio
+import os
+import time
+import warnings
+from datetime import datetime
+from typing import Any
+
+from ai_tax_search.info_extraction.extractor import InformationExtractor
+from ai_tax_search.info_extraction.schema_utils import prepare_schema_from_db
+from ai_tax_search.llms import get_llm
+from ai_tax_search.retrieval.fetch import get_documents_by_id
+from celery import Celery, Task
+from celery.exceptions import Retry
+from dotenv import load_dotenv
+from loguru import logger
+
+from app.core.supabase import supabase_client
+from app.models import (
+    DocumentExtractionRequest,
+    DocumentExtractionResponse,
+    DocumentProcessingStatus,
+)
+from app.schemas import _fetch_schema_from_db
+from app.error_utils import is_weaviate_or_grpc_error
+
+load_dotenv()
+BROKER_URL = os.environ["CELERY_BROKER_URL"]
+BACKEND_URL = os.environ["CELERY_BACKEND_URL"]
+PROJECT_NAME = os.environ["CELERY_PROJECT_NAME"]
+LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+
+celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
+
+
+def _update_job_results_in_supabase(
+    job_id: str,
+    results: list[dict[str, Any]],
+    completed_documents: int,
+    status: str = "STARTED",
+) -> bool:
+    """
+    Update extraction job results in Supabase incrementally during processing.
+
+    This ensures results are persisted even if Celery task data expires before
+    the job status is queried.
+
+    Args:
+        job_id: The Celery task ID / job ID
+        results: List of document extraction results
+        completed_documents: Count of completed documents
+        status: Job status (STARTED, SUCCESS, FAILURE)
+
+    Returns:
+        True if update succeeded, False otherwise
+    """
+    if not supabase_client:
+        logger.debug(f"Supabase client not available, skipping results update for job {job_id}")
+        return False
+
+    try:
+        update_data = {
+            "results": results,
+            "completed_documents": completed_documents,
+            "status": status,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        result = supabase_client.table("extraction_jobs").update(update_data).eq("job_id", job_id).execute()
+
+        if result.data and len(result.data) > 0:
+            logger.debug(f"Updated Supabase results for job {job_id}: {completed_documents} docs processed")
+            return True
+        else:
+            logger.warning(f"No rows updated in Supabase for job {job_id} - job might not exist")
+            return False
+
+    except Exception as e:
+        logger.error(f"Failed to update Supabase results for job {job_id}: {e}")
+        return False
+
+
+def _build_celery_failure_metadata(
+    exception: BaseException | None = None,
+    **extra_meta: Any
+) -> dict[str, Any]:
+    """
+    Build a dictionary capturing failure metadata suitable for job/task status reporting.
+    
+    Args:
+        exception: An optional exception object. If provided, its type and message are recorded in the metadata.
+        **extra_meta: Arbitrary additional metadata key-value pairs.
+
+    Returns:
+        Dictionary containing:
+            - "exc_type" and "exc_message" if exception is given,
+            - all key-value pairs from extra_meta.
+
+    Example:
+        >>> _build_celery_failure_metadata(ValueError("bad"), code="ERR", status=500)
+        {'exc_type': 'ValueError', 'exc_message': 'bad', 'code': 'ERR', 'status': 500}
+    """
+    meta: dict[str, Any] = {}
+    if exception is not None:
+        meta["exc_type"] = type(exception).__name__
+        meta["exc_message"] = str(exception)
+    meta.update(extra_meta)
+    return meta
+
+
+def _calculate_task_timing_metrics(
+    job_start_time: float,
+    completed_documents: int,
+    total_documents: int,
+) -> dict[str, Any]:
+    """
+    Calculate timing metrics for a task in progress.
+    
+    Args:
+        job_start_time: Unix timestamp when the job started
+        completed_documents: Number of documents processed so far
+        total_documents: Total number of documents to process
+    
+    Returns:
+        Dictionary containing:
+            - elapsed_time: Seconds elapsed since job start
+            - avg_time_per_doc: Average time per document in seconds
+            - remaining_documents: Number of documents left to process
+            - estimated_time_remaining: Estimated seconds until completion
+    
+    Example:
+        >>> _calculate_task_timing_metrics(time.time() - 100, 5, 10)
+        {'elapsed_time': 100, 'avg_time_per_doc': 20.0, 'remaining_documents': 5, 'estimated_time_remaining': 100.0}
+    """
+    elapsed_time = time.time() - job_start_time
+    avg_time_per_doc = elapsed_time / completed_documents if completed_documents > 0 else 0
+    remaining_documents = total_documents - completed_documents
+    estimated_time_remaining = avg_time_per_doc * remaining_documents
+    
+    return {
+        "elapsed_time": elapsed_time,
+        "avg_time_per_doc": avg_time_per_doc,
+        "remaining_documents": remaining_documents,
+        "estimated_time_remaining": estimated_time_remaining,
+    }
+
+
+@celery_app.task(
+    bind=True,
+    pydantic=True,
+    track_started=True,
+    max_retries=2, 
+    default_retry_delay=60,
+    autoretry_for=(ConnectionError, OSError, TimeoutError),
+    retry_backoff=True,
+    retry_backoff_max=300, 
+    retry_jitter=True,
+)
+def extract_information_from_documents_task(
+    self: Task,
+    request: DocumentExtractionRequest,
+) -> list[DocumentExtractionResponse]:
+    """
+    Extract information from documents using InformationExtractor with schemas from Supabase.
+    
+    This is the recommended function that uses InformationExtractor with prepared schemas
+    from Supabase database. The schema should be provided as a dict with 'name', 'description',
+    and 'text' fields (as returned by GET /schemas/db/{schema_id}).
+    
+    Error handling:
+    - Connection errors (ConnectionError, OSError, TimeoutError): Automatically retried by Celery
+      up to 2 times (3 attempts total) with exponential backoff (60s base, 300s max)
+    - gRPC/Weaviate errors: Retry up to 2 times with custom backoff (5min, 10min, 20min)
+    - Schema/validation errors: Not retried, fail immediately
+    - Other errors: Mark all documents as failed and return failed results
+    
+    Retry strategy:
+    - Uses exception type checking (not string matching) for safer error detection
+    - Celery's autoretry_for handles most connection errors automatically
+    - Custom retry logic only for gRPC/Weaviate-specific exceptions
+        
+    Note: The InformationExtractor also has built-in retry logic for LLM API calls, 
+    so transient LLM errors are handled at multiple levels.
+    
+    Args:
+        request: DocumentExtractionRequest with user_schema containing full schema dict from Supabase
+                 (must have 'name', 'description', 'text' fields)
+    
+    Returns:
+        List of DocumentExtractionResponse objects with extracted data
+    """
+    try:
+        # Track job start time
+        job_start_time = time.time()
+        started_at = datetime.utcnow()
+        
+        # Update state with timing metadata
+        self.update_state(
+            state=DocumentProcessingStatus.PROCESSING.value,
+            meta={
+                "started_at": started_at.isoformat(),
+                "total_documents": len(request.document_ids),
+                "completed_documents": 0,
+            }
+        )
+        
+        # Initialize LLM - this may fail if LLM service is unavailable
+        llm_name = request.llm_name
+        logger.info(f"Initializing LLM for extraction: model={llm_name}, base_url={LLM_BASE_URL}, kwargs={request.llm_kwargs}")
+        llm = get_llm(
+            name=llm_name,
+            base_url=LLM_BASE_URL,
+            **request.llm_kwargs,
+        )
+        api_base = getattr(llm, 'openai_api_base', 'not set')
+        logger.info(f"LLM initialized: model={llm.model_name}, api_base={api_base}")
+        
+        # Get documents - this may fail if Weaviate is unavailable
+        documents = asyncio.run(get_documents_by_id(request.document_ids))
+
+        # Schema must be provided as dict from Supabase (with 'name', 'description', 'text' fields)
+        # If not provided, fetch it from the database
+        user_schema = request.user_schema
+        if user_schema is None:
+            schema_id = request.schema_id
+            if not schema_id:
+                raise ValueError(
+                    "Either user_schema or schema_id must be provided. "
+                    "If schema_id is provided, it will be fetched from the database."
+                )
+            
+            try:
+                user_schema = _fetch_schema_from_db(schema_id, client=supabase_client)
+                logger.info(f"Fetched schema {schema_id} from database")
+            except Exception as e:
+                logger.error(f"Failed to fetch schema from database: {e}", exc_info=True)
+                raise ValueError(f"Failed to fetch schema from database: {str(e)}")
+
+        logger.info(f"Preparing schema from database format, schema type: {type(user_schema)}")
+        try:
+            # Get language from request, default to Polish
+            language = request.language or "pl"
+            # Prepare schema using schema_utils
+            prepared_schema = prepare_schema_from_db(user_schema, language=language, strict=True)
+            logger.info("Schema prepared successfully")
+            
+            # Create extractor with prepared schema
+            extractor = InformationExtractor(
+                model=llm,
+                prompt_name=request.prompt_id,
+                schema=prepared_schema,
+            )
+            logger.info("InformationExtractor created successfully")
+        except Exception as e:
+            error_type = type(e).__name__
+            error_msg = str(e)
+            logger.error(f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}", exc_info=True)
+            # Ensure exception message includes error type for Celery serialization
+            if error_type not in error_msg:
+                # Create new exception with type in message
+                raise type(e)(f"{error_type}: {error_msg}") from e
+            raise
+
+        results: list[DocumentExtractionResponse] = []
+        total_documents = len(documents)
+        
+        for idx, doc in enumerate(documents):
+            doc_start_time = time.time()
+            
+            # Extract information - this may fail if LLM service is unavailable
+            # The extractor has its own retry logic, but we catch connection errors here too
+            # Select language-specific extraction instructions based on request language
+            language = request.language or "pl"
+            
+            # Load additional instructions from YAML config files
+            base_instructions = InformationExtractor.get_additional_instructions(language=language)
+            
+            # Combine base instructions with any existing additional_instructions
+            combined_instructions = base_instructions
+            if request.additional_instructions:
+                combined_instructions = f"{base_instructions}\n\n{request.additional_instructions}"
+            
+            try:
+                extracted_data = asyncio.run(
+                    extractor.extract_information_with_structured_output(
+                        {
+                            "extraction_context": request.extraction_context,
+                            "additional_instructions": combined_instructions,
+                            "language": request.language,
+                            "full_text": doc.full_text,
+                        }
+                    )
+                )
+
+                results.append(
+                    DocumentExtractionResponse(
+                        collection_id=request.collection_id,
+                        document_id=doc.document_id,
+                        status=DocumentProcessingStatus.COMPLETED,
+                        created_at=datetime.utcnow().isoformat(),
+                        updated_at=datetime.utcnow().isoformat(),
+                        started_at=datetime.utcnow().isoformat(),
+                        completed_at=datetime.utcnow().isoformat(),
+                        error_message=None,
+                        extracted_data=extracted_data,
+                    ).model_dump(mode="json")
+                )
+            except Exception as doc_error:
+                # Individual document failed - mark it as failed but continue with other documents
+                logger.error(f"Error extracting from document {doc.document_id}: {doc_error}", exc_info=True)
+                results.append(
+                    DocumentExtractionResponse(
+                        collection_id=request.collection_id,
+                        document_id=doc.document_id,
+                        status=DocumentProcessingStatus.FAILED,
+                        created_at=datetime.utcnow().isoformat(),
+                        updated_at=datetime.utcnow().isoformat(),
+                        started_at=datetime.utcnow().isoformat(),
+                        completed_at=datetime.utcnow().isoformat(),
+                        error_message=str(doc_error),
+                        extracted_data=None,
+                    ).model_dump(mode="json")
+                )
+            
+            # Update progress with timing information
+            completed_documents = idx + 1
+            timing_metrics = _calculate_task_timing_metrics(
+                job_start_time=job_start_time,
+                completed_documents=completed_documents,
+                total_documents=total_documents,
+            )
+            
+            # Update task state with progress and timing
+            self.update_state(
+                state=DocumentProcessingStatus.PROCESSING.value,
+                meta={
+                    "started_at": started_at.isoformat(),
+                    "total_documents": total_documents,
+                    "completed_documents": completed_documents,
+                    "elapsed_time_seconds": int(timing_metrics["elapsed_time"]),
+                    "estimated_time_remaining_seconds": int(timing_metrics["estimated_time_remaining"]),
+                    "avg_time_per_document_seconds": round(timing_metrics["avg_time_per_doc"], 2),
+                }
+            )
+
+            # Save results to Supabase after every document
+            # This ensures results are persisted even if Celery task data expires or worker crashes
+            _update_job_results_in_supabase(
+                job_id=self.request.id,
+                results=results,
+                completed_documents=completed_documents,
+                status="STARTED",
+            )
+
+        # Check results and update task state accordingly
+        completed_at = datetime.utcnow()
+        # NOTE: Do NOT call update_state() with final states (SUCCESS, FAILURE, etc.) before returning!
+        # When we call update_state() and then return a value, Celery's Redis backend may store
+        # the metadata from update_state() instead of the actual return value when fetching with .get().
+        # Let Celery automatically handle the final state based on the return value.
+        # The results list contains all the document statuses, which can be used by the extraction
+        # endpoint to determine the overall job status (COMPLETED, PARTIALLY_COMPLETED, FAILED).
+
+        # Final update to Supabase with all results and SUCCESS status
+        _update_job_results_in_supabase(
+            job_id=self.request.id,
+            results=results,
+            completed_documents=len(results),
+            status="SUCCESS",
+        )
+
+        return results
+    
+    except Retry:
+        # Re-raise retry exceptions to let Celery handle them
+        raise
+    except (ConnectionError, OSError, TimeoutError) as e:
+        # These are already configured in autoretry_for, but we can customize retry behavior here
+        # Note: Celery's autoretry_for will handle these automatically, this is just for logging
+        logger.warning(
+            f"Retryable connection error (attempt {self.request.retries + 1}/{self.max_retries + 1}): {type(e).__name__}: {e}"
+        )
+        raise  # Let Celery's autoretry_for handle it
+    except Exception as e:
+        # Check exception type for specific retryable errors using isinstance() ONLY
+        # No string matching or type name checking - we want to be 100% certain
+        # Uses shared error_utils.is_weaviate_or_grpc_error() for consistent detection
+        
+        # Check if it's a gRPC/Weaviate connection error
+        # Only retry if we can definitively identify the exception type
+        if is_weaviate_or_grpc_error(e):
+            exception_type = type(e).__name__
+            logger.warning(
+                f"Weaviate/gRPC connection error (attempt {self.request.retries + 1}/{self.max_retries + 1}): "
+                f"{exception_type}: {e}"
+            )
+            retry_delay = 300 * (2 ** self.request.retries)  # 5min, 10min, 20min
+            raise self.retry(exc=e, countdown=retry_delay)
+        
+        # For non-retryable errors, fail all documents
+        error_type = type(e).__name__
+        error_msg = str(e)
+        # Ensure error message includes type for Celery serialization
+        full_error_msg = f"{error_type}: {error_msg}" if error_type not in error_msg else error_msg
+        
+        logger.error(f"Error in extraction task: {full_error_msg}", exc_info=True)
+        failed_results = []
+        for doc_id in request.document_ids:
+            failed_results.append(
+                DocumentExtractionResponse(
+                    collection_id=request.collection_id,
+                    document_id=doc_id,
+                    status=DocumentProcessingStatus.FAILED,
+                    created_at=datetime.utcnow().isoformat(),
+                    updated_at=datetime.utcnow().isoformat(),
+                    started_at=datetime.utcnow().isoformat(),
+                    completed_at=datetime.utcnow().isoformat(),
+                    error_message=full_error_msg,
+                    extracted_data=None,
+                ).model_dump(mode="json")
+            )
+        # NOTE: Do NOT call update_state() before returning!
+        # When we manually set state and then return a value, Celery's Redis backend may store
+        # the metadata from update_state() instead of the actual return value when fetching with .get().
+        # Just return the failed_results - Celery will set state to SUCCESS since we return normally.
+        # The extraction endpoint will check the document statuses to determine if all failed.
+
+        # Save failed results to Supabase
+        _update_job_results_in_supabase(
+            job_id=self.request.id,
+            results=failed_results,
+            completed_documents=len(failed_results),
+            status="FAILURE",
+        )
+
+        return failed_results
+
+
+# Mock Celery task for schema generation
+@celery_app.task(bind=True)
+def generate_schema_task(self, request_data: dict):
+    """
+    Mock schema generation task.
+    In a real implementation, this would:
+    1. Initialize the schema generator agent
+    2. Analyze sample documents from the collection
+    3. Generate and refine the schema
+    4. Return the final schema
+    """
+
+    user_input = request_data["user_input"]
+    collection_id = request_data.get("collection_id", "general")
+
+    # Mock progressive updates
+    steps = [
+        ("problem_analysis", "Analyzing extraction requirements"),
+        ("data_assessment", "Examining sample documents"),
+        ("schema_generation", "Creating initial schema"),
+        ("schema_refinement", "Optimizing schema structure"),
+        ("validation", "Validating against sample data"),
+    ]
+
+    for i, (step_id, description) in enumerate(steps):
+        self.update_state(
+            state="PROGRESS",
+            meta={
+                "current_step": step_id,
+                "description": description,
+                "progress": (i + 1) / len(steps) * 100,
+            },
+        )
+        time.sleep(3)  # Simulate processing time
+
+    # Mock generated schema based on user input
+    mock_schema = {
+        "name": f"Generated Schema for {collection_id}",
+        "description": f"AI-generated schema based on: {user_input}",
+        "schema": {
+            "extracted_entities": {
+                "type": "array",
+                "description": "Key entities mentioned in the document",
+                "items": {"type": "string"},
+                "required": True,
+            },
+            "legal_concepts": {
+                "type": "array",
+                "description": "Legal concepts and terms identified",
+                "items": {"type": "string"},
+                "required": True,
+            },
+            "dates": {
+                "type": "array",
+                "description": "Important dates found in the document",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "date": {"type": "string"},
+                        "description": {"type": "string"},
+                    },
+                },
+                "required": False,
+            },
+            "amounts": {
+                "type": "array",
+                "description": "Financial amounts and monetary values",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "amount": {"type": "number"},
+                        "currency": {"type": "string"},
+                        "context": {"type": "string"},
+                    },
+                },
+                "required": False,
+            },
+            "key_findings": {
+                "type": "string",
+                "description": "Summary of key findings from the document",
+                "required": True,
+            },
+        },
+    }
+
+    return {
+        "schema": mock_schema,
+        "confidence": 0.92,
+        "validation_results": {
+            "valid": True,
+            "tested_documents": 5,
+            "success_rate": 0.95,
+        },
+    }

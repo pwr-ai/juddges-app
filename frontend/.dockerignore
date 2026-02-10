@@ -1,0 +1,39 @@
+# Node modules (installed in container)
+node_modules
+npm-debug.log
+
+# Next.js build output
+.next
+out
+.next/cache
+
+# Environment files (handled via docker-compose)
+.env
+.env.local
+.env.*.local
+
+# Production-specific files
+# docker-entrypoint.sh - needed for production stage
+
+# Testing
+coverage
+.nyc_output
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md

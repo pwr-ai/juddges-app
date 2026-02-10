@@ -1,0 +1,12 @@
+# Data Ingestion Dependencies for Juddges App
+
+# Core dependencies
+datasets>=2.14.0          # HuggingFace datasets library
+supabase>=2.0.0          # Supabase Python client
+openai>=1.0.0            # OpenAI API for embeddings
+python-dotenv>=1.0.0     # Environment variable management
+tqdm>=4.65.0             # Progress bars
+
+# Optional: For data processing
+pandas>=2.0.0
+numpy>=1.24.0

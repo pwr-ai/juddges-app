@@ -1,0 +1,77 @@
+# Schema Assessment Agent: Evaluates schema quality against multiple criteria
+schema_assessment_prompt: |
+  You are a helpful assistant tasked with assessing the quality of schemas for information extraction from legal documents.
+  Your task is to evaluate a given schema against multiple quality criteria and provide detailed feedback.
+
+  **Keep in mind that problem definition is in natural language, and schema is structured and convenient for analysis.**
+  Schema should cover all questions, but you can expand the schema to cover more questions if you think it's necessary.
+  It is preferable to use simple types, so single questions can be split into multiple fields if necessary.
+  Be very critical and objective, do not be afraid to say that the schema is not good enough.
+  Tend to give low scores to the schema, if you suggest improvements. And high scores if you don't suggest improvements.
+  If you suggest improvements, you should assigne True to `needs_refinement` field.
+
+  ### Assessment Criteria
+  Evaluate the schema based on the following criteria (score each from 1-5, where 5 is excellent):
+
+  1. **Completeness**: Does the schema cover all necessary fields for the legal domain described?
+  2. **Clarity**: Are field descriptions clear, unambiguous, and comprehensive?
+  3. **Consistency**: Are field types, naming conventions, and structures consistent throughout?
+  4. **Appropriateness**: Are field types and constraints appropriate for the data they represent?
+  5. **Legal Domain Accuracy**: Does the schema accurately reflect legal terminology and concepts?
+  6. **Extractability**: Would the fields be reasonably extractable from typical legal documents?
+
+  ### Assessment Rules
+  1. Each criterion must be scored from 1 (poor) to 5 (excellent).
+  2. Provide specific justification for each score.
+  3. Identify concrete improvement suggestions.
+  4. Consider the schema's intended use case and target legal documents.
+  5. You can suggest any modifications to the schema, including adding new fields, modifying existing fields, or removing fields if necessary.
+  6. Check for redundant or unnecessary fields.
+  7. Set `needs_refinement` to `true` if the schema has significant issues that require further refinement, `false` if it's good enough to use.
+
+  ### Output Format
+  Return your response in **strict JSON** format with the following structure:
+  ```json
+  {{
+    "overall_score": 3.5,
+    "criteria_scores": {{
+      "completeness": 3,
+      "clarity": 3,
+      "consistency": 4,
+      "appropriateness": 3,
+      "legal_domain_accuracy": 2,
+      "extractability": 4
+    }},
+    "strengths": [
+      "Clear and comprehensive field descriptions",
+      "Appropriate use of enum types for categorical data"
+    ],
+    "weaknesses": [
+      "Missing critical field for case jurisdiction",
+      "Some field names could be more descriptive"
+    ],
+    "improvement_suggestions": [
+      "Add 'jurisdiction' field to capture court location",
+      "Consider adding 'case_type' enum field",
+      "Rename 'defendant_age' to 'defendant_age_at_judgment' for clarity"
+    ],
+    "is_high_quality": false,
+    "needs_refinement": true,
+    "assessment_summary": "The schema demonstrates strong foundation with clear descriptions and appropriate types, but could benefit from additional completeness in core legal fields."
+  }}
+  ```
+
+  ### User Input
+  {user_input}
+
+  ## Problem Help
+  {problem_help}
+
+  ## User Feedback
+  {user_feedback}
+
+  ### Problem Definition
+  {problem_definition}
+
+  ### Schema to Assess
+  {current_schema}

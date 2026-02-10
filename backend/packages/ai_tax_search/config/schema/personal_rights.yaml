@@ -1,0 +1,83 @@
+# Source: JUDDGES/configs/ie_schema/personal_rights_refined.yaml
+naruszenie_dobr_osobistych:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy sprawa dotyczy naruszenia dóbr osobistych"
+  required: true
+
+podstawa_prawna:
+  type: array
+  items:
+    type: string
+    enum: ['art 23 KC', 'art 24 KC']
+  description: "Podstawa prawna – artykuły Kodeksu Cywilnego"
+  required: true
+
+inne_podstawy_prawne:
+  type: array
+  items:
+    type: string
+  description: "Inne podstawy prawne, jeśli przywołano. Podstawa prawna powinna być zapisana w formacie 'art. <numer> Należy stosować jednolity skrócony format cytowania:
+    '(art. [numer artykułu], § [numer paragrafu] [skrót aktu prawnego], z dnia [data])',
+    np. '(art. 385(1), § 1 k.c.)' lub '(art. 3 ustawy o gospodarce nieruchomościami z dnia 21 sierpnia 1997 r.)'"
+  required: false
+
+rodzaj_naruszajacego:
+  type: string
+  enum: ['Instytucja/firma', 'Osoba prywatna']
+  description: "Kto naruszył dobra osobiste - czy instytucja/firma czy osoba prywatna"
+  required: true
+
+rodzaj_dobra_osobistego:
+  type: array
+  items:
+    type: string
+    enum: ['Zdrowie', 'Wolność', 'Cześć', 'Swoboda sumienia', 'Nazwisko lub pseudonim', 'Wizerunek', 'Tajemnica korespondencji', 'Nietykalność mieszkania', 'Twórczość naukowa, artystyczna, wynalazcza i racjonalizatorska', 'Więzi rodzinne', 'Inne']
+  description: "Rodzaj dobra osobistego, które zostało naruszone"
+  required: true
+
+opis_naruszenia:
+  type: string
+  description: "Zwięzły opis, na czym polegało naruszenie dobra osobistego, może być zacytowanym krótkim fragmentem tekstu orzeczenia"
+  required: true
+
+miejsce_naruszenia:
+  type: string
+  enum: ['Miejsce publiczne', 'Miejsce prywatne', 'Miejsce pracy', 'W internecie']
+  description: "Jakie było miejsce naruszenia"
+  required: false
+
+naruszenie_media_spolecznosciowe:
+  type: string
+  enum: ['Tak', 'Nie']
+  description: "Czy naruszenie zaszło na mediach społecznościowych. Jeśli niedotyczy pozostaw puste"
+  required: true
+
+portale_spolecznosciowe:
+  type: array
+  items:
+    type: string
+    enum: ['Facebook', 'Instagram', 'TikTok', 'Linkedin', 'Forum dyskusyjne', 'Inne miejsce w internecie']
+  description: "Portale społecznościowe lub internetowe, gdzie doszło do naruszenia. Jeśli niedotyczy pozostaw puste"
+  required: false
+
+skala_naruszenia:
+  type: number
+  description: "Skala 1-5 oceny stopnia naruszenia dóbr osobistych. 0 - brak naruszenia, 1 - bardzo lekkie, 2 - lekkie, 3 - średnie, 4 - mocne, 5 - bardzo mocne"
+  required: false
+
+rodzaj_zadania:
+  type: array
+  items:
+    type: string
+    enum: ['Zaniechania działania', 'Żądanie ażeby pozwany dopełnił czynności potrzebnych do usunięcia skutków naruszenia. W szczególności ażeby złożyła oświadczenie odpowiedniej treści i w odpowiedniej formie', 'Zadośćuczynienia pieniężnego', 'Zapłaty odpowiedniej sumy pieniężnej na wskazany cel społeczny']
+  description: "Rodzaje żądań występujące w sprawie"
+  required: false
+
+dowody:
+  type: array
+  items:
+    type: string
+    enum: ['Przesłuchanie świadków', 'Przesłuchanie stron', 'Dokumenty', 'Zrzut ekranu/print screen']
+  description: "Rodzaje dowodów przedstawione w sprawie"
+  required: false

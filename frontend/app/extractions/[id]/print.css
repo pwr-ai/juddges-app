@@ -1,0 +1,624 @@
+/**
+ * Print styles - NUCLEAR RESET VERSION
+ * Everything starts at zero, build up from there
+ */
+
+@media print {
+
+  /* ===== PAGE SETUP ===== */
+  @page {
+    size: A4;
+    margin: 1.5cm 2cm;
+  }
+
+  /* ===== HIDE COMMAND PALETTE FIRST - BEFORE ANYTHING ELSE ===== */
+  /* Universal rule to catch command palette in any form */
+  body > div:last-child:has([data-slot="command"]),
+  body > div:last-child:has([data-slot="dialog-content"]),
+  body > div:last-child:has([cmdk-root]),
+  body > div:last-child:has([data-radix-portal]) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* ===== NUCLEAR RESET - EVERYTHING TO ZERO ===== */
+  /* Exclude elements that need spacing/borders from the reset */
+  *:not([class*="SubsectionHeader"]):not([class*="SectionHeader"]):not(h1):not(h2):not(h3):not(h4):not(p):not(dt):not(dd):not(dl):not(ul):not(ol):not(li):not(table):not(th):not(td):not(tr):not(thead):not(tbody),
+  *::before,
+  *::after {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-indent: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  /* RESET ALL COMPONENT CLASSES */
+  /* Exclude BaseCard group structure and TabsContent from reset to preserve extraction data */
+  [class*="Extraction"],
+  [class*="extraction"],
+  [class*="Document"],
+  [class*="document"],
+  [class*="Field"],
+  [class*="field"],
+  [class*="Card"]:not([class*="group"]),
+  [class*="card"]:not([class*="group"]),
+  [class*="Section"],
+  [class*="section"],
+  [class*="Subsection"],
+  [class*="subsection"],
+  [class*="Container"],
+  [class*="container"],
+  [class*="Accordion"],
+  [class*="accordion"],
+  [class*="Page"],
+  [class*="page"],
+  div:not([class*="group"]):not([class*="TabsContent"]):not([class*="tabs-content"]):not([class*="space-y-6"]):not([class*="mt-6"]),
+  section:not([class*="group"]),
+  article:not([class*="group"]) {
+    all: unset !important;
+    display: block !important;
+  }
+
+  /* Restore layout classes for BaseCard structure */
+  div[class*="flex"],
+  [class*="flex"] {
+    display: flex !important;
+  }
+
+  div[class*="grid"],
+  [class*="grid"] {
+    display: grid !important;
+  }
+
+  div[class*="space-y"],
+  [class*="space-y"] {
+    display: block !important;
+  }
+
+  /* Preserve BaseCard group structure - needed for extraction data display */
+  div[class*="group"][class*="relative"] {
+    display: block !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 0 1em 0 !important;
+  }
+
+  /* ===== ONLY BARE ESSENTIALS ===== */
+  body {
+    background: white !important;
+    color: #000 !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Force all text to black */
+  * {
+    color: #000 !important;
+  }
+
+  /* Hide UI elements - BUT KEEP BADGES */
+  button,
+  nav,
+  svg,
+  .print\:hidden,
+  [class*="hover:"]:not([data-slot="badge"]):not([class*="Badge"]):not([class*="badge"]):not(.badge),
+  [class*="focus:"]:not([data-slot="badge"]):not([class*="Badge"]):not([class*="badge"]):not(.badge) {
+    display: none !important;
+  }
+
+  /* Hide sidebar and navigation */
+  [class*="Sidebar"],
+  [class*="sidebar"],
+  [data-sidebar],
+  [data-slot="sidebar"],
+  [data-slot="sidebar-wrapper"],
+  aside,
+  [class*="AppSidebar"],
+  [class*="app-sidebar"],
+  [class*="Navbar"],
+  [class*="navbar"],
+  [class*="SidebarProvider"],
+  [class*="sidebar-provider"],
+  [class*="CommandPalette"],
+  [class*="command-palette"],
+  [class*="Footer"],
+  [class*="footer"],
+  footer,
+  [role="contentinfo"],
+  [aria-label="Site footer"] {
+    display: none !important;
+  }
+
+  /* Hide Command Palette and Dialog components - AGGRESSIVE */
+  [class*="CommandDialog"],
+  [class*="command-dialog"],
+  [class*="Dialog"],
+  [class*="dialog"],
+  [class*="DialogContent"],
+  [class*="dialog-content"],
+  [class*="DialogOverlay"],
+  [class*="dialog-overlay"],
+  [class*="DialogPortal"],
+  [class*="dialog-portal"],
+  [data-slot="command"],
+  [data-slot="command-input-wrapper"],
+  [data-slot="command-input"],
+  [data-slot="command-list"],
+  [data-slot="command-group"],
+  [data-slot="command-item"],
+  [data-slot="command-empty"],
+  [data-slot="command-separator"],
+  [data-slot="dialog"],
+  [data-slot="dialog-content"],
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-portal"],
+  [data-slot="dialog-header"],
+  [data-slot="dialog-title"],
+  [data-slot="dialog-description"],
+  [class*="Command"],
+  [class*="command"],
+  [class*="CommandInput"],
+  [class*="command-input"],
+  [class*="CommandList"],
+  [class*="command-list"],
+  [class*="CommandGroup"],
+  [class*="command-group"],
+  [class*="CommandItem"],
+  [class*="command-item"],
+  [class*="CommandEmpty"],
+  [class*="command-empty"],
+  [class*="CommandSeparator"],
+  [class*="command-separator"],
+  [class*="DialogHeader"],
+  [class*="dialog-header"],
+  [class*="DialogTitle"],
+  [class*="dialog-title"],
+  [class*="DialogDescription"],
+  [class*="dialog-description"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* Hide footer and command palette by targeting common patterns */
+  footer *,
+  [role="contentinfo"] *,
+  [aria-label="Site footer"] * {
+    display: none !important;
+  }
+
+  /* Hide dialog overlays and portals - AGGRESSIVE */
+  [data-radix-dialog-content],
+  [data-radix-dialog-overlay],
+  [data-radix-portal],
+  [data-radix-dialog-root] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* Hide cmdk (command menu) components - AGGRESSIVE */
+  [cmdk-root],
+  [cmdk-dialog],
+  [cmdk-input],
+  [cmdk-list],
+  [cmdk-group],
+  [cmdk-group-heading],
+  [cmdk-item],
+  [cmdk-separator],
+  [cmdk-empty] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* Note: Text-based selectors removed - :has-text() is not a valid CSS pseudo-class */
+
+  /* Ensure main content takes full width when printing */
+  main,
+  [class*="PageContainer"],
+  [class*="page-container"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide flex containers that might cause layout issues */
+  div.flex:has([class*="Sidebar"]),
+  div.flex:has([class*="sidebar"]) {
+    display: block !important;
+  }
+
+  /* Hide document selector and progress info */
+  [class*="SearchableDropdownButton"],
+  [class*="searchable-dropdown-button"],
+  [class*="DropdownButton"],
+  [class*="dropdown-button"] {
+    display: none !important;
+  }
+
+  /* Hide back button and header section */
+  [class*="Header"]:not([class*="SectionHeader"]):not([class*="SubsectionHeader"]),
+  [class*="header"]:not([class*="section-header"]):not([class*="subsection-header"]) {
+    display: none !important;
+  }
+
+  /* Hide BaseCard decorative gradient overlays */
+  div[class*="absolute"][class*="-z-10"] {
+    display: none !important;
+  }
+
+  /* Hide BaseCard titles - we use print-only headers instead */
+  div[class*="group"] > div[class*="flex"] > h3:first-child {
+    display: none !important;
+  }
+
+  /* Hide tabs and print button in the extraction viewer */
+  [class*="TabsList"],
+  [class*="tabs-list"],
+  [class*="TabsTrigger"],
+  [class*="tabs-trigger"] {
+    display: none !important;
+  }
+
+  /* Hide JSON tab content - only show formatted view */
+  [class*="TabsContent"][value="json"],
+  [class*="tabs-content"][value="json"] {
+    display: none !important;
+  }
+
+  /* Show formatted tab content - this contains the document information */
+  [class*="TabsContent"][value="formatted"],
+  [class*="tabs-content"][value="formatted"] {
+    display: block !important;
+  }
+
+  /* Hide job information card - first space-y-4 div contains the job info BaseCard */
+  div[class*="space-y-4"]:first-of-type {
+    display: none !important;
+  }
+
+  /* Ensure extraction data BaseCard content is visible */
+  div[class*="space-y-6"] {
+    display: block !important;
+  }
+
+  /* Ensure TabsContent and all its children are visible and properly formatted */
+  [class*="TabsContent"],
+  [class*="tabs-content"] {
+    display: block !important;
+  }
+
+  [class*="TabsContent"] > *,
+  [class*="tabs-content"] > * {
+    display: block !important;
+  }
+
+  /* Ensure ExtractionDataViewer and all its content is visible */
+  [class*="ExtractionDataViewer"],
+  [class*="extraction-data-viewer"],
+  [class*="ExtractionDataViewer"] > *,
+  [class*="extraction-data-viewer"] > * {
+    display: block !important;
+  }
+
+  /* Show print-only elements */
+  .print\:block,
+  .hidden.print\:block {
+    display: block !important;
+  }
+
+  /* ===== NOW BUILD UP WHAT WE NEED ===== */
+
+  /* Title area - Document ID and Schema/Job Title */
+  div.hidden.print\:block {
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 0.5em !important;
+    margin-bottom: 1em !important;
+    page-break-after: avoid !important;
+  }
+
+  div.hidden.print\:block h1 {
+    font-size: 20pt !important;
+    font-weight: bold !important;
+    margin: 0 0 0.3em 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+    line-height: 1.2 !important;
+  }
+
+  div.hidden.print\:block p {
+    font-size: 11pt !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Status badges in print header - PRESERVE COLORS */
+  div.hidden.print\:block span[class*="bg-green"],
+  div.hidden.print\:block .print\:bg-green-100 {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+    border: 1px solid #6ee7b7 !important;
+    font-size: 9pt !important;
+    font-weight: 600 !important;
+    padding: 0.2em 0.5em !important;
+    border-radius: 0.25em !important;
+    display: inline-block !important;
+  }
+
+  div.hidden.print\:block span[class*="bg-blue"],
+  div.hidden.print\:block .print\:bg-blue-100 {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid #93c5fd !important;
+    font-size: 9pt !important;
+    font-weight: 600 !important;
+    padding: 0.2em 0.5em !important;
+    border-radius: 0.25em !important;
+    display: inline-block !important;
+  }
+
+  div.hidden.print\:block span[class*="bg-red"],
+  div.hidden.print\:block .print\:bg-red-100 {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fca5a5 !important;
+    font-size: 9pt !important;
+    font-weight: 600 !important;
+    padding: 0.2em 0.5em !important;
+    border-radius: 0.25em !important;
+    display: inline-block !important;
+  }
+
+  div.hidden.print\:block div[class*="flex"] {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5em !important;
+    margin-top: 0.5em !important;
+  }
+
+  /* Headers */
+  h1 {
+    font-size: 18pt !important;
+    font-weight: bold !important;
+    margin-bottom: 0.2em !important;
+  }
+
+  h2 {
+    font-size: 16pt !important;
+    font-weight: bold !important;
+    margin-bottom: 0.2em !important;
+  }
+
+  h3 {
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    margin-bottom: 0.2em !important;
+    margin-top: 0.5em !important;
+    border-bottom: 1px solid #000 !important;
+    padding-bottom: 0.1em !important;
+  }
+
+  h4 {
+    font-size: 12pt !important;
+    font-weight: bold !important;
+    margin-bottom: 0.2em !important;
+  }
+
+  /* Section headers and subsection headers - LARGER AND MORE PROMINENT */
+  [class*="SubsectionHeader"],
+  [class*="subsection-header"],
+  [class*="SectionHeader"],
+  [class*="section-header"] {
+    display: block !important;
+    visibility: visible !important;
+    font-size: 14pt !important;
+    /* Increased from 12pt */
+    font-weight: bold !important;
+    color: #000 !important;
+    border-bottom: none !important;
+    /* Border removed */
+    margin: 1.5em 0 0.5em 0 !important;
+    padding-top: 0.5em !important;
+    /* Added padding as fallback for spacing */
+    padding-bottom: 0.2em !important;
+  }
+
+  /* First section header has no top margin */
+  [class*="SubsectionHeader"]:first-child,
+  [class*="SectionHeader"]:first-child {
+    margin-top: 0 !important;
+  }
+
+  /* Section containers - add spacing between sections */
+  [data-grid-section="true"],
+  [class*="section"],
+  section {
+    margin-top: 0.8em !important;
+    margin-bottom: 0.8em !important;
+  }
+
+  /* First section has no top margin */
+  [data-grid-section="true"]:first-child,
+  section:first-child {
+    margin-top: 0 !important;
+  }
+
+  /* Paragraphs */
+  p {
+    margin-bottom: 0.5em !important;
+    /* Increased from 0.3em */
+    font-size: 10pt !important;
+  }
+
+  /* Definition lists (field labels & values) */
+  dl {
+    margin-bottom: 0.8em !important;
+    /* Increased from 0.5em */
+  }
+
+  dt {
+    font-weight: bold !important;
+    font-size: 10pt !important;
+    margin-top: 1.2em !important;
+    /* Increased from 1em */
+    margin-bottom: 0 !important;
+    display: inline !important;
+  }
+
+  dt:first-child {
+    margin-top: 0 !important;
+  }
+
+  dt::after {
+    content: " " !important;
+  }
+
+  dd {
+    font-size: 10pt !important;
+    margin-left: 0 !important;
+    margin-bottom: 0.7em !important;
+    /* More spacing */
+    display: inline !important;
+  }
+
+  dd::after {
+    content: "\A" !important;
+    white-space: pre !important;
+  }
+
+  /* Lists - separate ul and ol */
+  ul {
+    margin: 0.5em 0 !important;
+    /* Increased from 0.3em */
+    padding-left: 0 !important;
+    list-style-type: none !important;
+    /* No CSS bullets - component handles it */
+  }
+
+  ol {
+    margin: 0.5em 0 !important;
+    /* Increased from 0.3em */
+    padding-left: 1.5em !important;
+    list-style-type: decimal !important;
+    list-style-position: outside !important;
+  }
+
+  /* Alphabetical lists */
+  ol[style*="list-style-type: lower-alpha"],
+  ol[style*="list-style-type: upper-alpha"] {
+    list-style-type: inherit !important;
+  }
+
+  ul li {
+    margin-bottom: 0.2em !important;
+    margin-left: 0.3em !important;
+    /* Increased indent to 0.3em */
+    padding-left: 0 !important;
+    display: block !important;
+  }
+
+  ol li {
+    margin-bottom: 0.2em !important;
+    /* Increased from 0.1em */
+    display: list-item !important;
+  }
+
+  /* Tables - MODERN & READABLE */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 1em 0 !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Prevent header repetition on new pages */
+  thead {
+    display: table-row-group !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc !important;
+    /* Modern light gray border */
+    text-align: left !important;
+    vertical-align: top !important;
+    color: #000 !important;
+    line-height: 1.4 !important;
+  }
+
+  th {
+    padding: 0.5em 0.8em !important;
+    background-color: #f5f5f5 !important;
+    /* Modern light header */
+    font-weight: bold !important;
+    font-size: 9pt !important;
+    text-transform: uppercase !important;
+    /* Modern touch */
+    letter-spacing: 0.05em !important;
+    border-bottom: 2px solid #999 !important;
+    /* Distinct header separation */
+  }
+
+  td {
+    padding: 0.3em 0.4em !important;
+    /* Compact but readable */
+  }
+
+  /* Badges - convert to plain text */
+  [data-slot="badge"],
+  [class*="Badge"],
+  [class*="badge"],
+  .badge {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #000 !important;
+    font-weight: normal !important;
+    display: inline !important;
+    box-shadow: none !important;
+    text-transform: none !important;
+    /* Ensure text isn't forced to uppercase if it was */
+  }
+
+  /* Page breaks */
+  h1,
+  h2,
+  h3,
+  h4 {
+    page-break-after: avoid !important;
+  }
+}

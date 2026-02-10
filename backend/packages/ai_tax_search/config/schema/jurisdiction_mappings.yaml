@@ -1,0 +1,516 @@
+# Jurisdiction Field Mappings for Universal Legal Document Schema
+# Maps field names and descriptions between English (UK) and Polish jurisdictions
+# Used to generate localized extraction prompts
+
+jurisdictions:
+  en_uk:
+    name: "England & Wales"
+    language: "en"
+
+  en_us:
+    name: "United States"
+    language: "en"
+
+  pl:
+    name: "Poland"
+    language: "pl"
+
+field_mappings:
+  # Case Identification
+  neutral_citation_number:
+    en_uk: "Neutral Citation Number (e.g., [2024] EWCA Crim 123)"
+    en_us: "Case Citation (e.g., 123 F.3d 456)"
+    pl: "Sygnatura akt (np. II AKa 123/24)"
+
+  case_number:
+    en_uk: "Case Number"
+    en_us: "Docket Number"
+    pl: "Numer sprawy"
+
+  case_name:
+    en_uk: "Case Name (e.g., R v Smith)"
+    en_us: "Case Name (e.g., State v. Smith)"
+    pl: "Nazwa sprawy (np. Prokuratura Rejonowa przeciwko Kowalskiemu)"
+
+  date_of_appeal_court_judgment:
+    en_uk: "Date of Appeal Court Judgment"
+    en_us: "Date of Appellate Court Decision"
+    pl: "Data wyroku sądu odwoławczego"
+
+  # Court and Judges
+  appeal_court_judges_names:
+    en_uk: "Appeal Court Judges Names (e.g., Lord Justice Smith, Mr Justice Jones)"
+    en_us: "Appellate Judges Names"
+    pl: "Skład sędziowski sądu odwoławczego"
+
+  conv_court_names:
+    en_uk: "Court Name(s) where Offender Convicted/Pled Guilty"
+    en_us: "Trial Court(s) where Defendant was Convicted"
+    pl: "Nazwa sądu/sądów, w których oskarżony został skazany"
+
+  sent_court_name:
+    en_uk: "Court Name where Offender Sentenced"
+    en_us: "Sentencing Court Name"
+    pl: "Nazwa sądu wymierzającego karę"
+
+  # Representatives
+  offender_representative_name:
+    en_uk: "Offender's Representative Name (Barrister/Solicitor)"
+    en_us: "Defense Attorney Name"
+    pl: "Obrońca oskarżonego (imię i nazwisko)"
+
+  crown_attorney_general_representative_name:
+    en_uk: "Crown/Attorney General Representative Name"
+    en_us: "Prosecutor/District Attorney Name"
+    pl: "Prokurator (imię i nazwisko)"
+
+  # Conviction Details
+  convict_plea_dates:
+    en_uk: "Conviction/Guilty Plea Date(s)"
+    en_us: "Conviction/Plea Date(s)"
+    pl: "Data/daty skazania lub przyznania się do winy"
+
+  convict_offences:
+    en_uk: "Offence(s) Offender was Convicted of"
+    en_us: "Offense(s) Defendant was Convicted of"
+    pl: "Przestępstwo/przestępstwa, za które oskarżony został skazany"
+
+  acquit_offences:
+    en_uk: "Offence(s) Offender was Acquitted of"
+    en_us: "Charge(s) Defendant was Acquitted of"
+    pl: "Przestępstwo/przestępstwa, od których oskarżony został uniewinniony"
+
+  did_offender_confess:
+    en_uk: "Did Offender Confess/Plead Guilty?"
+    en_us: "Did Defendant Confess/Plead Guilty?"
+    pl: "Czy oskarżony przyznał się do winy?"
+
+  plea_point:
+    en_uk: "At what point did Offender plead guilty?"
+    en_us: "When did Defendant enter guilty plea?"
+    pl: "W jakim momencie oskarżony przyznał się do winy?"
+    enum_mappings:
+      police_presence:
+        en_uk: "At police presence/arrest"
+        pl: "Podczas zatrzymania przez policję"
+      first_court_appearance:
+        en_uk: "At first court appearance"
+        pl: "Na pierwszym posiedzeniu sądu"
+      before_trial:
+        en_uk: "Before trial"
+        pl: "Przed rozprawą"
+      first_day_of_trial:
+        en_uk: "On first day of trial"
+        pl: "W pierwszym dniu rozprawy"
+      after_first_day_of_trial:
+        en_uk: "After first day of trial"
+        pl: "Po pierwszym dniu rozprawy"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  # Remand
+  remand_decision:
+    en_uk: "What was the Remand Decision for Offender?"
+    en_us: "What was the Bail/Detention Decision?"
+    pl: "Jaka była decyzja o tymczasowym aresztowaniu?"
+    enum_mappings:
+      unconditional_bail:
+        en_uk: "Unconditional bail"
+        pl: "Zwolnienie bez warunków"
+      conditional_bail:
+        en_uk: "Conditional bail"
+        pl: "Zwolnienie warunkowe (dozór)"
+      remanded_in_custody:
+        en_uk: "Remanded in custody"
+        pl: "Tymczasowe aresztowanie"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  remand_custody_time:
+    en_uk: "If remanded in custody, for how long?"
+    en_us: "Duration of pre-trial detention"
+    pl: "Czas trwania tymczasowego aresztowania"
+
+  # Sentencing
+  sentences_received:
+    en_uk: "Sentence(s) Received"
+    en_us: "Sentence(s) Imposed"
+    pl: "Wymierzona kara/kary"
+
+  sentence_serve:
+    en_uk: "How are sentences to be served?"
+    en_us: "How are sentences to be served?"
+    pl: "Jak mają być odbywane kary?"
+    enum_mappings:
+      concurrent:
+        en_uk: "Concurrently"
+        pl: "Łącznie (kary biegną równolegle)"
+      consecutive:
+        en_uk: "Consecutively"
+        pl: "Kolejno (kary biegną po sobie)"
+      combination:
+        en_uk: "Combination"
+        pl: "Kombinacja"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  what_ancilliary_orders:
+    en_uk: "Ancillary Orders Applied"
+    en_us: "Additional Orders/Conditions"
+    pl: "Środki karne i zabezpieczające"
+
+  # Offender Details
+  offender_gender:
+    en_uk: "Offender(s) Gender"
+    en_us: "Defendant(s) Gender"
+    pl: "Płeć oskarżonego/oskarżonych"
+    enum_mappings:
+      all_male:
+        en_uk: "Male"
+        pl: "Mężczyzna/mężczyźni"
+      all_female:
+        en_uk: "Female"
+        pl: "Kobieta/kobiety"
+      male_and_female:
+        en_uk: "Both male and female"
+        pl: "Mężczyźni i kobiety"
+
+  offender_age_offence:
+    en_uk: "Offender(s) Age at Time of Offence"
+    en_us: "Defendant(s) Age at Time of Offense"
+    pl: "Wiek oskarżonego w czasie popełnienia przestępstwa"
+
+  offender_job_offence:
+    en_uk: "Offender(s) Employment Status at Time of Offence"
+    en_us: "Defendant(s) Employment Status at Time of Offense"
+    pl: "Status zatrudnienia oskarżonego w czasie popełnienia przestępstwa"
+    enum_mappings:
+      employed:
+        en_uk: "Employed"
+        pl: "Zatrudniony"
+      self_employed:
+        en_uk: "Self-employed"
+        pl: "Samozatrudniony"
+      unemployed:
+        en_uk: "Unemployed"
+        pl: "Bezrobotny"
+      student:
+        en_uk: "Student"
+        pl: "Student/uczeń"
+      retired:
+        en_uk: "Retired"
+        pl: "Emeryt/rencista"
+      other:
+        en_uk: "Other"
+        pl: "Inny"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  offender_home_offence:
+    en_uk: "Offender(s) Accommodation Status at Time of Offence"
+    en_us: "Defendant(s) Housing Status at Time of Offense"
+    pl: "Sytuacja mieszkaniowa oskarżonego w czasie popełnienia przestępstwa"
+    enum_mappings:
+      fixed_address:
+        en_uk: "Fixed address"
+        pl: "Stałe miejsce zamieszkania"
+      homeless:
+        en_uk: "Homeless"
+        pl: "Bezdomny"
+      temporary_accommodation:
+        en_uk: "Temporary accommodation"
+        pl: "Tymczasowe zakwaterowanie"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  offender_mental_offence:
+    en_uk: "Offender(s) Mental Health at Time of Offence"
+    en_us: "Defendant(s) Mental Health Status"
+    pl: "Stan zdrowia psychicznego oskarżonego w czasie popełnienia przestępstwa"
+
+  offender_intox_offence:
+    en_uk: "Was Offender Intoxicated at Time of Offence?"
+    en_us: "Was Defendant Intoxicated at Time of Offense?"
+    pl: "Czy oskarżony był pod wpływem alkoholu lub środków odurzających?"
+    enum_mappings:
+      yes_drinking:
+        en_uk: "Yes - alcohol"
+        pl: "Tak - alkohol"
+      yes_drugs:
+        en_uk: "Yes - drugs"
+        pl: "Tak - narkotyki"
+      yes_drinking_and_drugs:
+        en_uk: "Yes - alcohol and drugs"
+        pl: "Tak - alkohol i narkotyki"
+      "no":
+        en_uk: "No"
+        pl: "Nie"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  offender_victim_relationship:
+    en_uk: "Offender-Victim Relationship"
+    en_us: "Defendant-Victim Relationship"
+    pl: "Relacja sprawca-pokrzywdzony"
+    enum_mappings:
+      stranger:
+        en_uk: "Stranger"
+        pl: "Nieznajomy"
+      relative:
+        en_uk: "Relative/Family member"
+        pl: "Krewny/członek rodziny"
+      acquaintance:
+        en_uk: "Acquaintance"
+        pl: "Znajomy"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  # Victim Details
+  victim_type:
+    en_uk: "Victim Type"
+    en_us: "Victim Type"
+    pl: "Typ pokrzywdzonego"
+    enum_mappings:
+      individual_person:
+        en_uk: "Individual person"
+        pl: "Osoba fizyczna"
+      organisation:
+        en_uk: "Organisation/Company"
+        pl: "Organizacja/firma"
+
+  num_victims:
+    en_uk: "Number of Victims"
+    en_us: "Number of Victims"
+    pl: "Liczba pokrzywdzonych"
+
+  victim_gender:
+    en_uk: "Victim(s) Gender"
+    en_us: "Victim(s) Gender"
+    pl: "Płeć pokrzywdzonego/pokrzywdzonych"
+    enum_mappings:
+      all_male:
+        en_uk: "Male"
+        pl: "Mężczyzna/mężczyźni"
+      all_female:
+        en_uk: "Female"
+        pl: "Kobieta/kobiety"
+      male_and_female:
+        en_uk: "Both male and female"
+        pl: "Mężczyźni i kobiety"
+
+  victim_age_offence:
+    en_uk: "Victim(s) Age at Time of Offence"
+    en_us: "Victim(s) Age at Time of Offense"
+    pl: "Wiek pokrzywdzonego w czasie popełnienia przestępstwa"
+
+  victim_job_offence:
+    en_uk: "Victim(s) Employment Status at Time of Offence"
+    en_us: "Victim(s) Employment Status"
+    pl: "Status zatrudnienia pokrzywdzonego"
+
+  victim_home_offence:
+    en_uk: "Victim(s) Accommodation Status at Time of Offence"
+    en_us: "Victim(s) Housing Status"
+    pl: "Sytuacja mieszkaniowa pokrzywdzonego"
+
+  victim_mental_offence:
+    en_uk: "Victim(s) Mental Health at Time of Offence"
+    en_us: "Victim(s) Mental Health Status"
+    pl: "Stan zdrowia psychicznego pokrzywdzonego"
+
+  victim_intox_offence:
+    en_uk: "Was Victim Intoxicated at Time of Offence?"
+    en_us: "Was Victim Intoxicated?"
+    pl: "Czy pokrzywdzony był pod wpływem alkoholu lub środków odurzających?"
+    enum_mappings:
+      yes_drinking:
+        en_uk: "Yes - alcohol"
+        pl: "Tak - alkohol"
+      yes_drugs:
+        en_uk: "Yes - drugs"
+        pl: "Tak - narkotyki"
+      yes_drinking_and_drugs:
+        en_uk: "Yes - alcohol and drugs"
+        pl: "Tak - alkohol i narkotyki"
+      "no":
+        en_uk: "No"
+        pl: "Nie"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  # Evidence
+  pros_evid_type_trial:
+    en_uk: "Types of Evidence Prosecution Presented at Trial"
+    en_us: "Types of Evidence Presented by Prosecution"
+    pl: "Rodzaje dowodów przedstawionych przez oskarżenie"
+
+  def_evid_type_trial:
+    en_uk: "Types of Evidence Defence Presented at Trial"
+    en_us: "Types of Evidence Presented by Defense"
+    pl: "Rodzaje dowodów przedstawionych przez obronę"
+
+  # Sentencing Factors
+  pre_sent_report:
+    en_uk: "Pre-sentence Report Assessment"
+    en_us: "Pre-sentence Investigation Report"
+    pl: "Ocena z raportu przedsądowego"
+    enum_mappings:
+      low:
+        en_uk: "Low risk"
+        pl: "Niskie ryzyko"
+      medium:
+        en_uk: "Medium risk"
+        pl: "Średnie ryzyko"
+      high:
+        en_uk: "High risk"
+        pl: "Wysokie ryzyko"
+      dont_know:
+        en_uk: "Unknown"
+        pl: "Nieznane"
+
+  agg_fact_sent:
+    en_uk: "Aggravating Factors Mentioned When Sentencing"
+    en_us: "Aggravating Factors in Sentencing"
+    pl: "Okoliczności obciążające wymienione przy wymiarze kary"
+
+  mit_fact_sent:
+    en_uk: "Mitigating Factors Mentioned When Sentencing"
+    en_us: "Mitigating Factors in Sentencing"
+    pl: "Okoliczności łagodzące wymienione przy wymiarze kary"
+
+  vic_impact_statement:
+    en_uk: "Was Victim Impact Statement Given?"
+    en_us: "Was Victim Impact Statement Presented?"
+    pl: "Czy złożono oświadczenie o wpływie na pokrzywdzonego?"
+
+  # Appeal Details
+  appellant:
+    en_uk: "Who is the Appellant?"
+    en_us: "Who is the Appellant?"
+    pl: "Kto jest stroną apelującą?"
+    enum_mappings:
+      offender:
+        en_uk: "Offender/Defendant"
+        pl: "Oskarżony"
+      attorney_general:
+        en_uk: "Attorney General/Crown"
+        pl: "Prokurator Generalny/Prokuratura"
+      other:
+        en_uk: "Other"
+        pl: "Inny"
+
+  co_def_acc_num:
+    en_uk: "Number of Co-defendants/Co-accused in Case"
+    en_us: "Number of Co-defendants"
+    pl: "Liczba współoskarżonych w sprawie"
+
+  appeal_against:
+    en_uk: "What is the Appeal Against?"
+    en_us: "Grounds for Appeal"
+    pl: "Przedmiot apelacji"
+    enum_mappings:
+      conviction_unsafe:
+        en_uk: "Conviction unsafe"
+        pl: "Skazanie wadliwe"
+      sentence_unduly_excessive:
+        en_uk: "Sentence unduly excessive"
+        pl: "Kara rażąco surowa"
+      sentence_unduly_lenient:
+        en_uk: "Sentence unduly lenient"
+        pl: "Kara rażąco łagodna"
+      both:
+        en_uk: "Both conviction and sentence"
+        pl: "Zarówno skazanie jak i kara"
+      other:
+        en_uk: "Other"
+        pl: "Inne"
+
+  appeal_ground:
+    en_uk: "Ground(s) for Appeal"
+    en_us: "Grounds for Appeal"
+    pl: "Podstawy apelacji"
+
+  sent_guide_which:
+    en_uk: "Sentencing Guideline/Law/Act Mentioned by Appeal Court"
+    en_us: "Sentencing Guidelines/Laws Referenced"
+    pl: "Wytyczne/przepisy dotyczące wymiaru kary przywołane przez sąd"
+
+  appeal_outcome:
+    en_uk: "Outcome of Appeal"
+    en_us: "Appeal Outcome"
+    pl: "Wynik apelacji"
+    enum_mappings:
+      dismissed_failed_refused:
+        en_uk: "Dismissed/Failed/Refused"
+        pl: "Oddalona/Odrzucona"
+      allowed_conviction_quashed:
+        en_uk: "Allowed - Conviction quashed"
+        pl: "Uwzględniona - Skazanie uchylone"
+      allowed_replaced_by_more_excessive_sentence:
+        en_uk: "Allowed - Replaced by more severe sentence"
+        pl: "Uwzględniona - Zastąpiono surowszą karą"
+      allowed_replaced_by_more_lenient_sentence:
+        en_uk: "Allowed - Replaced by more lenient sentence"
+        pl: "Uwzględniona - Zastąpiono łagodniejszą karą"
+      mixed_decision:
+        en_uk: "Mixed decision"
+        pl: "Decyzja mieszana"
+
+  # Appeal Reasons
+  reason_quash_conv:
+    en_uk: "Appeal Court Basis for Why Conviction is Quashed"
+    en_us: "Reasons for Overturning Conviction"
+    pl: "Podstawy uchylenia skazania przez sąd odwoławczy"
+
+  reason_sent_excessive:
+    en_uk: "Appeal Court Basis for Why Sentence is Unduly Excessive"
+    en_us: "Reasons Sentence Deemed Excessive"
+    pl: "Podstawy uznania kary za rażąco surową"
+
+  reason_sent_lenient:
+    en_uk: "Appeal Court Basis for Why Sentence is Unduly Lenient"
+    en_us: "Reasons Sentence Deemed Too Lenient"
+    pl: "Podstawy uznania kary za rażąco łagodną"
+
+  reason_dismiss:
+    en_uk: "Appeal Court Basis for Why Appeal Dismissed"
+    en_us: "Reasons for Dismissing Appeal"
+    pl: "Podstawy oddalenia apelacji"
+
+  keywords:
+    en_uk: "Keywords/Tags for the Case"
+    en_us: "Case Keywords/Tags"
+    pl: "Słowa kluczowe/tagi sprawy"
+
+# Extraction context templates by jurisdiction
+extraction_contexts:
+  en_uk: |
+    You are analyzing a UK criminal appeal court judgment. Extract structured information
+    following the schema provided. Pay attention to UK legal terminology and court structures.
+
+    Key UK terms to look for:
+    - Crown Court, Court of Appeal, High Court
+    - Appellant, Respondent, Crown
+    - Barrister, Solicitor, QC/KC
+    - Guilty plea, Not guilty plea
+    - Concurrent/Consecutive sentences
+    - Ancillary orders (restraining order, compensation order, etc.)
+
+  pl: |
+    Analizujesz polski wyrok sądu karnego lub apelacyjnego. Wyodrębnij strukturalne informacje
+    zgodnie z podanym schematem. Zwróć uwagę na polską terminologię prawną i strukturę sądów.
+
+    Kluczowe polskie terminy:
+    - Sąd Rejonowy, Sąd Okręgowy, Sąd Apelacyjny, Sąd Najwyższy
+    - Oskarżony, Obrońca, Prokurator
+    - Przyznanie się do winy, Nieprzyznanie się
+    - Kary łączne, Kary jednostkowe
+    - Środki karne (zakaz prowadzenia pojazdów, przepadek, nawiązka)

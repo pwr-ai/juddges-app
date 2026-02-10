@@ -1,0 +1,110 @@
+language: en
+content: |
+  Data extraction instructions according to the schema
+
+  Your goal is to extract information strictly according to the provided data schema. Work only on the basis of the source document and the schema. Do not use external knowledge or assumptions.
+
+  Follow the rules below to ensure consistency and high-quality results.
+
+  1) Output language:
+     - Write all textual values (descriptions, summaries) in English, unless the schema or the document explicitly requires another language (e.g. a proper name or term).
+
+  2) No guessing:
+     - Never invent or complete values that are not clearly present in the document.
+     - If a piece of information is not explicitly present in the document, treat it as "missing data".
+     - If you are not highly confident about the value of a field based on the document, treat it as missing data rather than filling in a guess.
+     - Do not create your own placeholder values such as "N/A", "unknown", "not provided", etc.
+
+  3) How to represent missing data (when the schema does not define a different rule):
+
+     a) Text fields (string):
+        - If there is no data, or no sufficiently certain information for a text field, set its value to an empty string `""`.
+        - This applies to both required and optional string fields, unless the schema explicitly defines a different value.
+
+     b) Enum fields:
+        - If you cannot, with high confidence, choose one specific enum value based on the document, treat this as missing data.
+        - Represent missing data for enum fields with `null`.
+        - Do not pick any enum value "by intuition" or as a best guess.
+        - Do not use values that are not part of the enum defined in the schema, and do not invent new enum variants.
+
+     c) Numeric fields (number):
+        - Never use 0, 1, or any other number as a default substitute for missing data.
+        - If the document does not contain a clear numeric value, treat it as missing data and do not substitute any numeric value.
+
+     d) Boolean fields (boolean):
+        - If the document does not clearly indicate that a condition is true or false, treat it as missing data.
+        - Do not set `true` or `false` based on intuition; do not infer booleans from vague wording.
+
+     e) Nested objects and arrays:
+        - Do not create nested objects or array elements "just in case".
+        - Only create nested objects and array items when the document contains data that clearly maps to them.
+
+  4) Dates:
+     - Format all dates using ISO format:
+       - full date → `YYYY-MM-DD`,
+       - year and month → `YYYY-MM`,
+       - year only → `YYYY`.
+     - Do not fill in missing parts of a date (e.g. missing day or month) based on assumptions.
+     - If you cannot reliably determine a date from the document, treat it as missing data and represent it according to the field type (e.g. `""` for string, `null` for enum-like fields).
+
+  5) Numbers and amounts:
+     - Represent all numeric values (e.g. prices, amounts, quantities) as numbers (JSON number type).
+     - Use a dot as the decimal separator and no currency symbol or spaces, e.g. `12345.67`.
+     - Do not round, convert or transform numeric values unless the schema explicitly requires it.
+     - If the schema has separate fields for currency or amount type, fill them based on the document.
+     - If a numeric value is not clearly present in the document, treat it as missing data and do not substitute 0 or any other number.
+
+  6) Identifiers:
+     - Copy identifiers (document numbers, references, codes, etc.) exactly as they appear in the document.
+     - Preserve all characters (letters, digits, spaces, special characters, punctuation).
+     - Do not normalise, reformat, or "clean up" identifiers.
+
+  7) Text fields (descriptions and summaries):
+     - Provide short, neutral summaries or short quotes from the document (typically 1–3 sentences).
+     - Base your text strictly on the content of the document.
+     - Do not add commentary, opinions, interpretations, or speculation.
+     - If you cannot create a meaningful summary from the document, use an empty string `""` as the value.
+
+  8) Enum fields:
+     - Only choose values that are explicitly listed in the enum definition in the schema.
+     - Select exactly one enum value per field.
+     - Base the choice strictly on the document.
+     - If you cannot, with high confidence, assign any of the enum values, represent missing data as `null` (see rule 3b).
+     - Never generate enum values that are not defined in the schema.
+
+  9) No external knowledge:
+     - Do not use general world knowledge, typical cases, or "common sense" to fill in missing data.
+     - Do not assume standard rates, dates, values, or interpretations if they are not explicitly provided in the document or the schema.
+
+  10) Multiple periods / time ranges:
+      - If the information refers to multiple periods (e.g. years, quarters, date ranges), represent this according to the schema:
+        - use dedicated fields if the schema provides them,
+        - or use the appropriate descriptive field if that is how the schema models such cases.
+      - When dates or ranges are given, preserve them as they are; do not simplify or merge them on your own.
+
+  11) Financial data:
+      - For financial fields (e.g. costs, revenues, taxes), use the type of value (e.g. net, gross) required by the schema.
+      - If the document contains multiple financial figures, select the one that matches the schema's definition for the field.
+      - If the schema expects a value that is not explicitly present (e.g. net value when only gross is given), do not calculate it yourself – treat it as missing data.
+
+  12) Field-level notes:
+      - Always follow any instructions or notes attached to specific fields in the schema (e.g. required format, units, allowed ranges, handling of missing data).
+      - If a field's description is more specific than the general rules here, follow the field description for that field.
+
+  13) Document- or domain-specific logic:
+      - If the schema contains additional rules specific to a document type or domain (e.g. legal, tax, technical), apply them exactly as written.
+      - Do not add your own legal conclusions, business judgements, or risk assessments.
+
+  14) Ambiguous or incomplete information:
+      - If the information in the document is ambiguous, contradictory, or incomplete, do not "choose the most likely" value.
+      - If you cannot assign a value with high confidence based on the document, treat it as missing data.
+      - Represent missing data according to the field type and the rules in point 3 (e.g. `""` for string, `null` for enum).
+
+  15) Consistency:
+      - Apply the same formatting and missing-data rules consistently across all fields of the same type.
+      - Make sure no missing information has been silently replaced with guessed or assumed values.
+
+  16) Schema priority:
+      - The schema defines which fields are relevant and how they should be represented.
+      - If there is any conflict between these general rules and a specific field description in the schema, follow the field description for that field.
+

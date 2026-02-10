@@ -1,0 +1,210 @@
+# docker-compose.yml
+# Production Legal AI / AI-Tax Application Services
+#
+# This file contains only application-specific services.
+# Shared infrastructure (PostgreSQL, Redis, ClickHouse, MinIO, Langfuse) is in docker-compose.shared.yml
+#
+# ENVIRONMENT CONFIGURATION:
+#   - All configuration in .env (non-secrets) and .env.secrets (secrets)
+#   - No more .env.prod, .env.dev, .env.team files
+#   - For development: uncomment dev overrides in .env
+#
+# USAGE:
+#   1. Start shared services once:
+#      docker compose -f docker-compose.shared.yml up -d
+#
+#   2. Start application services:
+#      docker compose up -d
+#
+#   3. Stop application without affecting shared services:
+#      docker compose down
+#
+# COMBINED USAGE (legacy):
+#   docker compose -f docker-compose.shared.yml -f docker-compose.yml up -d
+
+services:
+  # ============================================================================
+  # Application Services
+  # ============================================================================
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: legal-ai-frontend
+    expose:
+      - "3006"
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.secrets
+    environment:
+      - PORT=3006
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+      - API_BASE_URL=${API_BASE_URL}
+      - "VIRTUAL_HOST=${VIRTUAL_HOST_FRONTEND}"
+      - "VIRTUAL_PORT=${VIRTUAL_PORT_FRONTEND}"
+      - "LETSENCRYPT_HOST=${VIRTUAL_HOST_FRONTEND}"
+      - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
+    # All environment variables loaded from env_file
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.depends-on=backend"
+      - "com.legal-ai.service=application"
+      - "com.legal-ai.service.type=frontend"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+      - shared_network
+      - nginx-router_proxy-tier
+    # Health check for Next.js frontend
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3006/', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Structured logging with rotation for production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: legal-ai-backend
+    expose:
+      - "8002"
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.secrets
+    environment:
+      - "VIRTUAL_HOST=${VIRTUAL_HOST_BACKEND}"
+      - "VIRTUAL_PORT=${VIRTUAL_PORT_BACKEND}"
+      - "LETSENCRYPT_HOST=${VIRTUAL_HOST_BACKEND}"
+      - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
+    # All environment variables loaded from env_file
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "com.legal-ai.service=application"
+      - "com.legal-ai.service.type=backend-api"
+    # Backend API does not need to depend on backend-worker
+    # Workers are independent task processors and API can start without them
+    # Remove depends_on to allow independent scaling and deployment
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+      - shared_network
+      - nginx-router_proxy-tier
+    # Health check for FastAPI backend using dedicated health endpoint
+    # Uses /health/healthz - lightweight check without authentication
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Structured logging with rotation for production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+        reservations:
+          cpus: '4'
+          memory: 12G
+
+  backend-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: legal-ai-backend-worker
+    command: celery -A app.workers worker --loglevel=info
+    restart: unless-stopped
+    # PRODUCTION NOTE: Development volume mount removed for production deployment
+    # In production, code is baked into the Docker image at build time for:
+    # - Immutable deployments (no runtime code changes)
+    # - Better performance (no bind mount overhead)
+    # - Security (no host filesystem access)
+    # - Consistency (same code across all environments)
+    #
+    # For local development, uncomment the following line:
+    # volumes:
+    #   - ./backend:/app
+    env_file:
+      - .env
+      - .env.secrets
+    # All environment variables loaded from env_file
+    labels:
+      - "com.legal-ai.service=application"
+      - "com.legal-ai.service.type=worker"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+      - shared_network
+    # Health check for Celery worker
+    # Checks if Celery process is running and responsive
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers inspect ping -d celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+    # Structured logging with rotation for production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+
+networks:
+  # Application-only network for inter-service communication
+  app-network:
+    name: ai-tax-app-network
+    driver: bridge
+
+  # Shared infrastructure network (external - created by docker-compose.shared.yml)
+  shared_network:
+    name: ai-tax-shared-network
+    external: true
+
+  # External nginx reverse proxy network (production only)
+  nginx-router_proxy-tier:
+    external: true

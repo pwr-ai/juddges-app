@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "schema_generator_agent"
+version = "0.1.0"
+description = "Agentic system enabling automated schema generation for structured information extraction"
+authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+readme = "README.md"
+packages = [
+    { include = "schema_generator_agent" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+python-dotenv = "^1.0.0"
+langchain = "^0.3"
+langchain-openai = "^0.3.7"
+langchain-community = "^0.3.19"
+langchain-core = "^0.3.74"
+langchain-text-splitters = "^0.3.9"
+langgraph = "^0.6.4"
+langgraph-checkpoint-postgres = "^2.0.23"
+psycopg-binary = "^3.2.10"
+weaviate-client = "^4.11.1"
+ai-tax-search = {path = "../ai_tax_search", develop=true}
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.3.0"
+ruff = "^0.12.8"
+coverage = "^7.10.3"
+pytest = "^8.4.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.mypy]
+python_version = "3.13"
+untyped_calls_exclude = ["pymongo"]
+plugins = "numpy.typing.mypy_plugin"
+
+[[tool.mypy.overrides]]
+module = ["pyarrow.*", "datasets.*", "sentence_transformers.*"]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+minversion = "8.0.0"
+pythonpath = ["."]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
