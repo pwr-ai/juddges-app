@@ -1,10 +1,13 @@
 # Juddges App .gitignore
 
 # Environment variables
+# .env.example is tracked (template with variable names only)
+# .env is gitignored (contains actual values)
 .env
 .env.local
 .env.*.local
 .env.production
+.env.secrets
 
 # Dependencies
 node_modules/
