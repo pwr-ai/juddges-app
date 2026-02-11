@@ -97,8 +97,11 @@ schema_generation_prompt = ChatPromptTemplate.from_template(
     template_format="jinja2",
 )
 
-# Get default LLM (uses GPT-4o by default)
-model = get_default_llm(use_mini_model=False)
+
+# Lazy-load LLM to avoid requiring API key at import time
+def _get_model():
+    """Get or create the default LLM model (GPT-4o by default)."""
+    return get_default_llm(use_mini_model=False)
 
 
 def strip_markdown_json(text: str) -> str:
@@ -324,14 +327,20 @@ def parse_llm_json_output(message) -> dict[str, Any]:
         raise ValueError(f"Invalid JSON in LLM response: {e}")
 
 
-# Build the schema generation chain
-schema_generation_chain = (
-    RunnableLambda(prepare_input).with_config(run_name="prepare_schema_input")
-    | schema_generation_prompt.with_config(run_name="schema_generation_prompt")
-    | model.with_config(run_name="schema_generation_llm")
-    | RunnableLambda(parse_llm_json_output).with_config(run_name="parse_json_output")
-    | RunnableLambda(validate_and_fix_schema).with_config(run_name="schema_validator")
-).with_config(run_name="schema_generation_chain", callbacks=callbacks)
+def _build_schema_generation_chain():
+    """Build the schema generation chain (lazy initialization)."""
+    return (
+        RunnableLambda(prepare_input).with_config(run_name="prepare_schema_input")
+        | schema_generation_prompt.with_config(run_name="schema_generation_prompt")
+        | _get_model().with_config(run_name="schema_generation_llm")
+        | RunnableLambda(parse_llm_json_output).with_config(run_name="parse_json_output")
+        | RunnableLambda(validate_and_fix_schema).with_config(run_name="schema_validator")
+    ).with_config(run_name="schema_generation_chain", callbacks=callbacks)
+
+
+# Backward compatibility: Export chain builder as schema_generation_chain
+# Code that imports this will get a callable that returns the chain
+schema_generation_chain = _build_schema_generation_chain
 
 
 async def generate_schema(
@@ -400,8 +409,9 @@ async def generate_schema(
         run_config["metadata"]["langfuse_session"] = f"schema_{schema_name}"
         logger.debug(f"Langfuse tracking enabled for schema generation: {schema_name}")
 
-    # Generate schema using the chain
-    raw_schema = await schema_generation_chain.ainvoke(inputs, config=run_config)
+    # Generate schema using the chain (build chain lazily to avoid requiring API key at import)
+    chain = _build_schema_generation_chain()
+    raw_schema = await chain.ainvoke(inputs, config=run_config)
 
     # Merge with existing fields and mark new ones as AI-generated
     schema = merge_and_mark_new_fields(raw_schema, existing_fields)

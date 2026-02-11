@@ -7,11 +7,19 @@ from pathlib import Path
 import pytest
 from typing import AsyncGenerator
 
-# Add backend packages to Python path for tests
+# Add backend and packages to Python path for tests
 backend_dir = Path(__file__).parent.parent
 packages_dir = backend_dir / "packages"
-sys.path.insert(0, str(packages_dir / "juddges_search"))
-sys.path.insert(0, str(packages_dir / "schema_generator_agent"))
+
+# Add backend app directory for imports like "from app.models import..."
+sys.path.insert(0, str(backend_dir))
+
+# Add individual package directories (both have nested structure schema_name/schema_name/)
+# This allows both "from juddges_search.xxx" and "from schema_generator_agent.xxx" to work
+# For packages with nested structure: packages/package_name/package_name/
+# Add the inner package directories to sys.path
+sys.path.insert(0, str(packages_dir / "juddges_search" / "juddges_search"))
+sys.path.insert(0, str(packages_dir / "schema_generator_agent" / "schema_generator_agent"))
 
 
 # Removed custom event_loop fixture - pytest-asyncio handles this automatically
