@@ -22,7 +22,7 @@ from loguru import logger
 
 def _build_legal_prompt(response_format: str = "adaptive") -> str:
     """
-    Build the complete legal tax chat prompt based on response format.
+    Build the complete legal chat prompt based on response format.
 
     Args:
         response_format: Either 'short', 'detailed', or 'adaptive' (default)
@@ -54,17 +54,17 @@ def _build_legal_prompt(response_format: str = "adaptive") -> str:
 
 
 # Create prompt templates for all response formats
-LEGAL_TAX_CHAT_PROMPT_SHORT = _build_legal_prompt("short")
-LEGAL_TAX_CHAT_PROMPT_DETAILED = _build_legal_prompt("detailed")
-LEGAL_TAX_CHAT_PROMPT_ADAPTIVE = _build_legal_prompt("adaptive")
+LEGAL_CHAT_PROMPT_SHORT = _build_legal_prompt("short")
+LEGAL_CHAT_PROMPT_DETAILED = _build_legal_prompt("detailed")
+LEGAL_CHAT_PROMPT_ADAPTIVE = _build_legal_prompt("adaptive")
 
 model = get_default_llm(use_mini_model=False)
 
 # Create chat prompt templates for all response formats
 # Using default f-string format instead of jinja2 to avoid conflicts with JSON curly braces in examples
-chat_prompt_short = ChatPromptTemplate.from_template(LEGAL_TAX_CHAT_PROMPT_SHORT)
-chat_prompt_detailed = ChatPromptTemplate.from_template(LEGAL_TAX_CHAT_PROMPT_DETAILED)
-chat_prompt_adaptive = ChatPromptTemplate.from_template(LEGAL_TAX_CHAT_PROMPT_ADAPTIVE)
+chat_prompt_short = ChatPromptTemplate.from_template(LEGAL_CHAT_PROMPT_SHORT)
+chat_prompt_detailed = ChatPromptTemplate.from_template(LEGAL_CHAT_PROMPT_DETAILED)
+chat_prompt_adaptive = ChatPromptTemplate.from_template(LEGAL_CHAT_PROMPT_ADAPTIVE)
 
 
 def _get_value(inputs, key: str, default=None):
@@ -250,20 +250,20 @@ chat_chain = (
     RunnableSequence(
         retrieval_branch,
         RunnableLambda(_route_to_appropriate_prompt).with_config(
-            run_name="legal_tax_prompt_router", tags=["prompt-selection", "format-routing"]
+            run_name="legal_prompt_router", tags=["prompt-selection", "format-routing"]
         ),
-        model.with_config(run_name="legal_chat_llm_call", tags=["gpt4o", "legal-assistant", "tax-expert"]),
+        model.with_config(run_name="legal_chat_llm_call", tags=["gpt4o", "legal-assistant", "juddges"]),
         JsonOutputParser().with_config(run_name="legal_chat_json_parser", tags=["json-output", "structured-response"]),
     )
     .with_config(
         run_name="legal_chat_assistant",
         callbacks=callbacks,
-        tags=["legal-ai", "tax-assistant", "chat-with-history", "wust-project"],
+        tags=["legal-ai", "juddges", "chat-with-history", "wust-project", "legal-judgments"],
         metadata={
             "version": __version__,
-            "purpose": "Polish tax law consultation with chat history and intelligent retrieval routing",
+            "purpose": "Legal judgments analysis for Polish tax law and criminal law with chat history and intelligent retrieval routing",
             "project": "AI-Tax & JuDDGES - WUST",
-            "domain": "legal-tax-polish",
+            "domain": "legal-judgments-multi-domain",
             "features": [
                 "chat_history",
                 "document_retrieval",
