@@ -86,8 +86,8 @@ async def mock_weaviate_pool():
     mock_pool.disconnect = AsyncMock()
     
     # Patch get_weaviate_pool to return our mock
-    with patch("ai_tax_search.db.weaviate_pool.get_weaviate_pool", return_value=mock_pool):
-        with patch("ai_tax_search.db.weaviate_db.get_weaviate_pool", return_value=mock_pool):
+    with patch("juddges_search.db.weaviate_pool.get_weaviate_pool", return_value=mock_pool):
+        with patch("juddges_search.db.weaviate_db.get_weaviate_pool", return_value=mock_pool):
             yield mock_pool, mock_client, mock_legal_collection, mock_chunks_collection
 
 
@@ -257,9 +257,9 @@ class TestEndpointPoolIntegration:
         mock_collection.query.hybrid = AsyncMock(return_value=MagicMock(objects=[]))
         mock_client.collections.get = MagicMock(return_value=mock_collection)
         
-        with patch("ai_tax_search.db.weaviate_pool.get_weaviate_pool", return_value=mock_pool):
+        with patch("juddges_search.db.weaviate_pool.get_weaviate_pool", return_value=mock_pool):
             with patch(
-                "ai_tax_search.db.weaviate_db.weaviate.use_async_with_custom",
+                "juddges_search.db.weaviate_db.weaviate.use_async_with_custom",
                 return_value=mock_client
             ):
                 with patch(
@@ -293,7 +293,7 @@ class TestEndpointPoolIntegration:
         
         with patch.dict(os.environ, {"WEAVIATE_USE_POOL": "false"}):
             with patch(
-                "ai_tax_search.db.weaviate_db.weaviate.use_async_with_custom",
+                "juddges_search.db.weaviate_db.weaviate.use_async_with_custom",
                 return_value=mock_client
             ) as mock_use_async:
                 response = await async_client.post(

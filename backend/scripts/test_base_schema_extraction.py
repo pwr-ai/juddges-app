@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 # Add the package to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "packages" / "ai_tax_search"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "packages" / "juddges_search"))
 
 from juddges_search.info_extraction.base_schema_extractor import BaseSchemaExtractor
 from juddges_search.info_extraction.jurisdiction import detect_jurisdiction, Jurisdiction

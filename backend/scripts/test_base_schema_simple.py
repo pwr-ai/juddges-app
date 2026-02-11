@@ -273,7 +273,7 @@ def test_schema_loading() -> None:
     """Test loading the base schema JSON."""
     print_section("Testing Schema Loading")
 
-    schema_path = Path(__file__).parent.parent / "packages" / "ai_tax_search" / "config" / "schema" / "base_legal_schema.json"
+    schema_path = Path(__file__).parent.parent / "packages" / "juddges_search" / "config" / "schema" / "base_legal_schema.json"
 
     if not schema_path.exists():
         print(f"⚠️  Schema file not found at: {schema_path}")
@@ -333,7 +333,7 @@ def test_mappings_loading() -> None:
         print("⚠️  PyYAML not installed, skipping mappings test")
         return
 
-    mappings_path = Path(__file__).parent.parent / "packages" / "ai_tax_search" / "config" / "schema" / "jurisdiction_mappings.yaml"
+    mappings_path = Path(__file__).parent.parent / "packages" / "juddges_search" / "config" / "schema" / "jurisdiction_mappings.yaml"
 
     if not mappings_path.exists():
         print(f"⚠️  Mappings file not found at: {mappings_path}")

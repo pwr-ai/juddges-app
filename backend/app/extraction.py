@@ -493,7 +493,7 @@ def update_job_status_in_supabase(
         return False
 
 # Constants for prompt management
-PROMPTS_DIR = FilePath("packages/ai_tax_search/config/prompts")
+PROMPTS_DIR = FilePath("packages/juddges_search/config/prompts")
 PROMPTS_ARCHIVE_DIR = PROMPTS_DIR / "archive"
 SYSTEM_PROMPTS = {"info_extraction"}  # System prompts that cannot be deleted
 
