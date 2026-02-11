@@ -1,0 +1,1 @@
+# Schema generator agent tests
