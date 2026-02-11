@@ -22,7 +22,6 @@ juddges_search = { path = "packages/juddges_search", develop = true }
 schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
 langfuse = "^3.2.3"
 aiohttp = "^3.11.14"
-weaviate-client = "^4.11.1"
 httpx = "^0.27.0"
 supabase = "^2.20.0"
 langgraph-checkpoint-postgres = "^2.0.23"
@@ -51,10 +50,11 @@ poethepoet = "^0.29.0"
 test = "pytest tests/ -v"
 test-unit = "pytest tests/ -v -m unit"
 test-integration = "pytest tests/ -v -m integration"
-test-search = "pytest tests/test_weaviate_search.py -v"
-test-language = "pytest tests/test_language_search.py -v"
-test-pool = "pytest tests/test_weaviate_pool.py -v"
-test-endpoints = "pytest tests/test_endpoints_pool.py -v"
+# Weaviate tests removed - using Supabase pgvector exclusively
+# test-search = "pytest tests/test_weaviate_search.py -v"
+# test-language = "pytest tests/test_language_search.py -v"
+# test-pool = "pytest tests/test_weaviate_pool.py -v"
+# test-endpoints = "pytest tests/test_endpoints_pool.py -v"
 test-cov = "pytest tests/ --cov=juddges_search --cov-report=html --cov-report=term-missing"
 test-cov-html = "pytest tests/ --cov=juddges_search --cov-report=html"
 

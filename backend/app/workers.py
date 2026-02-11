@@ -7,7 +7,7 @@ from typing import Any
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.schema_utils import prepare_schema_from_db
 from juddges_search.llms import get_llm
-from juddges_search.retrieval.fetch import get_documents_by_id
+from app.utils.document_fetcher import get_documents_by_id
 from celery import Celery, Task
 from celery.exceptions import Retry
 from dotenv import load_dotenv
@@ -20,7 +20,6 @@ from app.models import (
     DocumentProcessingStatus,
 )
 from app.schemas import _fetch_schema_from_db
-from app.error_utils import is_weaviate_or_grpc_error
 
 load_dotenv()
 BROKER_URL = os.environ["CELERY_BROKER_URL"]
@@ -168,14 +167,12 @@ def extract_information_from_documents_task(
     Error handling:
     - Connection errors (ConnectionError, OSError, TimeoutError): Automatically retried by Celery
       up to 2 times (3 attempts total) with exponential backoff (60s base, 300s max)
-    - gRPC/Weaviate errors: Retry up to 2 times with custom backoff (5min, 10min, 20min)
     - Schema/validation errors: Not retried, fail immediately
     - Other errors: Mark all documents as failed and return failed results
-    
+
     Retry strategy:
-    - Uses exception type checking (not string matching) for safer error detection
-    - Celery's autoretry_for handles most connection errors automatically
-    - Custom retry logic only for gRPC/Weaviate-specific exceptions
+    - Uses Celery's autoretry_for to handle most connection errors automatically
+    - Database errors from Supabase are retried with connection error strategy
         
     Note: The InformationExtractor also has built-in retry logic for LLM API calls, 
     so transient LLM errors are handled at multiple levels.
@@ -213,7 +210,7 @@ def extract_information_from_documents_task(
         api_base = getattr(llm, 'openai_api_base', 'not set')
         logger.info(f"LLM initialized: model={llm.model_name}, api_base={api_base}")
         
-        # Get documents - this may fail if Weaviate is unavailable
+        # Get documents - this may fail if Supabase is unavailable
         documents = asyncio.run(get_documents_by_id(request.document_ids))
 
         # Schema must be provided as dict from Supabase (with 'name', 'description', 'text' fields)
@@ -380,21 +377,6 @@ def extract_information_from_documents_task(
         )
         raise  # Let Celery's autoretry_for handle it
     except Exception as e:
-        # Check exception type for specific retryable errors using isinstance() ONLY
-        # No string matching or type name checking - we want to be 100% certain
-        # Uses shared error_utils.is_weaviate_or_grpc_error() for consistent detection
-        
-        # Check if it's a gRPC/Weaviate connection error
-        # Only retry if we can definitively identify the exception type
-        if is_weaviate_or_grpc_error(e):
-            exception_type = type(e).__name__
-            logger.warning(
-                f"Weaviate/gRPC connection error (attempt {self.request.retries + 1}/{self.max_retries + 1}): "
-                f"{exception_type}: {e}"
-            )
-            retry_delay = 300 * (2 ** self.request.retries)  # 5min, 10min, 20min
-            raise self.retry(exc=e, countdown=retry_delay)
-        
         # For non-retryable errors, fail all documents
         error_type = type(e).__name__
         error_msg = str(e)

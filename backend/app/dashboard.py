@@ -14,20 +14,9 @@ from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
 
-# Weaviate imports - optional, will be None if not available
-try:
-    from weaviate.classes.query import Filter, MetadataQuery, Sort
-    from juddges_search.db.weaviate_db import WeaviateLegalDatabase
-    from juddges_search.retrieval.weaviate_search import search_chunks_term
-    WEAVIATE_AVAILABLE = True
-except ImportError:
-    WEAVIATE_AVAILABLE = False
-    WeaviateLegalDatabase = None
-    search_chunks_term = None
-    Filter = None
-    MetadataQuery = None
-    Sort = None
-    logger.info("Weaviate not available, using Supabase for dashboard queries")
+# Note: Weaviate has been removed - all queries now use Supabase pgvector
+WEAVIATE_AVAILABLE = False
+logger.info("Using Supabase for all dashboard queries")
 
 # Redis client setup (optional, falls back to in-memory cache)
 try:

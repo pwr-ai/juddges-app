@@ -36,37 +36,8 @@ from app.workers import (
     celery_app,
     extract_information_from_documents_task,
 )
-from app.error_utils import is_weaviate_or_grpc_error
 
 router = APIRouter(prefix="/extractions", tags=["extraction"])
-
-
-def raise_weaviate_error(error: Exception, context: str = "") -> None:
-    """
-    Raise an HTTPException for Weaviate/gRPC connection errors with appropriate details.
-    
-    This should be used together with is_weaviate_or_grpc_error() from error_utils,
-    which performs robust exception type checking using isinstance() checks only.
-    
-    Args:
-        error: The original Weaviate/gRPC-related exception
-        context: Optional context string describing what operation failed (e.g., "retrieving extraction job")
-        
-    Raises:
-        HTTPException: 503 Service Unavailable with Weaviate error details
-    """
-    context_msg = f" while {context}" if context else ""
-    logger.error(f"Weaviate connection error{context_msg}: {error}")
-    raise HTTPException(
-        status_code=503,
-        detail={
-            "error": "Weaviate Service Unavailable",
-            "message": "The vector database service (Weaviate) is currently unavailable. Please check the service status and try again later.",
-            "code": "WEAVIATE_UNAVAILABLE",
-            "debug": str(error),
-            "context": context
-        }
-    )
 
 
 def simplify_job_status(celery_state: str, results: list[dict[str, Any]] | None = None) -> str:

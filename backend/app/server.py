@@ -16,7 +16,6 @@ from loguru import logger
 from juddges_search.chains.chat import chat_chain
 from juddges_search.chains.enhance_query import enhance_query_chain
 from juddges_search.chains.qa import chain
-from juddges_search.db.weaviate_pool import cleanup_weaviate_pool, get_weaviate_pool
 from app.auth import verify_api_key
 from app.collections import router as collections_router
 from app.publications import router as publications_router
@@ -81,13 +80,12 @@ def validate_environment_variables():
     required_vars = {
         "BACKEND_API_KEY": "API key for backend authentication",
         "LANGGRAPH_POSTGRES_URL": "PostgreSQL URL for LangGraph checkpointer (local db:5432/juddges)",
-        "WEAVIATE_URL": "Weaviate vector database URL",
         "OPENAI_API_KEY": "OpenAI API key for LLM operations",
+        "SUPABASE_URL": "Supabase project URL (for database and vector search)",
+        "SUPABASE_SERVICE_ROLE_KEY": "Supabase service role key (for database operations)",
     }
 
     optional_vars = {
-        "SUPABASE_URL": "Supabase project URL (for analytics and feedback)",
-        "SUPABASE_SERVICE_ROLE_KEY": "Supabase service role key (for analytics and feedback)",
         "REDIS_HOST": "Redis host for guest sessions (default: localhost)",
         "REDIS_PORT": "Redis port for guest sessions (default: 6379)",
         "REDIS_AUTH": "Redis password for guest sessions",
@@ -192,25 +190,8 @@ async def lifespan(app: FastAPI):
         app.state.checkpointer = AsyncPostgresSaver(pool)
         logger.info("PostgreSQL connection pool initialized successfully")
 
-        # Step 4b: Setup Weaviate connection pool
-        use_weaviate_pool = os.getenv("WEAVIATE_USE_POOL", "true").lower() == "true"
-        if use_weaviate_pool:
-            try:
-                logger.info("Setting up Weaviate connection pool...")
-                weaviate_pool = get_weaviate_pool()
-                await weaviate_pool.connect()
-                app.state.weaviate_pool = weaviate_pool
-                logger.info("Weaviate connection pool initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize Weaviate connection pool: {e}")
-                logger.warning("Continuing without Weaviate connection pool (will use per-request connections)")
-                app.state.weaviate_pool = None
-        else:
-            logger.info("Weaviate connection pooling disabled (WEAVIATE_USE_POOL=false)")
-            app.state.weaviate_pool = None
-
-        # Step 5: Supabase client (now uses shared singleton from app.core.supabase)
-        logger.info("Using shared Supabase client from app.core.supabase")
+        # Step 5: Supabase client (uses shared singleton from app.core.supabase)
+        logger.info("Using shared Supabase client for database and vector search operations")
 
         # Step 6: Preload datasets (DISABLED - datasets are loaded on-demand)
         # Dataset preloading has been disabled to speed up application startup.
@@ -237,14 +218,6 @@ async def lifespan(app: FastAPI):
 
         # Cleanup on shutdown
         logger.info("Starting application shutdown sequence...")
-
-        # Cleanup Weaviate connection pool (safely handles case where pool doesn't exist)
-        try:
-            logger.info("Disconnecting Weaviate connection pool...")
-            await cleanup_weaviate_pool()
-            logger.info("Weaviate connection pool cleaned up successfully")
-        except Exception as e:
-            logger.error(f"Error cleaning up Weaviate connection pool: {e}")
 
     # Cleanup resources
     del app.state.checkpointer
