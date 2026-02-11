@@ -1074,6 +1074,14 @@ class SearchChunksResponse(BaseModel):
         default=None,
         description="Pagination metadata for progressive loading (infinite scroll support)",
     )
+    enhanced_query: str | None = Field(
+        default=None,
+        description="AI-enhanced query text (only present when mode='thinking')",
+    )
+    query_enhancement_used: bool = Field(
+        default=False,
+        description="Whether query enhancement was applied (True for mode='thinking')",
+    )
 
 
 # ===== Faceting Models =====

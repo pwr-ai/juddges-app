@@ -802,12 +802,30 @@ async def search_documents(request: SearchChunksRequest):
     )
 
     try:
+        # Enhance query if in "thinking" mode
+        search_query = query
+        enhanced_query_text = None
+        enhancement_time_ms = 0
+        if request.mode == "thinking":
+            try:
+                from juddges_search.chains.query_enhancement import enhance_query
+                enhancement_start = time.perf_counter()
+                logger.info(f"Enhancing query in thinking mode: {query}")
+                enhanced_query_text = await enhance_query(query)
+                search_query = enhanced_query_text
+                enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
+                logger.info(f"Enhanced query: {enhanced_query_text}")
+            except Exception as e:
+                logger.warning(f"Query enhancement failed, using original query: {e}")
+                # Fall back to original query if enhancement fails
+                enhanced_query_text = None
+
         # Generate embedding for query (if vector search is enabled)
         query_embedding = None
         embedding_time_ms = 0
         if request.alpha > 0:  # Vector search component enabled
             embedding_start = time.perf_counter()
-            query_embedding = await generate_embedding(query)
+            query_embedding = await generate_embedding(search_query)
             embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
 
         # Map languages to search_language parameter (default to Polish)
@@ -831,7 +849,7 @@ async def search_documents(request: SearchChunksRequest):
             'search_judgments_hybrid',
             {
                 'query_embedding': query_embedding,
-                'search_text': query if request.alpha < 1.0 else None,  # Skip text search if pure vector
+                'search_text': search_query if request.alpha < 1.0 else None,  # Skip text search if pure vector
                 'search_language': search_language,
                 'filter_jurisdictions': request.jurisdictions,
                 'filter_court_names': request.court_names,
@@ -882,6 +900,7 @@ async def search_documents(request: SearchChunksRequest):
         total_time_ms = (time.perf_counter() - start_time) * 1000
 
         timing_breakdown = {
+            "enhancement_ms": round(enhancement_time_ms, 2) if request.mode == "thinking" else 0,
             "embedding_ms": round(embedding_time_ms, 2),
             "search_ms": round(search_time_ms, 2),
             "total_ms": round(total_time_ms, 2),
@@ -909,6 +928,8 @@ async def search_documents(request: SearchChunksRequest):
             query_time_ms=round(search_time_ms, 2),
             timing_breakdown=timing_breakdown,
             pagination=pagination,
+            enhanced_query=enhanced_query_text if request.mode == "thinking" else None,
+            query_enhancement_used=request.mode == "thinking",
         )
 
     except HTTPException:
