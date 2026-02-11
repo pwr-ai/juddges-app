@@ -1,0 +1,45 @@
+# docker-compose.transformers.yml
+# Sentence Transformers Inference Service
+#
+# Provides embedding generation using sentence-transformers-paraphrase-multilingual-mpnet-base-v2
+# Supports both Polish and English text
+#
+# Usage:
+#   docker compose -f docker-compose.transformers.yml up -d
+#
+# API Endpoint:
+#   http://localhost:8080/.well-known/ready (health check)
+#   http://localhost:8080/vectors (embedding endpoint)
+
+services:
+  transformers:
+    image: semitechnologies/transformers-inference:sentence-transformers-paraphrase-multilingual-mpnet-base-v2
+    container_name: juddges-transformers
+    ports:
+      - "8080:8080"
+    environment:
+      - ENABLE_CUDA=0  # Set to 1 if GPU is available
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    networks:
+      - app-network
+    labels:
+      - "com.legal-ai.service=ml"
+      - "com.legal-ai.service.type=transformers"
+
+networks:
+  app-network:
+    external: true
