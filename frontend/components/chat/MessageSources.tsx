@@ -276,7 +276,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
 
   // Default: render both badge and expanded content
   return (
-    <div className="mt-0">
+    <div className="mt-0" data-testid="message-sources">
       {/* Collapsed state - badge */}
       <div className="flex justify-end -mt-2">
         <CollapsibleButton

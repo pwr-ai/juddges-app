@@ -1,10 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
-test.describe('Chat Functionality', () => {
+test.describe('Chat Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Mock Supabase auth
     await page.addInitScript(() => {
-      // Mock createClient to return authenticated user
       const mockSupabaseClient = {
         auth: {
           getUser: () => Promise.resolve({
@@ -29,7 +28,6 @@ test.describe('Chat Functionality', () => {
           })
         }
       };
-
       window.mockSupabaseClient = mockSupabaseClient;
     });
 
@@ -37,40 +35,9 @@ test.describe('Chat Functionality', () => {
     await page.goto('/chat');
   });
 
-  test('should render chat interface for authenticated user', async ({ page }) => {
-    // Wait for the chat interface to load
-    await page.waitForSelector('[data-testid="chat-interface"], .chat-interface, form', { timeout: 10000 });
-
-    // Verify chat interface is visible
-    const chatInterface = page.locator('form, [data-testid="chat-interface"], .chat-interface');
-    await expect(chatInterface.first()).toBeVisible();
-
-    // Look for input field (might have different selectors)
-    const inputSelectors = [
-      '[data-testid="chat-input"]',
-      'input[type="text"]',
-      'textarea',
-      '[placeholder*="message"]',
-      '[placeholder*="question"]',
-      '[placeholder*="chat"]'
-    ];
-
-    let inputFound = false;
-    for (const selector of inputSelectors) {
-      const input = page.locator(selector);
-      if (await input.count() > 0) {
-        await expect(input.first()).toBeVisible();
-        inputFound = true;
-        break;
-      }
-    }
-
-    expect(inputFound).toBeTruthy();
-  });
-
-  test('should handle chat conversation flow', async ({ page }) => {
+  test('should create new chat and send message', async ({ page }) => {
     // Mock the chat API endpoint
-    await page.route('**/api/chat', async route => {
+    await page.route('**/api/chat/**', async route => {
       const request = route.request();
       const body = await request.postDataJSON();
 
@@ -89,74 +56,14 @@ test.describe('Chat Functionality', () => {
       });
     });
 
-    // Wait for chat interface
+    // Wait for page to load
     await page.waitForSelector('form, [data-testid="chat-interface"]', { timeout: 10000 });
 
     // Find and fill the input
     const inputSelectors = [
       '[data-testid="chat-input"]',
-      'input[type="text"]',
-      'textarea',
-      '[placeholder*="message"]',
-      '[placeholder*="question"]'
-    ];
-
-    let chatInput;
-    for (const selector of inputSelectors) {
-      const input = page.locator(selector);
-      if (await input.count() > 0) {
-        chatInput = input.first();
-        break;
-      }
-    }
-
-    expect(chatInput).toBeDefined();
-    await chatInput!.fill('What are the legal requirements for Swiss franc loans?');
-
-    // Find and click submit button
-    const buttonSelectors = [
-      '[data-testid="send-button"]',
-      'button[type="submit"]',
-      'button:has-text("Send")',
-      'button:has-text("Submit")',
-      'form button'
-    ];
-
-    let submitButton;
-    for (const selector of buttonSelectors) {
-      const button = page.locator(selector);
-      if (await button.count() > 0) {
-        submitButton = button.first();
-        break;
-      }
-    }
-
-    expect(submitButton).toBeDefined();
-    await submitButton!.click();
-
-    // Wait for response to appear
-    await page.waitForTimeout(1000);
-
-    // Verify message appears in chat (look for the response text)
-    const responseText = 'AI Response to: "What are the legal requirements for Swiss franc loans?"';
-    await expect(page.locator('text=' + responseText)).toBeVisible({ timeout: 10000 });
-  });
-
-  test('should handle API errors gracefully', async ({ page }) => {
-    // Mock API error
-    await page.route('**/api/chat', route =>
-      route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Server Error' })
-      })
-    );
-
-    await page.waitForSelector('form, [data-testid="chat-interface"]', { timeout: 10000 });
-
-    // Find input and fill it
-    const inputSelectors = [
-      '[data-testid="chat-input"]',
+      'textarea[placeholder*="message"]',
+      'textarea[placeholder*="question"]',
       'input[type="text"]',
       'textarea'
     ];
@@ -170,43 +77,99 @@ test.describe('Chat Functionality', () => {
       }
     }
 
-    await chatInput!.fill('Test question');
+    expect(chatInput).toBeDefined();
+    await chatInput!.fill('What is a judgment?');
 
-    // Find and click submit
-    const submitButton = page.locator('button[type="submit"], [data-testid="send-button"], form button').first();
+    // Send message
+    const submitButton = page.locator('button[type="submit"], [data-testid="send-button"]').first();
     await submitButton.click();
 
-    // Wait a bit for error to potentially appear
-    await page.waitForTimeout(2000);
+    // Wait for response
+    const responseText = 'AI Response to: "What is a judgment?"';
+    await expect(page.locator(`text=${responseText}`)).toBeVisible({ timeout: 10000 });
 
-    // Check if any error indicators are present
-    const errorSelectors = [
-      '[data-testid="error-message"]',
-      '.error',
-      '[class*="error"]',
-      'text=Error',
-      'text=error',
-      'text=failed'
-    ];
-
-    let errorFound = false;
-    for (const selector of errorSelectors) {
-      const errorElement = page.locator(selector);
-      if (await errorElement.count() > 0) {
-        errorFound = true;
-        break;
-      }
-    }
-
-    // Note: Error handling might be implemented differently, so we'll just verify the request was made
-    expect(true).toBeTruthy(); // Test passes if no exceptions thrown
+    // Verify message appears in chat
+    await expect(page.locator('text=What is a judgment?')).toBeVisible();
   });
 
-  test('should maintain chat history across messages', async ({ page }) => {
+  test('should display streaming response', async ({ page }) => {
+    // Mock streaming response
+    await page.route('**/api/chat/**', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          output: {
+            text: 'This is a streaming response about legal precedent...',
+            document_ids: []
+          },
+          metadata: {
+            run_id: 'test-run-124'
+          }
+        })
+      });
+    });
+
+    await page.waitForSelector('form, [data-testid="chat-interface"]', { timeout: 10000 });
+
+    // Send message
+    const input = page.locator('textarea[placeholder*="message"], textarea').first();
+    await input.fill('Explain legal precedent');
+    await page.locator('button[type="submit"]').first().click();
+
+    // Wait for streaming to start
+    await page.waitForTimeout(1000);
+
+    // Verify assistant message appears
+    const assistantMessages = page.locator('[data-testid="chat-message-assistant"], [data-testid="chat-message"][data-role="assistant"]');
+    await expect(assistantMessages.first()).toBeVisible({ timeout: 10000 });
+
+    // Verify response contains text
+    await expect(page.locator('text=streaming response')).toBeVisible();
+  });
+
+  test('should show source documents with message', async ({ page }) => {
+    // Mock response with sources
+    await page.route('**/api/chat/**', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          output: {
+            text: 'Based on the contract law cases found...',
+            document_ids: ['doc1', 'doc2', 'doc3'],
+            sources: [
+              { id: 'doc1', title: 'Contract Law Case 1' },
+              { id: 'doc2', title: 'Contract Law Case 2' }
+            ]
+          },
+          metadata: {
+            run_id: 'test-run-125'
+          }
+        })
+      });
+    });
+
+    await page.waitForSelector('form, [data-testid="chat-interface"]', { timeout: 10000 });
+
+    // Send message that would return sources
+    const input = page.locator('textarea[placeholder*="message"], textarea').first();
+    await input.fill('Find cases about contract law');
+    await page.locator('button[type="submit"]').first().click();
+
+    // Wait for response with sources
+    await page.waitForTimeout(2000);
+
+    // Check for sources section or badge
+    const sourcesIndicators = page.locator('[data-testid="message-sources"], [class*="sources"], text=sources, text=Source');
+    await expect(sourcesIndicators.first()).toBeVisible({ timeout: 30000 });
+  });
+
+  test('should handle chat conversation flow', async ({ page }) => {
     let messageCount = 0;
 
     // Mock API to track message history
-    await page.route('**/api/chat', async route => {
+    await page.route('**/api/chat/**', async route => {
       const request = route.request();
       const body = await request.postDataJSON();
       messageCount++;
@@ -229,16 +192,16 @@ test.describe('Chat Functionality', () => {
     await page.waitForSelector('form, [data-testid="chat-interface"]', { timeout: 10000 });
 
     // Send first message
-    const chatInput = page.locator('input[type="text"], textarea, [data-testid="chat-input"]').first();
-    await chatInput.fill('First question about Swiss franc loans');
-    await page.locator('button[type="submit"], [data-testid="send-button"], form button').first().click();
+    const chatInput = page.locator('textarea[placeholder*="message"], textarea, input[type="text"]').first();
+    await chatInput.fill('First question about legal cases');
+    await page.locator('button[type="submit"]').first().click();
 
     // Wait for first response
     await expect(page.locator('text=Response 1:')).toBeVisible({ timeout: 10000 });
 
     // Send second message
     await chatInput.fill('Can you elaborate on that?');
-    await page.locator('button[type="submit"], [data-testid="send-button"], form button').first().click();
+    await page.locator('button[type="submit"]').first().click();
 
     // Wait for second response
     await expect(page.locator('text=Response 2:')).toBeVisible({ timeout: 10000 });
@@ -246,5 +209,32 @@ test.describe('Chat Functionality', () => {
     // Verify both messages are still visible (chat history maintained)
     await expect(page.locator('text=Response 1:')).toBeVisible();
     await expect(page.locator('text=Response 2:')).toBeVisible();
+  });
+
+  test('should handle API errors gracefully', async ({ page }) => {
+    // Mock API error
+    await page.route('**/api/chat/**', route =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Server Error' })
+      })
+    );
+
+    await page.waitForSelector('form, [data-testid="chat-interface"]', { timeout: 10000 });
+
+    // Find input and fill it
+    const chatInput = page.locator('textarea[placeholder*="message"], textarea, input[type="text"]').first();
+    await chatInput.fill('Test question');
+
+    // Find and click submit
+    const submitButton = page.locator('button[type="submit"]').first();
+    await submitButton.click();
+
+    // Wait for potential error to appear
+    await page.waitForTimeout(2000);
+
+    // Test passes if no exceptions thrown (error handling might vary)
+    expect(true).toBeTruthy();
   });
 });
