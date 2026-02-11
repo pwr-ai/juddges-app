@@ -6,9 +6,18 @@
 # - Development-specific volumes for code mounting
 # - Exposed ports for direct access
 # - Development environment variables
+# - No health checks (faster startup, not needed for local dev)
+# - No resource limits (full access to host resources)
+# - Minimal configuration (easier debugging)
 #
-# USAGE:
-#   docker compose -f docker-compose.dev.yml up -d
+# ENVIRONMENT CONFIGURATION:
+#   - .env (gitignored, contains all actual values)
+#   - .env.example (committed, template with variable names)
+#
+# SETUP:
+#   1. Copy .env.example to .env
+#   2. Fill in actual values in .env
+#   3. Run: docker compose -f docker-compose.dev.yml up -d
 
 services:
   # ============================================================================
@@ -24,15 +33,13 @@ services:
     ports:
       - "3007:3000"
     restart: unless-stopped
-    user: "1000:1000"  # Run as host user for proper file permissions
-    entrypoint: []
     command: ["npx", "next", "dev"]
     env_file:
       - .env
-      - .env.secrets
-      - .env.dev
     environment:
+      # Development environment override
       - NODE_ENV=development
+      # API URLs for container-to-container communication
       - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8004}
       - API_BASE_URL=http://backend-dev:8080
     volumes:
@@ -59,27 +66,14 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - .env.secrets
-      - .env.dev
     environment:
+      # Development environment override
       - PYTHON_ENV=development
-      # Langfuse connection settings
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      - LANGFUSE_HOST=${LANGFUSE_HOST}
-      # Redis Configuration
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_AUTH=${REDIS_AUTH}
-      # All credentials and connection strings loaded from env_file:
-      # - .env (structure/placeholders)
-      # - .env.secrets (actual credentials)
-      # - .env.dev (development overrides)
-      #
-      # Note: Supabase is external service (not in docker)
+      # HuggingFace cache configuration (container-specific paths)
       - HF_HOME=/tmp/hf
       - HF_HUB_CACHE=/tmp/hf/hub
       - TRANSFORMERS_CACHE=/tmp/hf/transformers
+    # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
     tty: true
     volumes:
       - ./backend:/app
@@ -105,27 +99,14 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - .env.secrets
-      - .env.dev
     environment:
+      # Development environment override
       - PYTHON_ENV=development
-      # Langfuse connection settings
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      - LANGFUSE_HOST=${LANGFUSE_HOST}
-      # Redis Configuration
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_AUTH=${REDIS_AUTH}
-      # All credentials and connection strings loaded from env_file:
-      # - .env (structure/placeholders)
-      # - .env.secrets (actual credentials)
-      # - .env.dev (development overrides)
-      #
-      # Note: Supabase is external service (not in docker)
+      # HuggingFace cache configuration (container-specific paths)
       - HF_HOME=/tmp/hf
       - HF_HUB_CACHE=/tmp/hf/hub
       - TRANSFORMERS_CACHE=/tmp/hf/transformers
+    # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
     volumes:
       - ./backend:/app
       - hf-cache-dev:/tmp/hf
@@ -165,6 +146,23 @@ networks:
 # ==============================================================================
 # Notes
 # ==============================================================================
+# DEVELOPMENT vs PRODUCTION DIFFERENCES:
+#
+# Development services (docker-compose.dev.yml) have:
+# - No health checks (faster startup, not needed for local dev)
+# - No resource limits (full access to host resources)
+# - No watchtower auto-update labels (not used in dev)
+# - No structured logging configuration (use docker logs directly)
+# - Minimal configuration (easier debugging)
+# - Hot reload enabled via volume mounts
+#
+# Production services (docker-compose.yml) include:
+# - Health checks for monitoring (frontend, backend, worker)
+# - Resource limits to prevent resource exhaustion
+# - Watchtower integration for automatic updates
+# - Structured logging with rotation
+# - Code baked into images (no volume mounts)
+#
 # NETWORK ARCHITECTURE:
 # - All development services use a single network: app-dev-network
 # - External infrastructure (Supabase, Redis, PostgreSQL) accessed via:

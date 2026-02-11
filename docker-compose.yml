@@ -2,10 +2,13 @@
 # Production Juddges Application Services
 #
 # ENVIRONMENT CONFIGURATION:
-#   - All configuration in .env (non-secrets) and .env.secrets (secrets)
+#   - .env (gitignored, contains all actual values)
+#   - .env.example (committed, template with variable names)
 #
-# USAGE:
-#   docker compose up -d
+# SETUP:
+#   1. Copy .env.example to .env
+#   2. Fill in actual values in .env
+#   3. Run: docker compose up -d
 
 services:
   # ============================================================================
@@ -27,17 +30,16 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - .env.secrets
     environment:
+      # Runtime configuration
       - PORT=3006
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
-      - API_BASE_URL=${API_BASE_URL}
+      # nginx-proxy reverse proxy configuration
       - "VIRTUAL_HOST=${VIRTUAL_HOST_FRONTEND}"
       - "VIRTUAL_PORT=${VIRTUAL_PORT_FRONTEND}"
       - "LETSENCRYPT_HOST=${VIRTUAL_HOST_FRONTEND}"
       - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
-    # All environment variables loaded from env_file
+    # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "com.centurylinklabs.watchtower.depends-on=backend"
@@ -81,13 +83,13 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - .env.secrets
     environment:
+      # nginx-proxy reverse proxy configuration
       - "VIRTUAL_HOST=${VIRTUAL_HOST_BACKEND}"
       - "VIRTUAL_PORT=${VIRTUAL_PORT_BACKEND}"
       - "LETSENCRYPT_HOST=${VIRTUAL_HOST_BACKEND}"
       - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
-    # All environment variables loaded from env_file
+    # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "com.juddges.service=application"
@@ -143,7 +145,6 @@ services:
     #   - ./backend:/app
     env_file:
       - .env
-      - .env.secrets
     # All environment variables loaded from env_file
     labels:
       - "com.juddges.service=application"
