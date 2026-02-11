@@ -6,7 +6,6 @@ Tests jurisdiction detection and schema loading without full dependencies.
 
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Literal
 
@@ -282,7 +281,7 @@ def test_schema_loading() -> None:
     with open(schema_path) as f:
         schema = json.load(f)
 
-    print(f"Schema loaded successfully!")
+    print("Schema loaded successfully!")
     print(f"Schema title: {schema.get('title', 'N/A')}")
     print(f"Total properties: {len(schema.get('properties', {}))}")
 

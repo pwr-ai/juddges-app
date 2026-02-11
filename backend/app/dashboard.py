@@ -2,7 +2,6 @@
 
 import json
 import os
-import re
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Optional
@@ -14,8 +13,6 @@ from supabase import create_client, Client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
-from juddges_search.retrieval.fetch import get_documents_by_id
-from juddges_search.db.supabase_db import get_vector_db
 
 # Weaviate imports - optional, will be None if not available
 try:

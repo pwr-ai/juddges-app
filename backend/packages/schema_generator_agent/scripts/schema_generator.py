@@ -1,8 +1,8 @@
 import os
 
 import yaml
-from juddges_search.models import DocumentType
 from dotenv import load_dotenv
+from juddges_search.models import DocumentType
 from langchain_openai import ChatOpenAI
 
 from schema_generator_agent.agents.schema_generator import SchemaGenerator

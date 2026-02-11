@@ -5,8 +5,7 @@ Migrates from current 32-property schema to optimized 13-property schema
 
 import asyncio
 import json
-from typing import List, Dict, Any, Optional
-from loguru import logger
+from typing import Dict, Any
 from rich.console import Console
 from rich.progress import track
 from rich.table import Table

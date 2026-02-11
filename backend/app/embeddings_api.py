@@ -17,8 +17,6 @@ from app.embedding_providers import (
     get_model_config,
     get_embedding_provider,
     set_active_model,
-    AVAILABLE_MODELS,
-    EmbeddingModelConfig,
 )
 
 router = APIRouter(prefix="/embeddings", tags=["embeddings"])

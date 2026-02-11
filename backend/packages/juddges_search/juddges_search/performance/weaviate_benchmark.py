@@ -449,7 +449,7 @@ class WeaviateBenchmarkSuite:
         with open(agg_results_file, "w", encoding="utf-8") as f:
             json.dump(agg_data, f, indent=2, ensure_ascii=False)
         
-        console.print(f"\n[green]Results saved to:[/green]")
+        console.print("\n[green]Results saved to:[/green]")
         console.print(f"Raw data: {raw_results_file}")
         console.print(f"Summary: {agg_results_file}")
 

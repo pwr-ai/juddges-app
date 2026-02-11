@@ -18,7 +18,6 @@ from app.core.auth_jwt import (
     get_optional_user,
     get_user_db_client,
     AuthenticatedUser,
-    get_admin_supabase_client,
 )
 
 

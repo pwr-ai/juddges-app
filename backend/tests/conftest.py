@@ -3,7 +3,6 @@ Pytest configuration and fixtures for AI Tax backend tests.
 """
 
 import pytest
-import asyncio
 from typing import AsyncGenerator
 
 

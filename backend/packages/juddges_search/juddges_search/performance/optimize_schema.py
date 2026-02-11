@@ -6,7 +6,7 @@ Reduces memory usage and improves query performance by optimizing property confi
 
 import asyncio
 import json
-from typing import Dict, List
+from typing import Dict
 
 from dotenv import load_dotenv
 from rich.console import Console
@@ -143,7 +143,7 @@ async def analyze_current_memory_usage(db: WeaviateLegalDatabase) -> Dict:
         legal_docs = await db.legal_documents_collection.aggregate.over_all()
         doc_chunks = await db.document_chunks_collection.aggregate.over_all()
         
-        console.print(f"[blue]Current Collections:[/blue]")
+        console.print("[blue]Current Collections:[/blue]")
         console.print(f"  LegalDocuments: {legal_docs.total_count if hasattr(legal_docs, 'total_count') else 'Unknown'} documents")
         console.print(f"  DocumentChunks: {doc_chunks.total_count if hasattr(doc_chunks, 'total_count') else 'Unknown'} chunks")
         
@@ -218,8 +218,8 @@ async def estimate_memory_savings() -> None:
         console.print(f"    Properties: {current} → {optimized} ({reduction} removed)")
         console.print(f"    Memory reduction: ~{percentage:.1f}%")
     
-    console.print(f"\n[bold]Overall estimated memory reduction: 60-80%[/bold]")
-    console.print(f"[bold]Expected query performance improvement: 40-60%[/bold]")
+    console.print("\n[bold]Overall estimated memory reduction: 60-80%[/bold]")
+    console.print("[bold]Expected query performance improvement: 40-60%[/bold]")
 
 async def main():
     """Main optimization function"""

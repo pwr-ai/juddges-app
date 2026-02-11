@@ -1570,7 +1570,7 @@ def main():
     output_file = sys.argv[1] if len(sys.argv) > 1 else "lawyer_schemas_pl.json"
     save_schemas_to_json(output_file)
 
-    console.print(f"\n[bold yellow]Aby wstawić te schematy do Supabase:[/bold yellow]")
+    console.print("\n[bold yellow]Aby wstawić te schematy do Supabase:[/bold yellow]")
     console.print("[yellow]Możesz użyć narzędzi Supabase MCP lub ręcznie wykonać instrukcje SQL INSERT.[/yellow]")
 
 

@@ -23,7 +23,6 @@ Architecture notes:
 """
 
 import asyncio
-import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone

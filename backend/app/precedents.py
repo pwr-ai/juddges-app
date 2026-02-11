@@ -5,7 +5,7 @@ AI-powered system to find relevant precedent cases based on fact patterns
 and legal issues. Uses semantic similarity and legal reasoning to rank results.
 """
 
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from langchain_core.output_parsers import JsonOutputParser

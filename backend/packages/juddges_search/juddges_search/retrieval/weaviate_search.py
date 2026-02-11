@@ -1,14 +1,12 @@
 import asyncio
-import os
 import time
-from collections import OrderedDict
-from typing import Optional, Any, Union
+from typing import Optional, Any
 
 from loguru import logger
-from weaviate.classes.query import Filter, MetadataQuery, HybridFusion
+from weaviate.classes.query import MetadataQuery
 from juddges_search.db.weaviate_db import WeaviateLegalDatabase
 from juddges_search.embeddings import VectorName
-from juddges_search.models import LegalDocument, LegalDocumentMetadata, DocumentChunk, DocumentType
+from juddges_search.models import LegalDocument, DocumentChunk, DocumentType
 from juddges_search.chains.rewrite_queries import search_query_generation
 from juddges_search.chains.models import QuestionDict
 from juddges_search.dict_utils import get_leaf_values
@@ -20,15 +18,10 @@ from juddges_search.retrieval.config import (
     PYTHON_GROUPBY_RETURN_PROPERTIES,
     SECONDS_TO_MS,
 )
-from juddges_search.settings import MAX_DOCUMENTS_PER_SEARCH
 from juddges_search.retrieval.filters import build_weaviate_filters
 from juddges_search.retrieval.utils import (
     convert_weaviate_obj_to_legal_document,
-    convert_weaviate_obj_to_legal_document_metadata,
     convert_weaviate_obj_to_document_chunk,
-    extract_score_from_obj,
-    get_chunk_document_id,
-    get_chunk_score,
     validate_search_parameters,
     group_chunks_by_document,
     convert_mixed_chunks_to_document_chunks,
@@ -202,7 +195,7 @@ async def search_chunks_term(
 
     # Validate query is not empty
     if not query or not query.strip():
-        logger.warning(f"Empty term query provided, returning empty results")
+        logger.warning("Empty term query provided, returning empty results")
         return []
 
     try:

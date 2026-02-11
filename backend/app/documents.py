@@ -12,7 +12,6 @@ This module provides:
 import asyncio
 import random
 import time
-from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional, Any, Dict
 
@@ -20,7 +19,7 @@ from fastapi import APIRouter, HTTPException, Query, Path, Response
 from loguru import logger
 
 from juddges_search.models import LegalDocument, DocumentType, IssuingBody
-from juddges_search.db.supabase_db import get_vector_db, SupabaseVectorDB
+from juddges_search.db.supabase_db import get_vector_db
 from app.utils.date_utils import parse_date
 from app.models import (
     DocumentRetrievalRequest,
@@ -32,8 +31,6 @@ from app.models import (
     DocumentResponse,
     BatchDocumentsRequest,
     BatchDocumentsResponse,
-    SearchDocumentsRequest,
-    SearchDocumentsResponse,
     SearchChunksRequest,
     SearchChunksResponse,
     FacetsResponse,
@@ -46,7 +43,6 @@ from app.models import (
 )
 from app.config import settings
 from app.utils import (
-    serialize_document_for_similarity,
     validate_array_size,
     validate_string_length,
 )

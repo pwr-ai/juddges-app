@@ -21,7 +21,6 @@ from tenacity import (
 )
 from tqdm import tqdm
 
-from .oai_schema_validation import validate_openai_schema, OaiSchemaValidationError
 from juddges_search.chains.callbacks import callbacks
 
 T_language = Literal["pl", "en"]
@@ -242,7 +241,7 @@ class InformationExtractor:
                         "required": required,
                         "properties": schema,
                     }
-                except (ValueError, KeyError) as e:
+                except (ValueError, KeyError):
                     # If validation fails, try to convert schema by extracting 'required' flags
                     # This handles schemas from database that have 'required' at property level
                     try:

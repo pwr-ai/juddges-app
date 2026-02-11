@@ -13,16 +13,12 @@ import strawberry
 from loguru import logger
 
 from app.graphql_api.converters import (
-    convert_document_chunk,
     convert_extraction_job,
     convert_legal_document,
-    convert_legal_document_metadata,
     convert_search_chunks_response,
-    convert_search_documents_response,
     convert_similar_documents_response,
 )
 from app.graphql_api.types import (
-    DocumentChunkType,
     DocumentIndexedEvent,
     ExtractionJobType,
     ExtractionProgressEvent,

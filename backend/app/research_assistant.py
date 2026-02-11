@@ -574,7 +574,7 @@ def _build_context_summary(context_data: dict) -> str:
             f"{m['role']}: {m['content'][:100]}"
             for m in context_data["recent_messages"][:5]
         ]
-        parts.append(f"Recent Chat Messages:\n" + "\n".join(messages))
+        parts.append("Recent Chat Messages:\n" + "\n".join(messages))
 
     if context_data.get("viewed_documents"):
         doc_ids = [d["document_id"] for d in context_data["viewed_documents"][:5]]

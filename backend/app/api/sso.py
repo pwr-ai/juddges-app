@@ -10,9 +10,8 @@ Includes:
 - SSO login event audit log
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Literal, Optional
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -21,7 +20,6 @@ from pydantic import BaseModel, Field
 from app.core.auth_jwt import (
     AuthenticatedUser,
     get_admin_supabase_client,
-    get_current_user,
     require_admin,
 )
 

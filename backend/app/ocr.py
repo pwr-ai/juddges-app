@@ -8,7 +8,6 @@ This module provides:
 - Per-page OCR results with confidence scores
 """
 
-import hashlib
 import re
 import uuid
 from datetime import datetime, timezone

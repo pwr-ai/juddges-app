@@ -1,5 +1,3 @@
-import json
-import re
 import warnings
 from typing import Any, Final
 
@@ -215,7 +213,7 @@ def convert_schema_to_oai_structured_output(schema: dict[str, Any], language: st
         PendingDeprecationWarning,
         stacklevel=2,
     )
-    logger.info(f"Starting schema conversion.")
+    logger.info("Starting schema conversion.")
 
     # Validate language
     if language not in {"pl", "en"}:
@@ -337,7 +335,7 @@ def prepare_schema_from_db(schema: dict[str, Any], language: str = "pl", strict:
         >>> prepared = prepare_schema_from_db(schema, language="pl")
         >>> extractor = InformationExtractor(model=llm, prompt_name="prompt", schema=prepared)
     """
-    logger.info(f"Preparing schema from database format")
+    logger.info("Preparing schema from database format")
     
     try:
         # First, try to validate as-is (in case it's already in OpenAI format)

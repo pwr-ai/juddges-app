@@ -1,6 +1,5 @@
 """Direct document fetch operations by identifier (ID or UUID)."""
 
-import asyncio
 from typing import Optional
 from weaviate.classes.query import Filter
 

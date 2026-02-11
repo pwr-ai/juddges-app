@@ -8,7 +8,7 @@ from typing import Any, Optional, Union
 
 from loguru import logger
 from juddges_search.models import LegalDocument, LegalDocumentMetadata, DocumentChunk, DocumentType
-from juddges_search.retrieval.config import MAX_INVALID_UUIDS_TO_SHOW, SECONDS_TO_MS
+from juddges_search.retrieval.config import MAX_INVALID_UUIDS_TO_SHOW
 
 
 def _parse_metadata(obj: Any) -> dict[str, Any]:
@@ -229,7 +229,7 @@ def convert_weaviate_obj_to_legal_document(
 
         try:
             document_type = DocumentType(doc_type_str)
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError):
             # If invalid, set to None (undefined) - NO GUESSING
             logger.warning(f"Invalid document_type '{doc_type_str}' for document {props.get('document_id', 'unknown')} - will be displayed as undefined")
             document_type = None
@@ -414,7 +414,7 @@ def convert_weaviate_obj_to_legal_document_metadata(obj, score: Optional[float] 
 
         try:
             document_type = DocumentType(doc_type_str)
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError):
             # If invalid, set to None (undefined) - NO GUESSING
             logger.warning(f"Invalid document_type '{doc_type_str}' for document UUID {uuid_str} - will be displayed as undefined")
             document_type = None
@@ -492,7 +492,6 @@ def validate_uuids(document_uuids: list[str]) -> None:
 
 # RRF functionality moved to aggregation.py
 # Import here for backward compatibility
-from juddges_search.retrieval.aggregation import reciprocal_rank_fusion
 
 
 def validate_search_parameters(

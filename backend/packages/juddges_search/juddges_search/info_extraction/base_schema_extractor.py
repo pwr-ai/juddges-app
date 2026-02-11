@@ -13,7 +13,7 @@ from langchain_openai import ChatOpenAI
 from loguru import logger
 
 from .extractor import InformationExtractor
-from .jurisdiction import Jurisdiction, detect_jurisdiction, get_jurisdiction_language
+from .jurisdiction import Jurisdiction, detect_jurisdiction
 
 
 class BaseSchemaExtractor:

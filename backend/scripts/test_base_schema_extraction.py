@@ -5,7 +5,6 @@ Tests the extraction pipeline with sample EN and PL legal documents.
 """
 
 import asyncio
-import json
 import os
 import sys
 from pathlib import Path
@@ -14,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "packages" / "juddges_search"))
 
 from juddges_search.info_extraction.base_schema_extractor import BaseSchemaExtractor
-from juddges_search.info_extraction.jurisdiction import detect_jurisdiction, Jurisdiction
+from juddges_search.info_extraction.jurisdiction import detect_jurisdiction
 
 
 # Sample English judgment text (UK Court of Appeal style)

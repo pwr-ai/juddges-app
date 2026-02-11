@@ -4,7 +4,6 @@ Based on frontend usage analysis - reduces properties from 32 to 13 (59% reducti
 """
 
 from weaviate.classes.config import Configure, Property, DataType, VectorDistances
-from juddges_search.embeddings import VectorName
 
 
 def create_optimized_legal_documents_schema():
@@ -272,4 +271,4 @@ if __name__ == "__main__":
     print(f"LegalDocuments: {len(create_optimized_legal_documents_schema()['properties'])} properties")
     print(f"DocumentChunks: {len(create_optimized_document_chunks_schema()['properties'])} properties")
     print(f"Removed properties: {len(REMOVED_PROPERTIES)}")
-    print(f"Memory reduction estimate: ~60%")
+    print("Memory reduction estimate: ~60%")

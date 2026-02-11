@@ -17,7 +17,6 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from juddges_search.db.supabase_db import get_vector_db
-from app.config import settings
 
 router = APIRouter(prefix="/deduplication", tags=["deduplication"])
 

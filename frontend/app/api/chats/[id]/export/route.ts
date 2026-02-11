@@ -86,7 +86,7 @@ export async function GET(
     }
 
     // Fetch source document details if there are any
-    let sources: Record<
+    const sources: Record<
       string,
       {
         title: string | null;

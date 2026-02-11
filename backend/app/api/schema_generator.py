@@ -30,14 +30,12 @@ from app.schemas import _generation_sessions
 
 # Import standardized error handling
 from app.errors import (
-    ValidationError,
     RateLimitError,
     GenerationTimeoutError,
     DatabaseError,
     VectorDBError,
     AppException,
-    ErrorCode,
-    handle_errors
+    ErrorCode
 )
 
 router = APIRouter(prefix="/schema-generator", tags=["schema-generator-chat"])
