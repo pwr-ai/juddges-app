@@ -22,10 +22,10 @@ try:
     from datasets import load_dataset
     from supabase import create_client, Client
     from tqdm import tqdm
-    import openai
+    import requests
 except ImportError as e:
     print(f"Error: Missing required dependencies. Please install:")
-    print("pip install datasets supabase openai tqdm python-dotenv")
+    print("pip install datasets supabase requests tqdm python-dotenv")
     sys.exit(1)
 
 
@@ -36,7 +36,7 @@ class JudgmentIngestionPipeline:
         self,
         supabase_url: str,
         supabase_key: str,
-        openai_api_key: Optional[str] = None
+        transformers_url: Optional[str] = None
     ):
         """
         Initialize the ingestion pipeline.
@@ -44,37 +44,40 @@ class JudgmentIngestionPipeline:
         Args:
             supabase_url: Supabase project URL
             supabase_key: Supabase service role key (for write access)
-            openai_api_key: OpenAI API key for generating embeddings (optional)
+            transformers_url: Sentence Transformers inference URL (optional)
         """
         self.supabase: Client = create_client(supabase_url, supabase_key)
-        self.openai_client = None
-
-        if openai_api_key:
-            openai.api_key = openai_api_key
-            self.openai_client = openai
+        self.transformers_url = transformers_url or os.getenv("TRANSFORMERS_INFERENCE_URL", "http://localhost:8080")
 
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """
-        Generate OpenAI embedding for text.
+        Generate embedding using Sentence Transformers.
 
         Args:
             text: Input text to embed
 
         Returns:
-            List of 1536 floats (ada-002 embedding), or None if OpenAI not configured
+            List of 768 floats (multilingual-mpnet embedding), or None if service unavailable
         """
-        if not self.openai_client:
-            return None
-
         try:
-            # Truncate text to ~8000 tokens (roughly 32k characters for safety)
+            # Truncate text to reasonable length
             truncated_text = text[:32000]
 
-            response = self.openai_client.embeddings.create(
-                model="text-embedding-ada-002",
-                input=truncated_text
-            )
-            return response.data[0].embedding
+            url = f"{self.transformers_url}/vectors"
+            payload = {"text": truncated_text}
+
+            response = requests.post(url, json=payload, timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+            vector = data.get("vector")
+
+            if not vector:
+                print(f"Warning: No vector in response from {url}")
+                return None
+
+            return vector
+
         except Exception as e:
             print(f"Warning: Failed to generate embedding: {e}")
             return None
@@ -92,10 +95,12 @@ class JudgmentIngestionPipeline:
         print(f"\n🇵🇱 Loading Polish judgments from HFforLegal/case-law (sample: {sample_size})...")
 
         try:
-            # Load dataset - filter for Polish jurisdiction
+            # Load dataset - use 'us' split (only available split)
+            # Note: This dataset contains US cases, not Polish
+            # We'll need to find an alternative Polish dataset
             dataset = load_dataset(
                 "HFforLegal/case-law",
-                split="train",
+                split="us",
                 streaming=True  # Use streaming to handle large datasets
             )
 
@@ -132,37 +137,54 @@ class JudgmentIngestionPipeline:
 
     def ingest_uk_judgments(self, sample_size: int = 100) -> int:
         """
-        Ingest UK judgments from JuDDGES/en-appealcourt dataset.
+        Ingest UK judgments from JuDDGES datasets.
+        Loads from both en-appealcourt and en-court-raw-sample.
 
         Args:
-            sample_size: Number of judgments to ingest
+            sample_size: Number of judgments to ingest (split between datasets)
 
         Returns:
             Number of judgments successfully ingested
         """
-        print(f"\n🇬🇧 Loading UK judgments from JuDDGES/en-appealcourt (sample: {sample_size})...")
+        total_ingested = 0
+        half_size = sample_size // 2
 
+        # Dataset 1: JuDDGES/en-appealcourt
+        print(f"\n🇬🇧 Loading UK Appeal Court judgments (sample: {half_size})...")
         try:
-            # Load dataset
-            dataset = load_dataset("JuDDGES/en-appealcourt", split="train")
+            dataset1 = load_dataset("JuDDGES/en-appealcourt", split="test")
+            sample_data1 = dataset1.select(range(min(half_size, len(dataset1))))
 
-            # Take sample
-            sample_data = dataset.select(range(min(sample_size, len(dataset))))
-
-            # Transform and insert
-            ingested = 0
-            for case in tqdm(sample_data, desc="Ingesting UK judgments"):
-                judgment_data = self._transform_uk_judgment(case)
+            for case in tqdm(sample_data1, desc="Ingesting Appeal Court judgments"):
+                judgment_data = self._transform_uk_judgment(case, source="JuDDGES/en-appealcourt")
                 if judgment_data:
                     self._insert_judgment(judgment_data)
-                    ingested += 1
+                    total_ingested += 1
 
-            print(f"✅ Successfully ingested {ingested} UK judgments")
-            return ingested
-
+            print(f"✅ Ingested {total_ingested} from en-appealcourt")
         except Exception as e:
-            print(f"❌ Error ingesting UK judgments: {e}")
-            return 0
+            print(f"❌ Error with en-appealcourt: {e}")
+
+        # Dataset 2: JuDDGES/en-court-raw-sample
+        print(f"\n🇬🇧 Loading UK Court raw sample judgments (sample: {sample_size - half_size})...")
+        try:
+            dataset2 = load_dataset("JuDDGES/en-court-raw-sample", split="train")
+            remaining = sample_size - total_ingested
+            sample_data2 = dataset2.select(range(min(remaining, len(dataset2))))
+
+            count_before = total_ingested
+            for case in tqdm(sample_data2, desc="Ingesting Court raw judgments"):
+                judgment_data = self._transform_uk_judgment(case, source="JuDDGES/en-court-raw-sample")
+                if judgment_data:
+                    self._insert_judgment(judgment_data)
+                    total_ingested += 1
+
+            print(f"✅ Ingested {total_ingested - count_before} from en-court-raw-sample")
+        except Exception as e:
+            print(f"❌ Error with en-court-raw-sample: {e}")
+
+        print(f"✅ Total UK judgments ingested: {total_ingested}")
+        return total_ingested
 
     def _transform_polish_judgment(self, raw_data: Dict) -> Optional[Dict]:
         """
@@ -209,60 +231,100 @@ class JudgmentIngestionPipeline:
             print(f"Warning: Failed to transform Polish judgment: {e}")
             return None
 
-    def _transform_uk_judgment(self, raw_data: Dict) -> Optional[Dict]:
+    def _transform_uk_judgment(self, raw_data: Dict, source: str = "JuDDGES/en-appealcourt") -> Optional[Dict]:
         """
         Transform UK judgment from JuDDGES format to our schema.
 
         Args:
-            raw_data: Raw data from JuDDGES/en-appealcourt
+            raw_data: Raw data from JuDDGES datasets
+            source: Source dataset name
 
         Returns:
             Transformed judgment data or None if invalid
         """
         try:
-            # Extract text content
-            full_text = raw_data.get('text', '') or raw_data.get('judgment_text', '')
-            if not full_text:
-                return None
+            # Handle different dataset structures
+            if source == "JuDDGES/en-appealcourt":
+                # This dataset has 'context' (full text) and 'output' (JSON metadata)
+                full_text = raw_data.get('context', '')
+                if not full_text:
+                    return None
 
-            # Generate embedding if OpenAI is configured
-            embedding = self.generate_embedding(full_text)
+                # For now, we'll just use the context text
+                # The 'output' field contains structured JSON we could parse later
+                return {
+                    'case_number': f"UK-APPEAL-{hash(full_text[:100]) % 1000000}",
+                    'jurisdiction': 'UK',
+                    'court_name': 'Court of Appeal',
+                    'court_level': 'Appeal Court',
+                    'decision_date': None,
+                    'title': full_text[:200] if full_text else 'Appeal Court Judgment',
+                    'summary': full_text[:500] if len(full_text) > 500 else '',
+                    'full_text': full_text,
+                    'judges': [],
+                    'case_type': 'Criminal',
+                    'decision_type': 'Judgment',
+                    'outcome': None,
+                    'keywords': [],
+                    'legal_topics': [],
+                    'embedding': self.generate_embedding(full_text),
+                    'metadata': {
+                        'language': 'en',
+                        'division': 'Criminal',
+                        'has_structured_output': 'output' in raw_data
+                    },
+                    'source_dataset': source,
+                    'source_id': str(hash(full_text[:100]))[:10],
+                    'source_url': None,
+                }
 
-            # Parse judges from the judgment
-            judges = []
-            judge_field = raw_data.get('judges', [])
-            if isinstance(judge_field, list):
-                judges = judge_field
-            elif isinstance(judge_field, str):
-                judges = [j.strip() for j in judge_field.split(',')]
+            else:  # JuDDGES/en-court-raw-sample
+                full_text = raw_data.get('full_text', '')
+                if not full_text:
+                    return None
 
-            return {
-                'case_number': raw_data.get('case_number', raw_data.get('neutral_citation', f"UK-{raw_data.get('id', 'unknown')}")),
-                'jurisdiction': 'UK',
-                'court_name': 'Court of Appeal (Criminal Division)',
-                'court_level': 'Appeal Court',
-                'decision_date': self._parse_date(raw_data.get('judgment_date') or raw_data.get('date')),
-                'title': raw_data.get('case_name', '')[:500],
-                'summary': raw_data.get('summary', ''),
-                'full_text': full_text,
-                'judges': judges,
-                'case_type': 'Criminal',
-                'decision_type': raw_data.get('decision_type', 'Judgment'),
-                'outcome': raw_data.get('outcome'),
-                'keywords': raw_data.get('keywords', []),
-                'legal_topics': raw_data.get('topics', []),
-                'embedding': embedding,
-                'metadata': {
-                    'language': 'en',
-                    'division': 'Criminal',
-                    'original_fields': list(raw_data.keys())
-                },
-                'source_dataset': 'JuDDGES/en-appealcourt',
-                'source_id': str(raw_data.get('id', '')),
-                'source_url': raw_data.get('uri') or raw_data.get('url'),
-            }
+                # Parse judges
+                judges = []
+                judge_field = raw_data.get('judges', [])
+                if isinstance(judge_field, list):
+                    judges = judge_field
+                elif isinstance(judge_field, str):
+                    judges = [j.strip() for j in judge_field.split(',')]
+
+                # Determine court type
+                court_type = raw_data.get('court_type', 'unknown')
+                court_name = court_type.replace('_', ' ').title()
+
+                return {
+                    'case_number': raw_data.get('citation', raw_data.get('docket_number', f"UK-{raw_data.get('judgment_id', 'unknown')[:10]}")),
+                    'jurisdiction': 'UK',
+                    'court_name': court_name,
+                    'court_level': 'High Court' if 'high' in court_type.lower() else 'Crown Court' if 'crown' in court_type.lower() else 'Court',
+                    'decision_date': self._parse_date(raw_data.get('publication_date')),
+                    'title': raw_data.get('excerpt', full_text[:200])[:500],
+                    'summary': raw_data.get('excerpt', ''),
+                    'full_text': full_text,
+                    'judges': judges,
+                    'case_type': 'Criminal' if 'crim' in court_type.lower() else 'Civil',
+                    'decision_type': 'Judgment',
+                    'outcome': None,
+                    'keywords': [],
+                    'legal_topics': [],
+                    'embedding': self.generate_embedding(full_text),
+                    'metadata': {
+                        'language': 'en',
+                        'court_type': court_type,
+                        'country': raw_data.get('country', 'UK'),
+                        'file_name': raw_data.get('file_name', ''),
+                    },
+                    'source_dataset': source,
+                    'source_id': raw_data.get('judgment_id', '')[:20],
+                    'source_url': raw_data.get('uri'),
+                }
         except Exception as e:
-            print(f"Warning: Failed to transform UK judgment: {e}")
+            print(f"Warning: Failed to transform UK judgment from {source}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def _parse_date(self, date_str: Optional[str]) -> Optional[str]:
@@ -318,19 +380,19 @@ def main():
     # Get credentials from environment
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')  # Need service role for writes
-    openai_api_key = os.getenv('OPENAI_API_KEY') if not args.no_embeddings else None
+    transformers_url = os.getenv('TRANSFORMERS_INFERENCE_URL', 'http://localhost:8080') if not args.no_embeddings else None
 
     if not supabase_url or not supabase_key:
         print("❌ Error: Missing required environment variables")
         print("Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY")
-        print("Optional: OPENAI_API_KEY (for embeddings)")
+        print("Optional: TRANSFORMERS_INFERENCE_URL (for embeddings, default: http://localhost:8080)")
         sys.exit(1)
 
     # Initialize pipeline
     pipeline = JudgmentIngestionPipeline(
         supabase_url=supabase_url,
         supabase_key=supabase_key,
-        openai_api_key=openai_api_key
+        transformers_url=transformers_url
     )
 
     # Run ingestion
