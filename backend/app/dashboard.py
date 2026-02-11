@@ -14,14 +14,14 @@ from supabase import create_client, Client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
-from ai_tax_search.retrieval.fetch import get_documents_by_id
-from ai_tax_search.db.supabase_db import get_vector_db
+from juddges_search.retrieval.fetch import get_documents_by_id
+from juddges_search.db.supabase_db import get_vector_db
 
 # Weaviate imports - optional, will be None if not available
 try:
     from weaviate.classes.query import Filter, MetadataQuery, Sort
-    from ai_tax_search.db.weaviate_db import WeaviateLegalDatabase
-    from ai_tax_search.retrieval.weaviate_search import search_chunks_term
+    from juddges_search.db.weaviate_db import WeaviateLegalDatabase
+    from juddges_search.retrieval.weaviate_search import search_chunks_term
     WEAVIATE_AVAILABLE = True
 except ImportError:
     WEAVIATE_AVAILABLE = False

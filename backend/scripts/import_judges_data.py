@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # Add parent directory to path to allow importing from packages
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from ai_tax_search.models import LegalDocument, DocumentType
+from juddges_search.models import LegalDocument, DocumentType
 
 load_dotenv()
 

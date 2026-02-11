@@ -7,7 +7,7 @@ Note: This requires dropping and recreating the properties or the entire collect
 import asyncio
 from loguru import logger
 
-from ai_tax_search.db.weaviate_db import WeaviateLegalDatabase
+from juddges_search.db.weaviate_db import WeaviateLegalDatabase
 
 
 async def check_and_update_properties():

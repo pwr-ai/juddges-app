@@ -14,8 +14,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from ai_tax_search.db.supabase_db import get_vector_db
-from ai_tax_search.llms import get_default_llm
+from juddges_search.db.supabase_db import get_vector_db
+from juddges_search.llms import get_default_llm
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/timeline", tags=["timeline"])

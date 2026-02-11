@@ -155,8 +155,8 @@
    applied via data-brand attribute on <html>.
    ============================================ */
 
-/* Judges Brand - Teal Theme */
-[data-brand="judges"] {
+/* Juddges Brand - Teal Theme */
+[data-brand="juddges"] {
   --primary: oklch(0.55 0.22 200.00);
   --ring: oklch(0.55 0.22 200.00);
   --accent: oklch(0.90 0.05 200.00);
@@ -166,8 +166,8 @@
   --chart-1: oklch(0.55 0.22 200.00);
 }
 
-[data-brand="judges"].dark,
-.dark[data-brand="judges"] {
+[data-brand="juddges"].dark,
+.dark[data-brand="juddges"] {
   --primary: oklch(0.62 0.22 200.00);
   --ring: oklch(0.55 0.22 200.00);
   --accent: oklch(0.32 0.12 200.00);

@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from ai_tax_search.db.supabase_db import get_vector_db
+from juddges_search.db.supabase_db import get_vector_db
 from app.core.supabase import get_supabase_client
 from app.documents import generate_embedding
 from app.models import validate_id_format

@@ -1,6 +1,6 @@
 # Juddges App Setup Guide
 
-Complete step-by-step guide to set up your Juddges App from the AI-Tax boilerplate.
+Complete step-by-step guide to set up your Juddges App.
 
 ## 📋 Prerequisites
 
@@ -103,21 +103,17 @@ python ingest_judgments.py --polish 10 --uk 10
 
 **Note:** If you skip `--openai-api-key`, judgments will be ingested without embeddings (semantic search won't work, but text search will).
 
-### Step 6: Copy Frontend/Backend Boilerplate
+### Step 6: Verify Installation
 
-Since we're forking from AI-Tax, copy the relevant directories:
+The frontend and backend are already included in this repository (forked from AI-Tax).
 
 ```bash
-# Copy frontend (from AI-Tax repo)
-cp -r /home/laugustyniak/github/legal-ai/AI-Tax/frontend ./frontend
+# Verify directory structure
+ls -la frontend/ backend/
 
-# Copy backend (from AI-Tax repo)
-cp -r /home/laugustyniak/github/legal-ai/AI-Tax/backend ./backend
-
-# Copy docker configuration
-cp /home/laugustyniak/github/legal-ai/AI-Tax/docker-compose.dev.yml ./
-
-# Update references from "AI-Tax" to "Juddges"
+# Check that packages are properly named
+grep "juddges" backend/pyproject.toml
+grep "juddges" frontend/package.json
 ```
 
 ## 🔧 Detailed Setup

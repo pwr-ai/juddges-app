@@ -20,7 +20,7 @@ import { enterpriseTracking, trackPageView } from "@/lib/analytics";
 export default function EnterprisePage() {
   // Track page view on mount
   useEffect(() => {
-    trackPageView("/enterprise", "AI-Tax Enterprise Solutions");
+    trackPageView("/enterprise", "Juddges Enterprise Solutions");
 
     // Track scroll depth
     let maxScrollDepth = 0;
@@ -87,7 +87,7 @@ export default function EnterprisePage() {
         {/* Value Propositions */}
         <ValuePropsGrid
           valueProps={enterpriseContent.valueProps}
-          title="Why Choose AI-Tax Enterprise?"
+          title="Why Choose Juddges Enterprise?"
           subtitle="Built for legal professionals who need reliability, security, and performance"
         />
 
@@ -121,7 +121,7 @@ export default function EnterprisePage() {
           <CaseStudies
             caseStudies={enterpriseContent.caseStudies}
             title="Real Results from Real Deployments"
-            subtitle="See how organizations use AI-Tax to transform their legal operations"
+            subtitle="See how organizations use Juddges to transform their legal operations"
           />
         </section>
 
@@ -148,14 +148,14 @@ export default function EnterprisePage() {
           <FAQSection
             faqs={enterpriseContent.faqs}
             title="Frequently Asked Questions"
-            subtitle="Find answers to common questions about AI-Tax Enterprise"
+            subtitle="Find answers to common questions about Juddges Enterprise"
           />
         </section>
 
         {/* Contact / CTA */}
         <ContactSection
           title="Ready to Transform Your Legal Practice?"
-          subtitle="Schedule a demo or speak with our team to learn how AI-Tax can work for you"
+          subtitle="Schedule a demo or speak with our team to learn how Juddges can work for you"
         />
 
         {/* Final Trust Reinforcement */}

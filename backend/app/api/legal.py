@@ -4,7 +4,7 @@ Legal and Compliance API
 Provides access to legal documents and GDPR compliance features.
 Includes data processing agreements, data exports, and deletion requests.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
@@ -78,7 +78,7 @@ class DPAInfoResponse(BaseModel):
     version: str = Field(default="1.0")
     effective_date: str
     data_processor: Dict = Field(
-        description="Information about data processor (AI-Tax)"
+        description="Information about data processor (Juddges)"
     )
     data_controller: str = Field(
         default="User",
@@ -113,7 +113,7 @@ async def get_dpa_info(
     """
     Get Data Processing Agreement (DPA) information.
 
-    Returns comprehensive information about how AI-Tax processes user data,
+    Returns comprehensive information about how Juddges processes user data,
     including retention periods, security measures, and sub-processors.
 
     This is required for GDPR Article 28 compliance.
@@ -134,13 +134,13 @@ async def get_dpa_info(
             version="1.0",
             effective_date="2025-01-01",
             data_processor={
-                "name": "AI-Tax",
+                "name": "Juddges",
                 "contact": "legal@legal-ai.augustyniak.ai",
                 "dpo_email": "dpo@legal-ai.augustyniak.ai",
                 "address": "To be determined",
                 "registration_number": "To be determined"
             },
-            data_controller="User (Individual or Organization using AI-Tax services)",
+            data_controller="User (Individual or Organization using Juddges services)",
             processing_purposes=[
                 "Legal research and document analysis",
                 "AI-powered search and recommendations",

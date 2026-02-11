@@ -39,7 +39,7 @@ export default function AboutPage(): React.JSX.Element {
         </Badge>
         <Header
           icon={Sparkles}
-          title="About JuDDGES & AI-Tax Projects"
+          title="About Juddges & AI-Tax Projects"
           size="4xl"
           description="Advancing legal research through artificial intelligence and open science"
         />

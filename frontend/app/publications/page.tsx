@@ -140,7 +140,7 @@ export default function PublicationsPage() {
               value={filterProject}
               options={[
                 { value: "all", label: "All projects" },
-                { value: PublicationProject.JUDDGES, label: "JuDDGES" },
+                { value: PublicationProject.JUDDGES, label: "JUDDGES" },
                 { value: PublicationProject.AI_TAX, label: "AI-TAX" },
               ]}
               onChange={(value) => setFilterProject(value as FilterProject)}

@@ -12,7 +12,7 @@ This service implements:
 - Document access tracking
 - Export tracking
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-12
 """
 

@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Header, Path, Query
 from pydantic import BaseModel, Field, field_validator
-from ai_tax_search.db.supabase_db import get_publications_db
+from juddges_search.db.supabase_db import get_publications_db
 from app.models import validate_id_format
 from loguru import logger
 

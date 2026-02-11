@@ -13,8 +13,8 @@ from pathlib import Path
 # Add the package to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "packages" / "ai_tax_search"))
 
-from ai_tax_search.info_extraction.base_schema_extractor import BaseSchemaExtractor
-from ai_tax_search.info_extraction.jurisdiction import detect_jurisdiction, Jurisdiction
+from juddges_search.info_extraction.base_schema_extractor import BaseSchemaExtractor
+from juddges_search.info_extraction.jurisdiction import detect_jurisdiction, Jurisdiction
 
 
 # Sample English judgment text (UK Court of Appeal style)

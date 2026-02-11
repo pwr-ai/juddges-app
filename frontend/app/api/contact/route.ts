@@ -90,7 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // TODO: Send confirmation email to user
     // await sendEmail({
     //   to: validatedData.email,
-    //   subject: 'Thank you for contacting AI-Tax Enterprise',
+    //   subject: 'Thank you for contacting Juddges',
     //   html: `...`
     // });
 

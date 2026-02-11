@@ -1,14 +1,16 @@
 # Backend Scripts
 
-Collection of utility scripts for the AI-Tax backend.
+Collection of utility scripts for the Juddges backend.
 
 ## Available Scripts
 
 ### fix_weaviate_schema.py
 
-Utility script for fixing and managing Weaviate schema configurations.
+**Legacy script from AI-Tax** - Utility for Weaviate schema configurations.
 
-**Usage:**
+**Note**: Juddges uses Supabase pgvector, so this script is not used in the current implementation.
+
+**Usage (legacy):**
 
 ```bash
 python scripts/fix_weaviate_schema.py
@@ -20,20 +22,20 @@ Setup script for creating the LangChain cache database in the Supabase PostgreSQ
 
 **Prerequisites:**
 
-- PostgreSQL container running (docker-compose.shared.yml)
-- Supabase PostgreSQL credentials (default: aiTax/fA684jk on port 5432)
+- PostgreSQL container running (docker-compose.dev.yml)
+- Supabase PostgreSQL credentials
 
 **Usage:**
 
 ```bash
 # Run setup using Docker
-docker compose -f docker-compose.shared.yml exec db psql -U aiTax -d aiTax -c 'CREATE DATABASE llm_cache OWNER "aiTax";'
+docker compose -f docker-compose.dev.yml exec db psql -U postgres -d postgres -c 'CREATE DATABASE llm_cache;'
 ```
 
 **What it does:**
 
-- Creates `llm_cache` database in the same PostgreSQL instance as Supabase
-- Uses existing `aiTax` user (no separate user needed)
+- Creates `llm_cache` database for LangChain caching
+- Uses Supabase PostgreSQL instance
 - Database accessible at `db:5432/llm_cache` (from containers) or `localhost:5432/llm_cache` (from host)
 
 **Manual Setup:**
@@ -42,10 +44,10 @@ If you prefer to set up the database manually:
 
 ```sql
 -- Connect to PostgreSQL container
-docker compose -f docker-compose.shared.yml exec db psql -U aiTax -d aiTax
+docker compose -f docker-compose.dev.yml exec db psql -U postgres -d postgres
 
--- Create database (uses existing aiTax user)
-CREATE DATABASE llm_cache OWNER "aiTax";
+-- Create database
+CREATE DATABASE llm_cache;
 
 -- Verify
 \c llm_cache
@@ -56,7 +58,7 @@ CREATE DATABASE llm_cache OWNER "aiTax";
 
 ```bash
 # Test from Docker container
-docker compose -f docker-compose.shared.yml exec db psql -U aiTax -d llm_cache -c "SELECT version();"
+docker compose -f docker-compose.dev.yml exec db psql -U postgres -d llm_cache -c "SELECT version();"
 
 # Test from backend container (if running)
 docker compose exec backend python -c "
@@ -200,15 +202,14 @@ backend/app/health/
 
 **Critical Services** (must be healthy):
 
-- PostgreSQL (conversation state, checkpointing)
+- PostgreSQL/Supabase (database, conversation state, vector search)
 - Redis (session management, caching)
-- Weaviate (vector search, embeddings)
 
 **Optional Services** (can be degraded):
 
-- Supabase (analytics, feedback)
 - Celery (background task processing)
 - Langfuse (LLM observability)
+- OpenAI API (embeddings, chat)
 
 ### Performance Characteristics
 

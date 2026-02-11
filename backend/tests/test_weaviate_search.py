@@ -6,8 +6,8 @@ Tests are marked with integration marker since they require Weaviate database ac
 """
 
 import pytest
-from ai_tax_search.retrieval.weaviate_search import search_documents
-from ai_tax_search.models import DocumentType
+from juddges_search.retrieval.weaviate_search import search_documents
+from juddges_search.models import DocumentType
 
 
 @pytest.mark.integration

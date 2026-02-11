@@ -19,8 +19,8 @@ from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, HTTPException, Query, Path, Response
 from loguru import logger
 
-from ai_tax_search.models import LegalDocument, DocumentType, IssuingBody
-from ai_tax_search.db.supabase_db import get_vector_db, SupabaseVectorDB
+from juddges_search.models import LegalDocument, DocumentType, IssuingBody
+from juddges_search.db.supabase_db import get_vector_db, SupabaseVectorDB
 from app.utils.date_utils import parse_date
 from app.models import (
     DocumentRetrievalRequest,

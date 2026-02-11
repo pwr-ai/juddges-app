@@ -13,11 +13,11 @@ import pytest
 from httpx import AsyncClient
 from httpx._transports.asgi import ASGITransport
 
-from ai_tax_search.db.weaviate_pool import (
+from juddges_search.db.weaviate_pool import (
     get_weaviate_pool,
     cleanup_weaviate_pool,
 )
-from ai_tax_search.db.weaviate_db import WeaviateLegalDatabase
+from juddges_search.db.weaviate_db import WeaviateLegalDatabase
 
 
 @pytest.fixture

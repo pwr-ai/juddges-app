@@ -4,7 +4,7 @@ Documentation for the AI-Tax → Juddges App transition and database migrations.
 
 ## 🔄 AI-Tax → Juddges Migration
 
-This project is a fork of the AI-Tax platform, specialized for judicial decisions. These documents track the transition progress.
+This project is a fork of AI-Tax, specialized for judicial decisions. These documents track the transition progress.
 
 ### [Branding Checklist](branding-checklist.md)
 Track branding updates from AI-Tax to Juddges:
@@ -93,7 +93,7 @@ mcp__supabase__apply_migration({
 ## 🎯 Migration Status
 
 ### Completed ✅
-- [x] Repository structure from AI-Tax
+- [x] Repository structure forked from AI-Tax
 - [x] Core documentation
 - [x] Basic judgment schema
 - [x] Vector search migration (Weaviate → pgvector)
@@ -109,7 +109,7 @@ mcp__supabase__apply_migration({
 - [ ] Performance optimization
 - [ ] Additional jurisdictions
 - [ ] Advanced analytics features
-- [ ] Complete AI-Tax code cleanup
+- [ ] Complete AI-Tax legacy code cleanup (remove unused Weaviate code, etc.)
 
 ## 🔧 Key Differences: AI-Tax vs Juddges
 
@@ -120,6 +120,7 @@ mcp__supabase__apply_migration({
 | **Jurisdictions** | Generic | Poland + UK |
 | **Vector DB** | Weaviate | Supabase pgvector |
 | **Schema** | Generic documents | Specialized judgments table |
+| **Package Name** | `ai_tax_search` | `juddges_search` |
 | **Language** | English | Polish + English |
 
 ## 🆘 Troubleshooting Migrations

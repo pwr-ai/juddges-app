@@ -14,7 +14,7 @@ import { getBrandConfig, getCurrentBrand } from "@/lib/brand";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const fallbackSiteUrl = "https://ai-tax.com";
+const fallbackSiteUrl = "https://juddges.com";
 const configuredSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
   process.env.VERCEL_PROJECT_PRODUCTION_URL ||

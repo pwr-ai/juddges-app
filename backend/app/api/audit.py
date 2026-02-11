@@ -4,7 +4,7 @@ Audit Trail API Endpoints
 Provides user access to their own audit trail for transparency and compliance.
 Users can view and export their activity history.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-12
 """
 

@@ -1,5 +1,5 @@
 """
-Secrets Manager for AI-Tax
+Secrets Manager for Juddges
 
 Manages secrets from Supabase Vault with fallback to environment variables.
 All API keys should be stored in Supabase Vault for security.
@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
     console = Console()
 
-    console.print("\n[bold cyan]AI-Tax Secrets Manager Test[/bold cyan]\n")
+    console.print("\n[bold cyan]Juddges Secrets Manager Test[/bold cyan]\n")
 
     manager = get_secrets_manager()
 

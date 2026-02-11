@@ -26,14 +26,14 @@ from werkzeug.utils import secure_filename
 from supabase import Client
 from app.core.supabase import supabase_client
 from langgraph.types import Command
-from ai_tax_search.info_extraction.extractor import InformationExtractor
-from ai_tax_search.info_extraction.schema_utils import (
+from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.info_extraction.schema_utils import (
     SchemaProcessingError,
     prepare_schema_from_db,
 )
-from ai_tax_search.info_extraction.oai_schema_validation import validate_openai_schema
-from ai_tax_search.llms import get_default_llm
-from ai_tax_search.models import DocumentType
+from juddges_search.info_extraction.oai_schema_validation import validate_openai_schema
+from juddges_search.llms import get_default_llm
+from juddges_search.models import DocumentType
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,

@@ -1,7 +1,7 @@
 """
 API Package
 
-REST API endpoints for AI-Tax legal compliance features.
+REST API endpoints for Juddges legal compliance features.
 
 This package contains:
 - audit: Audit trail API (user's own activity history)

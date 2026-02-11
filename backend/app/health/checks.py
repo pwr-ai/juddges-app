@@ -327,7 +327,7 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
     try:
         broker_url = os.getenv("CELERY_BROKER_URL")
         backend_url = os.getenv("CELERY_BACKEND_URL")
-        project_name = os.getenv("CELERY_PROJECT_NAME", "ai-tax")
+        project_name = os.getenv("CELERY_PROJECT_NAME", "juddges")
 
         if not broker_url or not backend_url:
             return ServiceHealth(

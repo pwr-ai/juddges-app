@@ -11,7 +11,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { LegalComplianceWrapper } from "@/components/legal/legal-compliance-wrapper";
 import { LoadingIndicator } from "@/lib/styles/components/loading-indicator";
 import { useAuth } from "@/contexts/AuthContext";
-import { AiTaxLogo } from "@/lib/styles/components/ai-tax-logo";
+import { JuddgesLogo } from "@/lib/styles/components/juddges-logo";
 import { CommandPaletteProvider } from "@/contexts/CommandPaletteContext";
 import { PWAProvider } from "@/components/PWAProvider";
 
@@ -123,7 +123,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
                 <div className="flex-1 overflow-y-auto flex items-center justify-center">
                 <LoadingIndicator
                   message="Initializing application and preparing your workspace"
-                  logo={<AiTaxLogo size="lg" showText={true} showGlow={true} />}
+                  logo={<JuddgesLogo size="lg" showText={true} showGlow={true} />}
                   showLoader={false}
                   variant="centered"
                   size="lg"

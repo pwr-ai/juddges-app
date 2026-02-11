@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from httpx._transports.asgi import ASGITransport
 
-from ai_tax_search.db.weaviate_pool import get_weaviate_pool, cleanup_weaviate_pool
+from juddges_search.db.weaviate_pool import get_weaviate_pool, cleanup_weaviate_pool
 
 
 @pytest.fixture
@@ -198,7 +198,7 @@ class TestSearchChunksEndpoint:
         mock_pool, mock_client, _, _ = mock_weaviate_pool
         
         # Mock responses - use proper DocumentChunk instances
-        from ai_tax_search.models import DocumentChunk
+        from juddges_search.models import DocumentChunk
         
         mock_chunk = DocumentChunk(
             document_id="test-doc-1",

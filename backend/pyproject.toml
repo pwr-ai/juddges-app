@@ -6,7 +6,7 @@ authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
 readme = "README.md"
 packages = [
     { include = "app" },
-    { include = "packages/ai_tax_search" },
+    { include = "packages/juddges_search" },
     { include = "packages/schema_generator_agent" },
 ]
 
@@ -18,7 +18,7 @@ langserve = { extras = ["server"], version = "^0.3.2" }
 langchain = "^0.3"
 langchain-community = "^0.3.19"
 langchain-openai = "^0.3.7"
-ai_tax_search = { path = "packages/ai_tax_search", develop = true }
+juddges_search = { path = "packages/juddges_search", develop = true }
 schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
 langfuse = "^3.2.3"
 aiohttp = "^3.11.14"
@@ -55,8 +55,8 @@ test-search = "pytest tests/test_weaviate_search.py -v"
 test-language = "pytest tests/test_language_search.py -v"
 test-pool = "pytest tests/test_weaviate_pool.py -v"
 test-endpoints = "pytest tests/test_endpoints_pool.py -v"
-test-cov = "pytest tests/ --cov=ai_tax_search --cov-report=html --cov-report=term-missing"
-test-cov-html = "pytest tests/ --cov=ai_tax_search --cov-report=html"
+test-cov = "pytest tests/ --cov=juddges_search --cov-report=html --cov-report=term-missing"
+test-cov-html = "pytest tests/ --cov=juddges_search --cov-report=html"
 
 # Code quality commands
 lint = "ruff check ."

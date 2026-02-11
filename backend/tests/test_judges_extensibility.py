@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../packages/ai_tax_search"))
 
-from ai_tax_search.models import LegalDocument, DocumentType
+from juddges_search.models import LegalDocument, DocumentType
 
 def test_extensibility():
     try:

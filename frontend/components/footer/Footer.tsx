@@ -38,8 +38,8 @@ export function Footer({ className }: { className?: string }) {
             WUST Research Project
           </Badge>
           <p className="text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-            AI-Tax is a research platform developed by Wrocław University of Science and Technology,
-            providing AI-powered legal document analysis and research tools for court judgments and tax law.
+            Juddges is a research platform developed by Wrocław University of Science and Technology,
+            providing AI-powered legal document analysis and research tools for court judgments.
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export function Footer({ className }: { className?: string }) {
         {/* Legal Disclaimer */}
         <div className="mt-3 pt-3 border-t border-slate-200/30 dark:border-slate-900/5">
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-4xl">
-            <strong className="font-semibold text-slate-700 dark:text-slate-300">Legal Notice:</strong> AI-Tax provides AI-powered legal information for
+            <strong className="font-semibold text-slate-700 dark:text-slate-300">Legal Notice:</strong> Juddges provides AI-powered legal information for
             research and educational purposes. This system does not constitute professional legal
             advice and should not be used as a substitute for consultation with a qualified attorney.
           </p>

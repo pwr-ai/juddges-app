@@ -13,7 +13,7 @@ export function LandingFooter() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                AI-Tax
+                Juddges
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -127,7 +127,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="https://github.com/ai-tax"
+                  href="https://github.com/pwr-ai/legal-ai"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -138,7 +138,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="https://linkedin.com/company/ai-tax"
+                  href="https://linkedin.com/company/juddges"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -155,7 +155,7 @@ export function LandingFooter() {
         <div className="mt-12 pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <p>
-              &copy; {currentYear} AI-Tax. All rights reserved.
+              &copy; {currentYear} Juddges. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link

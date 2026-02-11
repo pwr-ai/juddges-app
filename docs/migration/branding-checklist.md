@@ -9,13 +9,18 @@ This document tracks what has been updated and what still needs to be changed fr
 - [x] Docker compose files copied
 - [x] Frontend `package.json` - name changed to "juddges-frontend"
 - [x] Backend `pyproject.toml` - name changed to "juddges"
+- [x] Package renamed: `ai_tax_search` → `juddges_search`
 
 ### Documentation
-- [x] README.md - New project documentation written
-- [x] SETUP_GUIDE.md - Complete setup instructions
-- [x] DATA_INGESTION_GUIDE.md - Data ingestion documentation
-- [x] SUPABASE_MCP_GUIDE.md - Database management guide
-- [x] PROJECT_SUMMARY.md - Project overview
+- [x] README.md - Updated branding references
+- [x] CLAUDE.md - Updated all AI-Tax references
+- [x] docs/README.md - Updated migration documentation
+- [x] docs/migration/README.md - Updated fork references
+- [x] docs/migration/branding-checklist.md - This file
+- [x] docs/architecture/overview.md - Updated project overview
+- [x] docs/getting-started/setup-guide.md - Updated setup references
+- [x] backend/README.md - Updated to Juddges branding
+- [x] backend/packages/juddges_search/README.md - New package documentation
 
 ## 🔄 Remaining Updates Needed
 
@@ -60,23 +65,29 @@ This document tracks what has been updated and what still needs to be changed fr
 
 ## 🔍 Quick Search Commands
 
-Find AI-Tax references:
+Find remaining AI-Tax references:
 ```bash
 cd /home/laugustyniak/github/legal-ai/juddges-app
-grep -r "AI-Tax" frontend/ backend/ --include="*.ts" --include="*.tsx" --include="*.py"
+
+# Search in code
+grep -r "AI-Tax\|ai-tax\|ai_tax" frontend/ backend/ --include="*.ts" --include="*.tsx" --include="*.py"
+
+# Search in documentation
+grep -r "AI-Tax\|ai-tax\|ai_tax" docs/ --include="*.md"
 ```
 
 ## 🎯 Minimal Working Setup
 
 To get a working app quickly, you only need to update:
 1. ✅ Package names (done)
-2. [ ] Frontend layout title
-3. [ ] Environment variables (.env files)
-4. [ ] Run Supabase migration
-5. [ ] Ingest sample data
+2. ✅ Documentation (done)
+3. [ ] Frontend layout title
+4. [ ] Environment variables (.env files)
+5. [ ] Run Supabase migration
+6. [ ] Ingest sample data
 
 Everything else can be updated gradually.
 
 ---
 
-**Status**: Frontend/Backend copied, basic branding started
+**Status**: Documentation rebranding complete, code updates in progress

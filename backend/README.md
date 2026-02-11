@@ -1,6 +1,6 @@
-# AI-Tax Backend
+# Juddges Backend
 
-FastAPI-based backend for the AI-Tax platform providing legal document search, AI-powered chat, and document extraction.
+FastAPI-based backend for the Juddges platform providing judicial decision search, AI-powered chat, and document extraction.
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ backend/
 │   ├── feedback.py        # User feedback system
 │   └── ...
 ├── packages/              # Reusable packages
-│   ├── ai_tax_search/    # RAG search implementation
+│   ├── juddges_search/    # RAG search implementation
 │   └── schema_generator_agent/
 ├── tests/                 # Test suite
 ├── scripts/               # Utility scripts

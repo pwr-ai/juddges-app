@@ -20,13 +20,13 @@ import os
 import pytest
 from unittest.mock import AsyncMock
 from langchain_core.messages import HumanMessage, AIMessage
-from ai_tax_search.chains.models import DocumentRetrievalInput, Response
+from juddges_search.chains.models import DocumentRetrievalInput, Response
 from loguru import logger
 
 # Import chat_chain for integration tests that use it
 # This is wrapped in a conditional to avoid import errors during unit tests
 try:
-    from ai_tax_search.chains.chat import chat_chain
+    from juddges_search.chains.chat import chat_chain
 except Exception:
     # If import fails due to missing environment variables or API keys, set to None
     # Integration tests will be skipped if environment variables are not set

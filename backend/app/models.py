@@ -3,10 +3,10 @@ import uuid
 from enum import Enum
 from typing import Any, ClassVar, Literal, Optional, Union
 
-from ai_tax_search.chains.models import QuestionDict
-from ai_tax_search.info_extraction.extractor import InformationExtractor
-from ai_tax_search.models import DocumentChunk, LegalDocument, LegalDocumentMetadata
-from ai_tax_search.retrieval.config import (
+from juddges_search.chains.models import QuestionDict
+from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.models import DocumentChunk, LegalDocument, LegalDocumentMetadata
+from juddges_search.retrieval.config import (
     MAX_INVALID_UUIDS_TO_SHOW,
     OPTIMIZED_CHUNK_DOCS_LIMIT,
     OPTIMIZED_CHUNK_FETCH_LIMIT,

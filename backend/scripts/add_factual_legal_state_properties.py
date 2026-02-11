@@ -9,7 +9,7 @@ import asyncio
 from loguru import logger
 from weaviate.classes.config import Property, DataType
 
-from ai_tax_search.db.weaviate_db import WeaviateLegalDatabase
+from juddges_search.db.weaviate_db import WeaviateLegalDatabase
 
 
 async def add_properties():

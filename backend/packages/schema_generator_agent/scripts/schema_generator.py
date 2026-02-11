@@ -1,7 +1,7 @@
 import os
 
 import yaml
-from ai_tax_search.models import DocumentType
+from juddges_search.models import DocumentType
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 

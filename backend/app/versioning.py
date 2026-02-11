@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from ai_tax_search.db.supabase_db import get_vector_db
+from juddges_search.db.supabase_db import get_vector_db
 
 
 router = APIRouter(prefix="/documents", tags=["versioning"])

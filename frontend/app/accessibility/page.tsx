@@ -37,7 +37,7 @@ export default function AccessibilityPage() {
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none dark:prose-invert">
             <p>
-              AI-Tax strives to ensure that its services are accessible to people with disabilities. We have invested
+              Juddges strives to ensure that its services are accessible to people with disabilities. We have invested
               significant resources to help ensure that our website is made easier to use and more accessible for people
               with disabilities, with the strong belief that website accessibility efforts assist all users and that
               every person has the right to live with dignity, equality, comfort, and independence.
@@ -113,7 +113,7 @@ export default function AccessibilityPage() {
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none dark:prose-invert">
             <p>
-              AI-Tax aims to conform to the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA standards.
+              Juddges aims to conform to the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA standards.
               These guidelines explain how to make web content more accessible for people with disabilities and
               user-friendly for everyone.
             </p>
@@ -130,7 +130,7 @@ export default function AccessibilityPage() {
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none dark:prose-invert">
             <p>
-              Despite our best efforts to ensure accessibility of AI-Tax, there may be some limitations. Below is
+              Despite our best efforts to ensure accessibility of Juddges, there may be some limitations. Below is
               a description of known limitations:
             </p>
             <ul>
@@ -150,7 +150,7 @@ export default function AccessibilityPage() {
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none dark:prose-invert">
             <p>
-              AI-Tax is designed to be compatible with the following assistive technologies:
+              Juddges is designed to be compatible with the following assistive technologies:
             </p>
             <ul>
               <li>Screen readers (JAWS, NVDA, VoiceOver)</li>
@@ -173,7 +173,7 @@ export default function AccessibilityPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              We welcome your feedback on the accessibility of AI-Tax. If you encounter accessibility barriers,
+              We welcome your feedback on the accessibility of Juddges. If you encounter accessibility barriers,
               please let us know so we can work to resolve the issue:
             </p>
             <div className="space-y-2 text-sm">
@@ -199,7 +199,7 @@ export default function AccessibilityPage() {
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none dark:prose-invert">
             <p>
-              AI-Tax is assessed for accessibility compliance using a combination of:
+              Juddges is assessed for accessibility compliance using a combination of:
             </p>
             <ul>
               <li>Automated testing tools</li>

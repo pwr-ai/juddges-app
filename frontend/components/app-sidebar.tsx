@@ -71,7 +71,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { AiTaxLogo } from "@/lib/styles/components/ai-tax-logo";
+import { JuddgesLogo } from "@/lib/styles/components/juddges-logo";
 import { useChatContext } from "@/contexts/ChatContext";
 import { ChatHistory } from "@/lib/styles/components/chat";
 import {
@@ -162,7 +162,7 @@ export function AppSidebar(): React.JSX.Element {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none" />
 
             <Link href="/" className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
-              <AiTaxLogo 
+              <JuddgesLogo 
                 size="md" 
                 showText={false} 
                 showGlow={true} 
@@ -288,7 +288,7 @@ export function AppSidebar(): React.JSX.Element {
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none" />
 
           <Link href="/" className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
-            <AiTaxLogo 
+            <JuddgesLogo 
               size="md" 
               showText={false} 
               showGlow={true} 

@@ -49,7 +49,7 @@ INVALID_SCHEMA = {
 
 def test_schema_validation():
     """Test schema validation logic."""
-    from ai_tax_search.info_extraction.extractor import InformationExtractor
+    from juddges_search.info_extraction.extractor import InformationExtractor
 
     logger.info("Testing schema validation...")
 
@@ -198,7 +198,7 @@ def test_system_schema_protection():
     logger.success(f"✓ System schemas defined: {SYSTEM_SCHEMAS}")
 
     # Verify system schemas exist
-    from ai_tax_search.info_extraction.extractor import InformationExtractor
+    from juddges_search.info_extraction.extractor import InformationExtractor
 
     available_schemas = InformationExtractor.list_schemas()
     for schema_id in SYSTEM_SCHEMAS:
@@ -212,7 +212,7 @@ def test_system_schema_protection():
 
 def test_schema_listing():
     """Test schema listing functionality."""
-    from ai_tax_search.info_extraction.extractor import InformationExtractor
+    from juddges_search.info_extraction.extractor import InformationExtractor
 
     logger.info("Testing schema listing...")
 

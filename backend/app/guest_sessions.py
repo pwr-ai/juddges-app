@@ -4,7 +4,7 @@ Guest Session Management Module
 Handles anonymous user sessions, rate limiting, and conversion to registered users.
 Tracks guest usage for search queries and feature access.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-09
 """
 

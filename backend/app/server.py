@@ -13,10 +13,10 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from loguru import logger
 
-from ai_tax_search.chains.chat import chat_chain
-from ai_tax_search.chains.enhance_query import enhance_query_chain
-from ai_tax_search.chains.qa import chain
-from ai_tax_search.db.weaviate_pool import cleanup_weaviate_pool, get_weaviate_pool
+from juddges_search.chains.chat import chat_chain
+from juddges_search.chains.enhance_query import enhance_query_chain
+from juddges_search.chains.qa import chain
+from juddges_search.db.weaviate_pool import cleanup_weaviate_pool, get_weaviate_pool
 from app.auth import verify_api_key
 from app.collections import router as collections_router
 from app.publications import router as publications_router
@@ -80,7 +80,7 @@ def validate_environment_variables():
     """
     required_vars = {
         "BACKEND_API_KEY": "API key for backend authentication",
-        "LANGGRAPH_POSTGRES_URL": "PostgreSQL URL for LangGraph checkpointer (local db:5432/aiTax)",
+        "LANGGRAPH_POSTGRES_URL": "PostgreSQL URL for LangGraph checkpointer (local db:5432/juddges)",
         "WEAVIATE_URL": "Weaviate vector database URL",
         "OPENAI_API_KEY": "OpenAI API key for LLM operations",
     }
@@ -322,8 +322,8 @@ def custom_openapi():
 
 app = FastAPI(
     lifespan=lifespan,
-    title="AI-Tax Legal Research API",
-    description="Backend API for AI-Tax legal research platform with intelligent search, audit trail, and legal compliance",
+    title="Juddges Legal Research API",
+    description="Backend API for Juddges legal research platform with intelligent search, audit trail, and legal compliance",
     version="0.3.0",
 )
 

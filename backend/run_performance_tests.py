@@ -10,7 +10,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir / "packages" / "ai_tax_search"))
 
-from ai_tax_search.performance.weaviate_benchmark import main
+from juddges_search.performance.weaviate_benchmark import main
 
 if __name__ == "__main__":
     main()

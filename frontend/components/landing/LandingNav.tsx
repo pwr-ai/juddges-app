@@ -41,7 +41,7 @@ export function LandingNav() {
           <Link href="/enterprise" className="flex items-center gap-2">
             <div className="flex items-center">
               <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                AI-Tax
+                Juddges
               </span>
               <span className="ml-2 text-sm md:text-base text-muted-foreground">
                 Enterprise

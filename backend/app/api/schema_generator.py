@@ -15,10 +15,10 @@ from loguru import logger
 from pydantic import BaseModel, Field, ConfigDict
 
 from langgraph.types import Command
-from ai_tax_search.models import DocumentType
-from ai_tax_search.llms import get_default_llm
-from ai_tax_search.info_extraction.extractor import InformationExtractor
-from ai_tax_search.chains.schema_generation import generate_schema
+from juddges_search.models import DocumentType
+from juddges_search.llms import get_default_llm
+from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.chains.schema_generation import generate_schema
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,
@@ -536,7 +536,7 @@ async def test_schema(
         total_time = 0.0
 
         # Import necessary modules
-        from ai_tax_search.retrieval.weaviate_search import WeaviateSearchClient
+        from juddges_search.retrieval.weaviate_search import WeaviateSearchClient
 
         # Initialize search client with error handling
         try:

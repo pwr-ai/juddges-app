@@ -1,5 +1,5 @@
 export enum PublicationProject {
-  JUDDGES = "JuDDGES",
+  JUDDGES = "JUDDGES",
   AI_TAX = "AI-TAX"
 }
 

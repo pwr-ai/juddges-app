@@ -6,8 +6,8 @@ multiple language selection and filtering.
 """
 
 import pytest
-from ai_tax_search.retrieval.weaviate_search import search_documents, search_chunks_term
-from ai_tax_search.models import DocumentType
+from juddges_search.retrieval.weaviate_search import search_documents, search_chunks_term
+from juddges_search.models import DocumentType
 
 
 @pytest.mark.integration

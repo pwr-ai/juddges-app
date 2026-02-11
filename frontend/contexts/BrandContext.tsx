@@ -40,7 +40,7 @@ interface BrandProviderProps {
  * The brand is determined by:
  * 1. overrideBrand prop (if provided)
  * 2. NEXT_PUBLIC_BRAND environment variable
- * 3. Default: 'ai-tax'
+ * 3. Default: 'juddges'
  */
 export function BrandProvider({ children, overrideBrand }: BrandProviderProps) {
   const value = useMemo(() => {

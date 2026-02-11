@@ -4,7 +4,7 @@ Usage Tracking & Analytics Module
 Tracks user behavior, search queries, and feature usage for product analytics.
 Stores events in Supabase for analysis and reporting.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-09
 """
 

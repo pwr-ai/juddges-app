@@ -4,7 +4,7 @@ A/B Testing & Experimentation Module
 Manages experiments, variant assignments, event tracking, and statistical analysis.
 Supports A/B tests, multivariate tests, and feature flags.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 """
 
 from datetime import datetime

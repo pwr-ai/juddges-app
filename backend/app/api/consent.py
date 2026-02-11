@@ -4,7 +4,7 @@ User Consent Management API
 Handles user consent for legal compliance (GDPR, professional acknowledgment).
 Tracks consent versions and maintains consent history.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
@@ -354,7 +354,7 @@ async def accept_professional_acknowledgment(
     Accept professional acknowledgment.
 
     Convenience endpoint specifically for accepting the professional acknowledgment
-    that AI-Tax is not a replacement for professional legal advice.
+    that Juddges is not a replacement for professional legal advice.
 
     This is a required consent for using the service.
 

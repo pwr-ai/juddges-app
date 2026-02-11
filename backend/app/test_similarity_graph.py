@@ -134,7 +134,7 @@ class TestClusteringAlgorithm:
     def test_clustering_single_component(self):
         """Test clustering with a single connected component."""
         from app.documents import calculate_clusters
-        from ai_tax_search.models import LegalDocument
+        from juddges_search.models import LegalDocument
 
         # Create test documents
         docs = [
@@ -165,7 +165,7 @@ class TestClusteringAlgorithm:
     def test_clustering_multiple_components(self):
         """Test clustering with multiple connected components."""
         from app.documents import calculate_clusters
-        from ai_tax_search.models import LegalDocument
+        from juddges_search.models import LegalDocument
 
         docs = [
             LegalDocument(
@@ -195,7 +195,7 @@ class TestClusteringAlgorithm:
     def test_clustering_isolated_nodes(self):
         """Test clustering with isolated nodes."""
         from app.documents import calculate_clusters
-        from ai_tax_search.models import LegalDocument
+        from juddges_search.models import LegalDocument
 
         docs = [
             LegalDocument(
@@ -220,7 +220,7 @@ class TestClusteringAlgorithm:
     def test_clustering_empty_edges(self):
         """Test clustering with no edges."""
         from app.documents import calculate_clusters
-        from ai_tax_search.models import LegalDocument
+        from juddges_search.models import LegalDocument
 
         docs = [
             LegalDocument(
@@ -248,7 +248,7 @@ class TestPairwiseSimilarities:
     def test_pairwise_similarities_threshold_filtering(self):
         """Test that similarities below threshold are filtered."""
         from app.documents import calculate_pairwise_similarities
-        from ai_tax_search.models import LegalDocument
+        from juddges_search.models import LegalDocument
 
         # Create documents with mock vectors
         docs = [
@@ -273,7 +273,7 @@ class TestPairwiseSimilarities:
     def test_pairwise_similarities_no_duplicate_pairs(self):
         """Test that each pair appears only once."""
         from app.documents import calculate_pairwise_similarities
-        from ai_tax_search.models import LegalDocument
+        from juddges_search.models import LegalDocument
 
         docs = [
             LegalDocument(

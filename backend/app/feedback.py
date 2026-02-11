@@ -4,7 +4,7 @@ User Feedback System Module
 Collects user feedback on search results, features, and product experience.
 Stores feedback in Supabase for analysis and product improvements.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
@@ -427,7 +427,7 @@ async def submit_feature_feedback(
             "bug_report": "Thank you for reporting this issue! Our team will investigate and fix it.",
             "feature_request": "Thank you for your suggestion! We'll consider it for future updates.",
             "improvement": "Thank you! We appreciate suggestions for improving our platform.",
-            "praise": "Thank you so much! We're glad you're enjoying AI-Tax!"
+            "praise": "Thank you so much! We're glad you're enjoying Juddges!"
         }
 
         thank_you = thank_you_messages.get(

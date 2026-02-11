@@ -10,7 +10,7 @@ This service provides:
 - User data export (GDPR right to data portability)
 - GDPR right to erasure (data deletion)
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-12
 """
 

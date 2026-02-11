@@ -65,7 +65,7 @@ export default function PlansPage() {
       <div className="mb-12 text-center flex flex-col items-center justify-center gap-2">
         <div className="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-4 font-bold tracking-tight">
           <span className="text-4xl md:text-6xl bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent whitespace-nowrap">
-            AI-Tax
+            Juddges
           </span>
 
           <div className="h-[1.5em] min-w-[280px] md:min-w-[350px] relative flex items-center justify-center md:justify-start text-lg md:text-xl font-medium">
@@ -103,7 +103,7 @@ export default function PlansPage() {
                 Preview Phase Notice
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
-                This is a preview version of AI-Tax. In the preview phase, features may not work as intended, and some discrepancies can occur.
+                This is a preview version of Juddges. In the preview phase, features may not work as intended, and some discrepancies can occur.
                 We continuously improve both the UI/UX of the app and work on our models based on user feedback.
               </p>
               <div className="flex justify-end">

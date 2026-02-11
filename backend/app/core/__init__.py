@@ -1,5 +1,5 @@
 """
-Core utilities and shared functionality for the AI-Tax backend.
+Core utilities and shared functionality for the Juddges backend.
 
 This package contains core modules for authentication, configuration, and shared utilities.
 """

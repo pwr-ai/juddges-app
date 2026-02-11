@@ -5,10 +5,10 @@ import warnings
 from datetime import datetime
 from typing import Any
 
-from ai_tax_search.info_extraction.extractor import InformationExtractor
-from ai_tax_search.info_extraction.schema_utils import prepare_schema_from_db
-from ai_tax_search.llms import get_llm
-from ai_tax_search.retrieval.fetch import get_documents_by_id
+from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.info_extraction.schema_utils import prepare_schema_from_db
+from juddges_search.llms import get_llm
+from juddges_search.retrieval.fetch import get_documents_by_id
 from celery import Celery, Task
 from celery.exceptions import Retry
 from dotenv import load_dotenv

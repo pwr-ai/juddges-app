@@ -1,5 +1,5 @@
 # docker-compose.dev.yml
-# Development Legal AI / AI-Tax Application Services
+# Development Juddges Application Services
 #
 # This file contains only application-specific services for development.
 # Shared infrastructure (PostgreSQL, Redis, ClickHouse, MinIO, Langfuse) is in docker-compose.shared.yml
@@ -8,7 +8,7 @@
 #
 # INDEPENDENT STACK USAGE:
 #   1. Create external network (one-time):
-#      docker network create ai-tax-shared-network
+#      docker network create juddges-shared-network
 #
 #   2. Start shared services once:
 #      docker compose -f docker-compose.shared.yml up -d
@@ -38,7 +38,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: ai-tax-frontend-dev
+    container_name: juddges-frontend-dev
     ports:
       - "3007:3000"
     restart: unless-stopped
@@ -58,9 +58,9 @@ services:
       - /app/node_modules
       - /app/.next  # Keep .next in container to avoid permission issues
     labels:
-      - "com.legal-ai.service=application"
-      - "com.legal-ai.service.type=frontend"
-      - "com.legal-ai.environment=development"
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=frontend"
+      - "com.juddges.environment=development"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -71,7 +71,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: ai-tax-backend-dev
+    container_name: juddges-backend-dev
     ports:
       - "8004:8080"
     restart: unless-stopped
@@ -103,9 +103,9 @@ services:
       - ./backend:/app
       - hf-cache-dev:/tmp/hf
     labels:
-      - "com.legal-ai.service=application"
-      - "com.legal-ai.service.type=backend-api"
-      - "com.legal-ai.environment=development"
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=backend-api"
+      - "com.juddges.environment=development"
     depends_on:
       - backend-worker-dev
     extra_hosts:
@@ -118,7 +118,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: ai-tax-backend-worker-dev
+    container_name: juddges-backend-worker-dev
     command: celery -A app.workers worker --loglevel=info
     restart: unless-stopped
     env_file:
@@ -148,9 +148,9 @@ services:
       - ./backend:/app
       - hf-cache-dev:/tmp/hf
     labels:
-      - "com.legal-ai.service=application"
-      - "com.legal-ai.service.type=worker"
-      - "com.legal-ai.environment=development"
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=worker"
+      - "com.juddges.environment=development"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -164,10 +164,10 @@ services:
 volumes:
   # Development cache volumes
   next-cache-dev:
-    name: ai-tax-next-cache-dev
+    name: juddges-next-cache-dev
     driver: local
   hf-cache-dev:
-    name: ai-tax-hf-cache-dev
+    name: juddges-hf-cache-dev
     driver: local
 
 # ==============================================================================
@@ -177,13 +177,13 @@ volumes:
 networks:
   # Development application network for inter-service communication
   app-dev-network:
-    name: ai-tax-app-dev-network
+    name: juddges-app-dev-network
     driver: bridge
 
   # CHANGE: Join external shared network for infrastructure access
-  # Must be created manually: docker network create ai-tax-shared-network
+  # Must be created manually: docker network create juddges-shared-network
   shared_network:
-    name: ai-tax-shared-network
+    name: juddges-shared-network
     external: true
 
 # ==============================================================================

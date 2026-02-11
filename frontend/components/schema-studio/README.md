@@ -472,4 +472,4 @@ When adding new features:
 
 ## License
 
-Part of the AI-Tax project.
+Part of the Juddges project.

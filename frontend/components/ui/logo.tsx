@@ -36,7 +36,7 @@ const textSizeMap = {
 /**
  * Brand-aware Logo component
  *
- * Displays the logo for the current brand (judges, ai-tax, or legal-ai).
+ * Displays the logo for the current brand (juddges, ai-tax, or legal-ai).
  * Falls back to a default SVG icon if the brand logo file is not found.
  */
 export function Logo({

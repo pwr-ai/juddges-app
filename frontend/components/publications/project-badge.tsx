@@ -10,7 +10,7 @@ interface ProjectBadgeProps {
 
 const projectConfig = {
   [PublicationProject.JUDDGES]: {
-    label: "JuDDGES",
+    label: "JUDDGES",
     description: "Court Judgment Analysis",
     className: "bg-gradient-to-r from-primary/10 via-indigo-400/10 to-purple-400/10 text-primary border-primary/30 dark:from-primary/15 dark:via-indigo-400/15 dark:to-purple-400/15 dark:text-primary dark:border-primary/30"
   },

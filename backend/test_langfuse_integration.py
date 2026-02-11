@@ -41,7 +41,7 @@ def test_langfuse_setup():
 
     print("\n🔗 Testing Callback Handler Import:")
     try:
-        from ai_tax_search.chains.callbacks import langfuse_handler
+        from juddges_search.chains.callbacks import langfuse_handler
 
         print("  ✅ Callbacks imported successfully")
 
@@ -60,7 +60,7 @@ def test_langfuse_setup():
 
     print("\n🤖 Testing Chat Chain Import:")
     try:
-        from ai_tax_search.chains.chat import chat_chain
+        from juddges_search.chains.chat import chat_chain
 
         print("  ✅ Chat chain imported successfully")
         print(f"  🏷️  Chain name: {chat_chain.name}")

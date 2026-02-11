@@ -440,4 +440,4 @@ Output: Checklist 25 dokumentów, strategia obrony, przewidywane kwestie
 
 ## Kontakt i wsparcie
 
-Schematy są gotowe do użycia w systemie AI-Tax. Wszystkie opisy, pola i struktury zostały przetłumaczone na język polski i dostosowane do polskiego kontekstu prawnego (NIP, NSA, WSA, US, ZUS, RODO, itp.).
+Schematy są gotowe do użycia w systemie Juddges. Wszystkie opisy, pola i struktury zostały przetłumaczone na język polski i dostosowane do polskiego kontekstu prawnego (NIP, NSA, WSA, US, ZUS, RODO, itp.).

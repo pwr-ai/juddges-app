@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Juddges App is an AI-powered judicial decision search and analysis platform for Polish and UK court judgments. It's a specialized fork of the AI-Tax platform, adapted for legal case law research with semantic search capabilities.
+Juddges App is an AI-powered judicial decision search and analysis platform for Polish and UK court judgments. It's a specialized fork of AI-Tax, adapted for legal case law research with semantic search capabilities.
 
 **Key Technologies:**
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS 4, Zustand, React Query
 - **Backend**: FastAPI (Python 3.12+), PostgreSQL, pgvector for embeddings
-- **Vector Search**: Originally Weaviate (AI-Tax), migrating to Supabase pgvector
+- **Vector Search**: Supabase pgvector (migrated from Weaviate used in AI-Tax)
 - **AI/ML**: LangChain, OpenAI API, Langfuse (monitoring)
 - **Task Queue**: Celery with Redis
 - **Auth**: Supabase Auth
@@ -125,12 +125,13 @@ This is a monorepo with clear separation between frontend and backend:
 ### Backend Package Architecture
 The backend uses a package-based architecture with two main reusable packages:
 
-1. **`ai_tax_search`** (`backend/packages/ai_tax_search/`):
+1. **`juddges_search`** (`backend/packages/juddges_search/`):
    - RAG (Retrieval-Augmented Generation) search implementation
    - LangChain integration for AI-powered search
-   - Vector database operations (originally Weaviate, migrating to pgvector)
+   - Vector database operations using Supabase pgvector
    - Chat and QA chains
-   - Used as: `from ai_tax_search.chains.chat import chat_chain`
+   - Used as: `from juddges_search.chains.chat import chat_chain`
+   - Note: Package was originally named `ai_tax_search` in AI-Tax fork
 
 2. **`schema_generator_agent`** (`backend/packages/schema_generator_agent/`):
    - AI-powered legal schema generation
@@ -140,7 +141,7 @@ The backend uses a package-based architecture with two main reusable packages:
 Both packages are installed in editable mode via Poetry:
 ```python
 # From pyproject.toml
-ai_tax_search = { path = "packages/ai_tax_search", develop = true }
+juddges_search = { path = "packages/juddges_search", develop = true }
 schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
 ```
 
@@ -151,12 +152,12 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
   - Includes `embedding` column (vector(1536)) for semantic search
   - Full-text search using PostgreSQL GIN indexes
 
-- **Vector Search**: Transitioning from Weaviate to Supabase pgvector
-  - Original AI-Tax used Weaviate (see `backend/packages/ai_tax_search/db/weaviate_pool.py`)
+- **Vector Search**: Uses Supabase pgvector
+  - AI-Tax originally used Weaviate (some legacy code may still reference it)
   - Juddges App uses Supabase pgvector extension
   - Vector similarity search using HNSW index
 
-**Important**: When working with vector search, check whether code references Weaviate (legacy) or pgvector (current). The backend has Weaviate code from AI-Tax but Juddges uses Supabase pgvector.
+**Important**: When working with vector search, check whether code references Weaviate (legacy from AI-Tax) or pgvector (current). Juddges uses Supabase pgvector.
 
 ### FastAPI Server Structure
 The main FastAPI app (`backend/app/server.py`) is organized with:
@@ -282,13 +283,14 @@ Next.js 15 with App Router:
 
 ## Migration Notes (AI-Tax → Juddges)
 This codebase was forked from AI-Tax and adapted for judicial decisions:
-- **Branding**: References to "AI-Tax" being updated to "Juddges"
-- **Data Model**: Originally tax documents, now court judgments
-- **Vector DB**: Transitioning from Weaviate to Supabase pgvector
-- **Schema**: Custom `judgments` table replacing generic documents
+- **Branding**: References to "AI-Tax" updated to "Juddges"
+- **Data Model**: Transformed from tax documents to court judgments
+- **Vector DB**: Migrated from Weaviate to Supabase pgvector
+- **Schema**: Custom `judgments` table replaced generic documents
 - **Jurisdictions**: Supports Polish ("PL") and UK courts
+- **Package Names**: `ai_tax_search` → `juddges_search`
 
-When working with this codebase, be aware that some AI-Tax code/patterns may still exist and need adaptation for the Juddges domain.
+When working with this codebase, be aware that some AI-Tax code/patterns may still exist in legacy areas.
 
 ## Documentation
 - **README.md**: Project overview and quick start
@@ -296,4 +298,4 @@ When working with this codebase, be aware that some AI-Tax code/patterns may sti
 - **DATA_INGESTION_GUIDE.md**: Data pipeline documentation
 - **SUPABASE_MCP_GUIDE.md**: Supabase MCP tools reference
 - **PROJECT_SUMMARY.md**: High-level project summary and roadmap
-- **BRANDING_UPDATES.md**: Branding change checklist (AI-Tax → Juddges)
+- **docs/migration/branding-checklist.md**: Branding change checklist (AI-Tax → Juddges)

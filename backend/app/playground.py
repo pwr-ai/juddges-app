@@ -13,10 +13,10 @@ from fastapi import APIRouter, Header, HTTPException, status
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from ai_tax_search.info_extraction.extractor import InformationExtractor
-from ai_tax_search.info_extraction.schema_utils import prepare_schema_from_db
-from ai_tax_search.llms import get_llm
-from ai_tax_search.retrieval.fetch import get_documents_by_id
+from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.info_extraction.schema_utils import prepare_schema_from_db
+from juddges_search.llms import get_llm
+from juddges_search.retrieval.fetch import get_documents_by_id
 from app.core.supabase import get_supabase_client
 
 router = APIRouter(prefix="/playground", tags=["playground"])

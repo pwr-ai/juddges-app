@@ -8,9 +8,9 @@ from loguru import logger
 
 from langgraph.types import Command
 from pydantic import BaseModel, Field, ConfigDict
-from ai_tax_search.models import DocumentType
+from juddges_search.models import DocumentType
 
-from ai_tax_search.llms import get_default_llm
+from juddges_search.llms import get_default_llm
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,

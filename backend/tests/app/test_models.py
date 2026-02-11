@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import pytest
-from ai_tax_search.info_extraction.extractor import InformationExtractor
+from juddges_search.info_extraction.extractor import InformationExtractor
 from app.models import DocumentExtractionRequest
 from pydantic import ValidationError
 

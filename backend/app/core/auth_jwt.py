@@ -4,7 +4,7 @@ JWT Authentication Module
 Implements Supabase JWT token validation and user authentication for the API.
 This module provides secure user authentication by validating JWT tokens issued by Supabase.
 
-Author: AI-Tax Backend Team
+Author: Juddges Backend Team
 Date: 2025-10-11
 """
 

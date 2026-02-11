@@ -7,7 +7,7 @@ from typing import Any, Union
 import re
 
 import jinja2
-from ai_tax_search.info_extraction.extractor import InformationExtractor
+from juddges_search.info_extraction.extractor import InformationExtractor
 from celery import exceptions as celery_exceptions
 from celery.result import AsyncResult
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Path, Query, status
@@ -2173,7 +2173,7 @@ async def export_extraction_results(
 # =============================================================================
 
 
-from ai_tax_search.info_extraction import BaseSchemaExtractor
+from juddges_search.info_extraction import BaseSchemaExtractor
 from app.models import (
     BaseSchemaExtractionRequest,
     BaseSchemaExtractionResponse,
@@ -2207,7 +2207,7 @@ async def extract_with_base_schema(
     The extracted data can then be used for faceted filtering and search.
     """
     from langchain_openai import ChatOpenAI
-    from ai_tax_search.db.weaviate_db import WeaviateClient
+    from juddges_search.db.weaviate_db import WeaviateClient
 
     results: list[BaseSchemaExtractionResult] = []
     successful = 0

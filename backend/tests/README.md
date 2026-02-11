@@ -1,6 +1,6 @@
-# AI Tax Backend Tests
+# Juddges Backend Tests
 
-This directory contains the test suite for the AI Tax backend application.
+This directory contains the test suite for the Juddges backend application.
 
 ## Test Organization
 
@@ -17,9 +17,9 @@ tests/
 
 ### Integration Tests
 - **Marker**: `@pytest.mark.integration`
-- **Purpose**: Test functionality that requires external services (Weaviate database)
-- **Requirements**: Running Weaviate instance with test data
-- **Examples**: Search functionality, database operations
+- **Purpose**: Test functionality that requires external services (database, Redis, OpenAI API)
+- **Requirements**: Running Supabase database with test data
+- **Examples**: Search functionality, database operations, API endpoints
 
 ### Unit Tests
 - **Marker**: `@pytest.mark.unit`
@@ -37,10 +37,10 @@ tests/
    poetry install
    ```
 
-2. **For integration tests**: Ensure Weaviate is running with test data:
+2. **For integration tests**: Ensure database is running:
    ```bash
    # Start the Docker containers
-   docker compose up -d
+   docker compose -f docker-compose.dev.yml up -d
    ```
 
 ### Available Commands
@@ -53,12 +53,12 @@ poetry run poe test
 # Run only unit tests (no external dependencies)
 poetry run poe test-unit
 
-# Run only integration tests (requires Weaviate)
+# Run only integration tests (requires database)
 poetry run poe test-integration
 
 # Run specific test files
-poetry run poe test-search     # Weaviate search tests
-poetry run poe test-language   # Language search tests
+poetry run poe test-search     # Search functionality tests
+poetry run poe test-language   # Language-specific tests
 ```
 
 #### Code Coverage
@@ -97,14 +97,14 @@ poetry run poe ci
 ## Test Environment
 
 ### Docker Container Testing
-For integration tests that require Weaviate, you can run tests inside the Docker container:
+For integration tests that require database, you can run tests inside the Docker container:
 
 ```bash
 # Run tests in the backend container
-docker exec ai-tax-backend poetry run poe test-integration
+docker exec juddges-backend poetry run poe test-integration
 
 # Run specific test file in container
-docker exec ai-tax-backend poetry run poe test-search
+docker exec juddges-backend poetry run poe test-search
 ```
 
 ### Local Development

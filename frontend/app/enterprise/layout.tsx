@@ -2,34 +2,34 @@ import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI-Tax Enterprise | Legal AI Solutions for Law Firms & Organizations",
+  title: "Juddges Enterprise | Legal AI Solutions for Law Firms & Organizations",
   description:
     "Deploy proven legal AI technology in your infrastructure. Process millions of documents, automate research, extract structured data. Cloud, on-premise, or hybrid deployment options available.",
   keywords:
     "enterprise legal AI, law firm technology, legal document analysis, GDPR legal tech, AI-powered legal research, document extraction, legal automation",
   authors: [
-    { name: "AI-Tax Team", url: "https://ai-tax.example.com" },
+    { name: "Juddges Team", url: "https://juddges.com" },
   ],
   openGraph: {
-    title: "AI-Tax Enterprise | Legal AI Solutions for Law Firms",
+    title: "Juddges Enterprise | Legal AI Solutions for Law Firms",
     description:
-      "Deploy AI-Tax's proven legal research platform in your infrastructure. Trusted by 50+ researchers analyzing 3M+ documents.",
+      "Deploy Juddges's proven legal research platform in your infrastructure. Trusted by 50+ researchers analyzing 3M+ documents.",
     type: "website",
-    url: "https://ai-tax.example.com/enterprise",
-    siteName: "AI-Tax Enterprise",
+    url: "https://juddges.com/enterprise",
+    siteName: "Juddges Enterprise",
     images: [
       {
         url: "/og-image-enterprise.png",
         width: 1200,
         height: 630,
-        alt: "AI-Tax Enterprise Solutions",
+        alt: "Juddges Enterprise Solutions",
       },
     ],
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI-Tax Enterprise | Legal AI Solutions",
+    title: "Juddges Enterprise | Legal AI Solutions",
     description:
       "Deploy proven legal AI technology in your infrastructure. Cloud, on-premise, or hybrid deployment.",
     images: ["/og-image-enterprise.png"],
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://ai-tax.example.com/enterprise",
+    canonical: "https://juddges.com/enterprise",
   },
   category: "Legal Technology",
 };
@@ -66,7 +66,7 @@ export default function EnterpriseLayout({
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            name: "AI-Tax Enterprise",
+            name: "Juddges Enterprise",
             applicationCategory: "BusinessApplication",
             operatingSystem: "Web",
             description:
@@ -107,15 +107,15 @@ export default function EnterpriseLayout({
             mainEntity: [
               {
                 "@type": "Question",
-                name: "What languages does AI-Tax support?",
+                name: "What languages does Juddges support?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "AI-Tax currently supports Polish, English, German, and French for document processing and search. We can add support for additional languages based on your requirements.",
+                  text: "Juddges currently supports Polish, English, German, and French for document processing and search. We can add support for additional languages based on your requirements.",
                 },
               },
               {
                 "@type": "Question",
-                name: "Can we deploy AI-Tax on our own infrastructure?",
+                name: "Can we deploy Juddges on our own infrastructure?",
                 acceptedAnswer: {
                   "@type": "Answer",
                   text: "Yes, we offer on-premise deployment where the entire platform runs in your data center or private cloud. We provide Docker containers and comprehensive deployment documentation.",

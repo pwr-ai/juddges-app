@@ -3,7 +3,7 @@
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from ai_tax_search.db.weaviate_db import WeaviateLegalDatabase
+from juddges_search.db.weaviate_db import WeaviateLegalDatabase
 
 
 async def test_dashboard_stats():

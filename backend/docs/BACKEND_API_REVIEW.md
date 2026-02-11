@@ -19,7 +19,7 @@ This comprehensive review identified **47 issues** across the backend API:
 
 ### 1. Missing Error Detail Suppression in HTTPException
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/ai_tax_search/db/supabase_db.py:34`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/juddges_search/db/supabase_db.py:34`
 **Severity**: CRITICAL
 **Description**: Database errors expose internal implementation details and potential security information through HTTPException messages.
 
@@ -49,7 +49,7 @@ raise HTTPException(
 
 ### 2. Unvalidated User Input in Collections DB
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/ai_tax_search/db/supabase_db.py:114-147`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/juddges_search/db/supabase_db.py:114-147`
 **Severity**: CRITICAL
 **Description**: User-provided `collection_id` and `document_id` are directly passed to database queries without validation.
 
@@ -94,7 +94,7 @@ async def add_document(self, collection_id: str, document_id: str, user_id: str)
 
 ### 3. Race Condition in Collection Document Management
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/ai_tax_search/db/supabase_db.py:114-147`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/juddges_search/db/supabase_db.py:114-147`
 **Severity**: CRITICAL
 **Description**: Check-then-act pattern creates race condition where duplicate documents can be added.
 
@@ -154,7 +154,7 @@ async def add_document(self, collection_id: str, document_id: str, user_id: str)
 
 ### 4. Insecure API Key Authentication
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/auth.py:13-16`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/auth.py:13-16`
 **Severity**: CRITICAL
 **Description**: API key comparison is vulnerable to timing attacks.
 
@@ -194,7 +194,7 @@ async def verify_api_key(api_key: str = Depends(api_key_header)):
 
 ### 5. Missing Environment Variable Validation on Startup
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py:44-56`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py:44-56`
 **Severity**: CRITICAL
 **Description**: Server starts with missing `LANGGRAPH_POSTGRES_URL` but fails only when connection pool is needed.
 
@@ -259,7 +259,7 @@ except ValueError as e:
 
 ### 6. Synchronous Supabase Client in Async Context
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/ai_tax_search/db/supabase_db.py:22`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/juddges_search/db/supabase_db.py:22`
 **Severity**: CRITICAL
 **Description**: Using synchronous Supabase client in async functions blocks event loop.
 
@@ -324,7 +324,7 @@ class CollectionsDB:
 
 ### 7. Missing Transaction Isolation in Celery Worker
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/workers.py:28-85`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/workers.py:28-85`
 **Severity**: CRITICAL
 **Description**: Extraction task processes multiple documents without proper isolation or rollback on partial failure.
 
@@ -437,7 +437,7 @@ def extract_information_from_documents_task(
 
 ### 8. Dataset Loading Without Startup Hook
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:86-149`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:86-149`
 **Severity**: CRITICAL
 **Description**: Large datasets loaded lazily on first request instead of during server startup.
 
@@ -494,7 +494,7 @@ async def lifespan(app: FastAPI):
 
 ### 9. No Connection Pool Management for Supabase Client
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/dashboard.py:40-48`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/dashboard.py:40-48`
 **Severity**: CRITICAL
 **Description**: Multiple Supabase clients created without connection pool management.
 
@@ -582,7 +582,7 @@ def get_supabase_client() -> AsyncClient:
 
 ### 10. Overly Permissive CORS Configuration
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py:72-78`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py:72-78`
 **Severity**: HIGH
 **Description**: CORS allows all origins, credentials, methods, and headers.
 
@@ -628,7 +628,7 @@ app.add_middleware(
 
 ### 11. No Request Timeout Configuration
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py:124-127`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py:124-127`
 **Severity**: HIGH
 **Description**: Uvicorn runs without timeout configuration.
 
@@ -668,7 +668,7 @@ if __name__ == "__main__":
 
 ### 12. Missing Input Validation on Document Retrieval
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:428-463`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:428-463`
 **Severity**: HIGH
 **Description**: `max_documents` parameter not validated, can cause resource exhaustion.
 
@@ -705,7 +705,7 @@ class DocumentRetrievalRequest(BaseModel):
 
 ### 13. Celery Task Without Timeout
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/workers.py:27-85`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/workers.py:27-85`
 **Severity**: HIGH
 **Description**: Extraction tasks have no timeout, can run indefinitely.
 
@@ -746,7 +746,7 @@ def extract_information_from_documents_task(
 
 ### 14. Missing Pagination on List Endpoints
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/collections.py:60-66`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/collections.py:60-66`
 **Severity**: HIGH
 **Description**: Collections list endpoint returns all collections without pagination.
 
@@ -846,7 +846,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 ### 16. No Health Check Endpoint
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
 **Severity**: HIGH
 **Description**: No health check endpoint for load balancers/orchestrators.
 
@@ -888,7 +888,7 @@ async def health_check():
 
     # Check Weaviate connection
     try:
-        from ai_tax_search.db.weaviate_db import WeaviateLegalDatabase
+        from juddges_search.db.weaviate_db import WeaviateLegalDatabase
         async with WeaviateLegalDatabase() as db:
             is_ready = await db.client.is_ready()
             health_status["dependencies"]["weaviate"] = "healthy" if is_ready else "unhealthy"
@@ -918,7 +918,7 @@ async def readiness_check():
 
 ### 17. Missing Request ID Tracking
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
 **Severity**: HIGH
 **Description**: No request ID tracking for debugging and log correlation.
 
@@ -948,7 +948,7 @@ async def add_request_id(request: Request, call_next):
 
 ### 18. No Rate Limiting Implementation
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py:25-28, 65-69`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py:25-28, 65-69`
 **Severity**: HIGH
 **Description**: Rate limiting is commented out with TODO.
 
@@ -1004,7 +1004,7 @@ async def start_extraction(request: DocumentExtractionRequest):
 
 ### 19. Extraction Endpoint Missing Field in Simple Request
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/extraction.py:45-64`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/extraction.py:45-64`
 **Severity**: HIGH
 **Description**: `language` field used but not defined in `SimpleExtractionRequest`.
 
@@ -1047,7 +1047,7 @@ class SimpleExtractionRequest(BaseModel):
 
 ### 20. Cache Invalidation Strategy Missing
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:309-367`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:309-367`
 **Severity**: HIGH
 **Description**: Document ID cache has TTL but no invalidation on document changes.
 
@@ -1194,7 +1194,7 @@ def extract_information_from_documents_task(request: DocumentExtractionRequest):
 
 ### 23. No Bulk Operations Support
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/collections.py:111-123`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/collections.py:111-123`
 **Severity**: HIGH
 **Description**: Adding multiple documents requires multiple API calls.
 
@@ -1254,7 +1254,7 @@ async def add_documents_bulk(
 
 ### 24. Vulnerable to SQL Injection via Dashboard
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/dashboard.py:243-246`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/dashboard.py:243-246`
 **Severity**: HIGH
 **Description**: Supabase query with `.in_()` filter may be vulnerable to injection.
 
@@ -1373,7 +1373,7 @@ logger.error("Failed to load Eureka dataset: %s", str(e))
 
 ### 27. Missing Request Validation on Path Parameters
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:172-299`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:172-299`
 **Severity**: MEDIUM
 **Description**: `document_id` path parameter not validated.
 
@@ -1403,7 +1403,7 @@ async def get_document_html(
 
 ### 28. Global State Management Issues
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:78-83`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:78-83`
 **Severity**: MEDIUM
 **Description**: Global variables used for caching without thread safety.
 
@@ -1458,7 +1458,7 @@ _cache = DatasetCache()
 
 ### 29. Incomplete Error Recovery in Document HTML Endpoint
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:172-299`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:172-299`
 **Severity**: MEDIUM
 **Description**: Fallback chain catches all exceptions broadly.
 
@@ -1568,7 +1568,7 @@ async def get_document_html(document_id: str):
 
 ### 30. Missing Type Hints in XML Converter
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/xml_converter.py:4-438`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/xml_converter.py:4-438`
 **Severity**: MEDIUM
 **Description**: Complex XML conversion function lacks type hints.
 
@@ -1602,7 +1602,7 @@ def convert_xml_to_html(xml_content: str) -> str:
 
 ### 31. Inefficient Document Sampling
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py:383-426`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py:383-426`
 **Severity**: MEDIUM
 **Description**: Fetches all document IDs into memory before sampling.
 
@@ -1662,7 +1662,7 @@ async def get_documents_sample(
 
 ### 32. Session Cleanup Not Started
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/schema_generation_agent.py:26-38`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/schema_generation_agent.py:26-38`
 **Severity**: MEDIUM
 **Description**: Cleanup task defined but never started.
 
@@ -1792,7 +1792,7 @@ except CircuitBreakerError:
 
 ### 35. Example Questions Fallback Always Returns Same Results
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/example_questions.py:64-80`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/example_questions.py:64-80`
 **Severity**: MEDIUM
 **Description**: Fallback to hardcoded examples doesn't respect `num_polish` and `num_english` parameters.
 
@@ -1801,7 +1801,7 @@ except CircuitBreakerError:
 ```python
 except Exception as e:
     logger.error(f"Error fetching example questions from database: {e}")
-    from ai_tax_search.prompts.legal.examples import get_random_example_questions
+    from juddges_search.prompts.legal.examples import get_random_example_questions
 
     questions = get_random_example_questions(num_polish, num_english)
     return ExampleQuestionsResponse(questions=questions)
@@ -1843,7 +1843,7 @@ except Exception as e:
 
 ### 36. Dashboard Stats Don't Handle Database Errors Gracefully
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/dashboard.py:119-174`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/dashboard.py:119-174`
 **Severity**: MEDIUM
 **Description**: Returns zero stats on error, indistinguishable from empty database.
 
@@ -1901,7 +1901,7 @@ except Exception as e:
 
 ### 37. Mock Schema Generation Task Still in Production Code
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/workers.py:88-181`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/workers.py:88-181`
 **Severity**: MEDIUM
 **Description**: Mock implementation with hardcoded delays and fake data.
 
@@ -1963,7 +1963,7 @@ def generate_schema_task(self, request_data: dict):
 
 ### 38. No Input Sanitization in Schema Generator Agent
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/schema_generation_agent.py:92-134`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/schema_generation_agent.py:92-134`
 **Severity**: MEDIUM
 **Description**: User prompts passed directly to LLM without sanitization.
 
@@ -2021,7 +2021,7 @@ initial_state = AgentState(
 
 ### 39. Missing Indexes on Frequently Queried Fields
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/ai_tax_search/db/supabase_db.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/juddges_search/db/supabase_db.py`
 **Severity**: MEDIUM
 **Description**: Database queries without documented index requirements.
 
@@ -2063,7 +2063,7 @@ ON documents(language);
 
 ### 40. Extraction Models Don't Track Timestamps Correctly
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/workers.py:56-69`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/workers.py:56-69`
 **Severity**: MEDIUM
 **Description**: All timestamps set to same value, losing actual timing information.
 
@@ -2133,7 +2133,7 @@ def extract_information_from_documents_task(
 
 ### 41. Redis Connection Not Properly Managed
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/dashboard.py:17-32`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/dashboard.py:17-32`
 **Severity**: MEDIUM
 **Description**: Redis client created at module level without lifecycle management.
 
@@ -2323,7 +2323,7 @@ language=doc.get("language", DEFAULT_LANGUAGE)
 
 ### 45. Missing API Versioning
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
 **Severity**: LOW
 **Description**: No API versioning strategy.
 
@@ -2351,7 +2351,7 @@ async def api_redirect():
 
 ### 46. No OpenAPI Tags Organization
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
 **Severity**: LOW
 **Description**: API docs not organized with OpenAPI tag metadata.
 
@@ -2394,7 +2394,7 @@ app = FastAPI(
 
 ### 47. Missing Request Size Limits
 
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
 **Severity**: LOW
 **Description**: No limits on request body size.
 

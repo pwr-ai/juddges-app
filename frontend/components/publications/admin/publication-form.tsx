@@ -523,7 +523,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={PublicationProject.AI_TAX}>AI-TAX</SelectItem>
-                  <SelectItem value={PublicationProject.JUDDGES}>JuDDGES</SelectItem>
+                  <SelectItem value={PublicationProject.JUDDGES}>JUDDGES</SelectItem>
                 </SelectContent>
               </Select>
             </div>

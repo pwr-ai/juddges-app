@@ -117,7 +117,7 @@ class ExtractionInput:
 class Query:
     @strawberry.field(description="Get a single document by its ID")
     async def document(self, document_id: str) -> Optional[LegalDocumentType]:
-        from ai_tax_search.db.supabase_db import get_vector_db
+        from juddges_search.db.supabase_db import get_vector_db
         from app.documents import _convert_supabase_to_legal_document
         from app.models import validate_id_format
 
@@ -136,7 +136,7 @@ class Query:
 
     @strawberry.field(description="Get the full text of a document (separate query to avoid large default payloads)")
     async def document_full_text(self, document_id: str) -> Optional[str]:
-        from ai_tax_search.db.supabase_db import get_vector_db
+        from juddges_search.db.supabase_db import get_vector_db
         from app.models import validate_id_format
 
         try:
@@ -153,7 +153,7 @@ class Query:
 
     @strawberry.field(description="Get multiple documents by their IDs")
     async def documents(self, document_ids: list[str]) -> list[LegalDocumentType]:
-        from ai_tax_search.db.supabase_db import get_vector_db
+        from juddges_search.db.supabase_db import get_vector_db
         from app.documents import _convert_supabase_to_legal_document
 
         if not document_ids or len(document_ids) > 100:

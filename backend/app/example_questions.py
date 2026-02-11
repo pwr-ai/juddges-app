@@ -37,7 +37,7 @@ async def get_example_questions(
             "Supabase client not initialized - using fallback example questions"
         )
         # Fallback to hardcoded examples if database is not configured
-        from ai_tax_search.prompts.legal.examples import get_random_example_questions
+        from juddges_search.prompts.legal.examples import get_random_example_questions
 
         questions = get_random_example_questions(num_polish, num_english)
         return ExampleQuestionsResponse(questions=questions)
@@ -76,7 +76,7 @@ async def get_example_questions(
     except Exception as e:
         logger.error(f"Error fetching example questions from database: {e}")
         # Fallback to hardcoded examples on error
-        from ai_tax_search.prompts.legal.examples import get_random_example_questions
+        from juddges_search.prompts.legal.examples import get_random_example_questions
 
         questions = get_random_example_questions(num_polish, num_english)
         return ExampleQuestionsResponse(questions=questions)

@@ -1,7 +1,7 @@
 """
 Services Package
 
-Business logic and service layer for AI-Tax backend.
+Business logic and service layer for Juddges backend.
 
 This package contains:
 - audit_service: Audit logging for legal compliance

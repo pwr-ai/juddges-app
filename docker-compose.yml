@@ -1,5 +1,5 @@
 # docker-compose.yml
-# Production Legal AI / AI-Tax Application Services
+# Production Juddges Application Services
 #
 # This file contains only application-specific services.
 # Shared infrastructure (PostgreSQL, Redis, ClickHouse, MinIO, Langfuse) is in docker-compose.shared.yml
@@ -35,7 +35,7 @@ services:
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-    container_name: legal-ai-frontend
+    container_name: juddges-frontend
     expose:
       - "3006"
     restart: unless-stopped
@@ -55,8 +55,8 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "com.centurylinklabs.watchtower.depends-on=backend"
-      - "com.legal-ai.service=application"
-      - "com.legal-ai.service.type=frontend"
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=frontend"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -89,7 +89,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: legal-ai-backend
+    container_name: juddges-backend
     expose:
       - "8002"
     restart: unless-stopped
@@ -104,8 +104,8 @@ services:
     # All environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-      - "com.legal-ai.service=application"
-      - "com.legal-ai.service.type=backend-api"
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=backend-api"
     # Backend API does not need to depend on backend-worker
     # Workers are independent task processors and API can start without them
     # Remove depends_on to allow independent scaling and deployment
@@ -142,7 +142,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: legal-ai-backend-worker
+    container_name: juddges-backend-worker
     command: celery -A app.workers worker --loglevel=info
     restart: unless-stopped
     # PRODUCTION NOTE: Development volume mount removed for production deployment
@@ -160,8 +160,8 @@ services:
       - .env.secrets
     # All environment variables loaded from env_file
     labels:
-      - "com.legal-ai.service=application"
-      - "com.legal-ai.service.type=worker"
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=worker"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -197,12 +197,12 @@ services:
 networks:
   # Application-only network for inter-service communication
   app-network:
-    name: ai-tax-app-network
+    name: juddges-app-network
     driver: bridge
 
   # Shared infrastructure network (external - created by docker-compose.shared.yml)
   shared_network:
-    name: ai-tax-shared-network
+    name: juddges-shared-network
     external: true
 
   # External nginx reverse proxy network (production only)

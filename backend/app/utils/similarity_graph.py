@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from loguru import logger
 
-from ai_tax_search.models import LegalDocument
+from juddges_search.models import LegalDocument
 
 
 def calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:

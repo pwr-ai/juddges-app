@@ -1,7 +1,7 @@
 from typing import Any
 
 import yaml
-from ai_tax_search.models import DocumentType
+from juddges_search.models import DocumentType
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph

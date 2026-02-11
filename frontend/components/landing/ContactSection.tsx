@@ -182,7 +182,7 @@ export function ContactSection({ title, subtitle }: ContactSectionProps) {
                       <a href="/privacy" className="underline hover:text-foreground">
                         Privacy Policy
                       </a>{" "}
-                      and consent to be contacted about AI-Tax Enterprise
+                      and consent to be contacted about Juddges
                       solutions.
                     </p>
 

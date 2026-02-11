@@ -13,7 +13,7 @@ This document outlines five critical security and performance issues that were i
 ### Issue 1: Timing Attack Vulnerability (CRITICAL SECURITY)
 
 **Severity**: CRITICAL
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/auth.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/auth.py`
 **Lines**: 28-32
 
 #### Problem
@@ -50,9 +50,9 @@ if not secrets.compare_digest(api_key, API_KEY):
 **Severity**: CRITICAL
 **Files**:
 
-- `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/models.py` (validation function)
-- `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py` (document IDs)
-- `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/collections.py` (collection IDs)
+- `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/models.py` (validation function)
+- `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py` (document IDs)
+- `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/collections.py` (collection IDs)
 
 #### Problem
 
@@ -106,7 +106,7 @@ Added comprehensive validation:
 ### Issue 3: Synchronous Supabase Client (CRITICAL PERFORMANCE)
 
 **Severity**: CRITICAL
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/example_questions.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/example_questions.py`
 
 #### Problem
 
@@ -152,7 +152,7 @@ Client is now initialized once in `server.py` startup event handler.
 ### Issue 4: Missing Environment Variable Validation (CRITICAL CONFIG)
 
 **Severity**: CRITICAL
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
 
 #### Problem
 
@@ -197,7 +197,7 @@ def validate_environment_variables():
 ### Issue 5: Dataset Loading Performance (CRITICAL PERFORMANCE)
 
 **Severity**: CRITICAL
-**File**: `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py`
+**File**: `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py`
 **Impact on**: `/documents/{document_id}/html` endpoint
 
 #### Problem
@@ -349,30 +349,30 @@ Monitor these metrics post-deployment:
 
 ## Files Modified
 
-1. `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/auth.py`
+1. `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/auth.py`
    - Added `secrets.compare_digest()` for timing-safe comparison
    - Added security logging
 
-2. `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/models.py`
+2. `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/models.py`
    - Added `validate_id_format()` function
    - Added validators to request models
 
-3. `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/documents.py`
+3. `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/documents.py`
    - Added ID validation to all endpoints
    - Added Path parameter validation
    - Enhanced error logging
 
-4. `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/collections.py`
+4. `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/collections.py`
    - Added ID validation to all endpoints
    - Added Path parameter validation
    - Enhanced error logging
 
-5. `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/example_questions.py`
+5. `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/example_questions.py`
    - Moved Supabase client to startup initialization
    - Added client caching
    - Enhanced error handling
 
-6. `/home/laugustyniak/github/legal-ai/AI-Tax/backend/app/server.py`
+6. `/home/laugustyniak/github/legal-ai/juddges-app/backend/app/server.py`
    - Added `validate_environment_variables()` function
    - Enhanced lifespan handler with startup sequence
    - Added Supabase client initialization
