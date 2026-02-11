@@ -1,11 +1,13 @@
 -- =============================================================================
--- Migration: Extend judgments table for enhanced filtering and Polish language support
+-- Migration: Extend judgments table for enhanced filtering and multilingual search
 -- =============================================================================
 -- This migration enhances the judgments table with:
 -- - Additional indexes for rich server-side filtering (10+ filter types)
--- - Language-aware full-text search (Polish and English)
+-- - Language-aware full-text search (using 'simple' config for Polish, 'english' for UK)
 -- - Hybrid search function with comprehensive filters
 -- - Faceting function for dynamic filter UI with real-time counts
+--
+-- NOTE: Using 'simple' for Polish text as 'polish' dictionary is not available
 -- =============================================================================
 
 -- =============================================================================
@@ -30,39 +32,30 @@ CREATE INDEX IF NOT EXISTS idx_judgments_cited_legislation ON public.judgments
   USING gin(cited_legislation);
 
 -- Composite indexes for common filter combinations
--- Jurisdiction + Court Level + Date (for filtering by court hierarchy over time)
+-- These speed up multi-field queries substantially
 CREATE INDEX IF NOT EXISTS idx_judgments_jurisdiction_court_level_date ON public.judgments(
     jurisdiction,
     court_level,
     decision_date DESC
 ) WHERE decision_date IS NOT NULL;
 
--- Case Type + Date (for filtering case types over time)
 CREATE INDEX IF NOT EXISTS idx_judgments_case_type_date ON public.judgments(
     case_type,
     decision_date DESC
 ) WHERE decision_date IS NOT NULL AND case_type IS NOT NULL;
 
-COMMENT ON INDEX idx_judgments_case_type IS 'Index for filtering by case type (Criminal, Civil, Administrative)';
-COMMENT ON INDEX idx_judgments_decision_type IS 'Index for filtering by decision type (Judgment, Order, Ruling)';
-COMMENT ON INDEX idx_judgments_outcome IS 'Index for filtering by case outcome (Granted, Dismissed, Remanded)';
-COMMENT ON INDEX idx_judgments_court_level IS 'Index for filtering by court hierarchy level';
-COMMENT ON INDEX idx_judgments_cited_legislation IS 'GIN index for filtering by cited legislation (array overlap)';
-COMMENT ON INDEX idx_judgments_jurisdiction_court_level_date IS 'Composite index for jurisdiction + court level + date filtering';
-COMMENT ON INDEX idx_judgments_case_type_date IS 'Composite index for case type + date filtering';
-
 -- =============================================================================
--- STEP 2: Add Polish Language Full-Text Search
+-- STEP 2: Create Language-Aware Full-Text Search Indexes
 -- =============================================================================
 
--- Drop existing English-only full-text search index
-DROP INDEX IF EXISTS public.idx_judgments_full_text_search;
+-- Drop old index if exists (from initial migration)
+DROP INDEX IF EXISTS idx_judgments_full_text_search;
 
--- Create Polish text search index (for Polish judgments)
--- Uses PostgreSQL's built-in Polish stemming and stop words
-CREATE INDEX idx_judgments_full_text_search_pl ON public.judgments
+-- Polish language index (using 'simple' config as fallback)
+-- Note: 'simple' doesn't do stemming but works for all languages
+CREATE INDEX IF NOT EXISTS idx_judgments_full_text_search_pl ON public.judgments
     USING gin(
-        to_tsvector('polish',
+        to_tsvector('simple',
             coalesce(title, '') || ' ' ||
             coalesce(summary, '') || ' ' ||
             coalesce(full_text, '')
@@ -70,8 +63,9 @@ CREATE INDEX idx_judgments_full_text_search_pl ON public.judgments
     )
     WHERE jurisdiction = 'PL' OR metadata->>'language' = 'pl';
 
--- Create English text search index (for UK judgments)
-CREATE INDEX idx_judgments_full_text_search_en ON public.judgments
+-- English language index (for UK judgments)
+-- Uses PostgreSQL's built-in English stemming and stop words
+CREATE INDEX IF NOT EXISTS idx_judgments_full_text_search_en ON public.judgments
     USING gin(
         to_tsvector('english',
             coalesce(title, '') || ' ' ||
@@ -81,26 +75,15 @@ CREATE INDEX idx_judgments_full_text_search_en ON public.judgments
     )
     WHERE jurisdiction = 'UK' OR metadata->>'language' = 'en';
 
-COMMENT ON INDEX idx_judgments_full_text_search_pl IS 'Polish language full-text search index with Polish stemming';
-COMMENT ON INDEX idx_judgments_full_text_search_en IS 'English language full-text search index with English stemming';
-
 -- =============================================================================
--- STEP 3: Create Hybrid Search Function with Rich Filters
+-- STEP 3: Create Hybrid Search Function
 -- =============================================================================
-
--- Drop existing search function if it exists (to allow recreation)
-DROP FUNCTION IF EXISTS public.search_judgments_hybrid(
-    vector(1536), text, text,
-    text[], text[], text[], text[], text[], text[], text[], text[], text[],
-    date, date,
-    float, float, int, int
-);
 
 CREATE OR REPLACE FUNCTION public.search_judgments_hybrid(
     -- Search parameters
     query_embedding vector(1536) DEFAULT NULL,
     search_text text DEFAULT NULL,
-    search_language text DEFAULT 'polish',  -- 'polish' or 'english'
+    search_language text DEFAULT 'simple',  -- 'simple' or 'english'
 
     -- Filter parameters (all optional, NULL means no filter)
     filter_jurisdictions text[] DEFAULT NULL,
@@ -156,7 +139,7 @@ BEGIN
     -- Select text search configuration based on language
     ts_config := CASE
         WHEN search_language = 'english' THEN 'english'::regconfig
-        ELSE 'polish'::regconfig
+        ELSE 'simple'::regconfig  -- Use 'simple' for Polish and others
     END;
 
     -- Build text search query if provided
@@ -259,17 +242,11 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.search_judgments_hybrid IS
-    'Hybrid search combining vector similarity and full-text search with comprehensive filtering. ' ||
-    'Supports Polish and English language stemming. Uses Reciprocal Rank Fusion for result scoring. ' ||
-    'Parameters: query_embedding (vector search), search_text (full-text), search_language (polish/english), ' ||
-    'filter_* (11 filter types), similarity_threshold (vector cutoff), hybrid_alpha (0=text only, 1=vector only), ' ||
-    'result_limit/result_offset (pagination).';
+    'Hybrid search combining vector similarity and full-text search with comprehensive filtering. Supports multilingual text search using simple (for Polish) and english configurations. Uses Reciprocal Rank Fusion for result scoring. Parameters: query_embedding (vector search), search_text (full-text), search_language (simple/english), filter_* (11 filter types), similarity_threshold (vector cutoff), hybrid_alpha (0=text only, 1=vector only), result_limit/result_offset (pagination).';
 
 -- =============================================================================
 -- STEP 4: Create Faceting Function for Dynamic Filter Counts
 -- =============================================================================
-
-DROP FUNCTION IF EXISTS public.get_judgment_facets(text[], date, date);
 
 CREATE OR REPLACE FUNCTION public.get_judgment_facets(
     -- Optional pre-filters to compute facets within a subset
@@ -336,80 +313,40 @@ BEGIN
     GROUP BY outcome
 
     UNION ALL
-    -- Keyword facet (unnest array, count occurrences, filter by frequency)
+    -- Keyword facet
     SELECT 'keyword'::text, keyword, COUNT(*)::bigint
     FROM filtered_judgments, unnest(keywords) keyword
     WHERE keywords IS NOT NULL
     GROUP BY keyword
-    HAVING COUNT(*) > 1  -- Only show keywords with 2+ occurrences
+    HAVING COUNT(*) > 1
 
     UNION ALL
-    -- Legal topic facet (unnest array, count occurrences, filter by frequency)
+    -- Legal topic facet
     SELECT 'legal_topic'::text, topic, COUNT(*)::bigint
     FROM filtered_judgments, unnest(legal_topics) topic
     WHERE legal_topics IS NOT NULL
     GROUP BY topic
-    HAVING COUNT(*) > 1  -- Only show topics with 2+ occurrences
-
-    ORDER BY facet_type, facet_count DESC;
+    HAVING COUNT(*) > 1;
 END;
 $$;
 
 COMMENT ON FUNCTION public.get_judgment_facets IS
-    'Returns aggregated counts for each filter option. Used to display filter counts in UI (e.g., "Criminal (234)"). ' ||
-    'Supports optional pre-filtering by jurisdiction and date range to compute facets within a subset. ' ||
-    'Output format: (facet_type, facet_value, facet_count) e.g., ("case_type", "Criminal", 1234).';
+    'Returns aggregated counts for each filter option. Used to display filter counts in UI. Supports optional pre-filtering by jurisdiction and date range to compute facets within a subset. Output format: (facet_type, facet_value, facet_count).';
 
 -- =============================================================================
--- STEP 5: Performance Optimization - Analyze Tables
+-- STEP 5: Add Helpful Comments
 -- =============================================================================
 
--- Update statistics for query planner optimization
-ANALYZE public.judgments;
+COMMENT ON INDEX idx_judgments_case_type IS 'Index for filtering by case type (Criminal, Civil, Administrative)';
+COMMENT ON INDEX idx_judgments_decision_type IS 'Index for filtering by decision type (Judgment, Order, Ruling)';
+COMMENT ON INDEX idx_judgments_outcome IS 'Index for filtering by case outcome (Granted, Dismissed, Remanded)';
+COMMENT ON INDEX idx_judgments_court_level IS 'Index for filtering by court hierarchy level';
+COMMENT ON INDEX idx_judgments_cited_legislation IS 'GIN index for filtering by cited legislation (array overlap)';
+COMMENT ON INDEX idx_judgments_jurisdiction_court_level_date IS 'Composite index for jurisdiction + court level + date filtering';
+COMMENT ON INDEX idx_judgments_case_type_date IS 'Composite index for case type + date filtering';
+COMMENT ON INDEX idx_judgments_full_text_search_pl IS 'Simple text search index for Polish judgments (language-agnostic)';
+COMMENT ON INDEX idx_judgments_full_text_search_en IS 'English language full-text search index with English stemming';
 
 -- =============================================================================
--- Verification Queries (for testing after migration)
+-- END OF MIGRATION
 -- =============================================================================
-
--- Test 1: Verify all indexes exist
--- SELECT indexname, indexdef
--- FROM pg_indexes
--- WHERE tablename = 'judgments' AND schemaname = 'public'
--- ORDER BY indexname;
-
--- Test 2: Test Polish full-text search
--- SELECT id, title, summary
--- FROM judgments
--- WHERE to_tsvector('polish', full_text) @@ plainto_tsquery('polish', 'prawo karne')
--- LIMIT 5;
-
--- Test 3: Test hybrid search function with filters
--- SELECT id, title, case_type, court_level, combined_score
--- FROM search_judgments_hybrid(
---     search_text := 'prawa człowieka',
---     search_language := 'polish',
---     filter_jurisdictions := ARRAY['PL'],
---     filter_case_types := ARRAY['Criminal'],
---     filter_date_from := '2023-01-01',
---     filter_date_to := '2024-12-31',
---     hybrid_alpha := 0.7,
---     result_limit := 10
--- );
-
--- Test 4: Test faceting function
--- SELECT facet_type, facet_value, facet_count
--- FROM get_judgment_facets(
---     pre_filter_jurisdictions := ARRAY['PL']
--- )
--- WHERE facet_type = 'case_type'
--- ORDER BY facet_count DESC;
-
--- Test 5: Check index usage with EXPLAIN
--- EXPLAIN (ANALYZE, BUFFERS)
--- SELECT * FROM judgments
--- WHERE case_type = 'Criminal'
---   AND jurisdiction = 'PL'
---   AND decision_date >= '2023-01-01'
--- ORDER BY decision_date DESC
--- LIMIT 20;
--- Should show "Index Scan using idx_judgments_case_type_date" or similar
