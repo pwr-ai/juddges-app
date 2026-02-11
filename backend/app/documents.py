@@ -858,12 +858,20 @@ async def search_documents(request: SearchChunksRequest):
         documents = []
 
         for result in results:
-            # Create a simple chunk representation
+            # Create DocumentChunk-compatible representation with enhanced metadata
             chunk_data = {
                 "document_id": str(result.get("id", "")),  # Use judgment ID
-                "chunk_index": 0,
-                "content": result.get("summary") or result.get("title") or "",
+                "chunk_id": 0,  # First chunk for each document
+                "chunk_text": result.get("chunk_text", "") or result.get("summary", "") or result.get("title", ""),
+                "chunk_type": result.get("chunk_type", "summary"),
+                "chunk_start_pos": result.get("chunk_start_pos", 0),
+                "chunk_end_pos": result.get("chunk_end_pos", 0),
                 "similarity": result.get("combined_score", 0.0),
+                "metadata": result.get("chunk_metadata", {}),
+                # Include scoring details for transparency
+                "vector_score": result.get("vector_score"),
+                "text_score": result.get("text_score"),
+                "combined_score": result.get("combined_score"),
             }
             chunks.append(chunk_data)
 

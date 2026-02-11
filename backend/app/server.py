@@ -325,6 +325,12 @@ app = FastAPI(
     title="Juddges Legal Research API",
     description="Backend API for Juddges legal research platform with intelligent search, audit trail, and legal compliance",
     version="0.3.0",
+    openapi_tags=[
+        {
+            "name": "deprecated",
+            "description": "⚠️ **Deprecated endpoints** - These endpoints are deprecated and will be removed in v0.4.0. Please migrate to the recommended alternatives listed in each endpoint's documentation.",
+        },
+    ],
 )
 
 # Override default OpenAPI schema generation

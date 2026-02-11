@@ -178,6 +178,18 @@ class DocumentChunk(BaseModel):
     tags: Optional[List[str]] = Field(default_factory=list, description="Tags or labels for the chunk")
     parent_segment_id: Optional[str] = Field(None, description="ID of the parent segment if hierarchical")
 
+    # Enhanced metadata fields for search results
+    chunk_type: Optional[str] = Field(default="summary", description="Type of chunk content (summary, excerpt, full_text)")
+    chunk_start_pos: Optional[int] = Field(default=0, description="Start position of chunk in source document")
+    chunk_end_pos: Optional[int] = Field(default=0, description="End position of chunk in source document")
+    metadata: Optional[dict[str, Any]] = Field(default_factory=dict, description="Additional metadata (court info, scores, etc.)")
+
+    # Search scoring fields
+    similarity: Optional[float] = Field(default=None, description="Overall similarity/relevance score")
+    vector_score: Optional[float] = Field(default=None, description="Vector similarity score component")
+    text_score: Optional[float] = Field(default=None, description="Text search score component")
+    combined_score: Optional[float] = Field(default=None, description="Combined hybrid search score")
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
