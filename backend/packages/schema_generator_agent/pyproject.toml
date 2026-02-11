@@ -19,7 +19,6 @@ langchain-text-splitters = "^0.3.9"
 langgraph = "^0.6.4"
 langgraph-checkpoint-postgres = "^2.0.23"
 psycopg-binary = "^3.2.10"
-weaviate-client = "^4.11.1"
 juddges-search = {path = "../juddges_search", develop=true}
 
 [tool.poetry.group.dev.dependencies]

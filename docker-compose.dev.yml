@@ -1,33 +1,14 @@
 # docker-compose.dev.yml
 # Development Juddges Application Services
 #
-# This file contains only application-specific services for development.
-# Shared infrastructure (PostgreSQL, Redis, ClickHouse, MinIO, Langfuse) is in docker-compose.shared.yml
-#
-# CHANGE: Application services now JOIN the external shared_network for direct infrastructure access
-#
-# INDEPENDENT STACK USAGE:
-#   1. Create external network (one-time):
-#      docker network create juddges-shared-network
-#
-#   2. Start shared services once:
-#      docker compose -f docker-compose.shared.yml up -d
-#
-#   3. Start development services independently:
-#      docker compose -f docker-compose.dev.yml up -d
-#
-#   4. Stop development without affecting shared services:
-#      docker compose -f docker-compose.dev.yml down
-#
-# COMBINED USAGE (legacy):
-#   docker compose -f docker-compose.shared.yml -f docker-compose.dev.yml up -d
-#
 # Features:
 # - Hot reload for frontend and backend
 # - Development-specific volumes for code mounting
 # - Exposed ports for direct access
 # - Development environment variables
-# - Direct infrastructure access via shared_network
+#
+# USAGE:
+#   docker compose -f docker-compose.dev.yml up -d
 
 services:
   # ============================================================================
@@ -37,7 +18,8 @@ services:
   frontend-dev:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: development
     container_name: juddges-frontend-dev
     ports:
       - "3007:3000"
@@ -65,12 +47,12 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-dev-network
-      # Frontend doesn't need shared_network - only talks to backend
 
   backend-dev:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: development
     container_name: juddges-backend-dev
     ports:
       - "8004:8080"
@@ -85,7 +67,7 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST}
-      # Redis Configuration - uses native Docker DNS via shared_network
+      # Redis Configuration
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_AUTH=${REDIS_AUTH}
@@ -112,12 +94,12 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-dev-network
-      - shared_network  # CHANGE: Added to access Redis, DB, etc. directly
 
   backend-worker-dev:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: development
     container_name: juddges-backend-worker-dev
     command: celery -A app.workers worker --loglevel=info
     restart: unless-stopped
@@ -131,7 +113,7 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST}
-      # Redis Configuration - uses native Docker DNS via shared_network
+      # Redis Configuration
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_AUTH=${REDIS_AUTH}
@@ -155,7 +137,6 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-dev-network
-      - shared_network  # CHANGE: Added to access Redis directly for Celery
 
 # ==============================================================================
 # Volumes (Development-Specific)
@@ -175,30 +156,20 @@ volumes:
 # ==============================================================================
 
 networks:
-  # Development application network for inter-service communication
+  # Single development network for all application services
+  # External services (Supabase, Redis) are accessed via host.docker.internal or external URLs
   app-dev-network:
     name: juddges-app-dev-network
     driver: bridge
 
-  # CHANGE: Join external shared network for infrastructure access
-  # Must be created manually: docker network create juddges-shared-network
-  shared_network:
-    name: juddges-shared-network
-    external: true
-
 # ==============================================================================
 # Notes
 # ==============================================================================
-# IMPORTANT CHANGES:
-# - backend and backend-worker now join shared_network
-# - Can access Redis, PostgreSQL, etc. via native Docker DNS (hostname: redis, db)
-# - No more host.docker.internal workaround needed
-# - .env.shared.override is NO LONGER NEEDED
-# - Use standard .env variables (REDIS_HOST=redis, not host.docker.internal)
-#
 # NETWORK ARCHITECTURE:
-# - frontend: app-dev-network only (talks to backend)
-# - backend: app-dev-network + shared_network (talks to frontend + infrastructure)
-# - backend-worker: app-dev-network + shared_network (talks to Redis for Celery)
-# - Redis/DB/etc: shared_network only (infrastructure isolation)
+# - All development services use a single network: app-dev-network
+# - External infrastructure (Supabase, Redis, PostgreSQL) accessed via:
+#   * External URLs (Supabase: SUPABASE_URL in .env)
+#   * host.docker.internal (for local services if needed)
+# - No external network dependencies
+# - Simplified single-network architecture for development
 # ==============================================================================

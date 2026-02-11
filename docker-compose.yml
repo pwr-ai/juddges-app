@@ -1,26 +1,11 @@
 # docker-compose.yml
 # Production Juddges Application Services
 #
-# This file contains only application-specific services.
-# Shared infrastructure (PostgreSQL, Redis, ClickHouse, MinIO, Langfuse) is in docker-compose.shared.yml
-#
 # ENVIRONMENT CONFIGURATION:
 #   - All configuration in .env (non-secrets) and .env.secrets (secrets)
-#   - No more .env.prod, .env.dev, .env.team files
-#   - For development: uncomment dev overrides in .env
 #
 # USAGE:
-#   1. Start shared services once:
-#      docker compose -f docker-compose.shared.yml up -d
-#
-#   2. Start application services:
-#      docker compose up -d
-#
-#   3. Stop application without affecting shared services:
-#      docker compose down
-#
-# COMBINED USAGE (legacy):
-#   docker compose -f docker-compose.shared.yml -f docker-compose.yml up -d
+#   docker compose up -d
 
 services:
   # ============================================================================
@@ -31,6 +16,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: production
       args:
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
@@ -61,8 +47,7 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-network
-      - shared_network
-      - nginx-router_proxy-tier
+      - nginx-router_proxy-tier  # Optional: for nginx-proxy reverse proxy integration
     # Health check for Next.js frontend
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3006/', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -89,6 +74,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: production
     container_name: juddges-backend
     expose:
       - "8002"
@@ -113,8 +99,7 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-network
-      - shared_network
-      - nginx-router_proxy-tier
+      - nginx-router_proxy-tier  # Optional: for nginx-proxy reverse proxy integration
     # Health check for FastAPI backend using dedicated health endpoint
     # Uses /health/healthz - lightweight check without authentication
     healthcheck:
@@ -142,6 +127,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: production
     container_name: juddges-backend-worker
     command: celery -A app.workers worker --loglevel=info
     restart: unless-stopped
@@ -166,7 +152,6 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-network
-      - shared_network
     # Health check for Celery worker
     # Checks if Celery process is running and responsive
     healthcheck:
@@ -195,16 +180,13 @@ services:
 # ==============================================================================
 
 networks:
-  # Application-only network for inter-service communication
+  # Internal network for inter-service communication (frontend, backend, backend-worker)
   app-network:
     name: juddges-app-network
     driver: bridge
 
-  # Shared infrastructure network (external - created by docker-compose.shared.yml)
-  shared_network:
-    name: juddges-shared-network
-    external: true
-
-  # External nginx reverse proxy network (production only)
+  # Optional: External nginx-proxy reverse proxy network
+  # Only needed if using jwilder/nginx-proxy for automatic SSL/reverse proxy
+  # Comment out if not using nginx-proxy
   nginx-router_proxy-tier:
     external: true
