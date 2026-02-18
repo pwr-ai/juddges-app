@@ -84,7 +84,7 @@ poetry run poe check-all                                 # Format + lint + test
 # Development (with hot reload and volume mounts)
 docker compose -f docker-compose.dev.yml up --build
 
-# Production
+# Production (local build)
 docker compose up -d
 
 # Stop services
@@ -97,6 +97,21 @@ docker compose logs -f backend-worker
 
 # Rebuild specific service
 docker compose up --build backend
+```
+
+### Production Build & Deploy
+```bash
+# Build, tag, and push Docker images to Docker Hub (laugustyniak/juddges-*)
+./scripts/build_and_push_prod.sh              # Auto-increment patch version
+./scripts/build_and_push_prod.sh minor        # Increment minor version
+./scripts/build_and_push_prod.sh major        # Increment major version
+./scripts/build_and_push_prod.sh 2.1.0        # Use explicit version
+
+# Deploy on production host (pull from Docker Hub and restart)
+./scripts/deploy_prod.sh                      # Deploy :latest
+./scripts/deploy_prod.sh 0.2.0               # Deploy specific version
+./scripts/deploy_prod.sh --status             # Show running containers
+./scripts/deploy_prod.sh --rollback           # Rollback to previous version
 ```
 
 ### Database & Data Ingestion
@@ -188,6 +203,24 @@ Next.js 15 with App Router:
 - Frontend runs on port 3007 (dev) or 3006 (prod)
 - CORS configured for cross-origin requests during development
 
+### Production Deployment Architecture
+**Docker Hub Registry**: `laugustyniak/juddges-{frontend,backend}`
+
+**Image Strategy**:
+- Two images built: `juddges-frontend` and `juddges-backend`
+- `backend-worker` reuses the `juddges-backend` image with a different command (Celery)
+- Images tagged with semantic version (`0.1.0`) and `latest`
+- `docker-compose.yml` has both `image:` and `build:` on each service — `image:` for Hub pulls, `build:` for local builds
+- Version tag controlled by `JUDDGES_IMAGE_TAG` env var (defaults to `latest`)
+
+**Versioning**: Git tags (`v0.1.0`, `v1.0.0`) are the source of truth. The build script reads the latest tag and auto-increments.
+
+**Deployment Flow**:
+1. Developer runs `build_and_push_prod.sh` locally (loads `.env` for frontend build args)
+2. Images pushed to Docker Hub
+3. On production host, run `deploy_prod.sh` to pull and restart
+4. Deploy history logged to `.deploy-history` for rollback support
+
 ## Key Files
 
 ### Configuration Files
@@ -206,6 +239,10 @@ Next.js 15 with App Router:
 - **`backend/app/server.py`**: FastAPI application entry point
 - **`frontend/app/layout.tsx`**: Root layout for Next.js app
 - **`scripts/ingest_judgments.py`**: Data ingestion pipeline
+
+### Deployment Scripts
+- **`scripts/build_and_push_prod.sh`**: Build Docker images, tag with semver, push to Docker Hub
+- **`scripts/deploy_prod.sh`**: Pull images from Docker Hub and deploy on production host
 
 ## Common Tasks
 

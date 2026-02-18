@@ -5,10 +5,15 @@
 #   - .env (gitignored, contains all actual values)
 #   - .env.example (committed, template with variable names)
 #
+# IMAGE TAG:
+#   Set JUDDGES_IMAGE_TAG in .env or environment to pin a version.
+#   Defaults to "latest" if unset.
+#
 # SETUP:
 #   1. Copy .env.example to .env
 #   2. Fill in actual values in .env
 #   3. Run: docker compose up -d
+#   (or use: ./scripts/deploy_prod.sh)
 
 services:
   # ============================================================================
@@ -16,6 +21,7 @@ services:
   # ============================================================================
 
   frontend:
+    image: laugustyniak/juddges-frontend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -73,6 +79,7 @@ services:
           memory: 1G
 
   backend:
+    image: laugustyniak/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -126,6 +133,7 @@ services:
           memory: 12G
 
   backend-worker:
+    image: laugustyniak/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile

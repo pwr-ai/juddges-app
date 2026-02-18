@@ -84,6 +84,21 @@ python ingest_judgments.py --polish 100 --uk 100
 
 ## 📚 Documentation
 
+### Developer Documentation
+
+Essential guides for developers:
+
+- **[DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md)** - Complete onboarding guide for new developers
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design decisions
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API documentation
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and workflow
+- **[CODE_STYLE.md](CODE_STYLE.md)** - Coding standards and best practices
+- **[TESTING.md](TESTING.md)** - Testing strategy and guidelines
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[CLAUDE.md](CLAUDE.md)** - Claude Code development instructions
+
+### Additional Documentation
+
 For detailed documentation, see the **[docs/](docs/)** directory:
 
 - **[Getting Started](docs/getting-started/)** - Setup guides and quick start
@@ -92,9 +107,6 @@ For detailed documentation, see the **[docs/](docs/)** directory:
 - **[Features](docs/features/)** - Feature-specific documentation
 - **[Frontend](docs/frontend/)** - Frontend development guide
 - **[Migration](docs/migration/)** - AI-Tax → Juddges transition docs
-- **[API](docs/api/)** - API reference documentation
-
-For Claude Code development instructions, see **[CLAUDE.md](CLAUDE.md)**.
 
 ## Project Structure
 
@@ -188,6 +200,40 @@ cd backend
 poetry run ruff format .
 poetry run ruff check .
 ```
+
+## Production Deployment
+
+### Build & Push to Docker Hub
+
+Build Docker images with semantic versioning and push to Docker Hub (`laugustyniak/juddges-*`):
+
+```bash
+./scripts/build_and_push_prod.sh              # Auto-increment patch (0.1.0 -> 0.1.1)
+./scripts/build_and_push_prod.sh minor        # Increment minor (0.1.1 -> 0.2.0)
+./scripts/build_and_push_prod.sh major        # Increment major (0.2.0 -> 1.0.0)
+./scripts/build_and_push_prod.sh 2.1.0        # Use explicit version
+```
+
+The script builds two images from the repo's `.env` file for frontend build args, tags them with the version and `latest`, pushes to Docker Hub, and creates a git tag:
+- `laugustyniak/juddges-frontend:<version>`
+- `laugustyniak/juddges-backend:<version>` (also used by backend-worker)
+
+### Deploy on Production Host
+
+Pull images from Docker Hub and restart containers:
+
+```bash
+./scripts/deploy_prod.sh                      # Deploy :latest
+./scripts/deploy_prod.sh 0.2.0               # Deploy specific version
+./scripts/deploy_prod.sh --status             # Show running containers
+./scripts/deploy_prod.sh --rollback           # Rollback to previous version
+```
+
+The deploy script pulls images, restarts containers via `docker-compose.yml`, waits for health checks, and logs deployment history to `.deploy-history`.
+
+### Versioning
+
+Versions are tracked as git tags (`v0.1.0`, `v1.0.0`, etc.). The build script reads the latest tag, increments it, and creates a new tag after a successful push.
 
 ## Contributing
 

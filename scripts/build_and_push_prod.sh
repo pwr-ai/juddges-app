@@ -1,0 +1,248 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# build_and_push_prod.sh
+# Build production Docker images, tag with semantic version, push to Docker Hub
+#
+# Usage:
+#   ./scripts/build_and_push_prod.sh              # Auto-increment patch (0.1.0 -> 0.1.1)
+#   ./scripts/build_and_push_prod.sh patch         # Same as above
+#   ./scripts/build_and_push_prod.sh minor         # Increment minor (0.1.1 -> 0.2.0)
+#   ./scripts/build_and_push_prod.sh major         # Increment major (0.2.0 -> 1.0.0)
+#   ./scripts/build_and_push_prod.sh 2.1.0         # Use explicit version
+# ==============================================================================
+
+set -euo pipefail
+
+# ------------------------------------------------------------------------------
+# Configuration
+# ------------------------------------------------------------------------------
+DOCKER_HUB_USER="laugustyniak"
+PROJECT="juddges"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+IMAGES=(
+    "frontend:frontend"       # <service-dir>:<image-suffix>
+    "backend:backend"         # backend image (also used by backend-worker)
+)
+
+# ------------------------------------------------------------------------------
+# Color output
+# ------------------------------------------------------------------------------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
+ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+err()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+
+# ------------------------------------------------------------------------------
+# Ensure Docker Hub login
+# ------------------------------------------------------------------------------
+ensure_docker_login() {
+    if docker info 2>/dev/null | grep -q "Username: ${DOCKER_HUB_USER}"; then
+        ok "Already logged in to Docker Hub as ${DOCKER_HUB_USER}"
+    else
+        info "Not logged in to Docker Hub. Logging in..."
+        docker login -u "${DOCKER_HUB_USER}"
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Get latest version from git tags
+# ------------------------------------------------------------------------------
+get_latest_version() {
+    local latest
+    latest=$(git -C "${REPO_ROOT}" tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
+    if [[ -z "${latest}" ]]; then
+        echo "0.0.0"
+    else
+        echo "${latest}"
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Increment semantic version
+# ------------------------------------------------------------------------------
+increment_version() {
+    local version="$1"
+    local part="${2:-patch}"
+
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "${version}"
+
+    case "${part}" in
+        major)
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        minor)
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        patch)
+            patch=$((patch + 1))
+            ;;
+        *)
+            err "Unknown version part: ${part}. Use major, minor, or patch."
+            exit 1
+            ;;
+    esac
+
+    echo "${major}.${minor}.${patch}"
+}
+
+# ------------------------------------------------------------------------------
+# Resolve next version
+# ------------------------------------------------------------------------------
+resolve_version() {
+    local arg="${1:-patch}"
+    local current
+    current=$(get_latest_version)
+
+    # Check if arg is an explicit version (x.y.z format)
+    if [[ "${arg}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "${arg}"
+    else
+        increment_version "${current}" "${arg}"
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Load .env for frontend build args
+# ------------------------------------------------------------------------------
+load_env() {
+    local env_file="${REPO_ROOT}/.env"
+    if [[ -f "${env_file}" ]]; then
+        info "Loading build args from .env"
+        set -a
+        # shellcheck disable=SC1090
+        source "${env_file}"
+        set +a
+    else
+        err ".env file not found at ${env_file}"
+        err "Copy .env.example to .env and fill in values."
+        exit 1
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Build and push a single image
+# ------------------------------------------------------------------------------
+build_and_push() {
+    local context_dir="$1"
+    local image_suffix="$2"
+    local version="$3"
+
+    local full_image="${DOCKER_HUB_USER}/${PROJECT}-${image_suffix}"
+    local build_context="${REPO_ROOT}/${context_dir}"
+
+    info "Building ${full_image}:${version} ..."
+
+    local build_args=()
+    if [[ "${context_dir}" == "frontend" ]]; then
+        build_args=(
+            --build-arg "NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-}"
+            --build-arg "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}"
+            --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+        )
+    fi
+
+    docker build \
+        --target production \
+        "${build_args[@]}" \
+        --tag "${full_image}:${version}" \
+        --tag "${full_image}:latest" \
+        --file "${build_context}/Dockerfile" \
+        "${build_context}"
+
+    ok "Built ${full_image}:${version}"
+
+    info "Pushing ${full_image}:${version} ..."
+    docker push "${full_image}:${version}"
+    docker push "${full_image}:latest"
+    ok "Pushed ${full_image}:${version} and :latest"
+}
+
+# ------------------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------------------
+main() {
+    local bump_arg="${1:-patch}"
+
+    info "=== Juddges Production Build & Push ==="
+    echo ""
+
+    # Ensure we're in a clean git state
+    cd "${REPO_ROOT}"
+
+    if [[ -n "$(git status --porcelain)" ]]; then
+        warn "Working tree has uncommitted changes."
+        warn "The version tag will be created on the current HEAD anyway."
+        echo ""
+    fi
+
+    # Resolve version
+    local current_version
+    current_version=$(get_latest_version)
+    local new_version
+    new_version=$(resolve_version "${bump_arg}")
+
+    info "Current version: v${current_version}"
+    info "New version:     v${new_version}"
+    echo ""
+
+    # Confirm
+    read -rp "Proceed with build and push v${new_version}? [y/N] " confirm
+    if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
+        info "Aborted."
+        exit 0
+    fi
+    echo ""
+
+    # Login to Docker Hub
+    ensure_docker_login
+
+    # Load .env for build args
+    load_env
+
+    # Build and push each image
+    for entry in "${IMAGES[@]}"; do
+        IFS=':' read -r context_dir image_suffix <<< "${entry}"
+        build_and_push "${context_dir}" "${image_suffix}" "${new_version}"
+        echo ""
+    done
+
+    # Create git tag
+    info "Creating git tag v${new_version} ..."
+    git tag -a "v${new_version}" -m "Release v${new_version}"
+    ok "Created tag v${new_version}"
+
+    # Push tag to remote
+    read -rp "Push tag v${new_version} to origin? [y/N] " push_tag
+    if [[ "${push_tag}" == "y" || "${push_tag}" == "Y" ]]; then
+        git push origin "v${new_version}"
+        ok "Pushed tag v${new_version} to origin"
+    fi
+
+    echo ""
+    ok "=== Build complete ==="
+    echo ""
+    info "Images pushed:"
+    for entry in "${IMAGES[@]}"; do
+        IFS=':' read -r _ image_suffix <<< "${entry}"
+        echo "  ${DOCKER_HUB_USER}/${PROJECT}-${image_suffix}:${new_version}"
+        echo "  ${DOCKER_HUB_USER}/${PROJECT}-${image_suffix}:latest"
+    done
+    echo ""
+    info "Deploy on production host with:"
+    echo "  ./scripts/deploy_prod.sh ${new_version}"
+    echo "  # or"
+    echo "  ./scripts/deploy_prod.sh          # uses :latest"
+}
+
+main "$@"
