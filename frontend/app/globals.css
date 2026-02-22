@@ -177,9 +177,9 @@
   --chart-1: oklch(0.62 0.18 200.00);
 }
 
-/* AI-Tax Brand - Purple Theme (Default) */
+/* Juddges Brand - Purple Theme (Default) */
 /* Already the default in :root, but explicit for clarity */
-[data-brand="ai-tax"] {
+[data-brand="juddges"] {
   --primary: oklch(0.58 0.24 265.00);
   --ring: oklch(0.62 0.19 259.81);
   --accent: oklch(0.95 0.03 236.82);
@@ -189,8 +189,8 @@
   --chart-1: oklch(0.62 0.19 259.81);
 }
 
-[data-brand="ai-tax"].dark,
-.dark[data-brand="ai-tax"] {
+[data-brand="juddges"].dark,
+.dark[data-brand="juddges"] {
   --primary: oklch(0.65 0.24 265.00);
   --ring: oklch(0.62 0.19 259.81);
   --accent: oklch(0.38 0.14 265.52);
@@ -200,7 +200,7 @@
   --chart-1: oklch(0.71 0.14 254.62);
 }
 
-/* Legal AI Brand - Deep Blue Theme */
+/* Juddges Alternative Brand - Deep Blue Theme */
 [data-brand="legal-ai"] {
   --primary: oklch(0.60 0.20 240.00);
   --ring: oklch(0.60 0.20 240.00);

@@ -17,8 +17,8 @@ export function LandingFooter() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Enterprise legal AI solutions for research institutions and law
-              firms.
+              Judgments analysis and extraction solutions for research institutions
+              and law firms.
             </p>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <GraduationCap className="size-4" />

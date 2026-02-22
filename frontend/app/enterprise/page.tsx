@@ -104,7 +104,7 @@ export default function EnterprisePage() {
         <section id="features">
           <FeatureShowcase
             features={enterpriseContent.features}
-            title="Comprehensive Legal AI Platform"
+            title="Comprehensive Judgments Analysis Platform"
             subtitle="Everything you need to transform your legal research workflow"
           />
         </section>

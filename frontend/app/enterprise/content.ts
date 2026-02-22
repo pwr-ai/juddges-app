@@ -25,7 +25,7 @@ import {
 
 export const enterpriseContent = {
   hero: {
-    headline: "Enterprise Legal AI Solutions for Your Firm",
+    headline: "Enterprise Judgments Analysis Solutions for Your Firm",
     subheadline:
       "Deploy Juddges's proven legal research platform in your infrastructure. Trusted by 50+ researchers analyzing 3M+ documents.",
     primaryCTA: { text: "Schedule a Demo", href: "#contact" },
@@ -247,7 +247,7 @@ export const enterpriseContent = {
       { name: "Pydantic", description: "Data validation" },
     ],
     data: [
-      { name: "Weaviate", description: "Vector database for semantic search" },
+      { name: "Supabase pgvector", description: "Vector database for semantic search" },
       { name: "PostgreSQL", description: "Relational data storage" },
       { name: "Redis", description: "Caching and queuing" },
     ],

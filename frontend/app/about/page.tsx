@@ -39,7 +39,7 @@ export default function AboutPage(): React.JSX.Element {
         </Badge>
         <Header
           icon={Sparkles}
-          title="About Juddges & AI-Tax Projects"
+          title="About Juddges"
           size="4xl"
           description="Advancing legal research through artificial intelligence and open science"
         />
@@ -142,20 +142,20 @@ export default function AboutPage(): React.JSX.Element {
         </div>
       </LightCard>
 
-      {/* AI-Tax Project */}
+      {/* Juddges Platform */}
       <LightCard padding="lg" className="mb-10">
         <SecondaryHeader
           icon={Target}
-          title="AI-Tax Project"
+          title="Juddges Platform"
           className="mb-3"
         />
-        <p className="text-base text-muted-foreground mb-6">AI-Powered Legal Document Analysis for Tax Law and Court Judgments</p>
+        <p className="text-base text-muted-foreground mb-6">Judgments Analysis and Extraction Toolset</p>
         <div className="space-y-8">
           <div>
             <p className="mb-5 text-base leading-relaxed">
-              AI-Tax is an innovative project focused on the analysis of
-              legal documents, particularly in the areas of court
-              judgments and tax law. Our goal is to leverage artificial
+              Juddges is an innovative platform focused on the analysis of
+              legal documents, particularly court judgments and legal
+              decisions. Our goal is to leverage artificial
               intelligence to:
             </p>
             <ul className="space-y-3 mb-5">
@@ -298,7 +298,7 @@ export default function AboutPage(): React.JSX.Element {
           title="Our Impact"
           className="mb-3"
         />
-        <p className="text-base text-muted-foreground mb-6">Contributing to legal AI research and practice</p>
+        <p className="text-base text-muted-foreground mb-6">Contributing to judgments analysis research and practice</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           {/* Reusing dashboard stat card style */}
           <div className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-muted/40 to-muted/20 dark:from-muted/30 dark:to-muted/10 p-6 hover:bg-gradient-to-br hover:from-muted/60 hover:to-muted/30 hover:shadow-lg transition-all duration-500">

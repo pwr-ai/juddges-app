@@ -678,7 +678,7 @@ export default function BlogPostPage() {
         <h2 className="text-3xl font-bold mb-4">Enjoyed this article?</h2>
         <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
           Explore more research insights and stay updated with the latest in
-          legal AI technology.
+          judgments analysis technology.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <PrimaryButton size="lg" icon={ArrowRight} onClick={() => router.push("/blog")}>

@@ -239,7 +239,7 @@ export default function BlogPage(): React.JSX.Element {
                 Explore the latest research findings, tutorials, and insights from
                 our team of{" "}
                 <span className="text-foreground font-semibold">
-                  legal AI experts
+                  judgments analysis experts
                 </span>
               </>
             }

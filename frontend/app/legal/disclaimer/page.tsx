@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata: Metadata = {
-  title: "Legal Disclaimer | AI Tax Assistant",
+  title: "Legal Disclaimer | Juddges",
   description:
-    "Important legal disclaimers and limitations regarding the use of AI Tax Assistant platform.",
+    "Important legal disclaimers and limitations regarding the use of Juddges platform.",
 };
 
 export default function DisclaimerPage() {
@@ -64,7 +64,7 @@ export default function DisclaimerPage() {
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
             <p>
-              The AI Tax Assistant platform provides <strong>information and research tools only</strong>.
+              The Juddges platform provides <strong>information and research tools only</strong>.
               Nothing provided by this platform constitutes legal advice, tax advice, or professional
               counsel of any kind.
             </p>
@@ -279,7 +279,7 @@ export default function DisclaimerPage() {
       {/* Footer */}
       <div className="mt-12 pt-8 border-t border-border">
         <p className="text-sm text-muted-foreground text-center">
-          By using the AI Tax Assistant platform, you acknowledge that you have read, understood,
+          By using the Juddges platform, you acknowledge that you have read, understood,
           and agree to be bound by this disclaimer.
         </p>
       </div>

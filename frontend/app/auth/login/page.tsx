@@ -2,8 +2,8 @@ import { LoginFormEnhanced } from "@/components/login-form-enhanced";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sign In | AI Tax Assistant",
-  description: "Sign in to your AI Tax Assistant account to access AI-powered legal and tax analysis tools.",
+  title: "Sign In | Juddges",
+  description: "Sign in to your Juddges account to access AI-powered judgments analysis and extraction tools.",
 };
 
 export default function LoginPage() {

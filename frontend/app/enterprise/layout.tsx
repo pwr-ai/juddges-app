@@ -2,16 +2,16 @@ import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Juddges Enterprise | Legal AI Solutions for Law Firms & Organizations",
+  title: "Juddges Enterprise | Judgments Analysis Solutions for Law Firms & Organizations",
   description:
-    "Deploy proven legal AI technology in your infrastructure. Process millions of documents, automate research, extract structured data. Cloud, on-premise, or hybrid deployment options available.",
+    "Deploy proven judgments analysis technology in your infrastructure. Process millions of documents, automate research, extract structured data. Cloud, on-premise, or hybrid deployment options available.",
   keywords:
-    "enterprise legal AI, law firm technology, legal document analysis, GDPR legal tech, AI-powered legal research, document extraction, legal automation",
+    "enterprise judgments analysis, law firm technology, legal document analysis, GDPR legal tech, AI-powered legal research, document extraction, legal automation",
   authors: [
     { name: "Juddges Team", url: "https://juddges.com" },
   ],
   openGraph: {
-    title: "Juddges Enterprise | Legal AI Solutions for Law Firms",
+    title: "Juddges Enterprise | Judgments Analysis Solutions for Law Firms",
     description:
       "Deploy Juddges's proven legal research platform in your infrastructure. Trusted by 50+ researchers analyzing 3M+ documents.",
     type: "website",
@@ -29,11 +29,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Juddges Enterprise | Legal AI Solutions",
+    title: "Juddges Enterprise | Judgments Analysis Solutions",
     description:
-      "Deploy proven legal AI technology in your infrastructure. Cloud, on-premise, or hybrid deployment.",
+      "Deploy proven judgments analysis technology in your infrastructure. Cloud, on-premise, or hybrid deployment.",
     images: ["/og-image-enterprise.png"],
-    creator: "@aitax",
+    creator: "@juddges",
   },
   robots: {
     index: true,
@@ -70,7 +70,7 @@ export default function EnterpriseLayout({
             applicationCategory: "BusinessApplication",
             operatingSystem: "Web",
             description:
-              "Enterprise legal AI platform for document analysis, semantic search, and structured data extraction",
+              "Enterprise judgments analysis platform for document analysis, semantic search, and structured data extraction",
             offers: {
               "@type": "Offer",
               price: "0",

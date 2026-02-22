@@ -37,9 +37,9 @@ interface OnboardingStep {
 
 const onboardingSteps: OnboardingStep[] = [
   {
-    title: "Welcome to AI Tax Assistant",
+    title: "Welcome to Juddges",
     description:
-      "Your intelligent companion for legal and tax research. Let's take a quick tour of what you can do.",
+      "Your intelligent companion for judgments analysis and legal research. Let's take a quick tour of what you can do.",
     icon: Brain,
     features: [
       "AI-powered legal document analysis",

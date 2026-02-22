@@ -7,8 +7,8 @@ import { Shield, Lock, Eye, Database, Mail } from "lucide-react";
 import React from "react";
 
 export const metadata = {
-  title: "Privacy Policy | Legal AI",
-  description: "Privacy policy for Legal AI legal research platform",
+  title: "Privacy Policy | Juddges",
+  description: "Privacy policy for Juddges judgments analysis platform",
 };
 
 export default function PrivacyPage(): React.ReactElement {
@@ -27,7 +27,7 @@ export default function PrivacyPage(): React.ReactElement {
       {/* Introduction */}
       <LightCard padding="lg" className="mb-8">
         <p className="text-base leading-relaxed text-muted-foreground">
-          Wrocław University of Science and Technology and collaborators (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operate the Legal AI platform.
+          Wrocław University of Science and Technology and collaborators (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operate the Juddges platform.
           This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you
           use our research platform.
         </p>
@@ -90,7 +90,7 @@ export default function PrivacyPage(): React.ReactElement {
             <ul className="list-disc list-inside ml-4 space-y-2">
               <li><strong>Platform Operation:</strong> To provide and maintain our services</li>
               <li><strong>User Authentication:</strong> To verify your identity and manage your account</li>
-              <li><strong>Research Purposes:</strong> To conduct academic research on legal AI systems</li>
+              <li><strong>Research Purposes:</strong> To conduct academic research on judgments analysis systems</li>
               <li><strong>Service Improvement:</strong> To analyze usage patterns and improve platform features</li>
               <li><strong>Communication:</strong> To send updates, security alerts, and support messages</li>
               <li><strong>Legal Compliance:</strong> To comply with applicable laws and regulations</li>

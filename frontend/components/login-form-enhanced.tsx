@@ -294,7 +294,7 @@ export function LoginFormEnhanced({
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>
             <p className="text-muted-foreground">
-              Sign in to access your AI Tax Assistant
+              Sign in to access Juddges
             </p>
           </div>
 
