@@ -1,6 +1,7 @@
 import React from "react";
 import "@/app/globals.css";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
+import { Instrument_Serif } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -12,7 +13,21 @@ import { ChunkErrorBoundary } from "@/components/ChunkErrorBoundary";
 import { SonnerToaster } from "@/lib/styles/components";
 import { getBrandConfig, getCurrentBrand } from "@/lib/brand";
 
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-instrument-serif",
+});
 
 const fallbackSiteUrl = "https://juddges.com";
 const configuredSiteUrl =
@@ -119,7 +134,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: runtimeConfig }}
         />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`} suppressHydrationWarning>
         <ChunkErrorBoundary>
           <QueryProvider>
             <AuthProvider>

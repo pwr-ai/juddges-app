@@ -150,7 +150,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
       // Label (on hover or selection)
       if ((isHovered || isSelected) && globalScale >= 0.5) {
-        ctx.font = '600 11px Inter, sans-serif';
+        ctx.font = '600 11px system-ui, sans-serif';
         ctx.fillStyle = '#1a1a1a';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
