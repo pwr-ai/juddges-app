@@ -37,7 +37,7 @@ export default function StatusPage() {
 
   const getCriticalServices = () => {
     if (!status) return [];
-    const critical = ['weaviate', 'redis', 'postgresql'];
+    const critical = ['redis', 'postgresql'];
     return critical
       .filter((name) => status.services[name])
       .map((name) => status.services[name]);
@@ -45,7 +45,7 @@ export default function StatusPage() {
 
   const getOptionalServices = () => {
     if (!status) return [];
-    const critical = ['weaviate', 'redis', 'postgresql'];
+    const critical = ['redis', 'postgresql'];
     return Object.values(status.services).filter(
       (service) => !critical.includes(service.name)
     );

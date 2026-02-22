@@ -87,19 +87,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Use provided document_ids or get all documents from the collection
-    // document_ids from frontend are already Weaviate IDs (backend returns them directly)
+    // document_ids from frontend are document IDs (backend returns them directly)
     let documentIds: string[];
 
     if (document_ids && document_ids.length > 0) {
-      // Frontend provides Weaviate IDs directly - just use them
+      // Frontend provides document IDs directly - just use them
       // Skip verification since backend already has these documents
       documentIds = document_ids;
-      apiLogger.info('Using provided Weaviate document IDs', {
+      apiLogger.info('Using provided document IDs', {
         requestId,
         count: documentIds.length
       });
     } else {
-      // Call backend to get all Weaviate document IDs from the collection
+      // Call backend to get all document IDs from the collection
       try {
         const response = await fetch(`${API_BASE_URL}/collections/${collection_id}/documents`, {
           headers: {
@@ -122,10 +122,10 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Backend returns array of {id, document_id} where both are Weaviate IDs
+        // Backend returns array of {id, document_id}
         documentIds = documents.map((doc: { document_id: string }) => doc.document_id);
 
-        apiLogger.info('Retrieved Weaviate document IDs from backend', {
+        apiLogger.info('Retrieved document IDs from backend', {
           requestId,
           count: documentIds.length
         });
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // Call the backend API to start extraction
     // Updated: POST /extractions/db (new endpoint using InformationExtractorDB with schemas from Supabase)
-    // Send Weaviate document_ids to the backend
+    // Send document_ids to the backend
     const backendPayload: {
       collection_id: string;
       schema_id: string;
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store job in Supabase for tracking (store Weaviate IDs)
+    // Store job in Supabase for tracking
     try {
       await supabase.from('extraction_jobs').insert({
         job_id: jobId,

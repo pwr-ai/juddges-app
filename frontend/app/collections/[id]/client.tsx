@@ -118,28 +118,28 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
     try {
       const response = await fetch(`/api/documents/${documentId}`);
       if (!response.ok) {
-        // Check if it's a Weaviate/application error (500 or 503 status codes)
-        let isWeaviateError = false;
+        // Check if it's a database/application error (500 or 503 status codes)
+        let isDatabaseError = false;
         try {
           const errorData = await response.json();
           const errorStr = JSON.stringify(errorData).toLowerCase();
-          isWeaviateError = 
-            errorStr.includes('weaviate') ||
+          isDatabaseError = 
+            errorStr.includes('database') ||
             errorStr.includes('vector_db_unavailable') ||
             response.status === 503 ||
             response.status === 500;
         } catch {
-          isWeaviateError = response.status === 503 || response.status === 500;
+          isDatabaseError = response.status === 503 || response.status === 500;
         }
         
         // Create error placeholder document
         const errorDoc: SearchDocument = {
           document_id: documentId,
           document_type: 'error',
-          summary: isWeaviateError 
+          summary: isDatabaseError
             ? "Source information cannot be loaded!"
             : "Document was not found!",
-          _isWeaviateError: isWeaviateError ? true : undefined,
+          ...(isDatabaseError && { _isDatabaseError: true }),
           title: null,
           date_issued: null,
           issuing_body: null,
@@ -186,10 +186,10 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
         return newMap;
       });
     } catch (error) {
-      // Check if it's a Weaviate/application error
+      // Check if it's a database/application error
       const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-      const isWeaviateError = 
-        errorMessage.includes('weaviate') ||
+      const isDatabaseError = 
+        errorMessage.includes('database') ||
         errorMessage.includes('vector_db_unavailable') ||
         errorMessage.includes('503') ||
         errorMessage.includes('500');
@@ -198,10 +198,10 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
       const errorDoc: SearchDocument = {
         document_id: documentId,
         document_type: 'error',
-        summary: isWeaviateError 
+        summary: isDatabaseError
           ? "Source information cannot be loaded!"
           : "Document was not found!",
-        _isWeaviateError: isWeaviateError ? true : undefined,
+        ...(isDatabaseError && { _isDatabaseError: true }),
         title: null,
         date_issued: null,
         issuing_body: null,
@@ -239,9 +239,9 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
       pageLogger.error('Failed to load document', error, {
         documentId,
         context: 'loadDocument',
-        isWeaviateError
+        isDatabaseError
       });
-      if (!isWeaviateError) {
+      if (!isDatabaseError) {
       toast.error(`Failed to load document ${documentId}`);
       }
     } finally {
@@ -871,42 +871,42 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
           </>
         )}
         
-        {/* Check for Weaviate errors */}
+        {/* Check for database errors */}
         {(() => {
           const loadedDocuments = Array.from(collection.documents)
             .map(docId => documents.get(String(docId)))
             .filter(Boolean) as SearchDocument[];
           
-          // Check for Weaviate errors: either has _isWeaviateError flag, or is error type with Weaviate-related summary
+          // Check for database errors: either has _isDatabaseError flag, or is error type with Weaviate-related summary
           // Also check for documents with "ERROR" in title or document_id (common pattern for error documents)
-          const weaviateErrors = loadedDocuments.filter((doc: SearchDocument) => {
-            if (doc._isWeaviateError) return true;
+          const databaseErrors = loadedDocuments.filter((doc: SearchDocument) => {
+            if ((doc as any)._isDatabaseError) return true;
             if (doc.document_type === 'error') {
-              // If summary mentions Weaviate-related issues, it's a Weaviate error
+              // If summary mentions database-related issues, it's a Weaviate error
               if (doc.summary?.toLowerCase().includes('source information cannot be loaded') ||
-                  doc.summary?.toLowerCase().includes('weaviate') ||
+                  doc.summary?.toLowerCase().includes('database') ||
                   doc.summary?.toLowerCase().includes('database') ||
                   doc.summary?.toLowerCase().includes('unavailable')) {
                 return true;
               }
               // If document has "ERROR" in title and is error type, treat as Weaviate error
-              // (since all error documents in collections are likely Weaviate-related)
+              // (since all error documents in collections are likely database-related)
               if (doc.title?.toUpperCase().includes('ERROR') || doc.document_id?.toUpperCase().includes('ERROR')) {
                 return true;
               }
             }
             return false;
           });
-          const hasWeaviateErrors = weaviateErrors.length > 0;
+          const hasDatabaseErrors = databaseErrors.length > 0;
           
-          // Check if there are any documents still loading that might be Weaviate errors
+          // Check if there are any documents still loading that might be database errors
           // If all documents are either loaded with errors or still loading, show error card
           const allDocMetadataLoaded = loadedDocuments.length === collection.documents.length;
           const allLoadedAreErrors = allDocMetadataLoaded && loadedDocuments.length > 0 && loadedDocuments.every((doc: SearchDocument) => {
-            if (doc._isWeaviateError) return true;
+            if ((doc as any)._isDatabaseError) return true;
             if (doc.document_type === 'error') {
               if (doc.summary?.toLowerCase().includes('source information cannot be loaded') ||
-                  doc.summary?.toLowerCase().includes('weaviate') ||
+                  doc.summary?.toLowerCase().includes('database') ||
                   doc.summary?.toLowerCase().includes('database') ||
                   doc.summary?.toLowerCase().includes('unavailable')) {
                 return true;
@@ -917,11 +917,11 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
             }
             return false;
           });
-          const shouldShowErrorCard = hasWeaviateErrors || allLoadedAreErrors;
+          const shouldShowErrorCard = hasDatabaseErrors || allLoadedAreErrors;
 
           return (
             <>
-              {/* Single error card for all Weaviate errors */}
+              {/* Single error card for all database errors */}
               {shouldShowErrorCard && (
                 <div className="mb-4">
                   <BaseCard
@@ -959,18 +959,18 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
           const document = documents.get(documentId);
           const isLoadingDoc = loadingDocuments.has(documentId);
                   
-                  // Skip Weaviate error documents - they're shown in the error card above
+                  // Skip database error documents - they're shown in the error card above
                   if (document) {
-                    const isWeaviateError = document._isWeaviateError || 
+                    const isDatabaseError = (document as any)._isDatabaseError || 
                       (document.document_type === 'error' && (
                         document.summary?.toLowerCase().includes('source information cannot be loaded') ||
-                        document.summary?.toLowerCase().includes('weaviate') ||
+                        document.summary?.toLowerCase().includes('database') ||
                         document.summary?.toLowerCase().includes('database') ||
                         document.summary?.toLowerCase().includes('unavailable') ||
                         document.title?.toUpperCase().includes('ERROR') ||
                         document.document_id?.toUpperCase().includes('ERROR')
                       ));
-                    if (isWeaviateError) {
+                    if (isDatabaseError) {
                       return null;
                     }
                   }

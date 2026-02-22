@@ -139,20 +139,20 @@ export function SourceCard({ document, onSaveToCollection }: SourceCardProps) {
           <div
             className={cn(
               "flex items-center gap-2 rounded-lg px-3 py-2 text-xs border",
-              (document as any)?._isWeaviateError
+              (document as any)?._isDatabaseError
                 ? "border-red-300/50 bg-red-50/80 dark:bg-red-950/60 dark:border-red-500/40 text-red-900 dark:text-red-200"
                 : "border-amber-300/50 bg-amber-50/80 dark:bg-amber-950/60 dark:border-amber-500/40 text-amber-900 dark:text-amber-200"
             )}
             role="alert"
             title={
-              (document as any)?._isWeaviateError
+              (document as any)?._isDatabaseError
                 ? "The document database is temporarily unavailable. Please try again later."
                 : "Document may not exist or is AI-generated noise. Verify manually."
             }
           >
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             <span>
-              {(document as any)?._isWeaviateError
+              {(document as any)?._isDatabaseError
                 ? "Source information cannot be loaded. The document database is temporarily unavailable."
                 : "May be hallucinated. Verify manually."}
             </span>

@@ -197,24 +197,24 @@ export default function StatisticsPage() {
 
         {/* Error Notice */}
         {statistics.errors && statistics.errors.length > 0 && (
-          <div className={`mt-4 p-4 rounded-lg ${statistics.errors.includes('weaviate_connection')
+          <div className={`mt-4 p-4 rounded-lg ${statistics.errors.includes('database_connection')
               ? 'bg-red-50 border border-red-200'
               : 'bg-yellow-50 border border-yellow-200'
             }`}>
-            <h3 className={`text-sm font-medium mb-2 ${statistics.errors.includes('weaviate_connection')
+            <h3 className={`text-sm font-medium mb-2 ${statistics.errors.includes('database_connection')
                 ? 'text-red-800'
                 : 'text-yellow-800'
               }`}>
-              {statistics.errors.includes('weaviate_connection')
+              {statistics.errors.includes('database_connection')
                 ? 'Database connection unavailable'
                 : 'Some statistics are temporarily unavailable'}
             </h3>
-            <p className={`text-sm ${statistics.errors.includes('weaviate_connection')
+            <p className={`text-sm ${statistics.errors.includes('database_connection')
                 ? 'text-red-700'
                 : 'text-yellow-700'
               }`}>
-              {statistics.errors.includes('weaviate_connection')
-                ? 'Unable to connect to the Weaviate database. Please ensure the database is running and accessible.'
+              {statistics.errors.includes('database_connection')
+                ? 'Unable to connect to the database. Please ensure the database is running and accessible.'
                 : `The following data couldn't be loaded: ${statistics.errors.map(error =>
                   error.replace('_', ' ')).join(', ')}. Available data is shown below.`}
             </p>

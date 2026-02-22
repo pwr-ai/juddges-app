@@ -87,10 +87,10 @@ export function ExtractionProgress({
           }
           
           // Check if this is a permanent error that requires stopping
-          const permanentErrors = ['WEAVIATE_UNAVAILABLE', 'TASK_SUBMISSION_FAILED'];
+          const permanentErrors = ['DATABASE_UNAVAILABLE', 'TASK_SUBMISSION_FAILED'];
           const isPermanentError = response.status === 401 || 
             permanentErrors.includes(errorCode || '') ||
-            errorMessage.toLowerCase().includes('weaviate') ||
+            errorMessage.toLowerCase().includes('database') ||
             errorMessage.toLowerCase().includes('vector database');
           
           if (isPermanentError) {

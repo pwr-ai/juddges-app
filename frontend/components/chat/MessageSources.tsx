@@ -189,16 +189,16 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
             </div>
           )}
 
-          {/* Check for Weaviate errors */}
+          {/* Check for database errors */}
           {documents && documents.length > 0 && (() => {
-            const weaviateErrors = documents.filter((doc: SearchDocument) => (doc as any)?._isWeaviateError);
-            const validDocuments = documents.filter((doc: SearchDocument) => !(doc as any)?._isWeaviateError);
-            const hasWeaviateErrors = weaviateErrors.length > 0;
+            const databaseErrors = documents.filter((doc: SearchDocument) => (doc as any)?._isDatabaseError);
+            const validDocuments = documents.filter((doc: SearchDocument) => !(doc as any)?._isDatabaseError);
+            const hasDatabaseErrors = databaseErrors.length > 0;
 
             return (
               <>
-                {/* Single error card for all Weaviate errors - aligned with sources button using same grid structure */}
-                {hasWeaviateErrors && (
+                {/* Single error card for all database errors - aligned with sources button using same grid structure */}
+                {hasDatabaseErrors && (
                   <div className="grid grid-cols-2 gap-2 items-center">
                     <div className="flex justify-start">
                       <BaseCard
@@ -232,7 +232,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
                   </div>
                 )}
 
-                {/* Document Cards - only show valid documents (not Weaviate errors) */}
+                {/* Document Cards - only show valid documents (not database errors) */}
                 {validDocuments.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {validDocuments.map((doc: SearchDocument, index) => {
@@ -328,16 +328,16 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
             </div>
           )}
 
-          {/* Check for Weaviate errors */}
+          {/* Check for database errors */}
           {documents && documents.length > 0 && (() => {
-            const weaviateErrors = documents.filter((doc: SearchDocument) => (doc as any)?._isWeaviateError);
-            const validDocuments = documents.filter((doc: SearchDocument) => !(doc as any)?._isWeaviateError);
-            const hasWeaviateErrors = weaviateErrors.length > 0;
+            const databaseErrors = documents.filter((doc: SearchDocument) => (doc as any)?._isDatabaseError);
+            const validDocuments = documents.filter((doc: SearchDocument) => !(doc as any)?._isDatabaseError);
+            const hasDatabaseErrors = databaseErrors.length > 0;
 
             return (
               <>
-                {/* Single error card for all Weaviate errors - aligned with sources button using same grid structure */}
-                {hasWeaviateErrors && (
+                {/* Single error card for all database errors - aligned with sources button using same grid structure */}
+                {hasDatabaseErrors && (
                   <div className="grid grid-cols-2 gap-2 items-center">
                     <div className="flex justify-start">
                       <BaseCard
@@ -371,7 +371,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
                   </div>
                 )}
 
-                {/* Document Cards - only show valid documents (not Weaviate errors) */}
+                {/* Document Cards - only show valid documents (not database errors) */}
                 {validDocuments.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {validDocuments.map((doc: SearchDocument, index) => {
