@@ -2,18 +2,6 @@ import path from 'path';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // In Next.js 15, publicRuntimeConfig is the recommended approach
-  // for environment variables that need to be available at runtime
-  publicRuntimeConfig: {
-    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  },
-  // Private environment variables (server-side only)
-  serverRuntimeConfig: {
-    BACKEND_API_KEY: process.env.BACKEND_API_KEY,
-    API_BASE_URL: process.env.API_BASE_URL,
-  },
   // Output standalone build optimized for Docker
   output: 'standalone',
   // Ensure tracing works correctly when multiple lockfiles exist in monorepo
@@ -23,9 +11,7 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Ensure environment variables are properly transferred to the client
   experimental: {
-    // Enable features compatible with Next.js 15
     serverActions: {
       bodySizeLimit: '2mb',
     },
