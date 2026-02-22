@@ -1,4 +1,4 @@
-"""LangChain chains for AI Tax Search."""
+"""LangChain chains for Juddges Search."""
 
 from juddges_search.chains.schema_generation import (
     generate_schema,

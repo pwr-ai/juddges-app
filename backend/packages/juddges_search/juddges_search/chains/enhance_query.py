@@ -33,4 +33,4 @@ enhance_query_chain = (
     | enhance_query_prompt
     | model_mini
     | RunnableLambda(lambda x: x.content)  # Extract just the string content
-).with_config(run_name="ai_tax_query_enhancement_chain", callbacks=callbacks)
+).with_config(run_name="juddges_query_enhancement_chain", callbacks=callbacks)

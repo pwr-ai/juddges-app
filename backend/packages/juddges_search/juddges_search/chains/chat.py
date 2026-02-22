@@ -262,7 +262,7 @@ chat_chain = (
         metadata={
             "version": __version__,
             "purpose": "Legal judgments analysis for Polish tax law and criminal law with chat history and intelligent retrieval routing",
-            "project": "AI-Tax & JuDDGES - WUST",
+            "project": "Juddges - WUST",
             "domain": "legal-judgments-multi-domain",
             "features": [
                 "chat_history",

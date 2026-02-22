@@ -1,7 +1,7 @@
 """
 Strawberry GraphQL type definitions for the Juddges legal research platform.
 
-These types mirror the Pydantic models in app.models and ai_tax_search.models,
+These types mirror the Pydantic models in app.models and juddges_search.models,
 converted to Strawberry's type system for GraphQL schema generation.
 """
 

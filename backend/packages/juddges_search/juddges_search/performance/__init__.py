@@ -1,3 +1,3 @@
 """
-Performance testing utilities for AI Tax Search
+Performance testing utilities for Juddges Search
 """

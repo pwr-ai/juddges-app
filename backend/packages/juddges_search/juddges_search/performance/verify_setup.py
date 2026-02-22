@@ -139,7 +139,7 @@ def main() -> None:
         console.print("\n[green]🎉 Setup verification complete! Ready to run benchmarks.[/green]")
         console.print("\nTo run benchmarks:")
         console.print("  python run_performance_tests.py")
-        console.print("  python -m ai_tax_search.performance.cli")
+        console.print("  python -m juddges_search.performance.cli")
     else:
         console.print("\n[red]⚠️  Setup issues detected. Please fix environment configuration.[/red]")
 

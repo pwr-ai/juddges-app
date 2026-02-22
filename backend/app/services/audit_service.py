@@ -104,7 +104,7 @@ class AuditService:
             return None
 
         # Hash the IP address with a salt
-        salt = "ai_tax_audit_salt_2025"  # Use env variable in production
+        salt = "juddges_audit_salt_2025"  # Use env variable in production
         hashed = hashlib.sha256(f"{ip_address}{salt}".encode()).hexdigest()
         return hashed[:16]  # First 16 chars for brevity
 
