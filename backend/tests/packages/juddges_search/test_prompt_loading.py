@@ -22,5 +22,4 @@ def test_extraction_context_loading(extraction_context_name: str) -> None:
     extraction_context = InformationExtractor.get_extraction_context(
         extraction_context_name
     )
-    breakpoint()
     assert extraction_context is not None

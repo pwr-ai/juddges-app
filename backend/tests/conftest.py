@@ -1,5 +1,5 @@
 """
-Pytest configuration and fixtures for AI Tax backend tests.
+Pytest configuration and fixtures for Juddges backend tests.
 """
 
 import sys
@@ -57,6 +57,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "slow: marks tests as slow-running tests (e.g., full workflow tests)"
+    )
+    config.addinivalue_line(
+        "markers",
+        "api: marks tests as API integration tests"
+    )
+    config.addinivalue_line(
+        "markers",
+        "auth: marks tests as authentication tests"
     )
 
 
