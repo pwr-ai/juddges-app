@@ -5,8 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AccentButton, SecondaryButton, TextButton } from "@/lib/styles/components";
-import { PublicationWithResources, PublicationStatus, PublicationProject } from "@/types/publication";
-import { ProjectBadge } from "./project-badge";
+import { PublicationWithResources, PublicationStatus } from "@/types/publication";
 import {
   FileText,
   Code,
@@ -73,21 +72,15 @@ export const PublicationCard: FC<PublicationCardProps> = ({ publication, current
     return publication.year.toString();
   };
 
-  // Project-specific gradient backgrounds
-  const gradientClass = publication.project === PublicationProject.JUDDGES
-    ? "bg-gradient-to-br from-blue-400/15 via-indigo-400/10 to-blue-400/8 dark:from-blue-500/15 dark:via-indigo-500/10 dark:to-blue-500/8"
-    : "bg-gradient-to-br from-purple-400/15 via-indigo-400/10 to-purple-400/8 dark:from-purple-500/15 dark:via-indigo-500/10 dark:to-purple-500/8";
-
   return (
     <Card className={cn(
       "group border border-slate-200/50 dark:border-slate-800/50",
-      gradientClass,
+      "bg-gradient-to-br from-blue-400/15 via-indigo-400/10 to-blue-400/8 dark:from-blue-500/15 dark:via-indigo-500/10 dark:to-blue-500/8",
       "hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300"
     )}>
       <CardHeader className="space-y-3">
-        {/* Project badge and status */}
+        {/* Status */}
         <div className="flex items-center gap-2 flex-wrap">
-          <ProjectBadge project={publication.project} />
           <Badge variant="outline" className={cn("font-medium", statusInfo.className)}>
             <StatusIcon className="h-3 w-3 mr-1" />
             {statusInfo.label}

@@ -17,7 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Loader2, Database, FileText, Briefcase, Link2 } from "lucide-react";
 import {
-  PublicationProject,
   PublicationType,
   PublicationStatus,
   PublicationAuthor,
@@ -107,9 +106,6 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
   const [year, setYear] = useState(publication?.year || new Date().getFullYear());
   const [month, setMonth] = useState<number | undefined>(publication?.month);
   const [abstract, setAbstract] = useState(publication?.abstract || "");
-  const [project, setProject] = useState<PublicationProject>(
-    publication?.project || PublicationProject.AI_TAX
-  );
   const [type, setType] = useState<PublicationType>(
     publication?.type || PublicationType.CONFERENCE
   );
@@ -320,7 +316,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
           year,
           month,
           abstract,
-          project,
+          project: "JUDDGES" as any,
           type,
           status,
           links,
@@ -338,7 +334,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
           year,
           month,
           abstract,
-          project,
+          project: "JUDDGES" as any,
           type,
           status,
           links,
@@ -514,19 +510,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
           <CardTitle>Classification</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label>Project *</Label>
-              <Select value={project} onValueChange={(v) => setProject(v as PublicationProject)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PublicationProject.AI_TAX}>AI-TAX</SelectItem>
-                  <SelectItem value={PublicationProject.JUDDGES}>JUDDGES</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Type *</Label>
               <Select value={type} onValueChange={(v) => setType(v as PublicationType)}>

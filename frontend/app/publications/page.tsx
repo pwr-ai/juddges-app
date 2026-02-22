@@ -3,15 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { PublicationCard } from "@/components/publications/publication-card";
-import { ProjectBadge } from "@/components/publications/project-badge";
 import { publications as staticPublications, sortPublications, getPublicationYears } from "@/lib/data/publications";
-import { PublicationProject, PublicationType, PublicationWithResources } from "@/types/publication";
+import { PublicationType, PublicationWithResources } from "@/types/publication";
 import { SecondaryButton, TextButton, DropdownButton } from "@/lib/styles/components";
-import { BookOpen, Filter, FolderKanban, Calendar, FileType, ArrowUpDown, Settings, Loader2 } from "lucide-react";
+import { BookOpen, Filter, Calendar, FileType, ArrowUpDown, Settings, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPublications } from "@/lib/api/publications";
 
-type FilterProject = PublicationProject | "all";
 type FilterYear = number | "all";
 type FilterType = PublicationType | "all";
 type SortOption = "date" | "title";
@@ -20,7 +18,6 @@ export default function PublicationsPage() {
   const { user } = useAuth();
   const [publications, setPublications] = useState<PublicationWithResources[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterProject, setFilterProject] = useState<FilterProject>("all");
   const [filterYear, setFilterYear] = useState<FilterYear>("all");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [sortBy, setSortBy] = useState<SortOption>("date");
@@ -51,11 +48,6 @@ export default function PublicationsPage() {
   const filteredPublications = useMemo(() => {
     let filtered = [...publications];
 
-    // Filter by project
-    if (filterProject !== "all") {
-      filtered = filtered.filter(pub => pub.project === filterProject);
-    }
-
     // Filter by year
     if (filterYear !== "all") {
       filtered = filtered.filter(pub => pub.year === filterYear);
@@ -68,16 +60,15 @@ export default function PublicationsPage() {
 
     // Sort
     return sortPublications(filtered, sortBy);
-  }, [publications, filterProject, filterYear, filterType, sortBy]);
+  }, [publications, filterYear, filterType, sortBy]);
 
   const resetFilters = () => {
-    setFilterProject("all");
     setFilterYear("all");
     setFilterType("all");
     setSortBy("date");
   };
 
-  const hasActiveFilters = filterProject !== "all" || filterYear !== "all" || filterType !== "all";
+  const hasActiveFilters = filterYear !== "all" || filterType !== "all";
 
   if (loading) {
     return (
@@ -109,9 +100,7 @@ export default function PublicationsPage() {
           )}
         </div>
         <p className="text-lg text-foreground/80 max-w-3xl leading-relaxed">
-          Research publications from our legal AI projects: <ProjectBadge project={PublicationProject.JUDDGES} className="mx-1" />
-          for court judgment analysis and <ProjectBadge project={PublicationProject.AI_TAX} className="mx-1" />
-          for tax law interpretation.
+          Research publications from the Juddges project for court judgment analysis and extraction.
         </p>
       </div>
 
@@ -130,24 +119,7 @@ export default function PublicationsPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Project Filter */}
-          <div>
-            <label className="text-sm font-semibold mb-2 block text-foreground">Project</label>
-            <DropdownButton
-              icon={<FolderKanban size={16} />}
-              label="All projects"
-              value={filterProject}
-              options={[
-                { value: "all", label: "All projects" },
-                { value: PublicationProject.JUDDGES, label: "JUDDGES" },
-                { value: PublicationProject.AI_TAX, label: "AI-TAX" },
-              ]}
-              onChange={(value) => setFilterProject(value as FilterProject)}
-              className="w-full"
-            />
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Year Filter */}
           <div>
             <label className="text-sm font-semibold mb-2 block text-foreground">Year</label>

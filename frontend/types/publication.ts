@@ -1,5 +1,6 @@
 export enum PublicationProject {
   JUDDGES = "JUDDGES",
+  /** @deprecated Kept for backward compatibility with existing database records */
   AI_TAX = "AI-TAX"
 }
 
