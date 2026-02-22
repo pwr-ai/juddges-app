@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import typer
-from juddges_search.retrieval.weaviate_search import (
+from juddges_search.retrieval.supabase_search import (
     search_chunks,
     search_documents,
 )

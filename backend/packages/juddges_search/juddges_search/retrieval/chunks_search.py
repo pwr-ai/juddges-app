@@ -2,7 +2,7 @@ import asyncio
 
 from juddges_search.chains.models import DocumentRetrieval, QuestionDict
 from juddges_search.dict_utils import get_leaf_values
-from juddges_search.retrieval.weaviate_search import (
+from juddges_search.retrieval.supabase_search import (
     search_chunks,
     search_chunks_term,
     search_chunks_vector,
