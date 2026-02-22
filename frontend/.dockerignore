@@ -18,6 +18,15 @@ out
 # Testing
 coverage
 .nyc_output
+tests
+__tests__
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+
+# Examples (not production code)
+examples
 
 # IDE
 .idea

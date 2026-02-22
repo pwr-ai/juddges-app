@@ -13,19 +13,13 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------------------
-# Configuration
+# Configuration (DOCKER_USERNAME loaded from .env)
 # ------------------------------------------------------------------------------
-DOCKER_HUB_USER="laugustyniak"
 PROJECT="juddges"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
 ENV_FILE="${REPO_ROOT}/.env"
 DEPLOY_LOG="${REPO_ROOT}/.deploy-history"
-
-IMAGES=(
-    "${DOCKER_HUB_USER}/${PROJECT}-frontend"
-    "${DOCKER_HUB_USER}/${PROJECT}-backend"
-)
 
 # ------------------------------------------------------------------------------
 # Color output
@@ -189,12 +183,27 @@ main() {
             ;;
     esac
 
-    # Validate .env exists
+    # Load .env
     if [[ ! -f "${ENV_FILE}" ]]; then
         err ".env file not found at ${ENV_FILE}"
         err "Copy .env.example to .env and fill in production values."
         exit 1
     fi
+    set -a
+    # shellcheck disable=SC1090
+    source "${ENV_FILE}"
+    set +a
+
+    if [[ -z "${DOCKER_USERNAME:-}" ]]; then
+        err "DOCKER_USERNAME not set in .env"
+        exit 1
+    fi
+    DOCKER_HUB_USER="${DOCKER_USERNAME}"
+
+    IMAGES=(
+        "${DOCKER_HUB_USER}/${PROJECT}-frontend"
+        "${DOCKER_HUB_USER}/${PROJECT}-backend"
+    )
 
     local tag="${arg}"
 

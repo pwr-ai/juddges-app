@@ -204,7 +204,7 @@ Next.js 15 with App Router:
 - CORS configured for cross-origin requests during development
 
 ### Production Deployment Architecture
-**Docker Hub Registry**: `laugustyniak/juddges-{frontend,backend}`
+**Docker Hub Registry**: `${DOCKER_USERNAME}/juddges-{frontend,backend}` (username from `.env`)
 
 **Image Strategy**:
 - Two images built: `juddges-frontend` and `juddges-backend`
@@ -292,7 +292,7 @@ Next.js 15 with App Router:
 ### Development vs Production
 - Development uses `docker-compose.dev.yml` with volume mounts for hot reload
 - Production uses `docker-compose.yml` with code baked into Docker images
-- Both configurations source variables from `.env` and `.env.secrets`
+- Both configurations source variables from `.env`
 
 ## Port Configuration
 - **Frontend**:

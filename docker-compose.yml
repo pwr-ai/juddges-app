@@ -21,7 +21,7 @@ services:
   # ============================================================================
 
   frontend:
-    image: laugustyniak/juddges-frontend:${JUDDGES_IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME}/juddges-frontend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -79,7 +79,7 @@ services:
           memory: 1G
 
   backend:
-    image: laugustyniak/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -133,7 +133,7 @@ services:
           memory: 12G
 
   backend-worker:
-    image: laugustyniak/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile

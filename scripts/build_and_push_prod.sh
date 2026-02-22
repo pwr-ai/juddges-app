@@ -14,9 +14,8 @@
 set -euo pipefail
 
 # ------------------------------------------------------------------------------
-# Configuration
+# Configuration (DOCKER_USERNAME and DOCKER_TOKEN loaded from .env)
 # ------------------------------------------------------------------------------
-DOCKER_HUB_USER="laugustyniak"
 PROJECT="juddges"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -40,14 +39,26 @@ warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 
 # ------------------------------------------------------------------------------
-# Ensure Docker Hub login
+# Ensure Docker Hub login (uses DOCKER_USERNAME / DOCKER_TOKEN from .env)
 # ------------------------------------------------------------------------------
 ensure_docker_login() {
+    if [[ -z "${DOCKER_USERNAME:-}" ]]; then
+        err "DOCKER_USERNAME not set in .env"
+        exit 1
+    fi
+    if [[ -z "${DOCKER_TOKEN:-}" ]]; then
+        err "DOCKER_TOKEN not set in .env"
+        exit 1
+    fi
+
+    DOCKER_HUB_USER="${DOCKER_USERNAME}"
+
     if docker info 2>/dev/null | grep -q "Username: ${DOCKER_HUB_USER}"; then
         ok "Already logged in to Docker Hub as ${DOCKER_HUB_USER}"
     else
-        info "Not logged in to Docker Hub. Logging in..."
-        docker login -u "${DOCKER_HUB_USER}"
+        info "Logging in to Docker Hub as ${DOCKER_HUB_USER} ..."
+        echo "${DOCKER_TOKEN}" | docker login -u "${DOCKER_HUB_USER}" --password-stdin
+        ok "Logged in to Docker Hub"
     fi
 }
 
@@ -110,6 +121,50 @@ resolve_version() {
     else
         increment_version "${current}" "${arg}"
     fi
+}
+
+# ------------------------------------------------------------------------------
+# Sync version across project files
+# ------------------------------------------------------------------------------
+sync_version() {
+    local version="$1"
+
+    info "Syncing version ${version} across project files ..."
+
+    # 1. VERSION file (plain text)
+    echo "${version}" > "${REPO_ROOT}/VERSION"
+    ok "  VERSION"
+
+    # 2. backend/pyproject.toml
+    local pyproject="${REPO_ROOT}/backend/pyproject.toml"
+    if [[ -f "${pyproject}" ]]; then
+        sed -i "s/^version = \".*\"/version = \"${version}\"/" "${pyproject}"
+        ok "  backend/pyproject.toml"
+    else
+        warn "  backend/pyproject.toml not found, skipping"
+    fi
+
+    # 3. frontend/package.json
+    local pkg_json="${REPO_ROOT}/frontend/package.json"
+    if [[ -f "${pkg_json}" ]]; then
+        sed -i "s/\"version\": \".*\"/\"version\": \"${version}\"/" "${pkg_json}"
+        ok "  frontend/package.json"
+    else
+        warn "  frontend/package.json not found, skipping"
+    fi
+
+    # 4. .env.example — update or add JUDDGES_IMAGE_TAG line
+    local env_example="${REPO_ROOT}/.env.example"
+    if [[ -f "${env_example}" ]]; then
+        if grep -q "^# JUDDGES_IMAGE_TAG=" "${env_example}"; then
+            sed -i "s/^# JUDDGES_IMAGE_TAG=.*/# JUDDGES_IMAGE_TAG=${version}/" "${env_example}"
+        elif grep -q "^JUDDGES_IMAGE_TAG=" "${env_example}"; then
+            sed -i "s/^JUDDGES_IMAGE_TAG=.*/JUDDGES_IMAGE_TAG=${version}/" "${env_example}"
+        fi
+        ok "  .env.example"
+    fi
+
+    echo ""
 }
 
 # ------------------------------------------------------------------------------
@@ -204,11 +259,14 @@ main() {
     fi
     echo ""
 
+    # Sync version across project files
+    sync_version "${new_version}"
+
+    # Load .env for build args and Docker credentials
+    load_env
+
     # Login to Docker Hub
     ensure_docker_login
-
-    # Load .env for build args
-    load_env
 
     # Build and push each image
     for entry in "${IMAGES[@]}"; do
@@ -217,16 +275,26 @@ main() {
         echo ""
     done
 
+    # Commit version-synced files
+    info "Committing version files ..."
+    git add \
+        "${REPO_ROOT}/VERSION" \
+        "${REPO_ROOT}/backend/pyproject.toml" \
+        "${REPO_ROOT}/frontend/package.json" \
+        "${REPO_ROOT}/.env.example"
+    git commit -m "release: v${new_version}" || warn "Nothing to commit (files already up to date)"
+
     # Create git tag
     info "Creating git tag v${new_version} ..."
     git tag -a "v${new_version}" -m "Release v${new_version}"
     ok "Created tag v${new_version}"
 
-    # Push tag to remote
-    read -rp "Push tag v${new_version} to origin? [y/N] " push_tag
+    # Push commit and tag to remote
+    read -rp "Push commit and tag v${new_version} to origin? [y/N] " push_tag
     if [[ "${push_tag}" == "y" || "${push_tag}" == "Y" ]]; then
+        git push origin HEAD
         git push origin "v${new_version}"
-        ok "Pushed tag v${new_version} to origin"
+        ok "Pushed commit and tag v${new_version} to origin"
     fi
 
     echo ""
