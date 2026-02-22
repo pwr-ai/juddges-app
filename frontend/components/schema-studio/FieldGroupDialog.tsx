@@ -19,7 +19,11 @@ import { getFieldTypeLabel } from "@/lib/schema-utils";
 import { cn } from "@/lib/utils";
 import type { SchemaField } from "@/hooks/schema-editor/types";
 
+let _groupFieldKeyCounter = 0;
+const newGroupFieldKey = () => `gf-${++_groupFieldKeyCounter}`;
+
 interface GroupField {
+  _key: string;
   name: string;
   type: string;
   description: string;
@@ -69,6 +73,7 @@ export function FieldGroupDialog({
                 const hasEnumRules = f.validation_rules?.enum && Array.isArray(f.validation_rules.enum) && f.validation_rules.enum.length > 0;
                 const hasDateFormat = f.validation_rules?.format === 'date';
                 return {
+                  _key: newGroupFieldKey(),
                   name: f.field_name,
                   type: hasEnumRules ? "string" : hasDateFormat ? "date" : f.field_type,
                   description: f.description || "",
@@ -76,14 +81,14 @@ export function FieldGroupDialog({
                   isChoice: hasEnumRules
                 };
               })
-            : [{ name: "", type: "string", description: "", enumValues: "", isChoice: false }]
+            : [{ _key: newGroupFieldKey(), name: "", type: "string", description: "", enumValues: "", isChoice: false }]
         );
         setFieldGroupPhase(1);
       } else {
         // Creating new group
         setFieldGroupName("");
         setFieldGroupDescription("");
-        setGroupFields([{ name: "", type: "string", description: "", enumValues: "", isChoice: false }]);
+        setGroupFields([{ _key: newGroupFieldKey(), name: "", type: "string", description: "", enumValues: "", isChoice: false }]);
         setFieldGroupPhase(1);
       }
     }
@@ -95,7 +100,7 @@ export function FieldGroupDialog({
   };
 
   const handleAddGroupField = () => {
-    setGroupFields([...groupFields, { name: "", type: "string", description: "", enumValues: "", isChoice: false }]);
+    setGroupFields([...groupFields, { _key: newGroupFieldKey(), name: "", type: "string", description: "", enumValues: "", isChoice: false }]);
   };
 
   const handleRemoveGroupField = (index: number) => {
@@ -119,7 +124,7 @@ export function FieldGroupDialog({
     onOpenChange(false);
     setFieldGroupName("");
     setFieldGroupDescription("");
-    setGroupFields([{ name: "", type: "string", description: "", enumValues: "", isChoice: false }]);
+    setGroupFields([{ _key: newGroupFieldKey(), name: "", type: "string", description: "", enumValues: "", isChoice: false }]);
     setFieldGroupPhase(1);
   };
 
@@ -261,7 +266,7 @@ export function FieldGroupDialog({
                       <div className="space-y-1.5">
                         {groupFields.map((field, index) => (
                           <div
-                            key={index}
+                            key={field._key}
                             className="flex items-center justify-between p-2 rounded-md bg-white/60 dark:bg-slate-800/60 border border-primary/10 hover:border-primary/20 transition-colors"
                           >
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -287,7 +292,7 @@ export function FieldGroupDialog({
                   <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                     {groupFields.map((field, index) => (
                       <div
-                        key={index}
+                        key={field._key}
                         className="border rounded-lg p-3 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm space-y-2"
                       >
                         <div className="flex items-start justify-between gap-2">

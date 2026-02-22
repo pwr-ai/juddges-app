@@ -8,7 +8,7 @@ Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -437,7 +437,7 @@ async def get_privacy_policy(
             "effective_date": "2025-01-01",
             "message": "Privacy policy document should be hosted separately and referenced here.",
             "url": "/docs/privacy-policy.html",
-            "last_updated": datetime.utcnow().isoformat(),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
         }
     )
 
@@ -461,7 +461,7 @@ async def get_terms_of_service(
             "effective_date": "2025-01-01",
             "message": "Terms of service document should be hosted separately and referenced here.",
             "url": "/docs/terms-of-service.html",
-            "last_updated": datetime.utcnow().isoformat(),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
         }
     )
 

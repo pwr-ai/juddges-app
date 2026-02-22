@@ -8,7 +8,7 @@ Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -218,7 +218,9 @@ async def update_consent(
             marketing_consent=consent_data.get("marketing_consent", False),
             marketing_consent_date=consent_data.get("marketing_consent_date"),
             is_compliant=is_compliant,
-            last_updated=consent_data.get("updated_at", datetime.utcnow().isoformat()),
+            last_updated=consent_data.get(
+                "updated_at", datetime.now(timezone.utc).isoformat()
+            ),
         )
 
         action_word = "accepted" if request.accepted else "revoked"
@@ -279,7 +281,7 @@ async def get_consent_status(user: AuthenticatedUser = Depends(get_current_user)
                 data_processing_consent=False,
                 marketing_consent=False,
                 is_compliant=False,
-                last_updated=datetime.utcnow().isoformat(),
+                last_updated=datetime.now(timezone.utc).isoformat(),
             )
 
         consent_data = result.data[0]
@@ -319,7 +321,9 @@ async def get_consent_status(user: AuthenticatedUser = Depends(get_current_user)
             marketing_consent=consent_data.get("marketing_consent", False),
             marketing_consent_date=consent_data.get("marketing_consent_date"),
             is_compliant=is_compliant,
-            last_updated=consent_data.get("updated_at", datetime.utcnow().isoformat()),
+            last_updated=consent_data.get(
+                "updated_at", datetime.now(timezone.utc).isoformat()
+            ),
         )
 
     except Exception as e:

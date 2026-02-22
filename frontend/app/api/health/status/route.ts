@@ -30,15 +30,8 @@ export async function GET() {
 
     const data = await response.json();
 
-    // For 503, backend includes status in detail field
     if (!response.ok) {
-      if (response.status === 503) {
-        return NextResponse.json(data.detail || data, { status: 200 });
-      }
-      return NextResponse.json(
-        { error: `Backend error: ${response.statusText}` },
-        { status: response.status }
-      );
+      return NextResponse.json(data.detail || data, { status: response.status });
     }
 
     return NextResponse.json(data, { status: 200 });

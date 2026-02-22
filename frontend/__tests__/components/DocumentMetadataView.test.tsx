@@ -10,7 +10,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import DocumentMetadataView from '@/components/document-metadata-view';
+import { DocumentMetadataView } from '@/components/document-metadata-view';
 
 describe('DocumentMetadataView Component', () => {
   describe('Basic Rendering', () => {

@@ -10,7 +10,7 @@ Includes:
 - SSO login event audit log
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -359,7 +359,7 @@ async def update_connection_status(
             .update(
                 {
                     "status": update.status,
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             )
             .eq("id", connection_id)

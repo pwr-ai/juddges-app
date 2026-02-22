@@ -17,7 +17,10 @@ describe('SearchPagination Component', () => {
   const defaultProps = {
     currentPage: 1,
     totalPages: 10,
+    totalResults: 100,
+    pageSize: 10,
     onPageChange: jest.fn(),
+    onPageSizeChange: jest.fn(),
   };
 
   beforeEach(() => {
@@ -350,16 +353,14 @@ describe('SearchPagination Component', () => {
   });
 
   describe('Visual Feedback', () => {
-    it('should show loading state when navigating', () => {
+    it('should render pagination without loading indicator (not supported)', () => {
       const { container } = render(
-        <SearchPagination {...defaultProps} isLoading={true} />
+        <SearchPagination {...defaultProps} />
       );
 
-      // Check if loading indicators are present (if component supports it)
-      const loadingIndicator = container.querySelector('[data-loading="true"]');
-      if (loadingIndicator) {
-        expect(loadingIndicator).toBeInTheDocument();
-      }
+      // The component does not have a loading state prop
+      // Verify the pagination renders correctly
+      expect(container.firstChild).not.toBeNull();
     });
 
     it('should maintain visual consistency across different page counts', () => {

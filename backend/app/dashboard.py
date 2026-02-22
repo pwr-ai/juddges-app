@@ -137,7 +137,7 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
             logger.warning(f"Redis cache read failed: {e}")
 
     # Fallback to in-memory cache
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     if (
         _stats_cache["data"] is not None
         and _stats_cache["timestamp"] is not None

@@ -34,13 +34,10 @@ describe('SourceCard Component', () => {
     full_text: 'Full text of the judgment...',
     thesis: null,
     keywords: ['contract', 'commercial law'],
-    issuing_body: 'Supreme Court',
-    ingestion_date: '2024-01-20',
-    last_updated: '2024-01-20',
-    processing_status: 'completed',
-    source_url: 'https://example.com/doc-123',
+    issuing_body: { name: 'Supreme Court', type: 'court' },
     legal_references: null,
     legal_concepts: null,
+    score: null,
     court_name: 'Supreme Court',
     department_name: 'Commercial Division',
     presiding_judge: null,
@@ -50,7 +47,14 @@ describe('SourceCard Component', () => {
     legal_bases: null,
     extracted_legal_bases: null,
     references: null,
-    metadata: null,
+    factual_state: null,
+    legal_state: null,
+    metadata: {
+      ingestion_date: '2024-01-20',
+      last_updated: '2024-01-20',
+      processing_status: 'completed',
+      source_url: 'https://example.com/doc-123',
+    },
   };
 
   describe('Rendering - Judgment Documents', () => {

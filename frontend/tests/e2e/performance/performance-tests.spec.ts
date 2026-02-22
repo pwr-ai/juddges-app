@@ -218,8 +218,8 @@ test.describe('Performance Tests', () => {
 
     // Get initial memory (if available)
     const initialMemory = await page.evaluate(() => {
-      if (performance.memory) {
-        return performance.memory.usedJSHeapSize;
+      if ((performance as any).memory) {
+        return (performance as any).memory.usedJSHeapSize;
       }
       return 0;
     });
@@ -235,8 +235,8 @@ test.describe('Performance Tests', () => {
 
     // Get final memory
     const finalMemory = await page.evaluate(() => {
-      if (performance.memory) {
-        return performance.memory.usedJSHeapSize;
+      if ((performance as any).memory) {
+        return (performance as any).memory.usedJSHeapSize;
       }
       return 0;
     });
@@ -256,7 +256,7 @@ test.describe('Performance Tests', () => {
     await page.goto('/search');
 
     // Collect Web Vitals
-    const vitals = await page.evaluate(() => {
+    const vitals = await page.evaluate((): Promise<{ fcp?: number; lcp?: number; cls?: number }> => {
       return new Promise((resolve) => {
         const metrics: any = {};
 

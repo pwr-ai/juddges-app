@@ -105,9 +105,15 @@ export function LoginFormEnhanced({
 
       if (ssoError) throw ssoError
 
-      // Redirect to the IdP login page
       if (data?.url) {
-        window.location.href = data.url
+        try {
+          const url = new URL(data.url, window.location.origin)
+          if (url.protocol === 'https:' || url.protocol === 'http:' || url.origin === window.location.origin) {
+            window.location.href = url.toString()
+          }
+        } catch {
+          pageLogger.error('Invalid SSO redirect URL', { url: data.url })
+        }
       }
     } catch (error: unknown) {
       const errorMessage =

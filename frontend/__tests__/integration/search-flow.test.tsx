@@ -42,7 +42,7 @@ jest.mock('@/lib/supabase/client', () => ({
 }));
 
 // Mock search store
-const mockSearchStore = {
+const mockSearchStore: Record<string, any> = {
   query: '',
   setQuery: jest.fn(),
   documentTypes: ['judgment'],
@@ -51,7 +51,7 @@ const mockSearchStore = {
   setSelectedLanguages: jest.fn(),
   isSearching: false,
   setIsSearching: jest.fn(),
-  error: null,
+  error: null as string | null,
   setError: jest.fn(),
   searchType: 'thinking',
   setSearchType: jest.fn(),
@@ -68,13 +68,13 @@ const mockSearchStore = {
   setDateFilter: jest.fn(),
   resetFilters: jest.fn(),
   getActiveFilterCount: jest.fn(() => 0),
-  searchMetadata: [],
+  searchMetadata: [] as any[],
   setSearchMetadata: jest.fn(),
   currentPage: 1,
   setCurrentPage: jest.fn(),
   pageSize: 10,
   loadState: jest.fn(),
-  getFilteredMetadata: jest.fn(() => []),
+  getFilteredMetadata: jest.fn(() => [] as any[]),
   getFilteredMetadataCount: jest.fn(() => 0),
   getAvailableFiltersFromMetadata: jest.fn(() => ({
     keywords: [],

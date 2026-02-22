@@ -7,7 +7,7 @@ Supports A/B tests, multivariate tests, and feature flags.
 Author: Juddges Backend Team
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -273,7 +273,7 @@ async def get_active_experiments(
 
     try:
         client = get_user_db_client(user)
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).isoformat()
 
         result = (
             client.table("experiments")
@@ -323,7 +323,7 @@ async def assign_variant(
             "experiment_id": experiment_id,
             "variant_id": variant_id,
             "user_id": user.id,
-            "assigned_at": datetime.utcnow().isoformat(),
+            "assigned_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = (
@@ -364,7 +364,7 @@ async def track_experiment_event(
             "event_type": request.event_type,
             "event_value": request.event_value,
             "metadata": request.metadata or {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = client.table("experiment_events").insert(event_data).execute()

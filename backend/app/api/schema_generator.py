@@ -7,7 +7,7 @@ schema generation functionality.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -252,7 +252,7 @@ def get_or_create_agent(
         graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
     )
 
-    _generation_sessions[session_id] = (agent, datetime.now())
+    _generation_sessions[session_id] = (agent, datetime.now(timezone.utc))
     return agent
 
 
@@ -373,7 +373,7 @@ async def schema_chat(
                 conversation_id=session_id,
                 collection_id=params.collection_id,
                 confidence_score=None,
-                session_metadata={"created_at": datetime.now().isoformat()},
+                session_metadata={"created_at": datetime.now(timezone.utc).isoformat()},
             )
 
             try:
@@ -539,7 +539,7 @@ async def test_schema(
         from app.utils.document_fetcher import get_documents_by_id
 
         for doc_id in params.document_ids:
-            start_time = datetime.now()
+            start_time = datetime.now(timezone.utc)
 
             try:
                 # Retrieve document from Supabase by ID
@@ -582,7 +582,9 @@ async def test_schema(
                     logger.error(f"Extraction failed for document {doc_id}: {e}")
                     raise ValueError(f"Extraction failed: {str(e)}")
 
-                execution_time = (datetime.now() - start_time).total_seconds() * 1000
+                execution_time = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
                 total_time += execution_time
 
                 results.append(
@@ -598,7 +600,9 @@ async def test_schema(
 
             except ValueError as e:
                 # User-friendly errors (document not found, missing content, etc.)
-                execution_time = (datetime.now() - start_time).total_seconds() * 1000
+                execution_time = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
                 total_time += execution_time
 
                 logger.warning(f"Document processing error for {doc_id}: {e}")
@@ -616,7 +620,9 @@ async def test_schema(
 
             except Exception as e:
                 # Unexpected errors
-                execution_time = (datetime.now() - start_time).total_seconds() * 1000
+                execution_time = (
+                    datetime.now(timezone.utc) - start_time
+                ).total_seconds() * 1000
                 total_time += execution_time
 
                 logger.error(

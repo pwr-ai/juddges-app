@@ -17,7 +17,7 @@ Date: 2025-10-12
 """
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks
@@ -177,7 +177,7 @@ class AuditService:
                 else None,  # Truncate user agent
                 "request_duration_ms": duration_ms,
                 "resource_type": "query",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -240,7 +240,7 @@ class AuditService:
                 "ip_address": AuditService._anonymize_ip(ip_address),
                 "resource_type": "document",
                 "resource_id": document_id,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -297,7 +297,7 @@ class AuditService:
                 "output_data": {},
                 "ip_address": AuditService._anonymize_ip(ip_address),
                 "resource_type": "export",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -374,7 +374,7 @@ class AuditService:
                 "http_status_code": http_status_code,
                 "api_endpoint": api_endpoint,
                 "error_message": error_message,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -418,9 +418,9 @@ class AuditService:
 
             # Set default date range
             if not start_date:
-                start_date = datetime.utcnow() - timedelta(days=90)
+                start_date = datetime.now(timezone.utc) - timedelta(days=90)
             if not end_date:
-                end_date = datetime.utcnow()
+                end_date = datetime.now(timezone.utc)
 
             # Build query
             query = client.table("audit_logs").select("*").eq("user_id", user_id)

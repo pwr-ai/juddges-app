@@ -30,10 +30,7 @@ def setup_langchain_cache() -> None:
         Exception: If cache setup fails (logged but not raised to prevent app crash)
     """
     try:
-        database_url = os.getenv(
-            "LANGCHAIN_CACHE_DATABASE_URL",
-            "postgresql://llm_cache:xNnseZW5SjjU5j7DKGyW_2oNFRsq1vdBGpgjwzsqB-w@host.docker.internal:5555/llm_cache",
-        )
+        database_url = os.getenv("LANGCHAIN_CACHE_DATABASE_URL")
 
         logger.info(
             f"Setting up LangChain PostgreSQL cache at {database_url.split('@')[1]}"

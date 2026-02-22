@@ -535,9 +535,9 @@ export default function ChatPage(): React.JSX.Element {
                       />
                     ))
                   ) : (
-                    currentExamples.slice(0, 4).map((example, index) => (
+                    currentExamples.slice(0, 4).map((example) => (
                       <button
-                        key={index}
+                        key={example.query}
                         onClick={() => handleExampleClick(example.query)}
                         className={cn(
                           // Base: Floating Card - Glass Tile

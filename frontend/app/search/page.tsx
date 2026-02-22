@@ -149,14 +149,13 @@ function SearchPageContent(): React.JSX.Element | null {
     ? loadingChunksRaw
     : Array.from(loadingChunksRaw as unknown as Set<string>);
 
-  // Get filtered metadata and compute pagination (always rely on latest store state)
-  const filteredMetadata = getFilteredMetadata();
+  const filteredMetadata = useMemo(() => getFilteredMetadata(), [getFilteredMetadata]);
 
-  const filteredCount = getFilteredMetadataCount();
+  const filteredCount = useMemo(() => getFilteredMetadataCount(), [getFilteredMetadataCount]);
 
-  const availableFilters = getAvailableFiltersFromMetadata();
+  const availableFilters = useMemo(() => getAvailableFiltersFromMetadata(), [getAvailableFiltersFromMetadata]);
 
-  const activeFilterCount = getActiveFilterCount();
+  const activeFilterCount = useMemo(() => getActiveFilterCount(), [getActiveFilterCount]);
 
   const computedTotalPages = useMemo(() => {
     return Math.ceil(filteredCount / pageSize);
@@ -423,6 +422,23 @@ function SearchPageContent(): React.JSX.Element | null {
     searchInputRef.current?.focus();
   };
 
+  const searchContextParams = useMemo(() => ({
+    searchQuery: query,
+    searchMode: lastSearchMode || searchType,
+    filters: {
+      courts: Array.from(filters.issuingBodies || []),
+      date_from: filters.dateFrom ? filters.dateFrom.toISOString().split('T')[0] : null,
+      date_to: filters.dateTo ? filters.dateTo.toISOString().split('T')[0] : null,
+      document_types: documentTypes,
+      languages: Array.from(selectedLanguages),
+      keywords: Array.from(filters.keywords || []),
+      legal_concepts: Array.from(filters.legalConcepts || []),
+      issuing_bodies: Array.from(filters.issuingBodies || []),
+    },
+    totalResults: searchMetadata.length,
+    searchTimestamp: searchTimestamp,
+  }), [query, lastSearchMode, searchType, filters, documentTypes, selectedLanguages, searchMetadata.length, searchTimestamp]);
+
   const showExpanded = searchMetadata.length === 0 && !error && !(query && hasPerformedSearch);
 
   if (!mounted) {
@@ -663,22 +679,7 @@ function SearchPageContent(): React.JSX.Element | null {
                     isLoadingMore={isLoadingMore}
                     paginationMetadata={paginationMetadata}
                     cachedEstimatedTotal={cachedEstimatedTotal}
-                    searchContextParams={{
-                      searchQuery: query,
-                      searchMode: lastSearchMode || searchType,
-                      filters: {
-                        courts: Array.from(filters.issuingBodies || []),
-                        date_from: filters.dateFrom ? filters.dateFrom.toISOString().split('T')[0] : null,
-                        date_to: filters.dateTo ? filters.dateTo.toISOString().split('T')[0] : null,
-                        document_types: documentTypes,
-                        languages: Array.from(selectedLanguages),
-                        keywords: Array.from(filters.keywords || []),
-                        legal_concepts: Array.from(filters.legalConcepts || []),
-                        issuing_bodies: Array.from(filters.issuingBodies || []),
-                      },
-                      totalResults: searchMetadata.length,
-                      searchTimestamp: searchTimestamp,
-                    }}
+                    searchContextParams={searchContextParams}
                   />
                 )}
               </div>

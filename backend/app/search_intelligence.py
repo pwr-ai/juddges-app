@@ -8,7 +8,7 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Literal
 
 from pydantic import BaseModel, Field
@@ -212,7 +212,7 @@ class IntelligentRanker:
             return 0.3  # Low score for unknown year
 
         if current_year is None:
-            current_year = datetime.now().year
+            current_year = datetime.now(timezone.utc).year
 
         age = current_year - year
 
@@ -390,7 +390,7 @@ class IntelligentRanker:
         if not year:
             return "Date unknown"
 
-        current_year = datetime.now().year
+        current_year = datetime.now(timezone.utc).year
         age = current_year - year
 
         if age <= 0:

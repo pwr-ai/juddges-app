@@ -105,8 +105,8 @@ describe('ErrorBoundary', () => {
   });
 
   it('shows error details in development mode', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, 'NODE_ENV');
+    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true });
 
     render(
       <ErrorBoundary>
@@ -116,12 +116,14 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Error details')).toBeInTheDocument();
 
-    process.env.NODE_ENV = originalEnv;
+    if (originalDescriptor) {
+      Object.defineProperty(process.env, 'NODE_ENV', originalDescriptor);
+    }
   });
 
   it('hides error details in production mode', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
+    const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, 'NODE_ENV');
+    Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', configurable: true });
 
     render(
       <ErrorBoundary>
@@ -131,7 +133,9 @@ describe('ErrorBoundary', () => {
 
     expect(screen.queryByText('Error details')).not.toBeInTheDocument();
 
-    process.env.NODE_ENV = originalEnv;
+    if (originalDescriptor) {
+      Object.defineProperty(process.env, 'NODE_ENV', originalDescriptor);
+    }
   });
 
   it('renders home button that navigates to home page', () => {

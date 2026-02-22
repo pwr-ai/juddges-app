@@ -10,9 +10,10 @@ This module provides:
 """
 
 import asyncio
+import re
 import random
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
 
 from fastapi import APIRouter, HTTPException, Query, Path, Response
@@ -289,7 +290,7 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[
     cache_key = "with_coords" if only_with_coordinates else "all"
 
     async with _cache_lock:
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         if cache_key not in _document_ids_cache:
             _document_ids_cache[cache_key] = {"data": None, "timestamp": None}
 
@@ -332,7 +333,7 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[
     # Update cache
     async with _cache_lock:
         _document_ids_cache[cache_key]["data"] = document_ids
-        _document_ids_cache[cache_key]["timestamp"] = datetime.now()
+        _document_ids_cache[cache_key]["timestamp"] = datetime.now(timezone.utc)
 
     return document_ids
 
@@ -417,6 +418,163 @@ async def get_documents_sample(
     return BatchDocumentsResponse(documents=documents)
 
 
+def _normalize_ref(ref_text: str) -> str:
+    match = re.search(r"r\.\s*-\s*(.+?)(?:\s*\(Dz\.|\s*-\s*art\.)", ref_text)
+    if match:
+        return match.group(1).strip()
+    return ref_text[:80].strip()
+
+
+def _build_ref_index(
+    docs: list[dict],
+) -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
+    ref_to_docs: dict[str, list[str]] = {}
+    doc_refs: dict[str, list[str]] = {}
+    doc_raw_refs: dict[str, list[str]] = {}
+
+    for doc in docs:
+        doc_id = doc["document_id"]
+        refs = doc.get("references", []) or []
+        normalized = [_normalize_ref(r) for r in refs]
+        doc_refs[doc_id] = normalized
+        doc_raw_refs[doc_id] = refs
+
+        for norm_ref in set(normalized):
+            if norm_ref not in ref_to_docs:
+                ref_to_docs[norm_ref] = []
+            ref_to_docs[norm_ref].append(doc_id)
+
+    return ref_to_docs, doc_refs, doc_raw_refs
+
+
+def _calc_authority_scores(
+    docs: list[dict],
+    doc_refs: dict[str, list[str]],
+    ref_to_docs: dict[str, list[str]],
+) -> dict[str, float]:
+    max_sharing = max((len(ids) for ids in ref_to_docs.values()), default=1)
+    authority_scores: dict[str, float] = {}
+
+    for doc in docs:
+        doc_id = doc["document_id"]
+        refs = doc_refs.get(doc_id, [])
+        if not refs:
+            authority_scores[doc_id] = 0.0
+            continue
+        sharing_counts = [len(ref_to_docs.get(r, [])) for r in set(refs)]
+        avg_sharing = sum(sharing_counts) / len(sharing_counts) if sharing_counts else 0
+        authority_scores[doc_id] = min(avg_sharing / max(max_sharing, 1), 1.0)
+
+    return authority_scores
+
+
+def _build_citation_nodes(
+    docs: list[dict],
+    doc_refs: dict[str, list[str]],
+    authority_scores: dict[str, float],
+) -> list[CitationNode]:
+    nodes = []
+    for doc in docs:
+        doc_id = doc["document_id"]
+        year = None
+        if doc.get("date_issued"):
+            try:
+                if isinstance(doc["date_issued"], str):
+                    dt = datetime.fromisoformat(
+                        doc["date_issued"].replace("Z", "+00:00")
+                    )
+                    year = dt.year
+            except (ValueError, TypeError):
+                pass
+
+        refs = doc.get("references", []) or []
+        nodes.append(
+            CitationNode(
+                id=doc_id,
+                title=doc.get("title") or f"Document {doc_id}",
+                document_type=doc.get("document_type", "unknown"),
+                year=year,
+                x=float(doc.get("x") or 0.0),
+                y=float(doc.get("y") or 0.0),
+                citation_count=len(refs),
+                authority_score=round(authority_scores.get(doc_id, 0.0), 3),
+                references=refs,
+                metadata={
+                    "court_name": doc.get("court_name"),
+                    "document_number": doc.get("document_number"),
+                    "language": doc.get("language"),
+                    "date_issued": doc.get("date_issued"),
+                },
+            )
+        )
+    return nodes
+
+
+def _build_citation_edges(
+    docs: list[dict],
+    doc_refs: dict[str, list[str]],
+    min_shared_refs: int,
+) -> list[CitationEdge]:
+    edges = []
+    doc_ids = [doc["document_id"] for doc in docs]
+    seen_pairs: set[tuple[str, str]] = set()
+
+    for i, doc_id_a in enumerate(doc_ids):
+        refs_a = set(doc_refs.get(doc_id_a, []))
+        for j in range(i + 1, len(doc_ids)):
+            doc_id_b = doc_ids[j]
+            refs_b = set(doc_refs.get(doc_id_b, []))
+            shared = refs_a & refs_b
+            if len(shared) < min_shared_refs:
+                continue
+            pair = (min(doc_id_a, doc_id_b), max(doc_id_a, doc_id_b))
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+            union = refs_a | refs_b
+            weight = len(shared) / len(union) if union else 0.0
+            edges.append(
+                CitationEdge(
+                    source=doc_id_a,
+                    target=doc_id_b,
+                    shared_refs=list(shared),
+                    weight=round(weight, 3),
+                )
+            )
+
+    return edges
+
+
+def _build_citation_statistics(
+    docs: list[dict],
+    ref_to_docs: dict[str, list[str]],
+    authority_scores: dict[str, float],
+    nodes: list[CitationNode],
+    edges: list[CitationEdge],
+) -> CitationNetworkStatistics:
+    all_citation_counts = [len(doc.get("references", []) or []) for doc in docs]
+    ref_counts = sorted(
+        [(ref, len(ids)) for ref, ids in ref_to_docs.items()],
+        key=lambda x: x[1],
+        reverse=True,
+    )[:10]
+    most_cited = [{"reference": ref, "count": count} for ref, count in ref_counts]
+    all_authority = list(authority_scores.values())
+
+    return CitationNetworkStatistics(
+        total_nodes=len(nodes),
+        total_edges=len(edges),
+        avg_citations=round(sum(all_citation_counts) / len(all_citation_counts), 2)
+        if all_citation_counts
+        else 0.0,
+        max_citations=max(all_citation_counts) if all_citation_counts else 0,
+        most_cited_refs=most_cited,
+        avg_authority_score=round(sum(all_authority) / len(all_authority), 3)
+        if all_authority
+        else 0.0,
+    )
+
+
 @router.get(
     "/citation-network",
     response_model=CitationNetworkResponse,
@@ -438,7 +596,6 @@ async def get_citation_network(
     try:
         db = get_vector_db()
 
-        # Fetch documents with references
         query = db.client.table("legal_documents").select(
             'document_id, title, document_type, date_issued, x, y, "references", court_name, document_number, language'
         )
@@ -451,8 +608,9 @@ async def get_citation_network(
                 query = query.in_("document_type", types_list)
 
         response = query.not_.is_("references", "null").limit(sample_size).execute()
-
         docs = response.data or []
+        docs = [d for d in docs if d.get("references") and len(d["references"]) > 0]
+
         if not docs:
             return CitationNetworkResponse(
                 nodes=[],
@@ -467,152 +625,15 @@ async def get_citation_network(
                 ),
             )
 
-        # Filter to only docs that have references
-        docs = [d for d in docs if d.get("references") and len(d["references"]) > 0]
-
-        # Normalize reference text for comparison (extract the law name before the parenthetical)
-        import re
-
-        def normalize_ref(ref_text: str) -> str:
-            """Extract law name for grouping (e.g. 'Kodeks postępowania cywilnego')."""
-            # Try to extract the law name between 'r. - ' and ' (Dz.'
-            match = re.search(r"r\.\s*-\s*(.+?)(?:\s*\(Dz\.|\s*-\s*art\.)", ref_text)
-            if match:
-                return match.group(1).strip()
-            # Fallback: use first 80 chars
-            return ref_text[:80].strip()
-
-        # Build reference index: ref -> list of doc_ids
-        ref_to_docs: dict[str, list[str]] = {}
-        doc_refs: dict[str, list[str]] = {}  # doc_id -> normalized refs
-        doc_raw_refs: dict[str, list[str]] = {}  # doc_id -> raw refs
-
-        for doc in docs:
-            doc_id = doc["document_id"]
-            refs = doc.get("references", []) or []
-            normalized = [normalize_ref(r) for r in refs]
-            doc_refs[doc_id] = normalized
-            doc_raw_refs[doc_id] = refs
-
-            for norm_ref in set(normalized):  # deduplicate per doc
-                if norm_ref not in ref_to_docs:
-                    ref_to_docs[norm_ref] = []
-                ref_to_docs[norm_ref].append(doc_id)
-
-        # Calculate authority scores
-        max_sharing = max((len(doc_ids) for doc_ids in ref_to_docs.values()), default=1)
-
-        authority_scores: dict[str, float] = {}
-        for doc in docs:
-            doc_id = doc["document_id"]
-            refs = doc_refs.get(doc_id, [])
-            if not refs:
-                authority_scores[doc_id] = 0.0
-                continue
-            # Authority = average of (how many docs share each of this doc's refs) / max
-            sharing_counts = [len(ref_to_docs.get(r, [])) for r in set(refs)]
-            avg_sharing = (
-                sum(sharing_counts) / len(sharing_counts) if sharing_counts else 0
-            )
-            authority_scores[doc_id] = min(avg_sharing / max(max_sharing, 1), 1.0)
-
-        # Build nodes
-        nodes = []
-        for doc in docs:
-            doc_id = doc["document_id"]
-            year = None
-            if doc.get("date_issued"):
-                try:
-                    from datetime import datetime
-
-                    if isinstance(doc["date_issued"], str):
-                        dt = datetime.fromisoformat(
-                            doc["date_issued"].replace("Z", "+00:00")
-                        )
-                        year = dt.year
-                except (ValueError, TypeError):
-                    pass
-
-            refs = doc.get("references", []) or []
-            nodes.append(
-                CitationNode(
-                    id=doc_id,
-                    title=doc.get("title") or f"Document {doc_id}",
-                    document_type=doc.get("document_type", "unknown"),
-                    year=year,
-                    x=float(doc.get("x") or 0.0),
-                    y=float(doc.get("y") or 0.0),
-                    citation_count=len(refs),
-                    authority_score=round(authority_scores.get(doc_id, 0.0), 3),
-                    references=refs,
-                    metadata={
-                        "court_name": doc.get("court_name"),
-                        "document_number": doc.get("document_number"),
-                        "language": doc.get("language"),
-                        "date_issued": doc.get("date_issued"),
-                    },
-                )
-            )
-
-        # Build edges from shared references
-        edges = []
-        doc_ids = [doc["document_id"] for doc in docs]
-        seen_pairs: set[tuple[str, str]] = set()
-
-        for i, doc_id_a in enumerate(doc_ids):
-            refs_a = set(doc_refs.get(doc_id_a, []))
-            for j in range(i + 1, len(doc_ids)):
-                doc_id_b = doc_ids[j]
-                refs_b = set(doc_refs.get(doc_id_b, []))
-
-                shared = refs_a & refs_b
-                if len(shared) >= min_shared_refs:
-                    pair = (min(doc_id_a, doc_id_b), max(doc_id_a, doc_id_b))
-                    if pair not in seen_pairs:
-                        seen_pairs.add(pair)
-                        # Weight based on Jaccard similarity of references
-                        union = refs_a | refs_b
-                        weight = len(shared) / len(union) if union else 0.0
-                        edges.append(
-                            CitationEdge(
-                                source=doc_id_a,
-                                target=doc_id_b,
-                                shared_refs=list(shared),
-                                weight=round(weight, 3),
-                            )
-                        )
-
-        # Compute statistics
-        all_citation_counts = [len(doc.get("references", []) or []) for doc in docs]
-
-        # Most cited references
-        ref_counts = sorted(
-            [(ref, len(doc_ids_list)) for ref, doc_ids_list in ref_to_docs.items()],
-            key=lambda x: x[1],
-            reverse=True,
-        )[:10]
-        most_cited = [{"reference": ref, "count": count} for ref, count in ref_counts]
-
-        all_authority = list(authority_scores.values())
-
-        statistics = CitationNetworkStatistics(
-            total_nodes=len(nodes),
-            total_edges=len(edges),
-            avg_citations=round(sum(all_citation_counts) / len(all_citation_counts), 2)
-            if all_citation_counts
-            else 0.0,
-            max_citations=max(all_citation_counts) if all_citation_counts else 0,
-            most_cited_refs=most_cited,
-            avg_authority_score=round(sum(all_authority) / len(all_authority), 3)
-            if all_authority
-            else 0.0,
+        ref_to_docs, doc_refs, _ = _build_ref_index(docs)
+        authority_scores = _calc_authority_scores(docs, doc_refs, ref_to_docs)
+        nodes = _build_citation_nodes(docs, doc_refs, authority_scores)
+        edges = _build_citation_edges(docs, doc_refs, min_shared_refs)
+        statistics = _build_citation_statistics(
+            docs, ref_to_docs, authority_scores, nodes, edges
         )
 
-        return CitationNetworkResponse(
-            nodes=nodes,
-            edges=edges,
-            statistics=statistics,
-        )
+        return CitationNetworkResponse(nodes=nodes, edges=edges, statistics=statistics)
 
     except Exception as e:
         logger.error(f"Error building citation network: {str(e)}", exc_info=True)

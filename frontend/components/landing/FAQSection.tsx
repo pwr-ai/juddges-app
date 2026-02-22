@@ -98,10 +98,10 @@ export function FAQSection({ faqs, title, subtitle }: FAQSectionProps) {
         {/* FAQs */}
         {filteredFAQs.length > 0 ? (
           <Accordion type="single" collapsible className="space-y-4">
-            {filteredFAQs.map((faq, index) => (
+            {filteredFAQs.map((faq) => (
               <AccordionItem
-                key={index}
-                value={`item-${index}`}
+                key={faq.question}
+                value={faq.question}
                 className="bg-card border border-border rounded-lg px-6"
               >
                 <AccordionTrigger className="hover:no-underline py-5">

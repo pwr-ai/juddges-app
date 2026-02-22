@@ -3,7 +3,7 @@
 import asyncio
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 import redis.asyncio as aioredis
@@ -38,7 +38,7 @@ async def check_redis(timeout: float = 3.0) -> ServiceHealth:
                 status=ServiceStatus.UNKNOWN,
                 message="Redis host not configured",
                 error="REDIS_HOST environment variable not set",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
 
         # Create Redis client with timeout
@@ -62,7 +62,7 @@ async def check_redis(timeout: float = 3.0) -> ServiceHealth:
                 status=ServiceStatus.HEALTHY,
                 response_time_ms=round(response_time, 2),
                 message=f"Connected to Redis at {redis_host}:{redis_port}",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
         finally:
             await redis_client.aclose()
@@ -75,7 +75,7 @@ async def check_redis(timeout: float = 3.0) -> ServiceHealth:
             status=ServiceStatus.UNHEALTHY,
             response_time_ms=round(response_time, 2),
             error=f"Connection timeout after {timeout}s",
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
@@ -85,7 +85,7 @@ async def check_redis(timeout: float = 3.0) -> ServiceHealth:
             status=ServiceStatus.UNHEALTHY,
             response_time_ms=round(response_time, 2),
             error=str(e),
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
 
 
@@ -110,7 +110,7 @@ async def check_postgresql(timeout: float = 3.0) -> ServiceHealth:
                 status=ServiceStatus.UNKNOWN,
                 message="PostgreSQL URL not configured",
                 error="LANGGRAPH_POSTGRES_URL environment variable not set",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
 
         # Create a temporary connection pool
@@ -131,7 +131,7 @@ async def check_postgresql(timeout: float = 3.0) -> ServiceHealth:
                     status=ServiceStatus.HEALTHY,
                     response_time_ms=round(response_time, 2),
                     message="PostgreSQL connection successful",
-                    last_checked=datetime.utcnow(),
+                    last_checked=datetime.now(timezone.utc),
                 )
 
     except asyncio.TimeoutError:
@@ -142,7 +142,7 @@ async def check_postgresql(timeout: float = 3.0) -> ServiceHealth:
             status=ServiceStatus.UNHEALTHY,
             response_time_ms=round(response_time, 2),
             error=f"Connection timeout after {timeout}s",
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
@@ -152,7 +152,7 @@ async def check_postgresql(timeout: float = 3.0) -> ServiceHealth:
             status=ServiceStatus.UNHEALTHY,
             response_time_ms=round(response_time, 2),
             error=str(e),
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
 
 
@@ -178,7 +178,7 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
                 name=service_name,
                 status=ServiceStatus.UNKNOWN,
                 message="Supabase not configured (optional service)",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
 
         # Try to create client and make simple REST call
@@ -201,7 +201,7 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
                     status=ServiceStatus.HEALTHY,
                     response_time_ms=round(response_time, 2),
                     message="Supabase REST API is accessible",
-                    last_checked=datetime.utcnow(),
+                    last_checked=datetime.now(timezone.utc),
                 )
             else:
                 logger.warning(
@@ -212,7 +212,7 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
                     status=ServiceStatus.DEGRADED,
                     response_time_ms=round(response_time, 2),
                     message=f"Supabase returned unexpected status {response.status_code}",
-                    last_checked=datetime.utcnow(),
+                    last_checked=datetime.now(timezone.utc),
                 )
 
     except asyncio.TimeoutError:
@@ -225,7 +225,7 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
             status=ServiceStatus.DEGRADED,
             response_time_ms=round(response_time, 2),
             message=f"Connection timeout after {timeout}s",
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
@@ -235,7 +235,7 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
             status=ServiceStatus.DEGRADED,
             response_time_ms=round(response_time, 2),
             message=str(e),
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
 
 
@@ -263,7 +263,7 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
                 status=ServiceStatus.UNKNOWN,
                 message="Celery not configured (optional service)",
                 error="CELERY_BROKER_URL or CELERY_BACKEND_URL not set",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
 
         # Create Celery app to inspect workers
@@ -287,7 +287,7 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
                 status=ServiceStatus.HEALTHY,
                 response_time_ms=round(response_time, 2),
                 message=f"{worker_count} Celery worker(s) active and processing tasks",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
         else:
             logger.warning("Celery health check found no active workers")
@@ -296,7 +296,7 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
                 status=ServiceStatus.DEGRADED,
                 response_time_ms=round(response_time, 2),
                 message="No active Celery workers found (background tasks may be delayed)",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
 
     except asyncio.TimeoutError:
@@ -309,7 +309,7 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
             status=ServiceStatus.DEGRADED,
             response_time_ms=round(response_time, 2),
             message=f"Worker inspection timeout after {timeout}s",
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
@@ -319,7 +319,7 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
             status=ServiceStatus.DEGRADED,
             response_time_ms=round(response_time, 2),
             message=str(e),
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
 
 
@@ -346,7 +346,7 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
                 name=service_name,
                 status=ServiceStatus.UNKNOWN,
                 message="Langfuse not configured (optional observability service)",
-                last_checked=datetime.utcnow(),
+                last_checked=datetime.now(timezone.utc),
             )
 
         # Check Langfuse health endpoint
@@ -363,7 +363,7 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
                     status=ServiceStatus.HEALTHY,
                     response_time_ms=round(response_time, 2),
                     message="Langfuse observability platform is accessible",
-                    last_checked=datetime.utcnow(),
+                    last_checked=datetime.now(timezone.utc),
                 )
             else:
                 logger.warning(
@@ -374,7 +374,7 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
                     status=ServiceStatus.DEGRADED,
                     response_time_ms=round(response_time, 2),
                     message=f"Langfuse returned unexpected status {response.status_code}",
-                    last_checked=datetime.utcnow(),
+                    last_checked=datetime.now(timezone.utc),
                 )
 
     except asyncio.TimeoutError:
@@ -387,7 +387,7 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
             status=ServiceStatus.DEGRADED,
             response_time_ms=round(response_time, 2),
             message=f"Connection timeout after {timeout}s",
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
     except Exception as e:
         response_time = (time.time() - start_time) * 1000
@@ -397,7 +397,7 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
             status=ServiceStatus.DEGRADED,
             response_time_ms=round(response_time, 2),
             message=str(e),
-            last_checked=datetime.utcnow(),
+            last_checked=datetime.now(timezone.utc),
         )
 
 

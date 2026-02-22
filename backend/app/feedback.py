@@ -8,7 +8,7 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -312,7 +312,7 @@ async def submit_search_feedback(
             "result_position": request.result_position,
             "reason": request.reason,
             "search_context": request.search_context or {},
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = client.table("search_feedback").insert(feedback_data).execute()
@@ -397,8 +397,8 @@ async def submit_feature_feedback(
             "status": "new",  # Initial status
             "attachments": request.attachments or [],
             "upvotes": 0,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = client.table("feature_requests").insert(feedback_data).execute()

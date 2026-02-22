@@ -10,7 +10,7 @@ Date: 2025-10-09
 
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import redis.asyncio as redis
@@ -147,8 +147,8 @@ async def get_or_create_guest_session(
     # Initialize session data
     session_data = {
         "searches_used": "0",
-        "created_at": datetime.utcnow().isoformat(),
-        "last_activity": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "last_activity": datetime.now(timezone.utc).isoformat(),
     }
 
     # Store session with expiry (24 hours)
@@ -189,7 +189,7 @@ async def get_guest_usage(session_id: str) -> dict:
 
     # Get TTL for expiration time
     ttl = await client.ttl(session_key)
-    expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
 
     return {
         "session_id": session_id,
@@ -214,7 +214,9 @@ async def increment_guest_search_count(session_id: str) -> bool:
     session_key = f"guest:session:{session_id}"
 
     # Update last activity
-    await client.hset(session_key, "last_activity", datetime.utcnow().isoformat())
+    await client.hset(
+        session_key, "last_activity", datetime.now(timezone.utc).isoformat()
+    )
 
     # Increment search count
     searches_used = await client.hincrby(session_key, "searches_used", 1)
@@ -244,7 +246,7 @@ async def create_guest_session(response: Response):
         session_id = await get_or_create_guest_session()
 
         # Set cookie (HttpOnly for security, SameSite=Lax for CSRF protection)
-        expires = datetime.utcnow() + timedelta(hours=SESSION_EXPIRY_HOURS)
+        expires = datetime.now(timezone.utc) + timedelta(hours=SESSION_EXPIRY_HOURS)
         response.set_cookie(
             key="guest_session_id",
             value=session_id,

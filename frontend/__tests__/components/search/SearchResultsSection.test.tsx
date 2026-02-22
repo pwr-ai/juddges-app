@@ -81,13 +81,31 @@ describe('SearchResultsSection Component', () => {
 
   const mockConvertMetadata = (metadata: LegalDocumentMetadata): SearchDocument => ({
     document_id: metadata.document_id,
-    title: metadata.title,
-    court_name: metadata.court_name,
+    title: metadata.title ?? null,
+    court_name: metadata.court_name ?? null,
     date_issued: metadata.date_issued,
     document_type: metadata.document_type,
     language: metadata.language,
-    document_number: metadata.document_number || '',
+    document_number: metadata.document_number ?? null,
     country: 'PL',
+    issuing_body: null,
+    summary: null,
+    thesis: null,
+    legal_references: null,
+    legal_concepts: null,
+    keywords: null,
+    score: null,
+    department_name: null,
+    presiding_judge: null,
+    judges: null,
+    parties: null,
+    outcome: null,
+    legal_bases: null,
+    extracted_legal_bases: null,
+    references: null,
+    factual_state: null,
+    legal_state: null,
+    full_text: null,
   });
 
   const defaultProps = {
@@ -109,9 +127,12 @@ describe('SearchResultsSection Component', () => {
     onLoadMore: jest.fn(),
     isLoadingMore: false,
     paginationMetadata: {
+      offset: 0,
+      limit: 10,
       loaded_count: 2,
       estimated_total: 100,
       has_more: true,
+      next_offset: 10,
     },
     cachedEstimatedTotal: null,
     searchContextParams: {
@@ -357,9 +378,12 @@ describe('SearchResultsSection Component', () => {
         <SearchResultsSection
           {...defaultProps}
           paginationMetadata={{
+            offset: 0,
+            limit: 10,
             loaded_count: 100,
             estimated_total: 100,
             has_more: false,
+            next_offset: null,
           }}
         />
       );
@@ -435,9 +459,12 @@ describe('SearchResultsSection Component', () => {
         <SearchResultsSection
           {...defaultProps}
           paginationMetadata={{
+            offset: 0,
+            limit: 10,
             loaded_count: 50,
             estimated_total: 200,
             has_more: true,
+            next_offset: 50,
           }}
         />
       );
@@ -452,9 +479,12 @@ describe('SearchResultsSection Component', () => {
           {...defaultProps}
           cachedEstimatedTotal={150}
           paginationMetadata={{
+            offset: 0,
+            limit: 10,
             loaded_count: 50,
             estimated_total: 200,
             has_more: true,
+            next_offset: 50,
           }}
         />
       );
@@ -541,6 +571,7 @@ describe('SearchResultsSection Component', () => {
           document_type: DocumentType.JUDGMENT,
           language: 'en',
           score: 0.5,
+          keywords: [],
         },
       ];
 

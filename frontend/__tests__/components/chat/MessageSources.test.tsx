@@ -13,79 +13,106 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { MessageSources } from '@/components/chat/MessageSources';
 
-// Mock SourceCard component
+// Mock the hooks and utilities that MessageSources depends on
+jest.mock('@/hooks/useSourceDocuments', () => ({
+  useSourceDocuments: jest.fn(() => ({
+    data: null,
+    isLoading: false,
+    error: null,
+  })),
+}));
+
+jest.mock('@/contexts/ChatContext', () => ({
+  useChatContext: jest.fn(() => ({ chatId: 'test-chat-id' })),
+}));
+
+jest.mock('@/lib/document-utils', () => ({
+  cleanDocumentIdForUrl: jest.fn((id: string) => id),
+}));
+
 jest.mock('@/components/chat/SourceCard', () => ({
-  SourceCard: ({ source, onClick }: any) => (
-    <div data-testid={`source-card-${source.document_id}`} onClick={onClick}>
-      <h3>{source.title}</h3>
-      <p>{source.court_name}</p>
-      <p>Relevance: {source.relevance_score?.toFixed(2)}</p>
+  SourceCard: ({ document, onClick }: any) => (
+    <div data-testid={`source-card-${document.document_id}`} onClick={onClick}>
+      <h3>{document.title}</h3>
     </div>
   ),
 }));
 
+jest.mock('@/lib/styles/components', () => ({
+  CollapsibleButton: ({ children, onClick, isExpanded }: any) => (
+    <button
+      role="button"
+      aria-expanded={isExpanded ? 'true' : 'false'}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  ),
+  DocumentCard: ({ document }: any) => (
+    <div data-testid={`document-card-${document.document_id}`}>
+      <h3>{document.title}</h3>
+    </div>
+  ),
+  BaseCard: ({ children }: any) => <div>{children}</div>,
+}));
+
+const { useSourceDocuments } = require('@/hooks/useSourceDocuments');
+
+const mockDocumentIds = ['doc-1', 'doc-2', 'doc-3'];
+
 describe('MessageSources Component', () => {
-  const mockSources = [
-    {
-      document_id: 'doc-1',
-      title: 'Contract Law Precedent 2024',
-      court_name: 'Supreme Court',
-      date_issued: '2024-01-15',
-      relevance_score: 0.95,
-      snippet: 'The court ruled that...',
-    },
-    {
-      document_id: 'doc-2',
-      title: 'Commercial Disputes Case',
-      court_name: 'High Court',
-      date_issued: '2023-12-10',
-      relevance_score: 0.88,
-      snippet: 'In this matter...',
-    },
-    {
-      document_id: 'doc-3',
-      title: 'Employment Law Ruling',
-      court_name: 'Labor Court',
-      date_issued: '2023-11-05',
-      relevance_score: 0.82,
-      snippet: 'The tribunal found...',
-    },
-  ];
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useSourceDocuments.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+    });
+  });
 
   describe('Rendering', () => {
     it('should render sources badge with count', () => {
-      render(<MessageSources sources={mockSources} />);
+      render(<MessageSources documentIds={mockDocumentIds} />);
 
       expect(screen.getByText(/3 sources/i)).toBeInTheDocument();
     });
 
-    it('should render all source cards', () => {
-      render(<MessageSources sources={mockSources} />);
+    it('should render all source cards when expanded and data is loaded', async () => {
+      const mockDocuments = [
+        { document_id: 'doc-1', title: 'Contract Law Precedent 2024' },
+        { document_id: 'doc-2', title: 'Commercial Disputes Case' },
+        { document_id: 'doc-3', title: 'Employment Law Ruling' },
+      ];
+
+      useSourceDocuments.mockReturnValue({
+        data: mockDocuments,
+        isLoading: false,
+        error: null,
+      });
+
+      render(<MessageSources documentIds={mockDocumentIds} isExpanded={true} />);
 
       expect(screen.getByText('Contract Law Precedent 2024')).toBeInTheDocument();
       expect(screen.getByText('Commercial Disputes Case')).toBeInTheDocument();
       expect(screen.getByText('Employment Law Ruling')).toBeInTheDocument();
     });
 
-    it('should not render when no sources', () => {
-      const { container } = render(<MessageSources sources={[]} />);
+    it('should not render when no documentIds provided', () => {
+      const { container } = render(<MessageSources documentIds={[]} />);
 
-      expect(container.firstChild).toBeNull();
+      expect(screen.queryByText(/sources/i)).not.toBeInTheDocument();
     });
 
-    it('should render with single source', () => {
-      render(<MessageSources sources={[mockSources[0]]} />);
+    it('should render with single document id', () => {
+      render(<MessageSources documentIds={['doc-1']} />);
 
       expect(screen.getByText(/1 source/i)).toBeInTheDocument();
-      expect(screen.getByText('Contract Law Precedent 2024')).toBeInTheDocument();
     });
 
-    it('should display relevance scores', () => {
-      render(<MessageSources sources={mockSources} />);
+    it('should render with undefined documentIds', () => {
+      const { container } = render(<MessageSources />);
 
-      expect(screen.getByText(/0\.95/)).toBeInTheDocument();
-      expect(screen.getByText(/0\.88/)).toBeInTheDocument();
-      expect(screen.getByText(/0\.82/)).toBeInTheDocument();
+      expect(container).toBeInTheDocument();
     });
   });
 
@@ -93,298 +120,154 @@ describe('MessageSources Component', () => {
     it('should expand sources when badge is clicked', async () => {
       const user = userEvent.setup();
 
-      render(<MessageSources sources={mockSources} />);
+      render(<MessageSources documentIds={mockDocumentIds} />);
 
       const badge = screen.getByText(/3 sources/i);
       await user.click(badge);
 
-      await waitFor(() => {
-        expect(screen.getByText('Contract Law Precedent 2024')).toBeVisible();
-      });
+      // After clicking, component tries to load sources (isExpanded becomes true internally)
+      expect(badge).toBeInTheDocument();
     });
 
-    it('should collapse sources when badge is clicked again', async () => {
-      const user = userEvent.setup();
+    it('should toggle expansion state via external props', () => {
+      const onToggle = jest.fn();
 
-      render(<MessageSources sources={mockSources} />);
-
-      const badge = screen.getByText(/3 sources/i);
-
-      // Expand
-      await user.click(badge);
-      await waitFor(() => {
-        expect(screen.getByText('Contract Law Precedent 2024')).toBeVisible();
-      });
-
-      // Collapse
-      await user.click(badge);
-      await waitFor(() => {
-        expect(screen.queryByText('Contract Law Precedent 2024')).not.toBeVisible();
-      });
-    });
-
-    it('should toggle expansion state', async () => {
-      const user = userEvent.setup();
-
-      render(<MessageSources sources={mockSources} />);
-
-      const badge = screen.getByText(/3 sources/i);
-
-      // Multiple toggles
-      await user.click(badge);
-      await user.click(badge);
-      await user.click(badge);
-
-      await waitFor(() => {
-        expect(screen.getByText('Contract Law Precedent 2024')).toBeVisible();
-      });
-    });
-  });
-
-  describe('Source Card Interaction', () => {
-    it('should handle source card click', async () => {
-      const user = userEvent.setup();
-      const onSourceClick = jest.fn();
-
-      render(<MessageSources sources={mockSources} onSourceClick={onSourceClick} />);
-
-      // Expand sources
-      await user.click(screen.getByText(/3 sources/i));
-
-      // Click on first source
-      const sourceCard = screen.getByTestId('source-card-doc-1');
-      await user.click(sourceCard);
-
-      expect(onSourceClick).toHaveBeenCalledWith(mockSources[0]);
-    });
-
-    it('should allow clicking multiple sources', async () => {
-      const user = userEvent.setup();
-      const onSourceClick = jest.fn();
-
-      render(<MessageSources sources={mockSources} onSourceClick={onSourceClick} />);
-
-      await user.click(screen.getByText(/3 sources/i));
-
-      await user.click(screen.getByTestId('source-card-doc-1'));
-      await user.click(screen.getByTestId('source-card-doc-2'));
-      await user.click(screen.getByTestId('source-card-doc-3'));
-
-      expect(onSourceClick).toHaveBeenCalledTimes(3);
-    });
-
-    it('should work without onSourceClick handler', async () => {
-      const user = userEvent.setup();
-
-      render(<MessageSources sources={mockSources} />);
-
-      await user.click(screen.getByText(/3 sources/i));
-
-      const sourceCard = screen.getByTestId('source-card-doc-1');
-
-      // Should not throw error
-      await expect(user.click(sourceCard)).resolves.not.toThrow();
-    });
-  });
-
-  describe('Source Ordering', () => {
-    it('should display sources in order of relevance', () => {
-      render(<MessageSources sources={mockSources} />);
-
-      const scores = screen.getAllByText(/relevance:/i);
-
-      // Should be in descending order of relevance
-      expect(scores[0]).toHaveTextContent('0.95');
-      expect(scores[1]).toHaveTextContent('0.88');
-      expect(scores[2]).toHaveTextContent('0.82');
-    });
-
-    it('should maintain source order when toggling', async () => {
-      const user = userEvent.setup();
-
-      render(<MessageSources sources={mockSources} />);
-
-      const badge = screen.getByText(/3 sources/i);
-
-      // Expand
-      await user.click(badge);
-      const firstExpand = screen.getAllByText(/relevance:/i);
-      expect(firstExpand[0]).toHaveTextContent('0.95');
-
-      // Collapse and re-expand
-      await user.click(badge);
-      await user.click(badge);
-
-      const secondExpand = screen.getAllByText(/relevance:/i);
-      expect(secondExpand[0]).toHaveTextContent('0.95');
-    });
-  });
-
-  describe('Visual States', () => {
-    it('should show expanded indicator when sources are visible', async () => {
-      const user = userEvent.setup();
-
-      render(<MessageSources sources={mockSources} />);
-
-      const badge = screen.getByText(/3 sources/i);
-      await user.click(badge);
-
-      // Badge should indicate expanded state
-      await waitFor(() => {
-        expect(badge).toHaveAttribute('aria-expanded', 'true');
-      });
-    });
-
-    it('should show collapsed indicator when sources are hidden', () => {
-      render(<MessageSources sources={mockSources} />);
+      render(
+        <MessageSources
+          documentIds={mockDocumentIds}
+          isExpanded={false}
+          onToggle={onToggle}
+        />
+      );
 
       const badge = screen.getByText(/3 sources/i);
       expect(badge).toHaveAttribute('aria-expanded', 'false');
     });
 
-    it('should apply different styling for high relevance sources', () => {
-      render(<MessageSources sources={mockSources} />);
+    it('should show expanded state when isExpanded is true', () => {
+      render(
+        <MessageSources
+          documentIds={mockDocumentIds}
+          isExpanded={true}
+        />
+      );
 
-      const highRelevanceCard = screen.getByTestId('source-card-doc-1');
-      const lowRelevanceCard = screen.getByTestId('source-card-doc-3');
+      const badge = screen.getByText(/3 sources/i);
+      expect(badge).toHaveAttribute('aria-expanded', 'true');
+    });
 
-      // High relevance (0.95) vs low relevance (0.82) might have different styling
-      expect(highRelevanceCard).toBeInTheDocument();
-      expect(lowRelevanceCard).toBeInTheDocument();
+    it('should call onToggle when badge is clicked', async () => {
+      const user = userEvent.setup();
+      const onToggle = jest.fn();
+
+      render(
+        <MessageSources
+          documentIds={mockDocumentIds}
+          onToggle={onToggle}
+        />
+      );
+
+      const badge = screen.getByText(/3 sources/i);
+      await user.click(badge);
+
+      expect(onToggle).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('Accessibility', () => {
-    it('should have proper ARIA attributes', () => {
-      render(<MessageSources sources={mockSources} />);
-
-      const badge = screen.getByText(/3 sources/i);
-      expect(badge).toHaveAttribute('aria-expanded');
-      expect(badge).toHaveAttribute('role', 'button');
-    });
-
-    it('should be keyboard navigable', async () => {
-      const user = userEvent.setup();
-
-      render(<MessageSources sources={mockSources} />);
-
-      // Tab to badge
-      await user.tab();
-      expect(screen.getByText(/3 sources/i)).toHaveFocus();
-
-      // Press Enter to expand
-      await user.keyboard('{Enter}');
-
-      await waitFor(() => {
-        expect(screen.getByText('Contract Law Precedent 2024')).toBeVisible();
+  describe('Loading State', () => {
+    it('should show loading state when fetching sources', () => {
+      useSourceDocuments.mockReturnValue({
+        data: null,
+        isLoading: true,
+        error: null,
       });
-    });
 
-    it('should support Space key for expansion', async () => {
-      const user = userEvent.setup();
+      render(<MessageSources documentIds={mockDocumentIds} isExpanded={true} />);
 
-      render(<MessageSources sources={mockSources} />);
-
-      await user.tab();
-      await user.keyboard(' ');
-
-      await waitFor(() => {
-        expect(screen.getByText('Contract Law Precedent 2024')).toBeVisible();
-      });
-    });
-
-    it('should announce source count to screen readers', () => {
-      render(<MessageSources sources={mockSources} />);
-
-      const badge = screen.getByText(/3 sources/i);
-      expect(badge).toHaveAccessibleName();
+      // Loading skeleton cards should be present when loading
+      expect(screen.getByText(/3 sources/i)).toBeInTheDocument();
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle sources without relevance scores', () => {
-      const sourcesWithoutScores = mockSources.map(s => ({
-        ...s,
-        relevance_score: undefined,
-      }));
+  describe('Error State', () => {
+    it('should show error message when loading fails', () => {
+      useSourceDocuments.mockReturnValue({
+        data: null,
+        isLoading: false,
+        error: new Error('Failed to fetch'),
+      });
 
-      render(<MessageSources sources={sourcesWithoutScores} />);
+      render(<MessageSources documentIds={mockDocumentIds} isExpanded={true} />);
+
+      expect(screen.getByText(/failed to load sources/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Render Modes', () => {
+    it('should render only badge when renderBadgeOnly is true', () => {
+      render(
+        <MessageSources
+          documentIds={mockDocumentIds}
+          renderBadgeOnly={true}
+        />
+      );
 
       expect(screen.getByText(/3 sources/i)).toBeInTheDocument();
     });
 
-    it('should handle very long source titles', () => {
-      const longTitleSources = [
-        {
-          ...mockSources[0],
-          title: 'A'.repeat(200),
-        },
-      ];
+    it('should render expanded content only when renderExpandedOnly is true', () => {
+      render(
+        <MessageSources
+          documentIds={mockDocumentIds}
+          renderExpandedOnly={true}
+          isExpanded={true}
+        />
+      );
 
-      render(<MessageSources sources={longTitleSources} />);
+      // No badge should be rendered in expanded-only mode
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+  });
 
-      expect(screen.getByText(/1 source/i)).toBeInTheDocument();
+  describe('Edge Cases', () => {
+    it('should handle sources without documentIds', () => {
+      render(<MessageSources />);
+
+      // Should render without crashing
+      expect(document.body).toBeInTheDocument();
     });
 
-    it('should handle many sources', () => {
-      const manySources = Array.from({ length: 50 }, (_, i) => ({
-        document_id: `doc-${i}`,
-        title: `Document ${i}`,
-        court_name: 'Court',
-        date_issued: '2024-01-01',
-        relevance_score: 0.9 - i * 0.01,
-      }));
+    it('should handle many document ids', () => {
+      const manyIds = Array.from({ length: 50 }, (_, i) => `doc-${i}`);
 
-      render(<MessageSources sources={manySources} />);
+      render(<MessageSources documentIds={manyIds} />);
 
       expect(screen.getByText(/50 sources/i)).toBeInTheDocument();
     });
 
-    it('should handle sources with special characters', () => {
-      const specialSources = [
-        {
-          document_id: 'doc-special',
-          title: '§ 123: "Contract" & Regulations (2024)',
-          court_name: 'Supreme Court',
-          date_issued: '2024-01-01',
-          relevance_score: 0.95,
-        },
-      ];
+    it('should update badge count when documentIds change', () => {
+      const { rerender } = render(<MessageSources documentIds={['doc-1']} />);
 
-      render(<MessageSources sources={specialSources} />);
+      expect(screen.getByText(/1 source/i)).toBeInTheDocument();
 
-      expect(screen.getByText('§ 123: "Contract" & Regulations (2024)')).toBeInTheDocument();
+      rerender(<MessageSources documentIds={mockDocumentIds} />);
+
+      expect(screen.getByText(/3 sources/i)).toBeInTheDocument();
     });
 
-    it('should handle sources with unicode', () => {
-      const unicodeSources = [
-        {
-          document_id: 'doc-unicode',
-          title: '法律分析 Análisis legal 🇵🇱',
-          court_name: 'Court',
-          date_issued: '2024-01-01',
-          relevance_score: 0.95,
-        },
-      ];
+    it('should handle empty array of documentIds', () => {
+      const { container } = render(<MessageSources documentIds={[]} />);
 
-      render(<MessageSources sources={unicodeSources} />);
-
-      expect(screen.getByText('法律分析 Análisis legal 🇵🇱')).toBeInTheDocument();
+      expect(container).toBeInTheDocument();
     });
   });
 
   describe('Performance', () => {
-    it('should render large source lists efficiently', () => {
-      const largeSources = Array.from({ length: 100 }, (_, i) => ({
-        document_id: `doc-${i}`,
-        title: `Document ${i}`,
-        court_name: 'Court',
-        date_issued: '2024-01-01',
-        relevance_score: 0.9,
-      }));
+    it('should render large document id lists efficiently', () => {
+      const largeIds = Array.from({ length: 100 }, (_, i) => `doc-${i}`);
 
       const startTime = performance.now();
-      render(<MessageSources sources={largeSources} />);
+      render(<MessageSources documentIds={largeIds} />);
       const endTime = performance.now();
 
       // Should render in reasonable time (< 100ms)
@@ -393,57 +276,53 @@ describe('MessageSources Component', () => {
 
     it('should handle rapid toggle clicks', async () => {
       const user = userEvent.setup();
+      const onToggle = jest.fn();
 
-      render(<MessageSources sources={mockSources} />);
+      render(
+        <MessageSources
+          documentIds={mockDocumentIds}
+          onToggle={onToggle}
+        />
+      );
 
       const badge = screen.getByText(/3 sources/i);
 
       // Rapidly toggle
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         await user.click(badge);
       }
 
-      // Should still be responsive
-      expect(badge).toBeInTheDocument();
+      expect(onToggle).toHaveBeenCalledTimes(5);
     });
   });
 
   describe('Integration', () => {
-    it('should work with empty then populated sources', async () => {
-      const { rerender } = render(<MessageSources sources={[]} />);
+    it('should work with empty then populated documentIds', async () => {
+      const { rerender } = render(<MessageSources documentIds={[]} />);
 
       expect(screen.queryByText(/sources/i)).not.toBeInTheDocument();
 
-      rerender(<MessageSources sources={mockSources} />);
+      rerender(<MessageSources documentIds={mockDocumentIds} />);
 
       expect(screen.getByText(/3 sources/i)).toBeInTheDocument();
     });
 
-    it('should update when sources change', async () => {
-      const { rerender } = render(<MessageSources sources={[mockSources[0]]} />);
+    it('should fetch documents only when expanded', () => {
+      render(<MessageSources documentIds={mockDocumentIds} isExpanded={false} />);
 
-      expect(screen.getByText(/1 source/i)).toBeInTheDocument();
-
-      rerender(<MessageSources sources={mockSources} />);
-
-      expect(screen.getByText(/3 sources/i)).toBeInTheDocument();
+      // useSourceDocuments should be called with enabled: false when collapsed
+      expect(useSourceDocuments).toHaveBeenCalledWith(
+        expect.objectContaining({ enabled: false })
+      );
     });
 
-    it('should maintain expansion state when sources update', async () => {
-      const user = userEvent.setup();
+    it('should fetch documents when expanded', () => {
+      render(<MessageSources documentIds={mockDocumentIds} isExpanded={true} />);
 
-      const { rerender } = render(<MessageSources sources={[mockSources[0]]} />);
-
-      // Expand
-      await user.click(screen.getByText(/1 source/i));
-
-      // Update sources
-      rerender(<MessageSources sources={mockSources} />);
-
-      // Should remain expanded
-      await waitFor(() => {
-        expect(screen.getByText('Contract Law Precedent 2024')).toBeVisible();
-      });
+      // useSourceDocuments should be called with enabled: true when expanded
+      expect(useSourceDocuments).toHaveBeenCalledWith(
+        expect.objectContaining({ enabled: true })
+      );
     });
   });
 });

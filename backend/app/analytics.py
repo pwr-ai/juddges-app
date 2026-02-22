@@ -8,7 +8,7 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -210,7 +210,7 @@ async def track_event(
             "user_id": user_id,
             "session_id": request.session_id,
             "properties": properties or {},
-            "created_at": request.timestamp or datetime.utcnow().isoformat(),
+            "created_at": request.timestamp or datetime.now(timezone.utc).isoformat(),
         }
 
         result = client.table("events").insert(event_data).execute()
@@ -275,7 +275,7 @@ async def track_search(
             "filters": request.filters,
             "duration_ms": request.duration_ms,
             "clicked_result": request.clicked_result,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = client.table("search_queries").insert(search_data).execute()
@@ -351,7 +351,7 @@ async def track_feature_usage(
             "properties": properties or {},
             "success": success,
             "error_message": error_message,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         result = client.table("feature_usage").insert(usage_data).execute()

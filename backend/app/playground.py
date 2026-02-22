@@ -7,7 +7,7 @@ immediate feedback.
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Header, HTTPException, status
@@ -271,7 +271,7 @@ async def playground_extract(
     - schema info and document metadata
     """
     start_time = time.time()
-    started_at = datetime.utcnow().isoformat()
+    started_at = datetime.now(timezone.utc).isoformat()
 
     logger.info(
         f"Playground extraction started: schema={request.schema_id}, "
@@ -345,7 +345,7 @@ async def playground_extract(
         extraction_ms = (time.time() - extraction_start) * 1000
 
         # Step 4: Calculate timing
-        completed_at = datetime.utcnow().isoformat()
+        completed_at = datetime.now(timezone.utc).isoformat()
         total_ms = (time.time() - start_time) * 1000
 
         timing = PlaygroundTiming(
@@ -398,7 +398,7 @@ async def playground_extract(
         raise
     except Exception as e:
         # Calculate timing even for failures
-        completed_at = datetime.utcnow().isoformat()
+        completed_at = datetime.now(timezone.utc).isoformat()
         total_ms = (time.time() - start_time) * 1000
 
         error_message = str(e)

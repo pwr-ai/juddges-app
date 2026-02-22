@@ -58,9 +58,9 @@ export function FeatureShowcase({
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {feature.tags.map((tag, index) => (
+                    {feature.tags.map((tag) => (
                       <Badge
-                        key={index}
+                        key={tag}
                         variant="secondary"
                         className="text-xs"
                       >
@@ -82,9 +82,9 @@ export function FeatureShowcase({
 
                   {/* Details */}
                   <ul className="space-y-2">
-                    {feature.details.map((detail, index) => (
+                    {feature.details.map((detail) => (
                       <li
-                        key={index}
+                        key={detail}
                         className="flex items-start gap-2 text-sm"
                       >
                         <div className="size-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />

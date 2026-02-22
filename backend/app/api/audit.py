@@ -11,7 +11,7 @@ Date: 2025-10-12
 import csv
 import io
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -187,7 +187,7 @@ async def get_my_activity_statistics(
     """
     try:
         # Calculate date range
-        end_date = datetime.utcnow()
+        end_date = datetime.now(timezone.utc)
         start_date = end_date - timedelta(days=days)
 
         # Get audit trail for statistics
@@ -299,7 +299,7 @@ async def export_my_audit_trail(
         )
 
         # Generate filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         filename = f"audit_trail_{user.id[:8]}_{timestamp}.{format}"
 
         if format == "json":

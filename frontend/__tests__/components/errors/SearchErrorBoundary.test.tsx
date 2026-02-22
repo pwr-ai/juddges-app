@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { SearchErrorBoundary } from '@/components/errors/SearchErrorBoundary';
 
 // Component that throws specific search errors
-function ThrowSearchError({ errorType }: { errorType: 'network' | 'timeout' | 'generic' }) {
+function ThrowSearchError({ errorType }: { errorType: 'network' | 'timeout' | 'generic' }): never {
   const errorMessages = {
     network: 'Failed to fetch search results',
     timeout: 'Search request timeout',
@@ -78,8 +78,8 @@ describe('SearchErrorBoundary', () => {
   });
 
   it('shows error details in development mode', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    const originalDescriptor = Object.getOwnPropertyDescriptor(process.env, 'NODE_ENV');
+    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true });
 
     render(
       <SearchErrorBoundary>
@@ -89,7 +89,9 @@ describe('SearchErrorBoundary', () => {
 
     expect(screen.getByText(/Error details.*development only/i)).toBeInTheDocument();
 
-    process.env.NODE_ENV = originalEnv;
+    if (originalDescriptor) {
+      Object.defineProperty(process.env, 'NODE_ENV', originalDescriptor);
+    }
   });
 
   it('calls console.error with search context when error occurs', () => {

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path as FilePath
 from typing import Any, Union
 import re
@@ -457,7 +457,7 @@ def update_job_status_in_supabase(
 
         update_data = {
             "status": db_status,
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
 
         # Add optional fields
@@ -469,7 +469,7 @@ def update_job_status_in_supabase(
 
         # Set completed_at for terminal states
         if db_status in ["SUCCESS", "FAILURE"]:
-            update_data["completed_at"] = datetime.utcnow().isoformat()
+            update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
 
         if error_message:
             update_data["error_message"] = error_message
@@ -557,7 +557,7 @@ def load_prompt_metadata(prompt_id: str) -> PromptMetadata:
             prompt_id=prompt_id,
             description="System prompt",
             variables=[],
-            created_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             is_system=prompt_id in SYSTEM_PROMPTS,
         )
 
@@ -601,7 +601,7 @@ def create_backup(prompt_id: str) -> None:
     if not prompt_path.exists():
         return
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     backup_prompt_path = PROMPTS_DIR / f"{prompt_id}.jinja2.backup_{timestamp}"
     backup_metadata_path = PROMPTS_DIR / f"{prompt_id}.json.backup_{timestamp}"
 
@@ -1196,7 +1196,9 @@ async def get_extraction_job(
                                     supabase.table("extraction_jobs").update(
                                         {
                                             "job_id": new_task.id,
-                                            "updated_at": datetime.utcnow().isoformat(),
+                                            "updated_at": datetime.now(
+                                                timezone.utc
+                                            ).isoformat(),
                                         }
                                     ).eq("job_id", job_id).execute()
 
@@ -1549,7 +1551,9 @@ async def list_extraction_jobs(
                     task_id=task_id,
                     collection_id=collection_id,
                     status=simplified_status,
-                    created_at=datetime.utcnow().isoformat(),  # Not available from inspect
+                    created_at=datetime.now(
+                        timezone.utc
+                    ).isoformat(),  # Not available from inspect
                     updated_at=None,
                     total_documents=None,
                     completed_documents=None,
@@ -1842,7 +1846,7 @@ async def create_prompt(
         )
 
     # Create and save metadata
-    created_at = datetime.utcnow().isoformat()
+    created_at = datetime.now(timezone.utc).isoformat()
     metadata = PromptMetadata(
         prompt_id=prompt_id,
         description=request.description,
@@ -1947,7 +1951,7 @@ async def update_prompt(
             )
 
     # Update metadata
-    updated_at = datetime.utcnow().isoformat()
+    updated_at = datetime.now(timezone.utc).isoformat()
     if request.description is not None:
         metadata.description = request.description
     if request.variables is not None:
@@ -2255,7 +2259,7 @@ async def export_extraction_results(
             if schema_name
             else ""
         )
-        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         filename_parts = [p for p in [safe_collection, safe_schema, date_str] if p]
         filename = "_".join(filename_parts)
@@ -2414,7 +2418,7 @@ async def extract_with_base_schema(
                             "extracted_data": extracted_data,
                             "jurisdiction": jurisdiction,
                             "extraction_status": "completed",
-                            "extracted_at": datetime.utcnow().isoformat(),
+                            "extracted_at": datetime.now(timezone.utc).isoformat(),
                         }
                     ).eq("document_id", doc_id).execute()
                 except Exception as e:

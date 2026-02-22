@@ -169,6 +169,15 @@ const DocumentVisualization: React.FC<DocumentVisualizationProps> = ({ className
   // Cache for API responses
   const cacheRef = React.useRef<Map<string, SimilarityGraphData>>(new Map());
 
+  // Pending timeouts registry for cleanup on unmount
+  const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  useEffect(() => {
+    return () => {
+      pendingTimeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   // Update slider value when controls change externally
   useEffect(() => {
     setSliderValue(controls.sampleSize);
@@ -223,23 +232,23 @@ const DocumentVisualization: React.FC<DocumentVisualizationProps> = ({ className
             nodes: prev?.nodes || [],
             edges: prev?.edges || []
           } as SimilarityGraphData));
-          setTimeout(() => setLoadingStats(false), 50);
+          pendingTimeoutsRef.current.push(setTimeout(() => setLoadingStats(false), 50));
         }
-        
+
         // Load config (document types) quickly - only on first load
         if (isFirstLoad) {
           const types = Array.from(new Set(cachedData.nodes.map(node => node.document_type)));
           setAvailableDocumentTypes(types);
-          setTimeout(() => setLoadingConfig(false), 100);
+          pendingTimeoutsRef.current.push(setTimeout(() => setLoadingConfig(false), 100));
         }
-        
+
         // Load full graph data
         setGraphData(cachedData);
-        setTimeout(() => {
+        pendingTimeoutsRef.current.push(setTimeout(() => {
           setLoadingPlot(false);
           setLoading(false);
           setIsFirstLoad(false);
-        }, 150);
+        }, 150));
         return;
       }
 
@@ -261,27 +270,27 @@ const DocumentVisualization: React.FC<DocumentVisualizationProps> = ({ className
           nodes: prev?.nodes || [],
           edges: prev?.edges || []
         } as SimilarityGraphData));
-        setTimeout(() => {
+        pendingTimeoutsRef.current.push(setTimeout(() => {
           setLoadingStats(false);
-        }, 100);
+        }, 100));
       }
-      
+
       // Update config (document types) next (show after 200ms) - only on first load
       if (isFirstLoad && data.nodes && data.nodes.length > 0) {
         const types = Array.from(new Set(data.nodes.map(node => node.document_type)));
         setAvailableDocumentTypes(types);
-        setTimeout(() => {
+        pendingTimeoutsRef.current.push(setTimeout(() => {
           setLoadingConfig(false);
-        }, 200);
+        }, 200));
       }
-      
+
       // Update full graph data last (show after 300ms)
       setGraphData(data);
-      setTimeout(() => {
+      pendingTimeoutsRef.current.push(setTimeout(() => {
         setLoadingPlot(false);
         setLoading(false);
         setIsFirstLoad(false);
-      }, 300);
+      }, 300));
 
       // Store in cache
       cacheRef.current.set(cacheKey, data);

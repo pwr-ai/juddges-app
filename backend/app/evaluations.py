@@ -5,7 +5,7 @@ This module provides endpoints for creating and managing extraction evaluations,
 which form the ground truth dataset for measuring schema accuracy.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query, status
@@ -330,7 +330,7 @@ async def create_evaluation(
             )
 
         # Create evaluation
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         result = (
             supabase.table("extraction_evaluations")
             .insert(
@@ -488,7 +488,7 @@ async def update_evaluation(
             )
 
         # Build update data
-        update_data = {"updated_at": datetime.utcnow().isoformat()}
+        update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
 
         if request.overall_rating is not None:
             update_data["overall_rating"] = request.overall_rating

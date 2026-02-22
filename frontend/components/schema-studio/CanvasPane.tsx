@@ -278,8 +278,8 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
               <div className="text-sm">
                 <p className="font-medium mb-1">Validation Errors:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  {validationErrors.map((error, index) => (
-                    <li key={index}>{error}</li>
+                  {validationErrors.map((error) => (
+                    <li key={error}>{error}</li>
                   ))}
                 </ul>
               </div>
@@ -296,8 +296,8 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
               <div className="text-sm">
                 <p className="font-medium mb-1">Warnings:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  {validationWarnings.map((warning, index) => (
-                    <li key={index}>{warning}</li>
+                  {validationWarnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
                   ))}
                 </ul>
               </div>

@@ -68,7 +68,7 @@ describe('ChatInput Component', () => {
           id: 'tool-1',
           icon: <span>📄</span>,
           label: 'Tool 1',
-          type: 'button' as const,
+          type: 'toggle' as const,
           onClick: jest.fn(),
         },
       ];
@@ -290,7 +290,7 @@ describe('ChatInput Component', () => {
           id: 'attach',
           icon: <span>📎</span>,
           label: 'Attach',
-          type: 'button' as const,
+          type: 'toggle' as const,
           onClick,
         },
       ];
@@ -357,14 +357,14 @@ describe('ChatInput Component', () => {
           id: 'tool-1',
           icon: <span>1</span>,
           label: 'Tool 1',
-          type: 'button' as const,
+          type: 'toggle' as const,
           onClick: jest.fn(),
         },
         {
           id: 'tool-2',
           icon: <span>2</span>,
           label: 'Tool 2',
-          type: 'button' as const,
+          type: 'toggle' as const,
           onClick: jest.fn(),
         },
       ];
@@ -381,7 +381,7 @@ describe('ChatInput Component', () => {
           id: 'attach',
           icon: <span>📎</span>,
           label: 'Attach',
-          type: 'button' as const,
+          type: 'toggle' as const,
           onClick: jest.fn(),
         },
       ];
@@ -451,7 +451,7 @@ describe('ChatInput Component', () => {
       render(<ChatInput {...defaultProps} onChange={onChange} />);
 
       const textarea = screen.getByRole('textbox');
-      await user.type(textarea, 'rapid typing test', { delay: 1 });
+      await user.type(textarea, 'rapid typing test');
 
       expect(onChange).toHaveBeenCalled();
     });

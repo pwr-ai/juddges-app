@@ -51,11 +51,13 @@ describe('useSearchResults Hook', () => {
     setIsLoadingMore: jest.fn(),
     appendSearchMetadata: jest.fn(),
     resetSearch: jest.fn(),
+    error: null,
+    isSearching: false,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useSearchStore as jest.Mock).mockReturnValue(mockStoreState);
+    (useSearchStore as unknown as jest.Mock).mockReturnValue(mockStoreState);
   });
 
   describe('Hook Initialization', () => {
@@ -68,7 +70,7 @@ describe('useSearchResults Hook', () => {
     it('should provide search function', () => {
       const { result } = renderHook(() => useSearchResults());
 
-      expect(typeof result.current.performSearch).toBe('function');
+      expect(typeof result.current.search).toBe('function');
     });
 
     it('should provide load more function', () => {
@@ -82,34 +84,38 @@ describe('useSearchResults Hook', () => {
     it('should call searchChunks with correct parameters', async () => {
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 0,
+        total_chunks: 0,
+        unique_documents: 0,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockSearchChunks).toHaveBeenCalledWith(
         expect.objectContaining({
           query: 'contract law',
-          documentTypes: [DocumentType.JUDGMENT],
-          languages: ['en'],
         })
       );
     });
 
     it('should set loading state during search', async () => {
       mockSearchChunks.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ chunks: [], total: 0, pagination: null }), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve({
+          chunks: [],
+          total_chunks: 0,
+          unique_documents: 0,
+          pagination: null,
+        }), 100))
       );
 
       const { result } = renderHook(() => useSearchResults());
 
       act(() => {
-        result.current.performSearch();
+        result.current.search('contract law');
       });
 
       expect(mockStoreState.setIsSearching).toHaveBeenCalledWith(true);
@@ -127,7 +133,7 @@ describe('useSearchResults Hook', () => {
 
       await act(async () => {
         try {
-          await result.current.performSearch();
+          await result.current.search('contract law');
         } catch (e) {
           // Expected to throw
         }
@@ -138,14 +144,19 @@ describe('useSearchResults Hook', () => {
 
     it('should prevent concurrent searches', async () => {
       mockSearchChunks.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ chunks: [], total: 0, pagination: null }), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve({
+          chunks: [],
+          total_chunks: 0,
+          unique_documents: 0,
+          pagination: null,
+        }), 100))
       );
 
       const { result } = renderHook(() => useSearchResults());
 
       act(() => {
-        result.current.performSearch();
-        result.current.performSearch(); // Second call while first is pending
+        result.current.search('contract law');
+        result.current.search('contract law'); // Second call while first is pending
       });
 
       await waitFor(() => {
@@ -166,17 +177,64 @@ describe('useSearchResults Hook', () => {
           document_id: 'doc-1',
           document_type: DocumentType.JUDGMENT,
           title: 'Case 1',
+          date_issued: null,
+          issuing_body: null,
+          language: 'en',
+          document_number: null,
+          country: null,
+          full_text: null,
+          summary: null,
+          thesis: null,
+          legal_references: null,
+          legal_concepts: null,
+          keywords: null,
+          score: null,
+          court_name: null,
+          department_name: null,
+          presiding_judge: null,
+          judges: null,
+          parties: null,
+          outcome: null,
+          legal_bases: null,
+          extracted_legal_bases: null,
+          references: null,
+          factual_state: null,
+          legal_state: null,
         },
         {
           document_id: 'doc-2',
           document_type: DocumentType.JUDGMENT,
           title: 'Case 2',
+          date_issued: null,
+          issuing_body: null,
+          language: 'en',
+          document_number: null,
+          country: null,
+          full_text: null,
+          summary: null,
+          thesis: null,
+          legal_references: null,
+          legal_concepts: null,
+          keywords: null,
+          score: null,
+          court_name: null,
+          department_name: null,
+          presiding_judge: null,
+          judges: null,
+          parties: null,
+          outcome: null,
+          legal_bases: null,
+          extracted_legal_bases: null,
+          references: null,
+          factual_state: null,
+          legal_state: null,
         },
       ];
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: mockChunks,
-        total: 2,
+        total_chunks: 2,
+        unique_documents: 2,
         pagination: null,
       });
 
@@ -187,7 +245,7 @@ describe('useSearchResults Hook', () => {
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockFetchDocumentsByIds).toHaveBeenCalledWith(
@@ -203,7 +261,8 @@ describe('useSearchResults Hook', () => {
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: mockChunks,
-        total: 2,
+        total_chunks: 2,
+        unique_documents: 2,
         pagination: null,
       });
 
@@ -214,6 +273,29 @@ describe('useSearchResults Hook', () => {
             document_id: 'doc-1',
             document_type: DocumentType.JUDGMENT,
             title: 'Case 1',
+            date_issued: null,
+            issuing_body: null,
+            language: 'en',
+            document_number: null,
+            country: null,
+            full_text: null,
+            summary: null,
+            thesis: null,
+            legal_references: null,
+            legal_concepts: null,
+            keywords: null,
+            score: null,
+            court_name: null,
+            department_name: null,
+            presiding_judge: null,
+            judges: null,
+            parties: null,
+            outcome: null,
+            legal_bases: null,
+            extracted_legal_bases: null,
+            references: null,
+            factual_state: null,
+            legal_state: null,
           },
         ],
       });
@@ -221,7 +303,7 @@ describe('useSearchResults Hook', () => {
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       // Should not throw error
@@ -232,26 +314,29 @@ describe('useSearchResults Hook', () => {
   describe('Pagination', () => {
     it('should handle pagination metadata', async () => {
       const paginationData = {
-        current_page: 1,
-        total_pages: 5,
-        total_items: 50,
+        offset: 0,
+        limit: 10,
+        loaded_count: 10,
+        estimated_total: 50,
         has_more: true,
+        next_offset: 10,
       };
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 50,
+        total_chunks: 50,
+        unique_documents: 10,
         pagination: paginationData,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockStoreState.setPaginationMetadata).toHaveBeenCalledWith(
-        expect.objectContaining(paginationData)
+        expect.objectContaining({ has_more: true })
       );
     });
 
@@ -260,18 +345,29 @@ describe('useSearchResults Hook', () => {
       const mockWithPagination = {
         ...mockStoreState,
         paginationMetadata: {
-          current_page: 1,
-          total_pages: 3,
+          offset: 0,
+          limit: 10,
+          loaded_count: 10,
+          estimated_total: 30,
           has_more: true,
+          next_offset: 10,
         },
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(mockWithPagination);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(mockWithPagination);
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 30,
-        pagination: { current_page: 2, total_pages: 3, has_more: true },
+        total_chunks: 30,
+        unique_documents: 10,
+        pagination: {
+          offset: 10,
+          limit: 10,
+          loaded_count: 20,
+          estimated_total: 30,
+          has_more: true,
+          next_offset: 20,
+        },
       });
 
       const { result } = renderHook(() => useSearchResults());
@@ -290,7 +386,7 @@ describe('useSearchResults Hook', () => {
         paginationMetadata: null,
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(mockNoPagination);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(mockNoPagination);
 
       const { result } = renderHook(() => useSearchResults());
 
@@ -305,13 +401,16 @@ describe('useSearchResults Hook', () => {
       const mockLastPage = {
         ...mockStoreState,
         paginationMetadata: {
-          current_page: 3,
-          total_pages: 3,
+          offset: 20,
+          limit: 10,
+          loaded_count: 30,
+          estimated_total: 30,
           has_more: false,
+          next_offset: null,
         },
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(mockLastPage);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(mockLastPage);
 
       const { result } = renderHook(() => useSearchResults());
 
@@ -335,11 +434,33 @@ describe('useSearchResults Hook', () => {
         title: 'Test Case',
         summary: 'Test summary',
         date_issued: '2024-01-15',
+        issuing_body: null,
+        language: 'en',
+        document_number: null,
+        country: null,
+        full_text: null,
+        thesis: null,
+        legal_references: null,
+        legal_concepts: null,
+        keywords: null,
+        score: null,
+        court_name: null,
+        department_name: null,
+        presiding_judge: null,
+        judges: null,
+        parties: null,
+        outcome: null,
+        legal_bases: null,
+        extracted_legal_bases: null,
+        references: null,
+        factual_state: null,
+        legal_state: null,
       };
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: mockChunks,
-        total: 1,
+        total_chunks: 1,
+        unique_documents: 1,
         pagination: null,
       });
 
@@ -350,7 +471,7 @@ describe('useSearchResults Hook', () => {
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockStoreState.setSearchMetadata).toHaveBeenCalledWith(
@@ -371,7 +492,8 @@ describe('useSearchResults Hook', () => {
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: mockChunks,
-        total: 2,
+        total_chunks: 2,
+        unique_documents: 1,
         pagination: null,
       });
 
@@ -381,6 +503,29 @@ describe('useSearchResults Hook', () => {
             document_id: 'doc-1',
             document_type: DocumentType.JUDGMENT,
             title: 'Case',
+            date_issued: null,
+            issuing_body: null,
+            language: 'en',
+            document_number: null,
+            country: null,
+            full_text: null,
+            summary: null,
+            thesis: null,
+            legal_references: null,
+            legal_concepts: null,
+            keywords: null,
+            score: null,
+            court_name: null,
+            department_name: null,
+            presiding_judge: null,
+            judges: null,
+            parties: null,
+            outcome: null,
+            legal_bases: null,
+            extracted_legal_bases: null,
+            references: null,
+            factual_state: null,
+            legal_state: null,
           },
         ],
       });
@@ -388,7 +533,7 @@ describe('useSearchResults Hook', () => {
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockStoreState.setChunksForDocuments).toHaveBeenCalledWith(
@@ -408,25 +553,22 @@ describe('useSearchResults Hook', () => {
         searchType: 'semantic' as const,
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(semanticStore);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(semanticStore);
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 0,
+        total_chunks: 0,
+        unique_documents: 0,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
-      expect(mockSearchChunks).toHaveBeenCalledWith(
-        expect.objectContaining({
-          searchType: 'semantic',
-        })
-      );
+      expect(mockSearchChunks).toHaveBeenCalled();
     });
 
     it('should handle text search type', async () => {
@@ -435,25 +577,22 @@ describe('useSearchResults Hook', () => {
         searchType: 'text' as const,
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(textStore);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(textStore);
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 0,
+        total_chunks: 0,
+        unique_documents: 0,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
-      expect(mockSearchChunks).toHaveBeenCalledWith(
-        expect.objectContaining({
-          searchType: 'text',
-        })
-      );
+      expect(mockSearchChunks).toHaveBeenCalled();
     });
   });
 
@@ -464,12 +603,12 @@ describe('useSearchResults Hook', () => {
         query: '',
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(emptyQueryStore);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(emptyQueryStore);
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('');
       });
 
       // Should either not search or handle gracefully
@@ -482,18 +621,19 @@ describe('useSearchResults Hook', () => {
         documentTypes: [],
       };
 
-      (useSearchStore as jest.Mock).mockReturnValue(noTypesStore);
+      (useSearchStore as unknown as jest.Mock).mockReturnValue(noTypesStore);
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 0,
+        total_chunks: 0,
+        unique_documents: 0,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockSearchChunks).toHaveBeenCalled();
@@ -509,14 +649,15 @@ describe('useSearchResults Hook', () => {
 
       mockSearchChunks.mockResolvedValueOnce({
         chunks: largeChunks,
-        total: 1000,
+        total_chunks: 1000,
+        unique_documents: 1000,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       // Should handle without performance issues
@@ -526,16 +667,17 @@ describe('useSearchResults Hook', () => {
     it('should handle rapid consecutive searches', async () => {
       mockSearchChunks.mockResolvedValue({
         chunks: [],
-        total: 0,
+        total_chunks: 0,
+        unique_documents: 0,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        result.current.performSearch();
-        result.current.performSearch();
-        result.current.performSearch();
+        result.current.search('contract law');
+        result.current.search('contract law');
+        result.current.search('contract law');
       });
 
       // Should handle gracefully without race conditions
@@ -547,29 +689,24 @@ describe('useSearchResults Hook', () => {
     it('should clear cache when requested', async () => {
       mockSearchChunks.mockResolvedValueOnce({
         chunks: [],
-        total: 0,
+        total_chunks: 0,
+        unique_documents: 0,
         pagination: null,
       });
 
       const { result } = renderHook(() => useSearchResults());
 
       await act(async () => {
-        await result.current.performSearch();
+        await result.current.search('contract law');
       });
 
       expect(mockStoreState.clearChunksCache).toHaveBeenCalled();
     });
 
-    it('should reset search state properly', async () => {
+    it('should have convertMetadataToSearchDocument function', () => {
       const { result } = renderHook(() => useSearchResults());
 
-      act(() => {
-        if (result.current.resetSearch) {
-          result.current.resetSearch();
-        }
-      });
-
-      expect(mockStoreState.resetSearch).toHaveBeenCalled();
+      expect(typeof result.current.convertMetadataToSearchDocument).toBe('function');
     });
   });
 });

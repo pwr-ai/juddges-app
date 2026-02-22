@@ -57,34 +57,43 @@ class CollectionsDB:
                 return []
 
             collections = response.data
+            collection_ids = [c["id"] for c in collections]
 
-            # For each collection, fetch all document IDs with pagination
+            # Batch-fetch all documents for all collections in a single query
+            all_docs: List[Dict[str, Any]] = []
+            page_size = 1000
+            offset = 0
+
+            while True:
+                docs_response = (
+                    self.client.table("collection_supabase_documents")
+                    .select("collection_id, document_id")
+                    .in_("collection_id", collection_ids)
+                    .range(offset, offset + page_size - 1)
+                    .execute()
+                )
+
+                if not docs_response.data:
+                    break
+
+                all_docs.extend(docs_response.data)
+
+                if len(docs_response.data) < page_size:
+                    break
+
+                offset += page_size
+
+            # Group documents by collection_id in Python
+            docs_by_collection: Dict[str, List[Dict[str, Any]]] = {c["id"]: [] for c in collections}
+            for doc in all_docs:
+                cid = doc["collection_id"]
+                if cid in docs_by_collection:
+                    docs_by_collection[cid].append({"document_id": doc["document_id"]})
+
             for collection in collections:
-                all_documents = []
-                page_size = 1000
-                offset = 0
-
-                while True:
-                    docs_response = (
-                        self.client.table("collection_supabase_documents")
-                        .select("document_id")
-                        .eq("collection_id", collection["id"])
-                        .range(offset, offset + page_size - 1)
-                        .execute()
-                    )
-
-                    if not docs_response.data:
-                        break
-
-                    all_documents.extend(docs_response.data)
-
-                    if len(docs_response.data) < page_size:
-                        break
-
-                    offset += page_size
-
-                collection["collection_supabase_documents"] = all_documents
-                collection["document_count"] = len(all_documents)
+                docs = docs_by_collection[collection["id"]]
+                collection["collection_supabase_documents"] = docs
+                collection["document_count"] = len(docs)
 
             return collections
         except Exception as e:

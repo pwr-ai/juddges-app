@@ -14,7 +14,7 @@ Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
@@ -93,7 +93,7 @@ class RetentionService:
             return {
                 "status": "success",
                 "archived_count": archived_count,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -101,7 +101,7 @@ class RetentionService:
             return {
                 "status": "failed",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
     @staticmethod
@@ -128,7 +128,7 @@ class RetentionService:
 
             export_data = {
                 "user_id": user_id,
-                "export_date": datetime.utcnow().isoformat(),
+                "export_date": datetime.now(timezone.utc).isoformat(),
                 "format": format,
             }
 
@@ -142,7 +142,7 @@ class RetentionService:
             export_data["consent"] = consent_result.data
 
             # Export audit logs (last 2 years for performance)
-            two_years_ago = datetime.utcnow() - timedelta(days=730)
+            two_years_ago = datetime.now(timezone.utc) - timedelta(days=730)
             audit_result = (
                 client.table("audit_logs")
                 .select(
@@ -191,7 +191,7 @@ class RetentionService:
             return {
                 "status": "success",
                 "data": export_data,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -240,7 +240,7 @@ class RetentionService:
                 "data_types": data_types or [],
                 "reason": reason,
                 "status": "pending",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             result = (
@@ -261,7 +261,7 @@ class RetentionService:
                     "request_id": request_id,
                     "message": "Data deletion request created. It will be processed within 30 days as required by GDPR.",
                     "request_details": result.data[0],
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
 
         except Exception as e:
@@ -309,7 +309,7 @@ class RetentionService:
             client.table("data_deletion_requests").update(
                 {
                     "status": "in_progress",
-                    "started_at": datetime.utcnow().isoformat(),
+                    "started_at": datetime.now(timezone.utc).isoformat(),
                     "processed_by": processed_by,
                 }
             ).eq("id", request_id).execute()
@@ -337,7 +337,7 @@ class RetentionService:
             client.table("data_deletion_requests").update(
                 {
                     "status": "completed",
-                    "completed_at": datetime.utcnow().isoformat(),
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
                     "deletion_summary": deletion_summary,
                 }
             ).eq("id", request_id).execute()
@@ -351,7 +351,7 @@ class RetentionService:
                 "status": "success",
                 "request_id": request_id,
                 "deletion_summary": deletion_summary,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:

@@ -12,7 +12,7 @@ import json
 import re
 import shutil
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -50,7 +50,7 @@ async def cleanup_expired_sessions():
     """Background task to clean up expired generation sessions."""
     while True:
         await asyncio.sleep(300)  # Every 5 minutes
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         expired = [
             sid
             for sid, (_, created) in _generation_sessions.items()
@@ -625,7 +625,7 @@ def _create_backup(schema_id: str) -> None:
 
     if existing_files:
         original_file = existing_files[0]
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         backup_path = (
             schema_dir / f"{schema_id}{original_file.suffix}.backup_{timestamp}"
         )
@@ -710,7 +710,7 @@ async def create_schema(params: CreateSchemaRequest) -> dict[str, Any]:
         metadata = SchemaMetadata(
             schema_id=schema_id,
             description=params.description,
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             is_system=False,
         )
         _save_schema_metadata(metadata)
@@ -796,7 +796,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
             metadata = SchemaMetadata(
                 schema_id=schema_id,
                 description="Legacy schema",
-                created_at=datetime.now().isoformat(),
+                created_at=datetime.now(timezone.utc).isoformat(),
                 is_system=False,
             )
 
@@ -833,7 +833,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
             metadata.description = params.description
 
         # Update metadata timestamp
-        metadata.updated_at = datetime.now().isoformat()
+        metadata.updated_at = datetime.now(timezone.utc).isoformat()
         _save_schema_metadata(metadata)
 
         logger.info(f"Updated schema: {schema_id}")
@@ -918,7 +918,7 @@ async def delete_schema(schema_id: str, force: bool = False) -> DeleteSchemaResp
         else:
             # Archive (soft delete)
             archive_dir = _get_archive_directory()
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             archive_path = (
                 archive_dir / f"{schema_id}{schema_file.suffix}.archived_{timestamp}"
             )
@@ -1061,7 +1061,7 @@ def get_or_create_generation_agent(
         graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
     )
 
-    _generation_sessions[session_id] = (agent, datetime.now())
+    _generation_sessions[session_id] = (agent, datetime.now(timezone.utc))
     return agent
 
 
@@ -1123,7 +1123,7 @@ async def start_schema_generation(
             conversation_id=session_id,
             collection_id=params.collection_id,
             confidence_score=None,
-            session_metadata={"created_at": datetime.now().isoformat()},
+            session_metadata={"created_at": datetime.now(timezone.utc).isoformat()},
         )
 
         response = await agent.graph.ainvoke(
