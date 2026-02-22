@@ -5,6 +5,7 @@ from typing import Any, Union
 import re
 
 import jinja2
+from juddges_search.info_extraction import BaseSchemaExtractor
 from juddges_search.info_extraction.extractor import InformationExtractor
 from celery import exceptions as celery_exceptions
 from celery.result import AsyncResult
@@ -14,23 +15,31 @@ from werkzeug.utils import secure_filename
 
 from app.core.supabase import supabase_client as supabase
 from app.models import (
+    BaseSchemaExtractionRequest,
+    BaseSchemaExtractionResponse,
+    BaseSchemaExtractionResult,
     BatchExtractionResponse,
     BulkExtractionRequest,
     BulkExtractionResponse,
     BulkExtractionJobInfo,
+    CancelJobResponse,
     CreatePromptRequest,
     DeletePromptResponse,
     DocumentExtractionRequest,
     DocumentExtractionResponse,
     DocumentExtractionSubmissionResponse,
     DocumentProcessingStatus,
+    ExtractedDataFilterRequest,
+    ExtractionJobSummary,
+    FacetCount,
+    FacetCountsResponse,
+    FilterFieldConfig,
+    FilterOptionsResponse,
+    ListExtractionJobsResponse,
     PromptMetadata,
     PromptResponse,
     SimpleExtractionRequest,
     UpdatePromptRequest,
-    ExtractionJobSummary,
-    ListExtractionJobsResponse,
-    CancelJobResponse,
 )
 from app.workers import (
     celery_app,
@@ -40,46 +49,48 @@ from app.workers import (
 router = APIRouter(prefix="/extractions", tags=["extraction"])
 
 
-def simplify_job_status(celery_state: str, results: list[dict[str, Any]] | None = None) -> str:
+def simplify_job_status(
+    celery_state: str, results: list[dict[str, Any]] | None = None
+) -> str:
     """
     Map Celery task states to simplified user-facing job statuses.
-    
+
     Status State Machine:
     --------------------
     The extraction job lifecycle follows this state machine:
-    
+
     1. Initial State: "IN_PROGRESS"
        - Maps from Celery states: PENDING, STARTED, PROCESSING, RETRY
        - Job is queued or actively running
        - Valid transitions: → COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED
-    
+
     2. Terminal States (no further transitions):
        a) "COMPLETED" - All documents processed successfully
           - Maps from: SUCCESS (with all documents succeeded in results)
-          
+
        b) "PARTIALLY_COMPLETED" - Some documents succeeded, some failed
           - Maps from: SUCCESS or PARTIAL_FAILURE (with mixed results)
           - Indicates degraded success where some data was extracted
-          
+
        c) "FAILED" - All documents failed or task failed completely
           - Maps from: FAILURE (or SUCCESS with all documents failed)
           - No data was successfully extracted
-          
+
        d) "CANCELLED" - Job was cancelled by user or system
           - Maps from: REVOKED, CANCELLED
           - Processing was interrupted
-    
+
     Simplified Statuses:
     - "IN_PROGRESS": Job is running (PENDING, STARTED, PROCESSING, RETRY)
     - "COMPLETED": Job completed successfully (all documents succeeded)
     - "FAILED": Job failed completely (all documents failed or task error)
     - "PARTIALLY_COMPLETED": Some documents succeeded, some failed
     - "CANCELLED": Job was cancelled
-    
+
     Args:
         celery_state: The raw Celery task state
         results: Optional list of document results to determine partial completion
-        
+
     Returns:
         Simplified status string for user display (uppercase)
     """
@@ -88,32 +99,36 @@ def simplify_job_status(celery_state: str, results: list[dict[str, Any]] | None 
     # Map intermediate states to "IN_PROGRESS"
     if normalized_state in {"PENDING", "STARTED", "PROCESSING", "RETRY"}:
         return "IN_PROGRESS"
-    
+
     # Map cancellation states
     if normalized_state in {"REVOKED", "CANCELLED"}:
         return "CANCELLED"
-    
+
     # For completed tasks, check results to determine status
     if normalized_state == "SUCCESS" and results:
         failed_count = sum(
-            1 for r in results 
-            if isinstance(r, dict) and r.get("status") == DocumentProcessingStatus.FAILED.value
+            1
+            for r in results
+            if isinstance(r, dict)
+            and r.get("status") == DocumentProcessingStatus.FAILED.value
         )
         total_count = len(results)
-        
+
         if failed_count == 0:
             return "COMPLETED"
         elif failed_count < total_count:
             return "PARTIALLY_COMPLETED"
         else:
             return "FAILED"
-    
+
     # Map failure states (including custom COMPLETED_WITH_FAILURES state from worker)
     if normalized_state in {"FAILURE", "PARTIAL_FAILURE", "COMPLETED_WITH_FAILURES"}:
         if results:
             failed_count = sum(
-                1 for r in results
-                if isinstance(r, dict) and r.get("status") == DocumentProcessingStatus.FAILED.value
+                1
+                for r in results
+                if isinstance(r, dict)
+                and r.get("status") == DocumentProcessingStatus.FAILED.value
             )
             total_count = len(results)
             if failed_count == 0:
@@ -124,11 +139,11 @@ def simplify_job_status(celery_state: str, results: list[dict[str, Any]] | None 
         if normalized_state == "PARTIAL_FAILURE":
             return "PARTIALLY_COMPLETED"
         return "FAILED"
-    
+
     # Default for SUCCESS without results
     if normalized_state == "SUCCESS":
         return "COMPLETED"
-    
+
     # Fallback: return as-is if unknown (keep uppercase)
     logger.warning(f"Unknown Celery state: {celery_state}, returning as-is")
     return normalized_state or "UNKNOWN"
@@ -136,7 +151,9 @@ def simplify_job_status(celery_state: str, results: list[dict[str, Any]] | None 
 
 def is_uuid(value: str) -> bool:
     """Check if a string is a valid UUID."""
-    uuid_pattern = re.compile(r'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$', re.IGNORECASE)
+    uuid_pattern = re.compile(
+        r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", re.IGNORECASE
+    )
     return bool(uuid_pattern.match(value))
 
 
@@ -145,7 +162,9 @@ def is_uuid(value: str) -> bool:
 # =============================================================================
 
 
-def _validate_documents(document_ids: list[str] | None, collection_id: str | None) -> list[str]:
+def _validate_documents(
+    document_ids: list[str] | None, collection_id: str | None
+) -> list[str]:
     """
     Validate that document_ids is not empty.
 
@@ -167,8 +186,8 @@ def _validate_documents(document_ids: list[str] | None, collection_id: str | Non
             detail={
                 "error": "Empty Collection",
                 "message": "No documents provided for extraction. Please ensure the collection contains documents.",
-                "code": "EMPTY_DOCUMENT_LIST"
-            }
+                "code": "EMPTY_DOCUMENT_LIST",
+            },
         )
     return docs
 
@@ -187,8 +206,8 @@ def _validate_schema_id_required(schema_id: str | None) -> None:
             detail={
                 "error": "Missing Schema",
                 "message": "Schema ID is required for extraction.",
-                "code": "MISSING_SCHEMA_ID"
-            }
+                "code": "MISSING_SCHEMA_ID",
+            },
         )
 
 
@@ -206,8 +225,8 @@ def _check_supabase_available() -> None:
             detail={
                 "error": "Service Unavailable",
                 "message": "Database connection unavailable. The extraction service cannot connect to the database. Please try again later or contact support.",
-                "code": "DATABASE_UNAVAILABLE"
-            }
+                "code": "DATABASE_UNAVAILABLE",
+            },
         )
 
 
@@ -225,8 +244,8 @@ def _validate_collection_id(collection_id: str | None) -> None:
             detail={
                 "error": "Missing Collection",
                 "message": "Collection ID is required for extraction.",
-                "code": "MISSING_COLLECTION_ID"
-            }
+                "code": "MISSING_COLLECTION_ID",
+            },
         )
 
 
@@ -257,8 +276,8 @@ def _submit_extraction_task(extraction_request: DocumentExtractionRequest) -> st
                 "error": "Task Queue Connection Error",
                 "message": "Failed to connect to the task queue service. The Redis/Celery broker may be unavailable. Please check the service status and try again.",
                 "code": "TASK_SUBMISSION_FAILED",
-                "debug": str(e)
-            }
+                "debug": str(e),
+            },
         )
     except (ConnectionError, OSError, TimeoutError) as e:
         logger.error(f"Network error while submitting extraction task: {e}")
@@ -268,19 +287,22 @@ def _submit_extraction_task(extraction_request: DocumentExtractionRequest) -> st
                 "error": "Task Queue Network Error",
                 "message": "Failed to connect to the task queue service due to a network error. Please check your connection and try again.",
                 "code": "TASK_SUBMISSION_FAILED",
-                "debug": str(e)
-            }
+                "debug": str(e),
+            },
         )
     except Exception as e:
-        logger.error(f"Unexpected error while submitting extraction task to Celery: {e}", exc_info=True)
+        logger.error(
+            f"Unexpected error while submitting extraction task to Celery: {e}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
                 "error": "Task Submission Failed",
                 "message": "An unexpected error occurred while submitting the extraction job. Please try again or contact support.",
                 "code": "TASK_SUBMISSION_FAILED",
-                "debug": str(e)
-            }
+                "debug": str(e),
+            },
         )
 
 
@@ -302,7 +324,13 @@ def _fetch_schema_from_db(schema_id: str, include_metadata: bool = False) -> dic
 
     try:
         fields = "name, description, text" if include_metadata else "text"
-        response = supabase.table("extraction_schemas").select(fields).eq("id", schema_id).single().execute()
+        response = (
+            supabase.table("extraction_schemas")
+            .select(fields)
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
         if not response.data:
             logger.warning(f"Schema {schema_id} not found in database")
@@ -311,8 +339,8 @@ def _fetch_schema_from_db(schema_id: str, include_metadata: bool = False) -> dic
                 detail={
                     "error": "Schema Not Found",
                     "message": f"The extraction schema '{schema_id}' was not found in the database. Please ensure you've selected a valid schema.",
-                    "code": "SCHEMA_NOT_FOUND"
-                }
+                    "code": "SCHEMA_NOT_FOUND",
+                },
             )
 
         if include_metadata:
@@ -327,14 +355,16 @@ def _fetch_schema_from_db(schema_id: str, include_metadata: bool = False) -> dic
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Unexpected error fetching schema from database: {}", str(e), exc_info=True)
+        logger.error(
+            "Unexpected error fetching schema from database: {}", str(e), exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Schema Retrieval Error",
                 "message": f"Failed to retrieve schema from database: {str(e)}. Please try again or contact support.",
-                "code": "SCHEMA_FETCH_ERROR"
-            }
+                "code": "SCHEMA_FETCH_ERROR",
+            },
         )
 
 
@@ -363,7 +393,7 @@ def _convert_simplified_schema(user_schema: dict) -> dict:
             converted_schema[field_name] = {
                 "type": "string",
                 "description": field_desc,
-                "required": True
+                "required": True,
             }
         logger.info("Schema conversion completed")
         return converted_schema
@@ -389,25 +419,25 @@ def update_job_status_in_supabase(
 ) -> bool:
     """
     Update extraction job status in Supabase database.
-    
+
     Maps simplified statuses to database-compatible values:
     - Supabase accepts: PENDING, STARTED, SUCCESS, FAILURE
     - Maps: IN_PROGRESS/PROCESSING -> STARTED, COMPLETED/PARTIALLY_COMPLETED -> SUCCESS, FAILED -> FAILURE
-    
+
     Args:
         job_id: The job ID to update
         simplified_status: The simplified status from simplify_job_status()
         completed_documents: Optional count of completed documents
         results: Optional list of document results
         error_message: Optional error message for failed jobs
-        
+
     Returns:
         True if update succeeded, False otherwise
     """
     if not supabase:
         logger.debug(f"Supabase client not available, skipping update for job {job_id}")
         return False
-    
+
     try:
         # Map simplified status to database-compatible status
         # Supabase schema only accepts: PENDING, STARTED, SUCCESS, FAILURE
@@ -424,29 +454,34 @@ def update_job_status_in_supabase(
             "CANCELLED": "FAILURE",  # Treat cancelled as failure
         }
         db_status = status_mapping.get(simplified_status, "STARTED")
-        
+
         update_data = {
             "status": db_status,
             "updated_at": datetime.utcnow().isoformat(),
         }
-        
+
         # Add optional fields
         if completed_documents is not None:
             update_data["completed_documents"] = completed_documents
-        
+
         if results is not None:
             update_data["results"] = results
-        
+
         # Set completed_at for terminal states
         if db_status in ["SUCCESS", "FAILURE"]:
             update_data["completed_at"] = datetime.utcnow().isoformat()
-        
+
         if error_message:
             update_data["error_message"] = error_message
-        
+
         # Execute update
-        result = supabase.table("extraction_jobs").update(update_data).eq("job_id", job_id).execute()
-        
+        result = (
+            supabase.table("extraction_jobs")
+            .update(update_data)
+            .eq("job_id", job_id)
+            .execute()
+        )
+
         if result.data and len(result.data) > 0:
             logger.info(
                 f"Updated Supabase: job {job_id}, status {db_status} (from {simplified_status}), "
@@ -454,12 +489,15 @@ def update_job_status_in_supabase(
             )
             return True
         else:
-            logger.warning(f"No rows updated in Supabase for job {job_id} - job might not exist or job_id mismatch")
+            logger.warning(
+                f"No rows updated in Supabase for job {job_id} - job might not exist or job_id mismatch"
+            )
             return False
-            
+
     except Exception as e:
         logger.error(f"Failed to update Supabase for job {job_id}: {e}", exc_info=True)
         return False
+
 
 # Constants for prompt management
 PROMPTS_DIR = FilePath("packages/juddges_search/config/prompts")
@@ -468,6 +506,7 @@ SYSTEM_PROMPTS = {"info_extraction"}  # System prompts that cannot be deleted
 
 
 # ===== Helper Functions for Prompt Management =====
+
 
 def get_prompt_file_path(prompt_id: str) -> FilePath:
     """Get the file path for a prompt template."""
@@ -519,7 +558,7 @@ def load_prompt_metadata(prompt_id: str) -> PromptMetadata:
             description="System prompt",
             variables=[],
             created_at=datetime.utcnow().isoformat(),
-            is_system=prompt_id in SYSTEM_PROMPTS
+            is_system=prompt_id in SYSTEM_PROMPTS,
         )
 
     try:
@@ -611,6 +650,7 @@ def archive_prompt(prompt_id: str) -> None:
 
 # ===== Authentication Helper =====
 
+
 def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:
     """
     Extract user ID from request header.
@@ -630,6 +670,7 @@ def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:
 
 
 # ===== Job Management Endpoints =====
+
 
 @router.post(
     "",
@@ -655,7 +696,9 @@ async def create_extraction_job(
     try:
         if isinstance(request, SimpleExtractionRequest):
             # Validate documents
-            document_ids = _validate_documents(request.document_ids, request.collection_id)
+            document_ids = _validate_documents(
+                request.document_ids, request.collection_id
+            )
 
             # Validate and fetch schema
             _validate_schema_id_required(request.schema_id)
@@ -691,14 +734,16 @@ async def create_extraction_job(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Unexpected error creating extraction job: {}", str(e), exc_info=True)
+        logger.error(
+            "Unexpected error creating extraction job: {}", str(e), exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal Server Error",
                 "message": f"An unexpected error occurred while creating the extraction job: {str(e)}. Please try again or contact support.",
-                "code": "INTERNAL_ERROR"
-            }
+                "code": "INTERNAL_ERROR",
+            },
         )
 
 
@@ -729,7 +774,9 @@ async def create_extraction_job_db(
     try:
         if isinstance(request, SimpleExtractionRequest):
             # Validate documents
-            document_ids = _validate_documents(request.document_ids, request.collection_id)
+            document_ids = _validate_documents(
+                request.document_ids, request.collection_id
+            )
 
             # Validate schema_id is present and is a UUID
             _validate_schema_id_required(request.schema_id)
@@ -739,14 +786,18 @@ async def create_extraction_job_db(
                     detail={
                         "error": "Invalid Schema ID",
                         "message": f"Schema ID '{request.schema_id}' is not a valid UUID. This endpoint requires a schema from Supabase database.",
-                        "code": "INVALID_SCHEMA_ID"
-                    }
+                        "code": "INVALID_SCHEMA_ID",
+                    },
                 )
 
             # Fetch full schema with metadata from database
             logger.info(f"Fetching full schema {request.schema_id} from database")
-            user_schema = _fetch_schema_from_db(request.schema_id, include_metadata=True)
-            logger.info(f"Successfully fetched full schema from database: {request.schema_id}")
+            user_schema = _fetch_schema_from_db(
+                request.schema_id, include_metadata=True
+            )
+            logger.info(
+                f"Successfully fetched full schema from database: {request.schema_id}"
+            )
 
             extraction_request = DocumentExtractionRequest(
                 collection_id=request.collection_id,
@@ -762,16 +813,18 @@ async def create_extraction_job_db(
             # Validate user_schema has required fields if provided
             if request.user_schema is not None:
                 required_fields = ["name", "description", "text"]
-                missing_fields = [f for f in required_fields if f not in request.user_schema]
+                missing_fields = [
+                    f for f in required_fields if f not in request.user_schema
+                ]
                 if missing_fields:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail={
                             "error": "Invalid Schema Format",
                             "message": f"Schema is missing required fields: {', '.join(missing_fields)}. "
-                                       f"Schema must have 'name', 'description', and 'text' fields.",
-                            "code": "INVALID_SCHEMA_FORMAT"
-                        }
+                            f"Schema must have 'name', 'description', and 'text' fields.",
+                            "code": "INVALID_SCHEMA_FORMAT",
+                        },
                     )
             extraction_request = request
 
@@ -784,9 +837,9 @@ async def create_extraction_job_db(
                 detail={
                     "error": "Missing Schema",
                     "message": "user_schema must be provided. For simple requests, provide schema_id to fetch from database. "
-                               "For full requests, provide user_schema with 'name', 'description', and 'text' fields.",
-                    "code": "MISSING_USER_SCHEMA"
-                }
+                    "For full requests, provide user_schema with 'name', 'description', and 'text' fields.",
+                    "code": "MISSING_USER_SCHEMA",
+                },
             )
 
         # Submit and return
@@ -796,14 +849,16 @@ async def create_extraction_job_db(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Unexpected error creating extraction job: {}", str(e), exc_info=True)
+        logger.error(
+            "Unexpected error creating extraction job: {}", str(e), exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal Server Error",
                 "message": f"An unexpected error occurred while creating the extraction job: {str(e)}. Please try again or contact support.",
-                "code": "INTERNAL_ERROR"
-            }
+                "code": "INTERNAL_ERROR",
+            },
         )
 
 
@@ -839,18 +894,24 @@ async def create_bulk_extraction(
         for schema_id in request.schema_ids:
             # Validate schema_id is a UUID
             if not is_uuid(schema_id):
-                jobs.append(BulkExtractionJobInfo(
-                    job_id="",
-                    schema_id=schema_id,
-                    schema_name=None,
-                    status="rejected",
-                ))
+                jobs.append(
+                    BulkExtractionJobInfo(
+                        job_id="",
+                        schema_id=schema_id,
+                        schema_name=None,
+                        status="rejected",
+                    )
+                )
                 continue
 
             try:
                 # Fetch schema from database
                 schema_data = _fetch_schema_from_db(schema_id, include_metadata=True)
-                schema_name = schema_data.get("name", "Unknown Schema") if isinstance(schema_data, dict) else None
+                schema_name = (
+                    schema_data.get("name", "Unknown Schema")
+                    if isinstance(schema_data, dict)
+                    else None
+                )
 
                 # Create extraction request for this schema
                 extraction_request = DocumentExtractionRequest(
@@ -866,31 +927,43 @@ async def create_bulk_extraction(
                 # Submit to Celery
                 task_id = _submit_extraction_task(extraction_request)
 
-                jobs.append(BulkExtractionJobInfo(
-                    job_id=task_id,
-                    schema_id=schema_id,
-                    schema_name=schema_name,
-                    status="accepted",
-                ))
+                jobs.append(
+                    BulkExtractionJobInfo(
+                        job_id=task_id,
+                        schema_id=schema_id,
+                        schema_name=schema_name,
+                        status="accepted",
+                    )
+                )
 
-                logger.info(f"Bulk extraction: created job {task_id} for schema {schema_id} ({schema_name})")
+                logger.info(
+                    f"Bulk extraction: created job {task_id} for schema {schema_id} ({schema_name})"
+                )
 
             except HTTPException as he:
-                logger.warning(f"Failed to create job for schema {schema_id}: {he.detail}")
-                jobs.append(BulkExtractionJobInfo(
-                    job_id="",
-                    schema_id=schema_id,
-                    schema_name=None,
-                    status="rejected",
-                ))
+                logger.warning(
+                    f"Failed to create job for schema {schema_id}: {he.detail}"
+                )
+                jobs.append(
+                    BulkExtractionJobInfo(
+                        job_id="",
+                        schema_id=schema_id,
+                        schema_name=None,
+                        status="rejected",
+                    )
+                )
             except Exception as e:
-                logger.error(f"Unexpected error creating job for schema {schema_id}: {e}")
-                jobs.append(BulkExtractionJobInfo(
-                    job_id="",
-                    schema_id=schema_id,
-                    schema_name=None,
-                    status="rejected",
-                ))
+                logger.error(
+                    f"Unexpected error creating job for schema {schema_id}: {e}"
+                )
+                jobs.append(
+                    BulkExtractionJobInfo(
+                        job_id="",
+                        schema_id=schema_id,
+                        schema_name=None,
+                        status="rejected",
+                    )
+                )
 
         accepted_count = sum(1 for j in jobs if j.status == "accepted")
 
@@ -913,8 +986,8 @@ async def create_bulk_extraction(
             detail={
                 "error": "Bulk Extraction Failed",
                 "message": f"An error occurred while creating bulk extraction jobs: {str(e)}",
-                "code": "BULK_EXTRACTION_FAILED"
-            }
+                "code": "BULK_EXTRACTION_FAILED",
+            },
         )
 
 
@@ -925,7 +998,7 @@ async def create_bulk_extraction(
     description="Retrieve the status and results of an extraction job by its ID.",
 )
 async def get_extraction_job(
-    job_id: str = Path(..., description="Extraction job ID (task ID)")
+    job_id: str = Path(..., description="Extraction job ID (task ID)"),
 ) -> BatchExtractionResponse:
     """
     Get extraction job status and results.
@@ -951,8 +1024,14 @@ async def get_extraction_job(
         except Exception as state_error:
             # Task might not exist if worker wasn't running when it was submitted
             error_msg = str(state_error).lower()
-            if "not found" in error_msg or "does not exist" in error_msg or "pending" in error_msg:
-                logger.warning(f"Task {job_id} not found or not captured by worker: {state_error}")
+            if (
+                "not found" in error_msg
+                or "does not exist" in error_msg
+                or "pending" in error_msg
+            ):
+                logger.warning(
+                    f"Task {job_id} not found or not captured by worker: {state_error}"
+                )
                 # Return as PENDING - task is queued but not captured yet
                 return BatchExtractionResponse(
                     task_id=job_id,
@@ -965,23 +1044,33 @@ async def get_extraction_job(
                 detail={
                     "error": "Service Unavailable",
                     "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
-                    "code": "WORKER_UNAVAILABLE"
-                }
+                    "code": "WORKER_UNAVAILABLE",
+                },
             )
-        
+
         # If task state is PENDING and has no info, either:
         # 1. Task hasn't been captured by a worker yet (new job)
         # 2. Celery task data has expired (old job) - preserve existing state
         if task_state == "PENDING" and not task_result.info:
-            logger.warning(f"Task {job_id} is PENDING with no info - checking Supabase for existing state")
+            logger.warning(
+                f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
+            )
 
             # First, check if the job already has progress in Supabase
             # This handles the case where Celery task data has expired but job was partially/fully processed
             if supabase:
                 try:
-                    job_data = supabase.table("extraction_jobs").select("*").eq("job_id", job_id).single().execute()
+                    job_data = (
+                        supabase.table("extraction_jobs")
+                        .select("*")
+                        .eq("job_id", job_id)
+                        .single()
+                        .execute()
+                    )
                     if job_data.data:
-                        completed_documents = job_data.data.get("completed_documents", 0) or 0
+                        completed_documents = (
+                            job_data.data.get("completed_documents", 0) or 0
+                        )
                         total_documents = job_data.data.get("total_documents", 0) or 0
                         existing_status = job_data.data.get("status", "PENDING")
                         existing_results = job_data.data.get("results")
@@ -994,18 +1083,38 @@ async def get_extraction_job(
                             )
 
                             # Determine the appropriate status based on existing state
-                            if completed_documents >= total_documents and total_documents > 0:
+                            if (
+                                completed_documents >= total_documents
+                                and total_documents > 0
+                            ):
                                 # All documents processed - should be SUCCESS
                                 final_status = "COMPLETED"
-                                if existing_status not in ["SUCCESS", "COMPLETED", "PARTIALLY_COMPLETED"]:
+                                if existing_status not in [
+                                    "SUCCESS",
+                                    "COMPLETED",
+                                    "PARTIALLY_COMPLETED",
+                                ]:
                                     # Update Supabase to reflect completion
-                                    update_job_status_in_supabase(job_id, final_status, completed_documents=completed_documents)
+                                    update_job_status_in_supabase(
+                                        job_id,
+                                        final_status,
+                                        completed_documents=completed_documents,
+                                    )
                             elif completed_documents > 0:
                                 # Partially processed - job was interrupted
                                 final_status = "PARTIALLY_COMPLETED"
-                                if existing_status not in ["SUCCESS", "COMPLETED", "PARTIALLY_COMPLETED", "FAILURE"]:
+                                if existing_status not in [
+                                    "SUCCESS",
+                                    "COMPLETED",
+                                    "PARTIALLY_COMPLETED",
+                                    "FAILURE",
+                                ]:
                                     # Update Supabase to reflect partial completion (Celery data lost)
-                                    update_job_status_in_supabase(job_id, final_status, completed_documents=completed_documents)
+                                    update_job_status_in_supabase(
+                                        job_id,
+                                        final_status,
+                                        completed_documents=completed_documents,
+                                    )
                             else:
                                 final_status = existing_status
 
@@ -1013,7 +1122,9 @@ async def get_extraction_job(
                             results = None
                             if existing_results:
                                 results = [
-                                    DocumentExtractionResponse(**r) if isinstance(r, dict) else r
+                                    DocumentExtractionResponse(**r)
+                                    if isinstance(r, dict)
+                                    else r
                                     for r in existing_results
                                 ]
 
@@ -1024,25 +1135,40 @@ async def get_extraction_job(
                             )
 
                         # Job has no progress yet - try to resubmit
-                        logger.info(f"Job {job_id} has no progress, attempting to resubmit")
+                        logger.info(
+                            f"Job {job_id} has no progress, attempting to resubmit"
+                        )
                         collection_id = job_data.data.get("collection_id")
                         schema_id = job_data.data.get("schema_id")
                         document_ids = job_data.data.get("document_ids", [])
                         language = job_data.data.get("language", "pl")
-                        extraction_context = job_data.data.get("extraction_context", "Extract structured information from legal documents using the provided schema.")
+                        extraction_context = job_data.data.get(
+                            "extraction_context",
+                            "Extract structured information from legal documents using the provided schema.",
+                        )
 
                         if collection_id and schema_id and document_ids:
                             # Fetch schema from database
-                            schema_response = supabase.table("extraction_schemas").select("name, description, text").eq("id", schema_id).single().execute()
+                            schema_response = (
+                                supabase.table("extraction_schemas")
+                                .select("name, description, text")
+                                .eq("id", schema_id)
+                                .single()
+                                .execute()
+                            )
                             if schema_response.data:
                                 user_schema = {
                                     "name": schema_response.data["name"],
-                                    "description": schema_response.data.get("description", ""),
+                                    "description": schema_response.data.get(
+                                        "description", ""
+                                    ),
                                     "text": schema_response.data["text"],
                                 }
 
                                 # Get prompt_id from job data, default to 'info_extraction'
-                                prompt_id = job_data.data.get("prompt_id", "info_extraction")
+                                prompt_id = job_data.data.get(
+                                    "prompt_id", "info_extraction"
+                                )
 
                                 # Create request object
                                 resubmit_request = DocumentExtractionRequest(
@@ -1057,16 +1183,22 @@ async def get_extraction_job(
 
                                 # Resubmit the task
                                 try:
-                                    new_task = extract_information_from_documents_task.delay(
-                                        resubmit_request.model_dump(mode="json")
+                                    new_task = (
+                                        extract_information_from_documents_task.delay(
+                                            resubmit_request.model_dump(mode="json")
+                                        )
                                     )
-                                    logger.info(f"Resubmitted job {job_id} as new job {new_task.id}")
+                                    logger.info(
+                                        f"Resubmitted job {job_id} as new job {new_task.id}"
+                                    )
 
                                     # Update the job record with new job_id
-                                    supabase.table("extraction_jobs").update({
-                                        "job_id": new_task.id,
-                                        "updated_at": datetime.utcnow().isoformat()
-                                    }).eq("job_id", job_id).execute()
+                                    supabase.table("extraction_jobs").update(
+                                        {
+                                            "job_id": new_task.id,
+                                            "updated_at": datetime.utcnow().isoformat(),
+                                        }
+                                    ).eq("job_id", job_id).execute()
 
                                     # Return the new job status
                                     return BatchExtractionResponse(
@@ -1075,9 +1207,13 @@ async def get_extraction_job(
                                         results=None,
                                     )
                                 except Exception as resubmit_error:
-                                    logger.error(f"Failed to resubmit job {job_id}: {resubmit_error}")
+                                    logger.error(
+                                        f"Failed to resubmit job {job_id}: {resubmit_error}"
+                                    )
                 except Exception as supabase_error:
-                    logger.warning(f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}")
+                    logger.warning(
+                        f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}"
+                    )
 
             # If resubmission failed or Supabase not available, return PENDING status
             # Note: Using PENDING instead of QUEUED to match database constraint
@@ -1092,14 +1228,16 @@ async def get_extraction_job(
             if not task_result.ready():
                 # Task has been captured (has info), so use normal status mapping
                 simplified_status = simplify_job_status(task_state)
-                
+
                 # Update Supabase with current status for in-progress jobs
                 task_info = task_result.info
                 completed_docs = None
                 if isinstance(task_info, dict):
                     completed_docs = task_info.get("completed_documents")
-                update_job_status_in_supabase(job_id, simplified_status, completed_documents=completed_docs)
-                
+                update_job_status_in_supabase(
+                    job_id, simplified_status, completed_documents=completed_docs
+                )
+
                 return BatchExtractionResponse(
                     task_id=job_id,
                     status=simplified_status,
@@ -1128,20 +1266,27 @@ async def get_extraction_job(
                 error_type = type(error_info).__name__ if error_info else "TaskError"
                 error_message = str(error_info) if error_info else "Task failed"
                 logger.error(
-                    "Extraction job {} failed: {}: {}", job_id, error_type, error_message
+                    "Extraction job {} failed: {}: {}",
+                    job_id,
+                    error_type,
+                    error_message,
                 )
                 simplified_status = simplify_job_status(task_state)
-                
+
                 # Update Supabase with failure status
-                update_job_status_in_supabase(job_id, simplified_status, error_message=error_message)
-                
+                update_job_status_in_supabase(
+                    job_id, simplified_status, error_message=error_message
+                )
+
                 return BatchExtractionResponse(
                     task_id=job_id,
                     status=simplified_status,
                     results=[],
                 )
         except Exception as failed_check_error:
-            logger.warning(f"Error checking if task {job_id} failed: {failed_check_error}")
+            logger.warning(
+                f"Error checking if task {job_id} failed: {failed_check_error}"
+            )
 
         # Task completed successfully - get results
         try:
@@ -1149,12 +1294,23 @@ async def get_extraction_job(
 
             # Handle case where Celery returns task metadata instead of actual results
             # This can happen when task manually calls update_state(state="FAILURE"/"SUCCESS")
-            if isinstance(results, dict) and any(key in results for key in ["started_at", "elapsed_time_seconds", "exc_type"]):
-                logger.warning(f"Celery returned task metadata instead of results for job {job_id}: {results}")
+            if isinstance(results, dict) and any(
+                key in results
+                for key in ["started_at", "elapsed_time_seconds", "exc_type"]
+            ):
+                logger.warning(
+                    f"Celery returned task metadata instead of results for job {job_id}: {results}"
+                )
                 # Check if there's error information in the metadata
-                error_msg = results.get("error") or results.get("exc_message") or "Task completed with unexpected result format"
+                error_msg = (
+                    results.get("error")
+                    or results.get("exc_message")
+                    or "Task completed with unexpected result format"
+                )
                 simplified_status = simplify_job_status(task_state)
-                update_job_status_in_supabase(job_id, simplified_status, error_message=str(error_msg))
+                update_job_status_in_supabase(
+                    job_id, simplified_status, error_message=str(error_msg)
+                )
                 return BatchExtractionResponse(
                     task_id=job_id,
                     status=simplified_status,
@@ -1163,17 +1319,25 @@ async def get_extraction_job(
 
             # Validate results format - each item should be a dict
             if not isinstance(results, list):
-                logger.error(f"Unexpected results type from Celery task: {type(results)}, expected list. Results: {results!r}")
-                raise ValueError(f"Expected list of results, got {type(results).__name__}")
+                logger.error(
+                    f"Unexpected results type from Celery task: {type(results)}, expected list. Results: {results!r}"
+                )
+                raise ValueError(
+                    f"Expected list of results, got {type(results).__name__}"
+                )
 
             responses = []
             for idx, res in enumerate(results):
                 if isinstance(res, dict):
                     responses.append(DocumentExtractionResponse(**res))
                 else:
-                    logger.error(f"Result item {idx} is not a dict: {type(res).__name__} = {res!r}")
-                    raise TypeError(f"Result item {idx} must be a dict, got {type(res).__name__}: {res!r}")
-            
+                    logger.error(
+                        f"Result item {idx} is not a dict: {type(res).__name__} = {res!r}"
+                    )
+                    raise TypeError(
+                        f"Result item {idx} must be a dict, got {type(res).__name__}: {res!r}"
+                    )
+
             # Simplify status based on results
             simplified_status = simplify_job_status(task_state, results)
 
@@ -1181,18 +1345,21 @@ async def get_extraction_job(
             processed_count = None
             if results:
                 processed_count = sum(
-                    1 for r in results
-                    if isinstance(r, dict) and r.get("status") in [
+                    1
+                    for r in results
+                    if isinstance(r, dict)
+                    and r.get("status")
+                    in [
                         DocumentProcessingStatus.COMPLETED.value,
                         DocumentProcessingStatus.FAILED.value,
-                        DocumentProcessingStatus.PARTIALLY_COMPLETED.value
+                        DocumentProcessingStatus.PARTIALLY_COMPLETED.value,
                     ]
                 )
             update_job_status_in_supabase(
-                job_id, 
-                simplified_status, 
+                job_id,
+                simplified_status,
                 completed_documents=processed_count,
-                results=results
+                results=results,
             )
 
             return BatchExtractionResponse(
@@ -1203,15 +1370,21 @@ async def get_extraction_job(
         except Exception as get_error:
             error_msg = str(get_error)
             # Check if this is a worker unavailable error
-            if "worker" in error_msg.lower() or "not available" in error_msg.lower() or "timeout" in error_msg.lower():
-                logger.error(f"Worker unavailable when getting results for job {job_id}: {get_error}")
+            if (
+                "worker" in error_msg.lower()
+                or "not available" in error_msg.lower()
+                or "timeout" in error_msg.lower()
+            ):
+                logger.error(
+                    f"Worker unavailable when getting results for job {job_id}: {get_error}"
+                )
                 raise HTTPException(
                     status_code=503,
                     detail={
                         "error": "Service Unavailable",
                         "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
-                        "code": "WORKER_UNAVAILABLE"
-                    }
+                        "code": "WORKER_UNAVAILABLE",
+                    },
                 )
             # Re-raise other errors
             raise
@@ -1221,29 +1394,41 @@ async def get_extraction_job(
     except Exception as e:
         error_type = type(e).__name__
         error_message = str(e)
-        
+
         # Check if this is a worker/Celery connection error
         error_lower = error_message.lower()
-        if any(keyword in error_lower for keyword in ['worker', 'celery', 'broker', 'backend', 'connection', 'timeout', 'not available']):
-            logger.warning(f"Celery worker unavailable when retrieving job {job_id}: {error_message}")
+        if any(
+            keyword in error_lower
+            for keyword in [
+                "worker",
+                "celery",
+                "broker",
+                "backend",
+                "connection",
+                "timeout",
+                "not available",
+            ]
+        ):
+            logger.warning(
+                f"Celery worker unavailable when retrieving job {job_id}: {error_message}"
+            )
             raise HTTPException(
                 status_code=503,
                 detail={
                     "error": "Service Unavailable",
                     "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
-                    "code": "WORKER_UNAVAILABLE"
-                }
+                    "code": "WORKER_UNAVAILABLE",
+                },
             )
-        
+
         # Use logger.exception() which automatically includes exception info
         logger.exception(
-            "Error retrieving extraction job {}: {}: {}", job_id, error_type, error_message
+            "Error retrieving extraction job {}: {}: {}",
+            job_id,
+            error_type,
+            error_message,
         )
-        
-        # Check if this is a Weaviate/gRPC connection error and raise appropriate exception
-        if is_weaviate_or_grpc_error(e):
-            raise_weaviate_error(e, context=f"retrieving extraction job {job_id}")
-        
+
         # For other errors, raise generic internal server error
         raise HTTPException(
             status_code=500,
@@ -1251,8 +1436,8 @@ async def get_extraction_job(
                 "error": "Internal Server Error",
                 "message": f"An error occurred while retrieving the extraction job: {error_type}: {error_message}",
                 "code": "JOB_RETRIEVAL_FAILED",
-                "error_type": error_type
-            }
+                "error_type": error_type,
+            },
         )
 
 
@@ -1265,7 +1450,10 @@ async def get_extraction_job(
 async def list_extraction_jobs(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(20, ge=1, le=100, description="Number of jobs per page"),
-    status: str | None = Query(None, description="Filter by job status (IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED)"),
+    status: str | None = Query(
+        None,
+        description="Filter by job status (IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED)",
+    ),
     user_id: str = Depends(get_current_user),
 ) -> ListExtractionJobsResponse:
     """
@@ -1289,7 +1477,9 @@ async def list_extraction_jobs(
     For production use with many tasks, consider implementing a dedicated job tracking database.
     """
     try:
-        logger.info(f"Listing extraction jobs for user {user_id}, page={page}, page_size={page_size}, status={status}")
+        logger.info(
+            f"Listing extraction jobs for user {user_id}, page={page}, page_size={page_size}, status={status}"
+        )
 
         # Query Celery's result backend to get all tasks
         # Note: This approach has limitations - Celery doesn't provide built-in filtering by user
@@ -1303,7 +1493,7 @@ async def list_extraction_jobs(
             logger.error("Celery inspect API returned None - no workers available")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Task processing service is currently unavailable. No workers are running. Please contact support."
+                detail="Task processing service is currently unavailable. No workers are running. Please contact support.",
             )
 
         # Get active, scheduled, and reserved tasks with defensive error handling
@@ -1312,10 +1502,12 @@ async def list_extraction_jobs(
             scheduled_tasks = inspect.scheduled() or {}
             reserved_tasks = inspect.reserved() or {}
         except Exception as e:
-            logger.error("Failed to retrieve task information from Celery workers: {}", e)
+            logger.error(
+                "Failed to retrieve task information from Celery workers: {}", e
+            )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Task processing service is temporarily unavailable. Please try again later."
+                detail="Task processing service is temporarily unavailable. Please try again later.",
             )
 
         # Combine all active tasks
@@ -1352,15 +1544,17 @@ async def list_extraction_jobs(
                 if simplified_status != status and raw_status != status:
                     continue
 
-            jobs.append(ExtractionJobSummary(
-                task_id=task_id,
-                collection_id=collection_id,
-                status=simplified_status,
-                created_at=datetime.utcnow().isoformat(),  # Not available from inspect
-                updated_at=None,
-                total_documents=None,
-                completed_documents=None,
-            ))
+            jobs.append(
+                ExtractionJobSummary(
+                    task_id=task_id,
+                    collection_id=collection_id,
+                    status=simplified_status,
+                    created_at=datetime.utcnow().isoformat(),  # Not available from inspect
+                    updated_at=None,
+                    total_documents=None,
+                    completed_documents=None,
+                )
+            )
 
         # For completed/failed tasks, we need to query the result backend
         # This is limited because Celery doesn't provide a built-in way to list all results
@@ -1380,7 +1574,9 @@ async def list_extraction_jobs(
         end_idx = start_idx + page_size
         paginated_jobs = jobs[start_idx:end_idx]
 
-        logger.info(f"Found {total} extraction jobs, returning page {page} with {len(paginated_jobs)} jobs")
+        logger.info(
+            f"Found {total} extraction jobs, returning page {page} with {len(paginated_jobs)} jobs"
+        )
 
         return ListExtractionJobsResponse(
             jobs=paginated_jobs,
@@ -1392,8 +1588,7 @@ async def list_extraction_jobs(
     except Exception as e:
         logger.error("Error listing extraction jobs: {}", str(e))
         raise HTTPException(
-            status_code=500,
-            detail=f"Error listing extraction jobs: {str(e)}"
+            status_code=500, detail=f"Error listing extraction jobs: {str(e)}"
         )
 
 
@@ -1444,7 +1639,7 @@ async def cancel_or_delete_extraction_job(
             return CancelJobResponse(
                 task_id=job_id,
                 status="not_found",
-                message="Job not found or not started yet"
+                message="Job not found or not started yet",
             )
 
         # Check if task is already completed
@@ -1455,32 +1650,25 @@ async def cancel_or_delete_extraction_job(
             return CancelJobResponse(
                 task_id=job_id,
                 status="already_completed",
-                message=f"Job already completed with status: {task_status}"
+                message=f"Job already completed with status: {task_status}",
             )
 
         # Task is running or pending - revoke it
         # terminate=True will kill the worker process if the task is running
         # signal='SIGTERM' is the default, which allows graceful shutdown
-        celery_app.control.revoke(
-            job_id,
-            terminate=True,
-            signal='SIGTERM'
-        )
+        celery_app.control.revoke(job_id, terminate=True, signal="SIGTERM")
 
         logger.info(f"Successfully revoked job {job_id} for user {user_id}")
 
         return CancelJobResponse(
             task_id=job_id,
             status="cancelled",
-            message="Job cancellation requested. The task will be terminated if currently running."
+            message="Job cancellation requested. The task will be terminated if currently running.",
         )
 
     except Exception as e:
         logger.error("Error cancelling job {}: {}", job_id, str(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error cancelling job: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error cancelling job: {str(e)}")
 
 
 @router.delete(
@@ -1495,76 +1683,76 @@ async def delete_extraction_job(
 ) -> CancelJobResponse:
     """
     Permanently delete an extraction job from Supabase.
-    
+
     This endpoint deletes the job record from the database. The job must belong to the user.
-    
+
     **Path Parameters:**
     - **job_id**: The ID of the extraction job to delete
-    
+
     **Authorization:**
     - Requires X-User-ID header
     - Only the job owner can delete (verified through user_id)
-    
+
     **Response:**
     - **status**: "deleted" or "not_found"
     - **message**: Human-readable status message
     """
     try:
         logger.info(f"User {user_id} requesting deletion of job {job_id}")
-        
+
         if not supabase:
-            raise HTTPException(
-                status_code=503,
-                detail="Database service unavailable"
-            )
-        
+            raise HTTPException(status_code=503, detail="Database service unavailable")
+
         # Verify job exists and belongs to user
-        job_response = supabase.table("extraction_jobs").select("user_id").eq("job_id", job_id).single().execute()
-        
+        job_response = (
+            supabase.table("extraction_jobs")
+            .select("user_id")
+            .eq("job_id", job_id)
+            .single()
+            .execute()
+        )
+
         if not job_response.data:
             logger.warning(f"Job {job_id} not found")
             return CancelJobResponse(
-                task_id=job_id,
-                status="not_found",
-                message="Job not found"
+                task_id=job_id, status="not_found", message="Job not found"
             )
-        
+
         if job_response.data.get("user_id") != user_id:
-            logger.warning(f"User {user_id} attempted to delete job {job_id} belonging to another user")
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to delete this job"
+            logger.warning(
+                f"User {user_id} attempted to delete job {job_id} belonging to another user"
             )
-        
+            raise HTTPException(
+                status_code=403, detail="You do not have permission to delete this job"
+            )
+
         # Delete the job from Supabase
-        delete_response = supabase.table("extraction_jobs").delete().eq("job_id", job_id).execute()
-        
+        delete_response = (
+            supabase.table("extraction_jobs").delete().eq("job_id", job_id).execute()
+        )
+
         if delete_response.data:
             logger.info(f"Successfully deleted job {job_id} from database")
             return CancelJobResponse(
-                task_id=job_id,
-                status="deleted",
-                message="Job deleted successfully"
+                task_id=job_id, status="deleted", message="Job deleted successfully"
             )
         else:
             logger.warning(f"No rows deleted for job {job_id}")
             return CancelJobResponse(
                 task_id=job_id,
                 status="not_found",
-                message="Job not found or already deleted"
+                message="Job not found or already deleted",
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error deleting job {job_id}: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error deleting job: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error deleting job: {str(e)}")
 
 
 # ===== Prompts Management Endpoints =====
+
 
 @router.get(
     "/prompts",
@@ -1578,10 +1766,7 @@ async def list_prompts() -> list[str]:
         return InformationExtractor.list_prompts()
     except Exception as e:
         logger.error(f"Error listing prompts: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error listing prompts: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error listing prompts: {str(e)}")
 
 
 @router.get(
@@ -1590,23 +1775,17 @@ async def list_prompts() -> list[str]:
     summary="Get prompt template",
     description="Retrieve a specific prompt template by its ID.",
 )
-async def get_prompt(
-    prompt_id: str = Path(..., description="Prompt ID")
-) -> str:
+async def get_prompt(prompt_id: str = Path(..., description="Prompt ID")) -> str:
     """Get a specific prompt template."""
     try:
         prompt_id = secure_filename(prompt_id)
         return InformationExtractor.get_prompt_template(prompt_id)
     except FileNotFoundError:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Prompt '{prompt_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
     except Exception as e:
         logger.error(f"Error retrieving prompt {prompt_id}: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Error retrieving prompt: {str(e)}"
+            status_code=500, detail=f"Error retrieving prompt: {str(e)}"
         )
 
 
@@ -1637,8 +1816,7 @@ async def create_prompt(
     if prompt_exists(prompt_id):
         logger.warning(f"Attempted to create duplicate prompt: {prompt_id}")
         raise HTTPException(
-            status_code=400,
-            detail=f"Prompt '{prompt_id}' already exists"
+            status_code=400, detail=f"Prompt '{prompt_id}' already exists"
         )
 
     # Validate Jinja2 template syntax
@@ -1646,10 +1824,7 @@ async def create_prompt(
         validate_jinja2_template(request.template)
     except ValueError as e:
         logger.error(f"Invalid Jinja2 template for prompt {prompt_id}: {str(e)}")
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Ensure prompts directory exists
     PROMPTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -1663,8 +1838,7 @@ async def create_prompt(
     except Exception as e:
         logger.error(f"Error writing prompt file {prompt_id}: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Error saving prompt template: {str(e)}"
+            status_code=500, detail=f"Error saving prompt template: {str(e)}"
         )
 
     # Create and save metadata
@@ -1674,7 +1848,7 @@ async def create_prompt(
         description=request.description,
         variables=request.variables,
         created_at=created_at,
-        is_system=False
+        is_system=False,
     )
 
     try:
@@ -1682,10 +1856,7 @@ async def create_prompt(
     except ValueError as e:
         # Cleanup: remove template file if metadata save fails
         prompt_path.unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
     logger.info(f"Successfully created prompt {prompt_id}")
 
@@ -1695,7 +1866,7 @@ async def create_prompt(
         template=request.template,
         variables=request.variables,
         created_at=created_at,
-        is_system=False
+        is_system=False,
     )
 
 
@@ -1727,19 +1898,13 @@ async def update_prompt(
     # Check if prompt exists
     if not prompt_exists(prompt_id):
         logger.warning(f"Attempted to update non-existent prompt: {prompt_id}")
-        raise HTTPException(
-            status_code=404,
-            detail=f"Prompt '{prompt_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
 
     # Load existing metadata
     try:
         metadata = load_prompt_metadata(prompt_id)
     except ValueError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Load existing template
     try:
@@ -1747,31 +1912,26 @@ async def update_prompt(
     except Exception as e:
         logger.error(f"Error loading existing template for {prompt_id}: {str(e)}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Error loading existing template: {str(e)}"
+            status_code=500, detail=f"Error loading existing template: {str(e)}"
         )
 
     # Validate new template if provided
-    new_template = request.template if request.template is not None else existing_template
+    new_template = (
+        request.template if request.template is not None else existing_template
+    )
     if request.template is not None:
         try:
             validate_jinja2_template(request.template)
         except ValueError as e:
             logger.error(f"Invalid Jinja2 template for prompt {prompt_id}: {str(e)}")
-            raise HTTPException(
-                status_code=400,
-                detail=str(e)
-            )
+            raise HTTPException(status_code=400, detail=str(e))
 
     # Create backup before updating
     try:
         create_backup(prompt_id)
     except ValueError as e:
         logger.error(f"Error creating backup for prompt {prompt_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error creating backup: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error creating backup: {str(e)}")
 
     # Update template file if template changed
     if request.template is not None:
@@ -1783,8 +1943,7 @@ async def update_prompt(
         except Exception as e:
             logger.error(f"Error writing prompt file {prompt_id}: {str(e)}")
             raise HTTPException(
-                status_code=500,
-                detail=f"Error saving prompt template: {str(e)}"
+                status_code=500, detail=f"Error saving prompt template: {str(e)}"
             )
 
     # Update metadata
@@ -1798,10 +1957,7 @@ async def update_prompt(
     try:
         save_prompt_metadata(metadata)
     except ValueError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
     logger.info(f"Successfully updated prompt {prompt_id}")
 
@@ -1812,7 +1968,7 @@ async def update_prompt(
         variables=metadata.variables,
         created_at=metadata.created_at,
         updated_at=updated_at,
-        is_system=metadata.is_system
+        is_system=metadata.is_system,
     )
 
 
@@ -1824,7 +1980,7 @@ async def update_prompt(
 )
 async def delete_prompt(
     prompt_id: str = Path(..., description="Prompt ID to delete"),
-    force: bool = Query(False, description="Force deletion even if prompt is in use")
+    force: bool = Query(False, description="Force deletion even if prompt is in use"),
 ) -> DeletePromptResponse:
     """
     Delete a custom prompt template.
@@ -1844,17 +2000,13 @@ async def delete_prompt(
     # Check if prompt exists
     if not prompt_exists(prompt_id):
         logger.warning(f"Attempted to delete non-existent prompt: {prompt_id}")
-        raise HTTPException(
-            status_code=404,
-            detail=f"Prompt '{prompt_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
 
     # Prevent deletion of system prompts
     if is_system_prompt(prompt_id):
         logger.warning(f"Attempted to delete system prompt: {prompt_id}")
         raise HTTPException(
-            status_code=400,
-            detail=f"Cannot delete system prompt '{prompt_id}'"
+            status_code=400, detail=f"Cannot delete system prompt '{prompt_id}'"
         )
 
     # Archive the prompt (move to archive directory instead of deleting)
@@ -1865,19 +2017,17 @@ async def delete_prompt(
         return DeletePromptResponse(
             prompt_id=prompt_id,
             status="archived",
-            message=f"Prompt '{prompt_id}' has been archived successfully"
+            message=f"Prompt '{prompt_id}' has been archived successfully",
         )
     except ValueError as e:
         logger.error(f"Error archiving prompt {prompt_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ===== Schemas Management Endpoints =====
 # DEPRECATED: These endpoints are maintained for backward compatibility.
 # Use /schemas endpoints instead (see app/schemas.py)
+
 
 @router.get(
     "/schemas",
@@ -1900,13 +2050,11 @@ async def list_schemas() -> list[str]:
         return InformationExtractor.list_schemas()
     except Exception as e:
         logger.error(f"Error listing schemas: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error listing schemas: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error listing schemas: {str(e)}")
 
 
 # ===== Export Endpoints =====
+
 
 @router.get(
     "/{job_id}/export",
@@ -1948,8 +2096,8 @@ async def export_extraction_results(
             detail={
                 "error": "Invalid Format",
                 "message": "Export format must be 'xlsx' or 'csv'",
-                "code": "INVALID_FORMAT"
-            }
+                "code": "INVALID_FORMAT",
+            },
         )
 
     if not supabase:
@@ -1958,15 +2106,19 @@ async def export_extraction_results(
             detail={
                 "error": "Service Unavailable",
                 "message": "Database service is unavailable",
-                "code": "DATABASE_UNAVAILABLE"
-            }
+                "code": "DATABASE_UNAVAILABLE",
+            },
         )
 
     try:
         # Fetch job data from Supabase
-        job_response = supabase.table("extraction_jobs").select(
-            "job_id, user_id, collection_id, schema_id, results, status"
-        ).eq("job_id", job_id).single().execute()
+        job_response = (
+            supabase.table("extraction_jobs")
+            .select("job_id, user_id, collection_id, schema_id, results, status")
+            .eq("job_id", job_id)
+            .single()
+            .execute()
+        )
 
         if not job_response.data:
             raise HTTPException(
@@ -1974,8 +2126,8 @@ async def export_extraction_results(
                 detail={
                     "error": "Job Not Found",
                     "message": f"Extraction job '{job_id}' was not found",
-                    "code": "JOB_NOT_FOUND"
-                }
+                    "code": "JOB_NOT_FOUND",
+                },
             )
 
         job_data = job_response.data
@@ -1987,8 +2139,8 @@ async def export_extraction_results(
                 detail={
                     "error": "Access Denied",
                     "message": "You do not have permission to export this job",
-                    "code": "ACCESS_DENIED"
-                }
+                    "code": "ACCESS_DENIED",
+                },
             )
 
         results = job_data.get("results", [])
@@ -1999,8 +2151,8 @@ async def export_extraction_results(
                 detail={
                     "error": "No Results",
                     "message": "This job has no results to export",
-                    "code": "NO_RESULTS"
-                }
+                    "code": "NO_RESULTS",
+                },
             )
 
         # Fetch collection and schema names for filename
@@ -2009,7 +2161,13 @@ async def export_extraction_results(
 
         if job_data.get("collection_id"):
             try:
-                col_response = supabase.table("collections").select("name").eq("id", job_data["collection_id"]).single().execute()
+                col_response = (
+                    supabase.table("collections")
+                    .select("name")
+                    .eq("id", job_data["collection_id"])
+                    .single()
+                    .execute()
+                )
                 if col_response.data:
                     collection_name = col_response.data.get("name", "extraction")
             except Exception:
@@ -2017,7 +2175,13 @@ async def export_extraction_results(
 
         if job_data.get("schema_id"):
             try:
-                schema_response = supabase.table("extraction_schemas").select("name").eq("id", job_data["schema_id"]).single().execute()
+                schema_response = (
+                    supabase.table("extraction_schemas")
+                    .select("name")
+                    .eq("id", job_data["schema_id"])
+                    .single()
+                    .execute()
+                )
                 if schema_response.data:
                     schema_name = schema_response.data.get("name", "")
             except Exception:
@@ -2069,8 +2233,8 @@ async def export_extraction_results(
                 detail={
                     "error": "No Completed Results",
                     "message": "No completed results with data available to export",
-                    "code": "NO_COMPLETED_RESULTS"
-                }
+                    "code": "NO_COMPLETED_RESULTS",
+                },
             )
 
         # Create DataFrame
@@ -2083,8 +2247,14 @@ async def export_extraction_results(
         df = df[ordered_cols]
 
         # Generate filename
-        safe_collection = "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in collection_name)
-        safe_schema = "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in schema_name) if schema_name else ""
+        safe_collection = "".join(
+            c if c.isalnum() or c in ("-", "_") else "-" for c in collection_name
+        )
+        safe_schema = (
+            "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in schema_name)
+            if schema_name
+            else ""
+        )
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
 
         filename_parts = [p for p in [safe_collection, safe_schema, date_str] if p]
@@ -2100,19 +2270,23 @@ async def export_extraction_results(
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
 
             output.seek(0)
-            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            media_type = (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
             filename_ext = f"{filename}.xlsx"
         else:
             # CSV export with UTF-8 BOM for Excel compatibility
             csv_content = df.to_csv(index=False)
-            output.write(b'\xef\xbb\xbf')  # UTF-8 BOM
-            output.write(csv_content.encode('utf-8'))
+            output.write(b"\xef\xbb\xbf")  # UTF-8 BOM
+            output.write(csv_content.encode("utf-8"))
 
             output.seek(0)
             media_type = "text/csv; charset=utf-8"
             filename_ext = f"{filename}.csv"
 
-        logger.info(f"Exporting job {job_id} as {format}: {len(rows)} rows, filename={filename_ext}")
+        logger.info(
+            f"Exporting job {job_id} as {format}: {len(rows)} rows, filename={filename_ext}"
+        )
 
         return StreamingResponse(
             output,
@@ -2120,7 +2294,7 @@ async def export_extraction_results(
             headers={
                 "Content-Disposition": f'attachment; filename="{filename_ext}"',
                 "X-Rows-Count": str(len(rows)),
-            }
+            },
         )
 
     except HTTPException:
@@ -2132,27 +2306,14 @@ async def export_extraction_results(
             detail={
                 "error": "Export Failed",
                 "message": f"Failed to export results: {str(e)}",
-                "code": "EXPORT_FAILED"
-            }
+                "code": "EXPORT_FAILED",
+            },
         )
 
 
 # =============================================================================
 # BASE SCHEMA EXTRACTION ENDPOINTS
 # =============================================================================
-
-
-from juddges_search.info_extraction import BaseSchemaExtractor
-from app.models import (
-    BaseSchemaExtractionRequest,
-    BaseSchemaExtractionResponse,
-    BaseSchemaExtractionResult,
-    ExtractedDataFilterRequest,
-    FacetCount,
-    FacetCountsResponse,
-    FilterFieldConfig,
-    FilterOptionsResponse,
-)
 
 
 @router.post(
@@ -2176,7 +2337,6 @@ async def extract_with_base_schema(
     The extracted data can then be used for faceted filtering and search.
     """
     from langchain_openai import ChatOpenAI
-    from juddges_search.db.weaviate_db import WeaviateClient
 
     results: list[BaseSchemaExtractionResult] = []
     successful = 0
@@ -2186,43 +2346,50 @@ async def extract_with_base_schema(
     model = ChatOpenAI(model=request.llm_name, temperature=0)
     extractor = BaseSchemaExtractor(model=model)
 
-    # Get Weaviate client for document retrieval
-    try:
-        weaviate_client = WeaviateClient()
-    except Exception as e:
-        logger.error(f"Failed to connect to Weaviate: {e}")
+    if not supabase:
         raise HTTPException(
             status_code=503,
             detail={
-                "error": "Vector Database Unavailable",
-                "message": "Could not connect to the document database.",
-                "code": "WEAVIATE_UNAVAILABLE",
-            }
+                "error": "Database Unavailable",
+                "message": "Database connection not available.",
+                "code": "DATABASE_UNAVAILABLE",
+            },
         )
 
     for doc_id in request.document_ids:
         try:
-            # Fetch document from Weaviate
-            doc = await weaviate_client.get_document_by_id(doc_id)
+            # Fetch document from Supabase
+            doc_response = (
+                supabase.table("judgments")
+                .select("id, full_text, language, court_name")
+                .eq("id", doc_id)
+                .maybe_single()
+                .execute()
+            )
+            doc = doc_response.data if doc_response else None
             if not doc:
-                results.append(BaseSchemaExtractionResult(
-                    document_id=doc_id,
-                    jurisdiction="unknown",
-                    status="failed",
-                    error_message=f"Document not found: {doc_id}",
-                ))
+                results.append(
+                    BaseSchemaExtractionResult(
+                        document_id=doc_id,
+                        jurisdiction="unknown",
+                        status="failed",
+                        error_message=f"Document not found: {doc_id}",
+                    )
+                )
                 failed += 1
                 continue
 
             # Extract full text
-            full_text = doc.get("full_text", "") or doc.get("content", "")
+            full_text = doc.get("full_text", "")
             if not full_text:
-                results.append(BaseSchemaExtractionResult(
-                    document_id=doc_id,
-                    jurisdiction="unknown",
-                    status="failed",
-                    error_message="Document has no text content",
-                ))
+                results.append(
+                    BaseSchemaExtractionResult(
+                        document_id=doc_id,
+                        jurisdiction="unknown",
+                        status="failed",
+                        error_message="Document has no text content",
+                    )
+                )
                 failed += 1
                 continue
 
@@ -2242,32 +2409,40 @@ async def extract_with_base_schema(
             # Store in Supabase
             if supabase:
                 try:
-                    supabase.table("legal_documents").update({
-                        "extracted_data": extracted_data,
-                        "jurisdiction": jurisdiction,
-                        "extraction_status": "completed",
-                        "extracted_at": datetime.utcnow().isoformat(),
-                    }).eq("document_id", doc_id).execute()
+                    supabase.table("legal_documents").update(
+                        {
+                            "extracted_data": extracted_data,
+                            "jurisdiction": jurisdiction,
+                            "extraction_status": "completed",
+                            "extracted_at": datetime.utcnow().isoformat(),
+                        }
+                    ).eq("document_id", doc_id).execute()
                 except Exception as e:
                     logger.warning(f"Failed to store extracted data for {doc_id}: {e}")
 
-            results.append(BaseSchemaExtractionResult(
-                document_id=doc_id,
-                jurisdiction=jurisdiction,
-                status="completed",
-                extracted_data=extracted_data,
-                validation_errors=validation_errors if validation_errors else None,
-            ))
+            results.append(
+                BaseSchemaExtractionResult(
+                    document_id=doc_id,
+                    jurisdiction=jurisdiction,
+                    status="completed",
+                    extracted_data=extracted_data,
+                    validation_errors=validation_errors if validation_errors else None,
+                )
+            )
             successful += 1
 
         except Exception as e:
-            logger.error(f"Failed to extract from document {doc_id}: {e}", exc_info=True)
-            results.append(BaseSchemaExtractionResult(
-                document_id=doc_id,
-                jurisdiction="unknown",
-                status="failed",
-                error_message=str(e),
-            ))
+            logger.error(
+                f"Failed to extract from document {doc_id}: {e}", exc_info=True
+            )
+            results.append(
+                BaseSchemaExtractionResult(
+                    document_id=doc_id,
+                    jurisdiction="unknown",
+                    status="failed",
+                    error_message=str(e),
+                )
+            )
             failed += 1
 
     return BaseSchemaExtractionResponse(
@@ -2302,7 +2477,7 @@ async def filter_by_extracted_data(
                 "error": "Database Unavailable",
                 "message": "Database connection not available.",
                 "code": "DATABASE_UNAVAILABLE",
-            }
+            },
         )
 
     try:
@@ -2314,7 +2489,7 @@ async def filter_by_extracted_data(
                 "p_text_query": request.text_query,
                 "p_limit": request.limit,
                 "p_offset": request.offset,
-            }
+            },
         ).execute()
 
         if response.data:
@@ -2343,7 +2518,7 @@ async def filter_by_extracted_data(
                 "error": "Filter Failed",
                 "message": str(e),
                 "code": "FILTER_FAILED",
-            }
+            },
         )
 
 
@@ -2369,14 +2544,13 @@ async def get_facet_counts(
                 "error": "Database Unavailable",
                 "message": "Database connection not available.",
                 "code": "DATABASE_UNAVAILABLE",
-            }
+            },
         )
 
     try:
         # Call the stored function for facet counts
         response = supabase.rpc(
-            "get_extracted_facet_counts",
-            {"field_path": field}
+            "get_extracted_facet_counts", {"field_path": field}
         ).execute()
 
         counts = [
@@ -2399,7 +2573,7 @@ async def get_facet_counts(
                 "error": "Facet Query Failed",
                 "message": str(e),
                 "code": "FACET_QUERY_FAILED",
-            }
+            },
         )
 
 
@@ -2436,4 +2610,3 @@ async def get_filter_options():
     ]
 
     return FilterOptionsResponse(fields=fields)
-

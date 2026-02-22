@@ -14,82 +14,6 @@ from psycopg_pool import AsyncConnectionPool
 from app.health.models import ServiceHealth, ServiceStatus
 
 
-async def check_weaviate(timeout: float = 5.0) -> ServiceHealth:
-    """
-    Check Weaviate vector database health.
-
-    Args:
-        timeout: Maximum time to wait for response in seconds
-
-    Returns:
-        ServiceHealth: Health status of Weaviate service
-    """
-    start_time = time.time()
-    service_name = "weaviate"
-
-    try:
-        weaviate_url = os.getenv("WV_URL") or os.getenv("WEAVIATE_URL")
-        if not weaviate_url:
-            return ServiceHealth(
-                name=service_name,
-                status=ServiceStatus.UNKNOWN,
-                message="Weaviate URL not configured",
-                error="WV_URL or WEAVIATE_URL environment variable not set",
-                last_checked=datetime.utcnow(),
-            )
-
-        # Ensure URL has protocol
-        if not weaviate_url.startswith(("http://", "https://")):
-            weaviate_url = f"http://{weaviate_url}"
-
-        # Try HTTP health check first (faster)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            ready_url = f"{weaviate_url}/.well-known/ready"
-            response = await client.get(ready_url)
-
-            response_time = (time.time() - start_time) * 1000
-
-            if response.status_code == 200:
-                logger.debug(f"Weaviate health check successful: {ready_url}")
-                return ServiceHealth(
-                    name=service_name,
-                    status=ServiceStatus.HEALTHY,
-                    response_time_ms=round(response_time, 2),
-                    message="Weaviate is ready and accepting connections",
-                    last_checked=datetime.utcnow(),
-                )
-            else:
-                logger.warning(f"Weaviate health check failed with status {response.status_code}")
-                return ServiceHealth(
-                    name=service_name,
-                    status=ServiceStatus.UNHEALTHY,
-                    response_time_ms=round(response_time, 2),
-                    error=f"Weaviate returned status code {response.status_code}",
-                    last_checked=datetime.utcnow(),
-                )
-
-    except asyncio.TimeoutError:
-        response_time = (time.time() - start_time) * 1000
-        logger.error(f"Weaviate health check timed out after {timeout}s")
-        return ServiceHealth(
-            name=service_name,
-            status=ServiceStatus.UNHEALTHY,
-            response_time_ms=round(response_time, 2),
-            error=f"Connection timeout after {timeout}s",
-            last_checked=datetime.utcnow(),
-        )
-    except Exception as e:
-        response_time = (time.time() - start_time) * 1000
-        logger.error(f"Weaviate health check failed: {e}")
-        return ServiceHealth(
-            name=service_name,
-            status=ServiceStatus.UNHEALTHY,
-            response_time_ms=round(response_time, 2),
-            error=str(e),
-            last_checked=datetime.utcnow(),
-        )
-
-
 async def check_redis(timeout: float = 3.0) -> ServiceHealth:
     """
     Check Redis cache and session store health.
@@ -280,7 +204,9 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
                     last_checked=datetime.utcnow(),
                 )
             else:
-                logger.warning(f"Supabase health check returned status {response.status_code}")
+                logger.warning(
+                    f"Supabase health check returned status {response.status_code}"
+                )
                 return ServiceHealth(
                     name=service_name,
                     status=ServiceStatus.DEGRADED,
@@ -291,7 +217,9 @@ async def check_supabase(timeout: float = 5.0) -> ServiceHealth:
 
     except asyncio.TimeoutError:
         response_time = (time.time() - start_time) * 1000
-        logger.warning(f"Supabase health check timed out after {timeout}s (optional service)")
+        logger.warning(
+            f"Supabase health check timed out after {timeout}s (optional service)"
+        )
         return ServiceHealth(
             name=service_name,
             status=ServiceStatus.DEGRADED,
@@ -351,7 +279,9 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
 
         if active_workers and len(active_workers) > 0:
             worker_count = len(active_workers)
-            logger.debug(f"Celery health check successful: {worker_count} workers active")
+            logger.debug(
+                f"Celery health check successful: {worker_count} workers active"
+            )
             return ServiceHealth(
                 name=service_name,
                 status=ServiceStatus.HEALTHY,
@@ -371,7 +301,9 @@ async def check_celery(timeout: float = 5.0) -> ServiceHealth:
 
     except asyncio.TimeoutError:
         response_time = (time.time() - start_time) * 1000
-        logger.warning(f"Celery health check timed out after {timeout}s (optional service)")
+        logger.warning(
+            f"Celery health check timed out after {timeout}s (optional service)"
+        )
         return ServiceHealth(
             name=service_name,
             status=ServiceStatus.DEGRADED,
@@ -434,7 +366,9 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
                     last_checked=datetime.utcnow(),
                 )
             else:
-                logger.warning(f"Langfuse health check returned status {response.status_code}")
+                logger.warning(
+                    f"Langfuse health check returned status {response.status_code}"
+                )
                 return ServiceHealth(
                     name=service_name,
                     status=ServiceStatus.DEGRADED,
@@ -445,7 +379,9 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
 
     except asyncio.TimeoutError:
         response_time = (time.time() - start_time) * 1000
-        logger.warning(f"Langfuse health check timed out after {timeout}s (optional service)")
+        logger.warning(
+            f"Langfuse health check timed out after {timeout}s (optional service)"
+        )
         return ServiceHealth(
             name=service_name,
             status=ServiceStatus.DEGRADED,
@@ -476,7 +412,6 @@ async def check_all_services() -> dict[str, ServiceHealth]:
 
     # Run all checks concurrently
     results = await asyncio.gather(
-        check_weaviate(),
         check_redis(),
         check_postgresql(),
         check_supabase(),
@@ -487,12 +422,11 @@ async def check_all_services() -> dict[str, ServiceHealth]:
 
     # Map results to service names
     services = {
-        "weaviate": results[0],
-        "redis": results[1],
-        "postgresql": results[2],
-        "supabase": results[3],
-        "celery": results[4],
-        "langfuse": results[5],
+        "redis": results[0],
+        "postgresql": results[1],
+        "supabase": results[2],
+        "celery": results[3],
+        "langfuse": results[4],
     }
 
     logger.info(f"Health checks completed: {len(services)} services checked")

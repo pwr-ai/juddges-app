@@ -32,7 +32,7 @@ def _get_system_status(services: dict) -> SystemStatus:
     Determine overall system status based on individual service health.
 
     Critical services (redis, postgresql) must be healthy.
-    Optional services (supabase, celery, langfuse, weaviate) can be degraded without affecting system status.
+    Optional services (supabase, celery, langfuse) can be degraded without affecting system status.
 
     Args:
         services: Dictionary of service health checks
@@ -66,9 +66,14 @@ def _get_system_status(services: dict) -> SystemStatus:
     optional_degraded = False
     for service_name, service_health in services.items():
         if service_name not in critical_services:
-            if service_health.status in [ServiceStatus.DEGRADED, ServiceStatus.UNHEALTHY]:
+            if service_health.status in [
+                ServiceStatus.DEGRADED,
+                ServiceStatus.UNHEALTHY,
+            ]:
                 optional_degraded = True
-                logger.info(f"Optional service {service_name} is {service_health.status}")
+                logger.info(
+                    f"Optional service {service_name} is {service_health.status}"
+                )
 
     if optional_degraded:
         return SystemStatus.DEGRADED
@@ -164,7 +169,7 @@ async def detailed_status():
     Detailed health status endpoint.
 
     Performs health checks on all critical and optional services:
-    - Critical: Weaviate, Redis, PostgreSQL
+    - Critical: Redis, PostgreSQL
     - Optional: Supabase, Celery, Langfuse
 
     System status levels:
@@ -251,12 +256,6 @@ async def list_dependencies():
     logger.debug("Dependencies list requested")
 
     critical_deps = {
-        "weaviate": DependencyInfo(
-            name="weaviate",
-            critical=True,
-            description="Vector database for semantic search and document embeddings",
-            health_check_url=os.getenv("WV_URL", "").rstrip("/") + "/.well-known/ready" if os.getenv("WV_URL") else None,
-        ),
         "redis": DependencyInfo(
             name="redis",
             critical=True,
@@ -276,7 +275,9 @@ async def list_dependencies():
             name="supabase",
             critical=False,
             description="Analytics, user feedback, and additional storage (optional)",
-            health_check_url=os.getenv("SUPABASE_URL", "").rstrip("/") + "/rest/v1/" if os.getenv("SUPABASE_URL") else None,
+            health_check_url=os.getenv("SUPABASE_URL", "").rstrip("/") + "/rest/v1/"
+            if os.getenv("SUPABASE_URL")
+            else None,
         ),
         "celery": DependencyInfo(
             name="celery",
@@ -288,7 +289,10 @@ async def list_dependencies():
             name="langfuse",
             critical=False,
             description="LLM observability and tracing platform (optional)",
-            health_check_url=os.getenv("LANGFUSE_HOST", "").rstrip("/") + "/api/public/health" if os.getenv("LANGFUSE_HOST") else None,
+            health_check_url=os.getenv("LANGFUSE_HOST", "").rstrip("/")
+            + "/api/public/health"
+            if os.getenv("LANGFUSE_HOST")
+            else None,
         ),
     }
 

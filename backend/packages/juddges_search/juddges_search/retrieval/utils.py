@@ -15,7 +15,7 @@ def _parse_metadata(obj: Any) -> dict[str, Any]:
     """Parse metadata field, handling both string and dict types.
 
     Args:
-        obj: Weaviate object with metadata property
+        obj: Object with metadata property
 
     Returns:
         Dictionary containing parsed metadata
@@ -132,14 +132,14 @@ def generate_document_id_variants(document_id: str) -> list[str]:
     """
     if not document_id:
         return []
-    
+
     variants = [
         document_id,  # Original format
         document_id.strip(),  # Stripped
         document_id.replace("/doc/", "").strip(),  # Without /doc/ prefix
         f"/doc/{document_id.replace('/doc/', '').strip()}",  # With /doc/ prefix
     ]
-    
+
     # Remove duplicates while preserving order
     seen = set()
     unique_variants = []
@@ -147,19 +147,17 @@ def generate_document_id_variants(document_id: str) -> list[str]:
         if variant and variant not in seen:
             seen.add(variant)
             unique_variants.append(variant)
-    
+
     return unique_variants
 
 
-def convert_weaviate_obj_to_legal_document(
-    obj, include_vectors: bool = False, include_scores: bool = False
-) -> LegalDocument:
-    """Convert a Weaviate object to a LegalDocument model.
+def convert_obj_to_legal_document(obj, include_vectors: bool = False, include_scores: bool = False) -> LegalDocument:
+    """Convert a search result object to a LegalDocument model.
 
     Handles optional fields safely - missing properties will be set to None or appropriate defaults.
 
     Args:
-        obj: Weaviate object from query response
+        obj: Search result object with a properties dict and optional metadata/score attributes
         include_vectors: Whether to include vector data in the document
         include_scores: Whether to include score in metadata (from obj.score or obj.metadata.score)
 
@@ -211,10 +209,12 @@ def convert_weaviate_obj_to_legal_document(
     # Parse document_type enum - allow undefined, NO GUESSING
     doc_type = props.get("document_type")
     doc_type_str = doc_type.strip().lower() if isinstance(doc_type, str) and doc_type else ""
-    
+
     # If missing, set to None (undefined)
     if not doc_type_str:
-        logger.warning(f"Missing document_type for document {props.get('document_id', 'unknown')} - will be displayed as undefined")
+        logger.warning(
+            f"Missing document_type for document {props.get('document_id', 'unknown')} - will be displayed as undefined"
+        )
         document_type = None
     else:
         # Normalize common variations
@@ -231,7 +231,9 @@ def convert_weaviate_obj_to_legal_document(
             document_type = DocumentType(doc_type_str)
         except (ValueError, KeyError):
             # If invalid, set to None (undefined) - NO GUESSING
-            logger.warning(f"Invalid document_type '{doc_type_str}' for document {props.get('document_id', 'unknown')} - will be displayed as undefined")
+            logger.warning(
+                f"Invalid document_type '{doc_type_str}' for document {props.get('document_id', 'unknown')} - will be displayed as undefined"
+            )
             document_type = None
 
     return LegalDocument(
@@ -270,13 +272,15 @@ def convert_weaviate_obj_to_legal_document(
     )
 
 
-def convert_weaviate_obj_to_document_chunk(obj, confidence_score: Optional[float] = None, extract_score: bool = True) -> DocumentChunk:
-    """Convert a Weaviate object to a DocumentChunk model.
+def convert_obj_to_document_chunk(
+    obj, confidence_score: Optional[float] = None, extract_score: bool = True
+) -> DocumentChunk:
+    """Convert a search result object to a DocumentChunk model.
 
     Handles optional fields safely - missing properties will be set to None or appropriate defaults.
 
     Args:
-        obj: Weaviate object from query response
+        obj: Search result object with a properties dict and optional metadata/score attributes
         confidence_score: Optional confidence score to use directly
         extract_score: If True and confidence_score is None, extract score from obj metadata
 
@@ -311,42 +315,42 @@ def convert_weaviate_obj_to_document_chunk(obj, confidence_score: Optional[float
 
 
 def get_chunk_score(chunk: Union[DocumentChunk, Any]) -> float:
-    """Get confidence score from either DocumentChunk or Weaviate object.
-    
+    """Get confidence score from either DocumentChunk or a raw search result object.
+
     Args:
-        chunk: Either a DocumentChunk object or Weaviate object
-        
+        chunk: Either a DocumentChunk object or a raw search result object
+
     Returns:
         Confidence score as float, or 0.0 if not available
     """
     if isinstance(chunk, DocumentChunk):
         return chunk.confidence_score or 0.0
     else:
-        # Weaviate object
+        # Raw search result object
         return extract_score_from_obj(chunk) or 0.0
 
 
 def get_chunk_document_id(chunk: Union[DocumentChunk, Any]) -> Optional[str]:
-    """Get document_id from either DocumentChunk or Weaviate object.
-    
+    """Get document_id from either DocumentChunk or a raw search result object.
+
     Args:
-        chunk: Either a DocumentChunk object or Weaviate object
-        
+        chunk: Either a DocumentChunk object or a raw search result object
+
     Returns:
         Document ID as string, or None if not available
     """
     if isinstance(chunk, DocumentChunk):
         return chunk.document_id
     else:
-        # Weaviate object
+        # Raw search result object
         return chunk.properties.get("document_id") if hasattr(chunk, "properties") else None
 
 
 def parse_date(date_value: Any) -> Optional[datetime]:
-    """Parse a date value from Weaviate (can be string, datetime, or None).
+    """Parse a date value (can be string, datetime, or None).
 
     Args:
-        date_value: Date value from Weaviate (ISO string, datetime object, or None)
+        date_value: Date value as ISO string, datetime object, or None
 
     Returns:
         Parsed datetime object or None
@@ -376,13 +380,13 @@ def parse_date(date_value: Any) -> Optional[datetime]:
     return None
 
 
-def convert_weaviate_obj_to_legal_document_metadata(obj, score: Optional[float] = None) -> LegalDocumentMetadata:
-    """Convert a Weaviate object to a LegalDocumentMetadata model (lightweight version).
+def convert_obj_to_legal_document_metadata(obj, score: Optional[float] = None) -> LegalDocumentMetadata:
+    """Convert a search result object to a LegalDocumentMetadata model (lightweight version).
 
     Includes required fields and extended fields for DocumentCard display.
 
     Args:
-        obj: Weaviate object from query response
+        obj: Search result object with a properties dict and optional uuid/score attributes
         score: Optional score to use. If not provided, extracts from obj.metadata.score or obj.score
 
     Returns:
@@ -390,13 +394,13 @@ def convert_weaviate_obj_to_legal_document_metadata(obj, score: Optional[float] 
     """
     props = obj.properties if hasattr(obj, "properties") else {}
 
-    # Get UUID from the object (always available on Weaviate objects)
+    # Get UUID from the object if available
     uuid_str = str(obj.uuid) if hasattr(obj, "uuid") else ""
 
     # Parse document_type enum - allow undefined, NO GUESSING
     doc_type = props.get("document_type")
     doc_type_str = doc_type.strip().lower() if isinstance(doc_type, str) and doc_type else ""
-    
+
     # If missing, set to None (undefined)
     if not doc_type_str:
         logger.warning(f"Missing document_type for document UUID {uuid_str} - will be displayed as undefined")
@@ -416,7 +420,9 @@ def convert_weaviate_obj_to_legal_document_metadata(obj, score: Optional[float] 
             document_type = DocumentType(doc_type_str)
         except (ValueError, KeyError):
             # If invalid, set to None (undefined) - NO GUESSING
-            logger.warning(f"Invalid document_type '{doc_type_str}' for document UUID {uuid_str} - will be displayed as undefined")
+            logger.warning(
+                f"Invalid document_type '{doc_type_str}' for document UUID {uuid_str} - will be displayed as undefined"
+            )
             document_type = None
 
     # Parse date_issued from string to datetime (optional field)
@@ -451,10 +457,10 @@ def convert_weaviate_obj_to_legal_document_metadata(obj, score: Optional[float] 
 
 
 def extract_score_from_obj(obj: Any) -> Optional[float]:
-    """Extract confidence_score from Weaviate object properties.
-    
+    """Extract confidence_score from search result object properties.
+
     Args:
-        obj: Weaviate object from query response
+        obj: Search result object with optional properties dict
 
     Returns:
         Confidence score value or None if not found
@@ -466,7 +472,7 @@ def extract_score_from_obj(obj: Any) -> Optional[float]:
             score = props.get("confidence_score")
             if score is not None:
                 return float(score)
-    
+
     return None
 
 
@@ -502,17 +508,17 @@ def validate_search_parameters(
     mode: str,
 ) -> int:
     """Validate search parameters and calculate limit_chunks if needed.
-    
+
     Args:
         limit_docs: Number of unique documents to return
         chunks_per_doc_multiplier: Multiplier for calculating limit_chunks
         limit_chunks: Number of raw chunks to fetch (None to calculate)
         alpha: Hybrid search balance (0.0-1.0)
         mode: Search mode ("rabbit" or "thinking")
-        
+
     Returns:
         Calculated or validated limit_chunks value
-        
+
     Raises:
         ValueError: If any parameter is invalid
     """
@@ -520,22 +526,22 @@ def validate_search_parameters(
         raise ValueError("limit_docs must be positive")
     if chunks_per_doc_multiplier <= 0:
         raise ValueError("chunks_per_doc_multiplier must be positive")
-    
+
     # Validate alpha parameter range
     if alpha < 0.0 or alpha > 1.0:
         raise ValueError(f"alpha must be between 0.0 and 1.0, got {alpha}")
-    
+
     # Validate mode parameter
     if mode not in ("rabbit", "thinking"):
         raise ValueError(f"mode must be 'rabbit' or 'thinking', got {mode}")
-    
+
     # Calculate limit_chunks if not provided
     if limit_chunks is None:
         limit_chunks = limit_docs * chunks_per_doc_multiplier
-    
+
     if limit_chunks <= 0:
         raise ValueError("limit_chunks must be positive")
-    
+
     return limit_chunks
 
 
@@ -544,42 +550,40 @@ def group_chunks_by_document(
     limit_docs: int,
 ) -> OrderedDict[str, Union[DocumentChunk, Any]]:
     """Group chunks by document_id, keeping only the best chunk per document.
-    
-    Chunks should be pre-sorted by relevance (RRF score or Weaviate score).
+
+    Chunks should be pre-sorted by relevance (RRF score or search score).
     The first occurrence of each document_id is kept as the best chunk.
-    
+
     Args:
-        chunks: List of chunks (DocumentChunk or Weaviate objects), pre-sorted by relevance
+        chunks: List of chunks (DocumentChunk or raw search result objects), pre-sorted by relevance
         limit_docs: Maximum number of unique documents to return
-        
+
     Returns:
         OrderedDict mapping document_id to best chunk (stops at limit_docs)
     """
     doc_to_chunk: OrderedDict[str, Union[DocumentChunk, Any]] = OrderedDict()
-    
+
     for chunk in chunks:
         if len(doc_to_chunk) >= limit_docs:
             break
-        
+
         doc_id = get_chunk_document_id(chunk)
         if not doc_id:
             continue
-        
+
         # Skip if document_id already exists (we already have the best chunk for this doc)
         if doc_id not in doc_to_chunk:
             doc_to_chunk[doc_id] = chunk
-    
+
     return doc_to_chunk
 
 
-def convert_mixed_chunks_to_document_chunks(
-    chunks: OrderedDict[str, Union[DocumentChunk, Any]]
-) -> list[DocumentChunk]:
-    """Convert mixed chunk types (DocumentChunk or Weaviate objects) to DocumentChunk objects.
-    
+def convert_mixed_chunks_to_document_chunks(chunks: OrderedDict[str, Union[DocumentChunk, Any]]) -> list[DocumentChunk]:
+    """Convert mixed chunk types (DocumentChunk or raw search result objects) to DocumentChunk objects.
+
     Args:
-        chunks: OrderedDict of chunks (may be DocumentChunk or Weaviate objects)
-        
+        chunks: OrderedDict of chunks (may be DocumentChunk or raw search result objects)
+
     Returns:
         List of DocumentChunk objects
     """
@@ -588,26 +592,24 @@ def convert_mixed_chunks_to_document_chunks(
         if isinstance(item, DocumentChunk):
             # Already a DocumentChunk (thinking mode), just use it
             if item.confidence_score is None:
-                logger.warning(
-                    f"DocumentChunk {item.chunk_id} (doc: {item.document_id}) has None confidence_score!"
-                )
+                logger.warning(f"DocumentChunk {item.chunk_id} (doc: {item.document_id}) has None confidence_score!")
             result.append(item)
         else:
-            # Weaviate object (rabbit mode), convert it
+            # Raw search result object (rabbit mode), convert it
             # Use confidence_score from properties if available, otherwise try to extract from metadata
             props = item.properties if hasattr(item, "properties") else {}
             confidence_score = props.get("confidence_score")
-            
+
             # Only try to extract from metadata if confidence_score is not in properties
             if confidence_score is None:
                 confidence_score = extract_score_from_obj(item)
-            
+
             # If still None, use 0.0 as fallback (don't log warning - confidence_score may legitimately be None)
             if confidence_score is None:
                 confidence_score = 0.0
-            
-            result.append(convert_weaviate_obj_to_document_chunk(item, confidence_score, extract_score=False))
-    
+
+            result.append(convert_obj_to_document_chunk(item, confidence_score, extract_score=False))
+
     return result
 
 
@@ -618,13 +620,13 @@ def build_timing_details(
     total_time_ms: float,
 ) -> dict[str, float]:
     """Build timing breakdown dictionary.
-    
+
     Args:
         query_time_ms: Query execution time in milliseconds
         grouping_time_ms: Grouping time in milliseconds
         conversion_time_ms: Conversion time in milliseconds
         total_time_ms: Total time in milliseconds
-        
+
     Returns:
         Dictionary with timing breakdown
     """
@@ -640,11 +642,11 @@ def build_timing_details(
 
 def create_empty_timing_details(query_time_ms: float, total_time_ms: float) -> dict[str, float]:
     """Create timing details for empty results.
-    
+
     Args:
         query_time_ms: Query execution time in milliseconds
         total_time_ms: Total time in milliseconds
-        
+
     Returns:
         Dictionary with timing breakdown (all post-processing times are 0)
     """

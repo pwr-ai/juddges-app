@@ -70,6 +70,7 @@ async def generate_embedding(text: str) -> List[float]:
         Embedding vector (dimensions depend on the active model)
     """
     from app.embedding_providers import get_embedding_provider
+
     provider = get_embedding_provider()
     return await provider.embed_text(text)
 
@@ -101,7 +102,7 @@ def _convert_judgment_to_legal_document(
         issuing_body = IssuingBody(
             name=court_name,
             court_level=judgment_data.get("court_level"),
-            country=country
+            country=country,
         )
 
     # Build vectors dict if requested
@@ -138,7 +139,8 @@ def _convert_judgment_to_legal_document(
         legal_bases=judgment_data.get("cited_legislation") or [],
         court_name=court_name,
         source_url=judgment_data.get("source_url"),
-        references=judgment_data.get("legal_topics") or [],  # Map legal_topics to references
+        references=judgment_data.get("legal_topics")
+        or [],  # Map legal_topics to references
     )
 
 
@@ -232,13 +234,17 @@ def _build_document_metadata_dict(doc: LegalDocument) -> dict:
         "x": doc.x,
         "y": doc.y,
         "thesis": doc.thesis,
-        "ingestion_date": doc.ingestion_date.isoformat() if doc.ingestion_date else None,
+        "ingestion_date": doc.ingestion_date.isoformat()
+        if doc.ingestion_date
+        else None,
         "last_updated": doc.last_updated.isoformat() if doc.last_updated else None,
         "processing_status": doc.processing_status,
         "source_url": doc.source_url,
         "parties": doc.parties,
         "outcome": doc.outcome,
-        "publication_date": doc.publication_date.isoformat() if doc.publication_date else None,
+        "publication_date": doc.publication_date.isoformat()
+        if doc.publication_date
+        else None,
         "presiding_judge": doc.presiding_judge,
         "judges": doc.judges,
         "legal_bases": doc.legal_bases,
@@ -251,7 +257,13 @@ def _build_document_metadata_dict(doc: LegalDocument) -> dict:
 
     # Merge nested metadata dict if it exists
     if doc.metadata and isinstance(doc.metadata, dict):
-        exclude_fields = {"html", "html_content", "raw_html", "full_text", "raw_content"}
+        exclude_fields = {
+            "html",
+            "html_content",
+            "raw_html",
+            "full_text",
+            "raw_content",
+        }
         for key, value in doc.metadata.items():
             key_lower = key.lower()
             if key_lower in exclude_fields or "chunk" in key_lower:
@@ -309,7 +321,9 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[
             )
 
         document_ids = [doc["document_id"] for doc in (response.data or [])]
-        logger.info(f"Found {len(document_ids)} documents (only_with_coords={only_with_coordinates})")
+        logger.info(
+            f"Found {len(document_ids)} documents (only_with_coords={only_with_coordinates})"
+        )
 
     except Exception as e:
         logger.error(f"Error fetching document IDs: {e}")
@@ -335,10 +349,14 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[
 async def list_documents(
     limit: int = Query(20, ge=1, le=100, description="Number of documents to return"),
     return_vectors: bool = Query(False, description="Include vector embeddings"),
-    only_with_coordinates: bool = Query(True, description="Only documents with x,y coordinates"),
+    only_with_coordinates: bool = Query(
+        True, description="Only documents with x,y coordinates"
+    ),
 ) -> BatchDocumentsResponse:
     """List documents with optional filters."""
-    all_document_ids = await _get_cached_document_ids(only_with_coordinates=only_with_coordinates)
+    all_document_ids = await _get_cached_document_ids(
+        only_with_coordinates=only_with_coordinates
+    )
 
     if not all_document_ids:
         return BatchDocumentsResponse(documents=[])
@@ -365,14 +383,24 @@ async def get_documents_sample(
         le=settings.MAX_SAMPLE_SIZE,
         description="Number of documents to sample",
     ),
-    return_vectors: bool = Query(False, description="Whether to include vector embeddings"),
-    only_with_coordinates: bool = Query(True, description="Only return documents with x,y coordinates"),
+    return_vectors: bool = Query(
+        False, description="Whether to include vector embeddings"
+    ),
+    only_with_coordinates: bool = Query(
+        True, description="Only return documents with x,y coordinates"
+    ),
 ):
     """Get a random sample of documents for visualization."""
-    all_document_ids = await _get_cached_document_ids(only_with_coordinates=only_with_coordinates)
+    all_document_ids = await _get_cached_document_ids(
+        only_with_coordinates=only_with_coordinates
+    )
 
     if not all_document_ids:
-        detail = "No documents with coordinates found" if only_with_coordinates else "No documents found"
+        detail = (
+            "No documents with coordinates found"
+            if only_with_coordinates
+            else "No documents found"
+        )
         raise HTTPException(status_code=404, detail=detail)
 
     sample_size = min(sample_size, len(all_document_ids))
@@ -396,9 +424,15 @@ async def get_documents_sample(
     description="Build a citation network showing shared legal references between documents.",
 )
 async def get_citation_network(
-    sample_size: int = Query(50, ge=1, le=200, description="Number of documents to include"),
-    min_shared_refs: int = Query(1, ge=1, le=10, description="Minimum shared references for an edge"),
-    document_types: Optional[str] = Query(None, description="Comma-separated document types to filter"),
+    sample_size: int = Query(
+        50, ge=1, le=200, description="Number of documents to include"
+    ),
+    min_shared_refs: int = Query(
+        1, ge=1, le=10, description="Minimum shared references for an edge"
+    ),
+    document_types: Optional[str] = Query(
+        None, description="Comma-separated document types to filter"
+    ),
 ) -> CitationNetworkResponse:
     """Build citation network from shared legal references between documents."""
     try:
@@ -406,7 +440,7 @@ async def get_citation_network(
 
         # Fetch documents with references
         query = db.client.table("legal_documents").select(
-            "document_id, title, document_type, date_issued, x, y, \"references\", court_name, document_number, language"
+            'document_id, title, document_type, date_issued, x, y, "references", court_name, document_number, language'
         )
 
         if document_types:
@@ -424,8 +458,12 @@ async def get_citation_network(
                 nodes=[],
                 edges=[],
                 statistics=CitationNetworkStatistics(
-                    total_nodes=0, total_edges=0, avg_citations=0.0,
-                    max_citations=0, most_cited_refs=[], avg_authority_score=0.0,
+                    total_nodes=0,
+                    total_edges=0,
+                    avg_citations=0.0,
+                    max_citations=0,
+                    most_cited_refs=[],
+                    avg_authority_score=0.0,
                 ),
             )
 
@@ -434,10 +472,11 @@ async def get_citation_network(
 
         # Normalize reference text for comparison (extract the law name before the parenthetical)
         import re
+
         def normalize_ref(ref_text: str) -> str:
             """Extract law name for grouping (e.g. 'Kodeks postępowania cywilnego')."""
             # Try to extract the law name between 'r. - ' and ' (Dz.'
-            match = re.search(r'r\.\s*-\s*(.+?)(?:\s*\(Dz\.|\s*-\s*art\.)', ref_text)
+            match = re.search(r"r\.\s*-\s*(.+?)(?:\s*\(Dz\.|\s*-\s*art\.)", ref_text)
             if match:
                 return match.group(1).strip()
             # Fallback: use first 80 chars
@@ -472,7 +511,9 @@ async def get_citation_network(
                 continue
             # Authority = average of (how many docs share each of this doc's refs) / max
             sharing_counts = [len(ref_to_docs.get(r, [])) for r in set(refs)]
-            avg_sharing = sum(sharing_counts) / len(sharing_counts) if sharing_counts else 0
+            avg_sharing = (
+                sum(sharing_counts) / len(sharing_counts) if sharing_counts else 0
+            )
             authority_scores[doc_id] = min(avg_sharing / max(max_sharing, 1), 1.0)
 
         # Build nodes
@@ -483,30 +524,35 @@ async def get_citation_network(
             if doc.get("date_issued"):
                 try:
                     from datetime import datetime
+
                     if isinstance(doc["date_issued"], str):
-                        dt = datetime.fromisoformat(doc["date_issued"].replace("Z", "+00:00"))
+                        dt = datetime.fromisoformat(
+                            doc["date_issued"].replace("Z", "+00:00")
+                        )
                         year = dt.year
                 except (ValueError, TypeError):
                     pass
 
             refs = doc.get("references", []) or []
-            nodes.append(CitationNode(
-                id=doc_id,
-                title=doc.get("title") or f"Document {doc_id}",
-                document_type=doc.get("document_type", "unknown"),
-                year=year,
-                x=float(doc.get("x") or 0.0),
-                y=float(doc.get("y") or 0.0),
-                citation_count=len(refs),
-                authority_score=round(authority_scores.get(doc_id, 0.0), 3),
-                references=refs,
-                metadata={
-                    "court_name": doc.get("court_name"),
-                    "document_number": doc.get("document_number"),
-                    "language": doc.get("language"),
-                    "date_issued": doc.get("date_issued"),
-                },
-            ))
+            nodes.append(
+                CitationNode(
+                    id=doc_id,
+                    title=doc.get("title") or f"Document {doc_id}",
+                    document_type=doc.get("document_type", "unknown"),
+                    year=year,
+                    x=float(doc.get("x") or 0.0),
+                    y=float(doc.get("y") or 0.0),
+                    citation_count=len(refs),
+                    authority_score=round(authority_scores.get(doc_id, 0.0), 3),
+                    references=refs,
+                    metadata={
+                        "court_name": doc.get("court_name"),
+                        "document_number": doc.get("document_number"),
+                        "language": doc.get("language"),
+                        "date_issued": doc.get("date_issued"),
+                    },
+                )
+            )
 
         # Build edges from shared references
         edges = []
@@ -527,12 +573,14 @@ async def get_citation_network(
                         # Weight based on Jaccard similarity of references
                         union = refs_a | refs_b
                         weight = len(shared) / len(union) if union else 0.0
-                        edges.append(CitationEdge(
-                            source=doc_id_a,
-                            target=doc_id_b,
-                            shared_refs=list(shared),
-                            weight=round(weight, 3),
-                        ))
+                        edges.append(
+                            CitationEdge(
+                                source=doc_id_a,
+                                target=doc_id_b,
+                                shared_refs=list(shared),
+                                weight=round(weight, 3),
+                            )
+                        )
 
         # Compute statistics
         all_citation_counts = [len(doc.get("references", []) or []) for doc in docs]
@@ -550,10 +598,14 @@ async def get_citation_network(
         statistics = CitationNetworkStatistics(
             total_nodes=len(nodes),
             total_edges=len(edges),
-            avg_citations=round(sum(all_citation_counts) / len(all_citation_counts), 2) if all_citation_counts else 0.0,
+            avg_citations=round(sum(all_citation_counts) / len(all_citation_counts), 2)
+            if all_citation_counts
+            else 0.0,
             max_citations=max(all_citation_counts) if all_citation_counts else 0,
             most_cited_refs=most_cited,
-            avg_authority_score=round(sum(all_authority) / len(all_authority), 3) if all_authority else 0.0,
+            avg_authority_score=round(sum(all_authority) / len(all_authority), 3)
+            if all_authority
+            else 0.0,
         )
 
         return CitationNetworkResponse(
@@ -586,7 +638,9 @@ async def get_document_metadata(
         doc_data = await db.get_document_by_id(document_id)
 
         if not doc_data:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
         doc = _convert_supabase_to_legal_document(doc_data)
         return _build_document_metadata_dict(doc)
@@ -595,7 +649,9 @@ async def get_document_metadata(
         raise
     except Exception as e:
         logger.error(f"Error retrieving document metadata {document_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error retrieving document metadata.")
+        raise HTTPException(
+            status_code=500, detail="Error retrieving document metadata."
+        )
 
 
 @router.get(
@@ -604,8 +660,12 @@ async def get_document_metadata(
     summary="Find similar documents to one document",
 )
 async def get_similar_to_document(
-    document_id: str = Path(..., description="Document ID to find similar documents for"),
-    top_k: int = Query(10, ge=1, le=100, description="Maximum number of similar documents"),
+    document_id: str = Path(
+        ..., description="Document ID to find similar documents for"
+    ),
+    top_k: int = Query(
+        10, ge=1, le=100, description="Maximum number of similar documents"
+    ),
 ) -> SimilarDocumentsResponse:
     """Find documents similar to a specific document using vector similarity."""
     try:
@@ -619,15 +679,24 @@ async def get_similar_to_document(
         # Fetch the source document to get its embedding
         doc_data = await db.get_document_by_id(document_id)
         if not doc_data:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
         # Get the embedding - first try from document, then generate
         embedding = doc_data.get("embedding")
         if not embedding:
             # Generate embedding from summary or title
-            text = doc_data.get("summary") or doc_data.get("title") or doc_data.get("full_text", "")[:2000]
+            text = (
+                doc_data.get("summary")
+                or doc_data.get("title")
+                or doc_data.get("full_text", "")[:2000]
+            )
             if not text:
-                raise HTTPException(status_code=400, detail="Document has no content to generate embedding")
+                raise HTTPException(
+                    status_code=400,
+                    detail="Document has no content to generate embedding",
+                )
             embedding = await generate_embedding(text)
 
         # Search for similar documents
@@ -693,9 +762,13 @@ async def get_document_by_id(
         doc_data = await db.get_document_by_id(document_id)
 
         if not doc_data:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
-        document = _convert_supabase_to_legal_document(doc_data, include_vectors=return_vectors)
+        document = _convert_supabase_to_legal_document(
+            doc_data, include_vectors=return_vectors
+        )
         return DocumentResponse(document=document)
 
     except HTTPException:
@@ -731,9 +804,13 @@ async def get_document_by_id_legacy(
     doc_data = await db.get_document_by_id(request.document_id)
 
     if not doc_data:
-        raise HTTPException(status_code=404, detail=f"Document {request.document_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Document {request.document_id} not found"
+        )
 
-    document = _convert_supabase_to_legal_document(doc_data, include_vectors=request.return_vectors)
+    document = _convert_supabase_to_legal_document(
+        doc_data, include_vectors=request.return_vectors
+    )
     return DocumentResponse(document=document)
 
 
@@ -745,7 +822,9 @@ async def get_document_by_id_legacy(
 async def get_documents_batch(request: BatchDocumentsRequest):
     """Retrieve multiple documents by their IDs in a single request."""
     try:
-        validate_array_size(request.document_ids, settings.MAX_BATCH_DOCUMENT_IDS, "document_ids")
+        validate_array_size(
+            request.document_ids, settings.MAX_BATCH_DOCUMENT_IDS, "document_ids"
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -753,7 +832,9 @@ async def get_documents_batch(request: BatchDocumentsRequest):
         if not doc_id or not doc_id.strip():
             raise HTTPException(status_code=400, detail="document_id cannot be empty")
         if len(doc_id) > 500:
-            raise HTTPException(status_code=400, detail="document_id exceeds maximum length")
+            raise HTTPException(
+                status_code=400, detail="document_id exceeds maximum length"
+            )
 
     db = get_vector_db()
     docs_data = await db.get_documents_by_ids(request.document_ids)
@@ -809,6 +890,7 @@ async def search_documents(request: SearchChunksRequest):
         if request.mode == "thinking":
             try:
                 from juddges_search.chains.query_enhancement import enhance_query
+
                 enhancement_start = time.perf_counter()
                 logger.info(f"Enhancing query in thinking mode: {query}")
                 enhanced_query_text = await enhance_query(query)
@@ -829,43 +911,48 @@ async def search_documents(request: SearchChunksRequest):
             embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
 
         # Map languages to search_language parameter (default to Polish)
-        search_language = 'polish'
+        search_language = "polish"
         if request.languages:
             # Use English if 'en' or 'uk' in languages
-            if 'en' in request.languages or 'uk' in request.languages:
-                search_language = 'english'
+            if "en" in request.languages or "uk" in request.languages:
+                search_language = "english"
 
         # Perform hybrid search using the new database function
         from app.core.supabase import get_supabase_client
+
         supabase = get_supabase_client()
 
         if not supabase:
-            raise HTTPException(status_code=500, detail="Database client not initialized")
+            raise HTTPException(
+                status_code=500, detail="Database client not initialized"
+            )
 
         search_start = time.perf_counter()
 
         # Call the new search_judgments_hybrid RPC function
         response = supabase.rpc(
-            'search_judgments_hybrid',
+            "search_judgments_hybrid",
             {
-                'query_embedding': query_embedding,
-                'search_text': search_query if request.alpha < 1.0 else None,  # Skip text search if pure vector
-                'search_language': search_language,
-                'filter_jurisdictions': request.jurisdictions,
-                'filter_court_names': request.court_names,
-                'filter_court_levels': request.court_levels,
-                'filter_case_types': request.case_types,
-                'filter_decision_types': request.decision_types,
-                'filter_outcomes': request.outcomes,
-                'filter_keywords': request.keywords,
-                'filter_legal_topics': request.legal_topics,
-                'filter_cited_legislation': request.cited_legislation,
-                'filter_date_from': request.date_from,
-                'filter_date_to': request.date_to,
-                'hybrid_alpha': request.alpha,
-                'result_limit': request.limit_docs or 20,
-                'result_offset': request.offset or 0,
-            }
+                "query_embedding": query_embedding,
+                "search_text": search_query
+                if request.alpha < 1.0
+                else None,  # Skip text search if pure vector
+                "search_language": search_language,
+                "filter_jurisdictions": request.jurisdictions,
+                "filter_court_names": request.court_names,
+                "filter_court_levels": request.court_levels,
+                "filter_case_types": request.case_types,
+                "filter_decision_types": request.decision_types,
+                "filter_outcomes": request.outcomes,
+                "filter_keywords": request.keywords,
+                "filter_legal_topics": request.legal_topics,
+                "filter_cited_legislation": request.cited_legislation,
+                "filter_date_from": request.date_from,
+                "filter_date_to": request.date_to,
+                "hybrid_alpha": request.alpha,
+                "result_limit": request.limit_docs or 20,
+                "result_offset": request.offset or 0,
+            },
         ).execute()
 
         results = response.data or []
@@ -880,7 +967,9 @@ async def search_documents(request: SearchChunksRequest):
             chunk_data = {
                 "document_id": str(result.get("id", "")),  # Use judgment ID
                 "chunk_id": 0,  # First chunk for each document
-                "chunk_text": result.get("chunk_text", "") or result.get("summary", "") or result.get("title", ""),
+                "chunk_text": result.get("chunk_text", "")
+                or result.get("summary", "")
+                or result.get("title", ""),
                 "chunk_type": result.get("chunk_type", "summary"),
                 "chunk_start_pos": result.get("chunk_start_pos", 0),
                 "chunk_end_pos": result.get("chunk_end_pos", 0),
@@ -900,7 +989,9 @@ async def search_documents(request: SearchChunksRequest):
         total_time_ms = (time.perf_counter() - start_time) * 1000
 
         timing_breakdown = {
-            "enhancement_ms": round(enhancement_time_ms, 2) if request.mode == "thinking" else 0,
+            "enhancement_ms": round(enhancement_time_ms, 2)
+            if request.mode == "thinking"
+            else 0,
             "embedding_ms": round(embedding_time_ms, 2),
             "search_ms": round(search_time_ms, 2),
             "total_ms": round(total_time_ms, 2),
@@ -916,8 +1007,11 @@ async def search_documents(request: SearchChunksRequest):
             limit=request.limit_docs or 20,
             loaded_count=len(results),
             estimated_total=None,
-            has_more=len(results) >= (request.limit_docs or 20),  # More results if we got a full page
-            next_offset=(request.offset or 0) + len(results) if len(results) >= (request.limit_docs or 20) else None,
+            has_more=len(results)
+            >= (request.limit_docs or 20),  # More results if we got a full page
+            next_offset=(request.offset or 0) + len(results)
+            if len(results) >= (request.limit_docs or 20)
+            else None,
         )
 
         return SearchChunksResponse(
@@ -973,7 +1067,7 @@ async def search_documents_legacy(request: DocumentRetrievalRequest):
 async def get_facets(
     jurisdiction: str | None = None,
     date_from: str | None = None,
-    date_to: str | None = None
+    date_to: str | None = None,
 ):
     """
     Get aggregated counts for each filter option (facets).
@@ -991,31 +1085,33 @@ async def get_facets(
     """
     try:
         from app.core.supabase import get_supabase_client
+
         supabase = get_supabase_client()
 
         if not supabase:
-            raise HTTPException(status_code=500, detail="Database client not initialized")
+            raise HTTPException(
+                status_code=500, detail="Database client not initialized"
+            )
 
         # Call faceting function
         response = supabase.rpc(
-            'get_judgment_facets',
+            "get_judgment_facets",
             {
-                'pre_filter_jurisdictions': [jurisdiction] if jurisdiction else None,
-                'pre_filter_date_from': date_from,
-                'pre_filter_date_to': date_to
-            }
+                "pre_filter_jurisdictions": [jurisdiction] if jurisdiction else None,
+                "pre_filter_date_from": date_from,
+                "pre_filter_date_to": date_to,
+            },
         ).execute()
 
         # Group facets by type
         grouped_facets: Dict[str, list] = {}
         for row in response.data or []:
-            facet_type = row['facet_type']
+            facet_type = row["facet_type"]
             if facet_type not in grouped_facets:
                 grouped_facets[facet_type] = []
-            grouped_facets[facet_type].append({
-                'value': row['facet_value'],
-                'count': row['facet_count']
-            })
+            grouped_facets[facet_type].append(
+                {"value": row["facet_value"], "count": row["facet_count"]}
+            )
 
         logger.info(f"Retrieved facets: {len(grouped_facets)} facet types")
         return FacetsResponse(facets=grouped_facets)
@@ -1042,7 +1138,9 @@ async def find_similar_documents_batch(request: SimilarDocumentsRequest):
 
         for doc_id in request.document_ids:
             try:
-                response = await get_similar_to_document(document_id=doc_id, top_k=request.top_k)
+                response = await get_similar_to_document(
+                    document_id=doc_id, top_k=request.top_k
+                )
                 all_responses.append(response)
             except HTTPException:
                 # If one document fails, add empty response
@@ -1058,7 +1156,9 @@ async def find_similar_documents_batch(request: SimilarDocumentsRequest):
 
     except Exception as e:
         logger.error(f"Error finding similar documents: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error finding similar documents: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error finding similar documents: {str(e)}"
+        )
 
 
 # ===== Utility Endpoints =====
@@ -1073,4 +1173,6 @@ async def get_embedding_stats():
         return stats
     except Exception as e:
         logger.error(f"Error getting embedding stats: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error getting embedding statistics")
+        raise HTTPException(
+            status_code=500, detail="Error getting embedding statistics"
+        )

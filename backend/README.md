@@ -99,7 +99,7 @@ poetry run mypy app/
 See `.env.sample` for required configuration variables:
 
 - **Database:** PostgreSQL connection string
-- **Vector Database:** Weaviate host, URL, ports, and API key
+- **Vector Search:** Supabase pgvector for embeddings
 - **AI Services:** OpenAI API key, LLM configuration
 - **Monitoring:** Langfuse configuration (optional)
 - **Task Queue:** Celery with Redis broker
@@ -108,7 +108,7 @@ See `.env.sample` for required configuration variables:
 
 ## Key Features
 
-- **Document Search:** Full-text and vector search with Weaviate
+- **Document Search:** Full-text and vector search with Supabase pgvector
 - **AI Chat:** RAG-based chat using LangChain and OpenAI
 - **Document Extraction:** PDF processing and metadata extraction
 - **Schema Generation:** AI-powered legal schema creation
@@ -120,7 +120,7 @@ See `.env.sample` for required configuration variables:
 ## Architecture
 
 - **Framework:** FastAPI with async/await
-- **Database:** PostgreSQL (metadata), Weaviate (vectors)
+- **Database:** PostgreSQL with pgvector (metadata + vectors)
 - **Caching:** Redis
 - **Task Queue:** Celery for background jobs
 - **AI/ML:** LangChain, OpenAI, Langfuse (monitoring)
@@ -144,11 +144,6 @@ See `.env.sample` for required configuration variables:
 - Ensure PostgreSQL is running: `docker compose ps db`
 - Check database credentials in `.env`
 - Wait for database initialization (can take 30s on first start)
-
-### Weaviate errors
-- Check Weaviate health: `curl http://localhost:8080/v1/.well-known/ready`
-- Restart Weaviate: `docker compose restart weaviate`
-- Verify Weaviate API key in `.env`
 
 ### Redis/Celery issues
 - Check Redis connection: `docker compose ps redis`

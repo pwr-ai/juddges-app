@@ -41,7 +41,7 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
             vector_questions += [input.question.ideal_paragraph]
         # Filter out empty vector questions
         vector_questions = [q for q in vector_questions if q and isinstance(q, str) and q.strip()]
-        
+
         # Safely extract term queries (handle None or empty dict)
         term_queries = input.question.term_queries or {}
         term_questions = get_leaf_values(term_queries)
@@ -61,7 +61,7 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
             search_chunks_vector(q, MAX_DOCUMENTS_PER_SEARCH, languages=languages, document_types=document_types)
             for q in vector_questions
         ]
-        
+
         # Batch term queries into a single BM25 search for better performance
         # Use explicit OR syntax for proper query semantics
         term_tasks = []
@@ -71,10 +71,10 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
                 combined_term_query = term_questions[0]
             else:
                 # Multiple queries - combine with explicit OR operator
-                # Weaviate BM25 supports OR syntax: (query1) OR (query2) OR (query3)
+                # Full-text search supports OR syntax: (query1) OR (query2) OR (query3)
                 # This is more explicit and correct than space-separated concatenation
                 combined_term_query = " OR ".join(f"({q})" for q in term_questions)
-            
+
             # Use a higher limit since we're combining multiple queries
             # This ensures we get enough results to cover all term query variations
             batched_term_limit = MAX_DOCUMENTS_PER_SEARCH * len(term_questions)
@@ -83,7 +83,7 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
                     combined_term_query,
                     max_chunks=batched_term_limit,
                     languages=languages,
-                    document_types=document_types
+                    document_types=document_types,
                 )
             ]
             logger.info(
@@ -95,7 +95,7 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
 
         # Run all tasks and collect results
         all_tasks = vector_tasks + term_tasks
-        
+
         # If no tasks to run (all queries were empty), return empty results
         if not all_tasks:
             logger.warning(
@@ -105,7 +105,7 @@ async def prepare_retriever(input: "DocumentRetrieval | dict"):
                 )
             )
             return []
-        
+
         all_results = []
 
         # Use gather to run all tasks concurrently

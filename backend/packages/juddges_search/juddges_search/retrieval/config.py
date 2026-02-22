@@ -1,4 +1,4 @@
-"""Configuration constants for Weaviate search operations."""
+"""Configuration constants for search operations."""
 
 # Maximum limit for document count queries (performance optimization)
 MAX_DOCUMENT_COUNT_LIMIT = 50
@@ -45,11 +45,18 @@ PYTHON_GROUPBY_CHUNKS_PER_DOC_MULTIPLIER = 3
 # Default hybrid alpha for Python GroupBy flow
 PYTHON_GROUPBY_DEFAULT_ALPHA = 0.5
 
-# Properties required to convert Weaviate chunk objects in Python GroupBy flow
+# Properties required to process chunk objects in Python GroupBy flow
 # CRITICAL: document_type is required - all chunks are guaranteed to have it
-PYTHON_GROUPBY_RETURN_PROPERTIES = ["chunk_id", "document_id", "chunk_text", "segment_type", "document_type", "language"]
+PYTHON_GROUPBY_RETURN_PROPERTIES = [
+    "chunk_id",
+    "document_id",
+    "chunk_text",
+    "segment_type",
+    "document_type",
+    "language",
+]
 
-# Auto-limit parameter for Weaviate queries
+# Auto-limit parameter for search queries
 # Controls score cutoff sensitivity: higher = more results returned
 # 10 = balanced threshold for quality vs quantity, prevents cutting off closely-scored results
 OPTIMIZED_AUTO_LIMIT = 10
@@ -60,7 +67,6 @@ OPTIMIZED_AUTO_LIMIT = 10
 DEFAULT_PAGE_SIZE = 10
 
 # Maximum offset to prevent deep pagination performance issues
-# Weaviate performance degrades at very high offsets
 MAX_PAGINATION_OFFSET = 10000
 
 # ===== Logging Configuration =====

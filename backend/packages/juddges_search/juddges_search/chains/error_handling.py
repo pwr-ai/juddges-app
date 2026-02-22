@@ -15,7 +15,6 @@ from openai import (
     APIConnectionError,
     APITimeoutError,
     InternalServerError,
-    APIError,
 )
 import json
 
@@ -52,21 +51,25 @@ class ChainExecutionError(Exception):
 
 class RetryableChainError(ChainExecutionError):
     """Error that can be retried."""
+
     pass
 
 
 class NonRetriableChainError(ChainExecutionError):
     """Error that should not be retried."""
+
     pass
 
 
 class JSONParsingError(NonRetriableChainError):
     """Error parsing JSON output from LLM."""
+
     pass
 
 
 class RetrievalError(RetryableChainError):
     """Error during document retrieval."""
+
     pass
 
 
@@ -85,7 +88,7 @@ def exponential_backoff(attempt: int, base_delay: float = 1.0, max_delay: float 
     import random
 
     # Exponential backoff: base_delay * 2^attempt
-    delay = min(base_delay * (2 ** attempt), max_delay)
+    delay = min(base_delay * (2**attempt), max_delay)
 
     # Add jitter: random value between 0 and delay
     jitter = random.uniform(0, delay * 0.1)  # 10% jitter
@@ -111,6 +114,7 @@ def retry_with_exponential_backoff(
     Returns:
         Decorated function with retry logic
     """
+
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -130,9 +134,7 @@ def retry_with_exponential_backoff(
                         )
                         time.sleep(delay)
                     else:
-                        logger.error(
-                            f"All {max_retries + 1} attempts failed for {func.__name__}: {e}"
-                        )
+                        logger.error(f"All {max_retries + 1} attempts failed for {func.__name__}: {e}")
                 except Exception as e:
                     # Non-retriable error - fail immediately
                     logger.error(f"Non-retriable error in {func.__name__}: {e}", exc_info=True)
@@ -142,12 +144,13 @@ def retry_with_exponential_backoff(
             raise RetryableChainError(
                 f"Failed after {max_retries + 1} attempts",
                 original_error=last_exception,
-                context={"function": func.__name__}
+                context={"function": func.__name__},
             )
 
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             import asyncio
+
             last_exception = None
 
             for attempt in range(max_retries + 1):
@@ -164,9 +167,7 @@ def retry_with_exponential_backoff(
                         )
                         await asyncio.sleep(delay)
                     else:
-                        logger.error(
-                            f"All {max_retries + 1} attempts failed for {func.__name__}: {e}"
-                        )
+                        logger.error(f"All {max_retries + 1} attempts failed for {func.__name__}: {e}")
                 except Exception as e:
                     # Non-retriable error - fail immediately
                     logger.error(f"Non-retriable error in {func.__name__}: {e}", exc_info=True)
@@ -176,7 +177,7 @@ def retry_with_exponential_backoff(
             raise RetryableChainError(
                 f"Failed after {max_retries + 1} attempts",
                 original_error=last_exception,
-                context={"function": func.__name__}
+                context={"function": func.__name__},
             )
 
         # Return appropriate wrapper based on function type
@@ -230,8 +231,7 @@ def safe_json_parse(response_text: str, default: dict | None = None) -> dict:
         # No default - raise error
         logger.error(f"Failed to parse JSON response: {response_text[:200]}...")
         raise JSONParsingError(
-            "Failed to parse JSON from LLM response",
-            context={"response_preview": response_text[:200]}
+            "Failed to parse JSON from LLM response", context={"response_preview": response_text[:200]}
         )
 
 
@@ -257,12 +257,11 @@ def create_fallback_response(error: Exception, question: str = "", response_type
             ),
             "sources": [],
             "reasoning": (
-                "Wystąpił błąd podczas analizy dokumentów prawnych. "
-                "System został poinformowany o problemie."
+                "Wystąpił błąd podczas analizy dokumentów prawnych. System został poinformowany o problemie."
             ),
             "confidence": "low",
             "error": True,
-            "error_type": type(error).__name__
+            "error_type": type(error).__name__,
         }
     elif response_type == "qa":
         return {
@@ -272,17 +271,13 @@ def create_fallback_response(error: Exception, question: str = "", response_type
             ),
             "sources": [],
             "error": True,
-            "error_type": type(error).__name__
+            "error_type": type(error).__name__,
         }
     elif response_type == "enhancement":
         # For query enhancement, fallback to original query
         return question
     else:
-        return {
-            "error": True,
-            "error_type": type(error).__name__,
-            "message": "An error occurred during processing"
-        }
+        return {"error": True, "error_type": type(error).__name__, "message": "An error occurred during processing"}
 
 
 def wrap_with_error_handling(
@@ -301,6 +296,7 @@ def wrap_with_error_handling(
     Returns:
         Wrapped Runnable with error handling
     """
+
     def error_handler(inputs: dict) -> Any:
         try:
             return runnable.invoke(inputs)
@@ -311,9 +307,7 @@ def wrap_with_error_handling(
                 return fallback_fn(e, inputs)
             else:
                 raise ChainExecutionError(
-                    f"{log_prefix} execution failed",
-                    original_error=e,
-                    context={"inputs": inputs}
+                    f"{log_prefix} execution failed", original_error=e, context={"inputs": inputs}
                 )
 
     async def async_error_handler(inputs: dict) -> Any:
@@ -326,9 +320,7 @@ def wrap_with_error_handling(
                 return fallback_fn(e, inputs)
             else:
                 raise ChainExecutionError(
-                    f"{log_prefix} execution failed",
-                    original_error=e,
-                    context={"inputs": inputs}
+                    f"{log_prefix} execution failed", original_error=e, context={"inputs": inputs}
                 )
 
     return RunnableLambda(func=error_handler, afunc=async_error_handler)
@@ -344,6 +336,7 @@ def log_chain_execution(chain_name: str):
     Returns:
         Decorated function with logging
     """
+
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -357,10 +350,7 @@ def log_chain_execution(chain_name: str):
                 return result
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.error(
-                    f"{chain_name} failed after {elapsed:.2f}s: {e}",
-                    exc_info=True
-                )
+                logger.error(f"{chain_name} failed after {elapsed:.2f}s: {e}", exc_info=True)
                 raise
 
         @functools.wraps(func)
@@ -375,10 +365,7 @@ def log_chain_execution(chain_name: str):
                 return result
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.error(
-                    f"{chain_name} failed after {elapsed:.2f}s: {e}",
-                    exc_info=True
-                )
+                logger.error(f"{chain_name} failed after {elapsed:.2f}s: {e}", exc_info=True)
                 raise
 
         if functools.iscoroutinefunction(func):
@@ -399,6 +386,7 @@ def validate_chain_input(required_fields: list[str]):
     Returns:
         Decorated function with input validation
     """
+
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:

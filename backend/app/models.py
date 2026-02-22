@@ -182,6 +182,7 @@ class SimpleExtractionRequest(BaseModel):
 
 class BulkExtractionRequest(BaseModel):
     """Request for applying multiple schemas to documents simultaneously."""
+
     collection_id: str = Field(
         min_length=1,
         max_length=255,
@@ -193,7 +194,8 @@ class BulkExtractionRequest(BaseModel):
         description="List of schema IDs to apply (max 10)",
     )
     document_ids: list[str] | None = Field(
-        default=None, description="List of document IDs to extract (optional, uses all collection docs if not provided)"
+        default=None,
+        description="List of document IDs to extract (optional, uses all collection docs if not provided)",
     )
     extraction_context: str = Field(
         default="Extract structured information from legal documents using the provided schema.",
@@ -233,6 +235,7 @@ class BulkExtractionRequest(BaseModel):
 
 class BulkExtractionJobInfo(BaseModel):
     """Info about a single job within a bulk extraction."""
+
     job_id: str
     schema_id: str
     schema_name: str | None = None
@@ -241,9 +244,12 @@ class BulkExtractionJobInfo(BaseModel):
 
 class BulkExtractionResponse(BaseModel):
     """Response for bulk extraction submission."""
+
     bulk_id: str = Field(description="Unique ID for this bulk extraction operation")
     status: Literal["accepted", "scheduled", "rejected"]
-    jobs: list[BulkExtractionJobInfo] = Field(description="Individual extraction jobs created")
+    jobs: list[BulkExtractionJobInfo] = Field(
+        description="Individual extraction jobs created"
+    )
     total_schemas: int
     total_documents: int
     auto_export: bool = False
@@ -583,7 +589,8 @@ class ExtractionJobSummary(BaseModel):
         default=None, description="Elapsed time in seconds since job started"
     )
     estimated_time_remaining_seconds: int | None = Field(
-        default=None, description="Estimated time remaining in seconds (for in-progress jobs)"
+        default=None,
+        description="Estimated time remaining in seconds (for in-progress jobs)",
     )
     avg_time_per_document_seconds: float | None = Field(
         default=None, description="Average processing time per document in seconds"
@@ -726,10 +733,10 @@ class ChunksByDocumentIdsResponse(BaseModel):
 
 
 class DocumentsByUuidRequest(BaseModel):
-    """Request to get documents by Weaviate UUIDs."""
+    """Request to get documents by UUIDs."""
 
     document_uuids: list[str] = Field(
-        description="List of Weaviate document UUIDs", min_length=1, max_length=100
+        description="List of document UUIDs", min_length=1, max_length=100
     )
     return_vectors: bool = Field(
         default=False, description="Whether to include vector embeddings"
@@ -892,7 +899,7 @@ class SearchDocumentsResponse(BaseModel):
     )
     query_time_ms: float | None = Field(
         default=None,
-        description="Query execution time in milliseconds (core Weaviate query only)",
+        description="Query execution time in milliseconds (core database query only)",
     )
 
 
@@ -974,51 +981,47 @@ class SearchChunksRequest(BaseModel):
     jurisdictions: list[str] | None = Field(
         default=None,
         description="Filter by jurisdictions (PL, UK)",
-        examples=[["PL"], ["UK"], ["PL", "UK"]]
+        examples=[["PL"], ["UK"], ["PL", "UK"]],
     )
     court_names: list[str] | None = Field(
-        default=None,
-        description="Filter by specific court names"
+        default=None, description="Filter by specific court names"
     )
     court_levels: list[str] | None = Field(
         default=None,
         description="Filter by court hierarchy level",
-        examples=[["Supreme Court"], ["Appeal Court"]]
+        examples=[["Supreme Court"], ["Appeal Court"]],
     )
     case_types: list[str] | None = Field(
         default=None,
         description="Filter by case type",
-        examples=[["Criminal"], ["Civil"]]
+        examples=[["Criminal"], ["Civil"]],
     )
     decision_types: list[str] | None = Field(
         default=None,
         description="Filter by decision type",
-        examples=[["Judgment"], ["Order"]]
+        examples=[["Judgment"], ["Order"]],
     )
     outcomes: list[str] | None = Field(
         default=None,
         description="Filter by case outcome",
-        examples=[["Granted"], ["Dismissed"]]
+        examples=[["Granted"], ["Dismissed"]],
     )
     keywords: list[str] | None = Field(
-        default=None,
-        description="Filter by keywords (OR logic)"
+        default=None, description="Filter by keywords (OR logic)"
     )
     legal_topics: list[str] | None = Field(
-        default=None,
-        description="Filter by legal topics (OR logic)"
+        default=None, description="Filter by legal topics (OR logic)"
     )
     cited_legislation: list[str] | None = Field(
-        default=None,
-        description="Filter by cited legislation"
+        default=None, description="Filter by cited legislation"
     )
     date_from: str | None = Field(
         default=None,
-        description="Filter decisions from this date (inclusive, ISO format YYYY-MM-DD)"
+        description="Filter decisions from this date (inclusive, ISO format YYYY-MM-DD)",
     )
     date_to: str | None = Field(
         default=None,
-        description="Filter decisions until this date (inclusive, ISO format YYYY-MM-DD)"
+        description="Filter decisions until this date (inclusive, ISO format YYYY-MM-DD)",
     )
 
     @field_validator("languages")
@@ -1089,12 +1092,14 @@ class SearchChunksResponse(BaseModel):
 
 class FacetOption(BaseModel):
     """A single facet option with count."""
+
     value: str = Field(description="The facet value (e.g., 'Criminal', 'PL')")
     count: int = Field(description="Number of documents with this value")
 
 
 class FacetsResponse(BaseModel):
     """Response containing facet counts for filters."""
+
     facets: dict[str, list[FacetOption]] = Field(
         description="Facets grouped by type (e.g., {'case_type': [{'value': 'Criminal', 'count': 234}]})"
     )
@@ -1120,9 +1125,7 @@ class FetchChunksByUuidResponse(BaseModel):
     chunks: list[DocumentChunk] = Field(
         description="Full chunk objects with all data including chunk_text"
     )
-    total_chunks: int = Field(
-        description="Number of chunks returned"
-    )
+    total_chunks: int = Field(description="Number of chunks returned")
 
 
 # ===== Citation Network Models =====
@@ -1130,12 +1133,17 @@ class FetchChunksByUuidResponse(BaseModel):
 
 class CitationNetworkRequest(BaseModel):
     """Request model for citation network visualization."""
+
     sample_size: int = Field(
-        default=50, ge=1, le=200,
+        default=50,
+        ge=1,
+        le=200,
         description="Number of documents to include in the network",
     )
     min_shared_refs: int = Field(
-        default=1, ge=1, le=10,
+        default=1,
+        ge=1,
+        le=10,
         description="Minimum number of shared legal references to create an edge",
     )
     document_types: list[str] | None = Field(
@@ -1145,38 +1153,52 @@ class CitationNetworkRequest(BaseModel):
 
 class CitationNode(BaseModel):
     """Node in the citation network representing a document."""
+
     id: str = Field(description="Document ID")
     title: str = Field(description="Document title")
     document_type: str = Field(description="Type of document")
     year: int | None = Field(None, description="Year of document issuance")
     x: float = Field(description="X coordinate for visualization")
     y: float = Field(description="Y coordinate for visualization")
-    citation_count: int = Field(description="Number of legal references this document cites")
-    authority_score: float = Field(description="How often this document's references are shared by others (0-1)")
-    references: list[str] = Field(default_factory=list, description="Legal references cited")
+    citation_count: int = Field(
+        description="Number of legal references this document cites"
+    )
+    authority_score: float = Field(
+        description="How often this document's references are shared by others (0-1)"
+    )
+    references: list[str] = Field(
+        default_factory=list, description="Legal references cited"
+    )
     metadata: dict = Field(default_factory=dict, description="Additional metadata")
 
 
 class CitationEdge(BaseModel):
     """Edge in the citation network representing shared legal references."""
+
     source: str = Field(description="Source document ID")
     target: str = Field(description="Target document ID")
     shared_refs: list[str] = Field(description="Shared legal reference texts")
-    weight: float = Field(ge=0.0, le=1.0, description="Normalized edge weight based on shared references")
+    weight: float = Field(
+        ge=0.0, le=1.0, description="Normalized edge weight based on shared references"
+    )
 
 
 class CitationNetworkStatistics(BaseModel):
     """Statistics about the citation network."""
+
     total_nodes: int = Field(description="Total number of nodes")
     total_edges: int = Field(description="Total number of edges")
     avg_citations: float = Field(description="Average citations per document")
     max_citations: int = Field(description="Maximum citations for a single document")
-    most_cited_refs: list[dict] = Field(description="Top referenced legal bases with counts")
+    most_cited_refs: list[dict] = Field(
+        description="Top referenced legal bases with counts"
+    )
     avg_authority_score: float = Field(description="Average authority score")
 
 
 class CitationNetworkResponse(BaseModel):
     """Response model for citation network."""
+
     nodes: list[CitationNode] = Field(description="List of document nodes")
     edges: list[CitationEdge] = Field(description="List of citation edges")
     statistics: CitationNetworkStatistics = Field(description="Network statistics")
@@ -1187,19 +1209,23 @@ class CitationNetworkResponse(BaseModel):
 
 class OCRJobRequest(BaseModel):
     """Request to submit a document for OCR processing."""
+
     document_id: str = Field(
-        min_length=1, max_length=255,
+        min_length=1,
+        max_length=255,
         description="Document ID to associate OCR results with",
     )
     source_type: Literal["pdf", "image"] = Field(
         description="Type of source file (pdf or image)",
     )
     source_filename: str | None = Field(
-        default=None, max_length=500,
+        default=None,
+        max_length=500,
         description="Original filename of the uploaded file",
     )
     language_hint: str | None = Field(
-        default=None, max_length=10,
+        default=None,
+        max_length=10,
         description="Hint for OCR language detection (e.g., 'pl', 'en')",
     )
 
@@ -1211,10 +1237,17 @@ class OCRJobRequest(BaseModel):
 
 class OCRQualityMetrics(BaseModel):
     """Quality metrics for OCR output."""
-    avg_confidence: float = Field(ge=0.0, le=1.0, description="Average character confidence")
-    low_confidence_words: int = Field(ge=0, description="Number of words with low confidence")
+
+    avg_confidence: float = Field(
+        ge=0.0, le=1.0, description="Average character confidence"
+    )
+    low_confidence_words: int = Field(
+        ge=0, description="Number of words with low confidence"
+    )
     total_words: int = Field(ge=0, description="Total words detected")
-    estimated_accuracy: float = Field(ge=0.0, le=1.0, description="Estimated text accuracy")
+    estimated_accuracy: float = Field(
+        ge=0.0, le=1.0, description="Estimated text accuracy"
+    )
     needs_review: bool = Field(description="Whether manual review is recommended")
     quality_level: Literal["high", "medium", "low"] = Field(
         description="Overall quality classification",
@@ -1223,17 +1256,20 @@ class OCRQualityMetrics(BaseModel):
 
 class OCRPageResult(BaseModel):
     """OCR result for a single page."""
+
     page_number: int = Field(ge=1, description="Page number (1-indexed)")
     extracted_text: str = Field(description="Text extracted from this page")
     confidence_score: float = Field(ge=0.0, le=1.0, description="Page-level confidence")
     word_count: int = Field(ge=0, description="Number of words on this page")
     quality_metrics: OCRQualityMetrics | None = Field(
-        default=None, description="Per-page quality metrics",
+        default=None,
+        description="Per-page quality metrics",
     )
 
 
 class OCRJobResponse(BaseModel):
     """Response for an OCR job submission."""
+
     job_id: str = Field(description="Unique OCR job identifier")
     document_id: str = Field(description="Associated document ID")
     status: Literal["pending", "processing", "completed", "failed"] = Field(
@@ -1244,6 +1280,7 @@ class OCRJobResponse(BaseModel):
 
 class OCRJobStatus(BaseModel):
     """Full status of an OCR job."""
+
     job_id: str = Field(description="Unique OCR job identifier")
     document_id: str = Field(description="Associated document ID")
     status: Literal["pending", "processing", "completed", "failed"] = Field(
@@ -1253,34 +1290,50 @@ class OCRJobStatus(BaseModel):
     source_filename: str | None = Field(default=None, description="Original filename")
     # OCR results
     extracted_text: str | None = Field(default=None, description="Full extracted text")
-    confidence_score: float | None = Field(default=None, description="Overall confidence")
-    page_count: int | None = Field(default=None, description="Number of pages processed")
+    confidence_score: float | None = Field(
+        default=None, description="Overall confidence"
+    )
+    page_count: int | None = Field(
+        default=None, description="Number of pages processed"
+    )
     language_detected: str | None = Field(default=None, description="Detected language")
     quality_metrics: OCRQualityMetrics | None = Field(
-        default=None, description="Overall quality assessment",
+        default=None,
+        description="Overall quality assessment",
     )
     pages: list[OCRPageResult] | None = Field(
-        default=None, description="Per-page results",
+        default=None,
+        description="Per-page results",
     )
     # Manual corrections
-    corrected_text: str | None = Field(default=None, description="Manually corrected text")
-    correction_notes: str | None = Field(default=None, description="Notes about corrections")
-    corrected_at: str | None = Field(default=None, description="When corrections were made")
+    corrected_text: str | None = Field(
+        default=None, description="Manually corrected text"
+    )
+    correction_notes: str | None = Field(
+        default=None, description="Notes about corrections"
+    )
+    corrected_at: str | None = Field(
+        default=None, description="When corrections were made"
+    )
     # Timestamps
     created_at: str = Field(description="Job creation time")
     updated_at: str = Field(description="Last update time")
     completed_at: str | None = Field(default=None, description="Job completion time")
-    error_message: str | None = Field(default=None, description="Error details if failed")
+    error_message: str | None = Field(
+        default=None, description="Error details if failed"
+    )
 
 
 class OCRCorrectionRequest(BaseModel):
     """Request to submit manual corrections for OCR text."""
+
     corrected_text: str = Field(
         min_length=1,
         description="The manually corrected full text",
     )
     correction_notes: str | None = Field(
-        default=None, max_length=2000,
+        default=None,
+        max_length=2000,
         description="Notes about what was corrected",
     )
     page_corrections: list[dict[str, Any]] | None = Field(
@@ -1291,6 +1344,7 @@ class OCRCorrectionRequest(BaseModel):
 
 class OCRCorrectionResponse(BaseModel):
     """Response after applying corrections."""
+
     job_id: str = Field(description="OCR job identifier")
     status: Literal["corrected"] = "corrected"
     corrected_at: str = Field(description="Timestamp of correction")
@@ -1299,6 +1353,7 @@ class OCRCorrectionResponse(BaseModel):
 
 class OCRJobListResponse(BaseModel):
     """Response for listing OCR jobs."""
+
     jobs: list[OCRJobStatus] = Field(description="List of OCR jobs")
     total: int = Field(description="Total number of jobs")
     page: int = Field(description="Current page")

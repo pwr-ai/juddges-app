@@ -57,7 +57,7 @@ class LegalDocumentMetadata(BaseModel):
     needed for document identification and basic metadata display.
     """
 
-    uuid: str = Field(..., description="Weaviate UUID of the document")
+    uuid: str = Field(..., description="UUID of the document")
     document_id: str = Field(..., description="Document identifier (e.g., case number, statute reference)")
     document_type: DocumentType = Field(..., description="Type of legal document")
     language: Optional[str] = Field(None, description="ISO 639-1 language code")
@@ -67,7 +67,7 @@ class LegalDocumentMetadata(BaseModel):
     keywords: List[str] = Field(default_factory=list, description="Keywords or tags")
     date_issued: Optional[datetime] = Field(None, description="Date when the document was issued")
     score: Optional[float] = Field(None, description="Relevance or similarity score from the search")
-    
+
     # Extended fields for DocumentCard display
     title: Optional[str] = Field(None, description="Title or name of the document")
     summary: Optional[str] = Field(None, description="Brief summary or abstract")
@@ -92,13 +92,11 @@ class LegalDocumentMetadata(BaseModel):
                 "thesis": "Main argument of the case",
             }
         }
-
     )
 
 
 class LegalDocument(BaseModel):
     """Model representing a legal document with comprehensive metadata."""
-
 
     document_id: str = Field(..., description="Unique identifier for the document")
     document_type: DocumentType = Field(..., description="Type of legal document")
@@ -125,7 +123,7 @@ class LegalDocument(BaseModel):
     x: Optional[float] = Field(None, description="X coordinate for visualization (e.g., UMAP)")
     y: Optional[float] = Field(None, description="Y coordinate for visualization (e.g., UMAP)")
 
-    # Additional fields used in weaviate_search.py
+    # Additional fields used in search operations
     thesis: Optional[str] = Field(None, description="Thesis or main argument of the document")
     ingestion_date: Optional[datetime] = Field(None, description="Date when document was ingested")
     last_updated: Optional[datetime] = Field(None, description="Date when document was last updated")
@@ -144,7 +142,7 @@ class LegalDocument(BaseModel):
     references: Optional[List[str]] = Field(default_factory=list, description="References to other documents")
 
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         json_schema_extra={
             "example": {
                 "document_id": "2024-SC-123",
@@ -157,7 +155,7 @@ class LegalDocument(BaseModel):
                 "document_number": "123/2024",
                 "keywords": ["contract law", "damages"],
             }
-        }
+        },
     )
 
 
@@ -171,18 +169,20 @@ class DocumentChunk(BaseModel):
     chunk_text: str = Field(..., description="Text content of the chunk")
     segment_type: Optional[SegmentType] = Field(None, description="Type of segment")
     position: Optional[int] = Field(None, ge=0, description="Position/order of the chunk in the document")
-    confidence_score: Optional[float] = Field(
-        default=None, description="Confidence score for the chunk extraction"
-    )
+    confidence_score: Optional[float] = Field(default=None, description="Confidence score for the chunk extraction")
     cited_references: Optional[List[str]] = Field(default_factory=list, description="References cited in this chunk")
     tags: Optional[List[str]] = Field(default_factory=list, description="Tags or labels for the chunk")
     parent_segment_id: Optional[str] = Field(None, description="ID of the parent segment if hierarchical")
 
     # Enhanced metadata fields for search results
-    chunk_type: Optional[str] = Field(default="summary", description="Type of chunk content (summary, excerpt, full_text)")
+    chunk_type: Optional[str] = Field(
+        default="summary", description="Type of chunk content (summary, excerpt, full_text)"
+    )
     chunk_start_pos: Optional[int] = Field(default=0, description="Start position of chunk in source document")
     chunk_end_pos: Optional[int] = Field(default=0, description="End position of chunk in source document")
-    metadata: Optional[dict[str, Any]] = Field(default_factory=dict, description="Additional metadata (court info, scores, etc.)")
+    metadata: Optional[dict[str, Any]] = Field(
+        default_factory=dict, description="Additional metadata (court info, scores, etc.)"
+    )
 
     # Search scoring fields
     similarity: Optional[float] = Field(default=None, description="Overall similarity/relevance score")

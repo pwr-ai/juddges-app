@@ -50,11 +50,6 @@ poethepoet = "^0.29.0"
 test = "pytest tests/ -v"
 test-unit = "pytest tests/ -v -m unit"
 test-integration = "pytest tests/ -v -m integration"
-# Weaviate tests removed - using Supabase pgvector exclusively
-# test-search = "pytest tests/test_weaviate_search.py -v"
-# test-language = "pytest tests/test_language_search.py -v"
-# test-pool = "pytest tests/test_weaviate_pool.py -v"
-# test-endpoints = "pytest tests/test_endpoints_pool.py -v"
 test-cov = "pytest tests/ --cov=juddges_search --cov-report=html --cov-report=term-missing"
 test-cov-html = "pytest tests/ --cov=juddges_search --cov-report=html"
 

@@ -27,11 +27,7 @@ class CollectionsDB:
             raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
 
         # Use ClientOptions to configure timeout instead of deprecated timeout parameter
-        options = ClientOptions(
-            postgrest_client_timeout=30,
-            storage_client_timeout=30,
-            schema="public"
-        )
+        options = ClientOptions(postgrest_client_timeout=30, storage_client_timeout=30, schema="public")
         self.client: Client = create_client(self.url, self.service_key, options=options)
         logger.info(f"Initialized CollectionsDB with Supabase client: {self.url[:50]}...")
 
@@ -96,20 +92,12 @@ class CollectionsDB:
             return []
 
     async def find_collection(
-        self,
-        collection_id: str,
-        user_id: str,
-        limit: Optional[int] = None,
-        offset: int = 0
+        self, collection_id: str, user_id: str, limit: Optional[int] = None, offset: int = 0
     ) -> Optional[Dict[str, Any]]:
         try:
             # First get the collection
             response = (
-                self.client.table("collections")
-                .select("*")
-                .eq("id", collection_id)
-                .eq("user_id", user_id)
-                .execute()
+                self.client.table("collections").select("*").eq("id", collection_id).eq("user_id", user_id).execute()
             )
 
             if not response.data:
@@ -207,7 +195,7 @@ class CollectionsDB:
     async def delete_collection(self, collection_id: str, user_id: str) -> bool:
         """Delete a collection and all its documents."""
         try:
-            # Delete from collection_supabase_documents table (for Weaviate document IDs)
+            # Delete from collection_supabase_documents table
             self.client.table("collection_supabase_documents").delete().eq("collection_id", collection_id).execute()
 
             response = (
@@ -226,7 +214,7 @@ class CollectionsDB:
             raise HTTPException(status_code=404, detail="Collection not found")
 
         try:
-            # Use collection_supabase_documents table for Weaviate document IDs (text type)
+            # Use collection_supabase_documents table for document IDs (text type)
             existing = (
                 self.client.table("collection_supabase_documents")
                 .select("*")
@@ -260,7 +248,7 @@ class CollectionsDB:
             raise HTTPException(status_code=404, detail="Collection not found")
 
         try:
-            # Use collection_supabase_documents table for Weaviate document IDs
+            # Use collection_supabase_documents table for document IDs
             (
                 self.client.table("collection_supabase_documents")
                 .delete()
@@ -284,10 +272,7 @@ class CollectionsDB:
         """
         # Check if collection exists (without user_id filtering)
         try:
-            collection_check = self.client.table("collections")\
-                .select("id")\
-                .eq("id", collection_id)\
-                .execute()
+            collection_check = self.client.table("collections").select("id").eq("id", collection_id).execute()
 
             if not collection_check.data:
                 raise HTTPException(status_code=404, detail="Collection not found")
@@ -298,24 +283,28 @@ class CollectionsDB:
             raise HTTPException(status_code=500, detail=f"Failed to check collection: {str(e)}")
 
         try:
-            # Get document IDs from collection_supabase_documents (Weaviate document IDs as text)
-            response = self.client.table("collection_supabase_documents")\
-                .select("document_id")\
-                .eq("collection_id", collection_id)\
+            # Get document IDs from collection_supabase_documents
+            response = (
+                self.client.table("collection_supabase_documents")
+                .select("document_id")
+                .eq("collection_id", collection_id)
                 .execute()
+            )
 
             if not response.data:
                 return []
 
-            # Return simple document list with just IDs (Weaviate document IDs)
+            # Return simple document list with just IDs
             documents = []
             for item in response.data:
                 doc_id = item.get("document_id")
                 if doc_id:
-                    documents.append({
-                        "id": doc_id,
-                        "document_id": doc_id,  # For compatibility with frontend
-                    })
+                    documents.append(
+                        {
+                            "id": doc_id,
+                            "document_id": doc_id,  # For compatibility with frontend
+                        }
+                    )
 
             logger.info(f"Retrieved {len(documents)} documents from collection {collection_id}")
             return documents
@@ -439,7 +428,9 @@ class SupabaseDB:
         """
         try:
             columns = (
-                "*" if include_text else "id, name, description, type, category, dates, created_at, updated_at, user_id, status, is_verified"
+                "*"
+                if include_text
+                else "id, name, description, type, category, dates, created_at, updated_at, user_id, status, is_verified"
             )
 
             response = self.client.table("extraction_schemas").select(columns).order("created_at", desc=True).execute()
@@ -469,11 +460,7 @@ class PublicationsDB:
         if not self.url or not self.service_key:
             raise ValueError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
 
-        options = ClientOptions(
-            postgrest_client_timeout=30,
-            storage_client_timeout=30,
-            schema="public"
-        )
+        options = ClientOptions(postgrest_client_timeout=30, storage_client_timeout=30, schema="public")
         self.client: Client = create_client(self.url, self.service_key, options=options)
         logger.info(f"Initialized PublicationsDB with Supabase client: {self.url[:50]}...")
 
@@ -495,7 +482,7 @@ class PublicationsDB:
         status: Optional[str] = None,
         pub_type: Optional[str] = None,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
         """Get all publications with optional filtering."""
         try:
@@ -514,7 +501,12 @@ class PublicationsDB:
             if pub_type:
                 query = query.eq("type", pub_type)
 
-            response = query.order("year", desc=True).order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            response = (
+                query.order("year", desc=True)
+                .order("created_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute()
+            )
 
             return response.data or []
         except Exception as e:
@@ -584,12 +576,7 @@ class PublicationsDB:
         """Update an existing publication."""
         try:
             data["updated_at"] = datetime.now(timezone.utc).isoformat()
-            response = (
-                self.client.table("publications")
-                .update(data)
-                .eq("id", publication_id)
-                .execute()
-            )
+            response = self.client.table("publications").update(data).eq("id", publication_id).execute()
 
             if not response.data:
                 raise HTTPException(status_code=404, detail="Publication not found")
@@ -611,12 +598,7 @@ class PublicationsDB:
             logger.error(f"Error deleting publication: {e}")
             return False
 
-    async def add_schema_link(
-        self,
-        publication_id: str,
-        schema_id: str,
-        description: Optional[str] = None
-    ) -> bool:
+    async def add_schema_link(self, publication_id: str, schema_id: str, description: Optional[str] = None) -> bool:
         """Link a schema to a publication."""
         try:
             data = {"publication_id": publication_id, "schema_id": schema_id}
@@ -636,9 +618,9 @@ class PublicationsDB:
     async def remove_schema_link(self, publication_id: str, schema_id: str) -> bool:
         """Remove a schema link from a publication."""
         try:
-            self.client.table("publication_schemas").delete().eq(
-                "publication_id", publication_id
-            ).eq("schema_id", schema_id).execute()
+            self.client.table("publication_schemas").delete().eq("publication_id", publication_id).eq(
+                "schema_id", schema_id
+            ).execute()
             logger.info(f"Removed schema {schema_id} from publication {publication_id}")
             return True
         except Exception as e:
@@ -646,10 +628,7 @@ class PublicationsDB:
             raise HTTPException(status_code=500, detail=f"Failed to remove schema link: {str(e)}")
 
     async def add_collection_link(
-        self,
-        publication_id: str,
-        collection_id: str,
-        description: Optional[str] = None
+        self, publication_id: str, collection_id: str, description: Optional[str] = None
     ) -> bool:
         """Link a collection to a publication."""
         try:
@@ -670,9 +649,9 @@ class PublicationsDB:
     async def remove_collection_link(self, publication_id: str, collection_id: str) -> bool:
         """Remove a collection link from a publication."""
         try:
-            self.client.table("publication_collections").delete().eq(
-                "publication_id", publication_id
-            ).eq("collection_id", collection_id).execute()
+            self.client.table("publication_collections").delete().eq("publication_id", publication_id).eq(
+                "collection_id", collection_id
+            ).execute()
             logger.info(f"Removed collection {collection_id} from publication {publication_id}")
             return True
         except Exception as e:
@@ -708,10 +687,7 @@ class PublicationsDB:
             return []
 
     async def add_extraction_job_link(
-        self,
-        publication_id: str,
-        job_id: str,
-        description: Optional[str] = None
+        self, publication_id: str, job_id: str, description: Optional[str] = None
     ) -> bool:
         """Link an extraction job to a publication."""
         try:
@@ -732,9 +708,9 @@ class PublicationsDB:
     async def remove_extraction_job_link(self, publication_id: str, job_id: str) -> bool:
         """Remove an extraction job link from a publication."""
         try:
-            self.client.table("publication_extraction_jobs").delete().eq(
-                "publication_id", publication_id
-            ).eq("job_id", job_id).execute()
+            self.client.table("publication_extraction_jobs").delete().eq("publication_id", publication_id).eq(
+                "job_id", job_id
+            ).execute()
             logger.info(f"Removed extraction job {job_id} from publication {publication_id}")
             return True
         except Exception as e:
@@ -776,7 +752,7 @@ class SupabaseVectorDB:
         options = ClientOptions(
             postgrest_client_timeout=60,  # Longer timeout for vector searches
             storage_client_timeout=30,
-            schema="public"
+            schema="public",
         )
         self.client: Client = create_client(self.url, self.service_key, options=options)
         logger.info(f"Initialized SupabaseVectorDB for URL: {self.url[:50]}...")
@@ -805,7 +781,7 @@ class SupabaseVectorDB:
                     "query_embedding": query_embedding,
                     "match_count": match_count,
                     "match_threshold": match_threshold,
-                }
+                },
             ).execute()
 
             return response.data or []
@@ -861,7 +837,7 @@ class SupabaseVectorDB:
                     "match_count": match_count,
                     "vector_weight": vector_weight,
                     "text_weight": text_weight,
-                }
+                },
             ).execute()
 
             return response.data or []
@@ -896,7 +872,7 @@ class SupabaseVectorDB:
                     "match_count": match_count,
                     "match_threshold": match_threshold,
                     "include_key_sections_only": include_key_sections_only,
-                }
+                },
             ).execute()
 
             return response.data or []
@@ -925,7 +901,7 @@ class SupabaseVectorDB:
                 {
                     "p_document_id": document_id,
                     "include_embeddings": include_embeddings,
-                }
+                },
             ).execute()
 
             return response.data or []
@@ -948,11 +924,7 @@ class SupabaseVectorDB:
         """
         try:
             response = (
-                self.client.table("legal_documents")
-                .select("*")
-                .eq("document_id", document_id)
-                .limit(1)
-                .execute()
+                self.client.table("legal_documents").select("*").eq("document_id", document_id).limit(1).execute()
             )
 
             return response.data[0] if response.data else None
@@ -977,12 +949,7 @@ class SupabaseVectorDB:
             return []
 
         try:
-            response = (
-                self.client.table("legal_documents")
-                .select("*")
-                .in_("document_id", document_ids)
-                .execute()
-            )
+            response = self.client.table("legal_documents").select("*").in_("document_id", document_ids).execute()
 
             return response.data or []
         except Exception as e:
@@ -1028,7 +995,9 @@ class SupabaseVectorDB:
             # Build query with FTS
             query_builder = (
                 self.client.table("legal_documents")
-                .select("supabase_document_id, document_id, title, document_type, court_name, date_issued, language, summary")
+                .select(
+                    "supabase_document_id, document_id, title, document_type, court_name, date_issued, language, summary"
+                )
                 .text_search("full_text", query, config="simple")
             )
 
@@ -1037,11 +1006,7 @@ class SupabaseVectorDB:
             if language:
                 query_builder = query_builder.eq("language", language)
 
-            response = (
-                query_builder
-                .range(offset, offset + limit - 1)
-                .execute()
-            )
+            response = query_builder.range(offset, offset + limit - 1).execute()
 
             return response.data or []
         except Exception as e:
@@ -1062,10 +1027,7 @@ def get_collections_db() -> CollectionsDB:
             _collections_db = CollectionsDB()
         except ValueError as e:
             logger.error(f"Collections database not configured: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Database configuration error: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Database configuration error: {str(e)}")
     return _collections_db
 
 
@@ -1087,7 +1049,7 @@ def reset_collections_db():
     if _collections_db is not None:
         # Properly close the client connection
         try:
-            if hasattr(_collections_db.client, 'close'):
+            if hasattr(_collections_db.client, "close"):
                 _collections_db.client.close()
         except Exception as e:
             logger.warning(f"Error closing Supabase client: {e}")
@@ -1106,10 +1068,7 @@ def get_publications_db() -> PublicationsDB:
             _publications_db = PublicationsDB()
         except ValueError as e:
             logger.error(f"Publications database not configured: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Database configuration error: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Database configuration error: {str(e)}")
     return _publications_db
 
 
@@ -1117,7 +1076,7 @@ def reset_publications_db():
     global _publications_db
     if _publications_db is not None:
         try:
-            if hasattr(_publications_db.client, 'close'):
+            if hasattr(_publications_db.client, "close"):
                 _publications_db.client.close()
         except Exception as e:
             logger.warning(f"Error closing Publications Supabase client: {e}")
@@ -1132,10 +1091,7 @@ def get_vector_db() -> SupabaseVectorDB:
             _vector_db = SupabaseVectorDB()
         except ValueError as e:
             logger.error(f"Vector database not configured: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Vector database configuration error: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Vector database configuration error: {str(e)}")
     return _vector_db
 
 
@@ -1144,7 +1100,7 @@ def reset_vector_db():
     global _vector_db
     if _vector_db is not None:
         try:
-            if hasattr(_vector_db.client, 'close'):
+            if hasattr(_vector_db.client, "close"):
                 _vector_db.client.close()
         except Exception as e:
             logger.warning(f"Error closing Vector Supabase client: {e}")

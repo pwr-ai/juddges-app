@@ -14,20 +14,17 @@ from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
 
-# Note: Weaviate has been removed - all queries now use Supabase pgvector
-WEAVIATE_AVAILABLE = False
-logger.info("Using Supabase for all dashboard queries")
-
 # Redis client setup (optional, falls back to in-memory cache)
 try:
     import redis.asyncio as redis
+
     redis_client = redis.Redis(
         host=os.getenv("REDIS_HOST", "redis"),
         port=int(os.getenv("REDIS_PORT", "6379")),
         password=os.getenv("REDIS_AUTH"),
         decode_responses=True,
         socket_connect_timeout=2,
-        socket_timeout=2
+        socket_timeout=2,
     )
     REDIS_AVAILABLE = True
     logger.info("Redis client initialized for dashboard caching")
@@ -41,21 +38,21 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 # TODO: Re-enable rate limiting after fixing slowapi dependency
 
+
 # Initialize Supabase client
 @lru_cache(maxsize=1)
 def get_supabase_client() -> Client:
     """Get cached Supabase client instance."""
     # Use ClientOptions to configure timeout instead of deprecated timeout parameter
     options = ClientOptions(
-        postgrest_client_timeout=30,
-        storage_client_timeout=30,
-        schema="public"
+        postgrest_client_timeout=30, storage_client_timeout=30, schema="public"
     )
     return create_client(
         os.getenv("NEXT_PUBLIC_SUPABASE_URL"),
         os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
-        options=options
+        options=options,
     )
+
 
 supabase: Client = get_supabase_client()
 
@@ -72,6 +69,7 @@ class DashboardStats(BaseModel):
     - judgments: Total court judgments with breakdowns by language
     - tax_interpretations: Total tax interpretations with breakdowns by language
     """
+
     total_documents: int
     judgments: int
     judgments_pl: int = 0  # Polish court judgments
@@ -85,6 +83,7 @@ class DashboardStats(BaseModel):
 
 class DocumentSummary(BaseModel):
     """Document with AI-generated summary."""
+
     id: str
     title: str
     document_type: str
@@ -100,6 +99,7 @@ class DocumentSummary(BaseModel):
 
 class TrendingTopic(BaseModel):
     """Trending topic information."""
+
     topic: str
     change: str
     trend: str  # "up", "down", "stable"
@@ -121,7 +121,7 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
         - Last update timestamp
 
     Note: Stats are read from the doc_type_stats table (pre-computed).
-    The 'added_this_week' count is still fetched from Weaviate as it's time-based.
+    The 'added_this_week' count is fetched from Supabase using a time-based filter.
     Results are cached for 4 hours in Redis and in-memory cache.
     """
     cache_key = "dashboard:stats"
@@ -138,19 +138,21 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
 
     # Fallback to in-memory cache
     now = datetime.now()
-    if (_stats_cache["data"] is not None and
-        _stats_cache["timestamp"] is not None and
-        (now - _stats_cache["timestamp"]).total_seconds() < _cache_ttl):
+    if (
+        _stats_cache["data"] is not None
+        and _stats_cache["timestamp"] is not None
+        and (now - _stats_cache["timestamp"]).total_seconds() < _cache_ttl
+    ):
         logger.debug("Returning in-memory cached dashboard stats")
         return _stats_cache["data"]
 
     try:
         # Fetch document counts from doc_type_stats table (pre-computed)
         logger.info("Fetching dashboard stats from doc_type_stats table...")
-        
+
         # Query the doc_type_stats table
         stats_response = supabase.table("doc_type_stats").select("*").execute()
-        
+
         # Parse stats from table
         total_documents = 0
         judgments = 0
@@ -186,7 +188,9 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
                 try:
                     # Parse timestamp string to datetime
                     if isinstance(created_at, str):
-                        row_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        row_time = datetime.fromisoformat(
+                            created_at.replace("Z", "+00:00")
+                        )
                     else:
                         row_time = created_at
 
@@ -194,18 +198,16 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
                         last_updated = row_time
                 except Exception as e:
                     logger.warning(f"Could not parse created_at timestamp: {e}")
-        
+
         # Convert last_updated datetime to ISO string for JSON serialization
         last_updated_str = last_updated.isoformat() if last_updated else None
-        
-        # Get "added_this_week" - prefer Supabase, fallback to Weaviate if available
+
+        # Get "added_this_week" count from Supabase
         logger.info("Fetching 'added_this_week' count...")
         added_this_week = 0
         one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-        # Try Supabase first
         try:
-            supabase = get_supabase_client()
             response = (
                 supabase.table("legal_documents")
                 .select("document_id", count="exact")
@@ -213,24 +215,15 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
                 .execute()
             )
             added_this_week = response.count or 0
-            logger.info(f"Documents added this week (from Supabase): {added_this_week:,}")
+            logger.info(
+                f"Documents added this week (from Supabase): {added_this_week:,}"
+            )
         except Exception as e:
             logger.warning(f"Could not fetch 'added_this_week' from Supabase: {e}")
-            # Fallback to Weaviate if available
-            if WEAVIATE_AVAILABLE and WeaviateLegalDatabase:
-                try:
-                    async with WeaviateLegalDatabase(use_pool=True) as db:
-                        collection = db.legal_documents_collection
-                        recent_result = await collection.aggregate.over_all(
-                            filters=Filter.by_property("ingestion_date").greater_or_equal(one_week_ago),
-                            total_count=True
-                        )
-                        added_this_week = recent_result.total_count
-                        logger.info(f"Documents added this week (from Weaviate): {added_this_week:,}")
-                except Exception as e2:
-                    logger.error(f"Weaviate fallback also failed: {e2}")
-        
-        logger.info(f"Stats from table: {total_documents:,} total, {judgments:,} judgments ({judgments_pl:,} PL, {judgments_uk:,} UK), {tax_interpretations:,} tax interpretations ({tax_interpretations_pl:,} PL, {tax_interpretations_uk:,} UK)")
+
+        logger.info(
+            f"Stats from table: {total_documents:,} total, {judgments:,} judgments ({judgments_pl:,} PL, {judgments_uk:,} UK), {tax_interpretations:,} tax interpretations ({tax_interpretations_pl:,} PL, {tax_interpretations_uk:,} UK)"
+        )
 
         stats = DashboardStats(
             total_documents=total_documents,
@@ -241,16 +234,14 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
             tax_interpretations_pl=tax_interpretations_pl,
             tax_interpretations_uk=tax_interpretations_uk,
             added_this_week=added_this_week,
-            last_updated=last_updated_str
+            last_updated=last_updated_str,
         )
 
         # Update Redis cache
         if REDIS_AVAILABLE and redis_client:
             try:
                 await redis_client.setex(
-                    cache_key,
-                    _cache_ttl,
-                    json.dumps(stats.model_dump())
+                    cache_key, _cache_ttl, json.dumps(stats.model_dump())
                 )
                 logger.debug("Updated Redis dashboard stats cache")
             except Exception as e:
@@ -275,22 +266,24 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
             tax_interpretations_pl=0,
             tax_interpretations_uk=0,
             added_this_week=0,
-            last_updated=None
+            last_updated=None,
         )
 
 
 @router.post("/refresh-stats")
-async def refresh_dashboard_stats(request: Request, api_key: str = Depends(verify_api_key)):
+async def refresh_dashboard_stats(
+    request: Request, api_key: str = Depends(verify_api_key)
+):
     """
     Manually clear the dashboard statistics cache.
-    
-    This forces the next /stats request to recount from Weaviate.
-    
+
+    This forces the next /stats request to recount from the database.
+
     Returns:
         dict: Status message
     """
     logger.info("Manual dashboard stats cache clear triggered")
-    
+
     try:
         # Clear caches to force fresh recount on next request
         if REDIS_AVAILABLE and redis_client:
@@ -299,28 +292,24 @@ async def refresh_dashboard_stats(request: Request, api_key: str = Depends(verif
                 logger.info("Cleared Redis cache")
             except Exception as e:
                 logger.warning(f"Could not clear Redis cache: {e}")
-        
+
         _stats_cache["data"] = None
         _stats_cache["timestamp"] = None
         logger.info("Cleared in-memory cache")
-        
+
         return {
             "status": "success",
-            "message": "Dashboard statistics cache cleared. Next request will recount from Weaviate."
+            "message": "Dashboard statistics cache cleared. Next request will recount from the database.",
         }
-        
+
     except Exception as e:
         logger.error(f"Error clearing dashboard cache: {e}")
-        return {
-            "status": "error",
-            "message": f"Failed to clear cache: {str(e)}"
-        }
+        return {"status": "error", "message": f"Failed to clear cache: {str(e)}"}
 
 
 @router.get("/recent-documents", response_model=list[DocumentSummary])
 async def get_recent_documents(
-    limit: int = Query(default=5, ge=1, le=20),
-    api_key: str = Depends(verify_api_key)
+    limit: int = Query(default=5, ge=1, le=20), api_key: str = Depends(verify_api_key)
 ):
     """
     Get highlighted documents for dashboard.
@@ -339,7 +328,9 @@ async def get_recent_documents(
 
     documents = []
 
-    async def search_and_convert(query: str, num_docs: int = 2) -> list[DocumentSummary]:
+    async def search_and_convert(
+        query: str, num_docs: int = 2
+    ) -> list[DocumentSummary]:
         """Search for documents and convert to DocumentSummary."""
         results = []
         try:
@@ -347,7 +338,9 @@ async def get_recent_documents(
             # Use full-text search on legal_documents table
             response = (
                 supabase.table("legal_documents")
-                .select("document_id, title, document_type, date_issued, country, language, document_number, issuing_body")
+                .select(
+                    "document_id, title, document_type, date_issued, country, language, document_number, issuing_body"
+                )
                 .text_search("full_text", query, config="simple")
                 .eq("language", "pl")
                 .limit(20)
@@ -363,7 +356,8 @@ async def get_recent_documents(
                     try:
                         doc_summary = DocumentSummary(
                             id=doc.get("document_id", ""),
-                            title=doc.get("title") or f"Document {doc.get('document_id', '')[:8]}",
+                            title=doc.get("title")
+                            or f"Document {doc.get('document_id', '')[:8]}",
                             document_type=doc.get("document_type") or "unknown",
                             publication_date=doc.get("date_issued"),
                             ai_summary=None,
@@ -372,10 +366,12 @@ async def get_recent_documents(
                             language=doc.get("language") or "pl",
                             issuing_body=doc.get("issuing_body"),
                             document_number=doc.get("document_number"),
-                            document_id=doc.get("document_id", "")
+                            document_id=doc.get("document_id", ""),
                         )
                         results.append(doc_summary)
-                        logger.info(f"Found document for '{query}': {doc_summary.title[:50] if doc_summary.title else 'Untitled'}")
+                        logger.info(
+                            f"Found document for '{query}': {doc_summary.title[:50] if doc_summary.title else 'Untitled'}"
+                        )
                     except Exception as e:
                         logger.warning(f"Error converting document: {e}")
         except Exception as e:
@@ -400,7 +396,9 @@ async def get_recent_documents(
                 seen_ids.add(doc.id)
                 unique_documents.append(doc)
 
-        logger.info(f"Returning {len(unique_documents)} highlighted documents (IP Box + Frank cases)")
+        logger.info(
+            f"Returning {len(unique_documents)} highlighted documents (IP Box + Frank cases)"
+        )
         return unique_documents
 
     except Exception as e:
@@ -410,8 +408,7 @@ async def get_recent_documents(
 
 @router.get("/featured-examples", response_model=list[DocumentSummary])
 async def get_featured_examples(
-    limit: int = Query(default=5, ge=1, le=10),
-    api_key: str = Depends(verify_api_key)
+    limit: int = Query(default=5, ge=1, le=10), api_key: str = Depends(verify_api_key)
 ):
     """
     Get curated featured example documents for new users.
@@ -426,12 +423,14 @@ async def get_featured_examples(
     """
     try:
         # For MVP: Return random selection of diverse document types
-        response = supabase.table("documents")\
-            .select("*")\
-            .in_("document_type", ["judgment", "tax_interpretation"])\
-            .not_.is_("title", "null")\
-            .limit(limit * 3)\
+        response = (
+            supabase.table("documents")
+            .select("*")
+            .in_("document_type", ["judgment", "tax_interpretation"])
+            .not_.is_("title", "null")
+            .limit(limit * 3)
             .execute()
+        )
 
         # Try to get diverse types
         featured = []
@@ -453,29 +452,38 @@ async def get_featured_examples(
                     # Extract case number from full_text if available
                     if full_text and not docket_number:
                         import re
+
                         text_preview = full_text[:500]
 
                         # Polish case number patterns
-                        pl_pattern = re.search(r'Sygn\.?\s*akt[:\s]+([IVX]+\s+[A-Z]+\s+\d+/\d+)', text_preview)
+                        pl_pattern = re.search(
+                            r"Sygn\.?\s*akt[:\s]+([IVX]+\s+[A-Z]+\s+\d+/\d+)",
+                            text_preview,
+                        )
                         if pl_pattern:
                             docket_number = pl_pattern.group(1)
                         else:
                             # UK case number patterns
-                            uk_pattern = re.search(r'Case No[:\s]+(\d{4}/\d+[A-Z]*\d*)', text_preview)
+                            uk_pattern = re.search(
+                                r"Case No[:\s]+(\d{4}/\d+[A-Z]*\d*)", text_preview
+                            )
                             if uk_pattern:
                                 docket_number = uk_pattern.group(1)
                             else:
                                 # Neutral citation
-                                neutral_pattern = re.search(r'\[(\d{4})\]\s+([A-Z]+)\s+([A-Za-z]+)[\.\s]+(\d+)', text_preview)
+                                neutral_pattern = re.search(
+                                    r"\[(\d{4})\]\s+([A-Z]+)\s+([A-Za-z]+)[\.\s]+(\d+)",
+                                    text_preview,
+                                )
                                 if neutral_pattern:
                                     docket_number = f"[{neutral_pattern.group(1)}] {neutral_pattern.group(2)} {neutral_pattern.group(3)} {neutral_pattern.group(4)}"
 
                         # Extract court name from text if not available
                         if not court_name:
                             court_patterns = [
-                                r'(Sąd\s+(?:Okręgowy|Rejonowy|Apelacyjny)\s+w\s+\w+)',
-                                r'(COURT OF APPEAL[^\n]*)',
-                                r'(Crown Court at\s+\w+)'
+                                r"(Sąd\s+(?:Okręgowy|Rejonowy|Apelacyjny)\s+w\s+\w+)",
+                                r"(COURT OF APPEAL[^\n]*)",
+                                r"(Crown Court at\s+\w+)",
                             ]
                             for pattern in court_patterns:
                                 court_match = re.search(pattern, text_preview)
@@ -487,10 +495,18 @@ async def get_featured_examples(
                     if docket_number:
                         title = f"Case {docket_number}"
                         if court_name:
-                            court_short = court_name[:40] + "..." if len(court_name) > 40 else court_name
+                            court_short = (
+                                court_name[:40] + "..."
+                                if len(court_name) > 40
+                                else court_name
+                            )
                             title = f"{court_short}: {docket_number}"
                     elif court_name and judgment_date and judgment_date != "None":
-                        court_short = court_name[:40] + "..." if len(court_name) > 40 else court_name
+                        court_short = (
+                            court_name[:40] + "..."
+                            if len(court_name) > 40
+                            else court_name
+                        )
                         title = f"{court_short} - {judgment_date[:10]}"
                     elif judgment_id:
                         if "_" in judgment_id:
@@ -501,17 +517,21 @@ async def get_featured_examples(
                     else:
                         title = f"Document {doc.get('id', 'N/A')[:8]}"
 
-                featured.append(DocumentSummary(
-                    id=doc.get("id", ""),
-                    title=title,
-                    document_type=doc_type,
-                    publication_date=doc.get("date_issued") or doc.get("publication_date") or doc.get("judgment_date"),
-                    ai_summary=None,
-                    key_topics=None,
-                    jurisdiction=doc.get("country"),
-                    language=doc.get("language", "pl"),
-                    issuing_body=doc.get("issuing_body")
-                ))
+                featured.append(
+                    DocumentSummary(
+                        id=doc.get("id", ""),
+                        title=title,
+                        document_type=doc_type,
+                        publication_date=doc.get("date_issued")
+                        or doc.get("publication_date")
+                        or doc.get("judgment_date"),
+                        ai_summary=None,
+                        key_topics=None,
+                        jurisdiction=doc.get("country"),
+                        language=doc.get("language", "pl"),
+                        issuing_body=doc.get("issuing_body"),
+                    )
+                )
                 seen_types.add(doc_type)
 
                 if len(featured) >= limit:
@@ -528,7 +548,7 @@ async def get_featured_examples(
 async def get_trending_topics(
     category: Optional[str] = None,
     limit: int = Query(default=5, ge=1, le=10),
-    api_key: str = Depends(verify_api_key)
+    api_key: str = Depends(verify_api_key),
 ):
     """
     Get trending legal topics based on search activity.
@@ -550,35 +570,35 @@ async def get_trending_topics(
             change="+45%",
             trend="up",
             query_count=1234,
-            category="Banking Law"
+            category="Banking Law",
         ),
         TrendingTopic(
             topic="GDPR Violations",
             change="+32%",
             trend="up",
             query_count=892,
-            category="Data Protection"
+            category="Data Protection",
         ),
         TrendingTopic(
             topic="VAT Deductions",
             change="0%",
             trend="stable",
             query_count=756,
-            category="Tax Law"
+            category="Tax Law",
         ),
         TrendingTopic(
             topic="Employment Contracts",
             change="+18%",
             trend="up",
             query_count=645,
-            category="Labor Law"
+            category="Labor Law",
         ),
         TrendingTopic(
             topic="Corporate Governance",
             change="-5%",
             trend="down",
             query_count=523,
-            category="Corporate Law"
+            category="Corporate Law",
         ),
     ]
 
@@ -613,7 +633,13 @@ async def test_document_counts(api_key: str = Depends(verify_api_key)):
 
         # Get counts by type
         logger.info("Fetching document counts by type...")
-        document_types = ["judgment", "tax_interpretation", "ruling", "opinion", "legislation"]
+        document_types = [
+            "judgment",
+            "tax_interpretation",
+            "ruling",
+            "opinion",
+            "legislation",
+        ]
         type_counts = {}
 
         for doc_type in document_types:
@@ -653,7 +679,7 @@ async def test_document_counts(api_key: str = Depends(verify_api_key)):
             "total_documents": total_count,
             "by_type": type_counts,
             "added_this_week": recent_count,
-            "message": "Document counting is working!"
+            "message": "Document counting is working!",
         }
 
     except Exception as e:
@@ -663,5 +689,5 @@ async def test_document_counts(api_key: str = Depends(verify_api_key)):
             "message": str(e),
             "total_documents": 0,
             "by_type": {},
-            "added_this_week": 0
+            "added_this_week": 0,
         }

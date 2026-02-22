@@ -5,10 +5,9 @@ Manages secrets from Supabase Vault with fallback to environment variables.
 All API keys should be stored in Supabase Vault for security.
 
 Usage:
-    from app.core.secrets import get_openai_key, get_weaviate_key
+    from app.core.secrets import get_openai_key
 
     openai.api_key = get_openai_key()
-    weaviate_key = get_weaviate_key()
 """
 
 from functools import lru_cache
@@ -20,6 +19,7 @@ from loguru import logger
 try:
     from supabase import create_client, Client
     from supabase.client import ClientOptions
+
     SUPABASE_AVAILABLE = True
 except ImportError:
     logger.warning("supabase-py not installed. Run: pip install supabase")
@@ -37,7 +37,9 @@ class SecretsManager:
     def _init_supabase(self) -> bool:
         """Initialize Supabase client."""
         if not SUPABASE_AVAILABLE:
-            logger.warning("Supabase client not available, using environment variables only")
+            logger.warning(
+                "Supabase client not available, using environment variables only"
+            )
             self._vault_enabled = False
             return False
 
@@ -58,9 +60,7 @@ class SecretsManager:
 
             # Use ClientOptions to configure timeout instead of deprecated timeout parameter
             options = ClientOptions(
-                postgrest_client_timeout=30,
-                storage_client_timeout=30,
-                schema="public"
+                postgrest_client_timeout=30, storage_client_timeout=30, schema="public"
             )
             self._supabase = create_client(url, key, options=options)
             return True
@@ -99,22 +99,22 @@ class SecretsManager:
 
             # Query vault.decrypted_secrets view
             # Note: This requires the service_role to have SELECT permission
-            result = self._supabase.rpc(
-                'get_vault_secrets',
-                {}
-            ).execute()
+            result = self._supabase.rpc("get_vault_secrets", {}).execute()
 
             # If RPC function doesn't exist, try direct table access
             if not result.data:
-                result = self._supabase.schema('vault').from_('decrypted_secrets')\
-                    .select('name,decrypted_secret')\
+                result = (
+                    self._supabase.schema("vault")
+                    .from_("decrypted_secrets")
+                    .select("name,decrypted_secret")
                     .execute()
+                )
 
             if result.data:
                 self._vault_secrets = {
-                    row.get('name'): row.get('decrypted_secret')
+                    row.get("name"): row.get("decrypted_secret")
                     for row in result.data
-                    if row.get('name') and row.get('decrypted_secret')
+                    if row.get("name") and row.get("decrypted_secret")
                 }
 
                 logger.success(f"Loaded {len(self._vault_secrets)} secrets from Vault")
@@ -130,10 +130,7 @@ class SecretsManager:
             return {}
 
     def get_secret(
-        self,
-        name: str,
-        fallback_env: Optional[str] = None,
-        required: bool = False
+        self, name: str, fallback_env: Optional[str] = None, required: bool = False
     ) -> Optional[str]:
         """
         Get secret from Vault, with optional fallback to environment variable.
@@ -186,27 +183,8 @@ class SecretsManager:
             ValueError: If key not found
         """
         return self.get_secret(
-            'openai_api_key',
-            fallback_env='OPENAI_API_KEY',
-            required=True
+            "openai_api_key", fallback_env="OPENAI_API_KEY", required=True
         )
-
-    def get_weaviate_key(self) -> str:
-        """
-        Get Weaviate API key from Vault.
-
-        Returns:
-            Weaviate API key
-
-        Raises:
-            ValueError: If key not found
-        """
-        return self.get_secret(
-            'weaviate_api_key',
-            fallback_env='WV_API_KEY',
-            required=True
-        )
-
 
     def refresh_secrets(self) -> Dict[str, str]:
         """
@@ -244,11 +222,6 @@ def get_secrets_manager() -> SecretsManager:
 def get_openai_key() -> str:
     """Get OpenAI API key from Vault."""
     return get_secrets_manager().get_openai_key()
-
-
-def get_weaviate_key() -> str:
-    """Get Weaviate API key from Vault."""
-    return get_secrets_manager().get_weaviate_key()
 
 
 def refresh_secrets() -> Dict[str, str]:
@@ -290,7 +263,9 @@ if __name__ == "__main__":
         console.print(table)
 
     else:
-        console.print("[yellow]⚠ No secrets in Vault, using environment variables[/yellow]\n")
+        console.print(
+            "[yellow]⚠ No secrets in Vault, using environment variables[/yellow]\n"
+        )
 
     # Test specific secret retrieval
     console.print("\n[bold cyan]Testing Secret Retrieval[/bold cyan]\n")
@@ -300,9 +275,3 @@ if __name__ == "__main__":
         console.print(f"[green]✓ OpenAI key: {openai_key[:20]}...[/green]")
     except ValueError as e:
         console.print(f"[red]✗ OpenAI key: {e}[/red]")
-
-    try:
-        weaviate_key = manager.get_weaviate_key()
-        console.print(f"[green]✓ Weaviate key: {weaviate_key[:20]}...[/green]")
-    except ValueError as e:
-        console.print(f"[red]✗ Weaviate key: {e}[/red]")
