@@ -14,7 +14,7 @@ chat_chain = create_safe_chain_wrapper(
     chain_name="legal_chat_chain",
     fallback_response=create_chat_fallback_response(),
     max_retries=3,
-    base_delay=2.0
+    base_delay=2.0,
 )
 
-__all__ = ['chat_chain']
+__all__ = ["chat_chain"]

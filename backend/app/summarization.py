@@ -179,9 +179,7 @@ async def summarize_documents(request: SummarizeRequest) -> SummarizeResponse:
         )
 
     # Format document content
-    formatted_docs = "\n\n".join(
-        _format_document_for_summary(doc) for doc in documents
-    )
+    formatted_docs = "\n\n".join(_format_document_for_summary(doc) for doc in documents)
 
     # Build focus areas instruction
     focus_instruction = ""
@@ -201,10 +199,12 @@ async def summarize_documents(request: SummarizeRequest) -> SummarizeResponse:
     )
 
     # Create the LLM chain
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", SUMMARIZATION_SYSTEM_PROMPT),
-        ("human", "{prompt}"),
-    ])
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", SUMMARIZATION_SYSTEM_PROMPT),
+            ("human", "{prompt}"),
+        ]
+    )
 
     llm = get_default_llm(use_mini_model=False)
     parser = JsonOutputParser()
@@ -246,23 +246,31 @@ async def summarize_documents(request: SummarizeRequest) -> SummarizeResponse:
 class KeyPointArgument(BaseModel):
     """A single argument extracted from the document."""
 
-    party: str = Field(description="Who made this argument (e.g., 'taxpayer', 'tax authority', 'appellant')")
+    party: str = Field(
+        description="Who made this argument (e.g., 'taxpayer', 'tax authority', 'appellant')"
+    )
     text: str = Field(description="The argument text")
-    source_ref: str = Field(description="Paragraph number, section reference, or position in document")
+    source_ref: str = Field(
+        description="Paragraph number, section reference, or position in document"
+    )
 
 
 class KeyPointHolding(BaseModel):
     """A single holding or decision extracted from the document."""
 
     text: str = Field(description="The holding or decision text")
-    source_ref: str = Field(description="Paragraph number, section reference, or position in document")
+    source_ref: str = Field(
+        description="Paragraph number, section reference, or position in document"
+    )
 
 
 class KeyPointLegalPrinciple(BaseModel):
     """A legal principle, rule, or precedent extracted from the document."""
 
     text: str = Field(description="The legal principle text")
-    source_ref: str = Field(description="Paragraph number, section reference, or position in document")
+    source_ref: str = Field(
+        description="Paragraph number, section reference, or position in document"
+    )
     legal_basis: str | None = Field(
         default=None,
         description="Specific statute, article, or case citation if mentioned",
@@ -353,10 +361,12 @@ async def extract_key_points(request: KeyPointsRequest) -> KeyPointsResponse:
     )
 
     # Create the LLM chain
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", KEY_POINTS_EXTRACTION_SYSTEM_PROMPT),
-        ("human", "{prompt}"),
-    ])
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", KEY_POINTS_EXTRACTION_SYSTEM_PROMPT),
+            ("human", "{prompt}"),
+        ]
+    )
 
     llm = get_default_llm(use_mini_model=False)
     parser = JsonOutputParser()

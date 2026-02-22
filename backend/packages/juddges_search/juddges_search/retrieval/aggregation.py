@@ -9,10 +9,7 @@ term queries) and needing to combine their results.
 from juddges_search.models import DocumentChunk
 
 
-def reciprocal_rank_fusion(
-    result_lists: list[list[DocumentChunk]],
-    k: int = 60
-) -> list[DocumentChunk]:
+def reciprocal_rank_fusion(result_lists: list[list[DocumentChunk]], k: int = 60) -> list[DocumentChunk]:
     """
     Perform Reciprocal Rank Fusion (RRF) on multiple query result lists.
 
@@ -50,30 +47,26 @@ def reciprocal_rank_fusion(
 
             if key not in chunk_key_to_info:
                 chunk_key_to_info[key] = {
-                    'chunk': chunk,
-                    'rrf_score': rrf_contribution,
-                    'max_score': chunk.confidence_score or 0.0,
+                    "chunk": chunk,
+                    "rrf_score": rrf_contribution,
+                    "max_score": chunk.confidence_score or 0.0,
                 }
             else:
                 # Add RRF contribution from this query
-                chunk_key_to_info[key]['rrf_score'] += rrf_contribution
+                chunk_key_to_info[key]["rrf_score"] += rrf_contribution
                 # Track highest individual score (for keeping best chunk version)
                 current_score = chunk.confidence_score or 0.0
-                if current_score > chunk_key_to_info[key]['max_score']:
-                    chunk_key_to_info[key]['max_score'] = current_score
-                    chunk_key_to_info[key]['chunk'] = chunk
+                if current_score > chunk_key_to_info[key]["max_score"]:
+                    chunk_key_to_info[key]["max_score"] = current_score
+                    chunk_key_to_info[key]["chunk"] = chunk
 
     # Sort by RRF score (descending)
-    sorted_chunks = sorted(
-        chunk_key_to_info.values(),
-        key=lambda x: x['rrf_score'],
-        reverse=True
-    )
+    sorted_chunks = sorted(chunk_key_to_info.values(), key=lambda x: x["rrf_score"], reverse=True)
 
     # Update confidence_score to RRF score for final chunks
     fused_chunks = []
     for item in sorted_chunks:
-        chunk = item['chunk']
+        chunk = item["chunk"]
         # Create a copy with RRF score as confidence_score
         # This preserves all other chunk properties
         fused_chunk = DocumentChunk(
@@ -83,7 +76,7 @@ def reciprocal_rank_fusion(
             document_type=chunk.document_type,
             language=chunk.language,
             position=chunk.position,
-            confidence_score=item['rrf_score'],  # Use RRF score
+            confidence_score=item["rrf_score"],  # Use RRF score
             parent_segment_id=chunk.parent_segment_id,
             segment_type=chunk.segment_type,
             cited_references=chunk.cited_references,

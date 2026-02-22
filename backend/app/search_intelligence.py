@@ -17,108 +17,103 @@ from loguru import logger
 
 # ===== Models =====
 
+
 class AuthoritySignals(BaseModel):
     """Authority and credibility signals for a legal document."""
+
     court_level: Optional[str] = Field(
         None,
         description="Court hierarchy level (Supreme, Regional, Local)",
-        examples=["Supreme Court"]
+        examples=["Supreme Court"],
     )
     court_level_score: float = Field(
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Normalized court level score (Supreme=1.0, Regional=0.6, Local=0.3)"
+        description="Normalized court level score (Supreme=1.0, Regional=0.6, Local=0.3)",
     )
     citation_count: Optional[int] = Field(
-        None,
-        description="Number of times this document has been cited",
-        examples=[23]
+        None, description="Number of times this document has been cited", examples=[23]
     )
     citation_score: float = Field(
         default=0.0,
         ge=0.0,
         le=1.0,
-        description="Normalized citation score (based on percentile)"
+        description="Normalized citation score (based on percentile)",
     )
     recency_score: float = Field(
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Recency score (recent documents score higher)"
+        description="Recency score (recent documents score higher)",
     )
     document_year: Optional[int] = Field(
-        None,
-        description="Year the document was issued",
-        examples=[2024]
+        None, description="Year the document was issued", examples=[2024]
     )
     precedent_strength: Optional[str] = Field(
         None,
         description="Legal precedent strength classification",
-        examples=["Binding", "Persuasive", "Informative"]
+        examples=["Binding", "Persuasive", "Informative"],
     )
 
 
 class RelevanceReason(BaseModel):
     """Individual factor explaining why a document is relevant."""
+
     factor: str = Field(
         description="Type of relevance factor",
-        examples=["semantic_match", "authority", "recency", "document_type", "keyword_match"]
+        examples=[
+            "semantic_match",
+            "authority",
+            "recency",
+            "document_type",
+            "keyword_match",
+        ],
     )
     weight: float = Field(
-        ge=0.0,
-        le=1.0,
-        description="Weight of this factor in final score (0.0 to 1.0)"
+        ge=0.0, le=1.0, description="Weight of this factor in final score (0.0 to 1.0)"
     )
     score: float = Field(
-        ge=0.0,
-        le=1.0,
-        description="Score for this specific factor (0.0 to 1.0)"
+        ge=0.0, le=1.0, description="Score for this specific factor (0.0 to 1.0)"
     )
     explanation: str = Field(
         description="Human-readable explanation of this factor",
-        examples=["Strong semantic similarity to search query"]
+        examples=["Strong semantic similarity to search query"],
     )
     matched_content: Optional[List[str]] = Field(
         None,
         description="Specific content that matched (keywords, phrases, concepts)",
-        examples=[["podatek VAT", "usługi cyfrowe"]]
+        examples=[["podatek VAT", "usługi cyfrowe"]],
     )
 
 
 class DocumentPreview(BaseModel):
     """Quick preview information for a document (for hover tooltip)."""
+
     summary: str = Field(
-        description="Brief 2-3 sentence summary of document",
-        max_length=500
+        description="Brief 2-3 sentence summary of document", max_length=500
     )
     key_facts: Optional[List[str]] = Field(
-        None,
-        description="Key facts extracted from document",
-        max_length=3
+        None, description="Key facts extracted from document", max_length=3
     )
     holding: Optional[str] = Field(
         None,
         description="Main holding or decision (for court judgments)",
-        max_length=300
+        max_length=300,
     )
 
 
 class SearchResultEnhanced(BaseModel):
     """Enhanced search result with ranking explanations."""
+
     document_id: str = Field(description="Document identifier")
     relevance_score: float = Field(
-        ge=0.0,
-        le=100.0,
-        description="Overall relevance score (0-100)"
+        ge=0.0, le=100.0, description="Overall relevance score (0-100)"
     )
     confidence: Literal["high", "medium", "low"] = Field(
         description="Confidence level in the ranking"
     )
-    rank_position: int = Field(
-        ge=1,
-        description="Position in search results (1-based)"
-    )
+    rank_position: int = Field(ge=1, description="Position in search results (1-based)")
     explanations: List[RelevanceReason] = Field(
         description="Detailed explanations of why this result is relevant"
     )
@@ -126,17 +121,17 @@ class SearchResultEnhanced(BaseModel):
         description="Authority and credibility indicators"
     )
     preview: Optional[DocumentPreview] = Field(
-        None,
-        description="Quick preview for hover tooltip"
+        None, description="Quick preview for hover tooltip"
     )
     highlighted_excerpts: Optional[List[str]] = Field(
         None,
         description="Relevant text excerpts with query terms highlighted",
-        max_length=3
+        max_length=3,
     )
 
 
 # ===== Ranking Algorithm =====
+
 
 class IntelligentRanker:
     """
@@ -152,10 +147,10 @@ class IntelligentRanker:
 
     # Ranking weights (must sum to 1.0)
     WEIGHT_SEMANTIC = 0.40  # Vector similarity
-    WEIGHT_KEYWORD = 0.20   # Keyword matching
-    WEIGHT_AUTHORITY = 0.20 # Court level + citations
-    WEIGHT_RECENCY = 0.10   # Document age
-    WEIGHT_TYPE = 0.10      # Document type relevance
+    WEIGHT_KEYWORD = 0.20  # Keyword matching
+    WEIGHT_AUTHORITY = 0.20  # Court level + citations
+    WEIGHT_RECENCY = 0.10  # Document age
+    WEIGHT_TYPE = 0.10  # Document type relevance
 
     # Court level scores
     COURT_SCORES = {
@@ -235,7 +230,9 @@ class IntelligentRanker:
             return max(0.1, 0.4 * (0.8 ** (age - 10)))
 
     @staticmethod
-    def calculate_citation_score(citation_count: Optional[int], max_citations: int = 100) -> float:
+    def calculate_citation_score(
+        citation_count: Optional[int], max_citations: int = 100
+    ) -> float:
         """
         Calculate citation score (normalized).
 
@@ -253,6 +250,7 @@ class IntelligentRanker:
 
         # Logarithmic scale
         import math
+
         normalized = math.log(citation_count + 1) / math.log(max_citations + 1)
         return min(1.0, normalized)
 
@@ -287,11 +285,11 @@ class IntelligentRanker:
 
         # Weighted average
         final_score = (
-            IntelligentRanker.WEIGHT_SEMANTIC * semantic_similarity +
-            IntelligentRanker.WEIGHT_KEYWORD * keyword_match +
-            IntelligentRanker.WEIGHT_AUTHORITY * (court_score + citation_score) / 2 +
-            IntelligentRanker.WEIGHT_RECENCY * recency_score +
-            IntelligentRanker.WEIGHT_TYPE * type_score
+            IntelligentRanker.WEIGHT_SEMANTIC * semantic_similarity
+            + IntelligentRanker.WEIGHT_KEYWORD * keyword_match
+            + IntelligentRanker.WEIGHT_AUTHORITY * (court_score + citation_score) / 2
+            + IntelligentRanker.WEIGHT_RECENCY * recency_score
+            + IntelligentRanker.WEIGHT_TYPE * type_score
         )
 
         # Scale to 0-100
@@ -304,35 +302,35 @@ class IntelligentRanker:
                 weight=IntelligentRanker.WEIGHT_SEMANTIC,
                 score=semantic_similarity,
                 explanation=IntelligentRanker._explain_semantic(semantic_similarity),
-                matched_content=None
+                matched_content=None,
             ),
             RelevanceReason(
                 factor="keyword_match",
                 weight=IntelligentRanker.WEIGHT_KEYWORD,
                 score=keyword_match,
                 explanation=IntelligentRanker._explain_keywords(keyword_match),
-                matched_content=None
+                matched_content=None,
             ),
             RelevanceReason(
                 factor="authority",
                 weight=IntelligentRanker.WEIGHT_AUTHORITY,
                 score=(court_score + citation_score) / 2,
                 explanation=IntelligentRanker._explain_authority(court, citation_count),
-                matched_content=None
+                matched_content=None,
             ),
             RelevanceReason(
                 factor="recency",
                 weight=IntelligentRanker.WEIGHT_RECENCY,
                 score=recency_score,
                 explanation=IntelligentRanker._explain_recency(year),
-                matched_content=None
+                matched_content=None,
             ),
             RelevanceReason(
                 factor="document_type",
                 weight=IntelligentRanker.WEIGHT_TYPE,
                 score=type_score,
                 explanation=IntelligentRanker._explain_type(document_type),
-                matched_content=None
+                matched_content=None,
             ),
         ]
 
@@ -443,6 +441,7 @@ class IntelligentRanker:
 
 # ===== Helper Functions =====
 
+
 def extract_keywords_from_query(query: str) -> List[str]:
     """
     Extract important keywords from search query.
@@ -459,16 +458,30 @@ def extract_keywords_from_query(query: str) -> List[str]:
     import re
 
     # Remove punctuation and lowercase
-    cleaned = re.sub(r'[^\w\s]', ' ', query.lower())
+    cleaned = re.sub(r"[^\w\s]", " ", query.lower())
 
     # Split and filter short words
     words = [w for w in cleaned.split() if len(w) > 3]
 
     # Remove Polish stop words (basic list)
     stop_words = {
-        'jest', 'oraz', 'albo', 'które', 'który', 'która',
-        'jakie', 'jaki', 'jaka', 'czyli', 'może', 'mogą',
-        'będzie', 'było', 'była', 'byli', 'były'
+        "jest",
+        "oraz",
+        "albo",
+        "które",
+        "który",
+        "która",
+        "jakie",
+        "jaki",
+        "jaka",
+        "czyli",
+        "może",
+        "mogą",
+        "będzie",
+        "było",
+        "była",
+        "byli",
+        "były",
     }
 
     keywords = [w for w in words if w not in stop_words]
@@ -476,7 +489,9 @@ def extract_keywords_from_query(query: str) -> List[str]:
     return keywords[:10]  # Limit to top 10 keywords
 
 
-def highlight_text_excerpt(text: str, keywords: List[str], max_length: int = 200) -> str:
+def highlight_text_excerpt(
+    text: str, keywords: List[str], max_length: int = 200
+) -> str:
     """
     Extract and highlight relevant text excerpt containing keywords.
 

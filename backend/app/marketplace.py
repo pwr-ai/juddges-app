@@ -68,10 +68,16 @@ class PublishListingRequest(BaseModel):
 
     schema_id: str = Field(description="ID of the extraction schema to publish")
     title: str = Field(min_length=3, max_length=200, description="Listing title")
-    description: str = Field(min_length=10, max_length=1000, description="Short description")
-    long_description: str | None = Field(default=None, description="Detailed description (markdown)")
+    description: str = Field(
+        min_length=10, max_length=1000, description="Short description"
+    )
+    long_description: str | None = Field(
+        default=None, description="Detailed description (markdown)"
+    )
     category: str = Field(default="general", description="Schema category")
-    tags: list[str] = Field(default_factory=list, description="Tags for discoverability")
+    tags: list[str] = Field(
+        default_factory=list, description="Tags for discoverability"
+    )
     version: str = Field(default="1.0.0", description="Semantic version")
     changelog: str | None = Field(default=None, description="Version changelog")
     license: str = Field(default="MIT", description="License type")
@@ -92,14 +98,18 @@ class PublishNewVersionRequest(BaseModel):
     """Request to publish a new version of a listing."""
 
     version: str = Field(description="New semantic version (must be higher)")
-    changelog: str | None = Field(default=None, description="What changed in this version")
+    changelog: str | None = Field(
+        default=None, description="What changed in this version"
+    )
 
 
 class SubmitReviewRequest(BaseModel):
     """Request to submit a review for a listing."""
 
     rating: int = Field(ge=1, le=5, description="Rating from 1-5 stars")
-    review_text: str | None = Field(default=None, max_length=2000, description="Review text")
+    review_text: str | None = Field(
+        default=None, max_length=2000, description="Review text"
+    )
 
 
 class ReviewItem(BaseModel):
@@ -155,7 +165,9 @@ class MarketplaceStatsResponse(BaseModel):
 async def browse_listings(
     search: str | None = Query(default=None, description="Search query"),
     category: str | None = Query(default=None, description="Filter by category"),
-    tags: str | None = Query(default=None, description="Comma-separated tags to filter by"),
+    tags: str | None = Query(
+        default=None, description="Comma-separated tags to filter by"
+    ),
     sort_by: Literal["newest", "popular", "top_rated", "most_downloaded"] = Query(
         "newest", description="Sort order"
     ),
@@ -168,9 +180,11 @@ async def browse_listings(
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        query_builder = supabase.table("marketplace_listings").select(
-            "*", count="exact"
-        ).eq("status", "published")
+        query_builder = (
+            supabase.table("marketplace_listings")
+            .select("*", count="exact")
+            .eq("status", "published")
+        )
 
         # Search
         if search:
@@ -218,7 +232,9 @@ async def browse_listings(
         raise
     except Exception as e:
         logger.error(f"Error browsing marketplace listings: {e}")
-        raise HTTPException(status_code=500, detail="Failed to browse marketplace listings.")
+        raise HTTPException(
+            status_code=500, detail="Failed to browse marketplace listings."
+        )
 
 
 @router.get(
@@ -234,48 +250,71 @@ async def get_marketplace_stats() -> MarketplaceStatsResponse:
 
     try:
         # Total published listings
-        listings_resp = supabase.table("marketplace_listings").select(
-            "id", count="exact"
-        ).eq("status", "published").execute()
+        listings_resp = (
+            supabase.table("marketplace_listings")
+            .select("id", count="exact")
+            .eq("status", "published")
+            .execute()
+        )
         total_listings = listings_resp.count or 0
 
         # Total downloads
-        downloads_resp = supabase.table("marketplace_downloads").select(
-            "id", count="exact"
-        ).execute()
+        downloads_resp = (
+            supabase.table("marketplace_downloads")
+            .select("id", count="exact")
+            .execute()
+        )
         total_downloads = downloads_resp.count or 0
 
         # Total reviews
-        reviews_resp = supabase.table("marketplace_reviews").select(
-            "id", count="exact"
-        ).execute()
+        reviews_resp = (
+            supabase.table("marketplace_reviews").select("id", count="exact").execute()
+        )
         total_reviews = reviews_resp.count or 0
 
         # Categories with counts
-        cat_resp = supabase.table("marketplace_listings").select(
-            "category"
-        ).eq("status", "published").execute()
+        cat_resp = (
+            supabase.table("marketplace_listings")
+            .select("category")
+            .eq("status", "published")
+            .execute()
+        )
         category_counts: dict[str, int] = {}
-        for item in (cat_resp.data or []):
+        for item in cat_resp.data or []:
             cat = item.get("category", "general")
             category_counts[cat] = category_counts.get(cat, 0) + 1
-        categories = [{"name": k, "count": v} for k, v in sorted(category_counts.items(), key=lambda x: x[1], reverse=True)]
+        categories = [
+            {"name": k, "count": v}
+            for k, v in sorted(
+                category_counts.items(), key=lambda x: x[1], reverse=True
+            )
+        ]
 
         # Top rated
-        top_rated_resp = supabase.table("marketplace_listings").select(
-            "*"
-        ).eq("status", "published").order(
-            "avg_rating", desc=True
-        ).limit(5).execute()
-        top_rated = [MarketplaceListingItem(**item) for item in (top_rated_resp.data or [])]
+        top_rated_resp = (
+            supabase.table("marketplace_listings")
+            .select("*")
+            .eq("status", "published")
+            .order("avg_rating", desc=True)
+            .limit(5)
+            .execute()
+        )
+        top_rated = [
+            MarketplaceListingItem(**item) for item in (top_rated_resp.data or [])
+        ]
 
         # Most downloaded
-        most_dl_resp = supabase.table("marketplace_listings").select(
-            "*"
-        ).eq("status", "published").order(
-            "download_count", desc=True
-        ).limit(5).execute()
-        most_downloaded = [MarketplaceListingItem(**item) for item in (most_dl_resp.data or [])]
+        most_dl_resp = (
+            supabase.table("marketplace_listings")
+            .select("*")
+            .eq("status", "published")
+            .order("download_count", desc=True)
+            .limit(5)
+            .execute()
+        )
+        most_downloaded = [
+            MarketplaceListingItem(**item) for item in (most_dl_resp.data or [])
+        ]
 
         return MarketplaceStatsResponse(
             total_listings=total_listings,
@@ -290,7 +329,9 @@ async def get_marketplace_stats() -> MarketplaceStatsResponse:
         raise
     except Exception as e:
         logger.error(f"Error fetching marketplace stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch marketplace statistics.")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch marketplace statistics."
+        )
 
 
 @router.get(
@@ -310,9 +351,11 @@ async def get_my_listings(
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        query_builder = supabase.table("marketplace_listings").select(
-            "*", count="exact"
-        ).eq("publisher_id", user_id)
+        query_builder = (
+            supabase.table("marketplace_listings")
+            .select("*", count="exact")
+            .eq("publisher_id", user_id)
+        )
 
         if status_filter:
             query_builder = query_builder.eq("status", status_filter)
@@ -353,9 +396,13 @@ async def get_listing_detail(listing_id: str) -> MarketplaceListingDetail:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        response = supabase.table("marketplace_listings").select(
-            "*, extraction_schemas(text, name, type, category)"
-        ).eq("id", listing_id).single().execute()
+        response = (
+            supabase.table("marketplace_listings")
+            .select("*, extraction_schemas(text, name, type, category)")
+            .eq("id", listing_id)
+            .single()
+            .execute()
+        )
 
         if not response.data:
             raise HTTPException(status_code=404, detail="Listing not found")
@@ -394,27 +441,35 @@ async def publish_listing(
 
     try:
         # Verify the schema exists and belongs to the user
-        schema_resp = supabase.table("extraction_schemas").select(
-            "id, user_id, text"
-        ).eq("id", request.schema_id).single().execute()
+        schema_resp = (
+            supabase.table("extraction_schemas")
+            .select("id, user_id, text")
+            .eq("id", request.schema_id)
+            .single()
+            .execute()
+        )
 
         if not schema_resp.data:
             raise HTTPException(status_code=404, detail="Schema not found")
 
         if schema_resp.data.get("user_id") != user_id:
-            raise HTTPException(status_code=403, detail="You can only publish your own schemas")
+            raise HTTPException(
+                status_code=403, detail="You can only publish your own schemas"
+            )
 
         # Check for duplicate listing of same schema
-        existing = supabase.table("marketplace_listings").select(
-            "id"
-        ).eq("schema_id", request.schema_id).eq(
-            "publisher_id", user_id
-        ).execute()
+        existing = (
+            supabase.table("marketplace_listings")
+            .select("id")
+            .eq("schema_id", request.schema_id)
+            .eq("publisher_id", user_id)
+            .execute()
+        )
 
         if existing.data:
             raise HTTPException(
                 status_code=409,
-                detail="This schema already has a marketplace listing. Update it instead."
+                detail="This schema already has a marketplace listing. Update it instead.",
             )
 
         # Create the listing
@@ -441,12 +496,14 @@ async def publish_listing(
         created = resp.data[0]
 
         # Create initial version snapshot
-        supabase.table("marketplace_listing_versions").insert({
-            "listing_id": created["id"],
-            "version": request.version,
-            "schema_snapshot": schema_resp.data.get("text", {}),
-            "changelog": request.changelog or "Initial release",
-        }).execute()
+        supabase.table("marketplace_listing_versions").insert(
+            {
+                "listing_id": created["id"],
+                "version": request.version,
+                "schema_snapshot": schema_resp.data.get("text", {}),
+                "changelog": request.changelog or "Initial release",
+            }
+        ).execute()
 
         return MarketplaceListingItem(**created)
 
@@ -454,7 +511,9 @@ async def publish_listing(
         raise
     except Exception as e:
         logger.error(f"Error publishing listing: {e}")
-        raise HTTPException(status_code=500, detail="Failed to publish schema to marketplace.")
+        raise HTTPException(
+            status_code=500, detail="Failed to publish schema to marketplace."
+        )
 
 
 @router.patch(
@@ -474,23 +533,32 @@ async def update_listing(
 
     try:
         # Verify ownership
-        existing = supabase.table("marketplace_listings").select(
-            "publisher_id"
-        ).eq("id", listing_id).single().execute()
+        existing = (
+            supabase.table("marketplace_listings")
+            .select("publisher_id")
+            .eq("id", listing_id)
+            .single()
+            .execute()
+        )
 
         if not existing.data:
             raise HTTPException(status_code=404, detail="Listing not found")
 
         if existing.data.get("publisher_id") != user_id:
-            raise HTTPException(status_code=403, detail="You can only update your own listings")
+            raise HTTPException(
+                status_code=403, detail="You can only update your own listings"
+            )
 
         update_data = {k: v for k, v in request.model_dump().items() if v is not None}
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        resp = supabase.table("marketplace_listings").update(
-            update_data
-        ).eq("id", listing_id).execute()
+        resp = (
+            supabase.table("marketplace_listings")
+            .update(update_data)
+            .eq("id", listing_id)
+            .execute()
+        )
 
         if not resp.data:
             raise HTTPException(status_code=500, detail="Failed to update listing")
@@ -520,22 +588,31 @@ async def download_schema(
 
     try:
         # Get listing with schema data
-        listing_resp = supabase.table("marketplace_listings").select(
-            "*, extraction_schemas(text)"
-        ).eq("id", listing_id).eq("status", "published").single().execute()
+        listing_resp = (
+            supabase.table("marketplace_listings")
+            .select("*, extraction_schemas(text)")
+            .eq("id", listing_id)
+            .eq("status", "published")
+            .single()
+            .execute()
+        )
 
         if not listing_resp.data:
-            raise HTTPException(status_code=404, detail="Listing not found or not published")
+            raise HTTPException(
+                status_code=404, detail="Listing not found or not published"
+            )
 
         data = listing_resp.data
         schema_info = data.get("extraction_schemas", {})
 
         # Record the download
-        supabase.table("marketplace_downloads").insert({
-            "listing_id": listing_id,
-            "user_id": user_id,
-            "version_downloaded": data.get("version", "1.0.0"),
-        }).execute()
+        supabase.table("marketplace_downloads").insert(
+            {
+                "listing_id": listing_id,
+                "user_id": user_id,
+                "version_downloaded": data.get("version", "1.0.0"),
+            }
+        ).execute()
 
         return DownloadResponse(
             listing_id=listing_id,
@@ -569,37 +646,51 @@ async def publish_new_version(
 
     try:
         # Verify ownership
-        listing_resp = supabase.table("marketplace_listings").select(
-            "publisher_id, schema_id, version"
-        ).eq("id", listing_id).single().execute()
+        listing_resp = (
+            supabase.table("marketplace_listings")
+            .select("publisher_id, schema_id, version")
+            .eq("id", listing_id)
+            .single()
+            .execute()
+        )
 
         if not listing_resp.data:
             raise HTTPException(status_code=404, detail="Listing not found")
 
         if listing_resp.data.get("publisher_id") != user_id:
-            raise HTTPException(status_code=403, detail="You can only version your own listings")
+            raise HTTPException(
+                status_code=403, detail="You can only version your own listings"
+            )
 
         # Get current schema data for snapshot
         schema_id = listing_resp.data["schema_id"]
-        schema_resp = supabase.table("extraction_schemas").select(
-            "text"
-        ).eq("id", schema_id).single().execute()
+        schema_resp = (
+            supabase.table("extraction_schemas")
+            .select("text")
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
         schema_data = schema_resp.data.get("text", {}) if schema_resp.data else {}
 
         # Create version record
-        supabase.table("marketplace_listing_versions").insert({
-            "listing_id": listing_id,
-            "version": request.version,
-            "schema_snapshot": schema_data,
-            "changelog": request.changelog,
-        }).execute()
+        supabase.table("marketplace_listing_versions").insert(
+            {
+                "listing_id": listing_id,
+                "version": request.version,
+                "schema_snapshot": schema_data,
+                "changelog": request.changelog,
+            }
+        ).execute()
 
         # Update listing version
-        supabase.table("marketplace_listings").update({
-            "version": request.version,
-            "changelog": request.changelog,
-        }).eq("id", listing_id).execute()
+        supabase.table("marketplace_listings").update(
+            {
+                "version": request.version,
+                "changelog": request.changelog,
+            }
+        ).eq("id", listing_id).execute()
 
         return {
             "status": "published",
@@ -625,11 +716,13 @@ async def get_version_history(listing_id: str) -> dict:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        resp = supabase.table("marketplace_listing_versions").select(
-            "id, listing_id, version, changelog, created_at"
-        ).eq("listing_id", listing_id).order(
-            "created_at", desc=True
-        ).execute()
+        resp = (
+            supabase.table("marketplace_listing_versions")
+            .select("id, listing_id, version, changelog, created_at")
+            .eq("listing_id", listing_id)
+            .order("created_at", desc=True)
+            .execute()
+        )
 
         return {
             "listing_id": listing_id,
@@ -659,21 +752,30 @@ async def get_listing_reviews(
 
     try:
         offset = (page - 1) * page_size
-        resp = supabase.table("marketplace_reviews").select(
-            "*", count="exact"
-        ).eq("listing_id", listing_id).order(
-            "created_at", desc=True
-        ).range(offset, offset + page_size - 1).execute()
+        resp = (
+            supabase.table("marketplace_reviews")
+            .select("*", count="exact")
+            .eq("listing_id", listing_id)
+            .order("created_at", desc=True)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
 
         reviews = [ReviewItem(**r) for r in (resp.data or [])]
         total = resp.count or 0
 
         # Get avg rating from listing
-        listing_resp = supabase.table("marketplace_listings").select(
-            "avg_rating"
-        ).eq("id", listing_id).single().execute()
+        listing_resp = (
+            supabase.table("marketplace_listings")
+            .select("avg_rating")
+            .eq("id", listing_id)
+            .single()
+            .execute()
+        )
 
-        avg_rating = float(listing_resp.data.get("avg_rating", 0)) if listing_resp.data else 0.0
+        avg_rating = (
+            float(listing_resp.data.get("avg_rating", 0)) if listing_resp.data else 0.0
+        )
 
         return ReviewsResponse(
             reviews=reviews,
@@ -706,16 +808,25 @@ async def submit_review(
 
     try:
         # Verify listing exists and is published
-        listing = supabase.table("marketplace_listings").select(
-            "id, publisher_id"
-        ).eq("id", listing_id).eq("status", "published").single().execute()
+        listing = (
+            supabase.table("marketplace_listings")
+            .select("id, publisher_id")
+            .eq("id", listing_id)
+            .eq("status", "published")
+            .single()
+            .execute()
+        )
 
         if not listing.data:
-            raise HTTPException(status_code=404, detail="Listing not found or not published")
+            raise HTTPException(
+                status_code=404, detail="Listing not found or not published"
+            )
 
         # Prevent self-review
         if listing.data.get("publisher_id") == user_id:
-            raise HTTPException(status_code=400, detail="You cannot review your own listing")
+            raise HTTPException(
+                status_code=400, detail="You cannot review your own listing"
+            )
 
         # Upsert review (one per user per listing)
         review_data = {
@@ -725,10 +836,14 @@ async def submit_review(
             "review_text": request.review_text,
         }
 
-        resp = supabase.table("marketplace_reviews").upsert(
-            review_data,
-            on_conflict="listing_id,reviewer_id",
-        ).execute()
+        resp = (
+            supabase.table("marketplace_reviews")
+            .upsert(
+                review_data,
+                on_conflict="listing_id,reviewer_id",
+            )
+            .execute()
+        )
 
         if not resp.data:
             raise HTTPException(status_code=500, detail="Failed to submit review")

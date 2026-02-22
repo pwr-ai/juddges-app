@@ -47,25 +47,24 @@ async def get_example_questions(
         # Wrap synchronous Supabase calls in asyncio.to_thread for parallel execution
         def fetch_polish():
             return client.rpc(
-                "get_random_example_questions", {"p_language": "pl", "p_count": num_polish}
+                "get_random_example_questions",
+                {"p_language": "pl", "p_count": num_polish},
             ).execute()
 
         def fetch_english():
             return client.rpc(
-                "get_random_example_questions", {"p_language": "en", "p_count": num_english}
+                "get_random_example_questions",
+                {"p_language": "en", "p_count": num_english},
             ).execute()
-        
+
         # Execute both database calls in parallel
         polish_response, english_response = await asyncio.gather(
-            asyncio.to_thread(fetch_polish),
-            asyncio.to_thread(fetch_english)
+            asyncio.to_thread(fetch_polish), asyncio.to_thread(fetch_english)
         )
 
         # Extract questions from response
         polish_questions = [item["question"] for item in (polish_response.data or [])]
-        english_questions = [
-            item["question"] for item in (english_response.data or [])
-        ]
+        english_questions = [item["question"] for item in (english_response.data or [])]
 
         # Combine Polish and English questions
         all_questions = polish_questions + english_questions

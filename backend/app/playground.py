@@ -5,6 +5,7 @@ This module provides synchronous extraction for the schema playground,
 allowing users to test their schemas against sample documents with
 immediate feedback.
 """
+
 import time
 from datetime import datetime
 from typing import Any, Literal, Optional
@@ -27,6 +28,7 @@ supabase = get_supabase_client()
 
 # ==================== Request/Response Models ====================
 
+
 class PlaygroundExtractionRequest(BaseModel):
     """Request for real-time extraction in playground mode."""
 
@@ -35,27 +37,24 @@ class PlaygroundExtractionRequest(BaseModel):
     )
     schema_version_id: Optional[str] = Field(
         default=None,
-        description="Optional: specific version ID from schema_versions table. If not provided, uses current schema."
+        description="Optional: specific version ID from schema_versions table. If not provided, uses current schema.",
     )
-    document_id: str = Field(
-        description="Weaviate document ID to extract from"
-    )
+    document_id: str = Field(description="Document ID to extract from")
     extraction_context: Optional[str] = Field(
         default="Extract structured information from the legal document.",
-        description="Context instructions for extraction"
+        description="Context instructions for extraction",
     )
     additional_instructions: Optional[str] = Field(
-        default=None,
-        description="Additional qualitative instructions"
+        default=None, description="Additional qualitative instructions"
     )
     language: str = Field(
-        default="pl",
-        description="Language for extraction (pl or en)"
+        default="pl", description="Language for extraction (pl or en)"
     )
 
 
 class PlaygroundTiming(BaseModel):
     """Timing metrics for playground extraction."""
+
     total_ms: float
     document_fetch_ms: float
     extraction_ms: float
@@ -69,7 +68,9 @@ class PlaygroundExtractionResponse(BaseModel):
     document_id: str
     schema_id: str
     schema_version: int = Field(description="Version number used for extraction")
-    schema_version_id: Optional[str] = Field(description="UUID of the schema version used")
+    schema_version_id: Optional[str] = Field(
+        description="UUID of the schema version used"
+    )
     status: Literal["success", "failed"]
     extracted_data: Optional[dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -88,6 +89,7 @@ class PlaygroundExtractionResponse(BaseModel):
 
 class PlaygroundTestRun(BaseModel):
     """Record of a playground test run for history tracking."""
+
     id: str
     schema_id: str
     schema_version_id: Optional[str]
@@ -99,9 +101,9 @@ class PlaygroundTestRun(BaseModel):
 
 # ==================== Helper Functions ====================
 
+
 def _fetch_schema_with_version(
-    schema_id: str,
-    schema_version_id: Optional[str] = None
+    schema_id: str, schema_version_id: Optional[str] = None
 ) -> tuple[dict[str, Any], int, Optional[str]]:
     """
     Fetch schema from database, optionally from a specific version.
@@ -112,53 +114,79 @@ def _fetch_schema_with_version(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     if schema_version_id:
         # Fetch specific version
-        version_response = supabase.table("schema_versions").select(
-            "id, schema_id, version_number, schema_snapshot, field_snapshot"
-        ).eq("id", schema_version_id).single().execute()
+        version_response = (
+            supabase.table("schema_versions")
+            .select("id, schema_id, version_number, schema_snapshot, field_snapshot")
+            .eq("id", schema_version_id)
+            .single()
+            .execute()
+        )
 
         if not version_response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Schema version '{schema_version_id}' not found"
+                detail=f"Schema version '{schema_version_id}' not found",
             )
 
         version_data = version_response.data
 
         # Get schema name from main table
-        schema_response = supabase.table("extraction_schemas").select(
-            "name, description"
-        ).eq("id", schema_id).single().execute()
+        schema_response = (
+            supabase.table("extraction_schemas")
+            .select("name, description")
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
-        schema_name = schema_response.data.get("name", "Unknown") if schema_response.data else "Unknown"
-        schema_description = schema_response.data.get("description", "") if schema_response.data else ""
+        schema_name = (
+            schema_response.data.get("name", "Unknown")
+            if schema_response.data
+            else "Unknown"
+        )
+        schema_description = (
+            schema_response.data.get("description", "") if schema_response.data else ""
+        )
 
-        return {
-            "name": schema_name,
-            "description": schema_description,
-            "text": version_data["schema_snapshot"],
-        }, version_data["version_number"], version_data["id"]
+        return (
+            {
+                "name": schema_name,
+                "description": schema_description,
+                "text": version_data["schema_snapshot"],
+            },
+            version_data["version_number"],
+            version_data["id"],
+        )
     else:
         # Fetch current schema
-        response = supabase.table("extraction_schemas").select(
-            "name, description, text, schema_version"
-        ).eq("id", schema_id).single().execute()
+        response = (
+            supabase.table("extraction_schemas")
+            .select("name, description, text, schema_version")
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
         if not response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Schema '{schema_id}' not found"
+                detail=f"Schema '{schema_id}' not found",
             )
 
-        return {
-            "name": response.data["name"],
-            "description": response.data.get("description", ""),
-            "text": response.data["text"],
-        }, response.data.get("schema_version", 1), None
+        return (
+            {
+                "name": response.data["name"],
+                "description": response.data.get("description", ""),
+                "text": response.data["text"],
+            },
+            response.data.get("schema_version", 1),
+            None,
+        )
 
 
 def _save_playground_run(
@@ -178,18 +206,24 @@ def _save_playground_run(
         return None
 
     try:
-        result = supabase.table("playground_test_runs").insert({
-            "schema_id": schema_id,
-            "schema_version_id": schema_version_id,
-            "document_id": document_id,
-            "user_id": user_id,
-            "extraction_result": extraction_result or {},
-            "execution_time_ms": execution_time_ms,
-            "status": status,
-            "error_message": error_message,
-            "document_metadata": document_metadata or {},
-            "model_info": model_info or {},
-        }).execute()
+        result = (
+            supabase.table("playground_test_runs")
+            .insert(
+                {
+                    "schema_id": schema_id,
+                    "schema_version_id": schema_version_id,
+                    "document_id": document_id,
+                    "user_id": user_id,
+                    "extraction_result": extraction_result or {},
+                    "execution_time_ms": execution_time_ms,
+                    "status": status,
+                    "error_message": error_message,
+                    "document_metadata": document_metadata or {},
+                    "model_info": model_info or {},
+                }
+            )
+            .execute()
+        )
 
         if result.data and len(result.data) > 0:
             return result.data[0].get("id")
@@ -200,6 +234,7 @@ def _save_playground_run(
 
 
 # ==================== API Endpoints ====================
+
 
 @router.post(
     "/extract",
@@ -227,7 +262,7 @@ async def playground_extract(
     **Request:**
     - schema_id: UUID of the schema to use
     - schema_version_id: Optional specific version to test
-    - document_id: Weaviate document ID to extract from
+    - document_id: Document ID to extract from
     - language: Extraction language (pl or en)
 
     **Response:**
@@ -244,7 +279,7 @@ async def playground_extract(
     )
 
     try:
-        # Step 1: Fetch document from Weaviate
+        # Step 1: Fetch document from database
         doc_fetch_start = time.time()
         documents = await get_documents_by_id([request.document_id])
         doc_fetch_ms = (time.time() - doc_fetch_start) * 1000
@@ -255,14 +290,18 @@ async def playground_extract(
                 detail={
                     "error": "Document Not Found",
                     "message": f"Document '{request.document_id}' not found in the database",
-                    "code": "DOCUMENT_NOT_FOUND"
-                }
+                    "code": "DOCUMENT_NOT_FOUND",
+                },
             )
 
         document = documents[0]
-        document_title = getattr(document, 'title', None) or getattr(document, 'name', None)
-        document_type = getattr(document, 'document_type', None)
-        document_text = getattr(document, 'full_text', None) or getattr(document, 'content', '')
+        document_title = getattr(document, "title", None) or getattr(
+            document, "name", None
+        )
+        document_type = getattr(document, "document_type", None)
+        document_text = getattr(document, "full_text", None) or getattr(
+            document, "content", ""
+        )
 
         if not document_text:
             raise HTTPException(
@@ -270,14 +309,13 @@ async def playground_extract(
                 detail={
                     "error": "Empty Document",
                     "message": "Document has no text content to extract from",
-                    "code": "EMPTY_DOCUMENT"
-                }
+                    "code": "EMPTY_DOCUMENT",
+                },
             )
 
         # Step 2: Fetch schema (current or specific version)
         schema_dict, version_number, version_id = _fetch_schema_with_version(
-            request.schema_id,
-            request.schema_version_id
+            request.schema_id, request.schema_version_id
         )
 
         schema_name = schema_dict.get("name", "Unknown")
@@ -290,18 +328,19 @@ async def playground_extract(
         prepared_schema = prepare_schema_from_db(schema_dict, language=request.language)
         llm = get_llm()
         extractor = InformationExtractor(
-            model=llm,
-            prompt_name="info_extraction",
-            schema=prepared_schema
+            model=llm, prompt_name="info_extraction", schema=prepared_schema
         )
 
         # Run extraction
-        extracted_data = await extractor.extract_information_with_structured_output({
-            "extraction_context": request.extraction_context or "Extract structured information from the legal document.",
-            "additional_instructions": request.additional_instructions or "",
-            "language": request.language,
-            "full_text": document_text,
-        })
+        extracted_data = await extractor.extract_information_with_structured_output(
+            {
+                "extraction_context": request.extraction_context
+                or "Extract structured information from the legal document.",
+                "additional_instructions": request.additional_instructions or "",
+                "language": request.language,
+                "full_text": document_text,
+            }
+        )
 
         extraction_ms = (time.time() - extraction_start) * 1000
 
@@ -383,8 +422,7 @@ async def playground_extract(
         # Get minimal schema info for response
         try:
             schema_dict, version_number, version_id = _fetch_schema_with_version(
-                request.schema_id,
-                request.schema_version_id
+                request.schema_id, request.schema_version_id
             )
             schema_name = schema_dict.get("name", "Unknown")
             field_count = len(schema_dict.get("text", {}))
@@ -433,15 +471,21 @@ async def list_playground_runs(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
-        response = supabase.table("playground_test_runs").select(
-            "id, schema_id, schema_version_id, document_id, status, execution_time_ms, created_at"
-        ).eq("schema_id", schema_id).eq("user_id", x_user_id).order(
-            "created_at", desc=True
-        ).limit(limit).execute()
+        response = (
+            supabase.table("playground_test_runs")
+            .select(
+                "id, schema_id, schema_version_id, document_id, status, execution_time_ms, created_at"
+            )
+            .eq("schema_id", schema_id)
+            .eq("user_id", x_user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
 
         if not response.data:
             return []
@@ -462,7 +506,7 @@ async def list_playground_runs(
         logger.error(f"Failed to list playground runs: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve playground runs: {str(e)}"
+            detail=f"Failed to retrieve playground runs: {str(e)}",
         )
 
 
@@ -483,18 +527,23 @@ async def get_playground_run(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
-        response = supabase.table("playground_test_runs").select("*").eq(
-            "id", run_id
-        ).eq("user_id", x_user_id).single().execute()
+        response = (
+            supabase.table("playground_test_runs")
+            .select("*")
+            .eq("id", run_id)
+            .eq("user_id", x_user_id)
+            .single()
+            .execute()
+        )
 
         if not response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Playground run '{run_id}' not found"
+                detail=f"Playground run '{run_id}' not found",
             )
 
         return response.data
@@ -504,5 +553,5 @@ async def get_playground_run(
         logger.error(f"Failed to get playground run {run_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve playground run: {str(e)}"
+            detail=f"Failed to retrieve playground run: {str(e)}",
         )

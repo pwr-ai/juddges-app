@@ -15,7 +15,9 @@ os.environ.setdefault("NEXT_PUBLIC_SUPABASE_URL", "http://test-supabase.local")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
-os.environ.setdefault("LANGGRAPH_POSTGRES_URL", "postgresql://test:test@localhost:5432/test")
+os.environ.setdefault(
+    "LANGGRAPH_POSTGRES_URL", "postgresql://test:test@localhost:5432/test"
+)
 os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")
 
@@ -44,29 +46,25 @@ def invalid_api_headers() -> Dict[str, str]:
 @pytest.fixture
 def valid_jwt_headers() -> Dict[str, str]:
     """Return valid JWT headers (mocked)."""
-    return {
-        "Authorization": "Bearer test-jwt-token",
-        "X-API-Key": "test-api-key-12345"
-    }
+    return {"Authorization": "Bearer test-jwt-token", "X-API-Key": "test-api-key-12345"}
 
 
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """
     Create an async HTTP client for testing FastAPI endpoints.
-    
+
     Uses ASGITransport to test the app directly without running a server.
     """
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
 
 @pytest.fixture
 async def authenticated_client(
-    valid_api_headers: Dict[str, str]
+    valid_api_headers: Dict[str, str],
 ) -> AsyncGenerator[AsyncClient, None]:
     """
     Create an authenticated async HTTP client with valid API key.
@@ -74,7 +72,7 @@ async def authenticated_client(
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers=valid_api_headers
+        headers=valid_api_headers,
     ) as ac:
         yield ac
 
@@ -82,11 +80,7 @@ async def authenticated_client(
 @pytest.fixture
 def mock_user() -> Dict[str, Any]:
     """Mock user data for authentication tests."""
-    return {
-        "id": "test-user-id-123",
-        "email": "test@example.com",
-        "name": "Test User"
-    }
+    return {"id": "test-user-id-123", "email": "test@example.com", "name": "Test User"}
 
 
 @pytest.fixture
@@ -101,18 +95,14 @@ def sample_document_data() -> Dict[str, Any]:
         "case_number": "I CSK 123/2023",
         "decision_date": "2023-06-15",
         "publication_date": "2023-07-01",
-        "document_type": "judgment"
+        "document_type": "judgment",
     }
 
 
 @pytest.fixture
 def sample_search_request() -> Dict[str, Any]:
     """Sample search request data."""
-    return {
-        "query": "contract law precedents",
-        "limit_docs": 10,
-        "alpha": 0.5
-    }
+    return {"query": "contract law precedents", "limit_docs": 10, "alpha": 0.5}
 
 
 @pytest.fixture
@@ -121,7 +111,7 @@ def sample_collection_data() -> Dict[str, Any]:
     return {
         "name": "Test Collection",
         "description": "A test collection for integration tests",
-        "tags": ["test", "integration"]
+        "tags": ["test", "integration"],
     }
 
 
@@ -137,20 +127,20 @@ def sample_schema_data() -> Dict[str, Any]:
                 "name": "parties",
                 "type": "array",
                 "description": "Parties involved in the contract",
-                "items": {"type": "string"}
+                "items": {"type": "string"},
             },
             {
                 "name": "contract_date",
                 "type": "string",
                 "format": "date",
-                "description": "Date of contract signing"
+                "description": "Date of contract signing",
             },
             {
                 "name": "contract_value",
                 "type": "number",
-                "description": "Monetary value of the contract"
-            }
-        ]
+                "description": "Monetary value of the contract",
+            },
+        ],
     }
 
 
@@ -158,7 +148,7 @@ def sample_schema_data() -> Dict[str, Any]:
 def clear_dependency_overrides():
     """
     Clear any dependency overrides after each test.
-    
+
     This ensures tests don't interfere with each other.
     """
     yield
@@ -169,19 +159,20 @@ def clear_dependency_overrides():
 def override_api_key_auth(test_api_key: str):
     """
     Factory fixture to override API key authentication.
-    
+
     Usage:
         def test_something(override_api_key_auth):
             override_api_key_auth()
             # Now API key verification is bypassed
     """
+
     def _override():
         async def mock_verify_api_key():
             return test_api_key
-        
+
         app.dependency_overrides[verify_api_key] = mock_verify_api_key
         return test_api_key
-    
+
     return _override
 
 
@@ -189,24 +180,26 @@ def override_api_key_auth(test_api_key: str):
 def pytest_configure(config):
     """Add custom markers for app integration tests."""
     config.addinivalue_line(
-        "markers",
-        "api: marks tests as API integration tests (requires HTTP client)"
+        "markers", "api: marks tests as API integration tests (requires HTTP client)"
     )
     config.addinivalue_line(
-        "markers",
-        "auth: marks tests as authentication/authorization tests"
+        "markers", "auth: marks tests as authentication/authorization tests"
     )
     config.addinivalue_line(
-        "markers",
-        "search: marks tests as search functionality tests"
+        "markers", "search: marks tests as search functionality tests"
     )
     config.addinivalue_line(
-        "markers",
-        "collections: marks tests as collection management tests"
+        "markers", "collections: marks tests as collection management tests"
     )
     config.addinivalue_line(
-        "markers",
-        "schemas: marks tests as schema management tests"
+        "markers", "schemas: marks tests as schema management tests"
+    )
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow (e.g., rate limiting tests)"
+    )
+    config.addinivalue_line("markers", "security: marks tests as security-related")
+    config.addinivalue_line(
+        "markers", "timing: marks tests that measure timing (timing attack protection)"
     )
 
 
@@ -216,39 +209,29 @@ def pytest_configure(config):
 @pytest.fixture
 def mock_user_a() -> Dict[str, Any]:
     """Mock user A for isolation testing."""
-    return {
-        "id": "user-a",
-        "email": "user-a@example.com",
-        "name": "User A"
-    }
+    return {"id": "user-a", "email": "user-a@example.com", "name": "User A"}
 
 
 @pytest.fixture
 def mock_user_b() -> Dict[str, Any]:
     """Mock user B for isolation testing."""
-    return {
-        "id": "user-b",
-        "email": "user-b@example.com",
-        "name": "User B"
-    }
+    return {"id": "user-b", "email": "user-b@example.com", "name": "User B"}
 
 
 @pytest.fixture
-def user_a_headers(valid_api_headers: Dict[str, str], mock_user_a: Dict[str, Any]) -> Dict[str, str]:
+def user_a_headers(
+    valid_api_headers: Dict[str, str], mock_user_a: Dict[str, Any]
+) -> Dict[str, str]:
     """Headers for user A (API key + user ID)."""
-    return {
-        **valid_api_headers,
-        "X-User-ID": mock_user_a["id"]
-    }
+    return {**valid_api_headers, "X-User-ID": mock_user_a["id"]}
 
 
 @pytest.fixture
-def user_b_headers(valid_api_headers: Dict[str, str], mock_user_b: Dict[str, Any]) -> Dict[str, str]:
+def user_b_headers(
+    valid_api_headers: Dict[str, str], mock_user_b: Dict[str, Any]
+) -> Dict[str, str]:
     """Headers for user B (API key + user ID)."""
-    return {
-        **valid_api_headers,
-        "X-User-ID": mock_user_b["id"]
-    }
+    return {**valid_api_headers, "X-User-ID": mock_user_b["id"]}
 
 
 @pytest.fixture
@@ -280,61 +263,37 @@ def malicious_user_ids() -> list[str]:
 def override_user_auth(mock_user: Dict[str, Any]):
     """
     Factory fixture to override user authentication.
-    
+
     Usage:
         def test_something(override_user_auth):
             override_user_auth("custom-user-id")
             # Now user authentication returns custom user ID
     """
     from app.collections import get_current_user
-    
+
     def _override(user_id: str = None):
         if user_id is None:
             user_id = mock_user["id"]
-        
+
         async def mock_get_current_user():
             return user_id
-        
+
         app.dependency_overrides[get_current_user] = mock_get_current_user
         return user_id
-    
+
     return _override
 
 
 @pytest.fixture
 async def client_with_user(
-    valid_api_headers: Dict[str, str],
-    mock_user: Dict[str, Any]
+    valid_api_headers: Dict[str, str], mock_user: Dict[str, Any]
 ) -> AsyncGenerator[AsyncClient, None]:
     """
     Create an authenticated async HTTP client with both API key and user ID.
     """
-    headers = {
-        **valid_api_headers,
-        "X-User-ID": mock_user["id"]
-    }
-    
+    headers = {**valid_api_headers, "X-User-ID": mock_user["id"]}
+
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-        headers=headers
+        transport=ASGITransport(app=app), base_url="http://test", headers=headers
     ) as ac:
         yield ac
-
-
-# Additional pytest markers
-def pytest_configure(config):
-    """Add custom markers for comprehensive testing."""
-    # Add new markers
-    config.addinivalue_line(
-        "markers",
-        "slow: marks tests as slow (e.g., rate limiting tests)"
-    )
-    config.addinivalue_line(
-        "markers",
-        "security: marks tests as security-related"
-    )
-    config.addinivalue_line(
-        "markers",
-        "timing: marks tests that measure timing (timing attack protection)"
-    )

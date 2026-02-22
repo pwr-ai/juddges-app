@@ -43,4 +43,3 @@ def serialize_date(date_value: datetime | str | None) -> str | None:
     if isinstance(date_value, datetime):
         return date_value.isoformat()
     return str(date_value)
-

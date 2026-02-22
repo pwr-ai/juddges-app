@@ -3,9 +3,7 @@ from langchain.schema import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
 
 
-def format_messages(
-    input: dict, max_last_messages: int = MAX_CHAT_LAST_MESSAGES
-) -> list[BaseMessage]:
+def format_messages(input: dict, max_last_messages: int = MAX_CHAT_LAST_MESSAGES) -> list[BaseMessage]:
     """Format the messages for the evaluator."""
     chat_history = input.get("chat_history", [])
     results: list[BaseMessage] = []

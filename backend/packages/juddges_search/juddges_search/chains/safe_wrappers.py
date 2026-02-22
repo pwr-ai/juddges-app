@@ -7,7 +7,7 @@ Provides production-ready wrappers around existing chains that add:
 - Comprehensive logging
 """
 
-from typing import Any, Callable
+from typing import Any
 from loguru import logger
 from langchain_core.runnables import Runnable, RunnableLambda
 from openai import RateLimitError, APIConnectionError, APITimeoutError, InternalServerError
@@ -16,11 +16,7 @@ import asyncio
 
 
 def create_safe_chain_wrapper(
-    chain: Runnable,
-    chain_name: str,
-    fallback_response: dict,
-    max_retries: int = 3,
-    base_delay: float = 1.0
+    chain: Runnable, chain_name: str, fallback_response: dict, max_retries: int = 3, base_delay: float = 1.0
 ) -> Runnable:
     """
     Wrap a chain with error handling, retry logic, and fallback.
@@ -39,7 +35,8 @@ def create_safe_chain_wrapper(
     def exponential_backoff(attempt: int) -> float:
         """Calculate exponential backoff with jitter."""
         import random
-        delay = min(base_delay * (2 ** attempt), 60.0)
+
+        delay = min(base_delay * (2**attempt), 60.0)
         jitter = random.uniform(0, delay * 0.1)
         return delay + jitter
 
@@ -124,8 +121,7 @@ def create_safe_chain_wrapper(
         return fallback_response
 
     return RunnableLambda(func=sync_wrapper, afunc=async_wrapper).with_config(
-        run_name=f"safe_{chain_name}",
-        tags=["error-handled", "retry-enabled", "fallback-enabled"]
+        run_name=f"safe_{chain_name}", tags=["error-handled", "retry-enabled", "fallback-enabled"]
     )
 
 
@@ -137,10 +133,7 @@ def create_chat_fallback_response(question: str = "") -> dict:
             "Proszę spróbuj ponownie za chwilę lub sformułuj pytanie inaczej."
         ),
         "sources": [],
-        "reasoning": (
-            "Wystąpił błąd podczas analizy dokumentów prawnych. "
-            "System został poinformowany o problemie."
-        ),
+        "reasoning": ("Wystąpił błąd podczas analizy dokumentów prawnych. System został poinformowany o problemie."),
         "confidence": "low",
         "error": True,
     }

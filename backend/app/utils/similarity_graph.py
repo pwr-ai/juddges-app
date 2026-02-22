@@ -158,4 +158,3 @@ def calculate_clusters(
 
     logger.info(f"Found {cluster_id} clusters")
     return clusters
-

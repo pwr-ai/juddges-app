@@ -26,6 +26,7 @@ router = APIRouter(prefix="/api/experiments", tags=["Experiments"])
 
 # ===== Models =====
 
+
 class VariantInput(BaseModel):
     name: str
     description: Optional[str] = None
@@ -39,13 +40,17 @@ class CreateExperimentRequest(BaseModel):
     description: Optional[str] = None
     hypothesis: Optional[str] = None
     experiment_type: Literal["ab_test", "multivariate", "feature_flag"] = "ab_test"
-    target_audience: Literal["all_users", "new_users", "returning_users", "percentage"] = "all_users"
+    target_audience: Literal[
+        "all_users", "new_users", "returning_users", "percentage"
+    ] = "all_users"
     target_percentage: int = Field(default=100, ge=1, le=100)
     primary_metric: str = "conversion"
     secondary_metrics: Optional[List[str]] = Field(default_factory=list)
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    feature_area: Optional[Literal["ui", "search", "chat", "prompts", "navigation", "other"]] = None
+    feature_area: Optional[
+        Literal["ui", "search", "chat", "prompts", "navigation", "other"]
+    ] = None
     variants: List[VariantInput] = Field(min_length=2)
 
 
@@ -53,14 +58,20 @@ class UpdateExperimentRequest(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     hypothesis: Optional[str] = None
-    status: Optional[Literal["draft", "running", "paused", "completed", "archived"]] = None
-    target_audience: Optional[Literal["all_users", "new_users", "returning_users", "percentage"]] = None
+    status: Optional[Literal["draft", "running", "paused", "completed", "archived"]] = (
+        None
+    )
+    target_audience: Optional[
+        Literal["all_users", "new_users", "returning_users", "percentage"]
+    ] = None
     target_percentage: Optional[int] = Field(default=None, ge=1, le=100)
     primary_metric: Optional[str] = None
     secondary_metrics: Optional[List[str]] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    feature_area: Optional[Literal["ui", "search", "chat", "prompts", "navigation", "other"]] = None
+    feature_area: Optional[
+        Literal["ui", "search", "chat", "prompts", "navigation", "other"]
+    ] = None
 
 
 class TrackExperimentEventRequest(BaseModel):
@@ -93,6 +104,7 @@ class ExperimentResultsResponse(BaseModel):
 
 # ===== API Endpoints =====
 
+
 @router.get("")
 async def list_experiments(
     status: Optional[str] = None,
@@ -105,9 +117,11 @@ async def list_experiments(
 
     try:
         client = get_user_db_client(user)
-        query = client.table("experiments").select(
-            "*, experiment_variants(*)"
-        ).order("created_at", desc=True)
+        query = (
+            client.table("experiments")
+            .select("*, experiment_variants(*)")
+            .order("created_at", desc=True)
+        )
 
         if status:
             query = query.eq("status", status)
@@ -133,9 +147,13 @@ async def get_experiment(
 
     try:
         client = get_user_db_client(user)
-        result = client.table("experiments").select(
-            "*, experiment_variants(*)"
-        ).eq("id", experiment_id).single().execute()
+        result = (
+            client.table("experiments")
+            .select("*, experiment_variants(*)")
+            .eq("id", experiment_id)
+            .single()
+            .execute()
+        )
 
         if not result.data:
             raise HTTPException(status_code=404, detail="Experiment not found")
@@ -196,7 +214,9 @@ async def create_experiment(
         var_result = client.table("experiment_variants").insert(variants_data).execute()
         experiment["experiment_variants"] = var_result.data
 
-        logger.info(f"Created experiment '{request.name}' with {len(request.variants)} variants (user: {user.id})")
+        logger.info(
+            f"Created experiment '{request.name}' with {len(request.variants)} variants (user: {user.id})"
+        )
         return experiment
 
     except Exception as e:
@@ -221,12 +241,17 @@ async def update_experiment(
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        result = client.table("experiments").update(update_data).eq(
-            "id", experiment_id
-        ).execute()
+        result = (
+            client.table("experiments")
+            .update(update_data)
+            .eq("id", experiment_id)
+            .execute()
+        )
 
         if not result.data:
-            raise HTTPException(status_code=404, detail="Experiment not found or not authorized")
+            raise HTTPException(
+                status_code=404, detail="Experiment not found or not authorized"
+            )
 
         logger.info(f"Updated experiment {experiment_id} (user: {user.id})")
         return result.data[0]
@@ -248,21 +273,27 @@ async def get_active_experiments(
 
     try:
         client = get_user_db_client(user)
-        now = datetime.utcnow().isoformat()
+        datetime.utcnow().isoformat()
 
-        result = client.table("experiments").select(
-            "*, experiment_variants(*)"
-        ).eq("status", "running").execute()
+        result = (
+            client.table("experiments")
+            .select("*, experiment_variants(*)")
+            .eq("status", "running")
+            .execute()
+        )
 
         experiments = result.data or []
 
         # Also get the user's existing assignments
-        assignments_result = client.table("experiment_assignments").select(
-            "experiment_id, variant_id"
-        ).eq("user_id", user.id).execute()
+        assignments_result = (
+            client.table("experiment_assignments")
+            .select("experiment_id, variant_id")
+            .eq("user_id", user.id)
+            .execute()
+        )
 
         assignments = {}
-        for a in (assignments_result.data or []):
+        for a in assignments_result.data or []:
             assignments[a["experiment_id"]] = a["variant_id"]
 
         return {
@@ -295,13 +326,19 @@ async def assign_variant(
             "assigned_at": datetime.utcnow().isoformat(),
         }
 
-        result = client.table("experiment_assignments").upsert(
-            assignment_data,
-            on_conflict="experiment_id,user_id"
-        ).execute()
+        result = (
+            client.table("experiment_assignments")
+            .upsert(assignment_data, on_conflict="experiment_id,user_id")
+            .execute()
+        )
 
-        logger.info(f"Assigned user {user.id} to variant {variant_id} in experiment {experiment_id}")
-        return {"status": "assigned", "assignment": result.data[0] if result.data else None}
+        logger.info(
+            f"Assigned user {user.id} to variant {variant_id} in experiment {experiment_id}"
+        )
+        return {
+            "status": "assigned",
+            "assignment": result.data[0] if result.data else None,
+        }
 
     except Exception as e:
         logger.error(f"Failed to assign variant: {e}")
@@ -358,9 +395,13 @@ async def get_experiment_results(
         client = get_user_db_client(user)
 
         # Get experiment info
-        exp_result = client.table("experiments").select("*").eq(
-            "id", experiment_id
-        ).single().execute()
+        exp_result = (
+            client.table("experiments")
+            .select("*")
+            .eq("id", experiment_id)
+            .single()
+            .execute()
+        )
 
         if not exp_result.data:
             raise HTTPException(status_code=404, detail="Experiment not found")
@@ -368,21 +409,30 @@ async def get_experiment_results(
         experiment = exp_result.data
 
         # Get variants
-        var_result = client.table("experiment_variants").select("*").eq(
-            "experiment_id", experiment_id
-        ).execute()
+        var_result = (
+            client.table("experiment_variants")
+            .select("*")
+            .eq("experiment_id", experiment_id)
+            .execute()
+        )
         variants = var_result.data or []
 
         # Get assignments count per variant
-        assign_result = client.table("experiment_assignments").select(
-            "variant_id"
-        ).eq("experiment_id", experiment_id).execute()
+        assign_result = (
+            client.table("experiment_assignments")
+            .select("variant_id")
+            .eq("experiment_id", experiment_id)
+            .execute()
+        )
         assignments = assign_result.data or []
 
         # Get events per variant
-        events_result = client.table("experiment_events").select(
-            "variant_id, event_type, event_value"
-        ).eq("experiment_id", experiment_id).execute()
+        events_result = (
+            client.table("experiment_events")
+            .select("variant_id, event_type, event_value")
+            .eq("experiment_id", experiment_id)
+            .execute()
+        )
         events = events_result.data or []
 
         # Compute per-variant stats
@@ -394,29 +444,45 @@ async def get_experiment_results(
             v_assignments = [a for a in assignments if a["variant_id"] == vid]
             v_events = [e for e in events if e["variant_id"] == vid]
             v_conversions = [e for e in v_events if e["event_type"] == "conversion"]
-            v_values = [e["event_value"] for e in v_events if e.get("event_value") is not None]
+            v_values = [
+                e["event_value"] for e in v_events if e.get("event_value") is not None
+            ]
 
             user_count = len(v_assignments)
             total_participants += user_count
 
             conversion_rate = 0.0
             if user_count > 0:
-                unique_conversion_users = len(set(
-                    a["variant_id"] for a in v_assignments
-                    if any(e["event_type"] == "conversion" and e["variant_id"] == vid for e in v_events)
-                ))
-                conversion_rate = round(len(v_conversions) / user_count * 100, 2) if user_count > 0 else 0.0
+                len(
+                    set(
+                        a["variant_id"]
+                        for a in v_assignments
+                        if any(
+                            e["event_type"] == "conversion" and e["variant_id"] == vid
+                            for e in v_events
+                        )
+                    )
+                )
+                conversion_rate = (
+                    round(len(v_conversions) / user_count * 100, 2)
+                    if user_count > 0
+                    else 0.0
+                )
 
-            variant_results.append(VariantResult(
-                variant_id=vid,
-                variant_name=v["name"],
-                is_control=v["is_control"],
-                total_users=user_count,
-                total_events=len(v_events),
-                conversion_count=len(v_conversions),
-                conversion_rate=conversion_rate,
-                avg_event_value=round(sum(v_values) / len(v_values), 4) if v_values else None,
-            ))
+            variant_results.append(
+                VariantResult(
+                    variant_id=vid,
+                    variant_name=v["name"],
+                    is_control=v["is_control"],
+                    total_users=user_count,
+                    total_events=len(v_events),
+                    conversion_count=len(v_conversions),
+                    conversion_rate=conversion_rate,
+                    avg_event_value=round(sum(v_values) / len(v_values), 4)
+                    if v_values
+                    else None,
+                )
+            )
 
         return ExperimentResultsResponse(
             experiment_id=experiment_id,

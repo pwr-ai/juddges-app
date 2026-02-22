@@ -40,9 +40,19 @@ class AuditService:
 
     # Sensitive fields to redact from logs
     SENSITIVE_FIELDS = {
-        "password", "token", "api_key", "secret", "authorization",
-        "cookie", "session_token", "refresh_token", "private_key",
-        "credit_card", "ssn", "pesel", "bank_account"
+        "password",
+        "token",
+        "api_key",
+        "secret",
+        "authorization",
+        "cookie",
+        "session_token",
+        "refresh_token",
+        "private_key",
+        "credit_card",
+        "ssn",
+        "pesel",
+        "bank_account",
     }
 
     @staticmethod
@@ -65,7 +75,10 @@ class AuditService:
             for key, value in data.items():
                 # Check if key contains sensitive information
                 key_lower = key.lower()
-                if any(sensitive in key_lower for sensitive in AuditService.SENSITIVE_FIELDS):
+                if any(
+                    sensitive in key_lower
+                    for sensitive in AuditService.SENSITIVE_FIELDS
+                ):
                     sanitized[key] = "[REDACTED]"
                 else:
                     sanitized[key] = AuditService._sanitize_data(value, max_depth - 1)
@@ -74,13 +87,16 @@ class AuditService:
         elif isinstance(data, list):
             # Limit list size to prevent abuse
             if len(data) > 100:
-                return [AuditService._sanitize_data(item, max_depth - 1) for item in data[:100]] + ["[TRUNCATED]"]
+                return [
+                    AuditService._sanitize_data(item, max_depth - 1)
+                    for item in data[:100]
+                ] + ["[TRUNCATED]"]
             return [AuditService._sanitize_data(item, max_depth - 1) for item in data]
 
         elif isinstance(data, str):
             # Truncate very long strings
             if len(data) > AuditService.MAX_INPUT_LENGTH:
-                return data[:AuditService.MAX_INPUT_LENGTH] + "...[TRUNCATED]"
+                return data[: AuditService.MAX_INPUT_LENGTH] + "...[TRUNCATED]"
             return data
 
         else:
@@ -118,7 +134,7 @@ class AuditService:
         metadata: Optional[Dict[str, Any]] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
-        duration_ms: Optional[int] = None
+        duration_ms: Optional[int] = None,
     ) -> Optional[str]:
         """
         Log a user query and AI response.
@@ -141,10 +157,9 @@ class AuditService:
             client = get_admin_supabase_client()
 
             # Sanitize input and output data
-            input_data = AuditService._sanitize_data({
-                "query": query,
-                "metadata": metadata or {}
-            })
+            input_data = AuditService._sanitize_data(
+                {"query": query, "metadata": metadata or {}}
+            )
 
             output_data = AuditService._sanitize_data(response)
 
@@ -157,17 +172,21 @@ class AuditService:
                 "output_data": output_data,
                 "model_used": model_used,
                 "ip_address": AuditService._anonymize_ip(ip_address),
-                "user_agent": user_agent[:500] if user_agent else None,  # Truncate user agent
+                "user_agent": user_agent[:500]
+                if user_agent
+                else None,  # Truncate user agent
                 "request_duration_ms": duration_ms,
                 "resource_type": "query",
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
 
             if result.data:
                 audit_id = result.data[0].get("id")
-                logger.debug(f"Audit log created: {audit_id} (user: {user_id}, action: query)")
+                logger.debug(
+                    f"Audit log created: {audit_id} (user: {user_id}, action: query)"
+                )
                 return audit_id
 
         except Exception as e:
@@ -182,7 +201,7 @@ class AuditService:
         action: str,  # 'view', 'download', 'upload'
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
     ) -> Optional[str]:
         """
         Log document access (view, download, upload).
@@ -205,7 +224,7 @@ class AuditService:
             action_type_map = {
                 "view": "document_view",
                 "download": "document_download",
-                "upload": "document_upload"
+                "upload": "document_upload",
             }
             action_type = action_type_map.get(action, "document_view")
 
@@ -214,22 +233,23 @@ class AuditService:
                 "user_id": user_id,
                 "session_id": session_id,
                 "action_type": action_type,
-                "input_data": AuditService._sanitize_data({
-                    "document_id": document_id,
-                    "metadata": metadata or {}
-                }),
+                "input_data": AuditService._sanitize_data(
+                    {"document_id": document_id, "metadata": metadata or {}}
+                ),
                 "output_data": {},
                 "ip_address": AuditService._anonymize_ip(ip_address),
                 "resource_type": "document",
                 "resource_id": document_id,
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
 
             if result.data:
                 audit_id = result.data[0].get("id")
-                logger.debug(f"Audit log created: {audit_id} (user: {user_id}, action: {action_type})")
+                logger.debug(
+                    f"Audit log created: {audit_id} (user: {user_id}, action: {action_type})"
+                )
                 return audit_id
 
         except Exception as e:
@@ -243,7 +263,7 @@ class AuditService:
         data_range: Optional[Dict[str, str]] = None,
         session_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
     ) -> Optional[str]:
         """
         Log data export operations.
@@ -267,22 +287,26 @@ class AuditService:
                 "user_id": user_id,
                 "session_id": session_id,
                 "action_type": "export",
-                "input_data": AuditService._sanitize_data({
-                    "export_type": export_type,
-                    "data_range": data_range or {},
-                    "metadata": metadata or {}
-                }),
+                "input_data": AuditService._sanitize_data(
+                    {
+                        "export_type": export_type,
+                        "data_range": data_range or {},
+                        "metadata": metadata or {},
+                    }
+                ),
                 "output_data": {},
                 "ip_address": AuditService._anonymize_ip(ip_address),
                 "resource_type": "export",
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
 
             if result.data:
                 audit_id = result.data[0].get("id")
-                logger.debug(f"Audit log created: {audit_id} (user: {user_id}, action: export)")
+                logger.debug(
+                    f"Audit log created: {audit_id} (user: {user_id}, action: export)"
+                )
                 return audit_id
 
         except Exception as e:
@@ -305,7 +329,7 @@ class AuditService:
         http_method: Optional[str] = None,
         http_status_code: Optional[int] = None,
         api_endpoint: Optional[str] = None,
-        error_message: Optional[str] = None
+        error_message: Optional[str] = None,
     ) -> Optional[str]:
         """
         Generic method to log any user action.
@@ -350,14 +374,16 @@ class AuditService:
                 "http_status_code": http_status_code,
                 "api_endpoint": api_endpoint,
                 "error_message": error_message,
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
 
             if result.data:
                 audit_id = result.data[0].get("id")
-                logger.debug(f"Audit log created: {audit_id} (user: {user_id}, action: {action_type})")
+                logger.debug(
+                    f"Audit log created: {audit_id} (user: {user_id}, action: {action_type})"
+                )
                 return audit_id
 
         except Exception as e:
@@ -371,7 +397,7 @@ class AuditService:
         end_date: Optional[datetime] = None,
         action_types: Optional[List[str]] = None,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
     ) -> Dict[str, Any]:
         """
         Retrieve audit trail for a specific user.
@@ -407,19 +433,33 @@ class AuditService:
                 query = query.in_("action_type", action_types)
 
             # Execute query with pagination
-            result = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            result = (
+                query.order("created_at", desc=True)
+                .range(offset, offset + limit - 1)
+                .execute()
+            )
 
             # Get total count (for pagination)
-            count_query = client.table("audit_logs").select("id", count="exact").eq("user_id", user_id)
+            count_query = (
+                client.table("audit_logs")
+                .select("id", count="exact")
+                .eq("user_id", user_id)
+            )
             count_query = count_query.gte("created_at", start_date.isoformat())
             count_query = count_query.lte("created_at", end_date.isoformat())
             if action_types:
                 count_query = count_query.in_("action_type", action_types)
 
             count_result = count_query.execute()
-            total_count = count_result.count if hasattr(count_result, 'count') else len(result.data)
+            total_count = (
+                count_result.count
+                if hasattr(count_result, "count")
+                else len(result.data)
+            )
 
-            logger.info(f"Retrieved audit trail for user {user_id}: {len(result.data)} records")
+            logger.info(
+                f"Retrieved audit trail for user {user_id}: {len(result.data)} records"
+            )
 
             return {
                 "user_id": user_id,
@@ -428,7 +468,7 @@ class AuditService:
                 "limit": limit,
                 "offset": offset,
                 "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat()
+                "end_date": end_date.isoformat(),
             }
 
         except Exception as e:
@@ -438,10 +478,7 @@ class AuditService:
 
 # Background task helper for non-blocking audit logging
 def log_audit_background(
-    background_tasks: BackgroundTasks,
-    user_id: str,
-    action_type: str,
-    **kwargs
+    background_tasks: BackgroundTasks, user_id: str, action_type: str, **kwargs
 ):
     """
     Add audit logging as a background task (non-blocking).
@@ -466,10 +503,7 @@ def log_audit_background(
         **kwargs: Additional arguments for AuditService.log_action()
     """
     background_tasks.add_task(
-        AuditService.log_action,
-        user_id=user_id,
-        action_type=action_type,
-        **kwargs
+        AuditService.log_action, user_id=user_id, action_type=action_type, **kwargs
     )
 
 

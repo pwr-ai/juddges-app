@@ -140,12 +140,61 @@ def _extract_keywords_tfidf(
 
     # Stopwords (Polish + English common ones)
     stopwords = {
-        "w", "z", "na", "do", "i", "o", "nie", "się", "jest", "od", "za",
-        "że", "to", "co", "po", "jak", "ale", "tym", "te", "ten", "ta",
-        "tego", "tej", "przez", "dla", "ze", "pod", "nad", "przy",
-        "the", "a", "an", "in", "of", "to", "and", "is", "for", "on",
-        "with", "at", "by", "from", "or", "as", "be", "was", "are",
-        "art", "ust", "pkt", "nr", "r", "dz", "poz",
+        "w",
+        "z",
+        "na",
+        "do",
+        "i",
+        "o",
+        "nie",
+        "się",
+        "jest",
+        "od",
+        "za",
+        "że",
+        "to",
+        "co",
+        "po",
+        "jak",
+        "ale",
+        "tym",
+        "te",
+        "ten",
+        "ta",
+        "tego",
+        "tej",
+        "przez",
+        "dla",
+        "ze",
+        "pod",
+        "nad",
+        "przy",
+        "the",
+        "a",
+        "an",
+        "in",
+        "of",
+        "to",
+        "and",
+        "is",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "or",
+        "as",
+        "be",
+        "was",
+        "are",
+        "art",
+        "ust",
+        "pkt",
+        "nr",
+        "r",
+        "dz",
+        "poz",
     }
 
     # Build per-cluster term frequencies
@@ -257,9 +306,7 @@ def _kmeans(
     labels = np.zeros(n, dtype=np.int32)
     for _ in range(max_iter):
         # Assign
-        dists = np.array(
-            [np.sum((embeddings - c) ** 2, axis=1) for c in centroids]
-        ).T
+        dists = np.array([np.sum((embeddings - c) ** 2, axis=1) for c in centroids]).T
         new_labels = np.argmin(dists, axis=1).astype(np.int32)
 
         if np.array_equal(new_labels, labels):
@@ -295,7 +342,9 @@ async def get_semantic_clusters(request: ClusteringRequest) -> ClusteringRespons
     db = get_vector_db()
 
     # Fetch documents with embeddings
-    select_fields = "document_id, title, document_type, date_issued, summary, keywords, embedding"
+    select_fields = (
+        "document_id, title, document_type, date_issued, summary, keywords, embedding"
+    )
     try:
         query = db.client.table("legal_documents").select(select_fields)
 
@@ -466,9 +515,7 @@ async def get_semantic_clusters(request: ClusteringRequest) -> ClusteringRespons
         avg_cluster_size=round(np.mean(cluster_sizes), 1) if cluster_sizes else 0.0,
         min_cluster_size=min(cluster_sizes) if cluster_sizes else 0,
         max_cluster_size=max(cluster_sizes) if cluster_sizes else 0,
-        avg_coherence=round(
-            float(np.mean([c.coherence_score for c in clusters])), 4
-        )
+        avg_coherence=round(float(np.mean([c.coherence_score for c in clusters])), 4)
         if clusters
         else 0.0,
         clustering_time_ms=round(clustering_time_ms, 2),

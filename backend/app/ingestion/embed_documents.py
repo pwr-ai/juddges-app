@@ -73,10 +73,14 @@ class EmbeddingGenerator:
                     )
                     await asyncio.sleep(RETRY_DELAY * (attempt + 1))
                 else:
-                    logger.error(f"Embedding generation failed after {MAX_RETRIES} attempts: {e}")
+                    logger.error(
+                        f"Embedding generation failed after {MAX_RETRIES} attempts: {e}"
+                    )
                     return None
 
-    async def generate_batch_embeddings(self, texts: list[str]) -> list[Optional[list[float]]]:
+    async def generate_batch_embeddings(
+        self, texts: list[str]
+    ) -> list[Optional[list[float]]]:
         """Generate embeddings for a batch of texts."""
         # Filter out empty texts but keep track of positions
         valid_indices = []
@@ -112,7 +116,9 @@ class EmbeddingGenerator:
                     )
                     await asyncio.sleep(RETRY_DELAY * (attempt + 1))
                 else:
-                    logger.error(f"Batch embedding failed after {MAX_RETRIES} attempts: {e}")
+                    logger.error(
+                        f"Batch embedding failed after {MAX_RETRIES} attempts: {e}"
+                    )
                     return [None] * len(texts)
 
     def get_documents_without_embeddings(
@@ -225,20 +231,22 @@ class EmbeddingGenerator:
 
         while offset < total_to_process:
             batch_limit = min(self.batch_size, total_to_process - offset)
-            documents = self.get_documents_without_embeddings(limit=batch_limit, offset=0)
+            documents = self.get_documents_without_embeddings(
+                limit=batch_limit, offset=0
+            )
 
             if not documents:
                 logger.info("No more documents to process")
                 break
 
-            batch_successful = await self.process_batch(documents)
+            await self.process_batch(documents)
             self.stats["total_processed"] += len(documents)
 
             elapsed = time.time() - start_time
             rate = self.stats["total_processed"] / elapsed if elapsed > 0 else 0
             logger.info(
                 f"Progress: {self.stats['total_processed']}/{total_to_process} "
-                f"({self.stats['total_processed']/total_to_process*100:.1f}%) | "
+                f"({self.stats['total_processed'] / total_to_process * 100:.1f}%) | "
                 f"Rate: {rate:.1f} docs/sec | "
                 f"Tokens: {self.stats['tokens_used']:,}"
             )

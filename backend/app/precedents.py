@@ -98,7 +98,9 @@ class PrecedentMatch(BaseModel):
     document_id: str = Field(description="Document ID")
     title: str | None = Field(default=None, description="Document title")
     document_type: str | None = Field(default=None, description="Type of document")
-    date_issued: str | None = Field(default=None, description="Date the document was issued")
+    date_issued: str | None = Field(
+        default=None, description="Date the document was issued"
+    )
     court_name: str | None = Field(default=None, description="Court name")
     outcome: str | None = Field(default=None, description="Case outcome")
     legal_bases: list[str] | None = Field(default=None, description="Legal bases cited")
@@ -126,9 +128,7 @@ class FindPrecedentsResponse(BaseModel):
     query: str = Field(description="The original query")
     precedents: list[PrecedentMatch] = Field(description="Ranked precedent matches")
     total_found: int = Field(description="Total number of precedents found")
-    search_strategy: str = Field(
-        description="Description of the search strategy used"
-    )
+    search_strategy: str = Field(description="Description of the search strategy used")
     enhanced_query: str | None = Field(
         default=None,
         description="AI-enhanced version of the query used for search",
@@ -249,7 +249,11 @@ def _format_candidate_for_analysis(doc: dict[str, Any]) -> str:
     # Use summary or truncated full text
     content = doc.get("summary") or doc.get("thesis") or ""
     if not content and doc.get("full_text"):
-        content = doc["full_text"][:3000] + "..." if len(doc.get("full_text", "")) > 3000 else doc.get("full_text", "")
+        content = (
+            doc["full_text"][:3000] + "..."
+            if len(doc.get("full_text", "")) > 3000
+            else doc.get("full_text", "")
+        )
     if content:
         parts.append(f"Content: {content}")
 
@@ -258,19 +262,21 @@ def _format_candidate_for_analysis(doc: dict[str, Any]) -> str:
 
 async def _enhance_query(query: str) -> tuple[str, list[str]]:
     """Use LLM to enhance the search query for better semantic matching."""
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a legal research query optimization expert."),
-        ("human", "{prompt}"),
-    ])
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", "You are a legal research query optimization expert."),
+            ("human", "{prompt}"),
+        ]
+    )
 
     llm = get_default_llm(use_mini_model=True)
     parser = JsonOutputParser()
     chain = chat_prompt | llm | parser
 
     try:
-        result = await chain.ainvoke({
-            "prompt": QUERY_ENHANCEMENT_PROMPT.format(query=query)
-        })
+        result = await chain.ainvoke(
+            {"prompt": QUERY_ENHANCEMENT_PROMPT.format(query=query)}
+        )
         enhanced = result.get("enhanced_query", query)
         concepts = result.get("legal_concepts", [])
         return enhanced, concepts
@@ -288,22 +294,26 @@ async def _analyze_precedents(
         _format_candidate_for_analysis(doc) for doc in candidates
     )
 
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", PRECEDENT_ANALYSIS_SYSTEM_PROMPT),
-        ("human", "{prompt}"),
-    ])
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", PRECEDENT_ANALYSIS_SYSTEM_PROMPT),
+            ("human", "{prompt}"),
+        ]
+    )
 
     llm = get_default_llm(use_mini_model=False)
     parser = JsonOutputParser()
     chain = chat_prompt | llm | parser
 
     try:
-        result = await chain.ainvoke({
-            "prompt": PRECEDENT_ANALYSIS_PROMPT.format(
-                query=query,
-                documents=formatted_docs,
-            )
-        })
+        result = await chain.ainvoke(
+            {
+                "prompt": PRECEDENT_ANALYSIS_PROMPT.format(
+                    query=query,
+                    documents=formatted_docs,
+                )
+            }
+        )
         return result
     except Exception as e:
         logger.error(f"Precedent analysis LLM error: {e}")
@@ -340,9 +350,13 @@ async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsRespo
         if doc_data:
             doc_context = doc_data.get("summary") or doc_data.get("thesis") or ""
             if doc_context:
-                search_text = f"{request.query}\n\nContext from document: {doc_context[:2000]}"
+                search_text = (
+                    f"{request.query}\n\nContext from document: {doc_context[:2000]}"
+                )
         else:
-            logger.warning(f"Source document {request.document_id} not found, using query only")
+            logger.warning(
+                f"Source document {request.document_id} not found, using query only"
+            )
 
     # Enhance the query for better semantic matching
     enhanced_text, legal_concepts = await _enhance_query(search_text)
@@ -390,7 +404,7 @@ async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsRespo
         similar_results = _apply_filters(similar_results, request.filters)
 
     # Fetch full document data for top candidates
-    candidate_ids = [r.get("document_id") for r in similar_results[:request.limit]]
+    candidate_ids = [r.get("document_id") for r in similar_results[: request.limit]]
     candidates_data = []
     for doc_id in candidate_ids:
         if doc_id:
@@ -433,9 +447,9 @@ async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsRespo
         relevance_score = analysis.get("relevance_score")
         if relevance_score is not None:
             # Combined score: 40% semantic similarity + 60% AI relevance
-            combined_score = 0.4 * similarity + 0.6 * relevance_score
+            0.4 * similarity + 0.6 * relevance_score
         else:
-            combined_score = similarity
+            pass
 
         # Format date
         date_val = doc.get("date_issued")
@@ -443,20 +457,26 @@ async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsRespo
         if date_val:
             date_str = str(date_val) if not isinstance(date_val, str) else date_val
 
-        precedents.append(PrecedentMatch(
-            document_id=doc_id,
-            title=doc.get("title"),
-            document_type=doc.get("document_type"),
-            date_issued=date_str,
-            court_name=doc.get("court_name"),
-            outcome=doc.get("outcome"),
-            legal_bases=doc.get("legal_bases") if isinstance(doc.get("legal_bases"), list) else None,
-            summary=doc.get("summary"),
-            similarity_score=round(similarity, 4),
-            relevance_score=round(relevance_score, 4) if relevance_score is not None else None,
-            matching_factors=analysis.get("matching_factors", []),
-            relevance_explanation=analysis.get("relevance_explanation"),
-        ))
+        precedents.append(
+            PrecedentMatch(
+                document_id=doc_id,
+                title=doc.get("title"),
+                document_type=doc.get("document_type"),
+                date_issued=date_str,
+                court_name=doc.get("court_name"),
+                outcome=doc.get("outcome"),
+                legal_bases=doc.get("legal_bases")
+                if isinstance(doc.get("legal_bases"), list)
+                else None,
+                summary=doc.get("summary"),
+                similarity_score=round(similarity, 4),
+                relevance_score=round(relevance_score, 4)
+                if relevance_score is not None
+                else None,
+                matching_factors=analysis.get("matching_factors", []),
+                relevance_explanation=analysis.get("relevance_explanation"),
+            )
+        )
 
     # Sort by combined score (AI relevance weighted higher)
     precedents.sort(
@@ -467,9 +487,13 @@ async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsRespo
     )
 
     # Trim to requested limit
-    precedents = precedents[:request.limit]
+    precedents = precedents[: request.limit]
 
-    search_strategy = "semantic_similarity + ai_analysis" if request.include_analysis else "semantic_similarity"
+    search_strategy = (
+        "semantic_similarity + ai_analysis"
+        if request.include_analysis
+        else "semantic_similarity"
+    )
 
     return FindPrecedentsResponse(
         query=request.query,
@@ -488,42 +512,45 @@ def _apply_filters(
 
     if filters.document_types:
         filtered = [
-            r for r in filtered
-            if r.get("document_type") in filters.document_types
+            r for r in filtered if r.get("document_type") in filters.document_types
         ]
 
     if filters.court_names:
         court_lower = [c.lower() for c in filters.court_names]
         filtered = [
-            r for r in filtered
+            r
+            for r in filtered
             if r.get("court_name") and r["court_name"].lower() in court_lower
         ]
 
     if filters.language:
-        filtered = [
-            r for r in filtered
-            if r.get("language") == filters.language
-        ]
+        filtered = [r for r in filtered if r.get("language") == filters.language]
 
     if filters.date_from:
         filtered = [
-            r for r in filtered
+            r
+            for r in filtered
             if r.get("date_issued") and str(r["date_issued"]) >= filters.date_from
         ]
 
     if filters.date_to:
         filtered = [
-            r for r in filtered
+            r
+            for r in filtered
             if r.get("date_issued") and str(r["date_issued"]) <= filters.date_to
         ]
 
     if filters.legal_bases:
         filter_bases_lower = {b.lower() for b in filters.legal_bases}
         filtered = [
-            r for r in filtered
-            if r.get("legal_bases") and any(
+            r
+            for r in filtered
+            if r.get("legal_bases")
+            and any(
                 b.lower() in filter_bases_lower
-                for b in (r["legal_bases"] if isinstance(r["legal_bases"], list) else [])
+                for b in (
+                    r["legal_bases"] if isinstance(r["legal_bases"], list) else []
+                )
             )
         ]
 

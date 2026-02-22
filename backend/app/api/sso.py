@@ -32,36 +32,48 @@ router = APIRouter(prefix="/api/sso", tags=["SSO Management"])
 
 class SSOConnectionBase(BaseModel):
     """Base model for SSO connection data."""
+
     name: str = Field(description="Display name for the SSO connection")
     organization: str = Field(description="Organization/company name")
     provider_type: Literal["saml", "oauth"] = Field(description="SSO protocol type")
     domain: str = Field(description="Email domain for SSO discovery")
-    auto_provision_users: bool = Field(default=True, description="Auto-create users on first SSO login")
-    default_account_type: str = Field(default="base", description="Default account type for provisioned users")
+    auto_provision_users: bool = Field(
+        default=True, description="Auto-create users on first SSO login"
+    )
+    default_account_type: str = Field(
+        default="base", description="Default account type for provisioned users"
+    )
 
 
 class SSOConnectionCreateSAML(SSOConnectionBase):
     """Create a SAML 2.0 SSO connection."""
+
     provider_type: Literal["saml"] = "saml"
     saml_entity_id: str = Field(description="IdP Entity ID")
     saml_sso_url: str = Field(description="IdP SSO Login URL")
     saml_certificate: str = Field(description="IdP X.509 certificate (PEM format)")
-    saml_metadata_url: Optional[str] = Field(None, description="IdP metadata URL for auto-config")
+    saml_metadata_url: Optional[str] = Field(
+        None, description="IdP metadata URL for auto-config"
+    )
 
 
 class SSOConnectionCreateOAuth(SSOConnectionBase):
     """Create an OAuth 2.0 / OIDC SSO connection."""
+
     provider_type: Literal["oauth"] = "oauth"
     oauth_client_id: str = Field(description="OAuth client ID")
     oauth_client_secret: str = Field(description="OAuth client secret")
     oauth_authorization_url: str = Field(description="Authorization endpoint URL")
     oauth_token_url: str = Field(description="Token endpoint URL")
     oauth_userinfo_url: Optional[str] = Field(None, description="UserInfo endpoint URL")
-    oauth_scopes: str = Field(default="openid email profile", description="OAuth scopes")
+    oauth_scopes: str = Field(
+        default="openid email profile", description="OAuth scopes"
+    )
 
 
 class SSOConnectionResponse(BaseModel):
     """Response model for an SSO connection."""
+
     id: str
     name: str
     slug: str
@@ -90,11 +102,13 @@ class SSOConnectionResponse(BaseModel):
 
 class SSOConnectionUpdateStatus(BaseModel):
     """Update SSO connection status."""
+
     status: Literal["active", "inactive", "pending"]
 
 
 class SSODomainCheckResponse(BaseModel):
     """Response for domain-based SSO discovery."""
+
     sso_enabled: bool
     provider_type: Optional[str] = None
     connection_id: Optional[str] = None
@@ -104,6 +118,7 @@ class SSODomainCheckResponse(BaseModel):
 
 class SSOLoginEventResponse(BaseModel):
     """SSO login event for audit log."""
+
     id: str
     connection_id: str
     connection_name: Optional[str] = None
@@ -118,10 +133,11 @@ class SSOLoginEventResponse(BaseModel):
 def _slugify(name: str) -> str:
     """Convert a name to a URL-friendly slug."""
     import re
+
     slug = name.lower().strip()
-    slug = re.sub(r'[^\w\s-]', '', slug)
-    slug = re.sub(r'[\s_]+', '-', slug)
-    slug = re.sub(r'-+', '-', slug)
+    slug = re.sub(r"[^\w\s-]", "", slug)
+    slug = re.sub(r"[\s_]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
     return slug
 
 
@@ -142,9 +158,14 @@ async def check_domain_sso(
     """
     try:
         client = get_admin_supabase_client()
-        result = client.table("sso_connections").select(
-            "id, name, organization, provider_type"
-        ).eq("domain", domain.lower()).eq("status", "active").limit(1).execute()
+        result = (
+            client.table("sso_connections")
+            .select("id, name, organization, provider_type")
+            .eq("domain", domain.lower())
+            .eq("status", "active")
+            .limit(1)
+            .execute()
+        )
 
         if result.data and len(result.data) > 0:
             conn = result.data[0]
@@ -178,7 +199,9 @@ async def list_connections(
     """List all SSO connections. Admin only."""
     try:
         client = get_admin_supabase_client()
-        query = client.table("sso_connections").select("*").order("created_at", desc=True)
+        query = (
+            client.table("sso_connections").select("*").order("created_at", desc=True)
+        )
 
         if status:
             query = query.eq("status", status)
@@ -190,7 +213,9 @@ async def list_connections(
         raise
     except Exception as e:
         logger.error(f"Error listing SSO connections: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to list SSO connections: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list SSO connections: {e}"
+        )
 
 
 @router.get(
@@ -205,7 +230,13 @@ async def get_connection(
     """Get details of a specific SSO connection. Admin only."""
     try:
         client = get_admin_supabase_client()
-        result = client.table("sso_connections").select("*").eq("id", connection_id).single().execute()
+        result = (
+            client.table("sso_connections")
+            .select("*")
+            .eq("id", connection_id)
+            .single()
+            .execute()
+        )
         return SSOConnectionResponse(**result.data)
 
     except Exception as e:
@@ -231,13 +262,16 @@ async def create_connection(
         client = get_admin_supabase_client()
 
         # Check for duplicate domain
-        existing = client.table("sso_connections").select("id").eq(
-            "domain", connection.domain.lower()
-        ).execute()
+        existing = (
+            client.table("sso_connections")
+            .select("id")
+            .eq("domain", connection.domain.lower())
+            .execute()
+        )
         if existing.data:
             raise HTTPException(
                 status_code=409,
-                detail=f"SSO connection already exists for domain '{connection.domain}'"
+                detail=f"SSO connection already exists for domain '{connection.domain}'",
             )
 
         slug = _slugify(connection.name)
@@ -255,19 +289,38 @@ async def create_connection(
         }
 
         # Add provider-specific fields
-        if isinstance(connection, SSOConnectionCreateSAML) or connection.provider_type == "saml":
-            saml_data = connection.model_dump(include={
-                "saml_entity_id", "saml_sso_url", "saml_certificate", "saml_metadata_url"
-            })
+        if (
+            isinstance(connection, SSOConnectionCreateSAML)
+            or connection.provider_type == "saml"
+        ):
+            saml_data = connection.model_dump(
+                include={
+                    "saml_entity_id",
+                    "saml_sso_url",
+                    "saml_certificate",
+                    "saml_metadata_url",
+                }
+            )
             insert_data.update({k: v for k, v in saml_data.items() if v is not None})
-        elif isinstance(connection, SSOConnectionCreateOAuth) or connection.provider_type == "oauth":
-            oauth_data = connection.model_dump(include={
-                "oauth_client_id", "oauth_client_secret", "oauth_authorization_url",
-                "oauth_token_url", "oauth_userinfo_url", "oauth_scopes"
-            })
+        elif (
+            isinstance(connection, SSOConnectionCreateOAuth)
+            or connection.provider_type == "oauth"
+        ):
+            oauth_data = connection.model_dump(
+                include={
+                    "oauth_client_id",
+                    "oauth_client_secret",
+                    "oauth_authorization_url",
+                    "oauth_token_url",
+                    "oauth_userinfo_url",
+                    "oauth_scopes",
+                }
+            )
             # Rename client_secret to encrypted field name
             if "oauth_client_secret" in oauth_data:
-                insert_data["oauth_client_secret_encrypted"] = oauth_data.pop("oauth_client_secret")
+                insert_data["oauth_client_secret_encrypted"] = oauth_data.pop(
+                    "oauth_client_secret"
+                )
             insert_data.update({k: v for k, v in oauth_data.items() if v is not None})
 
         result = client.table("sso_connections").insert(insert_data).execute()
@@ -283,7 +336,9 @@ async def create_connection(
         raise
     except Exception as e:
         logger.error(f"Error creating SSO connection: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to create SSO connection: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create SSO connection: {e}"
+        )
 
 
 @router.patch(
@@ -299,10 +354,17 @@ async def update_connection_status(
     """Activate, deactivate, or set pending status for an SSO connection. Admin only."""
     try:
         client = get_admin_supabase_client()
-        result = client.table("sso_connections").update({
-            "status": update.status,
-            "updated_at": datetime.utcnow().isoformat(),
-        }).eq("id", connection_id).execute()
+        result = (
+            client.table("sso_connections")
+            .update(
+                {
+                    "status": update.status,
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+            )
+            .eq("id", connection_id)
+            .execute()
+        )
 
         if not result.data:
             raise HTTPException(status_code=404, detail="SSO connection not found")
@@ -356,28 +418,35 @@ async def get_connection_events(
     """Get audit log of SSO login events for a connection. Admin only."""
     try:
         client = get_admin_supabase_client()
-        result = client.table("sso_login_events").select(
-            "*, sso_connections(name)"
-        ).eq("connection_id", connection_id).order(
-            "created_at", desc=True
-        ).range(offset, offset + limit - 1).execute()
+        result = (
+            client.table("sso_login_events")
+            .select("*, sso_connections(name)")
+            .eq("connection_id", connection_id)
+            .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
 
         events = []
         for event in result.data:
             conn_name = None
             if event.get("sso_connections"):
                 conn_name = event["sso_connections"].get("name")
-            events.append(SSOLoginEventResponse(
-                id=event["id"],
-                connection_id=event["connection_id"],
-                connection_name=conn_name,
-                user_id=event.get("user_id"),
-                email=event["email"],
-                event_type=event["event_type"],
-                ip_address=str(event["ip_address"]) if event.get("ip_address") else None,
-                error_message=event.get("error_message"),
-                created_at=event["created_at"],
-            ))
+            events.append(
+                SSOLoginEventResponse(
+                    id=event["id"],
+                    connection_id=event["connection_id"],
+                    connection_name=conn_name,
+                    user_id=event.get("user_id"),
+                    email=event["email"],
+                    event_type=event["event_type"],
+                    ip_address=str(event["ip_address"])
+                    if event.get("ip_address")
+                    else None,
+                    error_message=event.get("error_message"),
+                    created_at=event["created_at"],
+                )
+            )
         return events
 
     except Exception as e:

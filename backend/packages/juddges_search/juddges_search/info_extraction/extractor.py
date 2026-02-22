@@ -155,22 +155,22 @@ class InformationExtractor:
         assert set(extraction_context.keys()) == {"language", "extraction_context", "additional_instructions"}
 
         return extraction_context
-    
+
     @classmethod
     def get_additional_instructions(cls, language: str = "pl") -> str:
         """
         Load additional extraction instructions from YAML files.
-        
+
         These are the default/generic extraction instructions that ship with the package.
         They provide base guidelines for data extraction that can be combined with
         user-specific instructions.
-        
+
         Args:
             language: Language code ("pl" or "en"), defaults to "pl"
-            
+
         Returns:
             Additional extraction instructions as string
-            
+
         Raises:
             ValueError: If language is not supported
             FileNotFoundError: If instruction file doesn't exist
@@ -178,35 +178,33 @@ class InformationExtractor:
         if language not in {"pl", "en"}:
             logger.warning(f"Unsupported language '{language}', falling back to 'pl'")
             language = "pl"
-        
+
         instruction_file = cls.PROMPT_TEMPLATE_DIR / f"info_extraction_additional_instructions_{language}.yaml"
-        
+
         if not instruction_file.exists():
             raise FileNotFoundError(
-                f"Base instruction file not found: {instruction_file}. "
-                f"Expected language: {language}"
+                f"Base instruction file not found: {instruction_file}. Expected language: {language}"
             )
-        
+
         with open(instruction_file, "r") as f:
             instructions_data = yaml.safe_load(f)
-        
+
         if not isinstance(instructions_data, dict) or "content" not in instructions_data:
             raise ValueError(
-                f"Invalid instruction file format: {instruction_file}. "
-                f"Expected YAML with 'content' field."
+                f"Invalid instruction file format: {instruction_file}. Expected YAML with 'content' field."
             )
-        
+
         return instructions_data["content"]
 
     @staticmethod
     def prepare_oai_compatible_schema(schema: dict[str, Any]) -> dict[str, Any]:
         """
         Matches the proper format of the schema and normalizes it to the OpenAI JSON Schema format.
-        
+
         This method handles schemas loaded from YAML files (internal format) and converts them
         to OpenAI structured output format. The YAML internal format uses field-level 'required'
         flags which are converted to OpenAI's top-level 'required' array format.
-        
+
         Note: This is currently the primary way to prepare YAML schemas for extraction.
         Future refactoring may move this logic to a standalone function in schema_utils.
         """
@@ -276,14 +274,14 @@ class InformationExtractor:
     def validate_yaml_schema(schema: dict[str, Any]) -> None:
         """
         TODO: Needs refactoring to support YAML schema validation with OpenAI compatibility.
-        
+
         Validates the schema written in YAML internal format.
-        
+
         This method needs to be refactored/extended to work with validate_openai_schema()
         from oai_schema_validation module. Currently validate_openai_schema() works with
         JSON schemas, but this method handles YAML-specific internal format that needs
         to be converted first.
-        
+
         TODO: Extend oai_schema_validation to support YAML format schemas, or create
               a conversion layer that transforms YAML internal format to JSON format
               before validation.

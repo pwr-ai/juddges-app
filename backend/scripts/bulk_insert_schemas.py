@@ -19,30 +19,30 @@ print()
 
 for i, schema in enumerate(schemas, 1):
     # Prepare the INSERT statement with proper escaping
-    text_json = json.dumps(schema['text']).replace("'", "''")
-    dates_json = json.dumps(schema['dates']).replace("'", "''")
-    visual_metadata_json = json.dumps(schema['visual_metadata']).replace("'", "''")
-    description_escaped = schema['description'].replace("'", "''")
+    text_json = json.dumps(schema["text"]).replace("'", "''")
+    dates_json = json.dumps(schema["dates"]).replace("'", "''")
+    visual_metadata_json = json.dumps(schema["visual_metadata"]).replace("'", "''")
+    description_escaped = schema["description"].replace("'", "''")
 
     sql = f"""INSERT INTO extraction_schemas (
     id, name, description, type, category, text, dates,
     created_at, updated_at, user_id, schema_version,
     visual_metadata, last_edited_mode, field_count
 ) VALUES (
-    '{schema['id']}'::uuid,
-    '{schema['name']}',
+    '{schema["id"]}'::uuid,
+    '{schema["name"]}',
     '{description_escaped}',
-    '{schema['type']}',
-    '{schema['category']}',
+    '{schema["type"]}',
+    '{schema["category"]}',
     '{text_json}'::jsonb,
     '{dates_json}'::jsonb,
-    '{schema['created_at']}'::timestamp,
-    '{schema['updated_at']}'::timestamp,
+    '{schema["created_at"]}'::timestamp,
+    '{schema["updated_at"]}'::timestamp,
     NULL,
-    {schema['schema_version']},
+    {schema["schema_version"]},
     '{visual_metadata_json}'::jsonb,
-    '{schema['last_edited_mode']}',
-    {schema['field_count']}
+    '{schema["last_edited_mode"]}',
+    {schema["field_count"]}
 );
 """
     print(sql)

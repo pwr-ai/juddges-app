@@ -30,6 +30,7 @@ def get_redis_client():
     global redis_client
     if redis_client is None:
         import os
+
         redis_host = os.getenv("REDIS_HOST", "localhost")
         redis_port = int(os.getenv("REDIS_PORT", "6379"))
         redis_password = os.getenv("REDIS_AUTH")
@@ -39,9 +40,11 @@ def get_redis_client():
             port=redis_port,
             password=redis_password,
             db=1,  # Use separate DB for sessions
-            decode_responses=True
+            decode_responses=True,
         )
-        logger.info(f"Initialized Redis client for guest sessions: {redis_host}:{redis_port}")
+        logger.info(
+            f"Initialized Redis client for guest sessions: {redis_host}:{redis_port}"
+        )
 
     return redis_client
 
@@ -52,71 +55,58 @@ router = APIRouter(prefix="/api/guest", tags=["Guest Sessions"])
 
 # ===== Models =====
 
+
 class GuestSessionResponse(BaseModel):
     """Response model for guest session creation."""
+
     session_id: str = Field(
         description="Unique session identifier (UUID)",
-        examples=["550e8400-e29b-41d4-a716-446655440000"]
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     expires_at: str = Field(
         description="Session expiration timestamp (ISO 8601)",
-        examples=["2025-10-10T12:00:00Z"]
+        examples=["2025-10-10T12:00:00Z"],
     )
-    message: str = Field(
-        description="Welcome message for guest user"
-    )
+    message: str = Field(description="Welcome message for guest user")
 
 
 class GuestUsageResponse(BaseModel):
     """Response model for guest usage tracking."""
+
     session_id: str = Field(description="Guest session ID")
     searches_used: int = Field(
-        description="Number of searches performed in this session",
-        examples=[3]
+        description="Number of searches performed in this session", examples=[3]
     )
     searches_remaining: int = Field(
-        description="Number of searches remaining (5 max for guests)",
-        examples=[2]
+        description="Number of searches remaining (5 max for guests)", examples=[2]
     )
-    limit_reached: bool = Field(
-        description="Whether the usage limit has been reached"
-    )
-    expires_at: str = Field(
-        description="Session expiration timestamp (ISO 8601)"
-    )
+    limit_reached: bool = Field(description="Whether the usage limit has been reached")
+    expires_at: str = Field(description="Session expiration timestamp (ISO 8601)")
     upgrade_message: Optional[str] = Field(
         default=None,
-        description="Message prompting user to upgrade (shown when limit is close)"
+        description="Message prompting user to upgrade (shown when limit is close)",
     )
 
 
 class ConvertGuestRequest(BaseModel):
     """Request model for converting guest to registered user."""
-    session_id: str = Field(
-        description="Guest session ID to migrate"
-    )
-    user_id: str = Field(
-        description="New registered user ID (from Supabase Auth)"
-    )
-    email: str = Field(
-        description="User email address"
-    )
+
+    session_id: str = Field(description="Guest session ID to migrate")
+    user_id: str = Field(description="New registered user ID (from Supabase Auth)")
+    email: str = Field(description="User email address")
 
 
 class ConvertGuestResponse(BaseModel):
     """Response model for guest conversion."""
+
     status: str = Field(
         description="Conversion status (success, failed, session_not_found)"
     )
-    user_id: str = Field(
-        description="Registered user ID"
-    )
+    user_id: str = Field(description="Registered user ID")
     searches_migrated: int = Field(
         description="Number of searches migrated from guest session"
     )
-    message: str = Field(
-        description="Status message"
-    )
+    message: str = Field(description="Status message")
 
 
 # ===== Constants =====
@@ -128,8 +118,9 @@ UPGRADE_WARNING_THRESHOLD = 2  # Show upgrade message when 2 searches remain
 
 # ===== Helper Functions =====
 
+
 async def get_or_create_guest_session(
-    session_id: Optional[str] = Cookie(None, alias="guest_session_id")
+    session_id: Optional[str] = Cookie(None, alias="guest_session_id"),
 ) -> str:
     """
     Get existing guest session or create a new one.
@@ -189,8 +180,7 @@ async def get_guest_usage(session_id: str) -> dict:
     exists = await client.exists(session_key)
     if not exists:
         raise HTTPException(
-            status_code=404,
-            detail=f"Guest session not found or expired: {session_id}"
+            status_code=404, detail=f"Guest session not found or expired: {session_id}"
         )
 
     # Get session data
@@ -229,12 +219,15 @@ async def increment_guest_search_count(session_id: str) -> bool:
     # Increment search count
     searches_used = await client.hincrby(session_key, "searches_used", 1)
 
-    logger.info(f"Guest session {session_id} used {searches_used}/{GUEST_SEARCH_LIMIT} searches")
+    logger.info(
+        f"Guest session {session_id} used {searches_used}/{GUEST_SEARCH_LIMIT} searches"
+    )
 
     return searches_used <= GUEST_SEARCH_LIMIT
 
 
 # ===== API Endpoints =====
+
 
 @router.post("/session", response_model=GuestSessionResponse)
 async def create_guest_session(response: Response):
@@ -264,20 +257,17 @@ async def create_guest_session(response: Response):
         return GuestSessionResponse(
             session_id=session_id,
             expires_at=expires.isoformat(),
-            message="Guest session created. You have 5 free searches. Register for unlimited access!"
+            message="Guest session created. You have 5 free searches. Register for unlimited access!",
         )
 
     except Exception as e:
         logger.error(f"Failed to create guest session: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to create guest session"
-        )
+        raise HTTPException(status_code=500, detail="Failed to create guest session")
 
 
 @router.get("/usage", response_model=GuestUsageResponse)
 async def get_guest_usage_endpoint(
-    session_id: str = Cookie(None, alias="guest_session_id")
+    session_id: str = Cookie(None, alias="guest_session_id"),
 ):
     """
     Check guest session usage limits.
@@ -293,8 +283,7 @@ async def get_guest_usage_endpoint(
     """
     if not session_id:
         raise HTTPException(
-            status_code=400,
-            detail="No guest session found. Create a session first."
+            status_code=400, detail="No guest session found. Create a session first."
         )
 
     try:
@@ -308,19 +297,13 @@ async def get_guest_usage_endpoint(
                 "Register now for unlimited searches and advanced features!"
             )
 
-        return GuestUsageResponse(
-            **usage,
-            upgrade_message=upgrade_message
-        )
+        return GuestUsageResponse(**usage, upgrade_message=upgrade_message)
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to get guest usage: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve guest usage"
-        )
+        raise HTTPException(status_code=500, detail="Failed to retrieve guest usage")
 
 
 @router.post("/convert", response_model=ConvertGuestResponse)
@@ -348,7 +331,7 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
                 status="session_not_found",
                 user_id=request.user_id,
                 searches_migrated=0,
-                message="Guest session not found or expired. No data to migrate."
+                message="Guest session not found or expired. No data to migrate.",
             )
 
         # Get session data
@@ -374,7 +357,7 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
             status="success",
             user_id=request.user_id,
             searches_migrated=searches_used,
-            message=f"Successfully converted guest to user. Migrated {searches_used} searches."
+            message=f"Successfully converted guest to user. Migrated {searches_used} searches.",
         )
 
     except Exception as e:
@@ -383,14 +366,13 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
             status="failed",
             user_id=request.user_id,
             searches_migrated=0,
-            message=f"Failed to convert guest session: {str(e)}"
+            message=f"Failed to convert guest session: {str(e)}",
         )
 
 
 @router.delete("/session")
 async def delete_guest_session(
-    session_id: str = Cookie(None, alias="guest_session_id"),
-    response: Response = None
+    session_id: str = Cookie(None, alias="guest_session_id"), response: Response = None
 ):
     """
     Delete a guest session.
@@ -406,10 +388,7 @@ async def delete_guest_session(
         Success message
     """
     if not session_id:
-        raise HTTPException(
-            status_code=400,
-            detail="No guest session found"
-        )
+        raise HTTPException(status_code=400, detail="No guest session found")
 
     try:
         client = get_redis_client()
@@ -431,21 +410,19 @@ async def delete_guest_session(
 
         return {
             "status": "success",
-            "message": f"Guest session {session_id} deleted successfully"
+            "message": f"Guest session {session_id} deleted successfully",
         }
 
     except Exception as e:
         logger.error(f"Failed to delete guest session: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to delete guest session"
-        )
+        raise HTTPException(status_code=500, detail="Failed to delete guest session")
 
 
 # ===== Middleware Helper =====
 
+
 async def check_guest_rate_limit(
-    session_id: Optional[str] = Cookie(None, alias="guest_session_id")
+    session_id: Optional[str] = Cookie(None, alias="guest_session_id"),
 ) -> tuple[str, bool]:
     """
     Check if guest has reached rate limit.
@@ -474,8 +451,8 @@ async def check_guest_rate_limit(
                 "error": "Rate limit exceeded",
                 "message": "You've reached the limit of 5 free searches. Please register for unlimited access.",
                 "searches_used": usage["searches_used"],
-                "upgrade_url": "/auth/signup"
-            }
+                "upgrade_url": "/auth/signup",
+            },
         )
 
     return session_id, True

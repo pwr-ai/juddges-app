@@ -130,7 +130,9 @@ class Query:
         pydantic_doc = _convert_supabase_to_legal_document(doc_data)
         return convert_legal_document(pydantic_doc)
 
-    @strawberry.field(description="Get the full text of a document (separate query to avoid large default payloads)")
+    @strawberry.field(
+        description="Get the full text of a document (separate query to avoid large default payloads)"
+    )
     async def document_full_text(self, document_id: str) -> Optional[str]:
         from juddges_search.db.supabase_db import get_vector_db
         from app.models import validate_id_format
@@ -164,7 +166,9 @@ class Query:
         ]
 
     @strawberry.field(description="Search documents by metadata with hybrid search")
-    async def search_documents(self, input: SearchDocumentsInput) -> SearchDocumentsResultType:
+    async def search_documents(
+        self, input: SearchDocumentsInput
+    ) -> SearchDocumentsResultType:
         from app.documents import search_documents as rest_search
         from app.models import SearchChunksRequest
 
@@ -184,19 +188,23 @@ class Query:
         docs = []
         if response.documents:
             for doc in response.documents:
-                docs.append(LegalDocumentMetadataType(
-                    uuid="",
-                    document_id=doc.document_id,
-                    document_type=doc.document_type.value if hasattr(doc.document_type, "value") else str(doc.document_type),
-                    language=getattr(doc, "language", None),
-                    title=getattr(doc, "title", None),
-                    summary=getattr(doc, "summary", None),
-                    court_name=getattr(doc, "court_name", None),
-                    document_number=getattr(doc, "document_number", None),
-                    keywords=getattr(doc, "keywords", None),
-                    date_issued=getattr(doc, "date_issued", None),
-                    score=None,
-                ))
+                docs.append(
+                    LegalDocumentMetadataType(
+                        uuid="",
+                        document_id=doc.document_id,
+                        document_type=doc.document_type.value
+                        if hasattr(doc.document_type, "value")
+                        else str(doc.document_type),
+                        language=getattr(doc, "language", None),
+                        title=getattr(doc, "title", None),
+                        summary=getattr(doc, "summary", None),
+                        court_name=getattr(doc, "court_name", None),
+                        document_number=getattr(doc, "document_number", None),
+                        keywords=getattr(doc, "keywords", None),
+                        date_issued=getattr(doc, "date_issued", None),
+                        score=None,
+                    )
+                )
 
         return SearchDocumentsResultType(
             documents=docs,
@@ -205,7 +213,9 @@ class Query:
             query_time_ms=response.query_time_ms,
         )
 
-    @strawberry.field(description="Search document chunks with hybrid search and pagination")
+    @strawberry.field(
+        description="Search document chunks with hybrid search and pagination"
+    )
     async def search_chunks(self, input: SearchChunksInput) -> SearchChunksResultType:
         from app.documents import search_documents as rest_search
         from app.models import SearchChunksRequest

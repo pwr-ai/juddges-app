@@ -53,26 +53,22 @@ class ErrorDetail(BaseModel):
 
     error: str = Field(
         description="Short error title/type",
-        examples=["Validation Error", "Schema Not Found"]
+        examples=["Validation Error", "Schema Not Found"],
     )
     message: str = Field(
         description="Detailed user-friendly error message",
-        examples=["The provided collection ID is invalid"]
+        examples=["The provided collection ID is invalid"],
     )
     code: ErrorCode = Field(
         description="Machine-readable error code for client handling"
     )
     details: dict[str, Any] | None = Field(
-        default=None,
-        description="Additional context about the error"
+        default=None, description="Additional context about the error"
     )
 
     @classmethod
     def from_exception(
-        cls,
-        exc: Exception,
-        code: ErrorCode,
-        user_message: str | None = None
+        cls, exc: Exception, code: ErrorCode, user_message: str | None = None
     ) -> "ErrorDetail":
         """
         Create error detail from an exception.
@@ -89,7 +85,7 @@ class ErrorDetail(BaseModel):
             error=exc.__class__.__name__,
             message=user_message or str(exc),
             code=code,
-            details={"exception_type": type(exc).__name__}
+            details={"exception_type": type(exc).__name__},
         )
 
 
@@ -101,7 +97,7 @@ class AppException(Exception):
         message: str,
         code: ErrorCode,
         status_code: int = 500,
-        details: dict[str, Any] | None = None
+        details: dict[str, Any] | None = None,
     ) -> None:
         """
         Initialize application exception.
@@ -131,12 +127,13 @@ class AppException(Exception):
                 error=self.__class__.__name__,
                 message=self.message,
                 code=self.code,
-                details=self.details
-            ).model_dump()
+                details=self.details,
+            ).model_dump(),
         )
 
 
 # Specific exception classes for common scenarios
+
 
 class ValidationError(AppException):
     """Raised when request validation fails."""
@@ -146,7 +143,7 @@ class ValidationError(AppException):
             message=message,
             code=ErrorCode.VALIDATION_ERROR,
             status_code=400,
-            details=details
+            details=details,
         )
 
 
@@ -158,7 +155,7 @@ class EmptyCollectionError(AppException):
             message=f"Collection '{collection_id}' contains no documents",
             code=ErrorCode.EMPTY_DOCUMENT_LIST,
             status_code=400,
-            details={"collection_id": collection_id}
+            details={"collection_id": collection_id},
         )
 
 
@@ -170,7 +167,7 @@ class SchemaNotFoundError(AppException):
             message=f"Schema '{schema_id}' not found",
             code=ErrorCode.SCHEMA_NOT_FOUND,
             status_code=404,
-            details={"schema_id": schema_id}
+            details={"schema_id": schema_id},
         )
 
 
@@ -182,54 +179,66 @@ class CollectionNotFoundError(AppException):
             message=f"Collection '{collection_id}' not found",
             code=ErrorCode.COLLECTION_NOT_FOUND,
             status_code=404,
-            details={"collection_id": collection_id}
+            details={"collection_id": collection_id},
         )
 
 
 class DatabaseError(AppException):
     """Raised when database operations fail."""
 
-    def __init__(self, message: str = "Database operation failed", details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "Database operation failed",
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(
             message=message,
             code=ErrorCode.DATABASE_UNAVAILABLE,
             status_code=503,
-            details=details
+            details=details,
         )
 
 
 class VectorDBError(AppException):
     """Raised when vector database operations fail."""
 
-    def __init__(self, message: str = "Vector database operation failed", details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "Vector database operation failed",
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(
             message=message,
             code=ErrorCode.VECTOR_DB_UNAVAILABLE,
             status_code=503,
-            details=details
+            details=details,
         )
 
 
 class TaskSubmissionError(AppException):
     """Raised when task submission to Celery fails."""
 
-    def __init__(self, message: str = "Failed to submit task for processing", details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        message: str = "Failed to submit task for processing",
+        details: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(
             message=message,
             code=ErrorCode.TASK_SUBMISSION_FAILED,
             status_code=503,
-            details=details
+            details=details,
         )
 
 
 class RateLimitError(AppException):
     """Raised when rate limits are exceeded."""
 
-    def __init__(self, message: str = "Rate limit exceeded. Please try again later.") -> None:
+    def __init__(
+        self, message: str = "Rate limit exceeded. Please try again later."
+    ) -> None:
         super().__init__(
-            message=message,
-            code=ErrorCode.RATE_LIMIT_EXCEEDED,
-            status_code=429
+            message=message, code=ErrorCode.RATE_LIMIT_EXCEEDED, status_code=429
         )
 
 
@@ -238,9 +247,7 @@ class GenerationTimeoutError(AppException):
 
     def __init__(self, message: str = "Generation operation timed out") -> None:
         super().__init__(
-            message=message,
-            code=ErrorCode.GENERATION_TIMEOUT,
-            status_code=504
+            message=message, code=ErrorCode.GENERATION_TIMEOUT, status_code=504
         )
 
 
@@ -263,7 +270,9 @@ def handle_errors(func):
         try:
             return await func(*args, **kwargs)
         except AppException as e:
-            logger.error(f"Application error in {func.__name__}: {e.message}", exc_info=True)
+            logger.error(
+                f"Application error in {func.__name__}: {e.message}", exc_info=True
+            )
             raise e.to_http_exception()
         except HTTPException:
             # Re-raise HTTPExceptions as-is
@@ -273,7 +282,7 @@ def handle_errors(func):
             raise AppException(
                 message="An unexpected error occurred",
                 code=ErrorCode.INTERNAL_ERROR,
-                details={"error": str(e)}
+                details={"error": str(e)},
             ).to_http_exception()
 
     return wrapper

@@ -33,9 +33,8 @@ from app.errors import (
     RateLimitError,
     GenerationTimeoutError,
     DatabaseError,
-    VectorDBError,
     AppException,
-    ErrorCode
+    ErrorCode,
 )
 
 router = APIRouter(prefix="/schema-generator", tags=["schema-generator-chat"])
@@ -48,6 +47,7 @@ router = APIRouter(prefix="/schema-generator", tags=["schema-generator-chat"])
 
 class ConversationMessage(BaseModel):
     """Message in conversation history."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     role: str = Field(description="Message role: 'user' or 'assistant'")
@@ -91,6 +91,7 @@ class SchemaChatRequest(BaseModel):
 
 class SchemaChatResponse(BaseModel):
     """Response model matching frontend expectations."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     message: str = Field(description="AI's response message")
@@ -117,9 +118,12 @@ class SchemaChatResponse(BaseModel):
 
 class SchemaTestRequest(BaseModel):
     """Request model for schema testing."""
+
     model_config = ConfigDict(protected_namespaces=())
 
-    schema_definition: dict[str, Any] = Field(description="Schema to test", alias="schema")
+    schema_definition: dict[str, Any] = Field(
+        description="Schema to test", alias="schema"
+    )
     collection_id: str = Field(description="Collection ID to test against")
     document_ids: list[str] = Field(description="Document IDs to test with")
 
@@ -199,15 +203,13 @@ class SimpleSchemaGenerationResponse(BaseModel):
     )
     new_fields: list[str] = Field(
         default_factory=list,
-        description="List of field names that were AI-generated (new)"
+        description="List of field names that were AI-generated (new)",
     )
     existing_field_count: int = Field(
-        default=0,
-        description="Number of preserved existing fields"
+        default=0, description="Number of preserved existing fields"
     )
     new_field_count: int = Field(
-        default=0,
-        description="Number of newly generated fields"
+        default=0, description="Number of newly generated fields"
     )
 
 
@@ -406,7 +408,7 @@ async def schema_chat(
                     raise AppException(
                         message=f"Failed to generate schema: {str(e)}",
                         code=ErrorCode.INTERNAL_ERROR,
-                        status_code=500
+                        status_code=500,
                     ).to_http_exception()
         else:
             # Continuation - use existing session with user feedback
@@ -441,7 +443,7 @@ async def schema_chat(
                     raise AppException(
                         message=f"Failed to refine schema: {str(e)}",
                         code=ErrorCode.INTERNAL_ERROR,
-                        status_code=500
+                        status_code=500,
                     ).to_http_exception()
 
         # Extract response data
@@ -490,7 +492,7 @@ async def schema_chat(
         logger.error(f"Unexpected error in schema chat request: {e}", exc_info=True)
         raise AppException(
             message="An unexpected error occurred. Please try again or contact support if the problem persists.",
-            code=ErrorCode.INTERNAL_ERROR
+            code=ErrorCode.INTERNAL_ERROR,
         ).to_http_exception()
 
 
@@ -533,41 +535,28 @@ async def test_schema(
         failed = 0
         total_time = 0.0
 
-        # Import necessary modules
-        from juddges_search.retrieval.weaviate_search import WeaviateSearchClient
-
-        # Initialize search client with error handling
-        try:
-            search_client = WeaviateSearchClient()
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize WeaviateSearchClient: {e}", exc_info=True
-            )
-            raise VectorDBError(
-                "Vector search service is temporarily unavailable. Please try again later."
-            ).to_http_exception()
+        # Import document fetcher
+        from app.utils.document_fetcher import get_documents_by_id
 
         for doc_id in params.document_ids:
             start_time = datetime.now()
 
             try:
-                # Retrieve document from Weaviate by UUID with null check
+                # Retrieve document from Supabase by ID
                 try:
-                    document = search_client.get_document_by_id(doc_id)
+                    documents = await get_documents_by_id([doc_id])
+                    document = documents[0] if documents else None
                 except Exception as e:
-                    logger.error(f"Weaviate query failed for document {doc_id}: {e}")
+                    logger.error(f"Database query failed for document {doc_id}: {e}")
                     raise ValueError(f"Failed to retrieve document {doc_id}: {str(e)}")
 
                 if not document:
                     raise ValueError(f"Document {doc_id} not found in collection")
 
-                # Safely extract document text with null checks
-                if not hasattr(document, "properties") or document.properties is None:
-                    raise ValueError(
-                        f"Document {doc_id} has invalid structure (missing properties)"
-                    )
-
-                doc_text = document.properties.get("text", "")
+                # Safely extract document text
+                doc_text = getattr(document, "full_text", None) or getattr(
+                    document, "content", ""
+                )
 
                 if not doc_text or not isinstance(doc_text, str):
                     raise ValueError(
@@ -670,7 +659,7 @@ async def test_schema(
         }
 
     except HTTPException:
-        # Re-raise HTTP exceptions (like 503 from WeaviateSearchClient init)
+        # Re-raise HTTP exceptions from inner handlers
         raise
     except AppException as e:
         # Re-raise our standardized exceptions
@@ -678,8 +667,7 @@ async def test_schema(
     except Exception as e:
         logger.error(f"Failed to test schema: {e}", exc_info=True)
         raise AppException(
-            message=f"Failed to test schema: {str(e)}",
-            code=ErrorCode.INTERNAL_ERROR
+            message=f"Failed to test schema: {str(e)}", code=ErrorCode.INTERNAL_ERROR
         ).to_http_exception()
 
 

@@ -26,6 +26,7 @@ router = APIRouter(prefix="/deduplication", tags=["deduplication"])
 
 class DuplicatePair(BaseModel):
     """A pair of documents identified as duplicates."""
+
     document_id_a: str
     document_id_b: str
     title_a: Optional[str] = None
@@ -42,6 +43,7 @@ class DuplicatePair(BaseModel):
 
 class DuplicateGroup(BaseModel):
     """A group of documents that are duplicates of each other."""
+
     group_id: str
     canonical_document_id: str
     duplicate_type: str
@@ -51,6 +53,7 @@ class DuplicateGroup(BaseModel):
 
 class ScanRequest(BaseModel):
     """Request to scan documents for duplicates."""
+
     similarity_threshold: float = Field(
         default=0.95,
         ge=0.5,
@@ -75,6 +78,7 @@ class ScanRequest(BaseModel):
 
 class ScanResponse(BaseModel):
     """Response from a deduplication scan."""
+
     exact_duplicates: List[DuplicatePair]
     near_duplicates: List[DuplicatePair]
     total_documents_scanned: int
@@ -85,6 +89,7 @@ class ScanResponse(BaseModel):
 
 class CheckDocumentRequest(BaseModel):
     """Request to check a single document for duplicates."""
+
     document_id: str = Field(description="Document ID to check")
     similarity_threshold: float = Field(
         default=0.95,
@@ -96,6 +101,7 @@ class CheckDocumentRequest(BaseModel):
 
 class CheckDocumentResponse(BaseModel):
     """Response from checking a document for duplicates."""
+
     document_id: str
     has_exact_duplicate: bool
     has_near_duplicates: bool
@@ -106,6 +112,7 @@ class CheckDocumentResponse(BaseModel):
 
 class DeduplicationStatsResponse(BaseModel):
     """Statistics about duplicates in the database."""
+
     total_documents: int
     documents_with_hash: int
     documents_without_hash: int
@@ -123,9 +130,7 @@ def compute_content_hash(text: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def _cosine_similarity_batch(
-    query_vec: np.ndarray, matrix: np.ndarray
-) -> np.ndarray:
+def _cosine_similarity_batch(query_vec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
     """Compute cosine similarity between a query vector and a matrix of vectors."""
     query_norm = np.linalg.norm(query_vec)
     if query_norm == 0:
@@ -186,7 +191,11 @@ async def get_deduplication_stats() -> DeduplicationStatsResponse:
         )
         duplicate_groups = groups_resp.count or 0
 
-        coverage = (documents_with_hash / total_documents * 100) if total_documents > 0 else 0.0
+        coverage = (
+            (documents_with_hash / total_documents * 100)
+            if total_documents > 0
+            else 0.0
+        )
 
         return DeduplicationStatsResponse(
             total_documents=total_documents,
@@ -235,7 +244,9 @@ async def scan_for_duplicates(request: ScanRequest) -> ScanResponse:
         )
     except Exception:
         # Fallback if content_hash column doesn't exist yet
-        select_fields = "document_id, title, document_type, date_issued, full_text, embedding"
+        select_fields = (
+            "document_id, title, document_type, date_issued, full_text, embedding"
+        )
         response = (
             db.client.table("legal_documents")
             .select(select_fields)
@@ -283,8 +294,12 @@ async def scan_for_duplicates(request: ScanRequest) -> ScanResponse:
                             title_b=group[j].get("title"),
                             document_type_a=group[i].get("document_type"),
                             document_type_b=group[j].get("document_type"),
-                            date_issued_a=str(group[i].get("date_issued", "")) if group[i].get("date_issued") else None,
-                            date_issued_b=str(group[j].get("date_issued", "")) if group[j].get("date_issued") else None,
+                            date_issued_a=str(group[i].get("date_issued", ""))
+                            if group[i].get("date_issued")
+                            else None,
+                            date_issued_b=str(group[j].get("date_issued", ""))
+                            if group[j].get("date_issued")
+                            else None,
                             similarity_score=1.0,
                             duplicate_type="exact",
                             content_hash_a=content_hash,
@@ -347,8 +362,12 @@ async def scan_for_duplicates(request: ScanRequest) -> ScanResponse:
                             title_b=doc_b.get("title"),
                             document_type_a=doc_a.get("document_type"),
                             document_type_b=doc_b.get("document_type"),
-                            date_issued_a=str(doc_a.get("date_issued", "")) if doc_a.get("date_issued") else None,
-                            date_issued_b=str(doc_b.get("date_issued", "")) if doc_b.get("date_issued") else None,
+                            date_issued_a=str(doc_a.get("date_issued", ""))
+                            if doc_a.get("date_issued")
+                            else None,
+                            date_issued_b=str(doc_b.get("date_issued", ""))
+                            if doc_b.get("date_issued")
+                            else None,
                             similarity_score=round(sim, 4),
                             duplicate_type="near_duplicate",
                         )
@@ -419,16 +438,20 @@ async def check_document_duplicates(
                     .limit(200)
                     .execute()
                 )
-                for other_doc in (all_docs_resp.data or []):
+                for other_doc in all_docs_resp.data or []:
                     other_text = other_doc.get("full_text", "")
                     if other_text and compute_content_hash(other_text) == content_hash:
-                        exact_duplicates.append({
-                            "document_id": other_doc["document_id"],
-                            "title": other_doc.get("title"),
-                            "document_type": other_doc.get("document_type"),
-                            "date_issued": str(other_doc.get("date_issued", "")) if other_doc.get("date_issued") else None,
-                            "similarity_score": 1.0,
-                        })
+                        exact_duplicates.append(
+                            {
+                                "document_id": other_doc["document_id"],
+                                "title": other_doc.get("title"),
+                                "document_type": other_doc.get("document_type"),
+                                "date_issued": str(other_doc.get("date_issued", ""))
+                                if other_doc.get("date_issued")
+                                else None,
+                                "similarity_score": 1.0,
+                            }
+                        )
             except Exception as e:
                 logger.warning(f"Error checking text-based duplicates: {e}")
 
@@ -459,8 +482,12 @@ async def check_document_duplicates(
                             title_b=result.get("title"),
                             document_type_a=doc_data.get("document_type"),
                             document_type_b=result.get("document_type"),
-                            date_issued_a=str(doc_data.get("date_issued", "")) if doc_data.get("date_issued") else None,
-                            date_issued_b=str(result.get("date_issued", "")) if result.get("date_issued") else None,
+                            date_issued_a=str(doc_data.get("date_issued", ""))
+                            if doc_data.get("date_issued")
+                            else None,
+                            date_issued_b=str(result.get("date_issued", ""))
+                            if result.get("date_issued")
+                            else None,
                             similarity_score=round(sim_score, 4),
                             duplicate_type="near_duplicate",
                         )
@@ -522,12 +549,12 @@ async def compute_hashes(
         try:
             db.client.table("legal_documents").update(
                 {"content_hash": content_hash}
-            ).eq(
-                "supabase_document_id", doc["supabase_document_id"]
-            ).execute()
+            ).eq("supabase_document_id", doc["supabase_document_id"]).execute()
             updated += 1
         except Exception as e:
-            logger.warning(f"Error updating hash for document {doc['document_id']}: {e}")
+            logger.warning(
+                f"Error updating hash for document {doc['document_id']}: {e}"
+            )
             errors += 1
 
     return {

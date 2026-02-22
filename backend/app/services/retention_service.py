@@ -93,7 +93,7 @@ class RetentionService:
             return {
                 "status": "success",
                 "archived_count": archived_count,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:
@@ -101,7 +101,7 @@ class RetentionService:
             return {
                 "status": "failed",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
     @staticmethod
@@ -129,33 +129,61 @@ class RetentionService:
             export_data = {
                 "user_id": user_id,
                 "export_date": datetime.utcnow().isoformat(),
-                "format": format
+                "format": format,
             }
 
             # Export user consent
-            consent_result = client.table("user_consent").select("*").eq("user_id", user_id).execute()
+            consent_result = (
+                client.table("user_consent")
+                .select("*")
+                .eq("user_id", user_id)
+                .execute()
+            )
             export_data["consent"] = consent_result.data
 
             # Export audit logs (last 2 years for performance)
             two_years_ago = datetime.utcnow() - timedelta(days=730)
-            audit_result = client.table("audit_logs").select(
-                "id, action_type, created_at, resource_type, resource_id, session_id"
-            ).eq("user_id", user_id).gte("created_at", two_years_ago.isoformat()).execute()
+            audit_result = (
+                client.table("audit_logs")
+                .select(
+                    "id, action_type, created_at, resource_type, resource_id, session_id"
+                )
+                .eq("user_id", user_id)
+                .gte("created_at", two_years_ago.isoformat())
+                .execute()
+            )
             export_data["audit_logs"] = audit_result.data
 
             # Export analytics events
-            events_result = client.table("events").select("*").eq("user_id", user_id).execute()
+            events_result = (
+                client.table("events").select("*").eq("user_id", user_id).execute()
+            )
             export_data["events"] = events_result.data
 
             # Export search queries
-            search_result = client.table("search_queries").select("*").eq("user_id", user_id).execute()
+            search_result = (
+                client.table("search_queries")
+                .select("*")
+                .eq("user_id", user_id)
+                .execute()
+            )
             export_data["search_queries"] = search_result.data
 
             # Export feedback
-            feedback_result = client.table("search_feedback").select("*").eq("user_id", user_id).execute()
+            feedback_result = (
+                client.table("search_feedback")
+                .select("*")
+                .eq("user_id", user_id)
+                .execute()
+            )
             export_data["feedback"] = feedback_result.data
 
-            feature_feedback_result = client.table("feature_requests").select("*").eq("user_id", user_id).execute()
+            feature_feedback_result = (
+                client.table("feature_requests")
+                .select("*")
+                .eq("user_id", user_id)
+                .execute()
+            )
             export_data["feature_requests"] = feature_feedback_result.data
 
             logger.info(f"Exported user data for user {user_id} (format: {format})")
@@ -163,7 +191,7 @@ class RetentionService:
             return {
                 "status": "success",
                 "data": export_data,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:
@@ -175,7 +203,7 @@ class RetentionService:
         user_id: str,
         request_type: str = "full_deletion",
         data_types: Optional[List[str]] = None,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a data deletion request (GDPR right to erasure).
@@ -198,8 +226,11 @@ class RetentionService:
             # Default to all data types for full deletion
             if request_type == "full_deletion" and not data_types:
                 data_types = [
-                    "audit_logs", "analytics", "feedback",
-                    "search_queries", "user_consent"
+                    "audit_logs",
+                    "analytics",
+                    "feedback",
+                    "search_queries",
+                    "user_consent",
                 ]
 
             # Create deletion request
@@ -209,10 +240,14 @@ class RetentionService:
                 "data_types": data_types or [],
                 "reason": reason,
                 "status": "pending",
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
 
-            result = client.table("data_deletion_requests").insert(deletion_request).execute()
+            result = (
+                client.table("data_deletion_requests")
+                .insert(deletion_request)
+                .execute()
+            )
 
             if result.data:
                 request_id = result.data[0].get("id")
@@ -226,17 +261,18 @@ class RetentionService:
                     "request_id": request_id,
                     "message": "Data deletion request created. It will be processed within 30 days as required by GDPR.",
                     "request_details": result.data[0],
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
 
         except Exception as e:
-            logger.error(f"Failed to create data deletion request for user {user_id}: {e}")
+            logger.error(
+                f"Failed to create data deletion request for user {user_id}: {e}"
+            )
             raise
 
     @staticmethod
     async def process_deletion_request(
-        request_id: str,
-        processed_by: str
+        request_id: str, processed_by: str
     ) -> Dict[str, Any]:
         """
         Process a data deletion request (admin only).
@@ -254,9 +290,12 @@ class RetentionService:
             client = get_admin_supabase_client()
 
             # Get the deletion request
-            request_result = client.table("data_deletion_requests").select("*").eq(
-                "id", request_id
-            ).execute()
+            request_result = (
+                client.table("data_deletion_requests")
+                .select("*")
+                .eq("id", request_id)
+                .execute()
+            )
 
             if not request_result.data:
                 raise ValueError(f"Deletion request {request_id} not found")
@@ -267,11 +306,13 @@ class RetentionService:
             data_types = request["data_types"]
 
             # Update request status
-            client.table("data_deletion_requests").update({
-                "status": "in_progress",
-                "started_at": datetime.utcnow().isoformat(),
-                "processed_by": processed_by
-            }).eq("id", request_id).execute()
+            client.table("data_deletion_requests").update(
+                {
+                    "status": "in_progress",
+                    "started_at": datetime.utcnow().isoformat(),
+                    "processed_by": processed_by,
+                }
+            ).eq("id", request_id).execute()
 
             deletion_summary = {}
 
@@ -279,21 +320,27 @@ class RetentionService:
             if request_type == "anonymization":
                 # Anonymize user data instead of deleting
                 for data_type in data_types:
-                    count = await RetentionService._anonymize_data(client, user_id, data_type)
+                    count = await RetentionService._anonymize_data(
+                        client, user_id, data_type
+                    )
                     deletion_summary[data_type] = f"anonymized {count} records"
 
             else:
                 # Delete data (full or partial)
                 for data_type in data_types:
-                    count = await RetentionService._delete_data(client, user_id, data_type)
+                    count = await RetentionService._delete_data(
+                        client, user_id, data_type
+                    )
                     deletion_summary[data_type] = f"deleted {count} records"
 
             # Update request as completed
-            client.table("data_deletion_requests").update({
-                "status": "completed",
-                "completed_at": datetime.utcnow().isoformat(),
-                "deletion_summary": deletion_summary
-            }).eq("id", request_id).execute()
+            client.table("data_deletion_requests").update(
+                {
+                    "status": "completed",
+                    "completed_at": datetime.utcnow().isoformat(),
+                    "deletion_summary": deletion_summary,
+                }
+            ).eq("id", request_id).execute()
 
             logger.info(
                 f"Processed deletion request {request_id} for user {user_id} "
@@ -304,7 +351,7 @@ class RetentionService:
                 "status": "success",
                 "request_id": request_id,
                 "deletion_summary": deletion_summary,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:
@@ -312,10 +359,9 @@ class RetentionService:
 
             # Update request as failed
             try:
-                client.table("data_deletion_requests").update({
-                    "status": "failed",
-                    "error_message": str(e)
-                }).eq("id", request_id).execute()
+                client.table("data_deletion_requests").update(
+                    {"status": "failed", "error_message": str(e)}
+                ).eq("id", request_id).execute()
             except Exception:
                 pass
 
@@ -339,7 +385,7 @@ class RetentionService:
             "analytics": "events",
             "feedback": ["search_feedback", "feature_requests"],
             "search_queries": "search_queries",
-            "user_consent": "user_consent"
+            "user_consent": "user_consent",
         }
 
         table_names = table_mapping.get(data_type)
@@ -379,7 +425,7 @@ class RetentionService:
             "audit_logs": "audit_logs",
             "analytics": "events",
             "feedback": ["search_feedback", "feature_requests"],
-            "search_queries": "search_queries"
+            "search_queries": "search_queries",
         }
 
         table_names = table_mapping.get(data_type)
@@ -392,13 +438,18 @@ class RetentionService:
 
         total_anonymized = 0
         for table_name in table_names:
-            result = client.table(table_name).update({
-                "user_id": anonymized_id
-            }).eq("user_id", user_id).execute()
+            result = (
+                client.table(table_name)
+                .update({"user_id": anonymized_id})
+                .eq("user_id", user_id)
+                .execute()
+            )
 
             count = len(result.data) if result.data else 0
             total_anonymized += count
-            logger.info(f"Anonymized {count} records in {table_name} for user {user_id}")
+            logger.info(
+                f"Anonymized {count} records in {table_name} for user {user_id}"
+            )
 
         return total_anonymized
 

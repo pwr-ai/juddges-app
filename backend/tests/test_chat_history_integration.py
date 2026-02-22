@@ -7,12 +7,10 @@ and that the LLM response incorporates information from the first message in a
 
 To run this test, you need to set the following environment variables:
 - OPENAI_API_KEY: Your OpenAI API key
-- WEAVIATE_URL: URL to your Weaviate instance
 - BACKEND_API_KEY: API key for backend authentication (optional for tests)
 
 Example:
     export OPENAI_API_KEY="your-key-here"
-    export WEAVIATE_URL="http://localhost:8080"
     poetry run pytest tests/test_chat_history_integration.py -v -m integration
 """
 
@@ -191,8 +189,8 @@ async def test_chat_with_4_message_history_uses_first_message_mock(mock_chat_cha
 # Real integration tests that require external services
 @pytest.mark.integration
 @pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY") or not os.getenv("WEAVIATE_URL"),
-    reason="Integration test requires OPENAI_API_KEY and WEAVIATE_URL environment variables",
+    not os.getenv("OPENAI_API_KEY"),
+    reason="Integration test requires OPENAI_API_KEY environment variable",
 )
 @pytest.mark.asyncio
 async def test_chat_with_4_message_history_uses_first_message():

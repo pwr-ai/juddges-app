@@ -27,9 +27,9 @@ UK_COURT_PATTERNS = [
     r"Chancery\s+Division",
     r"Administrative\s+Court",
     r"EWCA\s+Crim",  # England and Wales Court of Appeal Criminal
-    r"EWCA\s+Civ",   # England and Wales Court of Appeal Civil
-    r"EWHC",         # England and Wales High Court
-    r"UKSC",         # UK Supreme Court
+    r"EWCA\s+Civ",  # England and Wales Court of Appeal Civil
+    r"EWHC",  # England and Wales High Court
+    r"UKSC",  # UK Supreme Court
 ]
 
 US_COURT_PATTERNS = [
@@ -40,8 +40,8 @@ US_COURT_PATTERNS = [
     r"Federal\s+Court",
     r"State\s+Supreme\s+Court",
     r"Superior\s+Court",
-    r"F\.?\s*2d",     # Federal Reporter 2nd
-    r"F\.?\s*3d",     # Federal Reporter 3rd
+    r"F\.?\s*2d",  # Federal Reporter 2nd
+    r"F\.?\s*3d",  # Federal Reporter 3rd
     r"U\.?S\.?\s+\d+",  # US Reports citation
 ]
 
@@ -57,27 +57,27 @@ PL_COURT_PATTERNS = [
     r"SA\s+[IVXLCDM]+",  # Appellate Court case number
     r"SO\s+[IVXLCDM]+",  # District Court case number
     r"SR\s+[IVXLCDM]+",  # Regional Court case number
-    r"NSA",              # Supreme Administrative Court
-    r"WSA",              # Voivodeship Administrative Court
-    r"KIO",              # National Appeals Chamber
+    r"NSA",  # Supreme Administrative Court
+    r"WSA",  # Voivodeship Administrative Court
+    r"KIO",  # National Appeals Chamber
 ]
 
 # Citation format patterns
 UK_CITATION_PATTERNS = [
     r"\[\d{4}\]\s+EWCA\s+Crim\s+\d+",  # [2024] EWCA Crim 123
-    r"\[\d{4}\]\s+UKSC\s+\d+",         # [2024] UKSC 1
-    r"\[\d{4}\]\s+EWHC\s+\d+",         # [2024] EWHC 456
-    r"\[\d{4}\]\s+\d+\s+Cr\s+App\s+R", # Criminal Appeal Reports
-    r"\[\d{4}\]\s+\d+\s+WLR",          # Weekly Law Reports
-    r"\[\d{4}\]\s+\d+\s+All\s+ER",     # All England Law Reports
+    r"\[\d{4}\]\s+UKSC\s+\d+",  # [2024] UKSC 1
+    r"\[\d{4}\]\s+EWHC\s+\d+",  # [2024] EWHC 456
+    r"\[\d{4}\]\s+\d+\s+Cr\s+App\s+R",  # Criminal Appeal Reports
+    r"\[\d{4}\]\s+\d+\s+WLR",  # Weekly Law Reports
+    r"\[\d{4}\]\s+\d+\s+All\s+ER",  # All England Law Reports
 ]
 
 PL_CITATION_PATTERNS = [
     r"[IVXLCDM]+\s+[A-Z]{2,3}\s+\d+/\d+",  # II AKa 123/24
-    r"[IVXLCDM]+\s+K\s+\d+/\d+",           # II K 123/24
-    r"[IVXLCDM]+\s+SA\s+\d+/\d+",          # II SA 123/24
-    r"sygn\.\s+akt",                        # "sygn. akt" (case reference)
-    r"Dz\.?\s*U\.?",                        # Dziennik Ustaw (Journal of Laws)
+    r"[IVXLCDM]+\s+K\s+\d+/\d+",  # II K 123/24
+    r"[IVXLCDM]+\s+SA\s+\d+/\d+",  # II SA 123/24
+    r"sygn\.\s+akt",  # "sygn. akt" (case reference)
+    r"Dz\.?\s*U\.?",  # Dziennik Ustaw (Journal of Laws)
 ]
 
 
@@ -138,11 +138,22 @@ def detect_jurisdiction(
 
     # Check for Polish-specific legal terms
     polish_terms = [
-        "oskarżony", "oskarżona", "skazany", "skazana",
-        "wyrok", "postanowienie", "uzasadnienie",
-        "apelacja", "kasacja", "zażalenie",
-        "prokurator", "obrońca", "pełnomocnik",
-        "kodeks karny", "k.k.", "k.p.k.",
+        "oskarżony",
+        "oskarżona",
+        "skazany",
+        "skazana",
+        "wyrok",
+        "postanowienie",
+        "uzasadnienie",
+        "apelacja",
+        "kasacja",
+        "zażalenie",
+        "prokurator",
+        "obrońca",
+        "pełnomocnik",
+        "kodeks karny",
+        "k.k.",
+        "k.p.k.",
     ]
     for term in polish_terms:
         if term.lower() in text_to_check.lower():
@@ -150,11 +161,19 @@ def detect_jurisdiction(
 
     # Check for UK-specific legal terms
     uk_terms = [
-        "defendant", "appellant", "respondent",
-        "crown court", "magistrates",
-        "barrister", "solicitor", "qc", "kc",
-        "criminal appeal act", "sentencing council",
-        "guilty plea", "not guilty",
+        "defendant",
+        "appellant",
+        "respondent",
+        "crown court",
+        "magistrates",
+        "barrister",
+        "solicitor",
+        "qc",
+        "kc",
+        "criminal appeal act",
+        "sentencing council",
+        "guilty plea",
+        "not guilty",
     ]
     for term in uk_terms:
         if term.lower() in text_to_check.lower():

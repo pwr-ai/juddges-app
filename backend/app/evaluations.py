@@ -4,6 +4,7 @@ Evaluation API endpoints for rating extraction quality.
 This module provides endpoints for creating and managing extraction evaluations,
 which form the ground truth dataset for measuring schema accuracy.
 """
+
 from datetime import datetime
 from typing import Any, Literal, Optional
 
@@ -21,20 +22,29 @@ supabase = get_supabase_client()
 
 # ==================== Request/Response Models ====================
 
+
 class FieldEvaluation(BaseModel):
     """Evaluation of a single extracted field."""
+
     field_path: str = Field(description="Dot-notation path (e.g., 'parties.0.name')")
     field_name: str = Field(description="Display name of the field")
     is_correct: bool = Field(description="Whether the extracted value is correct")
-    extracted_value: Optional[Any] = Field(default=None, description="The value that was extracted")
+    extracted_value: Optional[Any] = Field(
+        default=None, description="The value that was extracted"
+    )
     evaluator_notes: Optional[str] = Field(default=None, max_length=500)
 
 
 class CreateEvaluationRequest(BaseModel):
     """Request to create an extraction evaluation."""
-    schema_version_id: str = Field(description="UUID of the schema version being evaluated")
-    document_id: str = Field(description="Weaviate document ID")
-    playground_run_id: Optional[str] = Field(default=None, description="Optional link to playground test run")
+
+    schema_version_id: str = Field(
+        description="UUID of the schema version being evaluated"
+    )
+    document_id: str = Field(description="Document ID")
+    playground_run_id: Optional[str] = Field(
+        default=None, description="Optional link to playground test run"
+    )
 
     overall_rating: Literal["correct", "incorrect"] = Field(
         description="Overall extraction quality rating"
@@ -42,17 +52,17 @@ class CreateEvaluationRequest(BaseModel):
     overall_notes: Optional[str] = Field(default=None, max_length=2000)
 
     field_evaluations: list[FieldEvaluation] = Field(
-        default_factory=list,
-        description="Field-level evaluations"
+        default_factory=list, description="Field-level evaluations"
     )
     extracted_data: dict[str, Any] = Field(
         default_factory=dict,
-        description="Snapshot of extracted data at evaluation time"
+        description="Snapshot of extracted data at evaluation time",
     )
 
 
 class UpdateEvaluationRequest(BaseModel):
     """Request to update an existing evaluation."""
+
     overall_rating: Optional[Literal["correct", "incorrect"]] = None
     overall_notes: Optional[str] = None
     field_evaluations: Optional[list[FieldEvaluation]] = None
@@ -60,6 +70,7 @@ class UpdateEvaluationRequest(BaseModel):
 
 class EvaluationResponse(BaseModel):
     """Response containing evaluation details."""
+
     id: str
     schema_version_id: str
     document_id: str
@@ -75,17 +86,23 @@ class EvaluationResponse(BaseModel):
 
 class AccuracyStats(BaseModel):
     """Accuracy statistics for evaluations."""
+
     total_evaluations: int
     correct_count: int
     incorrect_count: int
-    accuracy_rate: float = Field(description="Percentage of correct evaluations (0-100)")
+    accuracy_rate: float = Field(
+        description="Percentage of correct evaluations (0-100)"
+    )
     total_fields_evaluated: int
     correct_fields: int
-    field_accuracy_rate: float = Field(description="Percentage of correct fields (0-100)")
+    field_accuracy_rate: float = Field(
+        description="Percentage of correct fields (0-100)"
+    )
 
 
 class SchemaEvaluationsResponse(BaseModel):
     """Response containing evaluations for a schema with stats."""
+
     schema_id: str
     schema_version_id: Optional[str]
     stats: AccuracyStats
@@ -97,15 +114,19 @@ class SchemaEvaluationsResponse(BaseModel):
 
 # ==================== Helper Functions ====================
 
+
 def _get_field_evaluations(evaluation_id: str) -> list[FieldEvaluation]:
     """Fetch field evaluations for an evaluation."""
     if not supabase:
         return []
 
     try:
-        response = supabase.table("extraction_field_evaluations").select("*").eq(
-            "evaluation_id", evaluation_id
-        ).execute()
+        response = (
+            supabase.table("extraction_field_evaluations")
+            .select("*")
+            .eq("evaluation_id", evaluation_id)
+            .execute()
+        )
 
         if not response.data:
             return []
@@ -126,8 +147,7 @@ def _get_field_evaluations(evaluation_id: str) -> list[FieldEvaluation]:
 
 
 def _save_field_evaluations(
-    evaluation_id: str,
-    field_evaluations: list[FieldEvaluation]
+    evaluation_id: str, field_evaluations: list[FieldEvaluation]
 ) -> None:
     """Save field evaluations to database."""
     if not supabase or not field_evaluations:
@@ -175,8 +195,7 @@ def _calculate_accuracy_stats(schema_version_id: str) -> AccuracyStats:
     try:
         # Try to use the database function
         result = supabase.rpc(
-            "get_schema_version_accuracy",
-            {"p_schema_version_id": schema_version_id}
+            "get_schema_version_accuracy", {"p_schema_version_id": schema_version_id}
         ).execute()
 
         if result.data and len(result.data) > 0:
@@ -196,9 +215,12 @@ def _calculate_accuracy_stats(schema_version_id: str) -> AccuracyStats:
     # Fallback: calculate manually
     try:
         # Get evaluation counts
-        evals = supabase.table("extraction_evaluations").select(
-            "id, overall_rating"
-        ).eq("schema_version_id", schema_version_id).execute()
+        evals = (
+            supabase.table("extraction_evaluations")
+            .select("id, overall_rating")
+            .eq("schema_version_id", schema_version_id)
+            .execute()
+        )
 
         if not evals.data:
             return AccuracyStats(
@@ -217,9 +239,12 @@ def _calculate_accuracy_stats(schema_version_id: str) -> AccuracyStats:
 
         # Get field evaluation counts
         eval_ids = [e["id"] for e in evals.data]
-        field_evals = supabase.table("extraction_field_evaluations").select(
-            "is_correct"
-        ).in_("evaluation_id", eval_ids).execute()
+        field_evals = (
+            supabase.table("extraction_field_evaluations")
+            .select("is_correct")
+            .in_("evaluation_id", eval_ids)
+            .execute()
+        )
 
         total_fields = len(field_evals.data) if field_evals.data else 0
         correct_fields = sum(1 for f in (field_evals.data or []) if f["is_correct"])
@@ -231,7 +256,9 @@ def _calculate_accuracy_stats(schema_version_id: str) -> AccuracyStats:
             accuracy_rate=round(correct * 100.0 / total, 2) if total > 0 else 0.0,
             total_fields_evaluated=total_fields,
             correct_fields=correct_fields,
-            field_accuracy_rate=round(correct_fields * 100.0 / total_fields, 2) if total_fields > 0 else 0.0,
+            field_accuracy_rate=round(correct_fields * 100.0 / total_fields, 2)
+            if total_fields > 0
+            else 0.0,
         )
     except Exception as e:
         logger.error(f"Failed to calculate accuracy stats: {e}")
@@ -247,6 +274,7 @@ def _calculate_accuracy_stats(schema_version_id: str) -> AccuracyStats:
 
 
 # ==================== API Endpoints ====================
+
 
 @router.post(
     "",
@@ -277,14 +305,18 @@ async def create_evaluation(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
         # Check if evaluation already exists
-        existing = supabase.table("extraction_evaluations").select("id").eq(
-            "schema_version_id", request.schema_version_id
-        ).eq("document_id", request.document_id).execute()
+        existing = (
+            supabase.table("extraction_evaluations")
+            .select("id")
+            .eq("schema_version_id", request.schema_version_id)
+            .eq("document_id", request.document_id)
+            .execute()
+        )
 
         if existing.data:
             raise HTTPException(
@@ -293,28 +325,34 @@ async def create_evaluation(
                     "error": "Evaluation Exists",
                     "message": "An evaluation already exists for this schema version and document. Use PUT to update it.",
                     "code": "EVALUATION_EXISTS",
-                    "existing_id": existing.data[0]["id"]
-                }
+                    "existing_id": existing.data[0]["id"],
+                },
             )
 
         # Create evaluation
         now = datetime.utcnow().isoformat()
-        result = supabase.table("extraction_evaluations").insert({
-            "schema_version_id": request.schema_version_id,
-            "document_id": request.document_id,
-            "playground_run_id": request.playground_run_id,
-            "overall_rating": request.overall_rating,
-            "overall_notes": request.overall_notes,
-            "extracted_data": request.extracted_data,
-            "evaluator_user_id": x_user_id,
-            "created_at": now,
-            "updated_at": now,
-        }).execute()
+        result = (
+            supabase.table("extraction_evaluations")
+            .insert(
+                {
+                    "schema_version_id": request.schema_version_id,
+                    "document_id": request.document_id,
+                    "playground_run_id": request.playground_run_id,
+                    "overall_rating": request.overall_rating,
+                    "overall_notes": request.overall_notes,
+                    "extracted_data": request.extracted_data,
+                    "evaluator_user_id": x_user_id,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
+            .execute()
+        )
 
         if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create evaluation"
+                detail="Failed to create evaluation",
             )
 
         evaluation = result.data[0]
@@ -349,7 +387,7 @@ async def create_evaluation(
         logger.error(f"Failed to create evaluation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create evaluation: {str(e)}"
+            detail=f"Failed to create evaluation: {str(e)}",
         )
 
 
@@ -367,18 +405,22 @@ async def get_evaluation(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
-        result = supabase.table("extraction_evaluations").select("*").eq(
-            "id", evaluation_id
-        ).single().execute()
+        result = (
+            supabase.table("extraction_evaluations")
+            .select("*")
+            .eq("id", evaluation_id)
+            .single()
+            .execute()
+        )
 
         if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Evaluation '{evaluation_id}' not found"
+                detail=f"Evaluation '{evaluation_id}' not found",
             )
 
         evaluation = result.data
@@ -403,7 +445,7 @@ async def get_evaluation(
         logger.error(f"Failed to get evaluation {evaluation_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get evaluation: {str(e)}"
+            detail=f"Failed to get evaluation: {str(e)}",
         )
 
 
@@ -426,19 +468,23 @@ async def update_evaluation(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
         # Check evaluation exists and user has access
-        existing = supabase.table("extraction_evaluations").select("*").eq(
-            "id", evaluation_id
-        ).single().execute()
+        existing = (
+            supabase.table("extraction_evaluations")
+            .select("*")
+            .eq("id", evaluation_id)
+            .single()
+            .execute()
+        )
 
         if not existing.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Evaluation '{evaluation_id}' not found"
+                detail=f"Evaluation '{evaluation_id}' not found",
             )
 
         # Build update data
@@ -450,14 +496,17 @@ async def update_evaluation(
             update_data["overall_notes"] = request.overall_notes
 
         # Update main evaluation
-        result = supabase.table("extraction_evaluations").update(
-            update_data
-        ).eq("id", evaluation_id).execute()
+        result = (
+            supabase.table("extraction_evaluations")
+            .update(update_data)
+            .eq("id", evaluation_id)
+            .execute()
+        )
 
         if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update evaluation"
+                detail="Failed to update evaluation",
             )
 
         # Update field evaluations if provided
@@ -492,7 +541,7 @@ async def update_evaluation(
         logger.error(f"Failed to update evaluation {evaluation_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update evaluation: {str(e)}"
+            detail=f"Failed to update evaluation: {str(e)}",
         )
 
 
@@ -510,19 +559,23 @@ async def delete_evaluation(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
         # Check evaluation exists
-        existing = supabase.table("extraction_evaluations").select("id").eq(
-            "id", evaluation_id
-        ).single().execute()
+        existing = (
+            supabase.table("extraction_evaluations")
+            .select("id")
+            .eq("id", evaluation_id)
+            .single()
+            .execute()
+        )
 
         if not existing.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Evaluation '{evaluation_id}' not found"
+                detail=f"Evaluation '{evaluation_id}' not found",
             )
 
         # Delete (cascade will handle field evaluations)
@@ -537,7 +590,7 @@ async def delete_evaluation(
         logger.error(f"Failed to delete evaluation {evaluation_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete evaluation: {str(e)}"
+            detail=f"Failed to delete evaluation: {str(e)}",
         )
 
 
@@ -549,7 +602,9 @@ async def delete_evaluation(
 )
 async def get_schema_evaluations(
     schema_id: str,
-    schema_version_id: Optional[str] = Query(None, description="Filter by specific version"),
+    schema_version_id: Optional[str] = Query(
+        None, description="Filter by specific version"
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     x_user_id: str = Header(..., alias="X-User-ID"),
@@ -563,7 +618,7 @@ async def get_schema_evaluations(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
@@ -571,9 +626,12 @@ async def get_schema_evaluations(
         if schema_version_id:
             version_ids = [schema_version_id]
         else:
-            versions = supabase.table("schema_versions").select("id").eq(
-                "schema_id", schema_id
-            ).execute()
+            versions = (
+                supabase.table("schema_versions")
+                .select("id")
+                .eq("schema_id", schema_id)
+                .execute()
+            )
             version_ids = [v["id"] for v in (versions.data or [])]
 
         if not version_ids:
@@ -596,9 +654,11 @@ async def get_schema_evaluations(
             )
 
         # Get evaluations with pagination
-        query = supabase.table("extraction_evaluations").select(
-            "*", count="exact"
-        ).in_("schema_version_id", version_ids)
+        query = (
+            supabase.table("extraction_evaluations")
+            .select("*", count="exact")
+            .in_("schema_version_id", version_ids)
+        )
 
         # Get total count
         count_result = query.execute()
@@ -606,37 +666,52 @@ async def get_schema_evaluations(
 
         # Get paginated results
         offset = (page - 1) * page_size
-        result = supabase.table("extraction_evaluations").select("*").in_(
-            "schema_version_id", version_ids
-        ).order("created_at", desc=True).range(offset, offset + page_size - 1).execute()
+        result = (
+            supabase.table("extraction_evaluations")
+            .select("*")
+            .in_("schema_version_id", version_ids)
+            .order("created_at", desc=True)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
 
         evaluations = []
-        for eval_data in (result.data or []):
+        for eval_data in result.data or []:
             field_evals = _get_field_evaluations(eval_data["id"])
-            evaluations.append(EvaluationResponse(
-                id=eval_data["id"],
-                schema_version_id=eval_data["schema_version_id"],
-                document_id=eval_data["document_id"],
-                playground_run_id=eval_data.get("playground_run_id"),
-                overall_rating=eval_data["overall_rating"],
-                overall_notes=eval_data.get("overall_notes"),
-                extracted_data=eval_data.get("extracted_data", {}),
-                evaluator_user_id=eval_data.get("evaluator_user_id"),
-                created_at=eval_data["created_at"],
-                updated_at=eval_data["updated_at"],
-                field_evaluations=field_evals,
-            ))
+            evaluations.append(
+                EvaluationResponse(
+                    id=eval_data["id"],
+                    schema_version_id=eval_data["schema_version_id"],
+                    document_id=eval_data["document_id"],
+                    playground_run_id=eval_data.get("playground_run_id"),
+                    overall_rating=eval_data["overall_rating"],
+                    overall_notes=eval_data.get("overall_notes"),
+                    extracted_data=eval_data.get("extracted_data", {}),
+                    evaluator_user_id=eval_data.get("evaluator_user_id"),
+                    created_at=eval_data["created_at"],
+                    updated_at=eval_data["updated_at"],
+                    field_evaluations=field_evals,
+                )
+            )
 
         # Calculate stats (use first version_id if filtering by version, otherwise aggregate)
-        stats_version_id = schema_version_id if schema_version_id else (version_ids[0] if version_ids else None)
-        stats = _calculate_accuracy_stats(stats_version_id) if stats_version_id else AccuracyStats(
-            total_evaluations=0,
-            correct_count=0,
-            incorrect_count=0,
-            accuracy_rate=0.0,
-            total_fields_evaluated=0,
-            correct_fields=0,
-            field_accuracy_rate=0.0,
+        stats_version_id = (
+            schema_version_id
+            if schema_version_id
+            else (version_ids[0] if version_ids else None)
+        )
+        stats = (
+            _calculate_accuracy_stats(stats_version_id)
+            if stats_version_id
+            else AccuracyStats(
+                total_evaluations=0,
+                correct_count=0,
+                incorrect_count=0,
+                accuracy_rate=0.0,
+                total_fields_evaluated=0,
+                correct_fields=0,
+                field_accuracy_rate=0.0,
+            )
         )
 
         return SchemaEvaluationsResponse(
@@ -654,7 +729,7 @@ async def get_schema_evaluations(
         logger.error(f"Failed to get schema evaluations: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get evaluations: {str(e)}"
+            detail=f"Failed to get evaluations: {str(e)}",
         )
 
 
@@ -677,19 +752,24 @@ async def get_document_evaluations(
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
-        query = supabase.table("extraction_evaluations").select("*").eq(
-            "document_id", document_id
+        query = (
+            supabase.table("extraction_evaluations")
+            .select("*")
+            .eq("document_id", document_id)
         )
 
         if schema_id:
             # Get version IDs for the schema
-            versions = supabase.table("schema_versions").select("id").eq(
-                "schema_id", schema_id
-            ).execute()
+            versions = (
+                supabase.table("schema_versions")
+                .select("id")
+                .eq("schema_id", schema_id)
+                .execute()
+            )
             version_ids = [v["id"] for v in (versions.data or [])]
             if version_ids:
                 query = query.in_("schema_version_id", version_ids)
@@ -697,28 +777,30 @@ async def get_document_evaluations(
         result = query.order("created_at", desc=True).execute()
 
         evaluations = []
-        for eval_data in (result.data or []):
+        for eval_data in result.data or []:
             field_evals = _get_field_evaluations(eval_data["id"])
-            evaluations.append(EvaluationResponse(
-                id=eval_data["id"],
-                schema_version_id=eval_data["schema_version_id"],
-                document_id=eval_data["document_id"],
-                playground_run_id=eval_data.get("playground_run_id"),
-                overall_rating=eval_data["overall_rating"],
-                overall_notes=eval_data.get("overall_notes"),
-                extracted_data=eval_data.get("extracted_data", {}),
-                evaluator_user_id=eval_data.get("evaluator_user_id"),
-                created_at=eval_data["created_at"],
-                updated_at=eval_data["updated_at"],
-                field_evaluations=field_evals,
-            ))
+            evaluations.append(
+                EvaluationResponse(
+                    id=eval_data["id"],
+                    schema_version_id=eval_data["schema_version_id"],
+                    document_id=eval_data["document_id"],
+                    playground_run_id=eval_data.get("playground_run_id"),
+                    overall_rating=eval_data["overall_rating"],
+                    overall_notes=eval_data.get("overall_notes"),
+                    extracted_data=eval_data.get("extracted_data", {}),
+                    evaluator_user_id=eval_data.get("evaluator_user_id"),
+                    created_at=eval_data["created_at"],
+                    updated_at=eval_data["updated_at"],
+                    field_evaluations=field_evals,
+                )
+            )
 
         return evaluations
     except Exception as e:
         logger.error(f"Failed to get document evaluations: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get evaluations: {str(e)}"
+            detail=f"Failed to get evaluations: {str(e)}",
         )
 
 

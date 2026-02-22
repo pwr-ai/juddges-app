@@ -2,7 +2,7 @@
 
 Run with:
     locust -f locustfile.py --host=http://localhost:8004
-    
+
 Or headless mode:
     locust -f locustfile.py --host=http://localhost:8004 --users 100 --spawn-rate 10 --run-time 5m --headless
 """
@@ -82,7 +82,10 @@ class JuddgesUser(HttpUser):
 
         self.client.post(
             "/api/chat",
-            json={"question": question, "conversation_id": f"test-{self.get_user_id()}"},
+            json={
+                "question": question,
+                "conversation_id": f"test-{self.get_user_id()}",
+            },
             headers=self.headers,
             name="/api/chat",
         )
@@ -136,7 +139,9 @@ class PowerUser(HttpUser):
     @task(1)
     def analytics_query(self):
         """Query analytics data."""
-        self.client.get("/api/analytics/summary", headers=self.headers, name="/api/analytics")
+        self.client.get(
+            "/api/analytics/summary", headers=self.headers, name="/api/analytics"
+        )
 
 
 class AdminUser(HttpUser):
@@ -146,12 +151,17 @@ class AdminUser(HttpUser):
 
     def on_start(self):
         """Initialize admin user."""
-        self.headers = {"Authorization": "Bearer admin-token", "X-API-Key": "test-api-key"}
+        self.headers = {
+            "Authorization": "Bearer admin-token",
+            "X-API-Key": "test-api-key",
+        }
 
     @task(2)
     def view_collections(self):
         """View document collections."""
-        self.client.get("/api/collections", headers=self.headers, name="/api/collections [list]")
+        self.client.get(
+            "/api/collections", headers=self.headers, name="/api/collections [list]"
+        )
 
     @task(1)
     def create_collection(self):
@@ -168,7 +178,9 @@ class AdminUser(HttpUser):
     @task(1)
     def view_schemas(self):
         """View extraction schemas."""
-        self.client.get("/api/schemas", headers=self.headers, name="/api/schemas [list]")
+        self.client.get(
+            "/api/schemas", headers=self.headers, name="/api/schemas [list]"
+        )
 
 
 # Event listeners for reporting
@@ -179,7 +191,9 @@ def on_test_start(environment, **kwargs):
     print("Starting Juddges API Load Test")
     print("=" * 60)
     print(f"Host: {environment.host}")
-    print(f"Users: {environment.runner.target_user_count if hasattr(environment.runner, 'target_user_count') else 'N/A'}")
+    print(
+        f"Users: {environment.runner.target_user_count if hasattr(environment.runner, 'target_user_count') else 'N/A'}"
+    )
     print("=" * 60 + "\n")
 
 
@@ -196,9 +210,17 @@ def on_test_stop(environment, **kwargs):
         print(
             f"Failure Rate: {environment.stats.total.num_failures / environment.stats.total.num_requests * 100:.2f}%"
         )
-        print(f"Average Response Time: {environment.stats.total.avg_response_time:.2f}ms")
-        print(f"Median Response Time: {environment.stats.total.median_response_time:.2f}ms")
-        print(f"95th Percentile: {environment.stats.total.get_response_time_percentile(0.95):.2f}ms")
-        print(f"99th Percentile: {environment.stats.total.get_response_time_percentile(0.99):.2f}ms")
+        print(
+            f"Average Response Time: {environment.stats.total.avg_response_time:.2f}ms"
+        )
+        print(
+            f"Median Response Time: {environment.stats.total.median_response_time:.2f}ms"
+        )
+        print(
+            f"95th Percentile: {environment.stats.total.get_response_time_percentile(0.95):.2f}ms"
+        )
+        print(
+            f"99th Percentile: {environment.stats.total.get_response_time_percentile(0.99):.2f}ms"
+        )
         print(f"Requests/sec: {environment.stats.total.total_rps:.2f}")
     print("=" * 60 + "\n")

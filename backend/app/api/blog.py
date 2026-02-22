@@ -19,6 +19,7 @@ router = APIRouter(prefix="/blog", tags=["blog"])
 # MODELS
 # ==============================================
 
+
 class BlogPostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     slug: Optional[str] = Field(None, max_length=255)
@@ -70,12 +71,13 @@ class BlogPostResponse(BaseModel):
 # HELPER FUNCTIONS
 # ==============================================
 
+
 def generate_slug(title: str) -> str:
     """Generate URL-friendly slug from title."""
     slug = title.lower()
-    slug = re.sub(r'[^\w\s-]', '', slug)
-    slug = re.sub(r'[-\s]+', '-', slug)
-    return slug.strip('-')
+    slug = re.sub(r"[^\w\s-]", "", slug)
+    slug = re.sub(r"[-\s]+", "-", slug)
+    return slug.strip("-")
 
 
 def calculate_read_time(content: str) -> int:
@@ -89,10 +91,9 @@ def calculate_read_time(content: str) -> int:
 async def get_post_tags(supabase, post_id: str) -> List[str]:
     """Get tags for a post."""
     try:
-        response = supabase.table("blog_tags")\
-            .select("tag")\
-            .eq("post_id", post_id)\
-            .execute()
+        response = (
+            supabase.table("blog_tags").select("tag").eq("post_id", post_id).execute()
+        )
         return [row["tag"] for row in response.data]
     except Exception as e:
         logger.error(f"Error fetching tags: {e}")
@@ -102,11 +103,13 @@ async def get_post_tags(supabase, post_id: str) -> List[str]:
 async def get_post_author(supabase, author_id: str) -> dict:
     """Get author information."""
     try:
-        response = supabase.table("user_profiles")\
-            .select("id, name, email, avatar, title")\
-            .eq("id", author_id)\
-            .single()\
+        response = (
+            supabase.table("user_profiles")
+            .select("id, name, email, avatar, title")
+            .eq("id", author_id)
+            .single()
             .execute()
+        )
 
         if response.data:
             return {
@@ -114,26 +117,20 @@ async def get_post_author(supabase, author_id: str) -> dict:
                 "name": response.data.get("name") or "Anonymous",
                 "email": response.data.get("email"),
                 "avatar": response.data.get("avatar"),
-                "title": response.data.get("title") or "Researcher"
+                "title": response.data.get("title") or "Researcher",
             }
     except Exception:
         pass
 
-    return {
-        "id": author_id,
-        "name": "Anonymous",
-        "title": "Researcher",
-        "avatar": None
-    }
+    return {"id": author_id, "name": "Anonymous", "title": "Researcher", "avatar": None}
 
 
 async def increment_view_count(supabase, post_id: str):
     """Increment view count for a post."""
     try:
-        supabase.table("blog_posts")\
-            .update({"views": supabase.rpc("increment", {"x": 1})})\
-            .eq("id", post_id)\
-            .execute()
+        supabase.table("blog_posts").update(
+            {"views": supabase.rpc("increment", {"x": 1})}
+        ).eq("id", post_id).execute()
     except Exception as e:
         logger.error(f"Error incrementing view count: {e}")
 
@@ -142,6 +139,7 @@ async def increment_view_count(supabase, post_id: str):
 # PUBLIC ENDPOINTS
 # ==============================================
 
+
 @router.get("/posts")
 async def list_posts(
     page: int = Query(1, ge=1),
@@ -149,19 +147,23 @@ async def list_posts(
     category: Optional[str] = None,
     tag: Optional[str] = None,
     search: Optional[str] = None,
-    sort: str = Query("published_at", pattern="^(published_at|views|likes_count|created_at)$"),
+    sort: str = Query(
+        "published_at", pattern="^(published_at|views|likes_count|created_at)$"
+    ),
     order: str = Query("desc", pattern="^(asc|desc)$"),
-    supabase=Depends(get_supabase_db)
+    supabase=Depends(get_supabase_db),
 ):
     """
     List published blog posts with pagination and filters.
     """
     try:
         # Build query
-        query = supabase.table("blog_posts")\
-            .select("*, author_id")\
-            .eq("status", "published")\
+        query = (
+            supabase.table("blog_posts")
+            .select("*, author_id")
+            .eq("status", "published")
             .is_("deleted_at", "null")
+        )
 
         # Apply filters
         if category:
@@ -190,18 +192,16 @@ async def list_posts(
             if tag and tag not in tags:
                 continue
 
-            posts.append({
-                **post,
-                "tags": tags,
-                "author": author
-            })
+            posts.append({**post, "tags": tags, "author": author})
 
         # Get total count
-        count_response = supabase.table("blog_posts")\
-            .select("id", count="exact")\
-            .eq("status", "published")\
-            .is_("deleted_at", "null")\
+        count_response = (
+            supabase.table("blog_posts")
+            .select("id", count="exact")
+            .eq("status", "published")
+            .is_("deleted_at", "null")
             .execute()
+        )
 
         total = count_response.count or 0
         total_pages = (total + limit - 1) // limit
@@ -214,8 +214,8 @@ async def list_posts(
                 "limit": limit,
                 "total_pages": total_pages,
                 "has_next": page < total_pages,
-                "has_prev": page > 1
-            }
+                "has_prev": page > 1,
+            },
         }
 
     except Exception as e:
@@ -224,22 +224,21 @@ async def list_posts(
 
 
 @router.get("/posts/{slug}")
-async def get_post(
-    slug: str,
-    supabase=Depends(get_supabase_db)
-):
+async def get_post(slug: str, supabase=Depends(get_supabase_db)):
     """
     Get a single published blog post by slug.
     """
     try:
         # Get post
-        response = supabase.table("blog_posts")\
-            .select("*")\
-            .eq("slug", slug)\
-            .eq("status", "published")\
-            .is_("deleted_at", "null")\
-            .single()\
+        response = (
+            supabase.table("blog_posts")
+            .select("*")
+            .eq("slug", slug)
+            .eq("status", "published")
+            .is_("deleted_at", "null")
+            .single()
             .execute()
+        )
 
         if not response.data:
             raise HTTPException(status_code=404, detail="Post not found")
@@ -251,14 +250,16 @@ async def get_post(
         author = await get_post_author(supabase, post["author_id"])
 
         # Get related posts (same category, different post)
-        related_response = supabase.table("blog_posts")\
-            .select("id, slug, title, excerpt, featured_image, category, read_time")\
-            .eq("category", post["category"])\
-            .neq("id", post["id"])\
-            .eq("status", "published")\
-            .is_("deleted_at", "null")\
-            .limit(3)\
+        related_response = (
+            supabase.table("blog_posts")
+            .select("id, slug, title, excerpt, featured_image, category, read_time")
+            .eq("category", post["category"])
+            .neq("id", post["id"])
+            .eq("status", "published")
+            .is_("deleted_at", "null")
+            .limit(3)
             .execute()
+        )
 
         # Increment view count (async, non-blocking)
         await increment_view_count(supabase, post["id"])
@@ -267,7 +268,7 @@ async def get_post(
             **post,
             "tags": tags,
             "author": author,
-            "related_posts": related_response.data or []
+            "related_posts": related_response.data or [],
         }
 
     except HTTPException:
@@ -283,23 +284,20 @@ async def list_categories(supabase=Depends(get_supabase_db)):
     Get all blog categories.
     """
     try:
-        response = supabase.table("blog_categories")\
-            .select("*")\
-            .execute()
+        response = supabase.table("blog_categories").select("*").execute()
 
         # Add post count for each category
         categories = []
         for cat in response.data:
-            count_response = supabase.table("blog_posts")\
-                .select("id", count="exact")\
-                .eq("category", cat["name"])\
-                .eq("status", "published")\
+            count_response = (
+                supabase.table("blog_posts")
+                .select("id", count="exact")
+                .eq("category", cat["name"])
+                .eq("status", "published")
                 .execute()
+            )
 
-            categories.append({
-                **cat,
-                "post_count": count_response.count or 0
-            })
+            categories.append({**cat, "post_count": count_response.count or 0})
 
         return {"data": categories}
 
@@ -312,22 +310,23 @@ async def list_categories(supabase=Depends(get_supabase_db)):
 # PROTECTED ENDPOINTS (REQUIRE AUTH)
 # ==============================================
 
+
 @router.post("/posts/{slug}/like")
 async def toggle_like(
-    slug: str,
-    current_user=Depends(get_current_user),
-    supabase=Depends(get_supabase_db)
+    slug: str, current_user=Depends(get_current_user), supabase=Depends(get_supabase_db)
 ):
     """
     Toggle like status for a post.
     """
     try:
         # Get post
-        post_response = supabase.table("blog_posts")\
-            .select("id")\
-            .eq("slug", slug)\
-            .single()\
+        post_response = (
+            supabase.table("blog_posts")
+            .select("id")
+            .eq("slug", slug)
+            .single()
             .execute()
+        )
 
         if not post_response.data:
             raise HTTPException(status_code=404, detail="Post not found")
@@ -335,38 +334,37 @@ async def toggle_like(
         post_id = post_response.data["id"]
 
         # Check if already liked
-        like_response = supabase.table("blog_likes")\
-            .select("id")\
-            .eq("post_id", post_id)\
-            .eq("user_id", current_user["id"])\
+        like_response = (
+            supabase.table("blog_likes")
+            .select("id")
+            .eq("post_id", post_id)
+            .eq("user_id", current_user["id"])
             .execute()
+        )
 
         if like_response.data:
             # Unlike
-            supabase.table("blog_likes")\
-                .delete()\
-                .eq("id", like_response.data[0]["id"])\
-                .execute()
+            supabase.table("blog_likes").delete().eq(
+                "id", like_response.data[0]["id"]
+            ).execute()
             liked = False
         else:
             # Like
-            supabase.table("blog_likes")\
-                .insert({"post_id": post_id, "user_id": current_user["id"]})\
-                .execute()
+            supabase.table("blog_likes").insert(
+                {"post_id": post_id, "user_id": current_user["id"]}
+            ).execute()
             liked = True
 
         # Get updated like count
-        post = supabase.table("blog_posts")\
-            .select("likes_count")\
-            .eq("id", post_id)\
-            .single()\
+        post = (
+            supabase.table("blog_posts")
+            .select("likes_count")
+            .eq("id", post_id)
+            .single()
             .execute()
+        )
 
-        return {
-            "success": True,
-            "liked": liked,
-            "likes": post.data["likes_count"]
-        }
+        return {"success": True, "liked": liked, "likes": post.data["likes_count"]}
 
     except HTTPException:
         raise
@@ -377,20 +375,20 @@ async def toggle_like(
 
 @router.post("/posts/{slug}/bookmark")
 async def toggle_bookmark(
-    slug: str,
-    current_user=Depends(get_current_user),
-    supabase=Depends(get_supabase_db)
+    slug: str, current_user=Depends(get_current_user), supabase=Depends(get_supabase_db)
 ):
     """
     Toggle bookmark status for a post.
     """
     try:
         # Get post
-        post_response = supabase.table("blog_posts")\
-            .select("id")\
-            .eq("slug", slug)\
-            .single()\
+        post_response = (
+            supabase.table("blog_posts")
+            .select("id")
+            .eq("slug", slug)
+            .single()
             .execute()
+        )
 
         if not post_response.data:
             raise HTTPException(status_code=404, detail="Post not found")
@@ -398,30 +396,28 @@ async def toggle_bookmark(
         post_id = post_response.data["id"]
 
         # Check if already bookmarked
-        bookmark_response = supabase.table("blog_bookmarks")\
-            .select("id")\
-            .eq("post_id", post_id)\
-            .eq("user_id", current_user["id"])\
+        bookmark_response = (
+            supabase.table("blog_bookmarks")
+            .select("id")
+            .eq("post_id", post_id)
+            .eq("user_id", current_user["id"])
             .execute()
+        )
 
         if bookmark_response.data:
             # Remove bookmark
-            supabase.table("blog_bookmarks")\
-                .delete()\
-                .eq("id", bookmark_response.data[0]["id"])\
-                .execute()
+            supabase.table("blog_bookmarks").delete().eq(
+                "id", bookmark_response.data[0]["id"]
+            ).execute()
             bookmarked = False
         else:
             # Add bookmark
-            supabase.table("blog_bookmarks")\
-                .insert({"post_id": post_id, "user_id": current_user["id"]})\
-                .execute()
+            supabase.table("blog_bookmarks").insert(
+                {"post_id": post_id, "user_id": current_user["id"]}
+            ).execute()
             bookmarked = True
 
-        return {
-            "success": True,
-            "bookmarked": bookmarked
-        }
+        return {"success": True, "bookmarked": bookmarked}
 
     except HTTPException:
         raise
@@ -432,29 +428,32 @@ async def toggle_bookmark(
 
 @router.get("/bookmarks")
 async def get_bookmarks(
-    current_user=Depends(get_current_user),
-    supabase=Depends(get_supabase_db)
+    current_user=Depends(get_current_user), supabase=Depends(get_supabase_db)
 ):
     """
     Get all bookmarked posts for the current user.
     """
     try:
-        response = supabase.table("blog_bookmarks")\
-            .select("*, blog_posts(*)")\
-            .eq("user_id", current_user["id"])\
+        response = (
+            supabase.table("blog_bookmarks")
+            .select("*, blog_posts(*)")
+            .eq("user_id", current_user["id"])
             .execute()
+        )
 
         bookmarks = []
         for bookmark in response.data:
             post = bookmark["blog_posts"]
-            bookmarks.append({
-                "id": post["id"],
-                "slug": post["slug"],
-                "title": post["title"],
-                "excerpt": post["excerpt"],
-                "featured_image": post["featured_image"],
-                "bookmarked_at": bookmark["created_at"]
-            })
+            bookmarks.append(
+                {
+                    "id": post["id"],
+                    "slug": post["slug"],
+                    "title": post["title"],
+                    "excerpt": post["excerpt"],
+                    "featured_image": post["featured_image"],
+                    "bookmarked_at": bookmark["created_at"],
+                }
+            )
 
         return {"data": bookmarks}
 
@@ -467,11 +466,12 @@ async def get_bookmarks(
 # ADMIN ENDPOINTS
 # ==============================================
 
+
 @router.post("/admin/posts")
 async def create_post(
     post: BlogPostCreate,
     current_user=Depends(get_current_user),
-    supabase=Depends(get_supabase_db)
+    supabase=Depends(get_supabase_db),
 ):
     """
     Create a new blog post (admin only).
@@ -495,27 +495,21 @@ async def create_post(
             "status": post.status,
             "published_at": post.published_at,
             "read_time": read_time,
-            "ai_summary": post.ai_summary
+            "ai_summary": post.ai_summary,
         }
 
-        response = supabase.table("blog_posts")\
-            .insert(post_data)\
-            .execute()
+        response = supabase.table("blog_posts").insert(post_data).execute()
 
         created_post = response.data[0]
 
         # Insert tags
         if post.tags:
             tags_data = [
-                {"post_id": created_post["id"], "tag": tag}
-                for tag in post.tags
+                {"post_id": created_post["id"], "tag": tag} for tag in post.tags
             ]
             supabase.table("blog_tags").insert(tags_data).execute()
 
-        return {
-            "success": True,
-            "data": created_post
-        }
+        return {"success": True, "data": created_post}
 
     except Exception as e:
         logger.error(f"Error creating post: {e}")

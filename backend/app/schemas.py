@@ -65,6 +65,7 @@ async def cleanup_expired_sessions():
 # Supabase Operations for Schema Management
 # ============================================================================
 
+
 @router.get("/db")
 async def list_schemas_from_db(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
@@ -116,8 +117,10 @@ async def list_schemas_from_db(
         )
 
         schemas = response.data if response.data else []
-        logger.info(f"Listed {len(schemas)} schemas from database (page {page}, total: {total})")
-        
+        logger.info(
+            f"Listed {len(schemas)} schemas from database (page {page}, total: {total})"
+        )
+
         return {
             "data": schemas,
             "pagination": {
@@ -127,7 +130,7 @@ async def list_schemas_from_db(
                 "total_pages": total_pages,
                 "has_next": page < total_pages,
                 "has_prev": page > 1,
-            }
+            },
         }
 
     except HTTPException:
@@ -140,10 +143,12 @@ async def list_schemas_from_db(
         )
 
 
-def _fetch_schema_from_db(schema_id: str, client: Optional[Client] = None) -> dict[str, Any]:
+def _fetch_schema_from_db(
+    schema_id: str, client: Optional[Client] = None
+) -> dict[str, Any]:
     """Fetch schema from database by ID."""
     db_client = client or supabase_client
-    
+
     if not db_client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -151,10 +156,7 @@ def _fetch_schema_from_db(schema_id: str, client: Optional[Client] = None) -> di
         )
 
     response = (
-        db_client.table("extraction_schemas")
-        .select("*")
-        .eq("id", schema_id)
-        .execute()
+        db_client.table("extraction_schemas").select("*").eq("id", schema_id).execute()
     )
 
     if not response.data or len(response.data) == 0:
@@ -213,7 +215,7 @@ async def get_schema_from_db(schema_id: str) -> dict[str, Any]:
             "content": {
                 "application/json": {
                     "example": {
-                        "detail": "Schema conversion failed: Field 'title' must be defined as a JSON object (e.g. {\"type\": \"string\", ...})."
+                        "detail": 'Schema conversion failed: Field \'title\' must be defined as a JSON object (e.g. {"type": "string", ...}).'
                     }
                 }
             },
@@ -221,28 +223,32 @@ async def get_schema_from_db(schema_id: str) -> dict[str, Any]:
     },
 )
 async def get_converted_schema_from_db(
-    schema_id: str, 
-    strict: bool = Query(default=True, description="Use strict mode for schema conversion"),
-    language: str = Query(default="pl", description="Language for schema conversion (pl or en)")
+    schema_id: str,
+    strict: bool = Query(
+        default=True, description="Use strict mode for schema conversion"
+    ),
+    language: str = Query(
+        default="pl", description="Language for schema conversion (pl or en)"
+    ),
 ) -> dict[str, Any]:
     """
     Get a schema from the database and return it converted using prepare_schema_from_db.
-    
+
     This endpoint is for verification purposes to check how the schema is converted
     for use with InformationExtractor. It fetches the schema from the database
     and applies the same conversion that prepare_schema_from_db uses.
-    
+
     Args:
         schema_id: UUID of the schema in the database
         strict: Whether to use strict mode for schema conversion (default: True)
         language: Language for schema conversion, either "pl" or "en" (default: "pl")
-    
+
     Returns:
         Converted schema in OpenAI structured output format
-    
+
     Raises:
         HTTPException: If schema not found, conversion fails, or database query fails
-    
+
     Example:
         ```
         GET /schemas/db/123e4567-e89b-12d3-a456-426614174000/converted?strict=true&language=pl
@@ -252,11 +258,13 @@ async def get_converted_schema_from_db(
         # Fetch schema from database
         schema = _fetch_schema_from_db(schema_id)
         logger.info(f"Retrieved schema from database for conversion: {schema_id}")
-        
+
         # Prepare schema using prepare_schema_from_db
-        converted_schema = prepare_schema_from_db(schema, language=language, strict=strict)
+        converted_schema = prepare_schema_from_db(
+            schema, language=language, strict=strict
+        )
         logger.info(f"Successfully converted schema {schema_id}")
-        
+
         return converted_schema
     except HTTPException:
         raise
@@ -350,12 +358,13 @@ async def get_schema(schema_id: str) -> dict[str, Any]:
 
 class CreateSchemaRequest(BaseModel):
     """Request model for creating a new custom schema."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     schema_id: str = Field(
         min_length=1,
         max_length=100,
-        pattern=r'^[a-zA-Z0-9_-]+$',
+        pattern=r"^[a-zA-Z0-9_-]+$",
         description="Unique identifier for the schema (alphanumeric, underscore, hyphen only)",
     )
     description: str = Field(
@@ -367,7 +376,7 @@ class CreateSchemaRequest(BaseModel):
         description="Schema definition in YAML internal format or JSON Schema draft-07 format",
     )
 
-    @field_validator('schema_definition')
+    @field_validator("schema_definition")
     @classmethod
     def validate_schema_structure(cls, v: dict[str, Any]) -> dict[str, Any]:
         """
@@ -392,7 +401,9 @@ class CreateSchemaRequest(BaseModel):
             raise ValueError("Schema cannot be empty")
 
         # Count total fields and check naming
-        def count_fields_and_validate(schema_dict: dict, current_depth: int = 0, path: str = "root") -> int:
+        def count_fields_and_validate(
+            schema_dict: dict, current_depth: int = 0, path: str = "root"
+        ) -> int:
             """Recursively count fields and validate structure."""
             if current_depth > 5:
                 raise ValueError(
@@ -408,7 +419,7 @@ class CreateSchemaRequest(BaseModel):
                         f"Field name must be a string at path: {path}.{field_name}"
                     )
 
-                if not field_name.replace('_', '').replace('-', '').isalnum():
+                if not field_name.replace("_", "").replace("-", "").isalnum():
                     raise ValueError(
                         f"Invalid field name '{field_name}' at path: {path}. "
                         "Field names must contain only alphanumeric characters, underscores, or hyphens."
@@ -419,25 +430,29 @@ class CreateSchemaRequest(BaseModel):
                 # Check if field_spec is a dictionary (nested structure)
                 if isinstance(field_spec, dict):
                     # Check for nested objects or arrays
-                    field_type = field_spec.get('type', '')
+                    field_type = field_spec.get("type", "")
 
-                    if field_type == 'object' and 'properties' in field_spec:
+                    if field_type == "object" and "properties" in field_spec:
                         # Recursively validate nested object
                         nested_count = count_fields_and_validate(
-                            field_spec['properties'],
+                            field_spec["properties"],
                             current_depth + 1,
-                            f"{path}.{field_name}"
+                            f"{path}.{field_name}",
                         )
                         field_count += nested_count
 
-                    elif field_type == 'array' and 'items' in field_spec:
+                    elif field_type == "array" and "items" in field_spec:
                         # Check array items for nested structures
-                        items = field_spec['items']
-                        if isinstance(items, dict) and items.get('type') == 'object' and 'properties' in items:
+                        items = field_spec["items"]
+                        if (
+                            isinstance(items, dict)
+                            and items.get("type") == "object"
+                            and "properties" in items
+                        ):
                             nested_count = count_fields_and_validate(
-                                items['properties'],
+                                items["properties"],
                                 current_depth + 1,
-                                f"{path}.{field_name}[items]"
+                                f"{path}.{field_name}[items]",
                             )
                             field_count += nested_count
 
@@ -445,9 +460,11 @@ class CreateSchemaRequest(BaseModel):
 
         try:
             # Handle both internal format and JSON Schema format
-            if 'properties' in v:
+            if "properties" in v:
                 # JSON Schema format with properties
-                total_fields = count_fields_and_validate(v['properties'], 0, "schema.properties")
+                total_fields = count_fields_and_validate(
+                    v["properties"], 0, "schema.properties"
+                )
             else:
                 # Internal YAML format (flat structure)
                 total_fields = count_fields_and_validate(v, 0, "schema")
@@ -459,7 +476,9 @@ class CreateSchemaRequest(BaseModel):
                     "Please reduce the number of fields or split into multiple schemas."
                 )
 
-            logger.info(f"Schema validation passed: {total_fields} fields, valid structure")
+            logger.info(
+                f"Schema validation passed: {total_fields} fields, valid structure"
+            )
             return v
 
         except ValueError:
@@ -476,6 +495,7 @@ class CreateSchemaRequest(BaseModel):
 
 class UpdateSchemaRequest(BaseModel):
     """Request model for updating an existing schema."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     description: str | None = Field(
@@ -489,9 +509,11 @@ class UpdateSchemaRequest(BaseModel):
         description="Updated schema definition",
     )
 
-    @field_validator('schema_definition')
+    @field_validator("schema_definition")
     @classmethod
-    def validate_schema_structure(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+    def validate_schema_structure(
+        cls, v: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
         """
         Validate schema structure if provided (same validation as CreateSchemaRequest).
 
@@ -583,7 +605,9 @@ def _save_schema_to_file(schema_id: str, schema: dict[str, Any]) -> None:
     schema_path = _get_schema_directory() / f"{schema_id}.yaml"
 
     with open(schema_path, "w") as f:
-        yaml.dump(schema, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        yaml.dump(
+            schema, f, default_flow_style=False, sort_keys=False, allow_unicode=True
+        )
 
     logger.info(f"Saved schema to file: {schema_path}")
 
@@ -594,14 +618,17 @@ def _create_backup(schema_id: str) -> None:
 
     # Find the existing schema file
     existing_files = [
-        f for f in schema_dir.iterdir()
+        f
+        for f in schema_dir.iterdir()
         if f.stem == schema_id and f.suffix in InformationExtractor.SCHEMA_EXTENSIONS
     ]
 
     if existing_files:
         original_file = existing_files[0]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = schema_dir / f"{schema_id}{original_file.suffix}.backup_{timestamp}"
+        backup_path = (
+            schema_dir / f"{schema_id}{original_file.suffix}.backup_{timestamp}"
+        )
 
         shutil.copy2(original_file, backup_path)
         logger.info(f"Created backup: {backup_path}")
@@ -665,7 +692,9 @@ async def create_schema(params: CreateSchemaRequest) -> dict[str, Any]:
 
         # Validate schema structure using InformationExtractor validation
         try:
-            validated_schema = InformationExtractor.prepare_oai_compatible_schema(params.schema_definition)
+            validated_schema = InformationExtractor.prepare_oai_compatible_schema(
+                params.schema_definition
+            )
             logger.info(f"Schema validated successfully: {schema_id}")
         except ValueError as e:
             logger.error(f"Schema validation failed for {schema_id}: {e}")
@@ -784,7 +813,9 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
         # Update schema if provided
         if params.schema_definition is not None:
             try:
-                validated_schema = InformationExtractor.prepare_oai_compatible_schema(params.schema_definition)
+                validated_schema = InformationExtractor.prepare_oai_compatible_schema(
+                    params.schema_definition
+                )
                 _save_schema_to_file(schema_id, params.schema_definition)
                 logger.info(f"Updated schema definition for: {schema_id}")
             except ValueError as e:
@@ -863,8 +894,10 @@ async def delete_schema(schema_id: str, force: bool = False) -> DeleteSchemaResp
         # Verify schema exists
         schema_dir = _get_schema_directory()
         schema_files = [
-            f for f in schema_dir.iterdir()
-            if f.stem == schema_id and f.suffix in InformationExtractor.SCHEMA_EXTENSIONS
+            f
+            for f in schema_dir.iterdir()
+            if f.stem == schema_id
+            and f.suffix in InformationExtractor.SCHEMA_EXTENSIONS
         ]
 
         if not schema_files:
@@ -886,7 +919,9 @@ async def delete_schema(schema_id: str, force: bool = False) -> DeleteSchemaResp
             # Archive (soft delete)
             archive_dir = _get_archive_directory()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            archive_path = archive_dir / f"{schema_id}{schema_file.suffix}.archived_{timestamp}"
+            archive_path = (
+                archive_dir / f"{schema_id}{schema_file.suffix}.archived_{timestamp}"
+            )
 
             shutil.move(str(schema_file), str(archive_path))
             status_msg = "archived"
@@ -900,7 +935,9 @@ async def delete_schema(schema_id: str, force: bool = False) -> DeleteSchemaResp
                 meta_path.unlink()
             else:
                 # Archive metadata as well
-                archive_meta_path = archive_dir / f"{schema_id}.meta.json.archived_{timestamp}"
+                archive_meta_path = (
+                    archive_dir / f"{schema_id}.meta.json.archived_{timestamp}"
+                )
                 shutil.move(str(meta_path), str(archive_meta_path))
 
         return DeleteSchemaResponse(
@@ -1028,7 +1065,11 @@ def get_or_create_generation_agent(
     return agent
 
 
-@router.post("/generate", response_model=SchemaGenerationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/generate",
+    response_model=SchemaGenerationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def start_schema_generation(
     params: SchemaGenerationRequest,
     request: Request,
@@ -1261,12 +1302,13 @@ async def cancel_generation_session(session_id: str) -> None:
 
 class SchemaFieldBase(BaseModel):
     """Base model for schema field definitions."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     field_name: str = Field(
         min_length=1,
         max_length=100,
-        pattern=r'^[a-zA-Z][a-zA-Z0-9_]*$',
+        pattern=r"^[a-zA-Z][a-zA-Z0-9_]*$",
         description="Field name (must start with letter, alphanumeric + underscore)",
     )
     field_type: str = Field(
@@ -1286,7 +1328,7 @@ class SchemaFieldBase(BaseModel):
         description="Additional validation rules (pattern, min, max, enum, etc.)",
     )
 
-    @field_validator('field_type')
+    @field_validator("field_type")
     @classmethod
     def validate_field_type(cls, v: str) -> str:
         """Validate that field_type is one of the supported types."""
@@ -1297,22 +1339,37 @@ class SchemaFieldBase(BaseModel):
             )
         return v
 
-    @field_validator('validation_rules')
+    @field_validator("validation_rules")
     @classmethod
     def validate_validation_rules(cls, v: dict[str, Any]) -> dict[str, Any]:
         """Validate that validation_rules contains only valid JSON Schema keywords."""
         # Valid JSON Schema validation keywords
         valid_keywords = {
             # String validation
-            "minLength", "maxLength", "pattern", "format",
+            "minLength",
+            "maxLength",
+            "pattern",
+            "format",
             # Number validation
-            "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf",
+            "minimum",
+            "maximum",
+            "exclusiveMinimum",
+            "exclusiveMaximum",
+            "multipleOf",
             # Array validation
-            "minItems", "maxItems", "uniqueItems", "items",
+            "minItems",
+            "maxItems",
+            "uniqueItems",
+            "items",
             # Object validation
-            "properties", "additionalProperties", "minProperties", "maxProperties",
+            "properties",
+            "additionalProperties",
+            "minProperties",
+            "maxProperties",
             # Common validation
-            "enum", "const", "default",
+            "enum",
+            "const",
+            "default",
         }
 
         invalid_keys = set(v.keys()) - valid_keywords
@@ -1341,13 +1398,14 @@ class SchemaFieldCreate(SchemaFieldBase):
 
 class SchemaFieldUpdate(BaseModel):
     """Request model for updating a schema field."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     field_name: str | None = Field(
         default=None,
         min_length=1,
         max_length=100,
-        pattern=r'^[a-zA-Z][a-zA-Z0-9_]*$',
+        pattern=r"^[a-zA-Z][a-zA-Z0-9_]*$",
         description="Updated field name",
     )
     field_type: str | None = Field(
@@ -1373,7 +1431,7 @@ class SchemaFieldUpdate(BaseModel):
         description="Updated position",
     )
 
-    @field_validator('field_type')
+    @field_validator("field_type")
     @classmethod
     def validate_field_type(cls, v: str | None) -> str | None:
         """Validate field_type if provided."""
@@ -1389,6 +1447,7 @@ class SchemaFieldUpdate(BaseModel):
 
 class SchemaCompileRequest(BaseModel):
     """Request model for compiling fields to JSON Schema."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     fields: list[dict[str, Any]] = Field(
@@ -1404,7 +1463,7 @@ class SchemaCompileRequest(BaseModel):
         description="Description for the compiled schema",
     )
 
-    @field_validator('fields')
+    @field_validator("fields")
     @classmethod
     def validate_fields_structure(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Validate that each field has required properties."""
@@ -1420,6 +1479,7 @@ class SchemaCompileRequest(BaseModel):
 
 class SchemaValidationResponse(BaseModel):
     """Response model for schema validation."""
+
     model_config = ConfigDict(protected_namespaces=())
 
     valid: bool = Field(description="Whether schema is valid")
@@ -1442,6 +1502,7 @@ class SchemaValidationResponse(BaseModel):
 
 
 # Helper functions for field-to-schema conversion
+
 
 def compile_field_to_json_schema(
     field: dict[str, Any],
@@ -1484,8 +1545,8 @@ def compile_field_to_json_schema(
             items_required = []
             for nested_field in nested_fields:
                 if nested_field.get("parent_field_path") == field["field_name"]:
-                    items_properties[nested_field["field_name"]] = compile_field_to_json_schema(
-                        nested_field
+                    items_properties[nested_field["field_name"]] = (
+                        compile_field_to_json_schema(nested_field)
                     )
                     if nested_field.get("is_required", False):
                         items_required.append(nested_field["field_name"])
@@ -1506,9 +1567,11 @@ def compile_field_to_json_schema(
         if nested_fields:
             for nested_field in nested_fields:
                 if nested_field.get("parent_field_path") == field["field_name"]:
-                    properties[nested_field["field_name"]] = compile_field_to_json_schema(
-                        nested_field,
-                        nested_fields,
+                    properties[nested_field["field_name"]] = (
+                        compile_field_to_json_schema(
+                            nested_field,
+                            nested_fields,
+                        )
                     )
                     if nested_field.get("is_required", False):
                         required.append(nested_field["field_name"])
@@ -1565,16 +1628,10 @@ def compile_fields_to_json_schema(
         ```
     """
     # Sort fields by position if available
-    sorted_fields = sorted(
-        fields,
-        key=lambda f: f.get("position", 0)
-    )
+    sorted_fields = sorted(fields, key=lambda f: f.get("position", 0))
 
     # Separate top-level fields from nested fields
-    top_level_fields = [
-        f for f in sorted_fields
-        if not f.get("parent_field_path")
-    ]
+    top_level_fields = [f for f in sorted_fields if not f.get("parent_field_path")]
 
     properties: dict[str, Any] = {}
     required: list[str] = []
@@ -1601,7 +1658,9 @@ def compile_fields_to_json_schema(
     return compiled_schema
 
 
-def validate_schema_compatibility(schema: dict[str, Any]) -> tuple[bool, list[str], list[str]]:
+def validate_schema_compatibility(
+    schema: dict[str, Any],
+) -> tuple[bool, list[str], list[str]]:
     """
     Validate schema compatibility with OpenAI structured output requirements.
 
@@ -1696,12 +1755,12 @@ def validate_schema_compatibility(schema: dict[str, Any]) -> tuple[bool, list[st
     if required:
         for req_field in required:
             if req_field not in properties:
-                errors.append(
-                    f"Required field '{req_field}' not found in properties"
-                )
+                errors.append(f"Required field '{req_field}' not found in properties")
 
     # Validate each property recursively
-    def validate_property(prop_name: str, prop_schema: dict[str, Any], path: str = "") -> None:
+    def validate_property(
+        prop_name: str, prop_schema: dict[str, Any], path: str = ""
+    ) -> None:
         """Recursively validate property definitions."""
         current_path = f"{path}.{prop_name}" if path else prop_name
 
@@ -1764,13 +1823,13 @@ def validate_schema_compatibility(schema: dict[str, Any]) -> tuple[bool, list[st
 async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
     """
     TEMPORARY endpoint to validate a schema from the database using validate_openai_schema.
-    
+
     This endpoint fetches a schema by ID from the database, converts it to OpenAI format,
     and validates it using validate_openai_schema with detailed error and warning information.
-    
+
     Args:
         schema_id: UUID of the schema in the database
-        
+
     Returns:
         Dictionary with validation result:
         - valid: bool indicating if schema is valid
@@ -1778,10 +1837,10 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
         - schema_id: str with the schema ID that was validated
         - errors: list[str] with detailed validation errors (if any)
         - warnings: list[str] with validation warnings (if any)
-        
+
     Raises:
         HTTPException: If schema not found or conversion fails
-        
+
     Example:
         ```
         GET /api/schemas/db/123e4567-e89b-12d3-a456-426614174000/validate-openai
@@ -1790,14 +1849,12 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
     try:
         schema = _fetch_schema_from_db(schema_id)
         logger.info(f"Retrieved schema from database for validation: {schema_id}")
-        
+
         errors: list[str] = []
         name = schema.get("name")
         if isinstance(name, str) and not SCHEMA_NAME_ALLOWED_PATTERN.fullmatch(name):
-            errors.append(
-                "Schema name may only contain letters, numbers, and spaces."
-            )
-        
+            errors.append("Schema name may only contain letters, numbers, and spaces.")
+
         text_section = schema.get("text")
         if text_section is None:
             errors.append("Schema is missing 'text' field with property definitions.")
@@ -1814,7 +1871,7 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
                     errors.append(
                         f"Field '{field_name}' must have 'required': true in DB schema definition."
                     )
-        
+
         # Choose best candidate for validator (without converting)
         if isinstance(schema.get("schema"), dict):
             validator_input = schema["schema"]
@@ -1828,12 +1885,12 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
         else:
             validator_input = schema
             validator_source = "raw"
-        
+
         validation_result = validate_openai_schema(
             validator_input,
             raise_on_error=False,
         )
-        
+
         combined_errors = errors + validation_result["errors"]
         warnings = validation_result["warnings"]
         is_valid = len(combined_errors) == 0
@@ -1842,7 +1899,7 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
             if is_valid
             else f"Schema validation failed with {len(combined_errors)} error(s)"
         )
-        
+
         return {
             "valid": is_valid,
             "message": message,
@@ -1854,10 +1911,13 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during schema validation for {schema_id}: {e}", exc_info=True)
+        logger.error(
+            f"Unexpected error during schema validation for {schema_id}: {e}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to validate schema: {str(e)}"
+            detail=f"Failed to validate schema: {str(e)}",
         )
 
 
@@ -1971,8 +2031,10 @@ async def compile_schema_fields(params: SchemaCompileRequest) -> dict[str, Any]:
 # Schema Version Management Endpoints
 # ============================================================================
 
+
 class SchemaVersionSummary(BaseModel):
     """Summary of a schema version for listing."""
+
     id: str
     version_number: int
     change_type: str
@@ -1984,6 +2046,7 @@ class SchemaVersionSummary(BaseModel):
 
 class SchemaVersionDetail(BaseModel):
     """Full details of a schema version."""
+
     id: str
     schema_id: str
     version_number: int
@@ -1999,6 +2062,7 @@ class SchemaVersionDetail(BaseModel):
 
 class VersionComparisonResponse(BaseModel):
     """Response from comparing two schema versions."""
+
     schema_id: str
     version_a: int
     version_b: int
@@ -2009,14 +2073,15 @@ class VersionComparisonResponse(BaseModel):
 
 class RollbackRequest(BaseModel):
     """Request for rolling back to a schema version."""
+
     change_summary: Optional[str] = Field(
-        default=None,
-        description="Optional note explaining why rolling back"
+        default=None, description="Optional note explaining why rolling back"
     )
 
 
 class RollbackResponse(BaseModel):
     """Response from a version rollback."""
+
     schema_id: str
     previous_version: int
     new_version: int
@@ -2048,37 +2113,49 @@ async def list_schema_versions(
     if not supabase_client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
         # Get current version number from main schema
-        schema_response = supabase_client.table("extraction_schemas").select(
-            "schema_version"
-        ).eq("id", schema_id).single().execute()
+        schema_response = (
+            supabase_client.table("extraction_schemas")
+            .select("schema_version")
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
         if not schema_response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Schema '{schema_id}' not found"
+                detail=f"Schema '{schema_id}' not found",
             )
 
         current_version = schema_response.data.get("schema_version", 1)
 
         # Get total count
-        count_response = supabase_client.table("schema_versions").select(
-            "id", count="exact"
-        ).eq("schema_id", schema_id).execute()
+        count_response = (
+            supabase_client.table("schema_versions")
+            .select("id", count="exact")
+            .eq("schema_id", schema_id)
+            .execute()
+        )
 
         total = count_response.count or 0
 
         # Get paginated versions
         offset = (page - 1) * page_size
-        versions_response = supabase_client.table("schema_versions").select(
-            "id, version_number, change_type, change_summary, changed_fields, user_id, created_at"
-        ).eq("schema_id", schema_id).order(
-            "version_number", desc=True
-        ).range(offset, offset + page_size - 1).execute()
+        versions_response = (
+            supabase_client.table("schema_versions")
+            .select(
+                "id, version_number, change_type, change_summary, changed_fields, user_id, created_at"
+            )
+            .eq("schema_id", schema_id)
+            .order("version_number", desc=True)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
 
         versions = [
             SchemaVersionSummary(
@@ -2102,7 +2179,7 @@ async def list_schema_versions(
                 "page_size": page_size,
                 "total": total,
                 "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
-            }
+            },
         }
 
     except HTTPException:
@@ -2111,7 +2188,7 @@ async def list_schema_versions(
         logger.error(f"Failed to list schema versions: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list versions: {str(e)}"
+            detail=f"Failed to list versions: {str(e)}",
         )
 
 
@@ -2133,18 +2210,23 @@ async def get_schema_version(
     if not supabase_client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
-        response = supabase_client.table("schema_versions").select("*").eq(
-            "schema_id", schema_id
-        ).eq("version_number", version_number).single().execute()
+        response = (
+            supabase_client.table("schema_versions")
+            .select("*")
+            .eq("schema_id", schema_id)
+            .eq("version_number", version_number)
+            .single()
+            .execute()
+        )
 
         if not response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Version {version_number} not found for schema '{schema_id}'"
+                detail=f"Version {version_number} not found for schema '{schema_id}'",
             )
 
         v = response.data
@@ -2168,7 +2250,7 @@ async def get_schema_version(
         logger.error(f"Failed to get schema version: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get version: {str(e)}"
+            detail=f"Failed to get version: {str(e)}",
         )
 
 
@@ -2192,33 +2274,47 @@ async def compare_schema_versions(
     if not supabase_client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
         # Fetch both versions
-        response_a = supabase_client.table("schema_versions").select(
-            "field_snapshot"
-        ).eq("schema_id", schema_id).eq("version_number", version_a).single().execute()
+        response_a = (
+            supabase_client.table("schema_versions")
+            .select("field_snapshot")
+            .eq("schema_id", schema_id)
+            .eq("version_number", version_a)
+            .single()
+            .execute()
+        )
 
-        response_b = supabase_client.table("schema_versions").select(
-            "field_snapshot"
-        ).eq("schema_id", schema_id).eq("version_number", version_b).single().execute()
+        response_b = (
+            supabase_client.table("schema_versions")
+            .select("field_snapshot")
+            .eq("schema_id", schema_id)
+            .eq("version_number", version_b)
+            .single()
+            .execute()
+        )
 
         if not response_a.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Version {version_a} not found"
+                detail=f"Version {version_a} not found",
             )
 
         if not response_b.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Version {version_b} not found"
+                detail=f"Version {version_b} not found",
             )
 
-        fields_a = {f["field_path"]: f for f in (response_a.data.get("field_snapshot") or [])}
-        fields_b = {f["field_path"]: f for f in (response_b.data.get("field_snapshot") or [])}
+        fields_a = {
+            f["field_path"]: f for f in (response_a.data.get("field_snapshot") or [])
+        }
+        fields_b = {
+            f["field_path"]: f for f in (response_b.data.get("field_snapshot") or [])
+        }
 
         paths_a = set(fields_a.keys())
         paths_b = set(fields_b.keys())
@@ -2240,30 +2336,38 @@ async def compare_schema_versions(
             # Check for meaningful changes
             changes = []
             if field_a.get("field_type") != field_b.get("field_type"):
-                changes.append({
-                    "property": "field_type",
-                    "old": field_a.get("field_type"),
-                    "new": field_b.get("field_type"),
-                })
+                changes.append(
+                    {
+                        "property": "field_type",
+                        "old": field_a.get("field_type"),
+                        "new": field_b.get("field_type"),
+                    }
+                )
             if field_a.get("description") != field_b.get("description"):
-                changes.append({
-                    "property": "description",
-                    "old": field_a.get("description"),
-                    "new": field_b.get("description"),
-                })
+                changes.append(
+                    {
+                        "property": "description",
+                        "old": field_a.get("description"),
+                        "new": field_b.get("description"),
+                    }
+                )
             if field_a.get("is_required") != field_b.get("is_required"):
-                changes.append({
-                    "property": "is_required",
-                    "old": field_a.get("is_required"),
-                    "new": field_b.get("is_required"),
-                })
+                changes.append(
+                    {
+                        "property": "is_required",
+                        "old": field_a.get("is_required"),
+                        "new": field_b.get("is_required"),
+                    }
+                )
 
             if changes:
-                modified_fields.append({
-                    "field_path": path,
-                    "field_name": field_b.get("field_name"),
-                    "changes": changes,
-                })
+                modified_fields.append(
+                    {
+                        "field_path": path,
+                        "field_name": field_b.get("field_name"),
+                        "changes": changes,
+                    }
+                )
 
         return VersionComparisonResponse(
             schema_id=schema_id,
@@ -2280,7 +2384,7 @@ async def compare_schema_versions(
         logger.error(f"Failed to compare versions: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to compare versions: {str(e)}"
+            detail=f"Failed to compare versions: {str(e)}",
         )
 
 
@@ -2308,19 +2412,23 @@ async def rollback_schema_version(
     if not supabase_client:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable"
+            detail="Database connection unavailable",
         )
 
     try:
         # Get current version before rollback
-        schema_response = supabase_client.table("extraction_schemas").select(
-            "schema_version"
-        ).eq("id", schema_id).single().execute()
+        schema_response = (
+            supabase_client.table("extraction_schemas")
+            .select("schema_version")
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
         if not schema_response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Schema '{schema_id}' not found"
+                detail=f"Schema '{schema_id}' not found",
             )
 
         previous_version = schema_response.data.get("schema_version", 1)
@@ -2331,23 +2439,31 @@ async def rollback_schema_version(
             {
                 "p_schema_id": schema_id,
                 "p_version_number": version_number,
-            }
+            },
         ).execute()
 
         if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Rollback failed - no result returned"
+                detail="Rollback failed - no result returned",
             )
 
         new_version_id = result.data
 
         # Get the new version number
-        new_schema = supabase_client.table("extraction_schemas").select(
-            "schema_version"
-        ).eq("id", schema_id).single().execute()
+        new_schema = (
+            supabase_client.table("extraction_schemas")
+            .select("schema_version")
+            .eq("id", schema_id)
+            .single()
+            .execute()
+        )
 
-        new_version = new_schema.data.get("schema_version", previous_version + 1) if new_schema.data else previous_version + 1
+        new_version = (
+            new_schema.data.get("schema_version", previous_version + 1)
+            if new_schema.data
+            else previous_version + 1
+        )
 
         change_summary = request.change_summary if request else None
         summary = change_summary or f"Rolled back to version {version_number}"
@@ -2372,5 +2488,5 @@ async def rollback_schema_version(
         logger.error(f"Failed to rollback schema version: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to rollback: {str(e)}"
+            detail=f"Failed to rollback: {str(e)}",
         )

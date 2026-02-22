@@ -85,12 +85,12 @@ def _simulate_ocr_processing(text_content: str, source_type: str) -> dict:
         )
 
     # Simulate multi-page splitting
-    sentences = re.split(r'(?<=[.!?])\s+', text_content)
+    sentences = re.split(r"(?<=[.!?])\s+", text_content)
     pages = []
     page_size = max(1, len(sentences) // 3)  # Roughly 3 pages
 
     for i in range(0, len(sentences), page_size):
-        page_text = " ".join(sentences[i:i + page_size])
+        page_text = " ".join(sentences[i : i + page_size])
         if page_text.strip():
             pages.append(page_text)
 
@@ -99,25 +99,34 @@ def _simulate_ocr_processing(text_content: str, source_type: str) -> dict:
 
     # Generate confidence scores (slightly varying per page)
     import random
+
     random.seed(hash(text_content) % (2**32))
     base_confidence = random.uniform(0.75, 0.98)
 
     page_results = []
     all_words = 0
     for idx, page_text in enumerate(pages):
-        page_confidence = min(1.0, max(0.5, base_confidence + random.uniform(-0.08, 0.08)))
+        page_confidence = min(
+            1.0, max(0.5, base_confidence + random.uniform(-0.08, 0.08))
+        )
         word_count = len(page_text.split())
         all_words += word_count
-        page_results.append({
-            "page_number": idx + 1,
-            "extracted_text": page_text,
-            "confidence_score": round(page_confidence, 4),
-            "word_count": word_count,
-            "quality_metrics": _compute_quality_metrics(page_text, page_confidence),
-        })
+        page_results.append(
+            {
+                "page_number": idx + 1,
+                "extracted_text": page_text,
+                "confidence_score": round(page_confidence, 4),
+                "word_count": word_count,
+                "quality_metrics": _compute_quality_metrics(page_text, page_confidence),
+            }
+        )
 
     full_text = "\n\n".join(p["extracted_text"] for p in page_results)
-    avg_confidence = sum(p["confidence_score"] for p in page_results) / len(page_results) if page_results else 0.0
+    avg_confidence = (
+        sum(p["confidence_score"] for p in page_results) / len(page_results)
+        if page_results
+        else 0.0
+    )
 
     return {
         "extracted_text": full_text,
@@ -153,13 +162,15 @@ def _build_job_status(job: dict, pages: list[dict] | None = None) -> dict:
             pq = p.get("quality_metrics")
             if pq and isinstance(pq, dict):
                 pq = OCRQualityMetrics(**pq).model_dump()
-            page_results.append(OCRPageResult(
-                page_number=p["page_number"],
-                extracted_text=p.get("extracted_text", ""),
-                confidence_score=p.get("confidence_score", 0.0),
-                word_count=p.get("word_count", 0),
-                quality_metrics=OCRQualityMetrics(**pq) if pq else None,
-            ).model_dump())
+            page_results.append(
+                OCRPageResult(
+                    page_number=p["page_number"],
+                    extracted_text=p.get("extracted_text", ""),
+                    confidence_score=p.get("confidence_score", 0.0),
+                    word_count=p.get("word_count", 0),
+                    quality_metrics=OCRQualityMetrics(**pq) if pq else None,
+                ).model_dump()
+            )
 
     return {
         "job_id": str(job["id"]),
@@ -206,7 +217,9 @@ async def submit_ocr_job(
         raise HTTPException(status_code=400, detail=str(e))
 
     if source_type not in ("pdf", "image"):
-        raise HTTPException(status_code=400, detail="source_type must be 'pdf' or 'image'")
+        raise HTTPException(
+            status_code=400, detail="source_type must be 'pdf' or 'image'"
+        )
 
     # Validate file type
     allowed_types = {
@@ -218,7 +231,7 @@ async def submit_ocr_job(
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type '{content_type}' for source_type '{source_type}'. "
-                   f"Allowed: {allowed_types[source_type]}",
+            f"Allowed: {allowed_types[source_type]}",
         )
 
     try:
@@ -245,7 +258,9 @@ async def submit_ocr_job(
             raise HTTPException(status_code=500, detail="Failed to create OCR job")
 
         # Simulate OCR processing (in production, this would be async via Celery)
-        text_preview = file_content.decode("utf-8", errors="ignore")[:5000] if file_content else ""
+        text_preview = (
+            file_content.decode("utf-8", errors="ignore")[:5000] if file_content else ""
+        )
         ocr_result = _simulate_ocr_processing(text_preview, source_type)
 
         # Update job with results
@@ -283,7 +298,7 @@ async def submit_ocr_job(
             document_id=document_id,
             status="completed",
             message=f"OCR processing completed. {ocr_result['page_count']} pages processed with "
-                    f"{ocr_result['confidence_score']:.0%} average confidence.",
+            f"{ocr_result['confidence_score']:.0%} average confidence.",
         )
 
     except HTTPException:
@@ -293,10 +308,12 @@ async def submit_ocr_job(
         # If job was created, mark it as failed
         try:
             supabase = get_supabase_client()
-            supabase.table("ocr_jobs").update({
-                "status": "failed",
-                "error_message": str(e),
-            }).eq("id", job_id).execute()
+            supabase.table("ocr_jobs").update(
+                {
+                    "status": "failed",
+                    "error_message": str(e),
+                }
+            ).eq("id", job_id).execute()
         except Exception:
             pass
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
@@ -368,14 +385,16 @@ async def submit_ocr_job_text(
             }
             supabase.table("ocr_page_results").insert(page_data).execute()
 
-        logger.info(f"OCR text job {job_id} completed: {ocr_result['page_count']} pages")
+        logger.info(
+            f"OCR text job {job_id} completed: {ocr_result['page_count']} pages"
+        )
 
         return OCRJobResponse(
             job_id=job_id,
             document_id=request.document_id,
             status="completed",
             message=f"OCR processing completed. {ocr_result['page_count']} pages processed with "
-                    f"{ocr_result['confidence_score']:.0%} average confidence.",
+            f"{ocr_result['confidence_score']:.0%} average confidence.",
         )
 
     except HTTPException:
@@ -408,7 +427,12 @@ async def get_ocr_job(job_id: str) -> OCRJobStatus:
         job = result.data[0]
 
         # Fetch page results
-        pages_result = supabase.table("ocr_page_results").select("*").eq("job_id", job_id).execute()
+        pages_result = (
+            supabase.table("ocr_page_results")
+            .select("*")
+            .eq("job_id", job_id)
+            .execute()
+        )
         pages = pages_result.data or []
 
         return OCRJobStatus(**_build_job_status(job, pages))
@@ -443,7 +467,9 @@ async def list_ocr_jobs(
 
         # Pagination
         offset = (page - 1) * page_size
-        query = query.order("created_at", desc=True).range(offset, offset + page_size - 1)
+        query = query.order("created_at", desc=True).range(
+            offset, offset + page_size - 1
+        )
 
         result = query.execute()
         jobs = result.data or []
@@ -482,7 +508,9 @@ async def submit_ocr_correction(
         supabase = get_supabase_client()
 
         # Verify job exists and is completed
-        result = supabase.table("ocr_jobs").select("id, status").eq("id", job_id).execute()
+        result = (
+            supabase.table("ocr_jobs").select("id, status").eq("id", job_id).execute()
+        )
         if not result.data:
             raise HTTPException(status_code=404, detail=f"OCR job {job_id} not found")
 
@@ -509,10 +537,12 @@ async def submit_ocr_correction(
                 page_num = pc.get("page_number")
                 corrected = pc.get("corrected_text")
                 if page_num is not None and corrected is not None:
-                    supabase.table("ocr_page_results").update({
-                        "corrected_text": corrected,
-                        "corrected_at": now,
-                    }).eq("job_id", job_id).eq("page_number", page_num).execute()
+                    supabase.table("ocr_page_results").update(
+                        {
+                            "corrected_text": corrected,
+                            "corrected_at": now,
+                        }
+                    ).eq("job_id", job_id).eq("page_number", page_num).execute()
 
         logger.info(f"OCR corrections applied to job {job_id}")
 

@@ -40,7 +40,9 @@ def load_prompts(system_type: str) -> dict[str, str]:
 
 def main() -> None:
     assert SYSTEM_TYPE in ["law", "tax"], "Invalid system type"
-    document_type = DocumentType.JUDGMENT if SYSTEM_TYPE == "law" else DocumentType.TAX_INTERPRETATION
+    document_type = (
+        DocumentType.JUDGMENT if SYSTEM_TYPE == "law" else DocumentType.TAX_INTERPRETATION
+    )
     prompts = load_prompts(SYSTEM_TYPE)
 
     llm = ChatOpenAI(

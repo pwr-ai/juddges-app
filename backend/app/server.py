@@ -191,7 +191,9 @@ async def lifespan(app: FastAPI):
         logger.info("PostgreSQL connection pool initialized successfully")
 
         # Step 5: Supabase client (uses shared singleton from app.core.supabase)
-        logger.info("Using shared Supabase client for database and vector search operations")
+        logger.info(
+            "Using shared Supabase client for database and vector search operations"
+        )
 
         # Step 6: Preload datasets (DISABLED - datasets are loaded on-demand)
         # Dataset preloading has been disabled to speed up application startup.
@@ -363,7 +365,13 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,  # Specific origins only
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-User-ID", "X-Request-ID"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-API-Key",
+        "X-User-ID",
+        "X-Request-ID",
+    ],
 )
 
 # Add GZip compression middleware for better performance

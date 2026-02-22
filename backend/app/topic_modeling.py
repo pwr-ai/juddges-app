@@ -79,7 +79,9 @@ class TopicDocument(BaseModel):
 class TimePeriod(BaseModel):
     """Topic prevalence in a specific time period."""
 
-    period_label: str = Field(description="Label for this time period (e.g., '2023-H1')")
+    period_label: str = Field(
+        description="Label for this time period (e.g., '2023-H1')"
+    )
     start_date: str | None = None
     end_date: str | None = None
     document_count: int = Field(description="Documents in this period")
@@ -95,9 +97,7 @@ class Topic(BaseModel):
     label: str = Field(description="Auto-generated topic label from top keywords")
     keywords: list[TopicKeyword] = Field(description="Top keywords for this topic")
     document_count: int = Field(description="Number of documents in this topic")
-    coherence_score: float = Field(
-        ge=0.0, le=1.0, description="Topic coherence score"
-    )
+    coherence_score: float = Field(ge=0.0, le=1.0, description="Topic coherence score")
     trend: str = Field(description="Trend direction: emerging, stable, or declining")
     trend_slope: float = Field(description="Numerical slope of the trend line")
     time_series: list[TimePeriod] = Field(
@@ -133,14 +133,77 @@ class TopicModelingResponse(BaseModel):
 
 # Polish + English stopwords (shared with clustering module)
 STOPWORDS = {
-    "w", "z", "na", "do", "i", "o", "nie", "się", "jest", "od", "za",
-    "że", "to", "co", "po", "jak", "ale", "tym", "te", "ten", "ta",
-    "tego", "tej", "przez", "dla", "ze", "pod", "nad", "przy",
-    "the", "a", "an", "in", "of", "to", "and", "is", "for", "on",
-    "with", "at", "by", "from", "or", "as", "be", "was", "are",
-    "art", "ust", "pkt", "nr", "r", "dz", "poz", "lit",
-    "oraz", "kan", "par", "ust", "jego", "ich", "który", "która",
-    "które", "ktory", "ktora", "ktore", "bez", "jako", "też",
+    "w",
+    "z",
+    "na",
+    "do",
+    "i",
+    "o",
+    "nie",
+    "się",
+    "jest",
+    "od",
+    "za",
+    "że",
+    "to",
+    "co",
+    "po",
+    "jak",
+    "ale",
+    "tym",
+    "te",
+    "ten",
+    "ta",
+    "tego",
+    "tej",
+    "przez",
+    "dla",
+    "ze",
+    "pod",
+    "nad",
+    "przy",
+    "the",
+    "a",
+    "an",
+    "in",
+    "of",
+    "to",
+    "and",
+    "is",
+    "for",
+    "on",
+    "with",
+    "at",
+    "by",
+    "from",
+    "or",
+    "as",
+    "be",
+    "was",
+    "are",
+    "art",
+    "ust",
+    "pkt",
+    "nr",
+    "r",
+    "dz",
+    "poz",
+    "lit",
+    "oraz",
+    "kan",
+    "par",
+    "ust",
+    "jego",
+    "ich",
+    "który",
+    "która",
+    "które",
+    "ktory",
+    "ktora",
+    "ktore",
+    "bez",
+    "jako",
+    "też",
 }
 
 
@@ -173,8 +236,7 @@ def _build_tfidf_matrix(
 
     for text in texts:
         tokens = [
-            w for w in text.split()
-            if len(w) > 2 and w not in STOPWORDS and w.isalpha()
+            w for w in text.split() if len(w) > 2 and w not in STOPWORDS and w.isalpha()
         ]
         unique_tokens = set(tokens)
         for t in unique_tokens:
@@ -288,7 +350,8 @@ def _compute_topic_coherence(
         for j in range(i):
             # Count co-occurrences
             co_occur = sum(
-                1 for doc_set in doc_tokens_sets
+                1
+                for doc_set in doc_tokens_sets
                 if words[i] in doc_set and words[j] in doc_set
             )
             d_j = sum(1 for doc_set in doc_tokens_sets if words[j] in doc_set)
@@ -482,8 +545,7 @@ async def analyze_topics(request: TopicModelingRequest) -> TopicModelingResponse
     # Build tokenized doc sets for coherence computation
     doc_token_sets = [
         set(
-            w for w in text.split()
-            if len(w) > 2 and w not in STOPWORDS and w.isalpha()
+            w for w in text.split() if len(w) > 2 and w not in STOPWORDS and w.isalpha()
         )
         for text in texts
     ]

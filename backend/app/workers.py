@@ -52,7 +52,9 @@ def _update_job_results_in_supabase(
         True if update succeeded, False otherwise
     """
     if not supabase_client:
-        logger.debug(f"Supabase client not available, skipping results update for job {job_id}")
+        logger.debug(
+            f"Supabase client not available, skipping results update for job {job_id}"
+        )
         return False
 
     try:
@@ -63,13 +65,22 @@ def _update_job_results_in_supabase(
             "updated_at": datetime.utcnow().isoformat(),
         }
 
-        result = supabase_client.table("extraction_jobs").update(update_data).eq("job_id", job_id).execute()
+        result = (
+            supabase_client.table("extraction_jobs")
+            .update(update_data)
+            .eq("job_id", job_id)
+            .execute()
+        )
 
         if result.data and len(result.data) > 0:
-            logger.debug(f"Updated Supabase results for job {job_id}: {completed_documents} docs processed")
+            logger.debug(
+                f"Updated Supabase results for job {job_id}: {completed_documents} docs processed"
+            )
             return True
         else:
-            logger.warning(f"No rows updated in Supabase for job {job_id} - job might not exist")
+            logger.warning(
+                f"No rows updated in Supabase for job {job_id} - job might not exist"
+            )
             return False
 
     except Exception as e:
@@ -78,12 +89,11 @@ def _update_job_results_in_supabase(
 
 
 def _build_celery_failure_metadata(
-    exception: BaseException | None = None,
-    **extra_meta: Any
+    exception: BaseException | None = None, **extra_meta: Any
 ) -> dict[str, Any]:
     """
     Build a dictionary capturing failure metadata suitable for job/task status reporting.
-    
+
     Args:
         exception: An optional exception object. If provided, its type and message are recorded in the metadata.
         **extra_meta: Arbitrary additional metadata key-value pairs.
@@ -112,28 +122,30 @@ def _calculate_task_timing_metrics(
 ) -> dict[str, Any]:
     """
     Calculate timing metrics for a task in progress.
-    
+
     Args:
         job_start_time: Unix timestamp when the job started
         completed_documents: Number of documents processed so far
         total_documents: Total number of documents to process
-    
+
     Returns:
         Dictionary containing:
             - elapsed_time: Seconds elapsed since job start
             - avg_time_per_doc: Average time per document in seconds
             - remaining_documents: Number of documents left to process
             - estimated_time_remaining: Estimated seconds until completion
-    
+
     Example:
         >>> _calculate_task_timing_metrics(time.time() - 100, 5, 10)
         {'elapsed_time': 100, 'avg_time_per_doc': 20.0, 'remaining_documents': 5, 'estimated_time_remaining': 100.0}
     """
     elapsed_time = time.time() - job_start_time
-    avg_time_per_doc = elapsed_time / completed_documents if completed_documents > 0 else 0
+    avg_time_per_doc = (
+        elapsed_time / completed_documents if completed_documents > 0 else 0
+    )
     remaining_documents = total_documents - completed_documents
     estimated_time_remaining = avg_time_per_doc * remaining_documents
-    
+
     return {
         "elapsed_time": elapsed_time,
         "avg_time_per_doc": avg_time_per_doc,
@@ -146,11 +158,11 @@ def _calculate_task_timing_metrics(
     bind=True,
     pydantic=True,
     track_started=True,
-    max_retries=2, 
+    max_retries=2,
     default_retry_delay=60,
     autoretry_for=(ConnectionError, OSError, TimeoutError),
     retry_backoff=True,
-    retry_backoff_max=300, 
+    retry_backoff_max=300,
     retry_jitter=True,
 )
 def extract_information_from_documents_task(
@@ -159,11 +171,11 @@ def extract_information_from_documents_task(
 ) -> list[DocumentExtractionResponse]:
     """
     Extract information from documents using InformationExtractor with schemas from Supabase.
-    
+
     This is the recommended function that uses InformationExtractor with prepared schemas
     from Supabase database. The schema should be provided as a dict with 'name', 'description',
     and 'text' fields (as returned by GET /schemas/db/{schema_id}).
-    
+
     Error handling:
     - Connection errors (ConnectionError, OSError, TimeoutError): Automatically retried by Celery
       up to 2 times (3 attempts total) with exponential backoff (60s base, 300s max)
@@ -173,14 +185,14 @@ def extract_information_from_documents_task(
     Retry strategy:
     - Uses Celery's autoretry_for to handle most connection errors automatically
     - Database errors from Supabase are retried with connection error strategy
-        
-    Note: The InformationExtractor also has built-in retry logic for LLM API calls, 
+
+    Note: The InformationExtractor also has built-in retry logic for LLM API calls,
     so transient LLM errors are handled at multiple levels.
-    
+
     Args:
         request: DocumentExtractionRequest with user_schema containing full schema dict from Supabase
                  (must have 'name', 'description', 'text' fields)
-    
+
     Returns:
         List of DocumentExtractionResponse objects with extracted data
     """
@@ -188,7 +200,7 @@ def extract_information_from_documents_task(
         # Track job start time
         job_start_time = time.time()
         started_at = datetime.utcnow()
-        
+
         # Update state with timing metadata
         self.update_state(
             state=DocumentProcessingStatus.PROCESSING.value,
@@ -196,20 +208,22 @@ def extract_information_from_documents_task(
                 "started_at": started_at.isoformat(),
                 "total_documents": len(request.document_ids),
                 "completed_documents": 0,
-            }
+            },
         )
-        
+
         # Initialize LLM - this may fail if LLM service is unavailable
         llm_name = request.llm_name
-        logger.info(f"Initializing LLM for extraction: model={llm_name}, base_url={LLM_BASE_URL}, kwargs={request.llm_kwargs}")
+        logger.info(
+            f"Initializing LLM for extraction: model={llm_name}, base_url={LLM_BASE_URL}, kwargs={request.llm_kwargs}"
+        )
         llm = get_llm(
             name=llm_name,
             base_url=LLM_BASE_URL,
             **request.llm_kwargs,
         )
-        api_base = getattr(llm, 'openai_api_base', 'not set')
+        api_base = getattr(llm, "openai_api_base", "not set")
         logger.info(f"LLM initialized: model={llm.model_name}, api_base={api_base}")
-        
+
         # Get documents - this may fail if Supabase is unavailable
         documents = asyncio.run(get_documents_by_id(request.document_ids))
 
@@ -223,22 +237,28 @@ def extract_information_from_documents_task(
                     "Either user_schema or schema_id must be provided. "
                     "If schema_id is provided, it will be fetched from the database."
                 )
-            
+
             try:
                 user_schema = _fetch_schema_from_db(schema_id, client=supabase_client)
                 logger.info(f"Fetched schema {schema_id} from database")
             except Exception as e:
-                logger.error(f"Failed to fetch schema from database: {e}", exc_info=True)
+                logger.error(
+                    f"Failed to fetch schema from database: {e}", exc_info=True
+                )
                 raise ValueError(f"Failed to fetch schema from database: {str(e)}")
 
-        logger.info(f"Preparing schema from database format, schema type: {type(user_schema)}")
+        logger.info(
+            f"Preparing schema from database format, schema type: {type(user_schema)}"
+        )
         try:
             # Get language from request, default to Polish
             language = request.language or "pl"
             # Prepare schema using schema_utils
-            prepared_schema = prepare_schema_from_db(user_schema, language=language, strict=True)
+            prepared_schema = prepare_schema_from_db(
+                user_schema, language=language, strict=True
+            )
             logger.info("Schema prepared successfully")
-            
+
             # Create extractor with prepared schema
             extractor = InformationExtractor(
                 model=llm,
@@ -249,7 +269,10 @@ def extract_information_from_documents_task(
         except Exception as e:
             error_type = type(e).__name__
             error_msg = str(e)
-            logger.error(f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}", exc_info=True)
+            logger.error(
+                f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}",
+                exc_info=True,
+            )
             # Ensure exception message includes error type for Celery serialization
             if error_type not in error_msg:
                 # Create new exception with type in message
@@ -258,23 +281,27 @@ def extract_information_from_documents_task(
 
         results: list[DocumentExtractionResponse] = []
         total_documents = len(documents)
-        
+
         for idx, doc in enumerate(documents):
-            doc_start_time = time.time()
-            
+            time.time()
+
             # Extract information - this may fail if LLM service is unavailable
             # The extractor has its own retry logic, but we catch connection errors here too
             # Select language-specific extraction instructions based on request language
             language = request.language or "pl"
-            
+
             # Load additional instructions from YAML config files
-            base_instructions = InformationExtractor.get_additional_instructions(language=language)
-            
+            base_instructions = InformationExtractor.get_additional_instructions(
+                language=language
+            )
+
             # Combine base instructions with any existing additional_instructions
             combined_instructions = base_instructions
             if request.additional_instructions:
-                combined_instructions = f"{base_instructions}\n\n{request.additional_instructions}"
-            
+                combined_instructions = (
+                    f"{base_instructions}\n\n{request.additional_instructions}"
+                )
+
             try:
                 extracted_data = asyncio.run(
                     extractor.extract_information_with_structured_output(
@@ -302,7 +329,10 @@ def extract_information_from_documents_task(
                 )
             except Exception as doc_error:
                 # Individual document failed - mark it as failed but continue with other documents
-                logger.error(f"Error extracting from document {doc.document_id}: {doc_error}", exc_info=True)
+                logger.error(
+                    f"Error extracting from document {doc.document_id}: {doc_error}",
+                    exc_info=True,
+                )
                 results.append(
                     DocumentExtractionResponse(
                         collection_id=request.collection_id,
@@ -316,7 +346,7 @@ def extract_information_from_documents_task(
                         extracted_data=None,
                     ).model_dump(mode="json")
                 )
-            
+
             # Update progress with timing information
             completed_documents = idx + 1
             timing_metrics = _calculate_task_timing_metrics(
@@ -324,7 +354,7 @@ def extract_information_from_documents_task(
                 completed_documents=completed_documents,
                 total_documents=total_documents,
             )
-            
+
             # Update task state with progress and timing
             self.update_state(
                 state=DocumentProcessingStatus.PROCESSING.value,
@@ -333,9 +363,13 @@ def extract_information_from_documents_task(
                     "total_documents": total_documents,
                     "completed_documents": completed_documents,
                     "elapsed_time_seconds": int(timing_metrics["elapsed_time"]),
-                    "estimated_time_remaining_seconds": int(timing_metrics["estimated_time_remaining"]),
-                    "avg_time_per_document_seconds": round(timing_metrics["avg_time_per_doc"], 2),
-                }
+                    "estimated_time_remaining_seconds": int(
+                        timing_metrics["estimated_time_remaining"]
+                    ),
+                    "avg_time_per_document_seconds": round(
+                        timing_metrics["avg_time_per_doc"], 2
+                    ),
+                },
             )
 
             # Save results to Supabase after every document
@@ -348,7 +382,7 @@ def extract_information_from_documents_task(
             )
 
         # Check results and update task state accordingly
-        completed_at = datetime.utcnow()
+        datetime.utcnow()
         # NOTE: Do NOT call update_state() with final states (SUCCESS, FAILURE, etc.) before returning!
         # When we call update_state() and then return a value, Celery's Redis backend may store
         # the metadata from update_state() instead of the actual return value when fetching with .get().
@@ -365,7 +399,7 @@ def extract_information_from_documents_task(
         )
 
         return results
-    
+
     except Retry:
         # Re-raise retry exceptions to let Celery handle them
         raise
@@ -381,8 +415,10 @@ def extract_information_from_documents_task(
         error_type = type(e).__name__
         error_msg = str(e)
         # Ensure error message includes type for Celery serialization
-        full_error_msg = f"{error_type}: {error_msg}" if error_type not in error_msg else error_msg
-        
+        full_error_msg = (
+            f"{error_type}: {error_msg}" if error_type not in error_msg else error_msg
+        )
+
         logger.error(f"Error in extraction task: {full_error_msg}", exc_info=True)
         failed_results = []
         for doc_id in request.document_ids:

@@ -18,16 +18,20 @@ class EmbeddingService:
 
     def __init__(self):
         """Initialize embedding service with environment configuration."""
-        self.transformers_url = os.getenv("TRANSFORMERS_INFERENCE_URL", "http://localhost:8080")
+        self.transformers_url = os.getenv(
+            "TRANSFORMERS_INFERENCE_URL", "http://localhost:8080"
+        )
         self.use_openai = os.getenv("USE_OPENAI_EMBEDDINGS", "false").lower() == "true"
         self.embedding_dim = int(os.getenv("EMBEDDING_DIMENSION", "768"))
         self.batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "16"))
 
-        logger.info(f"Embedding service initialized: "
-                   f"transformers_url={self.transformers_url}, "
-                   f"use_openai={self.use_openai}, "
-                   f"dim={self.embedding_dim}, "
-                   f"batch_size={self.batch_size}")
+        logger.info(
+            f"Embedding service initialized: "
+            f"transformers_url={self.transformers_url}, "
+            f"use_openai={self.use_openai}, "
+            f"dim={self.embedding_dim}, "
+            f"batch_size={self.batch_size}"
+        )
 
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """
@@ -42,7 +46,9 @@ class EmbeddingService:
         embeddings = self.generate_embeddings_batch([text])
         return embeddings[0] if embeddings else None
 
-    def generate_embeddings_batch(self, texts: List[str]) -> List[Optional[List[float]]]:
+    def generate_embeddings_batch(
+        self, texts: List[str]
+    ) -> List[Optional[List[float]]]:
         """
         Generate embeddings for multiple texts in batch (much faster).
 
@@ -72,7 +78,9 @@ class EmbeddingService:
         # Use OpenAI if explicitly configured
         return self._generate_openai_batch(texts)
 
-    def _generate_transformers_batch(self, texts: List[str]) -> List[Optional[List[float]]]:
+    def _generate_transformers_batch(
+        self, texts: List[str]
+    ) -> List[Optional[List[float]]]:
         """
         Generate embeddings using Sentence Transformers inference service (batch).
 
@@ -110,7 +118,9 @@ class EmbeddingService:
         if len(vectors) != len(texts):
             raise ValueError(f"Expected {len(texts)} vectors, got {len(vectors)}")
 
-        logger.debug(f"Generated {len(vectors)} embeddings in batch with dim={self.embedding_dim}")
+        logger.debug(
+            f"Generated {len(vectors)} embeddings in batch with dim={self.embedding_dim}"
+        )
         return vectors
 
     def _generate_openai_batch(self, texts: List[str]) -> List[Optional[List[float]]]:
@@ -137,8 +147,7 @@ class EmbeddingService:
             truncated_texts = [text[:32000] for text in texts]
 
             response = openai.embeddings.create(
-                model="text-embedding-ada-002",
-                input=truncated_texts
+                model="text-embedding-ada-002", input=truncated_texts
             )
 
             # Extract embeddings in order

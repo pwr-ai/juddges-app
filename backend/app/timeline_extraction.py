@@ -120,8 +120,15 @@ class TimelineEvent(BaseModel):
     title: str = Field(description="Short event title")
     description: str = Field(description="Detailed description of the event")
     category: Literal[
-        "filing", "decision", "deadline", "hearing", "appeal",
-        "enforcement", "procedural", "legislative", "other"
+        "filing",
+        "decision",
+        "deadline",
+        "hearing",
+        "appeal",
+        "enforcement",
+        "procedural",
+        "legislative",
+        "other",
     ] = Field(description="Category of the event")
     parties: list[str] = Field(
         default_factory=list, description="Parties or entities involved"
@@ -233,7 +240,9 @@ def _format_document_for_timeline(doc: dict[str, Any]) -> str:
         "and sequence events in legal proceedings."
     ),
 )
-async def extract_timeline(request: TimelineExtractionRequest) -> TimelineExtractionResponse:
+async def extract_timeline(
+    request: TimelineExtractionRequest,
+) -> TimelineExtractionResponse:
     """Extract a chronological timeline from legal documents."""
     logger.info(
         f"Timeline extraction request: depth={request.extraction_depth}, "
@@ -258,7 +267,9 @@ async def extract_timeline(request: TimelineExtractionRequest) -> TimelineExtrac
     focus_instruction = ""
     if request.focus_areas:
         areas_str = ", ".join(request.focus_areas)
-        focus_instruction = f"- Pay special attention to these temporal aspects: {areas_str}"
+        focus_instruction = (
+            f"- Pay special attention to these temporal aspects: {areas_str}"
+        )
 
     # Build the prompt
     filled_prompt = TIMELINE_EXTRACTION_PROMPT.format(
@@ -268,10 +279,12 @@ async def extract_timeline(request: TimelineExtractionRequest) -> TimelineExtrac
     )
 
     # Create the LLM chain
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", TIMELINE_SYSTEM_PROMPT),
-        ("human", "{prompt}"),
-    ])
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", TIMELINE_SYSTEM_PROMPT),
+            ("human", "{prompt}"),
+        ]
+    )
 
     llm = get_default_llm(use_mini_model=False)
     parser = JsonOutputParser()
@@ -290,7 +303,11 @@ async def extract_timeline(request: TimelineExtractionRequest) -> TimelineExtrac
     # Parse events
     events = []
     for event_data in result.get("events", []):
-        if isinstance(event_data, dict) and event_data.get("date") and event_data.get("title"):
+        if (
+            isinstance(event_data, dict)
+            and event_data.get("date")
+            and event_data.get("title")
+        ):
             try:
                 events.append(TimelineEvent(**event_data))
             except Exception as e:

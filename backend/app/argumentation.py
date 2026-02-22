@@ -308,10 +308,12 @@ async def analyze_arguments(
     )
 
     # Create the LLM chain
-    chat_prompt = ChatPromptTemplate.from_messages([
-        ("system", ARGUMENTATION_SYSTEM_PROMPT),
-        ("human", "{prompt}"),
-    ])
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", ARGUMENTATION_SYSTEM_PROMPT),
+            ("human", "{prompt}"),
+        ]
+    )
 
     llm = get_default_llm(use_mini_model=False)
     parser = JsonOutputParser()
@@ -330,7 +332,11 @@ async def analyze_arguments(
     # Parse arguments from response
     raw_arguments = result.get("arguments", [])
     valid_reasoning_patterns = {
-        "deductive", "analogical", "policy", "textual", "teleological",
+        "deductive",
+        "analogical",
+        "policy",
+        "textual",
+        "teleological",
     }
     valid_strengths = {"strong", "moderate", "weak"}
 

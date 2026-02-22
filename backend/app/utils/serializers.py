@@ -38,4 +38,3 @@ def serialize_document_for_similarity(doc: LegalDocument) -> dict:
         "country": doc.country,
         "language": doc.language,
     }
-

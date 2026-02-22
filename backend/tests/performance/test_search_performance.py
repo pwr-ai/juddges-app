@@ -47,18 +47,22 @@ class TestSearchPerformance:
         # Calculate percentiles
         p50 = statistics.median(latencies)
         p95 = (
-            statistics.quantiles(latencies, n=20)[18] if len(latencies) >= 20 else max(latencies)
+            statistics.quantiles(latencies, n=20)[18]
+            if len(latencies) >= 20
+            else max(latencies)
         )  # 95th percentile
         p99 = (
-            statistics.quantiles(latencies, n=100)[98] if len(latencies) >= 100 else max(latencies)
+            statistics.quantiles(latencies, n=100)[98]
+            if len(latencies) >= 100
+            else max(latencies)
         )
         avg = statistics.mean(latencies)
         min_latency = min(latencies)
         max_latency = max(latencies)
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Semantic Search Latency Metrics")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Iterations: {len(latencies)}")
         print(f"Min:        {min_latency:.1f}ms")
         print(f"p50:        {p50:.1f}ms")
@@ -66,7 +70,7 @@ class TestSearchPerformance:
         print(f"p99:        {p99:.1f}ms")
         print(f"Max:        {max_latency:.1f}ms")
         print(f"Average:    {avg:.1f}ms")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Assert performance targets
         # Note: These are reasonable targets for semantic search with embeddings + DB
@@ -107,18 +111,20 @@ class TestSearchPerformance:
         throughput = num_requests / total_time
         avg_latency = statistics.mean(durations) * 1000
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Concurrent Search Throughput")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Total Requests:  {num_requests}")
         print(f"Successful:      {successful}")
         print(f"Failed:          {failed}")
         print(f"Total Time:      {total_time:.2f}s")
         print(f"Throughput:      {throughput:.1f} req/s")
         print(f"Avg Latency:     {avg_latency:.1f}ms")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
-        assert successful == num_requests, f"Only {successful}/{num_requests} requests succeeded"
+        assert successful == num_requests, (
+            f"Only {successful}/{num_requests} requests succeeded"
+        )
         assert throughput > 5, f"Throughput {throughput:.1f} req/s below 5 req/s target"
 
     @pytest.mark.anyio
@@ -151,13 +157,13 @@ class TestSearchPerformance:
         p95 = statistics.quantiles(latencies, n=20)[18]
         avg = statistics.mean(latencies)
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Search with Filters Performance")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Iterations: {len(latencies)}")
         print(f"Average:    {avg:.1f}ms")
         print(f"p95:        {p95:.1f}ms")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         assert p95 < 3000, f"Filtered search p95 {p95:.1f}ms exceeds 3s target"
 
@@ -182,9 +188,7 @@ class TestDatabasePerformance:
 
             start = time.perf_counter()
             try:
-                results = await search_chunks_vector(
-                    query_embedding=query_embedding, limit=10
-                )
+                await search_chunks_vector(query_embedding=query_embedding, limit=10)
                 latency = (time.perf_counter() - start) * 1000
                 latencies.append(latency)
             except Exception as e:
@@ -193,7 +197,7 @@ class TestDatabasePerformance:
                 latencies.append(0)
 
         # Filter out failures
-        valid_latencies = [l for l in latencies if l > 0]
+        valid_latencies = [lat for lat in latencies if lat > 0]
 
         if valid_latencies:
             p50 = statistics.median(valid_latencies)
@@ -203,13 +207,13 @@ class TestDatabasePerformance:
                 else max(valid_latencies)
             )
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print("Vector Search Performance")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             print(f"Successful: {len(valid_latencies)}/{len(latencies)}")
             print(f"p50:        {p50:.1f}ms")
             print(f"p95:        {p95:.1f}ms")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
 
             assert p95 < 500, f"Vector search p95 {p95:.1f}ms exceeds 500ms target"
         else:
@@ -224,19 +228,24 @@ class TestDatabasePerformance:
             pytest.skip("juddges_search package not available")
 
         latencies: List[float] = []
-        queries = ["contract AND law", "tort OR liability", "criminal procedure", "property"]
+        queries = [
+            "contract AND law",
+            "tort OR liability",
+            "criminal procedure",
+            "property",
+        ]
 
         for query in queries * 3:  # Run each query 3 times
             start = time.perf_counter()
             try:
-                results = await search_chunks_term(query_text=query, limit=10)
+                await search_chunks_term(query_text=query, limit=10)
                 latency = (time.perf_counter() - start) * 1000
                 latencies.append(latency)
             except Exception as e:
                 print(f"Full-text search failed: {e}")
                 latencies.append(0)
 
-        valid_latencies = [l for l in latencies if l > 0]
+        valid_latencies = [lat for lat in latencies if lat > 0]
 
         if valid_latencies:
             p50 = statistics.median(valid_latencies)
@@ -246,13 +255,13 @@ class TestDatabasePerformance:
                 else max(valid_latencies)
             )
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print("Full-text Search Performance")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             print(f"Successful: {len(valid_latencies)}/{len(latencies)}")
             print(f"p50:        {p50:.1f}ms")
             print(f"p95:        {p95:.1f}ms")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
 
             assert p95 < 200, f"Full-text search p95 {p95:.1f}ms exceeds 200ms target"
         else:
@@ -282,12 +291,12 @@ class TestAPIEndpointPerformance:
         p50 = statistics.median(latencies)
         p95 = statistics.quantiles(latencies, n=20)[18]
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Health Check Latency")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"p50: {p50:.1f}ms")
         print(f"p95: {p95:.1f}ms")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         # Health checks should be very fast
         assert p95 < 50, f"Health check p95 {p95:.1f}ms exceeds 50ms target"
@@ -328,11 +337,11 @@ class TestAPIEndpointPerformance:
             )
             avg = statistics.mean(latencies)
 
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print("Document Retrieval Performance")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             print(f"Average: {avg:.1f}ms")
             print(f"p95:     {p95:.1f}ms")
-            print(f"{'='*60}\n")
+            print(f"{'=' * 60}\n")
 
             assert p95 < 1000, f"Document retrieval p95 {p95:.1f}ms exceeds 1s target"

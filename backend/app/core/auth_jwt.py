@@ -51,9 +51,7 @@ def get_admin_supabase_client() -> Client:
 
         # Use ClientOptions to configure timeout instead of deprecated timeout parameter
         options = ClientOptions(
-            postgrest_client_timeout=30,
-            storage_client_timeout=30,
-            schema="public"
+            postgrest_client_timeout=30, storage_client_timeout=30, schema="public"
         )
         _admin_supabase_client = create_client(url, service_role_key, options=options)
         logger.info("Initialized Supabase admin client (service role)")
@@ -89,9 +87,7 @@ def get_user_supabase_client(access_token: str) -> Client:
     # This ensures RLS policies are enforced
     # Use ClientOptions to configure timeout instead of deprecated timeout parameter
     options = ClientOptions(
-        postgrest_client_timeout=30,
-        storage_client_timeout=30,
-        schema="public"
+        postgrest_client_timeout=30, storage_client_timeout=30, schema="public"
     )
     client = create_client(url, anon_key, options=options)
 
@@ -152,7 +148,7 @@ class AuthenticatedUser:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> AuthenticatedUser:
     """
     Dependency to get the current authenticated user from JWT token.
@@ -206,8 +202,10 @@ async def get_current_user(
 
         # Create authenticated user object
         auth_user = AuthenticatedUser(
-            user_data=user_data.model_dump() if hasattr(user_data, 'model_dump') else user_data.__dict__,
-            access_token=access_token
+            user_data=user_data.model_dump()
+            if hasattr(user_data, "model_dump")
+            else user_data.__dict__,
+            access_token=access_token,
         )
 
         logger.debug(f"User authenticated: {auth_user.id} ({auth_user.email})")
@@ -226,7 +224,9 @@ async def get_current_user(
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+        HTTPBearer(auto_error=False)
+    ),
 ) -> Optional[AuthenticatedUser]:
     """
     Dependency to optionally get the current authenticated user.
@@ -259,7 +259,7 @@ async def get_optional_user(
 
 
 async def require_admin(
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> AuthenticatedUser:
     """
     Dependency to require admin role.
@@ -287,8 +287,7 @@ async def require_admin(
     if not user.is_admin():
         logger.warning(f"Admin access denied for user {user.id} ({user.email})")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required"
         )
 
     return user

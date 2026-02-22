@@ -43,7 +43,9 @@ class ResearchTopic(BaseModel):
 
     name: str = Field(description="Topic name")
     relevance: float = Field(ge=0.0, le=1.0, description="Relevance score (0-1)")
-    document_count: int = Field(default=0, description="Number of documents related to this topic")
+    document_count: int = Field(
+        default=0, description="Number of documents related to this topic"
+    )
     description: str | None = Field(default=None, description="Topic description")
 
 
@@ -52,8 +54,12 @@ class KnowledgeGap(BaseModel):
 
     topic: str = Field(description="Gap topic or area")
     description: str = Field(description="Description of what's missing")
-    severity: Literal["low", "medium", "high"] = Field(description="Gap importance level")
-    suggested_query: str | None = Field(default=None, description="Suggested search query to fill the gap")
+    severity: Literal["low", "medium", "high"] = Field(
+        description="Gap importance level"
+    )
+    suggested_query: str | None = Field(
+        default=None, description="Suggested search query to fill the gap"
+    )
 
 
 class ResearchStep(BaseModel):
@@ -61,11 +67,15 @@ class ResearchStep(BaseModel):
 
     title: str = Field(description="Step title")
     description: str = Field(description="Step description")
-    action_type: Literal["search", "read_document", "explore_topic", "compare_documents"] = Field(
-        description="Type of action to take"
+    action_type: Literal[
+        "search", "read_document", "explore_topic", "compare_documents"
+    ] = Field(description="Type of action to take")
+    query: str | None = Field(
+        default=None, description="Search query if action is 'search'"
     )
-    query: str | None = Field(default=None, description="Search query if action is 'search'")
-    document_ids: list[str] | None = Field(default=None, description="Document IDs if action involves specific documents")
+    document_ids: list[str] | None = Field(
+        default=None, description="Document IDs if action involves specific documents"
+    )
     priority: int = Field(default=0, description="Priority level (0=highest)")
 
 
@@ -75,15 +85,21 @@ class RelatedDocument(BaseModel):
     document_id: str = Field(description="Document ID")
     title: str | None = Field(default=None, description="Document title")
     document_type: str | None = Field(default=None, description="Document type")
-    relevance_score: float = Field(ge=0.0, le=1.0, description="Relevance to research context")
+    relevance_score: float = Field(
+        ge=0.0, le=1.0, description="Relevance to research context"
+    )
     reason: str = Field(description="Why this document is relevant")
 
 
 class AnalyzeResearchRequest(BaseModel):
     """Request for research context analysis."""
 
-    query: str | None = Field(default=None, description="Optional query providing research context")
-    document_ids: list[str] | None = Field(default=None, description="Optional document IDs to include in analysis")
+    query: str | None = Field(
+        default=None, description="Optional query providing research context"
+    )
+    document_ids: list[str] | None = Field(
+        default=None, description="Optional document IDs to include in analysis"
+    )
     chat_id: str | None = Field(default=None, description="Optional chat ID to analyze")
 
 
@@ -93,8 +109,12 @@ class AnalyzeResearchResponse(BaseModel):
     topics: list[ResearchTopic] = Field(description="Identified research topics")
     gaps: list[KnowledgeGap] = Field(description="Identified knowledge gaps")
     next_steps: list[ResearchStep] = Field(description="Suggested next steps")
-    related_documents: list[RelatedDocument] = Field(description="Related documents to explore")
-    coverage_score: float = Field(ge=0.0, le=1.0, description="Research coverage score (0-1)")
+    related_documents: list[RelatedDocument] = Field(
+        description="Related documents to explore"
+    )
+    coverage_score: float = Field(
+        ge=0.0, le=1.0, description="Research coverage score (0-1)"
+    )
     analysis_summary: str = Field(description="Summary of research analysis")
 
 
@@ -103,7 +123,9 @@ class QuickSuggestion(BaseModel):
 
     related_documents: list[RelatedDocument] = Field(description="Related documents")
     next_steps: list[ResearchStep] = Field(description="Suggested next steps")
-    trending_topics: list[str] = Field(description="Trending topics from user's history")
+    trending_topics: list[str] = Field(
+        description="Trending topics from user's history"
+    )
 
 
 class SavedResearchContext(BaseModel):
@@ -130,9 +152,15 @@ class SaveResearchContextRequest(BaseModel):
     title: str | None = Field(default=None, description="Context title")
     analyzed_topics: list[dict] = Field(default_factory=list, description="Topics JSON")
     identified_gaps: list[dict] = Field(default_factory=list, description="Gaps JSON")
-    suggested_next_steps: list[dict] = Field(default_factory=list, description="Steps JSON")
-    related_document_ids: list[str] = Field(default_factory=list, description="Related document IDs")
-    coverage_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Coverage score")
+    suggested_next_steps: list[dict] = Field(
+        default_factory=list, description="Steps JSON"
+    )
+    related_document_ids: list[str] = Field(
+        default_factory=list, description="Related document IDs"
+    )
+    coverage_score: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="Coverage score"
+    )
 
 
 # ===== Endpoints =====
@@ -146,7 +174,9 @@ class SaveResearchContextRequest(BaseModel):
 )
 async def analyze_research(
     request: AnalyzeResearchRequest,
-    user_id: str | None = Query(default=None, description="User ID for personalized analysis"),
+    user_id: str | None = Query(
+        default=None, description="User ID for personalized analysis"
+    ),
 ) -> AnalyzeResearchResponse:
     """Analyze user's research context using LLM to identify topics, gaps, and next steps."""
     try:
@@ -203,7 +233,9 @@ async def analyze_research(
 async def get_suggestions(
     user_id: str | None = Query(default=None, description="User ID"),
     query: str | None = Query(default=None, description="Optional query context"),
-    document_id: str | None = Query(default=None, description="Optional document ID for similar documents"),
+    document_id: str | None = Query(
+        default=None, description="Optional document ID for similar documents"
+    ),
     limit: int = Query(5, ge=1, le=20, description="Number of suggestions"),
 ) -> QuickSuggestion:
     """Get quick suggestions based on embeddings and user history (no LLM)."""
@@ -256,7 +288,9 @@ async def get_suggestions(
                             title=result.get("title"),
                             document_type=result.get("document_type"),
                             relevance_score=round(result.get("similarity", 0.0), 3),
-                            reason="Similar to your query" if query else "Similar to the document you're viewing",
+                            reason="Similar to your query"
+                            if query
+                            else "Similar to the document you're viewing",
                         )
                     )
 
@@ -370,7 +404,9 @@ async def save_research_context(
         response = supabase.table("research_contexts").insert(context_data).execute()
 
         if not response.data:
-            raise HTTPException(status_code=500, detail="Failed to save research context.")
+            raise HTTPException(
+                status_code=500, detail="Failed to save research context."
+            )
 
         saved = response.data[0]
 
@@ -427,13 +463,14 @@ async def _gather_research_context(
 
     try:
         # Get recent search queries
-        search_response = supabase.table("search_queries").select(
-            "query, created_at"
-        ).eq(
-            "user_id", user_id
-        ).order(
-            "created_at", desc=True
-        ).limit(10).execute()
+        search_response = (
+            supabase.table("search_queries")
+            .select("query, created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(10)
+            .execute()
+        )
 
         if search_response.data:
             context["recent_searches"] = [
@@ -444,29 +481,35 @@ async def _gather_research_context(
 
         # Get recent chat messages if chat_id provided
         if chat_id:
-            messages_response = supabase.table("messages").select(
-                "content, role, created_at"
-            ).eq(
-                "chat_id", chat_id
-            ).order(
-                "created_at", desc=True
-            ).limit(20).execute()
+            messages_response = (
+                supabase.table("messages")
+                .select("content, role, created_at")
+                .eq("chat_id", chat_id)
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute()
+            )
 
             if messages_response.data:
                 context["recent_messages"] = [
-                    {"content": m["content"], "role": m["role"], "timestamp": m["created_at"]}
+                    {
+                        "content": m["content"],
+                        "role": m["role"],
+                        "timestamp": m["created_at"],
+                    }
                     for m in messages_response.data
                 ]
                 context["has_data"] = True
 
         # Get recent document interactions
-        interactions_response = supabase.table("user_document_interactions").select(
-            "document_id, interaction_type, created_at"
-        ).eq(
-            "user_id", user_id
-        ).order(
-            "created_at", desc=True
-        ).limit(20).execute()
+        interactions_response = (
+            supabase.table("user_document_interactions")
+            .select("document_id, interaction_type, created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
 
         if interactions_response.data:
             # Group by document_id to avoid duplicates
@@ -476,11 +519,13 @@ async def _gather_research_context(
                 doc_id = interaction["document_id"]
                 if doc_id not in seen_docs:
                     seen_docs.add(doc_id)
-                    viewed_docs.append({
-                        "document_id": doc_id,
-                        "interaction_type": interaction["interaction_type"],
-                        "timestamp": interaction["created_at"],
-                    })
+                    viewed_docs.append(
+                        {
+                            "document_id": doc_id,
+                            "interaction_type": interaction["interaction_type"],
+                            "timestamp": interaction["created_at"],
+                        }
+                    )
             context["viewed_documents"] = viewed_docs[:10]
             if viewed_docs:
                 context["has_data"] = True
@@ -529,7 +574,10 @@ Respond ONLY with valid JSON in this exact format:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a legal research analysis assistant. Respond only with valid JSON."},
+                {
+                    "role": "system",
+                    "content": "You are a legal research analysis assistant. Respond only with valid JSON.",
+                },
                 {"role": "user", "content": prompt},
             ],
             temperature=0.7,
@@ -542,6 +590,7 @@ Respond ONLY with valid JSON in this exact format:
 
         # Parse JSON response
         import json
+
         analysis = json.loads(content)
 
         return analysis
@@ -581,7 +630,9 @@ def _build_context_summary(context_data: dict) -> str:
         parts.append(f"Recently Viewed Documents: {', '.join(doc_ids)}")
 
     if context_data.get("provided_documents"):
-        parts.append(f"Specified Documents: {', '.join(context_data['provided_documents'])}")
+        parts.append(
+            f"Specified Documents: {', '.join(context_data['provided_documents'])}"
+        )
 
     if not parts:
         return "No research context available."
@@ -602,7 +653,9 @@ async def _find_related_documents(
             query_parts.append(context_data["provided_query"])
 
         if context_data.get("recent_searches"):
-            query_parts.extend([s["query"] for s in context_data["recent_searches"][:3]])
+            query_parts.extend(
+                [s["query"] for s in context_data["recent_searches"][:3]]
+            )
 
         if not query_parts:
             return []
@@ -618,7 +671,9 @@ async def _find_related_documents(
         )
 
         # Filter out already viewed documents
-        viewed_ids = {d["document_id"] for d in context_data.get("viewed_documents", [])}
+        viewed_ids = {
+            d["document_id"] for d in context_data.get("viewed_documents", [])
+        }
 
         results = []
         for result in similar:
@@ -656,13 +711,14 @@ async def _get_trending_topics(user_id: str | None, limit: int = 5) -> list[str]
         if not supabase:
             return []
 
-        response = supabase.table("search_queries").select(
-            "query"
-        ).eq(
-            "user_id", user_id
-        ).order(
-            "created_at", desc=True
-        ).limit(20).execute()
+        response = (
+            supabase.table("search_queries")
+            .select("query")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(20)
+            .execute()
+        )
 
         if not response.data:
             return []
@@ -675,7 +731,7 @@ async def _get_trending_topics(user_id: str | None, limit: int = 5) -> list[str]
         for item in response.data:
             query = item.get("query", "")
             # Extract words (simple tokenization)
-            tokens = re.findall(r'\b\w{4,}\b', query.lower())
+            tokens = re.findall(r"\b\w{4,}\b", query.lower())
             words.extend(tokens)
 
         # Get most common words

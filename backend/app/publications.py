@@ -176,29 +176,35 @@ def transform_publication(data: dict) -> PublicationWithResources:
     schemas = []
     if "publication_schemas" in data:
         for ps in data.get("publication_schemas", []):
-            schemas.append(SchemaLink(
-                schema_id=ps["schema_id"],
-                description=ps.get("description"),
-                created_at=ps.get("created_at")
-            ))
+            schemas.append(
+                SchemaLink(
+                    schema_id=ps["schema_id"],
+                    description=ps.get("description"),
+                    created_at=ps.get("created_at"),
+                )
+            )
 
     collections = []
     if "publication_collections" in data:
         for pc in data.get("publication_collections", []):
-            collections.append(CollectionLink(
-                collection_id=pc["collection_id"],
-                description=pc.get("description"),
-                created_at=pc.get("created_at")
-            ))
+            collections.append(
+                CollectionLink(
+                    collection_id=pc["collection_id"],
+                    description=pc.get("description"),
+                    created_at=pc.get("created_at"),
+                )
+            )
 
     extraction_jobs = []
     if "publication_extraction_jobs" in data:
         for pj in data.get("publication_extraction_jobs", []):
-            extraction_jobs.append(ExtractionJobLink(
-                job_id=pj["job_id"],
-                description=pj.get("description"),
-                created_at=pj.get("created_at")
-            ))
+            extraction_jobs.append(
+                ExtractionJobLink(
+                    job_id=pj["job_id"],
+                    description=pj.get("description"),
+                    created_at=pj.get("created_at"),
+                )
+            )
 
     return PublicationWithResources(
         id=data["id"],
@@ -222,16 +228,20 @@ def transform_publication(data: dict) -> PublicationWithResources:
         updated_at=data["updated_at"],
         schemas=schemas,
         collections=collections,
-        extraction_jobs=extraction_jobs
+        extraction_jobs=extraction_jobs,
     )
 
 
 @router.get("", response_model=List[PublicationWithResources])
 async def list_publications(
-    project: Optional[PublicationProject] = Query(None, description="Filter by project"),
+    project: Optional[PublicationProject] = Query(
+        None, description="Filter by project"
+    ),
     year: Optional[int] = Query(None, ge=1900, le=2100, description="Filter by year"),
     status: Optional[PublicationStatus] = Query(None, description="Filter by status"),
-    pub_type: Optional[PublicationType] = Query(None, alias="type", description="Filter by type"),
+    pub_type: Optional[PublicationType] = Query(
+        None, alias="type", description="Filter by type"
+    ),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     db=Depends(get_publications_db),
@@ -243,7 +253,7 @@ async def list_publications(
         status=status.value if status else None,
         pub_type=pub_type.value if pub_type else None,
         limit=limit,
-        offset=offset
+        offset=offset,
     )
     return [transform_publication(p) for p in publications]
 
@@ -392,11 +402,14 @@ async def get_publication_schemas(
         raise HTTPException(status_code=400, detail=str(e))
 
     schemas = await db.get_publication_schemas(publication_id)
-    return [SchemaLink(
-        schema_id=s["schema_id"],
-        description=s.get("description"),
-        created_at=s.get("created_at")
-    ) for s in schemas]
+    return [
+        SchemaLink(
+            schema_id=s["schema_id"],
+            description=s.get("description"),
+            created_at=s.get("created_at"),
+        )
+        for s in schemas
+    ]
 
 
 @router.post("/{publication_id}/schemas")
@@ -445,11 +458,14 @@ async def get_publication_collections(
         raise HTTPException(status_code=400, detail=str(e))
 
     collections = await db.get_publication_collections(publication_id)
-    return [CollectionLink(
-        collection_id=c["collection_id"],
-        description=c.get("description"),
-        created_at=c.get("created_at")
-    ) for c in collections]
+    return [
+        CollectionLink(
+            collection_id=c["collection_id"],
+            description=c.get("description"),
+            created_at=c.get("created_at"),
+        )
+        for c in collections
+    ]
 
 
 @router.post("/{publication_id}/collections")
@@ -464,8 +480,13 @@ async def add_collection_link(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    await db.add_collection_link(publication_id, request.collection_id, request.description)
-    return {"message": "Collection linked successfully", "collection_id": request.collection_id}
+    await db.add_collection_link(
+        publication_id, request.collection_id, request.description
+    )
+    return {
+        "message": "Collection linked successfully",
+        "collection_id": request.collection_id,
+    }
 
 
 @router.delete("/{publication_id}/collections/{collection_id}")
@@ -498,11 +519,14 @@ async def get_publication_extraction_jobs(
         raise HTTPException(status_code=400, detail=str(e))
 
     jobs = await db.get_publication_extraction_jobs(publication_id)
-    return [ExtractionJobLink(
-        job_id=j["job_id"],
-        description=j.get("description"),
-        created_at=j.get("created_at")
-    ) for j in jobs]
+    return [
+        ExtractionJobLink(
+            job_id=j["job_id"],
+            description=j.get("description"),
+            created_at=j.get("created_at"),
+        )
+        for j in jobs
+    ]
 
 
 @router.post("/{publication_id}/extraction-jobs")
@@ -517,7 +541,9 @@ async def add_extraction_job_link(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    await db.add_extraction_job_link(publication_id, request.job_id, request.description)
+    await db.add_extraction_job_link(
+        publication_id, request.job_id, request.description
+    )
     return {"message": "Extraction job linked successfully", "job_id": request.job_id}
 
 

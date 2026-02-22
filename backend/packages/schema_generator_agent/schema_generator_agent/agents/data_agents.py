@@ -68,7 +68,7 @@ class SchemaDataAssessmentAgent:
         problem_definition = state["problem_definition"]
         current_schema = state["current_schema"]
         query = state["query"]
-        
+
         responses, data_assessment_results = asyncio.run(
             self._process_documents(
                 query, user_input, problem_help, user_feedback, problem_definition, current_schema
@@ -77,10 +77,16 @@ class SchemaDataAssessmentAgent:
         return {"messages": responses, "data_assessment_results": data_assessment_results}
 
     async def _process_documents(
-        self, query: str, user_input: str, problem_help: str, user_feedback: str, problem_definition: str, current_schema: str
+        self,
+        query: str,
+        user_input: str,
+        problem_help: str,
+        user_feedback: str,
+        problem_definition: str,
+        current_schema: str,
     ) -> tuple[list[Any], list[str]]:
         example_documents = await self._get_example_documents(query)
-        
+
         tasks = []
         for example_document in example_documents:
             tasks.append(
@@ -95,7 +101,7 @@ class SchemaDataAssessmentAgent:
                     }
                 )
             )
-        
+
         responses = await asyncio.gather(*tasks)
         data_assessment_results = [self.parser.parse(response.content) for response in responses]
         return responses, data_assessment_results
@@ -112,9 +118,7 @@ class SchemaDataAssessmentAgent:
                 return []
 
             # Adaptive sampling based on result quality
-            num_samples = min(
-                self.max_examples, max(self.min_examples, len(documents) // 10)
-            )
+            num_samples = min(self.max_examples, max(self.min_examples, len(documents) // 10))
 
             # Sample documents, ensuring we don't exceed available documents
             actual_samples = min(num_samples, len(documents))

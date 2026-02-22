@@ -6,7 +6,7 @@ to avoid requiring a live database connection.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 from typing import List, Dict, Any
 
 from juddges_search.retrieval.supabase_search import (
@@ -46,8 +46,8 @@ def sample_chunk_data() -> List[Dict[str, Any]]:
             "judgments": {
                 "court_name": "Supreme Court",
                 "decision_date": "2024-01-15",
-                "jurisdiction": "PL"
-            }
+                "jurisdiction": "PL",
+            },
         },
         {
             "document_id": "doc_456",
@@ -61,9 +61,9 @@ def sample_chunk_data() -> List[Dict[str, Any]]:
             "judgments": {
                 "court_name": "Court of Appeal",
                 "decision_date": "2024-02-20",
-                "jurisdiction": "UK"
-            }
-        }
+                "jurisdiction": "UK",
+            },
+        },
     ]
 
 
@@ -78,7 +78,7 @@ def sample_document_data() -> List[Dict[str, Any]]:
             "summary": "Contract dispute regarding damages.",
             "court_name": "Supreme Court",
             "decision_date": "2024-01-15",
-            "jurisdiction": "PL"
+            "jurisdiction": "PL",
         },
         {
             "id": "uuid-456",
@@ -87,8 +87,8 @@ def sample_document_data() -> List[Dict[str, Any]]:
             "summary": "Tort claim for negligence.",
             "court_name": "Court of Appeal",
             "decision_date": "2024-02-20",
-            "jurisdiction": "UK"
-        }
+            "jurisdiction": "UK",
+        },
     ]
 
 
@@ -101,7 +101,9 @@ class TestSupabaseSearchClient:
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
 
-        with patch('juddges_search.retrieval.supabase_search.create_client') as mock_create:
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client"
+        ) as mock_create:
             mock_create.return_value = Mock()
             client = SupabaseSearchClient()
 
@@ -114,11 +116,15 @@ class TestSupabaseSearchClient:
         monkeypatch.delenv("SUPABASE_URL", raising=False)
         monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
 
-        with pytest.raises(ValueError, match="Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY"):
+        with pytest.raises(
+            ValueError, match="Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY"
+        ):
             SupabaseSearchClient()
 
     @pytest.mark.asyncio
-    async def test_vector_search_chunks_success(self, mock_supabase_client, sample_chunk_data, monkeypatch):
+    async def test_vector_search_chunks_success(
+        self, mock_supabase_client, sample_chunk_data, monkeypatch
+    ):
         """Test successful vector search on chunks."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
@@ -128,19 +134,22 @@ class TestSupabaseSearchClient:
         # Setup mock response
         mock_response = Mock()
         mock_response.data = sample_chunk_data
-        mock_table.select.return_value.in_.return_value.execute.return_value = mock_response
+        mock_table.select.return_value.in_.return_value.execute.return_value = (
+            mock_response
+        )
         mock_table.select.return_value.execute.return_value = mock_response
 
-        with patch('juddges_search.retrieval.supabase_search.create_client', return_value=mock_client):
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
             client = SupabaseSearchClient()
             client.client = mock_client
 
             query_embedding = [0.1] * 1536  # Mock 1536-dim embedding
 
             results = await client.vector_search_chunks(
-                query_embedding=query_embedding,
-                match_count=10,
-                match_threshold=0.5
+                query_embedding=query_embedding, match_count=10, match_threshold=0.5
             )
 
             assert len(results) == 2
@@ -150,7 +159,9 @@ class TestSupabaseSearchClient:
             assert results[0].similarity == 0.89
 
     @pytest.mark.asyncio
-    async def test_vector_search_chunks_with_filters(self, mock_supabase_client, sample_chunk_data, monkeypatch):
+    async def test_vector_search_chunks_with_filters(
+        self, mock_supabase_client, sample_chunk_data, monkeypatch
+    ):
         """Test vector search with language and document type filters."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
@@ -169,24 +180,29 @@ class TestSupabaseSearchClient:
         mock_in_lang.in_.return_value = mock_in_doc
         mock_in_doc.execute.return_value = mock_response
 
-        with patch('juddges_search.retrieval.supabase_search.create_client', return_value=mock_client):
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
             client = SupabaseSearchClient()
             client.client = mock_client
 
             query_embedding = [0.1] * 1536
 
-            results = await client.vector_search_chunks(
+            await client.vector_search_chunks(
                 query_embedding=query_embedding,
                 match_count=10,
                 languages=["pl"],
-                document_types=["judgment"]
+                document_types=["judgment"],
             )
 
             # Verify filters were applied (mock chain was called)
             mock_table.select.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_full_text_search_chunks_success(self, mock_supabase_client, sample_chunk_data, monkeypatch):
+    async def test_full_text_search_chunks_success(
+        self, mock_supabase_client, sample_chunk_data, monkeypatch
+    ):
         """Test successful full-text search on chunks."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
@@ -210,22 +226,28 @@ class TestSupabaseSearchClient:
         mock_text_search.limit.return_value = mock_limit
         mock_limit.execute.return_value = mock_response
 
-        with patch('juddges_search.retrieval.supabase_search.create_client', return_value=mock_client):
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
             client = SupabaseSearchClient()
             client.client = mock_client
 
             results = await client.full_text_search_chunks(
-                query="contract dispute",
-                match_count=10
+                query="contract dispute", match_count=10
             )
 
             assert len(results) == 2
             assert isinstance(results[0], DocumentChunk)
             mock_table.select.assert_called_once()
-            mock_select.text_search.assert_called_once_with("chunk_text", "contract dispute", config="simple")
+            mock_select.text_search.assert_called_once_with(
+                "chunk_text", "contract dispute", config="simple"
+            )
 
     @pytest.mark.asyncio
-    async def test_full_text_search_empty_results(self, mock_supabase_client, monkeypatch):
+    async def test_full_text_search_empty_results(
+        self, mock_supabase_client, monkeypatch
+    ):
         """Test full-text search with no results."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
@@ -244,13 +266,15 @@ class TestSupabaseSearchClient:
         mock_text_search.limit.return_value = mock_limit
         mock_limit.execute.return_value = mock_response
 
-        with patch('juddges_search.retrieval.supabase_search.create_client', return_value=mock_client):
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
             client = SupabaseSearchClient()
             client.client = mock_client
 
             results = await client.full_text_search_chunks(
-                query="nonexistent query",
-                match_count=10
+                query="nonexistent query", match_count=10
             )
 
             assert len(results) == 0
@@ -261,7 +285,7 @@ class TestSupabaseSearchClient:
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
 
-        with patch('juddges_search.retrieval.supabase_search.create_client'):
+        with patch("juddges_search.retrieval.supabase_search.create_client"):
             client = SupabaseSearchClient()
 
             # Create mock chunks with different scores
@@ -270,21 +294,21 @@ class TestSupabaseSearchClient:
                 chunk_id=1,
                 chunk_text="Text 1",
                 vector_score=0.9,
-                text_score=0.0
+                text_score=0.0,
             )
             chunk2 = DocumentChunk(
                 document_id="doc_2",
                 chunk_id=2,
                 chunk_text="Text 2",
                 vector_score=0.0,
-                text_score=0.8
+                text_score=0.8,
             )
             chunk3 = DocumentChunk(
                 document_id="doc_3",
                 chunk_id=3,
                 chunk_text="Text 3",
                 vector_score=0.7,
-                text_score=0.6
+                text_score=0.6,
             )
 
             vector_results = [chunk1, chunk3]
@@ -295,7 +319,7 @@ class TestSupabaseSearchClient:
                 text_results,
                 vector_weight=0.7,
                 text_weight=0.3,
-                limit=10
+                limit=10,
             )
 
             # chunk3 should have highest combined score: 0.7*0.7 + 0.3*0.6 = 0.67
@@ -321,11 +345,13 @@ class TestPublicAPI:
                 document_id="doc_1",
                 chunk_id=1,
                 chunk_text="Test chunk",
-                combined_score=0.85
+                combined_score=0.85,
             )
         ]
 
-        with patch('juddges_search.retrieval.supabase_search.SupabaseSearchClient') as MockClient:
+        with patch(
+            "juddges_search.retrieval.supabase_search.SupabaseSearchClient"
+        ) as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.hybrid_search_chunks = AsyncMock(return_value=mock_chunks)
 
@@ -336,7 +362,7 @@ class TestPublicAPI:
                 query="test query",
                 max_chunks=10,
                 languages=["pl"],
-                document_types=["judgment"]
+                document_types=["judgment"],
             )
 
             assert len(results) == 1
@@ -354,22 +380,23 @@ class TestPublicAPI:
                 document_id="doc_1",
                 chunk_id=1,
                 chunk_text="Test chunk",
-                vector_score=0.92
+                vector_score=0.92,
             )
         ]
 
-        with patch('juddges_search.retrieval.supabase_search.SupabaseSearchClient') as MockClient:
-            with patch('juddges_search.retrieval.supabase_search.embed_texts') as mock_embed:
+        with patch(
+            "juddges_search.retrieval.supabase_search.SupabaseSearchClient"
+        ) as MockClient:
+            with patch(
+                "juddges_search.retrieval.supabase_search.embed_texts"
+            ) as mock_embed:
                 mock_embed.return_value = [0.1] * 1536
                 mock_instance = MockClient.return_value
                 mock_instance.vector_search_chunks = AsyncMock(return_value=mock_chunks)
 
                 reset_search_client()
 
-                results = await search_chunks_vector(
-                    query="test query",
-                    max_chunks=10
-                )
+                results = await search_chunks_vector(query="test query", max_chunks=10)
 
                 assert len(results) == 1
                 mock_embed.assert_called_once_with("test query")
@@ -386,27 +413,28 @@ class TestPublicAPI:
                 document_id="doc_1",
                 chunk_id=1,
                 chunk_text="Test chunk with contract law",
-                text_score=0.88
+                text_score=0.88,
             )
         ]
 
-        with patch('juddges_search.retrieval.supabase_search.SupabaseSearchClient') as MockClient:
+        with patch(
+            "juddges_search.retrieval.supabase_search.SupabaseSearchClient"
+        ) as MockClient:
             mock_instance = MockClient.return_value
             mock_instance.full_text_search_chunks = AsyncMock(return_value=mock_chunks)
 
             reset_search_client()
 
-            results = await search_chunks_term(
-                query="contract law",
-                max_chunks=10
-            )
+            results = await search_chunks_term(query="contract law", max_chunks=10)
 
             assert len(results) == 1
             assert results[0].text_score == 0.88
             mock_instance.full_text_search_chunks.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_documents(self, mock_supabase_client, sample_document_data, monkeypatch):
+    async def test_search_documents(
+        self, mock_supabase_client, sample_document_data, monkeypatch
+    ):
         """Test search_documents function."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
@@ -423,21 +451,27 @@ class TestPublicAPI:
         mock_select.limit.return_value = mock_limit
         mock_limit.execute.return_value = mock_response
 
-        with patch('juddges_search.retrieval.supabase_search.create_client', return_value=mock_client):
-            with patch('juddges_search.retrieval.supabase_search.embed_texts') as mock_embed:
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
+            with patch(
+                "juddges_search.retrieval.supabase_search.embed_texts"
+            ) as mock_embed:
                 mock_embed.return_value = [0.1] * 1536
 
                 reset_search_client()
 
                 # Need to patch the client.table access through get_search_client
-                with patch('juddges_search.retrieval.supabase_search.get_search_client') as mock_get_client:
+                with patch(
+                    "juddges_search.retrieval.supabase_search.get_search_client"
+                ) as mock_get_client:
                     mock_search_client = Mock()
                     mock_search_client.client = mock_client
                     mock_get_client.return_value = mock_search_client
 
                     results = await search_documents(
-                        query="contract dispute",
-                        max_results=10
+                        query="contract dispute", max_results=10
                     )
 
                     assert len(results) == 2
@@ -451,7 +485,7 @@ def test_get_search_client_singleton(monkeypatch):
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
 
-    with patch('juddges_search.retrieval.supabase_search.create_client'):
+    with patch("juddges_search.retrieval.supabase_search.create_client"):
         reset_search_client()
         client1 = get_search_client()
         client2 = get_search_client()
@@ -465,7 +499,7 @@ def test_reset_search_client(monkeypatch):
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
 
-    with patch('juddges_search.retrieval.supabase_search.create_client'):
+    with patch("juddges_search.retrieval.supabase_search.create_client"):
         client1 = get_search_client()
         reset_search_client()
         client2 = get_search_client()

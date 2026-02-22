@@ -27,6 +27,7 @@ router = APIRouter(prefix="/documents", tags=["versioning"])
 
 class DocumentVersion(BaseModel):
     """A single version entry for a document."""
+
     id: str
     document_id: str
     version_number: int
@@ -41,6 +42,7 @@ class DocumentVersion(BaseModel):
 
 class VersionHistoryResponse(BaseModel):
     """Response for version history of a document."""
+
     document_id: str
     current_version: int
     versions: List[DocumentVersion]
@@ -49,6 +51,7 @@ class VersionHistoryResponse(BaseModel):
 
 class VersionDetailResponse(BaseModel):
     """Detailed version with full content."""
+
     id: str
     document_id: str
     version_number: int
@@ -65,6 +68,7 @@ class VersionDetailResponse(BaseModel):
 
 class VersionDiffResponse(BaseModel):
     """Diff between two versions."""
+
     document_id: str
     from_version: int
     to_version: int
@@ -78,6 +82,7 @@ class VersionDiffResponse(BaseModel):
 
 class CreateVersionRequest(BaseModel):
     """Request to create a manual version snapshot."""
+
     change_description: Optional[str] = Field(
         default=None,
         max_length=500,
@@ -91,6 +96,7 @@ class CreateVersionRequest(BaseModel):
 
 class RevertVersionRequest(BaseModel):
     """Request to revert a document to a specific version."""
+
     version_number: int = Field(
         ge=1,
         description="Version number to revert to",
@@ -119,7 +125,8 @@ def _generate_diff_html(old_text: str, new_text: str) -> tuple[str, dict[str, in
     new_lines = new_text.splitlines(keepends=True)
 
     differ = difflib.unified_diff(
-        old_lines, new_lines,
+        old_lines,
+        new_lines,
         fromfile="Previous Version",
         tofile="Current Version",
         lineterm="",
@@ -188,14 +195,18 @@ async def get_version_history(
         )
 
         if not doc_response.data:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
         current_version = doc_response.data[0].get("current_version", 1) or 1
 
         # Get version history
         versions_response = (
             db.client.table("document_versions")
-            .select("id, document_id, version_number, title, content_hash, change_description, change_type, created_by, created_at, extracted_data")
+            .select(
+                "id, document_id, version_number, title, content_hash, change_description, change_type, created_by, created_at, extracted_data"
+            )
             .eq("document_id", document_id)
             .order("version_number", desc=True)
             .range(offset, offset + limit - 1)
@@ -237,7 +248,9 @@ async def get_version_history(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting version history for {document_id}: {e}", exc_info=True)
+        logger.error(
+            f"Error getting version history for {document_id}: {e}", exc_info=True
+        )
         raise HTTPException(status_code=500, detail="Error retrieving version history")
 
 
@@ -288,7 +301,10 @@ async def get_version_detail(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting version {version_number} for {document_id}: {e}", exc_info=True)
+        logger.error(
+            f"Error getting version {version_number} for {document_id}: {e}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="Error retrieving version detail")
 
 
@@ -402,19 +418,25 @@ async def create_version_snapshot(
         # Get current document
         doc_response = (
             db.client.table("legal_documents")
-            .select("document_id, title, full_text, summary, content_hash, extracted_data, current_version")
+            .select(
+                "document_id, title, full_text, summary, content_hash, extracted_data, current_version"
+            )
             .eq("document_id", document_id)
             .limit(1)
             .execute()
         )
 
         if not doc_response.data:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
         doc = doc_response.data[0]
 
         # Compute hash if missing
-        content_hash = doc.get("content_hash") or _compute_content_hash(doc["full_text"])
+        content_hash = doc.get("content_hash") or _compute_content_hash(
+            doc["full_text"]
+        )
 
         # Check if this exact content already has a version
         existing = (
@@ -461,9 +483,7 @@ async def create_version_snapshot(
         }
 
         insert_response = (
-            db.client.table("document_versions")
-            .insert(version_data)
-            .execute()
+            db.client.table("document_versions").insert(version_data).execute()
         )
 
         if not insert_response.data:
@@ -472,9 +492,9 @@ async def create_version_snapshot(
         v = insert_response.data[0]
 
         # Update current_version on the document
-        db.client.table("legal_documents").update(
-            {"current_version": next_version}
-        ).eq("document_id", document_id).execute()
+        db.client.table("legal_documents").update({"current_version": next_version}).eq(
+            "document_id", document_id
+        ).execute()
 
         logger.info(f"Created version {next_version} for document {document_id}")
 
@@ -536,17 +556,23 @@ async def revert_to_version(
         # Get current document to snapshot before revert
         doc_response = (
             db.client.table("legal_documents")
-            .select("document_id, title, full_text, summary, content_hash, extracted_data, current_version")
+            .select(
+                "document_id, title, full_text, summary, content_hash, extracted_data, current_version"
+            )
             .eq("document_id", document_id)
             .limit(1)
             .execute()
         )
 
         if not doc_response.data:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
         current_doc = doc_response.data[0]
-        current_hash = current_doc.get("content_hash") or _compute_content_hash(current_doc["full_text"])
+        current_hash = current_doc.get("content_hash") or _compute_content_hash(
+            current_doc["full_text"]
+        )
 
         # Get next version number for the pre-revert snapshot
         max_version_response = (
@@ -608,5 +634,8 @@ async def revert_to_version(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error reverting {document_id} to version {request.version_number}: {e}", exc_info=True)
+        logger.error(
+            f"Error reverting {document_id} to version {request.version_number}: {e}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="Error reverting document version")

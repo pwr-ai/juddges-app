@@ -15,11 +15,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.auth_jwt import (
-    get_optional_user,
-    get_user_db_client,
-    AuthenticatedUser
-)
+from app.core.auth_jwt import get_optional_user, get_user_db_client, AuthenticatedUser
 
 
 # Router configuration
@@ -28,8 +24,10 @@ router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
 # ===== Models =====
 
+
 class EventProperties(BaseModel):
     """Generic event properties (flexible schema)."""
+
     # Common properties
     query: Optional[str] = None
     document_id: Optional[str] = None
@@ -50,69 +48,56 @@ class EventProperties(BaseModel):
 
     # Custom properties
     custom_properties: Optional[Dict[str, Any]] = Field(
-        default_factory=dict,
-        description="Additional custom event properties"
+        default_factory=dict, description="Additional custom event properties"
     )
 
 
 class TrackEventRequest(BaseModel):
     """Generic event tracking request."""
+
     event_name: str = Field(
         description="Event name (e.g., 'search_performed', 'document_viewed')",
-        examples=["search_performed", "document_viewed", "feature_used"]
+        examples=["search_performed", "document_viewed", "feature_used"],
     )
     session_id: Optional[str] = Field(
-        None,
-        description="Session ID (for tracking user sessions)"
+        None, description="Session ID (for tracking user sessions)"
     )
     properties: Optional[EventProperties] = Field(
-        None,
-        description="Event properties (flexible schema)"
+        None, description="Event properties (flexible schema)"
     )
     timestamp: Optional[str] = Field(
-        None,
-        description="Event timestamp (ISO 8601) - defaults to current time"
+        None, description="Event timestamp (ISO 8601) - defaults to current time"
     )
 
 
 class TrackSearchRequest(BaseModel):
     """Search-specific tracking request."""
-    query: str = Field(
-        description="Search query text"
-    )
-    session_id: Optional[str] = Field(
-        None,
-        description="Session ID"
-    )
-    result_count: int = Field(
-        description="Number of results returned"
-    )
+
+    query: str = Field(description="Search query text")
+    session_id: Optional[str] = Field(None, description="Session ID")
+    result_count: int = Field(description="Number of results returned")
     filters: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Filters applied (document types, languages, etc.)"
+        None, description="Filters applied (document types, languages, etc.)"
     )
     duration_ms: Optional[int] = Field(
-        None,
-        description="Search duration in milliseconds"
+        None, description="Search duration in milliseconds"
     )
     clicked_result: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Information about clicked result (if any)"
+        None, description="Information about clicked result (if any)"
     )
 
 
 class EventResponse(BaseModel):
     """Response for event tracking."""
+
     status: Literal["success", "failed"]
-    event_id: Optional[str] = Field(
-        None,
-        description="ID of the tracked event"
-    )
+    event_id: Optional[str] = Field(None, description="ID of the tracked event")
     message: str
 
 
 class SessionSummary(BaseModel):
     """Summary of a user session."""
+
     session_id: str
     user_id: Optional[str]
     started_at: str
@@ -176,10 +161,11 @@ Expected Supabase tables (create these manually or via migration):
 
 # ===== API Endpoints =====
 
+
 @router.post("/track", response_model=EventResponse)
 async def track_event(
     request: TrackEventRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Track a generic analytics event.
@@ -215,6 +201,7 @@ async def track_event(
         else:
             # For anonymous users, we still need admin client for analytics
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Track to database
@@ -229,27 +216,27 @@ async def track_event(
         result = client.table("events").insert(event_data).execute()
         event_id = result.data[0]["id"] if result.data else None
 
-        logger.info(f"Tracked event: {request.event_name} (user: {user_id}, session: {request.session_id})")
+        logger.info(
+            f"Tracked event: {request.event_name} (user: {user_id}, session: {request.session_id})"
+        )
 
         return EventResponse(
             status="success",
             event_id=event_id,
-            message=f"Event '{request.event_name}' tracked successfully"
+            message=f"Event '{request.event_name}' tracked successfully",
         )
 
     except Exception as e:
         logger.error(f"Failed to track event: {e}")
         return EventResponse(
-            status="failed",
-            event_id=None,
-            message=f"Failed to track event: {str(e)}"
+            status="failed", event_id=None, message=f"Failed to track event: {str(e)}"
         )
 
 
 @router.post("/search", response_model=EventResponse)
 async def track_search(
     request: TrackSearchRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Track a search query for analytics.
@@ -276,6 +263,7 @@ async def track_search(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Track search to database
@@ -301,15 +289,13 @@ async def track_search(
         return EventResponse(
             status="success",
             event_id=search_id,
-            message="Search query tracked successfully"
+            message="Search query tracked successfully",
         )
 
     except Exception as e:
         logger.error(f"Failed to track search: {e}")
         return EventResponse(
-            status="failed",
-            event_id=None,
-            message=f"Failed to track search: {str(e)}"
+            status="failed", event_id=None, message=f"Failed to track search: {str(e)}"
         )
 
 
@@ -320,7 +306,7 @@ async def track_feature_usage(
     success: bool = True,
     properties: Optional[Dict[str, Any]] = None,
     error_message: Optional[str] = None,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Track feature usage for product analytics.
@@ -351,6 +337,7 @@ async def track_feature_usage(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Track feature usage to database
@@ -358,7 +345,9 @@ async def track_feature_usage(
             "user_id": user_id,
             "session_id": session_id,
             "feature_name": feature_name,
-            "feature_version": properties.get("feature_version") if properties else None,
+            "feature_version": properties.get("feature_version")
+            if properties
+            else None,
             "properties": properties or {},
             "success": success,
             "error_message": error_message,
@@ -376,7 +365,7 @@ async def track_feature_usage(
         return EventResponse(
             status="success",
             event_id=usage_id,
-            message=f"Feature usage '{feature_name}' tracked successfully"
+            message=f"Feature usage '{feature_name}' tracked successfully",
         )
 
     except Exception as e:
@@ -384,14 +373,13 @@ async def track_feature_usage(
         return EventResponse(
             status="failed",
             event_id=None,
-            message=f"Failed to track feature usage: {str(e)}"
+            message=f"Failed to track feature usage: {str(e)}",
         )
 
 
 @router.get("/session/{session_id}", response_model=SessionSummary)
 async def get_session_summary(
-    session_id: str,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    session_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)
 ):
     """
     Get analytics summary for a specific session.
@@ -418,12 +406,11 @@ async def get_session_summary(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Get all events for this session
-        query = client.table("events")\
-            .select("*")\
-            .eq("session_id", session_id)
+        query = client.table("events").select("*").eq("session_id", session_id)
 
         # If authenticated, filter by user_id for security
         if user:
@@ -433,14 +420,17 @@ async def get_session_summary(
 
         if not events.data:
             raise HTTPException(
-                status_code=404,
-                detail=f"No data found for session: {session_id}"
+                status_code=404, detail=f"No data found for session: {session_id}"
             )
 
         # Calculate statistics
         events_count = len(events.data)
-        searches_count = sum(1 for e in events.data if "search" in e["event_name"].lower())
-        documents_viewed = sum(1 for e in events.data if "document_viewed" in e["event_name"])
+        searches_count = sum(
+            1 for e in events.data if "search" in e["event_name"].lower()
+        )
+        documents_viewed = sum(
+            1 for e in events.data if "document_viewed" in e["event_name"]
+        )
 
         first_event = events.data[0]
         last_event = events.data[-1]
@@ -449,8 +439,8 @@ async def get_session_summary(
         ended_at = last_event["created_at"]
 
         # Calculate duration
-        start_time = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
-        end_time = datetime.fromisoformat(ended_at.replace('Z', '+00:00'))
+        start_time = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+        end_time = datetime.fromisoformat(ended_at.replace("Z", "+00:00"))
         duration_seconds = int((end_time - start_time).total_seconds())
 
         return SessionSummary(
@@ -461,7 +451,7 @@ async def get_session_summary(
             duration_seconds=duration_seconds,
             events_count=events_count,
             searches_count=searches_count,
-            documents_viewed=documents_viewed
+            documents_viewed=documents_viewed,
         )
 
     except HTTPException:
@@ -469,8 +459,7 @@ async def get_session_summary(
     except Exception as e:
         logger.error(f"Failed to get session summary: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve session summary: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve session summary: {str(e)}"
         )
 
 

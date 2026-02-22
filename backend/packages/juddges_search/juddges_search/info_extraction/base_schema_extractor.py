@@ -98,14 +98,16 @@ class BaseSchemaExtractor:
         # Get jurisdiction-specific extraction context
         extraction_contexts = self.mappings.get("extraction_contexts", {})
         context = extraction_contexts.get(
-            jurisdiction,
-            extraction_contexts.get("en_uk", "Extract information from this legal document.")
+            jurisdiction, extraction_contexts.get("en_uk", "Extract information from this legal document.")
         )
 
         # Note: Using string concatenation to avoid f-string parsing Jinja2 syntax
-        prompt = """You are a legal document analysis expert. Your task is to extract structured information from legal documents.
+        prompt = (
+            """You are a legal document analysis expert. Your task is to extract structured information from legal documents.
 
-""" + context + """
+"""
+            + context
+            + """
 
 IMPORTANT INSTRUCTIONS:
 1. Extract ALL required fields from the document
@@ -126,6 +128,7 @@ Document text to analyze:
 ====
 
 Extract all information according to the schema. Return a valid JSON object."""
+        )
 
         return prompt
 
@@ -150,7 +153,7 @@ Extract all information according to the schema. Return a valid JSON object."""
         clean_schema = self._clean_schema_for_extraction(schema)
 
         # Build prompt template
-        prompt = self._build_extraction_prompt(jurisdiction, additional_instructions)
+        self._build_extraction_prompt(jurisdiction, additional_instructions)
 
         # Create a temporary prompt file or use inline prompt
         # For now, we'll use the InformationExtractor with inline schema
@@ -173,11 +176,7 @@ Extract all information according to the schema. Return a valid JSON object."""
 
         def remove_extensions(obj: dict | list | Any) -> Any:
             if isinstance(obj, dict):
-                return {
-                    k: remove_extensions(v)
-                    for k, v in obj.items()
-                    if not k.startswith("x-")
-                }
+                return {k: remove_extensions(v) for k, v in obj.items() if not k.startswith("x-")}
             elif isinstance(obj, list):
                 return [remove_extensions(item) for item in obj]
             return obj
@@ -221,8 +220,7 @@ Extract all information according to the schema. Return a valid JSON object."""
 
         # Prepare extraction context
         extraction_context = self.mappings.get("extraction_contexts", {}).get(
-            jurisdiction,
-            self.mappings.get("extraction_contexts", {}).get("en_uk", "")
+            jurisdiction, self.mappings.get("extraction_contexts", {}).get("en_uk", "")
         )
 
         # Map jurisdiction to language
@@ -239,9 +237,7 @@ Extract all information according to the schema. Return a valid JSON object."""
 
         # Extract using structured output
         try:
-            extracted_data = await extractor.extract_information_with_structured_output(
-                prompt_fill_values
-            )
+            extracted_data = await extractor.extract_information_with_structured_output(prompt_fill_values)
             logger.info(f"Successfully extracted {len(extracted_data)} fields")
         except Exception as e:
             logger.error(f"Extraction failed: {e}")
@@ -284,30 +280,23 @@ Extract all information according to the schema. Return a valid JSON object."""
                     valid_values = field_def["enum"]
                     if data[field_name] not in valid_values:
                         errors.append(
-                            f"Field '{field_name}' has invalid value '{data[field_name]}'. "
-                            f"Valid values: {valid_values}"
+                            f"Field '{field_name}' has invalid value '{data[field_name]}'. Valid values: {valid_values}"
                         )
 
                 # Validate array types
                 if field_def.get("type") == "array":
                     if not isinstance(data[field_name], list):
-                        errors.append(
-                            f"Field '{field_name}' should be an array, got {type(data[field_name])}"
-                        )
+                        errors.append(f"Field '{field_name}' should be an array, got {type(data[field_name])}")
 
                 # Validate boolean types
                 if field_def.get("type") == "boolean":
                     if not isinstance(data[field_name], bool):
-                        errors.append(
-                            f"Field '{field_name}' should be a boolean, got {type(data[field_name])}"
-                        )
+                        errors.append(f"Field '{field_name}' should be a boolean, got {type(data[field_name])}")
 
                 # Validate number types
                 if field_def.get("type") == "number":
                     if not isinstance(data[field_name], (int, float)):
-                        errors.append(
-                            f"Field '{field_name}' should be a number, got {type(data[field_name])}"
-                        )
+                        errors.append(f"Field '{field_name}' should be a number, got {type(data[field_name])}")
 
         is_valid = len(errors) == 0
         return is_valid, errors
@@ -352,11 +341,7 @@ Extract all information according to the schema. Return a valid JSON object."""
             List of field names with facet filter type
         """
         properties = self.schema.get("properties", {})
-        return [
-            field_name
-            for field_name, field_def in properties.items()
-            if field_def.get("x-filter-type") == "facet"
-        ]
+        return [field_name for field_name, field_def in properties.items() if field_def.get("x-filter-type") == "facet"]
 
     def get_array_fields(self) -> list[str]:
         """Get list of array fields for multi-value filtering.
@@ -365,11 +350,7 @@ Extract all information according to the schema. Return a valid JSON object."""
             List of field names that are arrays
         """
         properties = self.schema.get("properties", {})
-        return [
-            field_name
-            for field_name, field_def in properties.items()
-            if field_def.get("type") == "array"
-        ]
+        return [field_name for field_name, field_def in properties.items() if field_def.get("type") == "array"]
 
     def get_text_search_fields(self) -> list[str]:
         """Get list of fields for full-text search.

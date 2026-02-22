@@ -17,12 +17,9 @@ async def test_documents_require_api_key(client: AsyncClient):
     # No API key
     response = await client.get("/documents")
     assert response.status_code == 403, "Should reject request without API key"
-    
+
     # Invalid API key
-    response = await client.get(
-        "/documents",
-        headers={"X-API-Key": "invalid-key"}
-    )
+    response = await client.get("/documents", headers={"X-API-Key": "invalid-key"})
     assert response.status_code == 401, "Should reject invalid API key"
 
 
@@ -30,8 +27,7 @@ async def test_documents_require_api_key(client: AsyncClient):
 @pytest.mark.api
 @pytest.mark.auth
 async def test_invalid_api_key_rejected(
-    client: AsyncClient,
-    invalid_api_headers: Dict[str, str]
+    client: AsyncClient, invalid_api_headers: Dict[str, str]
 ):
     """Test that invalid API key is properly rejected."""
     response = await client.get("/documents", headers=invalid_api_headers)
@@ -45,19 +41,18 @@ async def test_invalid_api_key_rejected(
 async def test_get_documents_list(authenticated_client: AsyncClient):
     """Test listing documents with pagination."""
     response = await authenticated_client.get(
-        "/documents",
-        params={"limit": 10, "offset": 0}
+        "/documents", params={"limit": 10, "offset": 0}
     )
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check response structure
     assert "documents" in data
     assert "total" in data
     assert "limit" in data
     assert "offset" in data
-    
+
     # Verify pagination
     assert isinstance(data["documents"], list)
     assert len(data["documents"]) <= 10
@@ -71,16 +66,12 @@ async def test_get_documents_list(authenticated_client: AsyncClient):
 async def test_get_documents_with_filters(authenticated_client: AsyncClient):
     """Test listing documents with jurisdiction filter."""
     response = await authenticated_client.get(
-        "/documents",
-        params={
-            "limit": 5,
-            "jurisdiction": "PL"
-        }
+        "/documents", params={"limit": 5, "jurisdiction": "PL"}
     )
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     # All documents should match jurisdiction filter
     for doc in data["documents"]:
         assert doc.get("jurisdiction") == "PL" or doc.get("country") == "PL"
@@ -91,22 +82,20 @@ async def test_get_documents_with_filters(authenticated_client: AsyncClient):
 @pytest.mark.search
 @pytest.mark.integration
 async def test_search_documents_basic(
-    authenticated_client: AsyncClient,
-    sample_search_request: Dict[str, Any]
+    authenticated_client: AsyncClient, sample_search_request: Dict[str, Any]
 ):
     """Test basic document search functionality."""
     response = await authenticated_client.post(
-        "/documents/search",
-        json=sample_search_request
+        "/documents/search", json=sample_search_request
     )
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check response structure
     assert "chunks" in data
     assert isinstance(data["chunks"], list)
-    
+
     # If results exist, validate structure
     if len(data["chunks"]) > 0:
         chunk = data["chunks"][0]
@@ -126,21 +115,14 @@ async def test_search_with_filters(authenticated_client: AsyncClient):
         "query": "contract law",
         "limit_docs": 5,
         "alpha": 0.5,
-        "filters": {
-            "jurisdiction": ["PL"],
-            "year_from": 2020,
-            "year_to": 2024
-        }
+        "filters": {"jurisdiction": ["PL"], "year_from": 2020, "year_to": 2024},
     }
-    
-    response = await authenticated_client.post(
-        "/documents/search",
-        json=request_data
-    )
-    
+
+    response = await authenticated_client.post("/documents/search", json=request_data)
+
     assert response.status_code == 200
     data = response.json()
-    
+
     assert "chunks" in data
     # Results should respect filters (when available)
     if "metadata" in data:
@@ -153,29 +135,22 @@ async def test_search_with_filters(authenticated_client: AsyncClient):
 @pytest.mark.integration
 async def test_search_returns_metadata(authenticated_client: AsyncClient):
     """Test that search returns proper chunk metadata."""
-    request_data = {
-        "query": "legal precedent",
-        "limit_docs": 3,
-        "alpha": 0.7
-    }
-    
-    response = await authenticated_client.post(
-        "/documents/search",
-        json=request_data
-    )
-    
+    request_data = {"query": "legal precedent", "limit_docs": 3, "alpha": 0.7}
+
+    response = await authenticated_client.post("/documents/search", json=request_data)
+
     assert response.status_code == 200
     data = response.json()
-    
+
     if len(data["chunks"]) > 0:
         chunk = data["chunks"][0]
-        
+
         # Validate chunk metadata
         assert "chunk_text" in chunk
         assert "chunk_type" in chunk
         assert "chunk_start_pos" in chunk
         assert "chunk_end_pos" in chunk
-        
+
         # Validate scores
         if "vector_score" in chunk or "text_score" in chunk:
             assert "combined_score" in chunk
@@ -193,23 +168,23 @@ async def test_search_with_invalid_params(authenticated_client: AsyncClient):
         json={
             "query": "test",
             "limit_docs": 1000,  # Exceeds maximum
-            "alpha": 0.5
-        }
+            "alpha": 0.5,
+        },
     )
-    
+
     # Should either reject or cap at max
     assert response.status_code in [200, 422]
-    
+
     # Invalid alpha (out of range)
     response = await authenticated_client.post(
         "/documents/search",
         json={
             "query": "test",
             "limit_docs": 10,
-            "alpha": 1.5  # Should be 0-1
-        }
+            "alpha": 1.5,  # Should be 0-1
+        },
     )
-    
+
     assert response.status_code == 422  # Validation error
 
 
@@ -219,20 +194,17 @@ async def test_search_with_invalid_params(authenticated_client: AsyncClient):
 async def test_get_document_by_id(authenticated_client: AsyncClient):
     """Test retrieving a specific document by ID."""
     # First get a list to find a valid ID
-    list_response = await authenticated_client.get(
-        "/documents",
-        params={"limit": 1}
-    )
-    
+    list_response = await authenticated_client.get("/documents", params={"limit": 1})
+
     assert list_response.status_code == 200
     data = list_response.json()
-    
+
     if len(data["documents"]) > 0:
         doc_id = data["documents"][0]["id"]
-        
+
         # Retrieve specific document
         response = await authenticated_client.get(f"/documents/{doc_id}")
-        
+
         assert response.status_code == 200
         doc = response.json()
         assert doc["id"] == doc_id
@@ -244,10 +216,10 @@ async def test_get_document_by_id(authenticated_client: AsyncClient):
 async def test_get_nonexistent_document(authenticated_client: AsyncClient):
     """Test retrieving a document that doesn't exist."""
     response = await authenticated_client.get("/documents/nonexistent-id-999999")
-    
+
     # Should return 404 or empty result
     assert response.status_code in [404, 200]
-    
+
     if response.status_code == 200:
         data = response.json()
         # Should indicate no document found
@@ -261,28 +233,21 @@ async def test_get_nonexistent_document(authenticated_client: AsyncClient):
 async def test_similar_documents(authenticated_client: AsyncClient):
     """Test finding similar documents."""
     # First get a document ID
-    list_response = await authenticated_client.get(
-        "/documents",
-        params={"limit": 1}
-    )
-    
+    list_response = await authenticated_client.get("/documents", params={"limit": 1})
+
     assert list_response.status_code == 200
     data = list_response.json()
-    
+
     if len(data["documents"]) > 0:
         doc_id = data["documents"][0]["id"]
-        
+
         # Find similar documents
-        request_data = {
-            "document_ids": [doc_id],
-            "top_k": 5
-        }
-        
+        request_data = {"document_ids": [doc_id], "top_k": 5}
+
         response = await authenticated_client.post(
-            "/documents/similar",
-            json=request_data
+            "/documents/similar", json=request_data
         )
-        
+
         assert response.status_code == 200
         results = response.json()
         assert isinstance(results, list)
@@ -294,27 +259,20 @@ async def test_similar_documents(authenticated_client: AsyncClient):
 @pytest.mark.integration
 async def test_similar_documents_multiple_ids(authenticated_client: AsyncClient):
     """Test finding similar documents for multiple source documents."""
-    list_response = await authenticated_client.get(
-        "/documents",
-        params={"limit": 2}
-    )
-    
+    list_response = await authenticated_client.get("/documents", params={"limit": 2})
+
     assert list_response.status_code == 200
     data = list_response.json()
-    
+
     if len(data["documents"]) >= 2:
         doc_ids = [doc["id"] for doc in data["documents"][:2]]
-        
-        request_data = {
-            "document_ids": doc_ids,
-            "top_k": 3
-        }
-        
+
+        request_data = {"document_ids": doc_ids, "top_k": 3}
+
         response = await authenticated_client.post(
-            "/documents/similar",
-            json=request_data
+            "/documents/similar", json=request_data
         )
-        
+
         assert response.status_code == 200
         results = response.json()
         assert isinstance(results, list)
@@ -328,14 +286,9 @@ async def test_similar_documents_multiple_ids(authenticated_client: AsyncClient)
 async def test_search_empty_query(authenticated_client: AsyncClient):
     """Test search with empty query string."""
     response = await authenticated_client.post(
-        "/documents/search",
-        json={
-            "query": "",
-            "limit_docs": 10,
-            "alpha": 0.5
-        }
+        "/documents/search", json={"query": "", "limit_docs": 10, "alpha": 0.5}
     )
-    
+
     # Should either reject or return empty results
     assert response.status_code in [200, 422]
 
@@ -347,22 +300,20 @@ async def test_pagination_consistency(authenticated_client: AsyncClient):
     """Test that pagination returns consistent results."""
     # First page
     response1 = await authenticated_client.get(
-        "/documents",
-        params={"limit": 5, "offset": 0}
+        "/documents", params={"limit": 5, "offset": 0}
     )
-    
+
     assert response1.status_code == 200
     data1 = response1.json()
-    
+
     # Second page
     response2 = await authenticated_client.get(
-        "/documents",
-        params={"limit": 5, "offset": 5}
+        "/documents", params={"limit": 5, "offset": 5}
     )
-    
+
     assert response2.status_code == 200
     data2 = response2.json()
-    
+
     # Documents should not overlap
     if len(data1["documents"]) > 0 and len(data2["documents"]) > 0:
         ids1 = {doc["id"] for doc in data1["documents"]}
@@ -378,14 +329,11 @@ async def test_search_mode_rabbit(authenticated_client: AsyncClient):
     request_data = {
         "question": "What are the tax implications?",
         "mode": "rabbit",
-        "max_documents": 5
+        "max_documents": 5,
     }
-    
-    response = await authenticated_client.post(
-        "/documents",
-        json=request_data
-    )
-    
+
+    response = await authenticated_client.post("/documents", json=request_data)
+
     assert response.status_code == 200
     data = response.json()
     assert "document" in data or "documents" in data
@@ -399,17 +347,14 @@ async def test_search_mode_thinking(authenticated_client: AsyncClient):
     request_data = {
         "question": "What are the legal precedents?",
         "mode": "thinking",
-        "max_documents": 5
+        "max_documents": 5,
     }
-    
-    response = await authenticated_client.post(
-        "/documents",
-        json=request_data
-    )
-    
+
+    response = await authenticated_client.post("/documents", json=request_data)
+
     assert response.status_code == 200
     data = response.json()
-    
+
     # Thinking mode may include enhanced query
     assert "document" in data or "documents" in data
     if "enhanced_query" in data:
@@ -422,7 +367,7 @@ async def test_search_mode_thinking(authenticated_client: AsyncClient):
 async def test_facets_endpoint(authenticated_client: AsyncClient):
     """Test facets/aggregations endpoint if available."""
     response = await authenticated_client.get("/documents/facets")
-    
+
     # Endpoint may or may not exist
     if response.status_code == 200:
         data = response.json()
@@ -436,25 +381,21 @@ async def test_facets_endpoint(authenticated_client: AsyncClient):
 async def test_batch_document_retrieval(authenticated_client: AsyncClient):
     """Test retrieving multiple documents in batch."""
     # Get some document IDs first
-    list_response = await authenticated_client.get(
-        "/documents",
-        params={"limit": 3}
-    )
-    
+    list_response = await authenticated_client.get("/documents", params={"limit": 3})
+
     assert list_response.status_code == 200
     data = list_response.json()
-    
+
     if len(data["documents"]) > 0:
         doc_ids = [doc["id"] for doc in data["documents"]]
-        
+
         # Batch retrieval endpoint (if available)
         request_data = {"document_ids": doc_ids}
-        
+
         response = await authenticated_client.post(
-            "/documents/batch",
-            json=request_data
+            "/documents/batch", json=request_data
         )
-        
+
         # May or may not be implemented
         if response.status_code == 200:
             results = response.json()

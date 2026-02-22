@@ -4,7 +4,6 @@ Pytest fixtures for schema and extraction API tests.
 
 import os
 import uuid
-from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict
 
 import pytest
@@ -17,7 +16,9 @@ os.environ.setdefault("NEXT_PUBLIC_SUPABASE_URL", "http://test-supabase.local")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
-os.environ.setdefault("LANGGRAPH_POSTGRES_URL", "postgresql://test:test@localhost:5432/test")
+os.environ.setdefault(
+    "LANGGRAPH_POSTGRES_URL", "postgresql://test:test@localhost:5432/test"
+)
 os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")
 
@@ -33,18 +34,14 @@ def test_api_key() -> str:
 @pytest.fixture
 def auth_headers(test_api_key: str) -> Dict[str, str]:
     """Return authentication headers with API key."""
-    return {
-        "X-API-Key": test_api_key,
-        "Content-Type": "application/json"
-    }
+    return {"X-API-Key": test_api_key, "Content-Type": "application/json"}
 
 
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Create an async HTTP client for testing."""
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
@@ -66,29 +63,29 @@ def sample_schema_data() -> Dict[str, Any]:
                     "type": "object",
                     "properties": {
                         "name": {"type": "string"},
-                        "role": {"type": "string"}
-                    }
-                }
+                        "role": {"type": "string"},
+                    },
+                },
             },
             {
                 "name": "contract_date",
                 "type": "date",
                 "description": "Date of contract signing",
-                "required": True
+                "required": True,
             },
             {
                 "name": "amount",
                 "type": "number",
                 "description": "Contract amount in currency",
-                "required": False
+                "required": False,
             },
             {
                 "name": "terms",
                 "type": "string",
                 "description": "Key contract terms",
-                "required": False
-            }
-        ]
+                "required": False,
+            },
+        ],
     }
 
 
@@ -103,9 +100,9 @@ def minimal_schema_data() -> Dict[str, Any]:
                 "name": "field1",
                 "type": "string",
                 "description": "Test field",
-                "required": True
+                "required": True,
             }
-        ]
+        ],
     }
 
 
@@ -121,7 +118,7 @@ def complex_schema_data() -> Dict[str, Any]:
                 "name": "case_number",
                 "type": "string",
                 "description": "Unique case identifier",
-                "required": True
+                "required": True,
             },
             {
                 "name": "court",
@@ -131,8 +128,8 @@ def complex_schema_data() -> Dict[str, Any]:
                 "properties": {
                     "name": {"type": "string"},
                     "jurisdiction": {"type": "string"},
-                    "level": {"type": "string"}
-                }
+                    "level": {"type": "string"},
+                },
             },
             {
                 "name": "judges",
@@ -143,9 +140,9 @@ def complex_schema_data() -> Dict[str, Any]:
                     "type": "object",
                     "properties": {
                         "name": {"type": "string"},
-                        "role": {"type": "string"}
-                    }
-                }
+                        "role": {"type": "string"},
+                    },
+                },
             },
             {
                 "name": "parties",
@@ -157,30 +154,30 @@ def complex_schema_data() -> Dict[str, Any]:
                     "properties": {
                         "name": {"type": "string"},
                         "type": {"type": "string"},
-                        "representation": {"type": "string"}
-                    }
-                }
+                        "representation": {"type": "string"},
+                    },
+                },
             },
             {
                 "name": "decision_date",
                 "type": "date",
                 "description": "Date of judgment",
-                "required": True
+                "required": True,
             },
             {
                 "name": "verdict",
                 "type": "string",
                 "description": "Court verdict",
-                "required": True
+                "required": True,
             },
             {
                 "name": "legal_basis",
                 "type": "array",
                 "description": "Legal basis for decision",
                 "required": False,
-                "items": {"type": "string"}
-            }
-        ]
+                "items": {"type": "string"},
+            },
+        ],
     }
 
 
@@ -246,8 +243,8 @@ def sample_extraction_request() -> Dict[str, Any]:
         "config": {
             "mode": "auto",
             "confidence_threshold": 0.7,
-            "extract_citations": True
-        }
+            "extract_citations": True,
+        },
     }
 
 
@@ -256,18 +253,8 @@ def sample_bulk_extraction_request() -> Dict[str, Any]:
     """Sample bulk extraction request."""
     return {
         "schema_id": "test-schema-123",
-        "document_ids": [
-            "doc-1",
-            "doc-2",
-            "doc-3",
-            "doc-4",
-            "doc-5"
-        ],
-        "config": {
-            "mode": "batch",
-            "parallel": True,
-            "max_workers": 3
-        }
+        "document_ids": ["doc-1", "doc-2", "doc-3", "doc-4", "doc-5"],
+        "config": {"mode": "batch", "parallel": True, "max_workers": 3},
     }
 
 
@@ -280,19 +267,16 @@ def invalid_schema_data() -> Dict[str, Any]:
             {
                 "name": "bad_field",
                 "type": "invalid_type",  # Invalid type
-                "required": True
+                "required": True,
             }
-        ]
+        ],
     }
 
 
 @pytest.fixture
 def schema_with_missing_required() -> Dict[str, Any]:
     """Schema data missing required fields."""
-    return {
-        "description": "Missing name field",
-        "fields": []
-    }
+    return {"description": "Missing name field", "fields": []}
 
 
 @pytest.fixture
@@ -318,10 +302,8 @@ def ai_generation_request() -> Dict[str, Any]:
     """Sample AI schema generation request."""
     return {
         "description": "I need to extract party names, dates, and amounts from contracts",
-        "sample_documents": [
-            "Contract between A and B for $10,000 dated 2024-01-15"
-        ],
-        "output_format": "json_schema"
+        "sample_documents": ["Contract between A and B for $10,000 dated 2024-01-15"],
+        "output_format": "json_schema",
     }
 
 
@@ -330,11 +312,7 @@ def chat_refinement_request() -> Dict[str, Any]:
     """Sample chat refinement request."""
     return {
         "message": "Add extraction of contract duration",
-        "context": {
-            "previous_schema": {
-                "fields": ["parties", "date", "amount"]
-            }
-        }
+        "context": {"previous_schema": {"fields": ["parties", "date", "amount"]}},
     }
 
 
@@ -344,7 +322,7 @@ def schema_test_request() -> Dict[str, Any]:
     return {
         "document_id": "test-doc-789",
         "sample_text": "Test document with party A and party B",
-        "validation_mode": "strict"
+        "validation_mode": "strict",
     }
 
 
@@ -356,7 +334,7 @@ def prompt_data() -> Dict[str, Any]:
         "name": "Contract Extraction Prompt",
         "template": "Extract the following from the contract:\n{{ fields }}",
         "variables": ["fields"],
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
 
 
@@ -365,18 +343,12 @@ def filter_request() -> Dict[str, Any]:
     """Sample filter request for extracted data."""
     return {
         "filters": {
-            "date_range": {
-                "start": "2024-01-01",
-                "end": "2024-12-31"
-            },
-            "amount_range": {
-                "min": 1000,
-                "max": 100000
-            },
-            "parties": ["Tech Solutions Inc."]
+            "date_range": {"start": "2024-01-01", "end": "2024-12-31"},
+            "amount_range": {"min": 1000, "max": 100000},
+            "parties": ["Tech Solutions Inc."],
         },
         "page": 1,
-        "page_size": 20
+        "page_size": 20,
     }
 
 
@@ -385,7 +357,5 @@ def facet_request() -> Dict[str, Any]:
     """Sample facet aggregation request."""
     return {
         "fields": ["jurisdiction", "court_type", "verdict"],
-        "filters": {
-            "year": 2024
-        }
+        "filters": {"year": 2024},
     }

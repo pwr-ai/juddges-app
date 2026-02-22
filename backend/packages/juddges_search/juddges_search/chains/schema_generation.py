@@ -115,19 +115,19 @@ def strip_markdown_json(text: str) -> str:
     text = text.strip()
 
     # Remove ```json ... ``` or ``` ... ``` blocks
-    pattern = r'^```(?:json)?\s*\n?(.*?)\n?```$'
+    pattern = r"^```(?:json)?\s*\n?(.*?)\n?```$"
     match = re.match(pattern, text, re.DOTALL | re.IGNORECASE)
     if match:
         text = match.group(1).strip()
 
     # Also handle case where there's text before/after the JSON
     # Try to extract just the JSON object
-    if not text.startswith('{'):
+    if not text.startswith("{"):
         # Find the first { and last }
-        start = text.find('{')
-        end = text.rfind('}')
+        start = text.find("{")
+        end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
-            text = text[start:end + 1]
+            text = text[start : end + 1]
 
     return text
 
@@ -248,8 +248,17 @@ def merge_and_mark_new_fields(
             prop["description"] = description
 
         # Copy any validation rules
-        for key in ["enum", "format", "pattern", "minLength", "maxLength",
-                    "minimum", "maximum", "minItems", "maxItems"]:
+        for key in [
+            "enum",
+            "format",
+            "pattern",
+            "minLength",
+            "maxLength",
+            "minimum",
+            "maximum",
+            "minItems",
+            "maxItems",
+        ]:
             if key in field:
                 prop[key] = field[key]
             # Also check validation_rules nested object
@@ -310,7 +319,7 @@ def parse_llm_json_output(message) -> dict[str, Any]:
     import json
 
     # Extract text content from message
-    if hasattr(message, 'content'):
+    if hasattr(message, "content"):
         text = message.content
     else:
         text = str(message)

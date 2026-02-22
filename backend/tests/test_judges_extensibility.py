@@ -1,9 +1,11 @@
 import sys
 import os
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../packages/juddges_search"))
 
 from juddges_search.models import LegalDocument, DocumentType
+
 
 def test_extensibility():
     try:
@@ -14,7 +16,7 @@ def test_extensibility():
             country="PL",
             # Extra field
             extra_field="This should be allowed",
-            victims_count=5
+            victims_count=5,
         )
         print("Model instantiated successfully with extra fields.")
         if "extra_field" in doc.model_dump():
@@ -27,6 +29,7 @@ def test_extensibility():
     except Exception as e:
         print(f"Model validation failed: {e}")
         return False
+
 
 if __name__ == "__main__":
     success = test_extensibility()

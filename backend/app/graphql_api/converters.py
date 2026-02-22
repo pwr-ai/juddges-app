@@ -34,7 +34,9 @@ def convert_legal_document(doc: Any) -> LegalDocumentType:
 
     return LegalDocumentType(
         document_id=doc.document_id,
-        document_type=doc.document_type.value if hasattr(doc.document_type, "value") else str(doc.document_type),
+        document_type=doc.document_type.value
+        if hasattr(doc.document_type, "value")
+        else str(doc.document_type),
         title=getattr(doc, "title", None),
         date_issued=getattr(doc, "date_issued", None),
         issuing_body=issuing_body,
@@ -65,7 +67,9 @@ def convert_legal_document_metadata(doc: Any) -> LegalDocumentMetadataType:
     return LegalDocumentMetadataType(
         uuid=doc.uuid,
         document_id=doc.document_id,
-        document_type=doc.document_type.value if hasattr(doc.document_type, "value") else str(doc.document_type),
+        document_type=doc.document_type.value
+        if hasattr(doc.document_type, "value")
+        else str(doc.document_type),
         language=getattr(doc, "language", None),
         victims_count=getattr(doc, "victims_count", None),
         offenders_count=getattr(doc, "offenders_count", None),
@@ -89,7 +93,11 @@ def convert_document_chunk(chunk: Any) -> DocumentChunkType:
         language=getattr(chunk, "language", None),
         chunk_id=chunk.chunk_id,
         chunk_text=chunk.chunk_text,
-        segment_type=chunk.segment_type.value if hasattr(chunk, "segment_type") and chunk.segment_type and hasattr(chunk.segment_type, "value") else getattr(chunk, "segment_type", None),
+        segment_type=chunk.segment_type.value
+        if hasattr(chunk, "segment_type")
+        and chunk.segment_type
+        and hasattr(chunk.segment_type, "value")
+        else getattr(chunk, "segment_type", None),
         position=getattr(chunk, "position", None),
         confidence_score=getattr(chunk, "confidence_score", None),
         cited_references=getattr(chunk, "cited_references", None),
@@ -170,5 +178,7 @@ def convert_extraction_job(job: Any) -> ExtractionJobType:
         total_documents=getattr(job, "total_documents", None),
         completed_documents=getattr(job, "completed_documents", None),
         elapsed_time_seconds=getattr(job, "elapsed_time_seconds", None),
-        estimated_time_remaining_seconds=getattr(job, "estimated_time_remaining_seconds", None),
+        estimated_time_remaining_seconds=getattr(
+            job, "estimated_time_remaining_seconds", None
+        ),
     )

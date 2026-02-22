@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 class EmbeddingProviderType(str, Enum):
     """Supported embedding provider types."""
+
     OPENAI = "openai"
     COHERE = "cohere"
     LOCAL = "local"
@@ -25,12 +26,19 @@ class EmbeddingProviderType(str, Enum):
 
 class EmbeddingModelConfig(BaseModel):
     """Configuration for an embedding model."""
+
     provider: EmbeddingProviderType = Field(description="Embedding provider type")
-    model_name: str = Field(description="Model identifier (e.g., 'text-embedding-3-small')")
+    model_name: str = Field(
+        description="Model identifier (e.g., 'text-embedding-3-small')"
+    )
     dimensions: int = Field(description="Output embedding dimensions")
-    max_input_length: int = Field(default=8000, description="Maximum input text length in characters")
+    max_input_length: int = Field(
+        default=8000, description="Maximum input text length in characters"
+    )
     description: str = Field(default="", description="Human-readable description")
-    is_default: bool = Field(default=False, description="Whether this is the default model")
+    is_default: bool = Field(
+        default=False, description="Whether this is the default model"
+    )
 
 
 # Pre-defined model configurations
@@ -93,7 +101,7 @@ class BaseEmbeddingProvider(ABC):
     def _truncate_text(self, text: str) -> str:
         """Truncate text to max input length."""
         if len(text) > self.config.max_input_length:
-            return text[:self.config.max_input_length]
+            return text[: self.config.max_input_length]
         return text
 
 
@@ -103,6 +111,7 @@ class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
     def __init__(self, config: EmbeddingModelConfig):
         super().__init__(config)
         from openai import AsyncOpenAI
+
         self._client = AsyncOpenAI()
 
     async def embed_text(self, text: str) -> list[float]:
@@ -170,21 +179,26 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
     def _get_model(self):
         if self._model is None:
             from sentence_transformers import SentenceTransformer
+
             logger.info(f"Loading local embedding model: {self.config.model_name}")
             self._model = SentenceTransformer(self.config.model_name)
         return self._model
 
     async def embed_text(self, text: str) -> list[float]:
         import asyncio
+
         text = self._truncate_text(text)
         model = self._get_model()
         # Run in thread pool since SentenceTransformer is synchronous
         loop = asyncio.get_event_loop()
-        embedding = await loop.run_in_executor(None, lambda: model.encode(text).tolist())
+        embedding = await loop.run_in_executor(
+            None, lambda: model.encode(text).tolist()
+        )
         return embedding
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         import asyncio
+
         texts = [self._truncate_text(t) for t in texts]
         model = self._get_model()
         loop = asyncio.get_event_loop()
@@ -209,7 +223,9 @@ _active_model_id: Optional[str] = None
 def get_model_config(model_id: str) -> EmbeddingModelConfig:
     """Get configuration for a specific model."""
     if model_id not in AVAILABLE_MODELS:
-        raise ValueError(f"Unknown model: {model_id}. Available: {list(AVAILABLE_MODELS.keys())}")
+        raise ValueError(
+            f"Unknown model: {model_id}. Available: {list(AVAILABLE_MODELS.keys())}"
+        )
     return AVAILABLE_MODELS[model_id]
 
 
@@ -276,10 +292,18 @@ def set_active_model(model_id: str) -> EmbeddingModelConfig:
     config = get_model_config(model_id)
 
     # Check API key availability
-    if config.provider == EmbeddingProviderType.COHERE and not os.getenv("COHERE_API_KEY"):
-        raise ValueError("COHERE_API_KEY environment variable is required for Cohere models")
-    if config.provider == EmbeddingProviderType.OPENAI and not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY environment variable is required for OpenAI models")
+    if config.provider == EmbeddingProviderType.COHERE and not os.getenv(
+        "COHERE_API_KEY"
+    ):
+        raise ValueError(
+            "COHERE_API_KEY environment variable is required for Cohere models"
+        )
+    if config.provider == EmbeddingProviderType.OPENAI and not os.getenv(
+        "OPENAI_API_KEY"
+    ):
+        raise ValueError(
+            "OPENAI_API_KEY environment variable is required for OpenAI models"
+        )
 
     # Clear cached provider to force re-initialization
     _active_provider = None

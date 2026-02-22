@@ -52,10 +52,12 @@ def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:
 
 def transform_collection(data) -> CollectionWithDocuments:
     documents = []
-    # Use collection_supabase_documents for Weaviate document IDs (text type)
+    # Use collection_supabase_documents for document IDs (text type)
     if "collection_supabase_documents" in data:
-        # Keep document IDs as strings (they are string identifiers from Weaviate)
-        documents = [str(cd["document_id"]) for cd in data["collection_supabase_documents"]]
+        # Keep document IDs as strings (they are string identifiers)
+        documents = [
+            str(cd["document_id"]) for cd in data["collection_supabase_documents"]
+        ]
 
     # Use document_count if available, otherwise count from documents list
     document_count = data.get("document_count", len(documents))
@@ -112,7 +114,9 @@ async def get_collection(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    collection = await db.find_collection(collection_id, user_id, limit=limit, offset=offset)
+    collection = await db.find_collection(
+        collection_id, user_id, limit=limit, offset=offset
+    )
     if not collection:
         raise HTTPException(404, "Collection not found")
     return transform_collection(collection)
@@ -195,7 +199,9 @@ async def add_document(
 class AddDocumentsRequest(BaseModel):
     """Request model for adding multiple documents to a collection."""
 
-    document_ids: List[str] = Field(description="List of document IDs to add", min_length=1)
+    document_ids: List[str] = Field(
+        description="List of document IDs to add", min_length=1
+    )
 
     @field_validator("document_ids")
     @classmethod
@@ -243,7 +249,9 @@ async def add_documents_batch(
 class RemoveDocumentRequest(BaseModel):
     """Request model for removing a document from a collection."""
 
-    document_id: str = Field(description="ID of the document to remove", min_length=1, max_length=255)
+    document_id: str = Field(
+        description="ID of the document to remove", min_length=1, max_length=255
+    )
 
     @field_validator("document_id")
     @classmethod

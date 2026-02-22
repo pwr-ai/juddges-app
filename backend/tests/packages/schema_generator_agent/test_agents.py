@@ -140,15 +140,15 @@ def test_schema_assessment_validates_quality(llm, prompts):
         "properties": {
             "party_name": {
                 "type": "string",
-                "description": "Name of the contracting party"
+                "description": "Name of the contracting party",
             },
             "contract_date": {
                 "type": "string",
                 "format": "date",
-                "description": "Date the contract was signed"
-            }
+                "description": "Date the contract was signed",
+            },
         },
-        "required": ["party_name", "contract_date"]
+        "required": ["party_name", "contract_date"],
     }
 
     state = AgentState(
@@ -192,7 +192,7 @@ def test_schema_assessment_flags_poor_quality(llm, prompts):
         "type": "object",
         "properties": {
             "data": {"type": "string"}  # Too generic, no description
-        }
+        },
     }
 
     state = AgentState(
@@ -227,17 +227,16 @@ def test_schema_refiner_improves_schema(llm, prompts):
     """Test schema refiner agent improves schema based on assessment."""
     agent = SchemaRefinerAgent(llm, prompts["schema_refiner"])
 
-    initial_schema = {
-        "type": "object",
-        "properties": {
-            "name": {"type": "string"}
-        }
-    }
+    initial_schema = {"type": "object", "properties": {"name": {"type": "string"}}}
 
     assessment = {
         "confidence_score": 0.6,
         "needs_refinement": True,
-        "suggestions": ["Add more specific fields", "Include descriptions", "Add required fields"]
+        "suggestions": [
+            "Add more specific fields",
+            "Include descriptions",
+            "Add required fields",
+        ],
     }
 
     state = AgentState(

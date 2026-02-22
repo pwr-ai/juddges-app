@@ -1173,7 +1173,10 @@ SCHEMA_13_TAX_AUDIT_ASSISTANT = create_schema_definition(
         "analiza_ryzyka": {
             "type": "object",
             "properties": {
-                "prawdopodobne_obszary_zainteresowania": {"type": "array", "items": {"type": "string"}},
+                "prawdopodobne_obszary_zainteresowania": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "potencjalne_problemy": {"type": "array", "items": {"type": "string"}},
                 "poziom_ryzyka": {"type": "string"},
             },
@@ -1209,7 +1212,10 @@ SCHEMA_13_TAX_AUDIT_ASSISTANT = create_schema_definition(
             "type": "object",
             "properties": {
                 "kluczowe_argumenty": {"type": "array", "items": {"type": "string"}},
-                "dokumentacja_wspomagajaca": {"type": "array", "items": {"type": "string"}},
+                "dokumentacja_wspomagajaca": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "potencjalne_slabosci": {"type": "array", "items": {"type": "string"}},
             },
             "description": "Rekomendowana strategia obrony",
@@ -1531,7 +1537,9 @@ def save_schemas_to_json(output_file: str = "lawyer_schemas_pl.json") -> None:
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(ALL_SCHEMAS, f, ensure_ascii=False, indent=2)
 
-    console.print(f"[bold green]✓ Pomyślnie zapisano {len(ALL_SCHEMAS)} schematów do {output_file}[/bold green]")
+    console.print(
+        f"[bold green]✓ Pomyślnie zapisano {len(ALL_SCHEMAS)} schematów do {output_file}[/bold green]"
+    )
 
 
 def display_schemas_table() -> None:
@@ -1550,7 +1558,9 @@ def display_schemas_table() -> None:
             schema["name"],
             schema["category"],
             str(schema["field_count"]),
-            schema["description"][:60] + "..." if len(schema["description"]) > 60 else schema["description"],
+            schema["description"][:60] + "..."
+            if len(schema["description"]) > 60
+            else schema["description"],
         )
 
     console.print(table)
@@ -1560,8 +1570,12 @@ def main():
     """Główny punkt wejścia skryptu."""
     import sys
 
-    console.print("[bold cyan]Rozpoczęcie generowania schematów dla prawników i doradców podatkowych[/bold cyan]")
-    console.print(f"[cyan]Liczba schematów do wygenerowania: {len(ALL_SCHEMAS)}[/cyan]\n")
+    console.print(
+        "[bold cyan]Rozpoczęcie generowania schematów dla prawników i doradców podatkowych[/bold cyan]"
+    )
+    console.print(
+        f"[cyan]Liczba schematów do wygenerowania: {len(ALL_SCHEMAS)}[/cyan]\n"
+    )
 
     # Wyświetl schematy w ładnej tabeli
     display_schemas_table()
@@ -1571,7 +1585,9 @@ def main():
     save_schemas_to_json(output_file)
 
     console.print("\n[bold yellow]Aby wstawić te schematy do Supabase:[/bold yellow]")
-    console.print("[yellow]Możesz użyć narzędzi Supabase MCP lub ręcznie wykonać instrukcje SQL INSERT.[/yellow]")
+    console.print(
+        "[yellow]Możesz użyć narzędzi Supabase MCP lub ręcznie wykonać instrukcje SQL INSERT.[/yellow]"
+    )
 
 
 if __name__ == "__main__":

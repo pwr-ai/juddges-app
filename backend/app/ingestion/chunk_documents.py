@@ -92,7 +92,9 @@ class DocumentChunker:
         """Count tokens in text using tiktoken."""
         return len(self.tokenizer.encode(text))
 
-    def detect_section(self, line: str, language: str = "pl") -> tuple[Optional[str], bool]:
+    def detect_section(
+        self, line: str, language: str = "pl"
+    ) -> tuple[Optional[str], bool]:
         """
         Detect if a line is a section header.
         Returns (section_title, is_key_section) or (None, False).
@@ -136,15 +138,19 @@ class DocumentChunker:
                 # Save current chunk before starting new section
                 if current_chunk and current_tokens >= MIN_CHUNK_SIZE:
                     chunk_text = " ".join(current_chunk)
-                    chunks.append({
-                        "document_id": document_id,
-                        "chunk_index": chunk_index,
-                        "chunk_type": "section" if current_section else "paragraph_block",
-                        "content": chunk_text,
-                        "section_title": current_section,
-                        "is_key_section": is_current_key,
-                        "token_count": current_tokens,
-                    })
+                    chunks.append(
+                        {
+                            "document_id": document_id,
+                            "chunk_index": chunk_index,
+                            "chunk_type": "section"
+                            if current_section
+                            else "paragraph_block",
+                            "content": chunk_text,
+                            "section_title": current_section,
+                            "is_key_section": is_current_key,
+                            "token_count": current_tokens,
+                        }
+                    )
                     chunk_index += 1
 
                 # Start new section
@@ -160,15 +166,19 @@ class DocumentChunker:
             if current_tokens + line_tokens > TARGET_CHUNK_SIZE and current_chunk:
                 # Save current chunk
                 chunk_text = " ".join(current_chunk)
-                chunks.append({
-                    "document_id": document_id,
-                    "chunk_index": chunk_index,
-                    "chunk_type": "section" if current_section else "paragraph_block",
-                    "content": chunk_text,
-                    "section_title": current_section,
-                    "is_key_section": is_current_key,
-                    "token_count": current_tokens,
-                })
+                chunks.append(
+                    {
+                        "document_id": document_id,
+                        "chunk_index": chunk_index,
+                        "chunk_type": "section"
+                        if current_section
+                        else "paragraph_block",
+                        "content": chunk_text,
+                        "section_title": current_section,
+                        "is_key_section": is_current_key,
+                        "token_count": current_tokens,
+                    }
+                )
                 chunk_index += 1
 
                 # Start new chunk with overlap
@@ -192,15 +202,17 @@ class DocumentChunker:
         # Don't forget the last chunk
         if current_chunk and current_tokens >= MIN_CHUNK_SIZE:
             chunk_text = " ".join(current_chunk)
-            chunks.append({
-                "document_id": document_id,
-                "chunk_index": chunk_index,
-                "chunk_type": "section" if current_section else "paragraph_block",
-                "content": chunk_text,
-                "section_title": current_section,
-                "is_key_section": is_current_key,
-                "token_count": current_tokens,
-            })
+            chunks.append(
+                {
+                    "document_id": document_id,
+                    "chunk_index": chunk_index,
+                    "chunk_type": "section" if current_section else "paragraph_block",
+                    "content": chunk_text,
+                    "section_title": current_section,
+                    "is_key_section": is_current_key,
+                    "token_count": current_tokens,
+                }
+            )
 
         return chunks
 
@@ -238,9 +250,7 @@ class DocumentChunker:
         """Fetch documents that don't have chunks yet."""
         # Get document IDs that already have chunks
         existing_chunks = (
-            self.supabase.table("document_chunks")
-            .select("document_id")
-            .execute()
+            self.supabase.table("document_chunks").select("document_id").execute()
         )
         existing_doc_ids = set(c["document_id"] for c in (existing_chunks.data or []))
 
@@ -335,12 +345,14 @@ class DocumentChunker:
         logger.info("Fetching documents without chunks...")
 
         start_time = time.time()
-        offset = 0
         total_to_process = limit or float("inf")
 
         while self.stats["documents_processed"] < total_to_process:
             documents = self.get_documents_without_chunks(
-                limit=min(self.batch_size, int(total_to_process - self.stats["documents_processed"])),
+                limit=min(
+                    self.batch_size,
+                    int(total_to_process - self.stats["documents_processed"]),
+                ),
                 offset=0,  # Always 0 since we filter by existing chunks
             )
 
@@ -348,7 +360,7 @@ class DocumentChunker:
                 logger.info("No more documents to process")
                 break
 
-            chunks_created = await self.process_batch(documents)
+            await self.process_batch(documents)
 
             elapsed = time.time() - start_time
             rate = self.stats["documents_processed"] / elapsed if elapsed > 0 else 0

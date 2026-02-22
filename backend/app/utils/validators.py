@@ -49,7 +49,7 @@ def validate_string_length(value: str, max_length: int, field_name: str) -> str:
 
 def validate_languages(v: list[str] | None) -> list[str] | None:
     """Validate language codes - accept 'pl', 'en', or 'uk' (normalized to 'en').
-    
+
     Note: 'uk' stands for United Kingdom and is normalized to 'en' (English).
     """
     if not v:

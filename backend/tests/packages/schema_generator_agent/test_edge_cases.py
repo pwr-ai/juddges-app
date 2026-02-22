@@ -38,7 +38,9 @@ def schema_generator(llm, prompts):
         prompt_schema_refiner=prompts["schema_refiner_prompt"],
         prompt_query_generator=prompts["query_generator_prompt"],
         prompt_schema_data_assessment=prompts["schema_data_assessment_prompt"],
-        prompt_schema_data_assessment_merger=prompts["schema_data_assessment_merger_prompt"],
+        prompt_schema_data_assessment_merger=prompts[
+            "schema_data_assessment_merger_prompt"
+        ],
         prompt_schema_data_refiner=prompts["schema_data_refiner_prompt"],
         use_interrupt=False,
     )
@@ -56,10 +58,7 @@ def test_route_after_assessment_needs_refinement():
         current_schema=None,
         schema_history=[],
         refinement_rounds=0,
-        assessment_result={
-            "confidence_score": 0.6,
-            "needs_refinement": True
-        },
+        assessment_result={"confidence_score": 0.6, "needs_refinement": True},
         data_assessment_results=None,
         merged_data_assessment=None,
         data_refinement_rounds=0,
@@ -70,7 +69,9 @@ def test_route_after_assessment_needs_refinement():
     )
 
     route = route_after_assessment(state)
-    assert route == "llm_schema_refiner", "Should route to refiner when needs refinement"
+    assert route == "llm_schema_refiner", (
+        "Should route to refiner when needs refinement"
+    )
 
 
 def test_route_after_assessment_low_confidence():
@@ -87,7 +88,7 @@ def test_route_after_assessment_low_confidence():
         refinement_rounds=2,
         assessment_result={
             "confidence_score": 0.7,  # Below 0.85 threshold
-            "needs_refinement": False
+            "needs_refinement": False,
         },
         data_assessment_results=None,
         merged_data_assessment=None,
@@ -99,7 +100,9 @@ def test_route_after_assessment_low_confidence():
     )
 
     route = route_after_assessment(state)
-    assert route == "llm_schema_refiner", "Should route to refiner when confidence is low"
+    assert route == "llm_schema_refiner", (
+        "Should route to refiner when confidence is low"
+    )
 
 
 def test_route_after_assessment_max_rounds():
@@ -114,10 +117,7 @@ def test_route_after_assessment_max_rounds():
         current_schema=None,
         schema_history=[],
         refinement_rounds=5,  # At max rounds
-        assessment_result={
-            "confidence_score": 0.6,
-            "needs_refinement": True
-        },
+        assessment_result={"confidence_score": 0.6, "needs_refinement": True},
         data_assessment_results=None,
         merged_data_assessment=None,
         data_refinement_rounds=0,
@@ -128,7 +128,9 @@ def test_route_after_assessment_max_rounds():
     )
 
     route = route_after_assessment(state)
-    assert route == "llm_schema_data_assessment", "Should stop refining after max rounds"
+    assert route == "llm_schema_data_assessment", (
+        "Should stop refining after max rounds"
+    )
 
 
 def test_route_after_assessment_high_confidence():
@@ -143,10 +145,7 @@ def test_route_after_assessment_high_confidence():
         current_schema=None,
         schema_history=[],
         refinement_rounds=1,
-        assessment_result={
-            "confidence_score": 0.9,
-            "needs_refinement": False
-        },
+        assessment_result={"confidence_score": 0.9, "needs_refinement": False},
         data_assessment_results=None,
         merged_data_assessment=None,
         data_refinement_rounds=0,
@@ -157,7 +156,9 @@ def test_route_after_assessment_high_confidence():
     )
 
     route = route_after_assessment(state)
-    assert route == "llm_schema_data_assessment", "Should proceed to data assessment when confident"
+    assert route == "llm_schema_data_assessment", (
+        "Should proceed to data assessment when confident"
+    )
 
 
 def test_route_after_data_assessment_merger_needs_refinement():
@@ -174,10 +175,7 @@ def test_route_after_data_assessment_merger_needs_refinement():
         refinement_rounds=0,
         assessment_result=None,
         data_assessment_results=None,
-        merged_data_assessment={
-            "confidence_score": 0.7,
-            "needs_refinement": True
-        },
+        merged_data_assessment={"confidence_score": 0.7, "needs_refinement": True},
         data_refinement_rounds=0,
         conversation_id=None,
         collection_id=None,
@@ -186,7 +184,9 @@ def test_route_after_data_assessment_merger_needs_refinement():
     )
 
     route = route_after_data_assessment_merger(state)
-    assert route == "llm_schema_data_refiner", "Should route to data refiner when needed"
+    assert route == "llm_schema_data_refiner", (
+        "Should route to data refiner when needed"
+    )
 
 
 def test_route_after_data_assessment_merger_max_rounds():
@@ -203,10 +203,7 @@ def test_route_after_data_assessment_merger_max_rounds():
         refinement_rounds=0,
         assessment_result=None,
         data_assessment_results=None,
-        merged_data_assessment={
-            "confidence_score": 0.6,
-            "needs_refinement": True
-        },
+        merged_data_assessment={"confidence_score": 0.6, "needs_refinement": True},
         data_refinement_rounds=5,  # At max
         conversation_id=None,
         collection_id=None,
@@ -232,10 +229,7 @@ def test_route_after_data_assessment_merger_complete():
         refinement_rounds=0,
         assessment_result=None,
         data_assessment_results=None,
-        merged_data_assessment={
-            "confidence_score": 0.9,
-            "needs_refinement": False
-        },
+        merged_data_assessment={"confidence_score": 0.9, "needs_refinement": False},
         data_refinement_rounds=1,
         conversation_id=None,
         collection_id=None,

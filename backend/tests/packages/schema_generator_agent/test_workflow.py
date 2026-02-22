@@ -5,7 +5,6 @@ from langchain_openai import ChatOpenAI
 from juddges_search.models import DocumentType
 
 from schema_generator_agent.agents.schema_generator import SchemaGenerator, load_prompts
-from schema_generator_agent.agents.agent_state import AgentState
 
 
 @pytest.fixture
@@ -58,15 +57,13 @@ def test_full_schema_generation_workflow(schema_generator):
 
     # Should have fields related to parties or names
     has_party_field = any(
-        "party" in key.lower() or "name" in key.lower()
-        for key in property_names
+        "party" in key.lower() or "name" in key.lower() for key in property_names
     )
     assert has_party_field, f"No party/name field found in: {property_names}"
 
     # Should have fields related to dates or judgment
     has_date_field = any(
-        "date" in key.lower() or "judgment" in key.lower()
-        for key in property_names
+        "date" in key.lower() or "judgment" in key.lower() for key in property_names
     )
     assert has_date_field, f"No date field found in: {property_names}"
 
@@ -91,7 +88,9 @@ def test_schema_refinement_improves_quality(schema_generator):
 
     # Check that schema has multiple properties (should be refined)
     properties = result["current_schema"]["properties"]
-    assert len(properties) >= 2, f"Schema should have multiple properties, got: {list(properties.keys())}"
+    assert len(properties) >= 2, (
+        f"Schema should have multiple properties, got: {list(properties.keys())}"
+    )
 
     # Check assessment was performed
     assert result["assessment_result"] is not None
@@ -107,16 +106,15 @@ def test_workflow_with_existing_schema(schema_generator):
     existing_schema = {
         "type": "object",
         "properties": {
-            "case_number": {
-                "type": "string",
-                "description": "Case identifier"
-            }
+            "case_number": {"type": "string", "description": "Case identifier"}
         },
-        "required": ["case_number"]
+        "required": ["case_number"],
     }
 
     # Run workflow with existing schema
-    result = schema_generator.get_complete_results(user_input, current_schema=existing_schema)
+    result = schema_generator.get_complete_results(
+        user_input, current_schema=existing_schema
+    )
 
     # Check that schema was updated/generated
     assert result["current_schema"] is not None
@@ -164,7 +162,9 @@ def test_workflow_handles_complex_request(schema_generator):
     properties = result["current_schema"]["properties"]
 
     # Should have multiple fields for this complex request
-    assert len(properties) >= 4, f"Expected at least 4 fields for complex request, got {len(properties)}"
+    assert len(properties) >= 4, (
+        f"Expected at least 4 fields for complex request, got {len(properties)}"
+    )
 
     # Check that schema has proper structure
     assert result["current_schema"].get("type") == "object"
@@ -188,4 +188,6 @@ def test_workflow_produces_valid_json_schema(schema_generator):
     # Each property should have a type
     for prop_name, prop_def in schema["properties"].items():
         assert "type" in prop_def, f"Property {prop_name} missing type"
-        assert isinstance(prop_def["type"], str), f"Property {prop_name} type should be string"
+        assert isinstance(prop_def["type"], str), (
+            f"Property {prop_name} type should be string"
+        )

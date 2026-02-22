@@ -1,7 +1,7 @@
 """Utility functions for fetching documents from Supabase.
 
 This module provides helper functions to fetch judgment documents from Supabase
-database by their IDs, replacing the legacy Weaviate-based document retrieval.
+database by their IDs.
 """
 
 from typing import Optional
@@ -67,12 +67,13 @@ async def get_documents_by_id(
                     source=row.get("source", ""),
                     url=row.get("url", ""),
                     # Vector embedding is only included if requested
-                    # Note: Supabase stores vectors as arrays, not in the same format as Weaviate
                     vector=row.get("embedding") if return_vectors else None,
                 )
                 documents.append(doc)
             except Exception as e:
-                logger.error(f"Error converting Supabase row to LegalDocument for document_id={row.get('document_id')}: {e}")
+                logger.error(
+                    f"Error converting Supabase row to LegalDocument for document_id={row.get('document_id')}: {e}"
+                )
                 continue
 
         logger.info(f"Successfully fetched {len(documents)} documents from Supabase")
@@ -81,11 +82,18 @@ async def get_documents_by_id(
         if len(documents) < len(document_ids):
             missing_count = len(document_ids) - len(documents)
             retrieved_ids = {doc.document_id for doc in documents}
-            missing_ids = [doc_id for doc_id in document_ids if doc_id not in retrieved_ids]
+            missing_ids = [
+                doc_id for doc_id in document_ids if doc_id not in retrieved_ids
+            ]
             logger.warning(
                 f"Only retrieved {len(documents)} out of {len(document_ids)} requested documents. "
                 f"{missing_count} document(s) not found in database. "
-                f"Missing IDs: {missing_ids[:10]}" + (f"... and {len(missing_ids) - 10} more" if len(missing_ids) > 10 else "")
+                f"Missing IDs: {missing_ids[:10]}"
+                + (
+                    f"... and {len(missing_ids) - 10} more"
+                    if len(missing_ids) > 10
+                    else ""
+                )
             )
 
         return documents
@@ -95,7 +103,9 @@ async def get_documents_by_id(
         raise RuntimeError(f"Database query failed: {e}") from e
 
 
-async def get_document_by_id(document_id: str, return_vectors: bool = False) -> Optional[LegalDocument]:
+async def get_document_by_id(
+    document_id: str, return_vectors: bool = False
+) -> Optional[LegalDocument]:
     """Get a single document by ID from Supabase.
 
     Args:

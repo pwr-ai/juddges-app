@@ -6,14 +6,13 @@ Tests retry logic, fallback mechanisms, and error recovery.
 
 import pytest
 import time
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, AsyncMock
 from openai import RateLimitError, APIConnectionError
 from juddges_search.chains.error_handling import (
     exponential_backoff,
     retry_with_exponential_backoff,
     safe_json_parse,
     create_fallback_response,
-    ChainExecutionError,
     JSONParsingError,
 )
 from juddges_search.chains.safe_wrappers import (
@@ -64,14 +63,16 @@ class TestRetryWithExponentialBackoff:
 
     def test_retry_on_retriable_error(self):
         """Test retry logic for retriable errors."""
-        mock_fn = Mock(side_effect=[
-            RateLimitError("Rate limited", response=None, body=None),
-            RateLimitError("Rate limited", response=None, body=None),
-            "success"
-        ])
+        mock_fn = Mock(
+            side_effect=[
+                RateLimitError("Rate limited", response=None, body=None),
+                RateLimitError("Rate limited", response=None, body=None),
+                "success",
+            ]
+        )
         decorated = retry_with_exponential_backoff(
             max_retries=3,
-            base_delay=0.01  # Short delay for testing
+            base_delay=0.01,  # Short delay for testing
         )(mock_fn)
 
         result = decorated()
@@ -82,10 +83,7 @@ class TestRetryWithExponentialBackoff:
     def test_all_retries_exhausted(self):
         """Test behavior when all retries are exhausted."""
         mock_fn = Mock(side_effect=RateLimitError("Rate limited", response=None, body=None))
-        decorated = retry_with_exponential_backoff(
-            max_retries=2,
-            base_delay=0.01
-        )(mock_fn)
+        decorated = retry_with_exponential_backoff(max_retries=2, base_delay=0.01)(mock_fn)
 
         with pytest.raises(Exception):  # Should raise ChainExecutionError or similar
             decorated()
@@ -105,14 +103,8 @@ class TestRetryWithExponentialBackoff:
     @pytest.mark.asyncio
     async def test_async_retry_logic(self):
         """Test retry logic works with async functions."""
-        mock_fn = AsyncMock(side_effect=[
-            APIConnectionError("Connection failed"),
-            "success"
-        ])
-        decorated = retry_with_exponential_backoff(
-            max_retries=2,
-            base_delay=0.01
-        )(mock_fn)
+        mock_fn = AsyncMock(side_effect=[APIConnectionError("Connection failed"), "success"])
+        decorated = retry_with_exponential_backoff(max_retries=2, base_delay=0.01)(mock_fn)
 
         result = await decorated()
 
@@ -132,20 +124,20 @@ class TestSafeJSONParse:
 
     def test_parse_json_in_markdown_code_block(self):
         """Test extracting JSON from markdown code blocks."""
-        markdown = '''Here's the response:
+        markdown = """Here's the response:
 ```json
 {"answer": "test", "sources": []}
 ```
-'''
+"""
         result = safe_json_parse(markdown)
 
         assert result == {"answer": "test", "sources": []}
 
     def test_parse_json_in_code_block_no_language(self):
         """Test extracting JSON from code blocks without language."""
-        markdown = '''```
+        markdown = """```
 {"answer": "test", "sources": []}
-```'''
+```"""
         result = safe_json_parse(markdown)
 
         assert result == {"answer": "test", "sources": []}
@@ -212,10 +204,7 @@ class TestSafeChainWrapper:
         mock_chain.invoke = Mock(return_value={"answer": "success"})
 
         wrapped = create_safe_chain_wrapper(
-            chain=mock_chain,
-            chain_name="test_chain",
-            fallback_response={"answer": "fallback"},
-            max_retries=2
+            chain=mock_chain, chain_name="test_chain", fallback_response={"answer": "fallback"}, max_retries=2
         )
 
         result = wrapped.invoke({"question": "test"})
@@ -226,17 +215,16 @@ class TestSafeChainWrapper:
     def test_wrapper_retry_on_rate_limit(self):
         """Test wrapper retries on rate limit errors."""
         mock_chain = Mock()
-        mock_chain.invoke = Mock(side_effect=[
-            RateLimitError("Rate limited", response=None, body=None),
-            {"answer": "success"}
-        ])
+        mock_chain.invoke = Mock(
+            side_effect=[RateLimitError("Rate limited", response=None, body=None), {"answer": "success"}]
+        )
 
         wrapped = create_safe_chain_wrapper(
             chain=mock_chain,
             chain_name="test_chain",
             fallback_response={"answer": "fallback"},
             max_retries=2,
-            base_delay=0.01
+            base_delay=0.01,
         )
 
         result = wrapped.invoke({"question": "test"})
@@ -254,7 +242,7 @@ class TestSafeChainWrapper:
             chain_name="test_chain",
             fallback_response={"answer": "fallback"},
             max_retries=2,
-            base_delay=0.01
+            base_delay=0.01,
         )
 
         result = wrapped.invoke({"question": "test"})
@@ -268,10 +256,7 @@ class TestSafeChainWrapper:
         mock_chain.invoke = Mock(side_effect=ValueError("Invalid input"))
 
         wrapped = create_safe_chain_wrapper(
-            chain=mock_chain,
-            chain_name="test_chain",
-            fallback_response={"answer": "fallback"},
-            max_retries=2
+            chain=mock_chain, chain_name="test_chain", fallback_response={"answer": "fallback"}, max_retries=2
         )
 
         result = wrapped.invoke({"question": "test"})
@@ -331,7 +316,7 @@ class TestErrorHandlingIntegration:
             chain_name="test_chain",
             fallback_response={"answer": "fallback"},
             max_retries=3,
-            base_delay=0.01
+            base_delay=0.01,
         )
 
         result = wrapped.invoke({"question": "test"})
@@ -342,18 +327,20 @@ class TestErrorHandlingIntegration:
     def test_timing_of_exponential_backoff(self):
         """Test that exponential backoff actually delays execution."""
         mock_chain = Mock()
-        mock_chain.invoke = Mock(side_effect=[
-            RateLimitError("Rate limited", response=None, body=None),
-            RateLimitError("Rate limited", response=None, body=None),
-            {"answer": "success"}
-        ])
+        mock_chain.invoke = Mock(
+            side_effect=[
+                RateLimitError("Rate limited", response=None, body=None),
+                RateLimitError("Rate limited", response=None, body=None),
+                {"answer": "success"},
+            ]
+        )
 
         wrapped = create_safe_chain_wrapper(
             chain=mock_chain,
             chain_name="test_chain",
             fallback_response={"answer": "fallback"},
             max_retries=3,
-            base_delay=0.1  # 100ms base delay
+            base_delay=0.1,  # 100ms base delay
         )
 
         start_time = time.time()

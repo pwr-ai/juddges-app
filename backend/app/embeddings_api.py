@@ -24,11 +24,15 @@ router = APIRouter(prefix="/embeddings", tags=["embeddings"])
 
 class SetActiveModelRequest(BaseModel):
     """Request to set the active embedding model."""
-    model_id: str = Field(description="Model ID to activate (e.g., 'openai/text-embedding-3-small')")
+
+    model_id: str = Field(
+        description="Model ID to activate (e.g., 'openai/text-embedding-3-small')"
+    )
 
 
 class SetActiveModelResponse(BaseModel):
     """Response after setting active model."""
+
     model_id: str
     provider: str
     model_name: str
@@ -38,26 +42,39 @@ class SetActiveModelResponse(BaseModel):
 
 class TestEmbeddingRequest(BaseModel):
     """Request to test embedding generation."""
-    text: str = Field(description="Text to generate a test embedding for", max_length=2000)
-    model_id: str | None = Field(default=None, description="Model to test (uses active model if not specified)")
+
+    text: str = Field(
+        description="Text to generate a test embedding for", max_length=2000
+    )
+    model_id: str | None = Field(
+        default=None, description="Model to test (uses active model if not specified)"
+    )
 
 
 class TestEmbeddingResponse(BaseModel):
     """Response for test embedding generation."""
+
     model_id: str
     dimensions: int
-    embedding_preview: list[float] = Field(description="First 10 dimensions of the embedding")
+    embedding_preview: list[float] = Field(
+        description="First 10 dimensions of the embedding"
+    )
     success: bool
     message: str
 
 
 class EmbeddingModelsResponse(BaseModel):
     """Response listing all available embedding models."""
+
     models: list[dict]
     active_model_id: str
 
 
-@router.get("/models", response_model=EmbeddingModelsResponse, summary="List available embedding models")
+@router.get(
+    "/models",
+    response_model=EmbeddingModelsResponse,
+    summary="List available embedding models",
+)
 async def list_models():
     """List all available embedding models and their configurations."""
     models = list_available_models()
@@ -79,7 +96,11 @@ async def get_active_model():
     }
 
 
-@router.post("/models/active", response_model=SetActiveModelResponse, summary="Set the active embedding model")
+@router.post(
+    "/models/active",
+    response_model=SetActiveModelResponse,
+    summary="Set the active embedding model",
+)
 async def set_active_model_endpoint(request: SetActiveModelRequest):
     """Set the active embedding model for search and indexing."""
     try:
@@ -95,7 +116,9 @@ async def set_active_model_endpoint(request: SetActiveModelRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/test", response_model=TestEmbeddingResponse, summary="Test embedding generation")
+@router.post(
+    "/test", response_model=TestEmbeddingResponse, summary="Test embedding generation"
+)
 async def test_embedding(request: TestEmbeddingRequest):
     """Generate a test embedding to verify model connectivity."""
     model_id = request.model_id or get_default_model_id()

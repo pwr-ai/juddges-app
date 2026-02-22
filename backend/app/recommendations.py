@@ -46,7 +46,9 @@ class RecommendationsResponse(BaseModel):
     recommendations: list[RecommendationItem] = Field(
         description="List of recommended documents"
     )
-    strategy: str = Field(description="Strategy used: content_based, history_based, or hybrid")
+    strategy: str = Field(
+        description="Strategy used: content_based, history_based, or hybrid"
+    )
     total_found: int = Field(description="Total recommendations found")
 
 
@@ -55,8 +57,12 @@ class TrackInteractionRequest(BaseModel):
 
     document_id: str = Field(description="Document ID interacted with")
     interaction_type: Literal[
-        "view", "search_click", "bookmark", "chat_reference",
-        "feedback_positive", "feedback_negative"
+        "view",
+        "search_click",
+        "bookmark",
+        "chat_reference",
+        "feedback_positive",
+        "feedback_negative",
     ] = Field(description="Type of interaction")
     context: dict | None = Field(
         default=None,
@@ -94,7 +100,8 @@ async def get_recommendations(
         default=None, description="Optional query for context-aware recommendations"
     ),
     document_id: str | None = Query(
-        default=None, description="Optional document ID for similar-document recommendations"
+        default=None,
+        description="Optional document ID for similar-document recommendations",
     ),
     limit: int = Query(10, ge=1, le=50, description="Number of recommendations"),
     strategy: Literal["auto", "content_based", "history_based", "hybrid"] = Query(
@@ -180,12 +187,14 @@ async def track_interaction(
             logger.warning("Supabase client not available for interaction tracking")
             return {"status": "skipped", "reason": "Storage unavailable"}
 
-        supabase.table("user_document_interactions").insert({
-            "user_id": user_id,
-            "document_id": request.document_id,
-            "interaction_type": request.interaction_type,
-            "context": request.context or {},
-        }).execute()
+        supabase.table("user_document_interactions").insert(
+            {
+                "user_id": user_id,
+                "document_id": request.document_id,
+                "interaction_type": request.interaction_type,
+                "context": request.context or {},
+            }
+        ).execute()
 
         return {"status": "tracked"}
 
@@ -273,13 +282,14 @@ async def _get_history_based_recommendations(
 
     try:
         # Get recent user interactions
-        response = supabase.table("user_document_interactions").select(
-            "document_id, interaction_type"
-        ).eq(
-            "user_id", user_id
-        ).order(
-            "created_at", desc=True
-        ).limit(50).execute()
+        response = (
+            supabase.table("user_document_interactions")
+            .select("document_id, interaction_type")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
 
         interactions = response.data if response.data else []
 
@@ -373,13 +383,14 @@ async def _get_search_history_recommendations(
         return []
 
     try:
-        response = supabase.table("search_queries").select(
-            "query"
-        ).eq(
-            "user_id", user_id
-        ).order(
-            "created_at", desc=True
-        ).limit(5).execute()
+        response = (
+            supabase.table("search_queries")
+            .select("query")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(5)
+            .execute()
+        )
 
         queries = response.data if response.data else []
         if not queries:
@@ -430,12 +441,16 @@ async def _get_recent_documents(limit: int = 10) -> list[RecommendationItem]:
         return []
 
     try:
-        response = supabase.table("legal_documents").select(
-            "document_id, title, document_type, date_issued, "
-            "document_number, court_name, language, summary"
-        ).order(
-            "created_at", desc=True
-        ).limit(limit).execute()
+        response = (
+            supabase.table("legal_documents")
+            .select(
+                "document_id, title, document_type, date_issued, "
+                "document_number, court_name, language, summary"
+            )
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
 
         docs = response.data if response.data else []
         return [
@@ -468,10 +483,12 @@ def _truncate(text: str | None, max_len: int) -> str | None:
         return None
     if len(text) <= max_len:
         return text
-    return text[:max_len - 3] + "..."
+    return text[: max_len - 3] + "..."
 
 
-def _content_reason(similarity: float, document_id: str | None, query: str | None) -> str:
+def _content_reason(
+    similarity: float, document_id: str | None, query: str | None
+) -> str:
     """Generate a human-readable reason for the recommendation."""
     if document_id:
         if similarity > 0.8:

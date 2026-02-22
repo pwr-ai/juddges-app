@@ -4,6 +4,7 @@ Shared Supabase client singleton for the application.
 This module provides a centralized Supabase client initialization to avoid
 duplicating the same initialization code across multiple files.
 """
+
 import os
 from typing import Optional
 

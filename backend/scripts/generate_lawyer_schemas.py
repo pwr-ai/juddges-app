@@ -1223,7 +1223,10 @@ SCHEMA_13_TAX_AUDIT_ASSISTANT = create_schema_definition(
             "type": "object",
             "properties": {
                 "key_arguments": {"type": "array", "items": {"type": "string"}},
-                "supporting_documentation": {"type": "array", "items": {"type": "string"}},
+                "supporting_documentation": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "potential_weaknesses": {"type": "array", "items": {"type": "string"}},
             },
             "description": "Recommended defense strategy",
@@ -1337,7 +1340,10 @@ SCHEMA_14_MANAGEMENT_REPORT = create_schema_definition(
             "properties": {
                 "overall_risk_level": {"type": "string"},
                 "key_risks": {"type": "array", "items": {"type": "string"}},
-                "risk_mitigation_actions": {"type": "array", "items": {"type": "string"}},
+                "risk_mitigation_actions": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
             },
             "description": "Summary of tax risks",
             "required": True,
@@ -1346,7 +1352,10 @@ SCHEMA_14_MANAGEMENT_REPORT = create_schema_definition(
             "type": "object",
             "properties": {
                 "all_filings_current": {"type": "boolean"},
-                "outstanding_obligations": {"type": "array", "items": {"type": "string"}},
+                "outstanding_obligations": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
                 "upcoming_deadlines": {"type": "array", "items": {"type": "string"}},
             },
             "description": "Tax compliance status overview",
@@ -1550,7 +1559,9 @@ def save_schemas_to_json(output_file: str = "lawyer_schemas.json") -> None:
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(ALL_SCHEMAS, f, ensure_ascii=False, indent=2)
 
-    console.print(f"[bold green]✓ Successfully saved {len(ALL_SCHEMAS)} schemas to {output_file}[/bold green]")
+    console.print(
+        f"[bold green]✓ Successfully saved {len(ALL_SCHEMAS)} schemas to {output_file}[/bold green]"
+    )
 
 
 def display_schemas_table() -> None:
@@ -1569,7 +1580,9 @@ def display_schemas_table() -> None:
             schema["name"],
             schema["category"],
             str(schema["field_count"]),
-            schema["description"][:60] + "..." if len(schema["description"]) > 60 else schema["description"],
+            schema["description"][:60] + "..."
+            if len(schema["description"]) > 60
+            else schema["description"],
         )
 
     console.print(table)
@@ -1579,7 +1592,9 @@ def main():
     """Main entry point for the script."""
     import sys
 
-    console.print("[bold cyan]Starting schema generation for lawyer and tax advisor use cases[/bold cyan]")
+    console.print(
+        "[bold cyan]Starting schema generation for lawyer and tax advisor use cases[/bold cyan]"
+    )
     console.print(f"[cyan]Total schemas to generate: {len(ALL_SCHEMAS)}[/cyan]\n")
 
     # Display the schemas in a nice table
@@ -1590,7 +1605,9 @@ def main():
     save_schemas_to_json(output_file)
 
     console.print("\n[bold yellow]To insert these schemas into Supabase:[/bold yellow]")
-    console.print("[yellow]You can use the Supabase MCP tools or manually execute SQL INSERT statements.[/yellow]")
+    console.print(
+        "[yellow]You can use the Supabase MCP tools or manually execute SQL INSERT statements.[/yellow]"
+    )
 
 
 if __name__ == "__main__":

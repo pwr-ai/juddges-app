@@ -6,8 +6,11 @@ from langchain_openai import ChatOpenAI
 
 
 # Query enhancement prompt
-QUERY_ENHANCEMENT_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """You are an expert legal research assistant. Your task is to enhance user search queries to improve legal document retrieval.
+QUERY_ENHANCEMENT_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """You are an expert legal research assistant. Your task is to enhance user search queries to improve legal document retrieval.
 
 Given a user's search query, rewrite it to:
 1. Add relevant legal terminology and synonyms
@@ -26,9 +29,11 @@ Examples:
 - Input: "employment discrimination"
   Output: "employment discrimination workplace discrimination discriminatory hiring practices discriminatory termination equal employment opportunity violations Title VII violations"
 
-Return ONLY the enhanced query text, no explanation."""),
-    ("human", "{query}")
-])
+Return ONLY the enhanced query text, no explanation.""",
+        ),
+        ("human", "{query}"),
+    ]
+)
 
 
 def create_query_enhancement_chain(llm: ChatOpenAI | None = None):
@@ -44,7 +49,7 @@ def create_query_enhancement_chain(llm: ChatOpenAI | None = None):
         llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.3,  # Low temperature for consistency
-            max_tokens=200
+            max_tokens=200,
         )
 
     chain = QUERY_ENHANCEMENT_PROMPT | llm | StrOutputParser()

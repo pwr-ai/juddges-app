@@ -36,10 +36,10 @@ class SupabaseSearchClient:
         options = ClientOptions(
             postgrest_client_timeout=60,  # Longer timeout for vector searches
             storage_client_timeout=30,
-            schema="public"
+            schema="public",
         )
         self.client: Client = create_client(self.url, self.service_key, options=options)
-        logger.info(f"Initialized SupabaseSearchClient for semantic search")
+        logger.info("Initialized SupabaseSearchClient for semantic search")
 
     async def vector_search_chunks(
         self,
@@ -64,9 +64,8 @@ class SupabaseSearchClient:
         """
         try:
             # Build the base query
-            query_builder = (
-                self.client.table("document_chunks")
-                .select("*, judgments!inner(jurisdiction, court_name, decision_date)")
+            query_builder = self.client.table("document_chunks").select(
+                "*, judgments!inner(jurisdiction, court_name, decision_date)"
             )
 
             # Apply filters
@@ -102,7 +101,7 @@ class SupabaseSearchClient:
                         "court_name": row.get("judgments", {}).get("court_name"),
                         "decision_date": row.get("judgments", {}).get("decision_date"),
                         "jurisdiction": row.get("judgments", {}).get("jurisdiction"),
-                    }
+                    },
                 )
                 chunks.append(chunk)
 
@@ -167,7 +166,7 @@ class SupabaseSearchClient:
                         "court_name": row.get("judgments", {}).get("court_name"),
                         "decision_date": row.get("judgments", {}).get("decision_date"),
                         "jurisdiction": row.get("judgments", {}).get("jurisdiction"),
-                    }
+                    },
                 )
                 chunks.append(chunk)
 
@@ -283,10 +282,7 @@ class SupabaseSearchClient:
 
         # Calculate combined scores
         for key, data in chunk_scores.items():
-            combined = (
-                data["vector_score"] * vector_weight +
-                data["text_score"] * text_weight
-            )
+            combined = data["vector_score"] * vector_weight + data["text_score"] * text_weight
             data["combined_score"] = combined
             # Update the chunk object
             data["chunk"].combined_score = combined
@@ -294,11 +290,7 @@ class SupabaseSearchClient:
             data["chunk"].text_score = data["text_score"]
 
         # Sort by combined score and return top results
-        sorted_chunks = sorted(
-            chunk_scores.values(),
-            key=lambda x: x["combined_score"],
-            reverse=True
-        )
+        sorted_chunks = sorted(chunk_scores.values(), key=lambda x: x["combined_score"], reverse=True)
 
         return [item["chunk"] for item in sorted_chunks[:limit]]
 
@@ -425,12 +417,11 @@ async def search_documents(
     """
     try:
         client = get_search_client()
-        query_embedding = embed_texts(query)
+        embed_texts(query)
 
         # Search using the judgments table directly
-        query_builder = (
-            client.client.table("judgments")
-            .select("id, case_number, title, summary, court_name, decision_date, jurisdiction")
+        query_builder = client.client.table("judgments").select(
+            "id, case_number, title, summary, court_name, decision_date, jurisdiction"
         )
 
         # Apply filters
@@ -445,17 +436,19 @@ async def search_documents(
         # Format results to match expected interface
         results = []
         for row in response.data:
-            results.append({
-                "uuid": str(row.get("id", "")),
-                "document_id": row.get("case_number", ""),
-                "signature": row.get("case_number", ""),
-                "title": row.get("title"),
-                "excerpt": row.get("summary"),
-                "court_name": row.get("court_name"),
-                "date": row.get("decision_date"),
-                "jurisdiction": row.get("jurisdiction"),
-                "score": 0.85,  # Placeholder - would come from actual vector search
-            })
+            results.append(
+                {
+                    "uuid": str(row.get("id", "")),
+                    "document_id": row.get("case_number", ""),
+                    "signature": row.get("case_number", ""),
+                    "title": row.get("title"),
+                    "excerpt": row.get("summary"),
+                    "court_name": row.get("court_name"),
+                    "date": row.get("decision_date"),
+                    "jurisdiction": row.get("jurisdiction"),
+                    "score": 0.85,  # Placeholder - would come from actual vector search
+                }
+            )
 
         logger.info(f"Document search returned {len(results)} documents")
         return results
@@ -470,7 +463,7 @@ def reset_search_client():
     global _search_client
     if _search_client is not None:
         try:
-            if hasattr(_search_client.client, 'close'):
+            if hasattr(_search_client.client, "close"):
                 _search_client.client.close()
         except Exception as e:
             logger.warning(f"Error closing Supabase search client: {e}")

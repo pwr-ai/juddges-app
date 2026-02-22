@@ -15,11 +15,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.auth_jwt import (
-    get_optional_user,
-    get_user_db_client,
-    AuthenticatedUser
-)
+from app.core.auth_jwt import get_optional_user, get_user_db_client, AuthenticatedUser
 
 
 # Router configuration
@@ -28,76 +24,67 @@ router = APIRouter(prefix="/api/feedback", tags=["User Feedback"])
 
 # ===== Models =====
 
+
 class SearchFeedbackContext(BaseModel):
     """Enriched search context for evaluation dataset building."""
 
     # Filter state at time of search
     filters: Optional[dict] = Field(
         None,
-        description="Active filters: courts, date_from, date_to, document_types, languages, keywords, legal_concepts, issuing_bodies"
+        description="Active filters: courts, date_from, date_to, document_types, languages, keywords, legal_concepts, issuing_bodies",
     )
 
     # Search parameters
     search_params: Optional[dict] = Field(
         None,
-        description="Search params: mode (rabbit/thinking), embedding_model, top_k, reranking_enabled, reranking_model"
+        description="Search params: mode (rabbit/thinking), embedding_model, top_k, reranking_enabled, reranking_model",
     )
 
     # Result context
     result_context: Optional[dict] = Field(
         None,
-        description="Result context: total_results, retrieval_score, reranking_score, page_number, page_size"
+        description="Result context: total_results, retrieval_score, reranking_score, page_number, page_size",
     )
 
     # Document identifiers and metadata
     document: Optional[dict] = Field(
         None,
-        description="Document info: document_id, document_number, uuid, title, document_type, court, date, language, country"
+        description="Document info: document_id, document_number, uuid, title, document_type, court, date, language, country",
     )
 
     # User interaction timing
     interaction: Optional[dict] = Field(
         None,
-        description="Interaction timing: search_timestamp, feedback_timestamp, time_to_feedback_ms, document_opened, chunks_expanded"
+        description="Interaction timing: search_timestamp, feedback_timestamp, time_to_feedback_ms, document_opened, chunks_expanded",
     )
 
     # Chunk information (if feedback on specific chunk)
     chunk_info: Optional[dict] = Field(
         None,
-        description="Chunk info: chunk_id, chunk_score, chunk_position, chunk_text"
+        description="Chunk info: chunk_id, chunk_score, chunk_position, chunk_text",
     )
 
     # All chunks displayed for this document
     chunks: Optional[list] = Field(
         None,
-        description="All displayed chunks: [{chunk_id, chunk_text, chunk_score, position}]"
+        description="All displayed chunks: [{chunk_id, chunk_text, chunk_score, position}]",
     )
 
 
 class SearchFeedbackRequest(BaseModel):
     """Feedback on search results with enriched context for evaluation datasets."""
-    document_id: str = Field(
-        description="Document ID that was rated"
-    )
-    search_query: str = Field(
-        description="Original search query"
-    )
+
+    document_id: str = Field(description="Document ID that was rated")
+    search_query: str = Field(description="Original search query")
     rating: Literal["relevant", "not_relevant", "somewhat_relevant"] = Field(
         description="Relevance rating for this result"
     )
-    session_id: Optional[str] = Field(
-        None,
-        description="Session ID for tracking"
-    )
+    session_id: Optional[str] = Field(None, description="Session ID for tracking")
     result_position: Optional[int] = Field(
-        None,
-        description="Position of this result in search results (1-based)",
-        ge=1
+        None, description="Position of this result in search results (1-based)", ge=1
     )
     reason: Optional[str] = Field(
-        None,
-        description="Optional text reason for the rating",
-        max_length=500
+        None, description="Optional text reason for the rating", max_length=500
     )
     search_context: Optional[dict] = Field(
         None,
@@ -110,12 +97,13 @@ class SearchFeedbackRequest(BaseModel):
             "interaction": { "search_timestamp", "feedback_timestamp", "time_to_feedback_ms", "document_opened", "chunks_expanded" },
             "chunk_info": { "chunk_id", "chunk_score", "chunk_position", "chunk_text" },
             "chunks": [{ "chunk_id", "chunk_text", "chunk_score", "position" }]
-        }"""
+        }""",
     )
 
 
 class SearchFeedbackResponse(BaseModel):
     """Response for search feedback submission."""
+
     status: Literal["success", "failed"]
     feedback_id: Optional[str] = None
     message: str
@@ -123,42 +111,40 @@ class SearchFeedbackResponse(BaseModel):
 
 class FeatureFeedbackRequest(BaseModel):
     """General feature feedback or feature request."""
-    feedback_type: Literal["bug_report", "feature_request", "improvement", "praise"] = Field(
-        description="Type of feedback"
+
+    feedback_type: Literal["bug_report", "feature_request", "improvement", "praise"] = (
+        Field(description="Type of feedback")
     )
     feature_name: Optional[str] = Field(
         None,
         description="Name of the feature this feedback relates to",
-        examples=["search", "collections", "document_viewer", "ai_chat"]
+        examples=["search", "collections", "document_viewer", "ai_chat"],
     )
     title: str = Field(
         description="Short title/summary of the feedback",
         min_length=5,
         max_length=200,
-        examples=["Search results not relevant for tax queries"]
+        examples=["Search results not relevant for tax queries"],
     )
     description: str = Field(
         description="Detailed description of the feedback",
         min_length=10,
-        max_length=2000
+        max_length=2000,
     )
     user_email: Optional[str] = Field(
-        None,
-        description="Email for follow-up (optional)"
+        None, description="Email for follow-up (optional)"
     )
     priority: Literal["low", "medium", "high", "critical"] = Field(
-        default="medium",
-        description="User-perceived priority"
+        default="medium", description="User-perceived priority"
     )
     attachments: Optional[List[str]] = Field(
-        None,
-        description="URLs to screenshots or other attachments",
-        max_length=5
+        None, description="URLs to screenshots or other attachments", max_length=5
     )
 
 
 class FeatureFeedbackResponse(BaseModel):
     """Response for feature feedback submission."""
+
     status: Literal["success", "failed"]
     feedback_id: Optional[str] = None
     message: str
@@ -167,14 +153,14 @@ class FeatureFeedbackResponse(BaseModel):
 
 class FeedbackSummary(BaseModel):
     """Summary of feedback for a feature or search query."""
+
     total_feedback: int
     positive_count: int
     negative_count: int
     neutral_count: int
     average_rating: Optional[float] = None
     recent_feedback: List[dict] = Field(
-        default_factory=list,
-        description="Sample of recent feedback items"
+        default_factory=list, description="Sample of recent feedback items"
     )
 
 
@@ -282,10 +268,11 @@ Expected Supabase tables (create these manually or via migration):
 
 # ===== API Endpoints =====
 
+
 @router.post("/search", response_model=SearchFeedbackResponse)
 async def submit_search_feedback(
     request: SearchFeedbackRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Submit feedback on search result relevance.
@@ -312,6 +299,7 @@ async def submit_search_feedback(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Store search feedback
@@ -344,9 +332,7 @@ async def submit_search_feedback(
             message = "Thank you! Your feedback has been recorded."
 
         return SearchFeedbackResponse(
-            status="success",
-            feedback_id=feedback_id,
-            message=message
+            status="success", feedback_id=feedback_id, message=message
         )
 
     except Exception as e:
@@ -354,14 +340,14 @@ async def submit_search_feedback(
         return SearchFeedbackResponse(
             status="failed",
             feedback_id=None,
-            message=f"Failed to submit feedback: {str(e)}"
+            message=f"Failed to submit feedback: {str(e)}",
         )
 
 
 @router.post("/feature", response_model=FeatureFeedbackResponse)
 async def submit_feature_feedback(
     request: FeatureFeedbackRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Submit general feature feedback or feature request.
@@ -396,6 +382,7 @@ async def submit_feature_feedback(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Store feature feedback
@@ -427,19 +414,18 @@ async def submit_feature_feedback(
             "bug_report": "Thank you for reporting this issue! Our team will investigate and fix it.",
             "feature_request": "Thank you for your suggestion! We'll consider it for future updates.",
             "improvement": "Thank you! We appreciate suggestions for improving our platform.",
-            "praise": "Thank you so much! We're glad you're enjoying Juddges!"
+            "praise": "Thank you so much! We're glad you're enjoying Juddges!",
         }
 
         thank_you = thank_you_messages.get(
-            request.feedback_type,
-            "Thank you for your feedback!"
+            request.feedback_type, "Thank you for your feedback!"
         )
 
         return FeatureFeedbackResponse(
             status="success",
             feedback_id=feedback_id,
             message="Feedback submitted successfully",
-            thank_you_message=thank_you
+            thank_you_message=thank_you,
         )
 
     except Exception as e:
@@ -448,7 +434,7 @@ async def submit_feature_feedback(
             status="failed",
             feedback_id=None,
             message=f"Failed to submit feedback: {str(e)}",
-            thank_you_message=None
+            thank_you_message=None,
         )
 
 
@@ -457,7 +443,7 @@ async def get_search_feedback_summary(
     document_id: Optional[str] = None,
     search_query: Optional[str] = None,
     limit: int = 10,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Get summary of search feedback.
@@ -482,6 +468,7 @@ async def get_search_feedback_summary(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Build query
@@ -501,16 +488,22 @@ async def get_search_feedback_summary(
                 positive_count=0,
                 negative_count=0,
                 neutral_count=0,
-                recent_feedback=[]
+                recent_feedback=[],
             )
 
         # Calculate statistics
         feedback_items = result.data
         total = len(feedback_items)
 
-        positive_count = sum(1 for item in feedback_items if item["rating"] == "relevant")
-        negative_count = sum(1 for item in feedback_items if item["rating"] == "not_relevant")
-        neutral_count = sum(1 for item in feedback_items if item["rating"] == "somewhat_relevant")
+        positive_count = sum(
+            1 for item in feedback_items if item["rating"] == "relevant"
+        )
+        negative_count = sum(
+            1 for item in feedback_items if item["rating"] == "not_relevant"
+        )
+        neutral_count = sum(
+            1 for item in feedback_items if item["rating"] == "somewhat_relevant"
+        )
 
         # Get recent feedback (sanitized - don't expose user_ids)
         recent = [
@@ -518,7 +511,7 @@ async def get_search_feedback_summary(
                 "rating": item["rating"],
                 "reason": item.get("reason"),
                 "created_at": item["created_at"],
-                "result_position": item.get("result_position")
+                "result_position": item.get("result_position"),
             }
             for item in feedback_items[:limit]
         ]
@@ -528,14 +521,13 @@ async def get_search_feedback_summary(
             positive_count=positive_count,
             negative_count=negative_count,
             neutral_count=neutral_count,
-            recent_feedback=recent
+            recent_feedback=recent,
         )
 
     except Exception as e:
         logger.error(f"Failed to get feedback summary: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve feedback summary: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve feedback summary: {str(e)}"
         )
 
 
@@ -544,7 +536,7 @@ async def get_recent_feature_feedback(
     feedback_type: Optional[str] = None,
     feature_name: Optional[str] = None,
     limit: int = 20,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ):
     """
     Get recent feature feedback and requests.
@@ -564,6 +556,7 @@ async def get_recent_feature_feedback(
             client = get_user_db_client(user)
         else:
             from app.core.auth_jwt import get_admin_supabase_client
+
             client = get_admin_supabase_client()
 
         # Build query
@@ -584,33 +577,29 @@ async def get_recent_feature_feedback(
                 "feedback_type": item["feedback_type"],
                 "feature_name": item.get("feature_name"),
                 "title": item["title"],
-                "description": item["description"][:200] + "..." if len(item["description"]) > 200 else item["description"],
+                "description": item["description"][:200] + "..."
+                if len(item["description"]) > 200
+                else item["description"],
                 "priority": item["priority"],
                 "status": item["status"],
                 "upvotes": item.get("upvotes", 0),
-                "created_at": item["created_at"]
+                "created_at": item["created_at"],
             }
             for item in result.data
         ]
 
-        return {
-            "status": "success",
-            "count": len(sanitized),
-            "feedback": sanitized
-        }
+        return {"status": "success", "count": len(sanitized), "feedback": sanitized}
 
     except Exception as e:
         logger.error(f"Failed to get recent feedback: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve recent feedback: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve recent feedback: {str(e)}"
         )
 
 
 @router.post("/feature/{feedback_id}/upvote")
 async def upvote_feature_request(
-    feedback_id: str,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    feedback_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)
 ):
     """
     Upvote a feature request to show support.
@@ -630,49 +619,54 @@ async def upvote_feature_request(
         # Note: For upvoting, we use admin client to increment the counter
         # But we log the user_id for analytics if available
         from app.core.auth_jwt import get_admin_supabase_client
+
         client = get_admin_supabase_client()
 
         user_id = user.id if user else None
 
         # Get current upvotes
-        result = client.table("feature_requests")\
-            .select("upvotes")\
-            .eq("id", feedback_id)\
+        result = (
+            client.table("feature_requests")
+            .select("upvotes")
+            .eq("id", feedback_id)
             .execute()
+        )
 
         if not result.data:
-            raise HTTPException(
-                status_code=404,
-                detail="Feature request not found"
-            )
+            raise HTTPException(status_code=404, detail="Feature request not found")
 
         current_upvotes = result.data[0].get("upvotes", 0)
 
         # Increment upvotes
-        update_result = client.table("feature_requests")\
-            .update({"upvotes": current_upvotes + 1})\
-            .eq("id", feedback_id)\
+        update_result = (
+            client.table("feature_requests")
+            .update({"upvotes": current_upvotes + 1})
+            .eq("id", feedback_id)
             .execute()
+        )
 
-        new_upvotes = update_result.data[0]["upvotes"] if update_result.data else current_upvotes + 1
+        new_upvotes = (
+            update_result.data[0]["upvotes"]
+            if update_result.data
+            else current_upvotes + 1
+        )
 
-        logger.info(f"Feature request {feedback_id} upvoted by user {user_id} (total: {new_upvotes})")
+        logger.info(
+            f"Feature request {feedback_id} upvoted by user {user_id} (total: {new_upvotes})"
+        )
 
         return {
             "status": "success",
             "feedback_id": feedback_id,
             "upvotes": new_upvotes,
-            "message": "Thank you for your vote!"
+            "message": "Thank you for your vote!",
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to upvote feature request: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to upvote: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to upvote: {str(e)}")
 
 
 logger.info("Feedback module initialized")
