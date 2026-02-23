@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SkeletonStat, SkeletonCard, SkeletonQuickAction, SkeletonTrendingTopic, SkeletonInsight, SkeletonChatCard, SkeletonDocumentCard, SkeletonExtractionCard } from "@/components/ui/skeleton-card";
-import { AuthBanner } from "@/components/auth/AuthBanner";
-import { ConversionCTA } from "@/components/auth/ConversionCTA";
+import { SkeletonTrendingTopic, SkeletonChatCard, SkeletonDocumentCard, SkeletonExtractionCard } from "@/components/ui/skeleton-card";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useDashboardStats,
@@ -17,16 +15,12 @@ import {
 import {
   MessageSquare,
   Search,
-  FolderOpen,
   FileText,
   Scale,
   TrendingUp,
   TrendingDown,
   Minus,
   BarChart,
-  GraduationCap,
-  Sparkles,
-  ArrowRight,
   Clock,
   ChevronRight,
   Database,
@@ -34,26 +28,17 @@ import {
   FileJson,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
-  Header, 
-  SecondaryHeader,
-  SectionHeader,
-  BaseCard, 
-  LightCard,
+import {
+  BaseCard,
   PrimaryButton,
-  SecondaryButton,
-  EmptyState,
-  DocumentCard,
   PageContainer,
   SchemaStatusBadge,
   VerifiedBadge,
 } from "@/lib/styles/components";
-import { StatsHero } from "@/components/dashboard/stats-hero";
 import { StatsCardV1 } from "@/components/dashboard/stats-card-v1";
-import { Badge } from "@/components/ui/badge";
 import { formatStatNumber } from "@/lib/format-stats";
-import { gradients } from "@/lib/styles/colors/gradients";
 import { cleanDocumentIdForUrl } from "@/lib/document-utils";
+import { LandingPage } from "@/components/landing/LandingPage";
 import React from "react";
 
 function formatLastUpdated(dateString: string | null): { value: string; label: string } {
@@ -161,129 +146,13 @@ export default function HomePage(): React.JSX.Element {
 
   // Individual loading states - each card loads separately
 
-  // For unauthenticated users, show the full hero section
+  // For unauthenticated users, show the premium landing page
   if (!authLoading && !user) {
     return (
-      <div className="min-h-screen">
-        {/* Full-page Statistics Hero */}
-        {statsLoading ? (
-          <div className="min-h-[90vh] flex items-center justify-center">
-            <div className="container mx-auto px-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => (
-                  <SkeletonStat key={i} />
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : statsError ? (
-          <div className="min-h-[90vh] flex items-center justify-center">
-            <div className="p-6 rounded-xl border border-destructive/50 bg-destructive/10 text-destructive max-w-md">
-              <p className="text-lg font-medium">Failed to load statistics</p>
-              <p className="text-sm mt-2 text-destructive/80">
-                {statsErrorDetails instanceof Error ? statsErrorDetails.message : "Unknown error"}
-              </p>
-            </div>
-          </div>
-        ) : stats ? (
-          <StatsHero stats={stats} formatLastUpdated={formatLastUpdated} />
-        ) : null}
-
-        {/* Rest of the content */}
-        <PageContainer width="standard" className="py-12">
-          {/* University Badge & Auth */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <GraduationCap className="size-4 text-primary" />
-              </div>
-              <span className="font-medium">Research project by Wroclaw University of Science and Technology</span>
-              <Link href="/about" className="text-primary hover:underline ml-1 font-semibold inline-flex items-center gap-1 group">
-                Learn more
-                <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
-            <AuthBanner />
-          </div>
-
-          {/* Quick Actions Section */}
-        <section className="mb-16">
-          <SecondaryHeader title="What would you like to do?" className="mb-6" />
-          {statsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(3)].map((_, i) => (
-                <SkeletonQuickAction key={i} />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Link href="/chat">
-                <BaseCard className="rounded-3xl p-6 h-full group/action transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 dark:hover:border-primary/30">
-                  <div className="flex flex-col items-center text-center gap-5">
-                    <div className="relative p-4 rounded-2xl bg-gradient-to-br from-blue-100/80 via-indigo-100/60 to-blue-100/60 dark:from-blue-900/40 dark:via-indigo-900/30 dark:to-blue-900/30 shadow-md border border-blue-200/50 dark:border-blue-800/30 transition-all duration-300 group-hover/action:scale-110 group-hover/action:rotate-3 group-hover/action:shadow-xl group-hover/action:shadow-primary/30 group-hover/action:bg-gradient-to-br group-hover/action:from-primary/20 group-hover/action:via-indigo-500/15 group-hover/action:to-primary/15 group-hover/action:border-primary/50">
-                      <MessageSquare className="size-7 text-blue-700 dark:text-blue-300 transition-all duration-300 group-hover/action:text-primary group-hover/action:scale-110" />
-                    </div>
-                    <h3 className="text-xl font-semibold">
-                      <span className="bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 dark:from-slate-50 dark:via-slate-100 dark:to-slate-50 group-hover/action:from-primary group-hover/action:via-indigo-500 group-hover/action:to-primary dark:group-hover/action:from-primary dark:group-hover/action:via-indigo-400 dark:group-hover/action:to-primary bg-clip-text text-transparent transition-all duration-300">
-                        Ask AI Assistant
-                      </span>
-                    </h3>
-                    <p className="text-sm text-muted-foreground group-hover/action:text-foreground line-clamp-2 leading-relaxed transition-colors duration-300">
-                      Get instant answers to legal questions with citations
-                    </p>
-                    <Badge variant="secondary" className="text-xs mt-auto px-3 py-1.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm group-hover/action:shadow-lg group-hover/action:bg-primary/10 group-hover/action:border-primary/40 group-hover/action:scale-105 transition-all duration-300">
-                      12,500+ questions answered
-                    </Badge>
-                  </div>
-                </BaseCard>
-              </Link>
-              <Link href="/search">
-                <BaseCard className="rounded-3xl p-6 h-full group/action transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 dark:hover:border-primary/30">
-                  <div className="flex flex-col items-center text-center gap-5">
-                    <div className="relative p-4 rounded-2xl bg-gradient-to-br from-blue-100/80 via-indigo-100/60 to-blue-100/60 dark:from-blue-900/40 dark:via-indigo-900/30 dark:to-blue-900/30 shadow-md border border-blue-200/50 dark:border-blue-800/30 transition-all duration-300 group-hover/action:scale-110 group-hover/action:rotate-3 group-hover/action:shadow-xl group-hover/action:shadow-primary/30 group-hover/action:bg-gradient-to-br group-hover/action:from-primary/20 group-hover/action:via-indigo-500/15 group-hover/action:to-primary/15 group-hover/action:border-primary/50">
-                      <Search className="size-7 text-blue-700 dark:text-blue-300 transition-all duration-300 group-hover/action:text-primary group-hover/action:scale-110" />
-                    </div>
-                    <h3 className="text-xl font-semibold">
-                      <span className="bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 dark:from-slate-50 dark:via-slate-100 dark:to-slate-50 group-hover/action:from-primary group-hover/action:via-indigo-500 group-hover/action:to-primary dark:group-hover/action:from-primary dark:group-hover/action:via-indigo-400 dark:group-hover/action:to-primary bg-clip-text text-transparent transition-all duration-300">
-                        Search Documents
-                      </span>
-                    </h3>
-                    <p className="text-sm text-muted-foreground group-hover/action:text-foreground line-clamp-2 leading-relaxed transition-colors duration-300">
-                      Find relevant cases, judgments, and interpretations
-                    </p>
-                    <Badge variant="secondary" className="text-xs mt-auto px-3 py-1.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm group-hover/action:shadow-lg group-hover/action:bg-primary/10 group-hover/action:border-primary/40 group-hover/action:scale-105 transition-all duration-300">
-                      3M+ documents available
-                    </Badge>
-                  </div>
-                </BaseCard>
-              </Link>
-              <Link href="/collections">
-                <BaseCard className="rounded-3xl p-6 h-full group/action transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 hover:border-primary/40 dark:hover:border-primary/30">
-                  <div className="flex flex-col items-center text-center gap-5">
-                    <div className="relative p-4 rounded-2xl bg-gradient-to-br from-blue-100/80 via-indigo-100/60 to-blue-100/60 dark:from-blue-900/40 dark:via-indigo-900/30 dark:to-blue-900/30 shadow-md border border-blue-200/50 dark:border-blue-800/30 transition-all duration-300 group-hover/action:scale-110 group-hover/action:rotate-3 group-hover/action:shadow-xl group-hover/action:shadow-primary/30 group-hover/action:bg-gradient-to-br group-hover/action:from-primary/20 group-hover/action:via-indigo-500/15 group-hover/action:to-primary/15 group-hover/action:border-primary/50">
-                      <FolderOpen className="size-7 text-blue-700 dark:text-blue-300 transition-all duration-300 group-hover/action:text-primary group-hover/action:scale-110" />
-                    </div>
-                    <h3 className="text-xl font-semibold">
-                      <span className="bg-gradient-to-br from-slate-900 via-slate-700 to-slate-900 dark:from-slate-50 dark:via-slate-100 dark:to-slate-50 group-hover/action:from-primary group-hover/action:via-indigo-500 group-hover/action:to-primary dark:group-hover/action:from-primary dark:group-hover/action:via-indigo-400 dark:group-hover/action:to-primary bg-clip-text text-transparent transition-all duration-300">
-                        My Collections
-                      </span>
-                    </h3>
-                    <p className="text-sm text-muted-foreground group-hover/action:text-foreground line-clamp-2 leading-relaxed transition-colors duration-300">
-                      Organize and save documents for easy reference
-                    </p>
-                    <Badge variant="secondary" className="text-xs mt-auto px-3 py-1.5 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm group-hover/action:shadow-lg group-hover/action:bg-primary/10 group-hover/action:border-primary/40 group-hover/action:scale-105 transition-all duration-300">
-                      Create your first collection
-                    </Badge>
-                  </div>
-                </BaseCard>
-              </Link>
-            </div>
-          )}
-        </section>
-
-        <ConversionCTA />
-        </PageContainer>
-      </div>
+      <LandingPage
+        stats={statsError ? null : stats}
+        statsLoading={statsLoading}
+      />
     );
   }
 

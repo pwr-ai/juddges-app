@@ -41,6 +41,8 @@ coverage/
 coverage.json
 *.cover
 .hypothesis/
+playwright-report/
+test-results/
 
 # IDE
 .vscode/

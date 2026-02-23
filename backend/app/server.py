@@ -55,6 +55,9 @@ from app.api.consent import router as consent_router
 from app.api.legal import router as legal_router
 from app.api.sso import router as sso_router
 
+# Import admin router (JWT + require_admin auth, no API key dependency)
+from app.api.admin import router as admin_router
+
 # Import health check router
 from app.health import router as health_router
 
@@ -492,6 +495,10 @@ app.include_router(legal_router)
 # SSO management endpoints (JWT authentication with admin checks in endpoints)
 # check-domain is public, admin endpoints require admin role
 app.include_router(sso_router)
+
+# Admin panel endpoints (JWT authentication via require_admin dependency)
+# No verify_api_key - authentication is handled entirely by require_admin
+app.include_router(admin_router)
 
 # Health check and status monitoring
 # Note: /health is public, /health/status requires API key (configured in router)

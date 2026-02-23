@@ -84,12 +84,13 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
     }
   }, [authLoading, isDebugPage]);
 
-  // Don't show sidebar/navbar for auth pages, style-demo, debug routes, and enterprise
+  // Don't show sidebar/navbar for auth pages, style-demo, debug routes, enterprise, and admin
   const isAuthPage = pathname?.startsWith("/auth");
   const isStyleDemoPage = pathname?.startsWith("/style-demo");
   const isEnterprisePage = pathname === "/enterprise";
+  const isAdminPage = pathname?.startsWith("/admin");
 
-  if (isAuthPage || isStyleDemoPage || isDebugPage || isEnterprisePage) {
+  if (isAuthPage || isStyleDemoPage || isDebugPage || isEnterprisePage || isAdminPage) {
     return <>{children}</>;
   }
 
