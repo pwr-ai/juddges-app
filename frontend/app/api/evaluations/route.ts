@@ -40,13 +40,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Get request body
     const body = await request.json();
 
+    // Get access token for backend JWT auth
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Session expired" },
+        { status: 401 }
+      );
+    }
+
     // Forward request to backend
     const response = await fetch(`${backendUrl}/evaluations`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": apiKey,
-        "X-User-ID": userData.user.id,
+        "Authorization": `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
     });
@@ -134,11 +144,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Get access token for backend JWT auth
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Session expired" },
+        { status: 401 }
+      );
+    }
+
     // Forward request to backend
     const response = await fetch(url, {
       headers: {
         "X-API-Key": apiKey,
-        "X-User-ID": userData.user.id,
+        "Authorization": `Bearer ${accessToken}`,
       },
     });
 

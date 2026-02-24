@@ -8,10 +8,11 @@ which form the ground truth dataset for measuring schema accuracy.
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.core.supabase import get_supabase_client
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
@@ -285,7 +286,7 @@ def _calculate_accuracy_stats(schema_version_id: str) -> AccuracyStats:
 )
 async def create_evaluation(
     request: CreateEvaluationRequest,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> EvaluationResponse:
     """
     Create a new extraction evaluation.
@@ -341,7 +342,7 @@ async def create_evaluation(
                     "overall_rating": request.overall_rating,
                     "overall_notes": request.overall_notes,
                     "extracted_data": request.extracted_data,
-                    "evaluator_user_id": x_user_id,
+                    "evaluator_user_id": current_user.id,
                     "created_at": now,
                     "updated_at": now,
                 }
@@ -399,7 +400,7 @@ async def create_evaluation(
 )
 async def get_evaluation(
     evaluation_id: str,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> EvaluationResponse:
     """Get a specific evaluation by ID."""
     if not supabase:
@@ -458,12 +459,13 @@ async def get_evaluation(
 async def update_evaluation(
     evaluation_id: str,
     request: UpdateEvaluationRequest,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> EvaluationResponse:
     """
     Update an existing evaluation.
 
     Only updates the fields that are provided in the request.
+    Only the user who created the evaluation can update it.
     """
     if not supabase:
         raise HTTPException(
@@ -485,6 +487,13 @@ async def update_evaluation(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Evaluation '{evaluation_id}' not found",
+            )
+
+        # Ownership check: only the creator can update
+        if existing.data.get("evaluator_user_id") != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only modify your own evaluations",
             )
 
         # Build update data
@@ -553,9 +562,9 @@ async def update_evaluation(
 )
 async def delete_evaluation(
     evaluation_id: str,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> None:
-    """Delete an evaluation and its field evaluations."""
+    """Delete an evaluation and its field evaluations. Only the creator can delete."""
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -563,10 +572,10 @@ async def delete_evaluation(
         )
 
     try:
-        # Check evaluation exists
+        # Check evaluation exists and verify ownership
         existing = (
             supabase.table("extraction_evaluations")
-            .select("id")
+            .select("id, evaluator_user_id")
             .eq("id", evaluation_id)
             .single()
             .execute()
@@ -576,6 +585,13 @@ async def delete_evaluation(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Evaluation '{evaluation_id}' not found",
+            )
+
+        # Ownership check: only the creator can delete
+        if existing.data.get("evaluator_user_id") != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only delete your own evaluations",
             )
 
         # Delete (cascade will handle field evaluations)
@@ -607,7 +623,7 @@ async def get_schema_evaluations(
     ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> SchemaEvaluationsResponse:
     """
     Get all evaluations for a schema with accuracy statistics.
@@ -742,7 +758,7 @@ async def get_schema_evaluations(
 async def get_document_evaluations(
     document_id: str,
     schema_id: Optional[str] = Query(None, description="Filter by specific schema"),
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> list[EvaluationResponse]:
     """
     Get all evaluations for a specific document.
@@ -812,7 +828,7 @@ async def get_document_evaluations(
 )
 async def get_accuracy_stats(
     schema_version_id: str,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> AccuracyStats:
     """Get accuracy statistics for a schema version."""
     return _calculate_accuracy_stats(schema_version_id)

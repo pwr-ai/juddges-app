@@ -9,13 +9,14 @@ Provides intelligent research assistance by:
 - Saving and managing research contexts
 """
 
-from typing import Literal
+from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+from app.core.auth_jwt import AuthenticatedUser, get_optional_user
 from juddges_search.db.supabase_db import get_vector_db
 from app.core.supabase import get_supabase_client
 from app.documents import generate_embedding
@@ -174,11 +175,10 @@ class SaveResearchContextRequest(BaseModel):
 )
 async def analyze_research(
     request: AnalyzeResearchRequest,
-    user_id: str | None = Query(
-        default=None, description="User ID for personalized analysis"
-    ),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ) -> AnalyzeResearchResponse:
     """Analyze user's research context using LLM to identify topics, gaps, and next steps."""
+    user_id = current_user.id if current_user else None
     try:
         # Gather research context
         context_data = await _gather_research_context(
@@ -231,7 +231,7 @@ async def analyze_research(
     description="Get lightweight suggestions without full LLM analysis.",
 )
 async def get_suggestions(
-    user_id: str | None = Query(default=None, description="User ID"),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
     query: str | None = Query(default=None, description="Optional query context"),
     document_id: str | None = Query(
         default=None, description="Optional document ID for similar documents"
@@ -239,6 +239,7 @@ async def get_suggestions(
     limit: int = Query(5, ge=1, le=20, description="Number of suggestions"),
 ) -> QuickSuggestion:
     """Get quick suggestions based on embeddings and user history (no LLM)."""
+    user_id = current_user.id if current_user else None
     if document_id:
         try:
             validate_id_format(document_id, "document_id")
@@ -324,11 +325,12 @@ async def get_suggestions(
     description="List user's saved research contexts.",
 )
 async def list_research_contexts(
-    user_id: str | None = Query(default=None, description="User ID"),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
     limit: int = Query(10, ge=1, le=50, description="Number of contexts to return"),
     status: str = Query("active", description="Filter by status"),
 ) -> list[SavedResearchContext]:
     """List user's saved research contexts."""
+    user_id = current_user.id if current_user else None
     if not user_id:
         return []
 
@@ -378,11 +380,12 @@ async def list_research_contexts(
 )
 async def save_research_context(
     request: SaveResearchContextRequest,
-    user_id: str | None = Query(default=None, description="User ID"),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
 ) -> SavedResearchContext:
-    """Save a research context."""
-    if not user_id:
-        raise HTTPException(status_code=400, detail="User ID required to save context.")
+    """Save a research context. Requires authentication."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Authentication required to save context.")
+    user_id = current_user.id
 
     try:
         supabase = get_supabase_client()

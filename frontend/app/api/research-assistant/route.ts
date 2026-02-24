@@ -30,12 +30,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw new UnauthorizedError("Authentication required");
     }
 
+    // Get access token for backend JWT auth
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new UnauthorizedError("Session expired");
+    }
+
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get("endpoint") || "suggestions";
 
-    // Build backend URL based on endpoint
+    // Build backend URL based on endpoint (user_id extracted from JWT on backend)
     const params = new URLSearchParams();
-    params.set("user_id", user.id);
 
     if (endpoint === "contexts") {
       const limit = searchParams.get("limit") || "10";
@@ -49,6 +55,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           headers: {
             "X-API-Key": BACKEND_API_KEY,
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
           },
         }
       );
@@ -85,6 +92,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         headers: {
           "X-API-Key": BACKEND_API_KEY,
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
         },
       }
     );
@@ -148,19 +156,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new UnauthorizedError("Authentication required");
     }
 
+    // Get access token for backend JWT auth
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new UnauthorizedError("Session expired");
+    }
+
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action") || "analyze";
     const body = await request.json();
 
-    const params = new URLSearchParams();
-    params.set("user_id", user.id);
-
+    // user_id is now extracted from JWT on the backend
     let backendUrl: string;
 
     if (action === "save") {
-      backendUrl = `${BACKEND_URL}/research-assistant/contexts?${params.toString()}`;
+      backendUrl = `${BACKEND_URL}/research-assistant/contexts`;
     } else {
-      backendUrl = `${BACKEND_URL}/research-assistant/analyze?${params.toString()}`;
+      backendUrl = `${BACKEND_URL}/research-assistant/analyze`;
     }
 
     const backendResponse = await fetch(backendUrl, {
@@ -168,6 +181,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       headers: {
         "X-API-Key": BACKEND_API_KEY,
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
     });
