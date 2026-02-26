@@ -417,6 +417,15 @@ class FilterOptionsResponse(BaseModel):
     fields: list[FilterFieldConfig]
 
 
+class BaseSchemaDefinitionResponse(BaseModel):
+    """Response containing localized base schema definitions for UI display."""
+
+    schema_key: str
+    default_locale: Literal["en", "pl"] = "en"
+    available_locales: list[Literal["en", "pl"]]
+    schemas: dict[str, dict[str, Any]]
+
+
 class DocumentExtractionResponse(BaseModel):
     collection_id: str
     document_id: str

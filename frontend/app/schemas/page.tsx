@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ExtractionSchema } from '@/types/extraction_schemas';
 import { GlassTabs, GlassTabsContent, GlassTabsList, GlassTabsTrigger } from '@/lib/styles/components';
 import { toast } from 'sonner';
-import { FileJson, Plus, ArrowUpDown, X } from 'lucide-react';
+import { FileJson, Plus, ArrowUpDown, X, Globe } from 'lucide-react';
 import {
   PageContainer,
   SecondaryButton,
@@ -354,6 +354,15 @@ export default function SchemasPage() {
               showFilters={showFilters}
               onToggleFilters={() => setShowFilters(!showFilters)}
             />
+            <div className="mb-3 flex justify-end">
+              <SecondaryButton
+                size="sm"
+                icon={Globe}
+                onClick={() => router.push('/schemas/base')}
+              >
+                View Base Schema (EN/PL)
+              </SecondaryButton>
+            </div>
             
             {/* Floating Filters Panel - Positioned next to Show Filters button */}
             <AnimatePresence>

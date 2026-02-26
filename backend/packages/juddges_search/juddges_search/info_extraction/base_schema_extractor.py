@@ -29,7 +29,8 @@ class BaseSchemaExtractor:
 
     PACKAGE_ROOT = Path(__file__).resolve().parents[2]
     SCHEMA_DIR = PACKAGE_ROOT / "config" / "schema"
-    BASE_SCHEMA_FILE = SCHEMA_DIR / "base_legal_schema.json"
+    BASE_SCHEMA_EN_FILE = SCHEMA_DIR / "base_legal_schema_en.json"
+    BASE_SCHEMA_PL_FILE = SCHEMA_DIR / "base_legal_schema_pl.json"
     MAPPINGS_FILE = SCHEMA_DIR / "jurisdiction_mappings.yaml"
 
     def __init__(
@@ -43,14 +44,24 @@ class BaseSchemaExtractor:
             model: Pre-configured ChatOpenAI model (optional)
             model_name: Model name to use if model not provided
         """
-        self.model = model or ChatOpenAI(model=model_name, temperature=0)
-        self.schema = self._load_schema()
+        self.model = model
+        self.model_name = model_name
+        self.en_schema = self._load_schema(self.BASE_SCHEMA_EN_FILE)
+        self.pl_schema = self._load_schema(self.BASE_SCHEMA_PL_FILE)
+        # Backward-compatible default schema used by filter helpers.
+        self.schema = self.en_schema
         self.mappings = self._load_mappings()
         self._extractor: InformationExtractor | None = None
 
-    def _load_schema(self) -> dict[str, Any]:
-        """Load the base legal schema from JSON file."""
-        with open(self.BASE_SCHEMA_FILE) as f:
+    def _get_model(self) -> ChatOpenAI:
+        """Get or lazily initialize the LLM model."""
+        if self.model is None:
+            self.model = ChatOpenAI(model=self.model_name, temperature=0)
+        return self.model
+
+    def _load_schema(self, schema_file: Path) -> dict[str, Any]:
+        """Load a base legal schema from JSON file."""
+        with open(schema_file) as f:
             return json.load(f)
 
     def _load_mappings(self) -> dict[str, Any]:
@@ -58,28 +69,27 @@ class BaseSchemaExtractor:
         with open(self.MAPPINGS_FILE) as f:
             return yaml.safe_load(f)
 
-    def _get_localized_schema(self, jurisdiction: Jurisdiction) -> dict[str, Any]:
-        """Create a schema copy with localized field descriptions.
+    def _get_schema_for_jurisdiction(self, jurisdiction: Jurisdiction) -> dict[str, Any]:
+        """Get schema variant for a detected jurisdiction."""
+        if jurisdiction == "pl":
+            return json.loads(json.dumps(self.pl_schema))  # Deep copy
+        return json.loads(json.dumps(self.en_schema))  # Deep copy
+
+    def get_schema_variant(self, locale: str = "en") -> dict[str, Any]:
+        """Get an explicit schema variant for UI display.
 
         Args:
-            jurisdiction: The detected document jurisdiction
+            locale: Locale code ('en' or 'pl')
 
         Returns:
-            Schema with field descriptions translated to the appropriate language
+            Schema variant with stable field keys
         """
-        localized_schema = json.loads(json.dumps(self.schema))  # Deep copy
-        field_mappings = self.mappings.get("field_mappings", {})
-
-        for field_name, field_def in localized_schema.get("properties", {}).items():
-            if field_name in field_mappings:
-                mapping = field_mappings[field_name]
-                # Get localized description
-                if jurisdiction in mapping:
-                    field_def["description"] = mapping[jurisdiction]
-                elif "en_uk" in mapping:  # Fallback to UK English
-                    field_def["description"] = mapping["en_uk"]
-
-        return localized_schema
+        normalized = (locale or "en").strip().lower()
+        return (
+            json.loads(json.dumps(self.pl_schema))
+            if normalized == "pl"
+            else json.loads(json.dumps(self.en_schema))
+        )
 
     def _build_extraction_prompt(
         self,
@@ -146,8 +156,8 @@ Extract all information according to the schema. Return a valid JSON object."""
         Returns:
             Configured InformationExtractor instance
         """
-        # Get localized schema
-        schema = self._get_localized_schema(jurisdiction)
+        # Get explicit schema variant by jurisdiction
+        schema = self._get_schema_for_jurisdiction(jurisdiction)
 
         # Remove x- extension properties for OpenAI compatibility
         clean_schema = self._clean_schema_for_extraction(schema)
@@ -158,7 +168,7 @@ Extract all information according to the schema. Return a valid JSON object."""
         # Create a temporary prompt file or use inline prompt
         # For now, we'll use the InformationExtractor with inline schema
         return InformationExtractor(
-            model=self.model,
+            model=self._get_model(),
             prompt_name="info_extraction",  # Use existing prompt template
             schema=clean_schema,
         )

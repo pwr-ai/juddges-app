@@ -18,6 +18,7 @@ from app.models import (
     BaseSchemaExtractionRequest,
     BaseSchemaExtractionResponse,
     BaseSchemaExtractionResult,
+    BaseSchemaDefinitionResponse,
     BatchExtractionResponse,
     BulkExtractionRequest,
     BulkExtractionResponse,
@@ -2579,6 +2580,32 @@ async def get_facet_counts(
                 "code": "FACET_QUERY_FAILED",
             },
         )
+
+
+@router.get(
+    "/base-schema/definition",
+    response_model=BaseSchemaDefinitionResponse,
+    summary="Get localized base schema definition",
+    description="Get the universal base schema in English and Polish variants for UI display.",
+)
+async def get_base_schema_definition() -> BaseSchemaDefinitionResponse:
+    """
+    Return the official base extraction schema used for judgments.
+
+    The schema key and field names stay stable across locales; only display
+    metadata (title/descriptions/enum labels) is localized.
+    """
+    extractor = BaseSchemaExtractor()
+
+    return BaseSchemaDefinitionResponse(
+        schema_key="universal_legal_document_base_schema",
+        default_locale="en",
+        available_locales=["en", "pl"],
+        schemas={
+            "en": extractor.get_schema_variant("en"),
+            "pl": extractor.get_schema_variant("pl"),
+        },
+    )
 
 
 @router.get(

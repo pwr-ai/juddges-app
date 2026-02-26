@@ -25,6 +25,7 @@ import {
   Settings,
   Sparkles,
   Database,
+  FileJson,
   BarChart,
   FileInput,
   Newspaper,
@@ -557,6 +558,17 @@ export function AppSidebar(): React.JSX.Element {
                       <Link href="/schemas">
                         <Database />
                         <span>{t('navigation.dataSchemas')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </ConditionalTooltip>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <ConditionalTooltip content="Base Schema (EN/PL)" isIconMode={isIconMode}>
+                    <SidebarMenuButton asChild isActive={pathname === "/schemas/base"}>
+                      <Link href="/schemas/base">
+                        <FileJson />
+                        <span>Base Schema</span>
                       </Link>
                     </SidebarMenuButton>
                   </ConditionalTooltip>

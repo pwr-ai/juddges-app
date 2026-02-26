@@ -1,0 +1,655 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Polish Base Schema",
+  "description": "Ujednolicony schemat do ekstrakcji ustrukturyzowanych danych z dokumentow prawnych w jezyku polskim.",
+  "type": "object",
+  "required": [
+    "keywords",
+    "neutral_citation_number",
+    "case_number",
+    "date_of_appeal_court_judgment",
+    "appeal_court_judges_names",
+    "case_name",
+    "offender_representative_name",
+    "crown_attorney_general_representative_name",
+    "conv_court_names",
+    "convict_plea_dates",
+    "convict_offences",
+    "acquit_offences",
+    "did_offender_confess",
+    "plea_point",
+    "remand_decision",
+    "remand_custody_time",
+    "sent_court_name",
+    "sentences_received",
+    "sentence_serve",
+    "what_ancilliary_orders",
+    "offender_gender",
+    "offender_age_offence",
+    "offender_job_offence",
+    "offender_home_offence",
+    "offender_mental_offence",
+    "offender_intox_offence",
+    "offender_victim_relationship",
+    "victim_type",
+    "num_victims",
+    "victim_gender",
+    "victim_age_offence",
+    "victim_job_offence",
+    "victim_home_offence",
+    "victim_mental_offence",
+    "victim_intox_offence",
+    "pros_evid_type_trial",
+    "def_evid_type_trial",
+    "pre_sent_report",
+    "agg_fact_sent",
+    "mit_fact_sent",
+    "vic_impact_statement",
+    "appellant",
+    "co_def_acc_num",
+    "appeal_against",
+    "appeal_ground",
+    "sent_guide_which",
+    "appeal_outcome",
+    "reason_quash_conv",
+    "reason_sent_excessive",
+    "reason_sent_lenient",
+    "reason_dismiss"
+  ],
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Słowa kluczowe/tagi sprawy",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Słowa kluczowe/tagi sprawy",
+      "x-ui-order": 1
+    },
+    "neutral_citation_number": {
+      "type": "string",
+      "description": "Sygnatura akt (np. II AKa 123/24)",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Sygnatura akt (np. II AKa 123/24)",
+      "x-ui-order": 2
+    },
+    "case_number": {
+      "type": "number",
+      "description": "Numer sprawy",
+      "x-filter-type": "range",
+      "x-ui-label": "Numer sprawy",
+      "x-ui-order": 3
+    },
+    "date_of_appeal_court_judgment": {
+      "type": "string",
+      "description": "Data wyroku sądu odwoławczego",
+      "x-filter-type": "date_range",
+      "x-ui-label": "Data wyroku sądu odwoławczego",
+      "x-ui-order": 4
+    },
+    "appeal_court_judges_names": {
+      "type": "string",
+      "description": "Skład sędziowski sądu odwoławczego",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Skład sędziowski sądu odwoławczego",
+      "x-ui-order": 5
+    },
+    "case_name": {
+      "type": "string",
+      "description": "Nazwa sprawy (np. Prokuratura Rejonowa przeciwko Kowalskiemu)",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Nazwa sprawy (np. Prokuratura Rejonowa przeciwko Kowalskiemu)",
+      "x-ui-order": 6
+    },
+    "offender_representative_name": {
+      "type": "string",
+      "description": "Obrońca oskarżonego (imię i nazwisko)",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Obrońca oskarżonego (imię i nazwisko)",
+      "x-ui-order": 7
+    },
+    "crown_attorney_general_representative_name": {
+      "type": "string",
+      "description": "Prokurator (imię i nazwisko)",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Prokurator (imię i nazwisko)",
+      "x-ui-order": 8
+    },
+    "conv_court_names": {
+      "type": "string",
+      "description": "Nazwa sądu/sądów, w których oskarżony został skazany",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Nazwa sądu/sądów, w których oskarżony został skazany",
+      "x-ui-order": 9
+    },
+    "convict_plea_dates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Data/daty skazania lub przyznania się do winy",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Data/daty skazania lub przyznania się do winy",
+      "x-ui-order": 10
+    },
+    "convict_offences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Przestępstwo/przestępstwa, za które oskarżony został skazany",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Przestępstwo/przestępstwa, za które oskarżony został skazany",
+      "x-ui-order": 11
+    },
+    "acquit_offences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Przestępstwo/przestępstwa, od których oskarżony został uniewinniony",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Przestępstwo/przestępstwa, od których oskarżony został uniewinniony",
+      "x-ui-order": 12
+    },
+    "did_offender_confess": {
+      "type": "boolean",
+      "description": "Czy oskarżony przyznał się do winy?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Czy oskarżony przyznał się do winy?",
+      "x-ui-order": 13
+    },
+    "plea_point": {
+      "type": "string",
+      "enum": [
+        "police_presence",
+        "first_court_appearance",
+        "before_trial",
+        "first_day_of_trial",
+        "after_first_day_of_trial",
+        "dont_know"
+      ],
+      "description": "W jakim momencie oskarżony przyznał się do winy?",
+      "x-filter-type": "facet",
+      "x-ui-label": "W jakim momencie oskarżony przyznał się do winy?",
+      "x-ui-order": 14,
+      "x-enum-labels": {
+        "police_presence": "Podczas zatrzymania przez policję",
+        "first_court_appearance": "Na pierwszym posiedzeniu sądu",
+        "before_trial": "Przed rozprawą",
+        "first_day_of_trial": "W pierwszym dniu rozprawy",
+        "after_first_day_of_trial": "Po pierwszym dniu rozprawy",
+        "dont_know": "Nieznane"
+      }
+    },
+    "remand_decision": {
+      "type": "string",
+      "enum": [
+        "unconditional_bail",
+        "conditional_bail",
+        "remanded_in_custody",
+        "dont_know"
+      ],
+      "description": "Jaka była decyzja o tymczasowym aresztowaniu?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Jaka była decyzja o tymczasowym aresztowaniu?",
+      "x-ui-order": 15,
+      "x-enum-labels": {
+        "unconditional_bail": "Zwolnienie bez warunków",
+        "conditional_bail": "Zwolnienie warunkowe (dozór)",
+        "remanded_in_custody": "Tymczasowe aresztowanie",
+        "dont_know": "Nieznane"
+      }
+    },
+    "remand_custody_time": {
+      "type": "string",
+      "description": "Czas trwania tymczasowego aresztowania",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Czas trwania tymczasowego aresztowania",
+      "x-ui-order": 16
+    },
+    "sent_court_name": {
+      "type": "string",
+      "description": "Nazwa sądu wymierzającego karę",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Nazwa sądu wymierzającego karę",
+      "x-ui-order": 17
+    },
+    "sentences_received": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Wymierzona kara/kary",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Wymierzona kara/kary",
+      "x-ui-order": 18
+    },
+    "sentence_serve": {
+      "type": "string",
+      "enum": [
+        "concurrent",
+        "consecutive",
+        "combination",
+        "dont_know"
+      ],
+      "description": "Jak mają być odbywane kary?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Jak mają być odbywane kary?",
+      "x-ui-order": 19,
+      "x-enum-labels": {
+        "concurrent": "Łącznie (kary biegną równolegle)",
+        "consecutive": "Kolejno (kary biegną po sobie)",
+        "combination": "Kombinacja",
+        "dont_know": "Nieznane"
+      }
+    },
+    "what_ancilliary_orders": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Środki karne i zabezpieczające",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Środki karne i zabezpieczające",
+      "x-ui-order": 20
+    },
+    "offender_gender": {
+      "type": "string",
+      "enum": [
+        "all_male",
+        "all_female",
+        "male_and_female"
+      ],
+      "description": "Płeć oskarżonego/oskarżonych",
+      "x-filter-type": "facet",
+      "x-ui-label": "Płeć oskarżonego/oskarżonych",
+      "x-ui-order": 21,
+      "x-enum-labels": {
+        "all_male": "Mężczyzna/mężczyźni",
+        "all_female": "Kobieta/kobiety",
+        "male_and_female": "Mężczyźni i kobiety"
+      }
+    },
+    "offender_age_offence": {
+      "type": "string",
+      "description": "Wiek oskarżonego w czasie popełnienia przestępstwa",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Wiek oskarżonego w czasie popełnienia przestępstwa",
+      "x-ui-order": 22
+    },
+    "offender_job_offence": {
+      "type": "string",
+      "enum": [
+        "employed",
+        "self_employed",
+        "unemployed",
+        "student",
+        "retired",
+        "other",
+        "dont_know"
+      ],
+      "description": "Status zatrudnienia oskarżonego w czasie popełnienia przestępstwa",
+      "x-filter-type": "facet",
+      "x-ui-label": "Status zatrudnienia oskarżonego w czasie popełnienia przestępstwa",
+      "x-ui-order": 23,
+      "x-enum-labels": {
+        "employed": "Zatrudniony",
+        "self_employed": "Samozatrudniony",
+        "unemployed": "Bezrobotny",
+        "student": "Student/uczeń",
+        "retired": "Emeryt/rencista",
+        "other": "Inny",
+        "dont_know": "Nieznane"
+      }
+    },
+    "offender_home_offence": {
+      "type": "string",
+      "enum": [
+        "fixed_address",
+        "homeless",
+        "temporary_accommodation",
+        "dont_know"
+      ],
+      "description": "Sytuacja mieszkaniowa oskarżonego w czasie popełnienia przestępstwa",
+      "x-filter-type": "facet",
+      "x-ui-label": "Sytuacja mieszkaniowa oskarżonego w czasie popełnienia przestępstwa",
+      "x-ui-order": 24,
+      "x-enum-labels": {
+        "fixed_address": "Stałe miejsce zamieszkania",
+        "homeless": "Bezdomny",
+        "temporary_accommodation": "Tymczasowe zakwaterowanie",
+        "dont_know": "Nieznane"
+      }
+    },
+    "offender_mental_offence": {
+      "type": "string",
+      "description": "Stan zdrowia psychicznego oskarżonego w czasie popełnienia przestępstwa",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Stan zdrowia psychicznego oskarżonego w czasie popełnienia przestępstwa",
+      "x-ui-order": 25
+    },
+    "offender_intox_offence": {
+      "type": "string",
+      "enum": [
+        "yes_drinking",
+        "yes_drugs",
+        "yes_drinking_and_drugs",
+        "no",
+        "dont_know"
+      ],
+      "description": "Czy oskarżony był pod wpływem alkoholu lub środków odurzających?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Czy oskarżony był pod wpływem alkoholu lub środków odurzających?",
+      "x-ui-order": 26,
+      "x-enum-labels": {
+        "yes_drinking": "Tak - alkohol",
+        "yes_drugs": "Tak - narkotyki",
+        "yes_drinking_and_drugs": "Tak - alkohol i narkotyki",
+        "no": "Nie",
+        "dont_know": "Nieznane"
+      }
+    },
+    "offender_victim_relationship": {
+      "type": "string",
+      "enum": [
+        "stranger",
+        "relative",
+        "acquaintance",
+        "dont_know"
+      ],
+      "description": "Relacja sprawca-pokrzywdzony",
+      "x-filter-type": "facet",
+      "x-ui-label": "Relacja sprawca-pokrzywdzony",
+      "x-ui-order": 27,
+      "x-enum-labels": {
+        "stranger": "Nieznajomy",
+        "relative": "Krewny/członek rodziny",
+        "acquaintance": "Znajomy",
+        "dont_know": "Nieznane"
+      }
+    },
+    "victim_type": {
+      "type": "string",
+      "enum": [
+        "individual_person",
+        "organisation"
+      ],
+      "description": "Typ pokrzywdzonego",
+      "x-filter-type": "facet",
+      "x-ui-label": "Typ pokrzywdzonego",
+      "x-ui-order": 28,
+      "x-enum-labels": {
+        "individual_person": "Osoba fizyczna",
+        "organisation": "Organizacja/firma"
+      }
+    },
+    "num_victims": {
+      "type": "number",
+      "description": "Liczba pokrzywdzonych",
+      "x-filter-type": "range",
+      "x-ui-label": "Liczba pokrzywdzonych",
+      "x-ui-order": 29
+    },
+    "victim_gender": {
+      "type": "string",
+      "enum": [
+        "all_male",
+        "all_female",
+        "male_and_female"
+      ],
+      "description": "Płeć pokrzywdzonego/pokrzywdzonych",
+      "x-filter-type": "facet",
+      "x-ui-label": "Płeć pokrzywdzonego/pokrzywdzonych",
+      "x-ui-order": 30,
+      "x-enum-labels": {
+        "all_male": "Mężczyzna/mężczyźni",
+        "all_female": "Kobieta/kobiety",
+        "male_and_female": "Mężczyźni i kobiety"
+      }
+    },
+    "victim_age_offence": {
+      "type": "number",
+      "description": "Wiek pokrzywdzonego w czasie popełnienia przestępstwa",
+      "x-filter-type": "range",
+      "x-ui-label": "Wiek pokrzywdzonego w czasie popełnienia przestępstwa",
+      "x-ui-order": 31
+    },
+    "victim_job_offence": {
+      "type": "string",
+      "description": "Status zatrudnienia pokrzywdzonego",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Status zatrudnienia pokrzywdzonego",
+      "x-ui-order": 32
+    },
+    "victim_home_offence": {
+      "type": "string",
+      "description": "Sytuacja mieszkaniowa pokrzywdzonego",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Sytuacja mieszkaniowa pokrzywdzonego",
+      "x-ui-order": 33
+    },
+    "victim_mental_offence": {
+      "type": "string",
+      "description": "Stan zdrowia psychicznego pokrzywdzonego",
+      "x-filter-type": "text_search",
+      "x-ui-label": "Stan zdrowia psychicznego pokrzywdzonego",
+      "x-ui-order": 34
+    },
+    "victim_intox_offence": {
+      "type": "string",
+      "enum": [
+        "yes_drinking",
+        "yes_drugs",
+        "yes_drinking_and_drugs",
+        "no",
+        "dont_know"
+      ],
+      "description": "Czy pokrzywdzony był pod wpływem alkoholu lub środków odurzających?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Czy pokrzywdzony był pod wpływem alkoholu lub środków odurzających?",
+      "x-ui-order": 35,
+      "x-enum-labels": {
+        "yes_drinking": "Tak - alkohol",
+        "yes_drugs": "Tak - narkotyki",
+        "yes_drinking_and_drugs": "Tak - alkohol i narkotyki",
+        "no": "Nie",
+        "dont_know": "Nieznane"
+      }
+    },
+    "pros_evid_type_trial": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Rodzaje dowodów przedstawionych przez oskarżenie",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Rodzaje dowodów przedstawionych przez oskarżenie",
+      "x-ui-order": 36
+    },
+    "def_evid_type_trial": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Rodzaje dowodów przedstawionych przez obronę",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Rodzaje dowodów przedstawionych przez obronę",
+      "x-ui-order": 37
+    },
+    "pre_sent_report": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "dont_know"
+      ],
+      "description": "Ocena z raportu przedsądowego",
+      "x-filter-type": "facet",
+      "x-ui-label": "Ocena z raportu przedsądowego",
+      "x-ui-order": 38,
+      "x-enum-labels": {
+        "low": "Niskie ryzyko",
+        "medium": "Średnie ryzyko",
+        "high": "Wysokie ryzyko",
+        "dont_know": "Nieznane"
+      }
+    },
+    "agg_fact_sent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Okoliczności obciążające wymienione przy wymiarze kary",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Okoliczności obciążające wymienione przy wymiarze kary",
+      "x-ui-order": 39
+    },
+    "mit_fact_sent": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Okoliczności łagodzące wymienione przy wymiarze kary",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Okoliczności łagodzące wymienione przy wymiarze kary",
+      "x-ui-order": 40
+    },
+    "vic_impact_statement": {
+      "type": "boolean",
+      "description": "Czy złożono oświadczenie o wpływie na pokrzywdzonego?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Czy złożono oświadczenie o wpływie na pokrzywdzonego?",
+      "x-ui-order": 41
+    },
+    "appellant": {
+      "type": "string",
+      "enum": [
+        "offender",
+        "attorney_general",
+        "other"
+      ],
+      "description": "Kto jest stroną apelującą?",
+      "x-filter-type": "facet",
+      "x-ui-label": "Kto jest stroną apelującą?",
+      "x-ui-order": 42,
+      "x-enum-labels": {
+        "offender": "Oskarżony",
+        "attorney_general": "Prokurator Generalny/Prokuratura",
+        "other": "Inny"
+      }
+    },
+    "co_def_acc_num": {
+      "type": "number",
+      "description": "Liczba współoskarżonych w sprawie",
+      "x-filter-type": "range",
+      "x-ui-label": "Liczba współoskarżonych w sprawie",
+      "x-ui-order": 43
+    },
+    "appeal_against": {
+      "type": "string",
+      "enum": [
+        "conviction_unsafe",
+        "sentence_unduly_excessive",
+        "sentence_unduly_lenient",
+        "both",
+        "other"
+      ],
+      "description": "Przedmiot apelacji",
+      "x-filter-type": "facet",
+      "x-ui-label": "Przedmiot apelacji",
+      "x-ui-order": 44,
+      "x-enum-labels": {
+        "conviction_unsafe": "Skazanie wadliwe",
+        "sentence_unduly_excessive": "Kara rażąco surowa",
+        "sentence_unduly_lenient": "Kara rażąco łagodna",
+        "both": "Zarówno skazanie jak i kara",
+        "other": "Inne"
+      }
+    },
+    "appeal_ground": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Podstawy apelacji",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Podstawy apelacji",
+      "x-ui-order": 45
+    },
+    "sent_guide_which": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Wytyczne/przepisy dotyczące wymiaru kary przywołane przez sąd",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Wytyczne/przepisy dotyczące wymiaru kary przywołane przez sąd",
+      "x-ui-order": 46
+    },
+    "appeal_outcome": {
+      "type": "string",
+      "enum": [
+        "dismissed_failed_refused",
+        "allowed_conviction_quashed",
+        "allowed_replaced_by_more_excessive_sentence",
+        "allowed_replaced_by_more_lenient_sentence",
+        "mixed_decision"
+      ],
+      "description": "Wynik apelacji",
+      "x-filter-type": "facet",
+      "x-ui-label": "Wynik apelacji",
+      "x-ui-order": 47,
+      "x-enum-labels": {
+        "dismissed_failed_refused": "Oddalona/Odrzucona",
+        "allowed_conviction_quashed": "Uwzględniona - Skazanie uchylone",
+        "allowed_replaced_by_more_excessive_sentence": "Uwzględniona - Zastąpiono surowszą karą",
+        "allowed_replaced_by_more_lenient_sentence": "Uwzględniona - Zastąpiono łagodniejszą karą",
+        "mixed_decision": "Decyzja mieszana"
+      }
+    },
+    "reason_quash_conv": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Podstawy uchylenia skazania przez sąd odwoławczy",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Podstawy uchylenia skazania przez sąd odwoławczy",
+      "x-ui-order": 48
+    },
+    "reason_sent_excessive": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Podstawy uznania kary za rażąco surową",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Podstawy uznania kary za rażąco surową",
+      "x-ui-order": 49
+    },
+    "reason_sent_lenient": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Podstawy uznania kary za rażąco łagodną",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Podstawy uznania kary za rażąco łagodną",
+      "x-ui-order": 50
+    },
+    "reason_dismiss": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Podstawy oddalenia apelacji",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Podstawy oddalenia apelacji",
+      "x-ui-order": 51
+    }
+  },
+  "additionalProperties": false
+}
