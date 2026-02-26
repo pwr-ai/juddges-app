@@ -398,7 +398,7 @@ export default function ChatPage(): React.JSX.Element {
       }}
       onStopGeneration={stopGeneration}
       isLoading={isLoading}
-      placeholder="Ask about tax law, court judgments, or legal regulations..."
+      placeholder="Ask JuDDGES about tax law, court judgments, or legal regulations..."
       tools={[
         {
           id: "responseFormat",
@@ -434,8 +434,8 @@ export default function ChatPage(): React.JSX.Element {
         {/* Loading indicator */}
         <div className="flex-1 flex items-center justify-center">
           <LoadingIndicator
-            message="Loading chat..."
-            subtitle="Preparing your AI assistant"
+            message="Loading JuDDGES chat..."
+            subtitle="Preparing your AI legal assistant"
             subtitleIcon={MessageSquare}
             variant="centered"
             size="lg"
@@ -508,7 +508,7 @@ export default function ChatPage(): React.JSX.Element {
               {/* Chat Header */}
               <div className="w-full">
                 <TypingHeader 
-                  text="What legal question can I help you with today?"
+                  text="What legal question can JuDDGES help you with?"
                   className="text-xl md:text-2xl font-semibold leading-relaxed text-black dark:text-foreground text-left"
                 />
               </div>

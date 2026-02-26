@@ -17,6 +17,10 @@ import {
   Globe,
   Lock,
   BookOpen,
+  Landmark,
+  Users,
+  FlaskConical,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -147,11 +151,11 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="font-serif text-5xl sm:text-6xl lg:text-7xl font-normal leading-[0.95] tracking-[-0.02em] text-foreground mb-6"
           >
-            Search millions of
+            <span className="text-primary">JuDDGES</span>
             <br />
-            court judgments
+            <span className="text-3xl sm:text-4xl lg:text-5xl text-muted-foreground/80">Judicial Decision Data</span>
             <br />
-            <span className="text-primary">with AI</span>
+            <span className="text-3xl sm:text-4xl lg:text-5xl text-muted-foreground/80">Gathering, Encoding &amp; Sharing</span>
           </motion.h1>
 
           {/* Subheadline */}
@@ -161,8 +165,7 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mb-10"
           >
-            An open-source research platform for Polish and UK legal decisions.
-            Semantic search, AI-powered analysis, and structured data extraction.
+            An open-source research platform for searching and analyzing court judgments from Poland and England &amp; Wales with AI-powered semantic search and structured data extraction.
           </motion.p>
 
           {/* CTAs */}
@@ -172,13 +175,13 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-wrap gap-4 mb-16"
           >
-            <Button size="lg" asChild className="h-13 px-8 text-base group">
+            <Button size="lg" asChild className="h-13 px-8 text-base group shadow-md hover:shadow-lg transition-shadow duration-200">
               <Link href="/auth/sign-up">
                 Get started free
                 <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="h-13 px-8 text-base">
+            <Button size="lg" variant="outline" asChild className="h-13 px-8 text-base hover:shadow-md transition-shadow duration-200">
               <Link href="/search">Try search</Link>
             </Button>
           </motion.div>
@@ -410,6 +413,129 @@ function formatStat(n: number): string {
 }
 
 // ─────────────────────────────────────────────
+// Section: About the JuDDGES Project
+// ─────────────────────────────────────────────
+
+const projectHighlights = [
+  {
+    icon: Landmark,
+    title: "Cross-Jurisdictional Research",
+    description:
+      "Covers criminal court records from Poland and England & Wales, enabling comparative analysis across diverse legal constitutions.",
+  },
+  {
+    icon: FlaskConical,
+    title: "NLP & Human-In-The-Loop",
+    description:
+      "Leverages advanced Natural Language Processing combined with human expertise to ensure accuracy in legal text annotation and analysis.",
+  },
+  {
+    icon: Users,
+    title: "Open Science Principles",
+    description:
+      "All software and tools are open source, fostering cross-disciplinary and cross-jurisdictional collaboration among researchers and public institutions.",
+  },
+  {
+    icon: BookOpen,
+    title: "Comprehensive Legal Repository",
+    description:
+      "Building the most comprehensive legal research repository in Europe, enabling flexible meta-annotation of legal texts at scale.",
+  },
+] as const;
+
+function AboutProjectSection() {
+  return (
+    <Section className="bg-gradient-to-b from-background to-primary/[0.02]">
+      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        {/* Section header */}
+        <div className="max-w-3xl mb-16">
+          <p className="text-sm font-medium text-primary uppercase tracking-[0.1em] mb-3">
+            About the Project
+          </p>
+          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight mb-4">
+            The JuDDGES Initiative
+          </h2>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            The JuDDGES project aims to revolutionize the accessibility and analysis of judicial decisions across varied legal systems. By overcoming barriers related to resources, language, data, and format inhomogeneity, the project facilitates the development and testing of theories on judicial decision-making and informs judicial policy and practice.
+          </p>
+        </div>
+
+        {/* Highlight cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16">
+          {projectHighlights.map((item, i) => (
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.5, delay: i * 0.08 }}
+              className="flex gap-5 p-6 rounded-2xl border border-border bg-card transition-colors duration-200 hover:border-primary/20"
+            >
+              <div className="shrink-0 p-3 h-fit rounded-xl bg-primary/8">
+                <item.icon className="size-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-foreground mb-2 tracking-[-0.01em]">
+                  {item.title}
+                </h3>
+                <p className="text-[15px] text-muted-foreground leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Project details bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5 }}
+          className="rounded-2xl border border-border bg-card p-8 md:p-10"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center sm:text-left">
+            <div>
+              <p className="text-xs font-medium text-primary uppercase tracking-[0.1em] mb-2">
+                Duration
+              </p>
+              <p className="text-lg font-semibold text-foreground">
+                Jan 2024 &ndash; Jan 2026
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Two-year research programme
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-primary uppercase tracking-[0.1em] mb-2">
+                Funding
+              </p>
+              <p className="text-lg font-semibold text-foreground tabular-nums">
+                &euro;529,384.67
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                European research grant
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-primary uppercase tracking-[0.1em] mb-2">
+                Institution
+              </p>
+              <p className="text-lg font-semibold text-foreground">
+                Wroclaw University
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                of Science and Technology
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Section 4: How It Works
 // ─────────────────────────────────────────────
 
@@ -505,28 +631,28 @@ function TrustCTASection() {
 
           {/* CTA */}
           <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight mb-4">
-            Start researching for free
+            Start using JuDDGES for free
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-            No credit card required. Built as an academic research project
-            at Wroclaw University of Science and Technology.
+            No credit card required. JuDDGES is an academic research project
+            at Wroclaw University of Science and Technology, open to researchers and institutions.
           </p>
 
           <div className="flex flex-wrap gap-4 justify-center mb-8">
-            <Button size="lg" asChild className="h-13 px-10 text-base group">
+            <Button size="lg" asChild className="h-13 px-10 text-base group shadow-md hover:shadow-lg transition-shadow duration-200">
               <Link href="/auth/sign-up">
                 Create free account
                 <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="h-13 px-10 text-base">
+            <Button size="lg" variant="outline" asChild className="h-13 px-10 text-base hover:shadow-md transition-shadow duration-200">
               <Link href="/about">Learn more</Link>
             </Button>
           </div>
 
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <GraduationCap className="size-4" />
-            <span>Research project by Wroclaw University of Science and Technology</span>
+            <span>JuDDGES &mdash; A research project by Wroclaw University of Science and Technology</span>
           </div>
         </div>
       </div>
@@ -542,6 +668,7 @@ export function LandingPage({ stats, statsLoading }: LandingPageProps) {
   return (
     <div className="min-h-screen">
       <HeroSection stats={stats} statsLoading={statsLoading} />
+      <AboutProjectSection />
       <CapabilitiesSection />
       <DataAuthoritySection stats={stats} statsLoading={statsLoading} />
       <HowItWorksSection />

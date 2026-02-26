@@ -37,7 +37,7 @@ interface OnboardingStep {
 
 const onboardingSteps: OnboardingStep[] = [
   {
-    title: "Welcome to Juddges",
+    title: "Welcome to JuDDGES",
     description:
       "Your intelligent companion for judgments analysis and legal research. Let's take a quick tour of what you can do.",
     icon: Brain,

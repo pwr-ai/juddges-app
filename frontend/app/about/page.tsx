@@ -39,7 +39,7 @@ export default function AboutPage(): React.JSX.Element {
         </Badge>
         <Header
           icon={Sparkles}
-          title="About Juddges"
+          title="About JuDDGES"
           size="4xl"
           description="Advancing legal research through artificial intelligence and open science"
         />
@@ -146,14 +146,14 @@ export default function AboutPage(): React.JSX.Element {
       <LightCard padding="lg" className="mb-10">
         <SecondaryHeader
           icon={Target}
-          title="Juddges Platform"
+          title="JuDDGES Platform"
           className="mb-3"
         />
-        <p className="text-base text-muted-foreground mb-6">Judgments Analysis and Extraction Toolset</p>
+        <p className="text-base text-muted-foreground mb-6">Judicial Decision Data Gathering, Encoding, and Sharing</p>
         <div className="space-y-8">
           <div>
             <p className="mb-5 text-base leading-relaxed">
-              Juddges is an innovative platform focused on the analysis of
+              JuDDGES is an innovative platform focused on the analysis of
               legal documents, particularly court judgments and legal
               decisions. Our goal is to leverage artificial
               intelligence to:
@@ -396,7 +396,7 @@ export default function AboutPage(): React.JSX.Element {
       <div className="text-center py-12">
         <h2 className="text-3xl font-bold mb-6">Ready to explore?</h2>
         <p className="text-muted-foreground mb-8 text-lg">
-          Start using our AI-powered legal research platform
+          Start using JuDDGES for AI-powered legal research
         </p>
         {user ? (
           <PrimaryButton size="lg" icon={ArrowRight} onClick={() => router.push('/')}>

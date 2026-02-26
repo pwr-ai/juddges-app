@@ -24,7 +24,7 @@ export default function CookiePolicyPage() {
       <Alert className="mb-8">
         <Info className="h-4 w-4" />
         <AlertDescription>
-          This Cookie Policy explains how Juddges uses cookies and similar technologies to recognize you when you visit our platform.
+          This Cookie Policy explains how JuDDGES uses cookies and similar technologies to recognize you when you visit our platform.
           It explains what these technologies are and why we use them, as well as your rights to control our use of them.
         </AlertDescription>
       </Alert>

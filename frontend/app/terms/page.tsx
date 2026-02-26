@@ -7,8 +7,8 @@ import { FileText, AlertTriangle, Users, Scale } from "lucide-react";
 import React from "react";
 
 export const metadata = {
-  title: "Terms of Service | Juddges",
-  description: "Terms of service for Juddges judgments analysis platform",
+  title: "Terms of Service | JuDDGES",
+  description: "Terms of service for JuDDGES judgments analysis platform",
 };
 
 export default function TermsPage(): React.ReactElement {
@@ -27,7 +27,7 @@ export default function TermsPage(): React.ReactElement {
       {/* Introduction */}
       <LightCard padding="lg" className="mb-8">
         <p className="text-base leading-relaxed text-muted-foreground">
-          These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Juddges platform operated by
+          These Terms of Service (&quot;Terms&quot;) govern your access to and use of the JuDDGES platform operated by
           Wrocław University of Science and Technology and collaborators. By accessing or using our platform, you agree to be
           bound by these Terms.
         </p>
@@ -43,7 +43,7 @@ export default function TermsPage(): React.ReactElement {
           <div className="space-y-2">
             <h3 className="font-semibold text-amber-900 dark:text-amber-100">Important Legal Notice</h3>
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Juddges is a research platform providing AI-powered legal information for educational and research
+              JuDDGES is a research platform providing AI-powered legal information for educational and research
               purposes only. This platform does not provide legal advice and should not be used as a substitute
               for consultation with a qualified attorney. Always consult a licensed legal professional for advice
               regarding your specific legal matters.
@@ -62,7 +62,7 @@ export default function TermsPage(): React.ReactElement {
           />
           <div className="space-y-4 text-muted-foreground">
             <p>
-              By creating an account or using the Juddges platform, you acknowledge that you have read,
+              By creating an account or using the JuDDGES platform, you acknowledge that you have read,
               understood, and agree to be bound by these Terms and our Privacy Policy. If you do not agree
               to these Terms, you must not access or use the platform.
             </p>
@@ -82,7 +82,7 @@ export default function TermsPage(): React.ReactElement {
             <div>
               <SectionHeader title="2.1 Research Platform" className="mb-2" />
               <p>
-                Juddges is an academic research platform designed to support legal research and education through
+                JuDDGES is an academic research platform designed to support legal research and education through
                 AI-powered analysis of court judgments and legal documents.
               </p>
             </div>
@@ -182,7 +182,7 @@ export default function TermsPage(): React.ReactElement {
             <div>
               <SectionHeader title="5.1 Platform Ownership" className="mb-2" />
               <p>
-                All content, features, and functionality of the Juddges platform, including but not limited to
+                All content, features, and functionality of the JuDDGES platform, including but not limited to
                 software, text, graphics, logos, and design, are owned by Wrocław University of Science and
                 Technology and collaborators and are protected by copyright and other intellectual property laws.
               </p>
@@ -413,7 +413,7 @@ export default function TermsPage(): React.ReactElement {
       <LightCard padding="lg" className="mt-8">
         <h3 className="font-semibold text-foreground mb-3">Acknowledgment</h3>
         <p className="text-base leading-relaxed text-muted-foreground">
-          By using the Juddges platform, you acknowledge that you have read these Terms of Service and agree to be
+          By using the JuDDGES platform, you acknowledge that you have read these Terms of Service and agree to be
           bound by them. If you do not agree to these Terms, please discontinue use of the platform immediately.
         </p>
       </LightCard>

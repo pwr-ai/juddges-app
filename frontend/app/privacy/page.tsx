@@ -7,8 +7,8 @@ import { Shield, Lock, Eye, Database, Mail } from "lucide-react";
 import React from "react";
 
 export const metadata = {
-  title: "Privacy Policy | Juddges",
-  description: "Privacy policy for Juddges judgments analysis platform",
+  title: "Privacy Policy | JuDDGES",
+  description: "Privacy policy for JuDDGES judgments analysis platform",
 };
 
 export default function PrivacyPage(): React.ReactElement {
@@ -27,7 +27,7 @@ export default function PrivacyPage(): React.ReactElement {
       {/* Introduction */}
       <LightCard padding="lg" className="mb-8">
         <p className="text-base leading-relaxed text-muted-foreground">
-          Wrocław University of Science and Technology and collaborators (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operate the Juddges platform.
+          Wrocław University of Science and Technology and collaborators (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) operate the JuDDGES platform.
           This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you
           use our research platform.
         </p>

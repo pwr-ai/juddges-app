@@ -529,7 +529,7 @@ function SearchPageContent(): React.JSX.Element | null {
               {/* Typing Animation Header */}
               <div className="w-full space-y-2">
                 <TypingHeader
-                  text="Search 3M+ legal documents"
+                  text="Search legal documents with JuDDGES"
                   className="text-3xl md:text-4xl font-bold leading-relaxed text-black dark:text-foreground text-center"
                 />
                 <p className="text-base md:text-lg text-muted-foreground text-center">

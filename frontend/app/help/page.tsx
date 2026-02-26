@@ -42,19 +42,19 @@ export default function HelpPage() {
       icon: BookOpen,
       questions: [
         {
-          q: "What is Juddges?",
-          a: "Juddges is a judgments analysis and extraction toolset developed by Wrocław University of Science and Technology and collaborators that provides AI-powered legal document analysis and research tools for court judgments. It combines advanced natural language processing with a comprehensive database of legal documents.",
+          q: "What is JuDDGES?",
+          a: "JuDDGES (Judicial Decision Data Gathering, Encoding, and Sharing) is an open-source research platform developed by Wroclaw University of Science and Technology that provides AI-powered legal document analysis and research tools for court judgments. It combines advanced natural language processing with a comprehensive database of legal documents from Poland and England & Wales.",
         },
         {
           q: "How do I create an account?",
-          a: "Currently, Juddges is in research beta. Account access is provided to academic researchers and collaborators. To request access, please contact us at lukasz.augustyniak@pwr.edu.pl with your academic affiliation and research interests.",
+          a: "Currently, JuDDGES is in research beta. Account access is provided to academic researchers and collaborators. To request access, please contact us at lukasz.augustyniak@pwr.edu.pl with your academic affiliation and research interests.",
         },
         {
-          q: "Is Juddges free to use?",
-          a: "Yes, Juddges is free for academic and research purposes. The platform is funded by Wrocław University of Science and Technology as part of the JuDDGES research project.",
+          q: "Is JuDDGES free to use?",
+          a: "Yes, JuDDGES is free for academic and research purposes. The platform is funded by Wroclaw University of Science and Technology as part of the JuDDGES research project.",
         },
         {
-          q: "What kind of legal documents can I find on Juddges?",
+          q: "What kind of legal documents can I find on JuDDGES?",
           a: "The platform contains Polish court judgments, tax law interpretations, and related legal documents. The database is continuously updated with new documents from official sources.",
         },
       ],
@@ -189,7 +189,7 @@ export default function HelpPage() {
         },
         {
           q: "Which browsers are supported?",
-          a: "Juddges works best on modern browsers including Chrome, Firefox, Safari, and Edge (latest versions). We recommend keeping your browser updated for optimal performance and security.",
+          a: "JuDDGES works best on modern browsers including Chrome, Firefox, Safari, and Edge (latest versions). We recommend keeping your browser updated for optimal performance and security.",
         },
         {
           q: "Can I use the platform on mobile devices?",
@@ -220,7 +220,7 @@ export default function HelpPage() {
         <Header
           title="How can we help you?"
           size="4xl"
-          description="Find answers to common questions about using Juddges, or contact our support team for personalized assistance."
+          description="Find answers to common questions about using JuDDGES, or contact our support team for personalized assistance."
           className="items-center text-center"
         />
 
@@ -253,7 +253,7 @@ export default function HelpPage() {
             <BookOpen className="size-10 text-primary mb-4" />
             <h3 className="font-semibold text-lg mb-3">About the Project</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Learn about the Juddges research project
+              Learn about the JuDDGES research project
             </p>
           </div>
         </LightCard>

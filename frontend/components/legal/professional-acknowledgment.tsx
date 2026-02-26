@@ -119,7 +119,7 @@ export function ProfessionalAcknowledgment({
             Professional Use Acknowledgment
           </DialogTitle>
           <DialogDescription className="text-base pt-2">
-            Before using Juddges, please review and acknowledge these important
+            Before using JuDDGES, please review and acknowledge these important
             professional responsibility terms.
           </DialogDescription>
         </DialogHeader>

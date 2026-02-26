@@ -27,7 +27,7 @@ export const enterpriseContent = {
   hero: {
     headline: "Enterprise Judgments Analysis Solutions for Your Firm",
     subheadline:
-      "Deploy Juddges's proven legal research platform in your infrastructure. Trusted by 50+ researchers analyzing 3M+ documents.",
+      "Deploy JuDDGES's proven legal research platform in your infrastructure. Trusted by 50+ researchers analyzing 3M+ documents.",
     primaryCTA: { text: "Schedule a Demo", href: "#contact" },
     secondaryCTA: { text: "View Case Studies", href: "#case-studies" },
   },
@@ -344,7 +344,7 @@ export const enterpriseContent = {
       challenge:
         "A leading law firm needed to analyze thousands of Swiss Franc loan court cases to identify patterns and build stronger legal arguments for their clients.",
       solution:
-        "Deployed Juddges with custom extraction schemas to automatically parse court judgments, extract key fields (loan terms, court decisions, legal reasoning), and visualize document similarity.",
+        "Deployed JuDDGES with custom extraction schemas to automatically parse court judgments, extract key fields (loan terms, court decisions, legal reasoning), and visualize document similarity.",
       results: [
         {
           metric: "80%",
@@ -370,7 +370,7 @@ export const enterpriseContent = {
       challenge:
         "Tax advisors needed to track regulatory changes and interpretations across multiple jurisdictions in real-time to provide accurate client guidance.",
       solution:
-        "Implemented Juddges with automated document ingestion, multi-language processing, and custom alerts for regulatory changes.",
+        "Implemented JuDDGES with automated document ingestion, multi-language processing, and custom alerts for regulatory changes.",
       results: [
         {
           metric: "95%",
@@ -396,7 +396,7 @@ export const enterpriseContent = {
       challenge:
         "Legal researchers needed better tools to analyze UK court judgments and identify precedents relevant to ongoing cases.",
       solution:
-        "Deployed cloud-hosted Juddges with semantic search, citation extraction, and similarity clustering specialized for UK legal documents.",
+        "Deployed cloud-hosted JuDDGES with semantic search, citation extraction, and similarity clustering specialized for UK legal documents.",
       results: [
         {
           metric: "50K+",
@@ -470,9 +470,9 @@ export const enterpriseContent = {
 
   faqs: [
     {
-      question: "What languages does Juddges support?",
+      question: "What languages does JuDDGES support?",
       answer:
-        "Juddges currently supports Polish, English, German, and French for document processing and search. We can add support for additional languages based on your requirements.",
+        "JuDDGES currently supports Polish, English, German, and French for document processing and search. We can add support for additional languages based on your requirements.",
       category: "Features",
     },
     {
@@ -482,7 +482,7 @@ export const enterpriseContent = {
       category: "Security",
     },
     {
-      question: "Can we deploy Juddges on our own infrastructure?",
+      question: "Can we deploy JuDDGES on our own infrastructure?",
       answer:
         "Yes, we offer on-premise deployment where the entire platform runs in your data center or private cloud. We provide Docker containers and comprehensive deployment documentation. Our team can assist with setup and configuration.",
       category: "Deployment",
@@ -513,21 +513,21 @@ export const enterpriseContent = {
     },
     {
       question:
-        "What makes Juddges different from other legal AI tools?",
+        "What makes JuDDGES different from other legal AI tools?",
       answer:
-        "Juddges is built on proven academic research and has processed over 3 million legal documents in production. Unlike consumer tools, we offer on-premise deployment, custom development, domain-specific AI models, and enterprise-grade security. Our platform is designed for legal professionals who need reliability, accuracy, and control.",
+        "JuDDGES is built on proven academic research and has processed over 3 million legal documents in production. Unlike consumer tools, we offer on-premise deployment, custom development, domain-specific AI models, and enterprise-grade security. Our platform is designed for legal professionals who need reliability, accuracy, and control.",
       category: "Product",
     },
     {
-      question: "Can we integrate Juddges with our existing document management system?",
+      question: "Can we integrate JuDDGES with our existing document management system?",
       answer:
-        "Yes, Juddges provides a REST API and supports integration with major document management systems like iManage, NetDocuments, and SharePoint. We can also develop custom integrations for proprietary systems.",
+        "Yes, JuDDGES provides a REST API and supports integration with major document management systems like iManage, NetDocuments, and SharePoint. We can also develop custom integrations for proprietary systems.",
       category: "Integration",
     },
     {
-      question: "What kind of documents can Juddges process?",
+      question: "What kind of documents can JuDDGES process?",
       answer:
-        "Juddges can process various legal document types including court judgments, legal opinions, contracts, regulations, tax interpretations, and more. We support PDF, DOCX, HTML, and plain text formats. Custom document type support can be added as needed.",
+        "JuDDGES can process various legal document types including court judgments, legal opinions, contracts, regulations, tax interpretations, and more. We support PDF, DOCX, HTML, and plain text formats. Custom document type support can be added as needed.",
       category: "Features",
     },
   ],
@@ -555,7 +555,7 @@ export const enterpriseContent = {
     university: {
       name: "Wrocław University of Science and Technology",
       description:
-        "Juddges is developed by researchers at one of Poland's leading technical universities, with expertise in natural language processing, machine learning, and legal technology.",
+        "JuDDGES is developed by researchers at one of Poland's leading technical universities, with expertise in natural language processing, machine learning, and legal technology.",
     },
     expertise: [
       "Natural Language Processing (NLP)",

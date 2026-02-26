@@ -100,7 +100,7 @@ export default function PublicationsPage() {
           )}
         </div>
         <p className="text-lg text-foreground/80 max-w-3xl leading-relaxed">
-          Research publications from the Juddges project for court judgment analysis and extraction.
+          Research publications from the JuDDGES project for court judgment analysis and extraction.
         </p>
       </div>
 

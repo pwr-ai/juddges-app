@@ -13,7 +13,7 @@ export default function NotFound() {
         <div className="max-w-md w-full px-6">
           <ErrorCard
             title="Page Not Found"
-            message="The page you're looking for doesn't exist. It may have been moved or deleted."
+            message="This page doesn't exist on JuDDGES. It may have been moved or deleted."
             onRetry={() => router.back()}
             retryLabel="Go Back"
             showRetry={true}

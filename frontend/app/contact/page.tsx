@@ -22,7 +22,7 @@ export default function ContactPage() {
         <Header
           title="Contact Us"
           size="4xl"
-          description="Have questions about Juddges? We're here to help. Reach out to our team for support, collaboration opportunities, or research inquiries."
+          description="Have questions about JuDDGES? We're here to help. Reach out to our team for support, collaboration opportunities, or research inquiries."
           className="items-center text-center"
         />
       </div>
@@ -165,7 +165,7 @@ export default function ContactPage() {
           <div>
             <h3 className="font-medium mb-3 text-base">Is the platform available for commercial use?</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Juddges is primarily a research platform. For commercial inquiries or licensing,
+              JuDDGES is primarily a research platform. For commercial inquiries or licensing,
               please contact us at lukasz.augustyniak@pwr.edu.pl.
             </p>
           </div>

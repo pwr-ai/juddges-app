@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata: Metadata = {
-  title: "Legal Disclaimer | Juddges",
+  title: "Legal Disclaimer | JuDDGES",
   description:
-    "Important legal disclaimers and limitations regarding the use of Juddges platform.",
+    "Important legal disclaimers and limitations regarding the use of JuDDGES platform.",
 };
 
 export default function DisclaimerPage() {
@@ -64,7 +64,7 @@ export default function DisclaimerPage() {
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
             <p>
-              The Juddges platform provides <strong>information and research tools only</strong>.
+              The JuDDGES platform provides <strong>information and research tools only</strong>.
               Nothing provided by this platform constitutes legal advice, tax advice, or professional
               counsel of any kind.
             </p>
@@ -279,7 +279,7 @@ export default function DisclaimerPage() {
       {/* Footer */}
       <div className="mt-12 pt-8 border-t border-border">
         <p className="text-sm text-muted-foreground text-center">
-          By using the Juddges platform, you acknowledge that you have read, understood,
+          By using the JuDDGES platform, you acknowledge that you have read, understood,
           and agree to be bound by this disclaimer.
         </p>
       </div>

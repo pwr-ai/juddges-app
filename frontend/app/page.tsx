@@ -251,7 +251,7 @@ export default function HomePage(): React.JSX.Element {
               <div className="p-4 rounded-full w-fit mx-auto mb-3">
                 <MessageSquare className="size-8 text-[rgba(71,85,105,0.2)]" />
               </div>
-              <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No chats yet. Start a conversation to see it here.</p>
+              <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No chats yet. Ask JuDDGES a legal question to get started.</p>
               <Link href="/chat">
                 <PrimaryButton size="sm" icon={MessageSquare}>
                   Start Chat
@@ -326,7 +326,7 @@ export default function HomePage(): React.JSX.Element {
               <div className="p-4 rounded-full w-fit mx-auto mb-3">
                 <FileJson className="size-8 text-[rgba(71,85,105,0.2)]" />
               </div>
-              <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No schemas yet. Generate your first schema using AI agents.</p>
+              <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No schemas yet. Let JuDDGES generate your first extraction schema.</p>
               <Link href="/schema-chat">
                 <PrimaryButton size="sm" icon={Zap}>
                   Generate Schema
@@ -417,7 +417,7 @@ export default function HomePage(): React.JSX.Element {
             // Legal Glassmorphism 2.0 - Zero State
             <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
               <FileText className="size-6 text-[rgba(71,85,105,0.2)] mx-auto mb-2" />
-              <p className="text-xs text-[rgba(71,85,105,0.6)] mb-3">No documents yet. Start exploring to see highlighted documents here.</p>
+              <p className="text-xs text-[rgba(71,85,105,0.6)] mb-3">No documents yet. Explore JuDDGES to discover court judgments.</p>
               <Link href="/search">
                 <PrimaryButton size="sm" icon={Search}>
                   Browse Documents
@@ -590,7 +590,7 @@ export default function HomePage(): React.JSX.Element {
                 <div className="p-4 rounded-full w-fit mx-auto mb-3">
                   <Zap className="size-8 text-[rgba(71,85,105,0.2)]" />
                 </div>
-                <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No extractions yet. Start extracting data from documents.</p>
+                <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No extractions yet. Use JuDDGES to extract structured data from documents.</p>
                 <Link href="/extract">
                   <PrimaryButton size="sm" icon={Zap}>
                     Start Extraction

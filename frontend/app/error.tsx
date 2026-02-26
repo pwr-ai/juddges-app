@@ -34,7 +34,7 @@ export default function AppError({ error, reset }: ErrorProps): React.JSX.Elemen
         <div className="w-full max-w-2xl px-6">
           <ErrorCard
             title="Something Went Wrong"
-            message="We encountered an unexpected error. Please try again."
+            message="JuDDGES encountered an unexpected error. Please try again."
             onRetry={handleRetry}
             retryLabel="Try Again"
             secondaryAction={{
