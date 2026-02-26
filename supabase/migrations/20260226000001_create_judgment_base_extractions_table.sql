@@ -420,7 +420,7 @@ CREATE INDEX IF NOT EXISTS idx_judgments_base_neutral_citation_trgm
 CREATE INDEX IF NOT EXISTS idx_judgments_base_search_tsv ON public.judgments
 USING gin (
     to_tsvector(
-        'simple',
+        'simple'::regconfig,
         coalesce(base_case_name, '') || ' ' ||
         coalesce(base_neutral_citation_number, '') || ' ' ||
         coalesce(base_appeal_court_judges_names, '') || ' ' ||
@@ -711,7 +711,7 @@ BEGIN
             AND (
                 p_text_query IS NULL OR TRIM(p_text_query) = '' OR
                 to_tsvector(
-                    'simple',
+                    'simple'::regconfig,
                     coalesce(j.base_case_name, '') || ' ' ||
                     coalesce(j.base_neutral_citation_number, '') || ' ' ||
                     coalesce(j.base_appeal_court_judges_names, '') || ' ' ||
