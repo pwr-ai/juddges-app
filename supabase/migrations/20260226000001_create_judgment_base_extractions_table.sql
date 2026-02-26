@@ -417,24 +417,6 @@ CREATE INDEX IF NOT EXISTS idx_judgments_base_case_name_trgm
 CREATE INDEX IF NOT EXISTS idx_judgments_base_neutral_citation_trgm
     ON public.judgments USING gin (base_neutral_citation_number gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS idx_judgments_base_search_tsv ON public.judgments
-USING gin (
-    to_tsvector(
-        'simple'::regconfig,
-        coalesce(base_case_name, '') || ' ' ||
-        coalesce(base_neutral_citation_number, '') || ' ' ||
-        coalesce(base_appeal_court_judges_names, '') || ' ' ||
-        coalesce(base_offender_representative_name, '') || ' ' ||
-        coalesce(base_crown_attorney_general_representative_name, '') || ' ' ||
-        coalesce(base_conv_court_names, '') || ' ' ||
-        coalesce(base_sent_court_name, '') || ' ' ||
-        coalesce(array_to_string(base_keywords, ' '), '') || ' ' ||
-        coalesce(array_to_string(base_convict_offences, ' '), '') || ' ' ||
-        coalesce(array_to_string(base_acquit_offences, ' '), '') || ' ' ||
-        coalesce(array_to_string(base_appeal_ground, ' '), '')
-    )
-);
-
 -- -----------------------------------------------------------------------------
 -- Helper functions
 -- -----------------------------------------------------------------------------
