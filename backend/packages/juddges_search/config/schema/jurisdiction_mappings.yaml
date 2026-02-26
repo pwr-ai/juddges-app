@@ -144,16 +144,13 @@ field_mappings:
     en_us: "How are sentences to be served?"
     pl: "Jak mają być odbywane kary?"
     enum_mappings:
-      concurrent:
+      serve_concurrent:
         en_uk: "Concurrently"
         pl: "Łącznie (kary biegną równolegle)"
-      consecutive:
+      serve_consecutive:
         en_uk: "Consecutively"
         pl: "Kolejno (kary biegną po sobie)"
-      combination:
-        en_uk: "Combination"
-        pl: "Kombinacja"
-      dont_know:
+      serve_unknown:
         en_uk: "Unknown"
         pl: "Nieznane"
 
@@ -168,15 +165,15 @@ field_mappings:
     en_us: "Defendant(s) Gender"
     pl: "Płeć oskarżonego/oskarżonych"
     enum_mappings:
-      all_male:
+      gender_male:
         en_uk: "Male"
-        pl: "Mężczyzna/mężczyźni"
-      all_female:
+        pl: "Mężczyzna"
+      gender_female:
         en_uk: "Female"
-        pl: "Kobieta/kobiety"
-      male_and_female:
-        en_uk: "Both male and female"
-        pl: "Mężczyźni i kobiety"
+        pl: "Kobieta"
+      gender_unknown:
+        en_uk: "Unknown"
+        pl: "Nieznane"
 
   offender_age_offence:
     en_uk: "Offender(s) Age at Time of Offence"
@@ -238,19 +235,13 @@ field_mappings:
     en_us: "Was Defendant Intoxicated at Time of Offense?"
     pl: "Czy oskarżony był pod wpływem alkoholu lub środków odurzających?"
     enum_mappings:
-      yes_drinking:
-        en_uk: "Yes - alcohol"
-        pl: "Tak - alkohol"
-      yes_drugs:
-        en_uk: "Yes - drugs"
-        pl: "Tak - narkotyki"
-      yes_drinking_and_drugs:
-        en_uk: "Yes - alcohol and drugs"
-        pl: "Tak - alkohol i narkotyki"
-      "no":
-        en_uk: "No"
-        pl: "Nie"
-      dont_know:
+      intox_alcohol:
+        en_uk: "Alcohol"
+        pl: "Alkohol"
+      intox_drugs:
+        en_uk: "Drugs"
+        pl: "Narkotyki"
+      intox_unknown:
         en_uk: "Unknown"
         pl: "Nieznane"
 
@@ -295,15 +286,15 @@ field_mappings:
     en_us: "Victim(s) Gender"
     pl: "Płeć pokrzywdzonego/pokrzywdzonych"
     enum_mappings:
-      all_male:
+      gender_male:
         en_uk: "Male"
-        pl: "Mężczyzna/mężczyźni"
-      all_female:
+        pl: "Mężczyzna"
+      gender_female:
         en_uk: "Female"
-        pl: "Kobieta/kobiety"
-      male_and_female:
-        en_uk: "Both male and female"
-        pl: "Mężczyźni i kobiety"
+        pl: "Kobieta"
+      gender_unknown:
+        en_uk: "Unknown"
+        pl: "Nieznane"
 
   victim_age_offence:
     en_uk: "Victim(s) Age at Time of Offence"
@@ -330,19 +321,13 @@ field_mappings:
     en_us: "Was Victim Intoxicated?"
     pl: "Czy pokrzywdzony był pod wpływem alkoholu lub środków odurzających?"
     enum_mappings:
-      yes_drinking:
-        en_uk: "Yes - alcohol"
-        pl: "Tak - alkohol"
-      yes_drugs:
-        en_uk: "Yes - drugs"
-        pl: "Tak - narkotyki"
-      yes_drinking_and_drugs:
-        en_uk: "Yes - alcohol and drugs"
-        pl: "Tak - alkohol i narkotyki"
-      "no":
-        en_uk: "No"
-        pl: "Nie"
-      dont_know:
+      intox_alcohol:
+        en_uk: "Alcohol"
+        pl: "Alkohol"
+      intox_drugs:
+        en_uk: "Drugs"
+        pl: "Narkotyki"
+      intox_unknown:
         en_uk: "Unknown"
         pl: "Nieznane"
 
@@ -417,21 +402,21 @@ field_mappings:
     en_us: "Grounds for Appeal"
     pl: "Przedmiot apelacji"
     enum_mappings:
-      conviction_unsafe:
+      appeal_conviction_unsafe:
         en_uk: "Conviction unsafe"
         pl: "Skazanie wadliwe"
-      sentence_unduly_excessive:
+      appeal_sentence_excessive:
         en_uk: "Sentence unduly excessive"
         pl: "Kara rażąco surowa"
-      sentence_unduly_lenient:
+      appeal_sentence_lenient:
         en_uk: "Sentence unduly lenient"
         pl: "Kara rażąco łagodna"
-      both:
-        en_uk: "Both conviction and sentence"
-        pl: "Zarówno skazanie jak i kara"
-      other:
+      appeal_other:
         en_uk: "Other"
         pl: "Inne"
+      appeal_unknown:
+        en_uk: "Unknown"
+        pl: "Nieznane"
 
   appeal_ground:
     en_uk: "Ground(s) for Appeal"
@@ -448,21 +433,24 @@ field_mappings:
     en_us: "Appeal Outcome"
     pl: "Wynik apelacji"
     enum_mappings:
-      dismissed_failed_refused:
+      outcome_dismissed_or_refused:
         en_uk: "Dismissed/Failed/Refused"
         pl: "Oddalona/Odrzucona"
-      allowed_conviction_quashed:
+      outcome_conviction_quashed:
         en_uk: "Allowed - Conviction quashed"
         pl: "Uwzględniona - Skazanie uchylone"
-      allowed_replaced_by_more_excessive_sentence:
+      outcome_sentence_more_severe:
         en_uk: "Allowed - Replaced by more severe sentence"
         pl: "Uwzględniona - Zastąpiono surowszą karą"
-      allowed_replaced_by_more_lenient_sentence:
+      outcome_sentence_more_lenient:
         en_uk: "Allowed - Replaced by more lenient sentence"
         pl: "Uwzględniona - Zastąpiono łagodniejszą karą"
-      mixed_decision:
-        en_uk: "Mixed decision"
-        pl: "Decyzja mieszana"
+      outcome_other:
+        en_uk: "Other"
+        pl: "Inne"
+      outcome_unknown:
+        en_uk: "Unknown"
+        pl: "Nieznane"
 
   # Appeal Reasons
   reason_quash_conv:

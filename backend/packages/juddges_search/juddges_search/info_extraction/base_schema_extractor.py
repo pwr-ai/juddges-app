@@ -297,6 +297,15 @@ Extract all information according to the schema. Return a valid JSON object."""
                 if field_def.get("type") == "array":
                     if not isinstance(data[field_name], list):
                         errors.append(f"Field '{field_name}' should be an array, got {type(data[field_name])}")
+                    else:
+                        item_enum = field_def.get("items", {}).get("enum")
+                        if item_enum:
+                            invalid_items = [item for item in data[field_name] if item not in item_enum]
+                            if invalid_items:
+                                errors.append(
+                                    f"Field '{field_name}' has invalid array values {invalid_items}. "
+                                    f"Valid values: {item_enum}"
+                                )
 
                 # Validate boolean types
                 if field_def.get("type") == "boolean":
@@ -337,6 +346,8 @@ Extract all information according to the schema. Return a valid JSON object."""
             # Add enum values if applicable
             if "enum" in field_def:
                 filter_config["enum_values"] = field_def["enum"]
+            elif field_def.get("type") == "array" and field_def.get("items", {}).get("enum"):
+                filter_config["enum_values"] = field_def["items"]["enum"]
 
             filters.append(filter_config)
 

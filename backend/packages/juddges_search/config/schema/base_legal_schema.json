@@ -213,15 +213,18 @@
       "x-ui-order": 18
     },
     "sentence_serve": {
-      "type": "string",
-      "enum": [
-        "concurrent",
-        "consecutive",
-        "combination",
-        "dont_know"
-      ],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "serve_concurrent",
+          "serve_consecutive",
+          "serve_unknown"
+        ]
+      },
+      "uniqueItems": true,
       "description": "How are sentences to be served?",
-      "x-filter-type": "facet",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Sentence Type",
       "x-ui-order": 19
     },
@@ -236,14 +239,18 @@
       "x-ui-order": 20
     },
     "offender_gender": {
-      "type": "string",
-      "enum": [
-        "all_male",
-        "all_female",
-        "male_and_female"
-      ],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "gender_male",
+          "gender_female",
+          "gender_unknown"
+        ]
+      },
+      "uniqueItems": true,
       "description": "Offender(s) Gender",
-      "x-filter-type": "facet",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Offender Gender",
       "x-ui-order": 21
     },
@@ -291,16 +298,18 @@
       "x-ui-order": 25
     },
     "offender_intox_offence": {
-      "type": "string",
-      "enum": [
-        "yes_drinking",
-        "yes_drugs",
-        "yes_drinking_and_drugs",
-        "no",
-        "dont_know"
-      ],
-      "description": "Was Offender Intoxicated at Time of Offence?",
-      "x-filter-type": "facet",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "intox_alcohol",
+          "intox_drugs",
+          "intox_unknown"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Was offender intoxicated at time of offence? Use an empty array to represent no intoxication.",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Offender Intoxication",
       "x-ui-order": 26
     },
@@ -336,14 +345,18 @@
       "x-ui-order": 29
     },
     "victim_gender": {
-      "type": "string",
-      "enum": [
-        "all_male",
-        "all_female",
-        "male_and_female"
-      ],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "gender_male",
+          "gender_female",
+          "gender_unknown"
+        ]
+      },
+      "uniqueItems": true,
       "description": "Victim(s) Gender",
-      "x-filter-type": "facet",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Victim Gender",
       "x-ui-order": 30
     },
@@ -376,16 +389,18 @@
       "x-ui-order": 34
     },
     "victim_intox_offence": {
-      "type": "string",
-      "enum": [
-        "yes_drinking",
-        "yes_drugs",
-        "yes_drinking_and_drugs",
-        "no",
-        "dont_know"
-      ],
-      "description": "Was Victim Intoxicated at Time of Offence?",
-      "x-filter-type": "facet",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "intox_alcohol",
+          "intox_drugs",
+          "intox_unknown"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Was victim intoxicated at time of offence? Use an empty array to represent no intoxication.",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Victim Intoxication",
       "x-ui-order": 35
     },
@@ -469,16 +484,20 @@
       "x-ui-order": 43
     },
     "appeal_against": {
-      "type": "string",
-      "enum": [
-        "conviction_unsafe",
-        "sentence_unduly_excessive",
-        "sentence_unduly_lenient",
-        "both",
-        "other"
-      ],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "appeal_conviction_unsafe",
+          "appeal_sentence_excessive",
+          "appeal_sentence_lenient",
+          "appeal_other",
+          "appeal_unknown"
+        ]
+      },
+      "uniqueItems": true,
       "description": "Appeal Against",
-      "x-filter-type": "facet",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Appeal Against",
       "x-ui-order": 44
     },
@@ -503,16 +522,21 @@
       "x-ui-order": 46
     },
     "appeal_outcome": {
-      "type": "string",
-      "enum": [
-        "dismissed_failed_refused",
-        "allowed_conviction_quashed",
-        "allowed_replaced_by_more_excessive_sentence",
-        "allowed_replaced_by_more_lenient_sentence",
-        "mixed_decision"
-      ],
-      "description": "Outcome of Appeal",
-      "x-filter-type": "facet",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "outcome_dismissed_or_refused",
+          "outcome_conviction_quashed",
+          "outcome_sentence_more_severe",
+          "outcome_sentence_more_lenient",
+          "outcome_other",
+          "outcome_unknown"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Outcome of appeal. Mixed decisions should contain multiple values.",
+      "x-filter-type": "array_contains",
       "x-ui-label": "Appeal Outcome",
       "x-ui-order": 47
     },

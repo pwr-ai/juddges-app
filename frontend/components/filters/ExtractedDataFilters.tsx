@@ -208,7 +208,10 @@ function ArrayFilter({
 }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const selectedValues = value || [];
-  const options = counts?.map((c) => c.value) || [];
+  const options =
+    (config.enum_values && config.enum_values.length > 0
+      ? config.enum_values
+      : counts?.map((c) => c.value)) || [];
 
   const toggleValue = (opt: string) => {
     const newValues = selectedValues.includes(opt)
@@ -250,7 +253,7 @@ function ArrayFilter({
                     htmlFor={`${config.field}-${opt}`}
                     className="text-sm flex-1 cursor-pointer"
                   >
-                    {opt}
+                    {formatEnumValue(opt)}
                     {count !== undefined && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         ({count})
