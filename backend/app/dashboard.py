@@ -13,6 +13,7 @@ from supabase import create_client, Client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
+from app.rate_limiter import limiter
 
 # Redis client setup (optional, falls back to in-memory cache)
 try:
@@ -36,7 +37,17 @@ except Exception as e:
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-# TODO: Re-enable rate limiting after fixing slowapi dependency
+DASHBOARD_READ_RATE_LIMIT = os.getenv("DASHBOARD_READ_RATE_LIMIT", "100/minute")
+DASHBOARD_REFRESH_RATE_LIMIT = os.getenv(
+    "DASHBOARD_REFRESH_RATE_LIMIT", "20/minute"
+)
+
+
+def _get_required_env(name: str) -> str:
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise RuntimeError(f"{name} environment variable is required")
+    return value
 
 
 # Initialize Supabase client
@@ -48,8 +59,8 @@ def get_supabase_client() -> Client:
         postgrest_client_timeout=30, storage_client_timeout=30, schema="public"
     )
     return create_client(
-        os.getenv("NEXT_PUBLIC_SUPABASE_URL"),
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
+        _get_required_env("SUPABASE_URL"),
+        _get_required_env("SUPABASE_SERVICE_ROLE_KEY"),
         options=options,
     )
 
@@ -108,8 +119,7 @@ class TrendingTopic(BaseModel):
 
 
 @router.get("/stats", response_model=DashboardStats)
-# TODO: Re-enable rate limiting after fixing slowapi dependency
-# @limiter.limit("100/minute")
+@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_api_key)):
     """
     Get key statistics for dashboard display.
@@ -271,6 +281,7 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
 
 
 @router.post("/refresh-stats")
+@limiter.limit(DASHBOARD_REFRESH_RATE_LIMIT)
 async def refresh_dashboard_stats(
     request: Request, api_key: str = Depends(verify_api_key)
 ):
@@ -308,7 +319,9 @@ async def refresh_dashboard_stats(
 
 
 @router.get("/recent-documents", response_model=list[DocumentSummary])
+@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_recent_documents(
+    request: Request,
     limit: int = Query(default=5, ge=1, le=20), api_key: str = Depends(verify_api_key)
 ):
     """
@@ -407,7 +420,9 @@ async def get_recent_documents(
 
 
 @router.get("/featured-examples", response_model=list[DocumentSummary])
+@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_featured_examples(
+    request: Request,
     limit: int = Query(default=5, ge=1, le=10), api_key: str = Depends(verify_api_key)
 ):
     """
@@ -545,7 +560,9 @@ async def get_featured_examples(
 
 
 @router.get("/trending-topics", response_model=list[TrendingTopic])
+@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_trending_topics(
+    request: Request,
     category: Optional[str] = None,
     limit: int = Query(default=5, ge=1, le=10),
     api_key: str = Depends(verify_api_key),
@@ -610,7 +627,10 @@ async def get_trending_topics(
 
 
 @router.get("/test-document-counts")
-async def test_document_counts(api_key: str = Depends(verify_api_key)):
+@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
+async def test_document_counts(
+    request: Request, api_key: str = Depends(verify_api_key)
+):
     """
     Test endpoint to verify document counting functionality.
 

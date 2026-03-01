@@ -1,0 +1,84 @@
+"""Integration tests for Meilisearch-backed autocomplete endpoint."""
+
+from typing import Any
+
+from app.server import app
+
+
+async def test_autocomplete_returns_503_when_meilisearch_not_configured(
+    authenticated_client,
+):
+    response = await authenticated_client.get(
+        "/api/search/autocomplete", params={"q": "vat"}
+    )
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert "not configured" in payload["detail"].lower()
+
+
+async def test_autocomplete_returns_hits_from_search_service(
+    authenticated_client,
+):
+    from app.api.search import get_search_service
+
+    class FakeSearchService:
+        configured = True
+
+        async def autocomplete(
+            self, query: str, limit: int = 10, filters: str | None = None
+        ) -> dict[str, Any]:
+            assert query == "contract"
+            assert limit == 5
+            assert filters == "language = 'pl'"
+            return {
+                "hits": [
+                    {
+                        "id": "doc-1",
+                        "title": "Contract law overview",
+                        "_formatted": {"title": "<mark>Contract</mark> law overview"},
+                    }
+                ],
+                "query": query,
+                "processingTimeMs": 7,
+                "estimatedTotalHits": 1,
+            }
+
+    app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
+
+    response = await authenticated_client.get(
+        "/api/search/autocomplete",
+        params={"q": "contract", "limit": 5, "filters": "language = 'pl'"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["query"] == "contract"
+    assert payload["processingTimeMs"] == 7
+    assert payload["estimatedTotalHits"] == 1
+    assert len(payload["hits"]) == 1
+    assert payload["hits"][0]["id"] == "doc-1"
+
+
+async def test_autocomplete_returns_502_when_search_backend_fails(
+    authenticated_client,
+):
+    from app.api.search import get_search_service
+
+    class FakeSearchService:
+        configured = True
+
+        async def autocomplete(
+            self, query: str, limit: int = 10, filters: str | None = None
+        ) -> dict[str, Any]:
+            raise RuntimeError("upstream timeout")
+
+    app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
+
+    response = await authenticated_client.get(
+        "/api/search/autocomplete", params={"q": "tax"}
+    )
+
+    assert response.status_code == 502
+    payload = response.json()
+    assert "autocomplete service error" in payload["detail"].lower()

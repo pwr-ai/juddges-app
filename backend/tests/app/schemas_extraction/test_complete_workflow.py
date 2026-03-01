@@ -12,6 +12,10 @@ Tests complete workflows:
 import pytest
 from httpx import AsyncClient
 import asyncio
+import os
+
+
+RUN_AI_TESTS = os.getenv("RUN_AI_TESTS", "").lower() in {"1", "true", "yes"}
 
 
 @pytest.mark.integration
@@ -115,8 +119,8 @@ class TestCompleteSchemaWorkflow:
 
 @pytest.mark.integration
 @pytest.mark.skipif(
-    not pytest.config.getoption("--run-ai-tests", default=False),
-    reason="AI tests require --run-ai-tests flag",
+    not RUN_AI_TESTS,
+    reason="AI tests require RUN_AI_TESTS=1",
 )
 class TestAIGenerationWorkflow:
     """Test AI-powered schema generation workflows."""

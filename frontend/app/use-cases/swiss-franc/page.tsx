@@ -56,7 +56,6 @@ export default function SwissFrancAnalysisPage() {
         const preparedData = prepareChartData(data, {
           selectedColumn: selectedColumn as keyof JudgmentData
         });
-        console.log('Chart Data:', preparedData); // Added logging
         setChartData(preparedData);
       } catch (error) {
         console.error('Error preparing chart data:', error);

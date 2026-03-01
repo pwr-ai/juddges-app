@@ -232,7 +232,7 @@ export function DocumentCardCompact({
               </div>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed pl-5">
-              We're continuously working on improving our features and expanding metadata coverage.
+              We&apos;re continuously working on improving our features and expanding metadata coverage.
             </p>
           </div>
         )}

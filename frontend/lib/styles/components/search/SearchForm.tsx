@@ -1,0 +1,237 @@
+"use client";
+
+import { forwardRef, useEffect, useRef, useState } from "react";
+import { Search } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { AutocompleteSuggestion } from "@/hooks/useSearchAutocomplete";
+import { DocumentType } from "@/types/search";
+
+type SearchMode = "rabbit" | "thinking";
+
+export interface SearchFormProps {
+  query: string;
+  setQuery: (value: string) => void;
+  searchType: SearchMode;
+  setSearchType: (value: SearchMode) => void;
+  documentTypes: DocumentType[];
+  toggleDocumentType: (type: DocumentType) => void;
+  selectedLanguages: Set<string>;
+  toggleLanguage: (language: string) => void;
+  setDocumentTypes: (types: DocumentType[]) => void;
+  setSelectedLanguages: (languages: Set<string>) => void;
+  isSearching: boolean;
+  hasResults: boolean;
+  hasError: boolean;
+  hasPerformedSearch: boolean;
+  onSearch: (mode?: SearchMode) => void;
+  autocompleteSuggestions?: AutocompleteSuggestion[];
+  isAutocompleteLoading?: boolean;
+  onSelectAutocompleteSuggestion?: (value: string) => void;
+}
+
+type PopularSearch = {
+  label: string;
+  mode: SearchMode;
+  documentTypes: DocumentType[];
+  languages: Set<string>;
+};
+
+const POPULAR_SEARCHES: PopularSearch[] = [
+  {
+    label: "Swiss franc loans",
+    mode: "thinking",
+    documentTypes: [DocumentType.JUDGMENT],
+    languages: new Set(["uk"]),
+  },
+  {
+    label: "IP Box tax relief",
+    mode: "thinking",
+    documentTypes: [DocumentType.TAX_INTERPRETATION],
+    languages: new Set(["pl"]),
+  },
+  {
+    label: "VAT regulations",
+    mode: "thinking",
+    documentTypes: [DocumentType.TAX_INTERPRETATION],
+    languages: new Set(["pl"]),
+  },
+];
+
+export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function SearchForm(
+  {
+    query,
+    setQuery,
+    setSearchType,
+    setDocumentTypes,
+    setSelectedLanguages,
+    isSearching,
+    hasResults,
+    hasError,
+    hasPerformedSearch,
+    onSearch,
+    autocompleteSuggestions = [],
+    isAutocompleteLoading = false,
+    onSelectAutocompleteSuggestion,
+  },
+  forwardedRef
+): React.JSX.Element {
+  const internalRef = useRef<HTMLInputElement>(null);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const setInputRef = (node: HTMLInputElement | null): void => {
+    internalRef.current = node;
+    if (!forwardedRef) {
+      return;
+    }
+    if (typeof forwardedRef === "function") {
+      forwardedRef(node);
+      return;
+    }
+    forwardedRef.current = node;
+  };
+
+  const handleSubmit = (event?: React.FormEvent): void => {
+    if (event) {
+      event.preventDefault();
+    }
+    if (!query.trim()) {
+      return;
+    }
+    onSearch();
+  };
+
+  const handlePopularSearch = (item: PopularSearch): void => {
+    setQuery(item.label);
+    setSearchType(item.mode);
+    setDocumentTypes(item.documentTypes);
+    setSelectedLanguages(item.languages);
+    internalRef.current?.focus();
+  };
+
+  const showPopularSearches = !hasPerformedSearch && !hasResults && !hasError;
+  const showSuggestions =
+    query.trim().length >= 2 &&
+    !isSearching &&
+    (isAutocompleteLoading || autocompleteSuggestions.length > 0);
+
+  const handleSuggestionSelect = (suggestion: string): void => {
+    if (onSelectAutocompleteSuggestion) {
+      onSelectAutocompleteSuggestion(suggestion);
+    } else {
+      setQuery(suggestion);
+    }
+    internalRef.current?.focus();
+  };
+
+  useEffect(() => {
+    setActiveSuggestionIndex(-1);
+  }, [query, autocompleteSuggestions.length, isAutocompleteLoading]);
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (!showSuggestions || autocompleteSuggestions.length === 0 || isAutocompleteLoading) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestionIndex((prev) => Math.min(prev + 1, autocompleteSuggestions.length - 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestionIndex((prev) => Math.max(prev - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter" && activeSuggestionIndex >= 0) {
+      event.preventDefault();
+      const selected = autocompleteSuggestions[activeSuggestionIndex];
+      if (selected) {
+        handleSuggestionSelect(selected.title);
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setActiveSuggestionIndex(-1);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`rounded-xl border bg-background/80 px-4 py-3 ${hasError ? "pb-2" : ""}`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Input
+          ref={setInputRef}
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={handleInputKeyDown}
+          placeholder="VAT refund for digital services in Poland"
+          disabled={isSearching}
+          className="h-11"
+        />
+        <Button
+          type="submit"
+          disabled={isSearching || !query.trim()}
+          className="h-11 min-w-[112px]"
+          aria-label="Search"
+        >
+          <Search className="mr-1 h-4 w-4" />
+          Search
+        </Button>
+      </div>
+
+      {showSuggestions && (
+        <div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-background/60 p-2">
+          <div className="px-1 text-xs text-muted-foreground">Suggestions</div>
+          {isAutocompleteLoading ? (
+            <p className="px-1 text-sm text-muted-foreground">Loading suggestions...</p>
+          ) : (
+            <div role="listbox" aria-label="Autocomplete suggestions" className="space-y-1">
+              {autocompleteSuggestions.map((item, index) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="option"
+                  aria-selected={index === activeSuggestionIndex}
+                  className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted ${
+                    index === activeSuggestionIndex ? "bg-muted" : ""
+                  }`}
+                  onMouseEnter={() => setActiveSuggestionIndex(index)}
+                  onClick={() => handleSuggestionSelect(item.title)}
+                  aria-label={`Use suggestion: ${item.title}`}
+                >
+                  <div className="font-medium">{item.title}</div>
+                  {item.summary ? (
+                    <div className="text-xs text-muted-foreground line-clamp-1">{item.summary}</div>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showPopularSearches && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Popular searches</span>
+          {POPULAR_SEARCHES.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => handlePopularSearch(item)}
+              className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </form>
+  );
+});

@@ -43,124 +43,14 @@ import {
   Download,
 } from "lucide-react";
 import type { BlogPost } from "@/types/blog";
+import {
+  deleteAdminPost,
+  fetchAdminPosts,
+  fetchAdminStats,
+  type BlogStats,
+} from "@/lib/blog/admin-api";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-
-// Mock posts including drafts for admin view
-const mockPosts: BlogPost[] = [
-  {
-    id: "1",
-    slug: "ai-legal-research-future",
-    title: "The Future of AI in Legal Research: Trends and Innovations",
-    excerpt:
-      "Exploring how artificial intelligence is revolutionizing legal research and what it means for the future of law practice.",
-    featured_image: "/api/placeholder/800/600",
-    author: {
-      name: "Łukasz Augustyniak",
-      title: "Research Lead @ WUST",
-    },
-    status: "published",
-    published_at: "2025-01-10T10:00:00Z",
-    created_at: "2025-01-08T10:00:00Z",
-    updated_at: "2025-01-10T10:00:00Z",
-    tags: ["AI", "Legal Tech", "Research"],
-    category: "Research",
-    read_time: 8,
-    views: 1247,
-    likes: 89,
-    ai_summary:
-      "This article discusses the transformative impact of AI on legal research.",
-  },
-  {
-    id: "2",
-    slug: "understanding-tax-interpretations",
-    title: "Understanding Polish Tax Interpretations: A Complete Guide",
-    excerpt:
-      "A comprehensive guide to navigating tax interpretations in Poland.",
-    author: {
-      name: "Anna Kowalska",
-      title: "Tax Law Expert",
-    },
-    status: "published",
-    published_at: "2025-01-05T14:30:00Z",
-    created_at: "2025-01-03T10:00:00Z",
-    updated_at: "2025-01-05T14:30:00Z",
-    tags: ["Tax", "Legal", "Poland"],
-    category: "Tutorials",
-    read_time: 12,
-    views: 2341,
-    likes: 156,
-  },
-  {
-    id: "3",
-    slug: "new-document-analysis-features",
-    title: "Introducing Advanced Document Analysis Features",
-    excerpt:
-      "We're excited to announce new AI-powered document analysis features.",
-    featured_image: "/api/placeholder/800/600",
-    author: {
-      name: "System Admin",
-      title: "Product Team",
-    },
-    status: "published",
-    published_at: "2025-01-02T09:00:00Z",
-    created_at: "2025-01-01T10:00:00Z",
-    updated_at: "2025-01-02T09:00:00Z",
-    tags: ["Updates", "Features", "AI"],
-    category: "Updates",
-    read_time: 5,
-    views: 3892,
-    likes: 234,
-  },
-  {
-    id: "4",
-    slug: "supreme-court-decisions-analysis",
-    title: "Analyzing Recent Supreme Court Decisions: Key Takeaways",
-    excerpt:
-      "An in-depth analysis of recent Supreme Court rulings and their implications.",
-    author: {
-      name: "Dr. Piotr Nowak",
-      title: "Legal Scholar",
-    },
-    status: "draft",
-    created_at: "2024-12-28T10:00:00Z",
-    updated_at: "2024-12-30T15:00:00Z",
-    tags: ["Supreme Court", "Analysis", "Case Law"],
-    category: "Insights",
-    read_time: 15,
-    views: 0,
-    likes: 0,
-  },
-  {
-    id: "5",
-    slug: "upcoming-legal-changes-2025",
-    title: "Upcoming Legal Changes in 2025: What You Need to Know",
-    excerpt: "A preview of important legal changes coming in 2025.",
-    author: {
-      name: "Anna Kowalska",
-      title: "Tax Law Expert",
-    },
-    status: "scheduled",
-    published_at: "2025-02-01T09:00:00Z",
-    created_at: "2025-01-05T10:00:00Z",
-    updated_at: "2025-01-08T15:00:00Z",
-    tags: ["Legal", "Updates", "2025"],
-    category: "Updates",
-    read_time: 10,
-    views: 0,
-    likes: 0,
-  },
-];
-
-interface BlogStats {
-  total_posts: number;
-  published: number;
-  drafts: number;
-  scheduled: number;
-  total_views: number;
-  total_likes: number;
-  avg_read_time: number;
-}
 
 export default function AdminBlogPage(): React.JSX.Element {
   const router = useRouter();
@@ -173,41 +63,31 @@ export default function AdminBlogPage(): React.JSX.Element {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
-    const fetchPosts = async (): Promise<void> => {
+    const loadBlogAdminData = async (): Promise<void> => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        
-        setPosts(mockPosts);
-        setFilteredPosts(mockPosts);
+        const [postsResponse, statsResponse] = await Promise.all([
+          fetchAdminPosts({ page: 1, limit: 200 }),
+          fetchAdminStats(),
+        ]);
 
-        // Calculate stats
-        const published = mockPosts.filter((p) => p.status === "published");
-        setStats({
-          total_posts: mockPosts.length,
-          published: published.length,
-          drafts: mockPosts.filter((p) => p.status === "draft").length,
-          scheduled: mockPosts.filter((p) => p.status === "scheduled").length,
-          total_views: published.reduce((sum, p) => sum + (p.views || 0), 0),
-          total_likes: published.reduce((sum, p) => sum + (p.likes || 0), 0),
-          avg_read_time:
-            published.length > 0
-              ? published.reduce((sum, p) => sum + (p.read_time || 0), 0) /
-                published.length
-              : 0,
-        });
+        setPosts(postsResponse.data);
+        setFilteredPosts(postsResponse.data);
+        setStats(statsResponse);
       } catch (error) {
-        console.error("Error fetching posts:", error);
+        console.error("Error fetching blog admin data:", error);
         toast.error("Failed to load posts", {
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred.",
         });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPosts();
+    loadBlogAdminData();
   }, []);
 
   useEffect(() => {
@@ -237,19 +117,25 @@ export default function AdminBlogPage(): React.JSX.Element {
   const handleDelete = async (id: string): Promise<void> => {
     try {
       // Confirm deletion
-      const confirmed = window.confirm("Are you sure you want to delete this post? This action cannot be undone.");
-      
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this post? This action cannot be undone."
+      );
+
       if (!confirmed) {
         return;
       }
 
-      // TODO: Implement API call to delete post
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      setPosts(posts.filter((p) => p.id !== id));
-      setFilteredPosts(filteredPosts.filter((p) => p.id !== id));
-      
+      await deleteAdminPost(id);
+      setPosts((current) => current.filter((post) => post.id !== id));
+      setFilteredPosts((current) => current.filter((post) => post.id !== id));
+
+      try {
+        const refreshedStats = await fetchAdminStats();
+        setStats(refreshedStats);
+      } catch (refreshError) {
+        console.warn("Failed to refresh stats after delete", refreshError);
+      }
+
       toast.success("Post deleted successfully", {
         description: "The post has been permanently removed.",
       });

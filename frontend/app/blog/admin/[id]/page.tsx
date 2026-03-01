@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PostEditor } from "@/components/blog/admin/post-editor";
 import { ArrowLeft } from "lucide-react";
 import type { BlogPost } from "@/types/blog";
+import { fetchAdminPostById, updateAdminPost } from "@/lib/blog/admin-api";
 import { toast } from "sonner";
 import {
   PageContainer,
@@ -15,47 +16,25 @@ import {
   LoadingIndicator,
 } from "@/lib/styles/components";
 
-// Mock data - replace with actual API call
-const mockPost: BlogPost = {
-  id: "1",
-  slug: "ai-legal-research-future",
-  title: "The Future of AI in Legal Research: Trends and Innovations",
-  excerpt:
-    "Exploring how artificial intelligence is revolutionizing legal research and what it means for the future of law practice.",
-  content: `# Introduction\n\nArtificial intelligence is transforming the legal industry...`,
-  featured_image: "/api/placeholder/800/600",
-  author: {
-    name: "Łukasz Augustyniak",
-    title: "Research Lead @ WUST",
-  },
-  status: "published",
-  published_at: "2025-01-10T10:00:00Z",
-  created_at: "2025-01-08T10:00:00Z",
-  updated_at: "2025-01-10T10:00:00Z",
-  tags: ["AI", "Legal Tech", "Research"],
-  category: "Research",
-  read_time: 8,
-  views: 1247,
-  likes: 89,
-  ai_summary:
-    "This article discusses the transformative impact of AI on legal research.",
-};
-
 export default function EditPostPage(): React.JSX.Element {
   const params = useParams();
   const router = useRouter();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const postId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   useEffect(() => {
     const fetchPost = async (): Promise<void> => {
+      if (!postId) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        // Simulate API call to fetch post
-        // In production, fetch by params.id
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setPost(mockPost);
+        const loadedPost = await fetchAdminPostById(postId);
+        setPost(loadedPost);
       } catch (error) {
         console.error("Error fetching post:", error);
         toast.error("Failed to load post", {
@@ -67,16 +46,19 @@ export default function EditPostPage(): React.JSX.Element {
     };
 
     fetchPost();
-  }, [params.id]);
+  }, [postId]);
 
-  const handleSave = async (_postData: Partial<BlogPost>): Promise<void> => {
-    // TODO: Use postData when implementing API call
-    void _postData;
+  const handleSave = async (postData: Partial<BlogPost>): Promise<void> => {
+    if (!post) {
+      return;
+    }
+
     try {
-      // TODO: Implement API call to update post
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
+      const updatedPost = await updateAdminPost(post.id, {
+        ...postData,
+        status: post.status,
+      });
+      setPost(updatedPost);
       setLastSaved(new Date());
       toast.success("Post updated successfully", {
         description: "Your changes have been saved.",
@@ -89,13 +71,18 @@ export default function EditPostPage(): React.JSX.Element {
     }
   };
 
-  const handlePublish = async (_postData: Partial<BlogPost>): Promise<void> => {
-    // TODO: Use postData when implementing API call
-    void _postData;
+  const handlePublish = async (postData: Partial<BlogPost>): Promise<void> => {
+    if (!post) {
+      return;
+    }
+
     try {
-      // TODO: Implement API call to publish/update post
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const updatedPost = await updateAdminPost(post.id, {
+        ...postData,
+        status: "published",
+        published_at: new Date().toISOString(),
+      });
+      setPost(updatedPost);
       
       toast.success("Post published successfully", {
         description: "Your post is now live.",

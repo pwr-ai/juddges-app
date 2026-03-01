@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import logger from "@/lib/logger";
+
+const unsavedChangesLogger = logger.child("unsaved-changes");
 
 /**
  * Hook to prevent page reload when there are unsaved changes
@@ -34,8 +37,7 @@ export function useUnsavedChangesWarning(
       // This works for: page reload (F5, Cmd+R), closing tab/window, navigating away
       const confirmationMessage = message || "You have unsaved changes. Are you sure you want to leave?";
       
-      // DEBUG: Log when beforeunload is triggered
-      console.log('[useUnsavedChangesWarning] beforeunload triggered, showing confirmation dialog');
+      unsavedChangesLogger.debug("beforeunload triggered");
       
       // Call preventDefault to prevent the default action
       e.preventDefault();
@@ -48,18 +50,17 @@ export function useUnsavedChangesWarning(
       return confirmationMessage;
     };
 
-    // DEBUG: Log when event listener is attached
-    console.log('[useUnsavedChangesWarning] Attaching beforeunload listener, hasUnsavedChanges:', hasUnsavedChanges);
+    unsavedChangesLogger.debug("attaching beforeunload listener", {
+      hasUnsavedChanges,
+    });
 
     // Add event listener for beforeunload (catches reload, close, navigation)
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      // DEBUG: Log when event listener is removed
-      console.log('[useUnsavedChangesWarning] Removing beforeunload listener');
+      unsavedChangesLogger.debug("removing beforeunload listener");
       // Clean up event listener when component unmounts or hasUnsavedChanges becomes false
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasUnsavedChanges, message]);
 }
-

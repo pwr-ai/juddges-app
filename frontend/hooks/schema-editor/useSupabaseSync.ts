@@ -588,9 +588,10 @@ export function useSupabaseSync(
    * Cleanup debounce timer on unmount
    */
   useEffect(() => {
+    const activeTimer = debounceTimerRef.current;
     return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+      if (activeTimer) {
+        clearTimeout(activeTimer);
       }
     };
   }, []);

@@ -43,6 +43,7 @@ from app.embeddings_api import router as embeddings_router
 from app.marketplace import router as marketplace_router
 from app.timeline_extraction import router as timeline_router
 from app.graphql_api.router import graphql_router
+from app.rate_limiter import limiter, RATE_LIMIT_STORAGE_URI, DEFAULT_RATE_LIMITS
 
 # Import Day 1 feature routers
 from app.guest_sessions import router as guest_sessions_router
@@ -51,8 +52,10 @@ from app.feedback import router as feedback_router
 
 # Import audit trail and compliance routers
 from app.api.audit import router as audit_router
+from app.api.blog import router as blog_router
 from app.api.consent import router as consent_router
 from app.api.legal import router as legal_router
+from app.api.search import router as search_router
 from app.api.sso import router as sso_router
 
 # Import admin router (JWT + require_admin auth, no API key dependency)
@@ -65,8 +68,7 @@ from app.health import router as health_router
 from app.langchain_cache import setup_langchain_cache
 
 # Rate limiting imports
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 # Suppress SSL ResourceWarnings from httpx/supabase/langchain clients
@@ -96,6 +98,10 @@ def validate_environment_variables():
         "LANGFUSE_PUBLIC_KEY": "Langfuse public key (for observability)",
         "LANGFUSE_SECRET_KEY": "Langfuse secret key (for observability)",
         "LANGFUSE_HOST": "Langfuse host URL (for observability)",
+        "MEILISEARCH_URL": "Meilisearch endpoint URL (for autocomplete search)",
+        "MEILISEARCH_SEARCH_KEY": "Meilisearch search key (preferred for query-only use)",
+        "MEILISEARCH_ADMIN_KEY": "Meilisearch admin key (fallback if search key not set)",
+        "MEILISEARCH_INDEX_NAME": "Meilisearch index name (default: documents)",
     }
 
     missing_required = []
@@ -314,26 +320,12 @@ app = FastAPI(
 # Override default OpenAPI schema generation
 app.openapi = custom_openapi
 
-# Configure rate limiting with Redis backend
+# Configure rate limiting
 logger.info("Configuring rate limiting...")
-redis_host = os.getenv("REDIS_HOST", "redis")
-redis_port = os.getenv("REDIS_PORT", "6379")
-redis_auth = os.getenv("REDIS_AUTH", "")
-
-# Build Redis connection URL
-redis_url = f"redis://{redis_host}:{redis_port}"
-if redis_auth:
-    redis_url = f"redis://:{redis_auth}@{redis_host}:{redis_port}"
-
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["100 per minute", "1000 per hour"],
-    storage_uri=redis_url,
-)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 logger.info(
-    f"Rate limiting enabled: 100 req/min, 1000 req/hour (storage: {redis_host}:{redis_port})"
+    f"Rate limiting enabled: {', '.join(DEFAULT_RATE_LIMITS)} (storage: {RATE_LIMIT_STORAGE_URI})"
 )
 
 # Configure CORS with environment-based origins
@@ -472,6 +464,8 @@ app.include_router(argumentation_router, dependencies=[Depends(verify_api_key)])
 app.include_router(embeddings_router, dependencies=[Depends(verify_api_key)])
 app.include_router(marketplace_router, dependencies=[Depends(verify_api_key)])
 app.include_router(timeline_router, dependencies=[Depends(verify_api_key)])
+app.include_router(blog_router, dependencies=[Depends(verify_api_key)])
+app.include_router(search_router, dependencies=[Depends(verify_api_key)])
 
 # Experiments - uses JWT authentication (implemented in endpoints)
 app.include_router(experiments_router)

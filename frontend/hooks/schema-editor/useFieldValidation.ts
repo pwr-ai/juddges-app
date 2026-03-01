@@ -136,6 +136,124 @@ const fieldSchema = z.object({
   validation_rules: validationRulesSchema,
 });
 
+function validateTypeSpecificRules(field: SchemaField): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const rules = field.validation_rules;
+
+  switch (field.field_type) {
+    case 'string':
+      if (rules.minimum !== undefined || rules.maximum !== undefined) {
+        errors.push({
+          fieldId: field.id,
+          fieldPath: field.field_path,
+          message: 'Minimum/maximum are not valid for string fields (use minLength/maxLength)',
+          severity: 'warning',
+          source: 'zod',
+        });
+      }
+      break;
+    case 'number':
+      if (rules.minLength !== undefined || rules.maxLength !== undefined) {
+        errors.push({
+          fieldId: field.id,
+          fieldPath: field.field_path,
+          message: 'minLength/maxLength are not valid for number fields (use minimum/maximum)',
+          severity: 'warning',
+          source: 'zod',
+        });
+      }
+      if (rules.pattern !== undefined) {
+        errors.push({
+          fieldId: field.id,
+          fieldPath: field.field_path,
+          message: 'Pattern is not valid for number fields',
+          severity: 'warning',
+          source: 'zod',
+        });
+      }
+      break;
+    case 'boolean':
+      if (
+        rules.minLength !== undefined ||
+        rules.maxLength !== undefined ||
+        rules.minimum !== undefined ||
+        rules.maximum !== undefined ||
+        rules.pattern !== undefined
+      ) {
+        errors.push({
+          fieldId: field.id,
+          fieldPath: field.field_path,
+          message: 'Boolean fields do not support length or range validation',
+          severity: 'warning',
+          source: 'zod',
+        });
+      }
+      break;
+    case 'array':
+      if (rules.minLength !== undefined || rules.maxLength !== undefined) {
+        errors.push({
+          fieldId: field.id,
+          fieldPath: field.field_path,
+          message: 'Use minItems/maxItems for array fields instead of minLength/maxLength',
+          severity: 'warning',
+          source: 'zod',
+        });
+      }
+      break;
+    case 'object':
+      if (rules.minLength !== undefined || rules.maxLength !== undefined) {
+        errors.push({
+          fieldId: field.id,
+          fieldPath: field.field_path,
+          message: 'Use minProperties/maxProperties for object fields',
+          severity: 'warning',
+          source: 'zod',
+        });
+      }
+      break;
+  }
+
+  return errors;
+}
+
+function compileFieldsToJsonSchema(fields: SchemaField[]): Record<string, unknown> {
+  const properties: Record<string, unknown> = {};
+  const required: string[] = [];
+
+  const rootFields = fields.filter((f) => !f.parent_field_id);
+
+  rootFields.forEach((field) => {
+    const fieldSchema: Record<string, unknown> = {
+      type: field.field_type,
+      description: field.description || undefined,
+      ...field.validation_rules,
+    };
+
+    if (field.field_type === 'object') {
+      const childFields = fields.filter((f) => f.parent_field_id === field.id);
+      if (childFields.length > 0) {
+        const nested = compileFieldsToJsonSchema(childFields);
+        fieldSchema.properties = nested.properties;
+        if (nested.required && (nested.required as string[]).length > 0) {
+          fieldSchema.required = nested.required;
+        }
+      }
+    }
+
+    properties[field.field_name] = fieldSchema;
+
+    if (field.is_required) {
+      required.push(field.field_name);
+    }
+  });
+
+  return {
+    type: 'object',
+    properties,
+    required: required.length > 0 ? required : undefined,
+  };
+}
+
 /**
  * Hook return value
  */
@@ -330,103 +448,6 @@ export function useFieldValidation(): UseFieldValidationReturn {
   );
 
   /**
-   * Validate type-specific rules
-   *
-   * Ensures validation rules are appropriate for the field type.
-   */
-  const validateTypeSpecificRules = useCallback(
-    (field: SchemaField): ValidationError[] => {
-      const errors: ValidationError[] = [];
-      const rules = field.validation_rules;
-
-      switch (field.field_type) {
-        case 'string':
-          // String rules
-          if (rules.minimum !== undefined || rules.maximum !== undefined) {
-            errors.push({
-              fieldId: field.id,
-              fieldPath: field.field_path,
-              message: 'Minimum/maximum are not valid for string fields (use minLength/maxLength)',
-              severity: 'warning',
-              source: 'zod',
-            });
-          }
-          break;
-
-        case 'number':
-          // Number rules
-          if (rules.minLength !== undefined || rules.maxLength !== undefined) {
-            errors.push({
-              fieldId: field.id,
-              fieldPath: field.field_path,
-              message: 'minLength/maxLength are not valid for number fields (use minimum/maximum)',
-              severity: 'warning',
-              source: 'zod',
-            });
-          }
-          if (rules.pattern !== undefined) {
-            errors.push({
-              fieldId: field.id,
-              fieldPath: field.field_path,
-              message: 'Pattern is not valid for number fields',
-              severity: 'warning',
-              source: 'zod',
-            });
-          }
-          break;
-
-        case 'boolean':
-          // Boolean fields don't support most validation rules
-          if (
-            rules.minLength !== undefined ||
-            rules.maxLength !== undefined ||
-            rules.minimum !== undefined ||
-            rules.maximum !== undefined ||
-            rules.pattern !== undefined
-          ) {
-            errors.push({
-              fieldId: field.id,
-              fieldPath: field.field_path,
-              message: 'Boolean fields do not support length or range validation',
-              severity: 'warning',
-              source: 'zod',
-            });
-          }
-          break;
-
-        case 'array':
-          // Array-specific validation
-          if (rules.minLength !== undefined || rules.maxLength !== undefined) {
-            errors.push({
-              fieldId: field.id,
-              fieldPath: field.field_path,
-              message: 'Use minItems/maxItems for array fields instead of minLength/maxLength',
-              severity: 'warning',
-              source: 'zod',
-            });
-          }
-          break;
-
-        case 'object':
-          // Object-specific validation
-          if (rules.minLength !== undefined || rules.maxLength !== undefined) {
-            errors.push({
-              fieldId: field.id,
-              fieldPath: field.field_path,
-              message: 'Use minProperties/maxProperties for object fields',
-              severity: 'warning',
-              source: 'zod',
-            });
-          }
-          break;
-      }
-
-      return errors;
-    },
-    []
-  );
-
-  /**
    * Validate entire schema against backend
    *
    * Compiles all fields to JSON Schema and validates with backend Pydantic validation.
@@ -530,51 +551,6 @@ export function useFieldValidation(): UseFieldValidationReturn {
       return false;
     }
   }, [fields, validateField, addValidationError]);
-
-  /**
-   * Compile fields to JSON Schema format
-   *
-   * Converts SchemaField[] to standard JSON Schema object.
-   */
-  const compileFieldsToJsonSchema = useCallback((fields: SchemaField[]): Record<string, unknown> => {
-    const properties: Record<string, unknown> = {};
-    const required: string[] = [];
-
-    // Process only root-level fields (parent_field_id is null)
-    const rootFields = fields.filter((f) => !f.parent_field_id);
-
-    rootFields.forEach((field) => {
-      const fieldSchema: Record<string, unknown> = {
-        type: field.field_type,
-        description: field.description || undefined,
-        ...field.validation_rules,
-      };
-
-      // Handle nested objects
-      if (field.field_type === 'object') {
-        const childFields = fields.filter((f) => f.parent_field_id === field.id);
-        if (childFields.length > 0) {
-          const nested = compileFieldsToJsonSchema(childFields);
-          fieldSchema.properties = nested.properties;
-          if (nested.required && (nested.required as string[]).length > 0) {
-            fieldSchema.required = nested.required;
-          }
-        }
-      }
-
-      properties[field.field_name] = fieldSchema;
-
-      if (field.is_required) {
-        required.push(field.field_name);
-      }
-    });
-
-    return {
-      type: 'object',
-      properties,
-      required: required.length > 0 ? required : undefined,
-    };
-  }, []);
 
   /**
    * Clear validation errors for a field

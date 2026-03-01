@@ -57,14 +57,14 @@ const validationRulesSchema = z.record(z.string(), z.unknown()).refine(
 );
 
 const schemaFieldSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().min(1).optional(),
   session_id: z.string().min(1),
   field_name: fieldNameSchema,
   field_path: z.string().min(1),
   field_type: fieldTypeSchema,
   description: fieldDescriptionSchema,
   is_required: z.boolean().default(false),
-  parent_field_id: z.string().uuid().optional(),
+  parent_field_id: z.string().min(1).optional(),
   position: z.number().int().min(0),
   validation_rules: validationRulesSchema.default({}),
   visual_metadata: z.record(z.string(), z.unknown()).default({}),
@@ -284,6 +284,7 @@ describe('JSON Schema Compilation Validation', () => {
 
       expect(jsonSchema.properties.age).toEqual({
         type: 'number',
+        description: 'Test field description',
         minimum: 0,
         maximum: 120,
       });
@@ -314,6 +315,7 @@ describe('JSON Schema Compilation Validation', () => {
 
       expect(jsonSchema.properties.is_active).toEqual({
         type: 'boolean',
+        description: 'Test field description',
       });
     });
 

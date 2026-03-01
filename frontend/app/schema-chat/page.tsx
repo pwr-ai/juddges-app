@@ -1,23 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { SchemaStudioLayout } from "@/components/schema-studio/SchemaStudioLayout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FolderOpen, Settings, X, Database, Edit2, Check, Eye, FileCode, Sparkles, RefreshCw, Save, Plus, Download, Upload, CheckCircle2, Copy } from "lucide-react";
+import { Loader2, X, Edit2, Check, FileCode, RefreshCw, Plus, Upload, CheckCircle2, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useSchemaEditorStore } from "@/hooks/schema-editor/useSchemaEditorStore";
 import { schemaService } from "@/lib/schema-editor/service";
 import type { SchemaSaveResponse } from "@/lib/schema-editor/service";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -29,35 +22,22 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { PageContainer, SecondaryButton, AccentButton, IconButton, BaseCard, LightCard, SectionHeader, SearchableDropdownButton, PrimaryButton, VerifiedBadge, SchemaStatusBadge } from "@/lib/styles/components";
+import { SecondaryButton, IconButton, PrimaryButton, VerifiedBadge } from "@/lib/styles/components";
 import { SchemaStatusSelector } from "@/lib/styles/components/schema-status-selector";
 import type { SchemaStatus } from "@/types/extraction_schemas";
+import type { SchemaMetadata } from "@/hooks/schema-editor/types";
 import { Label } from "@/components/ui/label";
 import { SaveActions } from "@/components/schema-studio/SaveActions";
-import { exportSchemaAsJSON, exportSchemaAsYAML, compileSchemaFieldsToJSONSchema } from "@/lib/schema-editor/compiler";
-import { ExtractionDataViewer } from "@/lib/styles/components/extraction/ExtractionDataViewer";
+import { exportSchemaAsJSON, exportSchemaAsYAML } from "@/lib/schema-editor/compiler";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TabsContent } from "@/components/ui/tabs";
 import { TabSelector } from "@/components/schema-studio/TabSelector";
 import { cn } from "@/lib/utils";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
+import { useSchemaNavigationInterception } from "@/hooks/schema-chat/useSchemaNavigationInterception";
+import { useSchemaPreviewData } from "@/hooks/schema-chat/useSchemaPreviewData";
+import { parseImportTextToSchema } from "@/lib/schema-chat/import-parser";
+import { SchemaDialogs } from "@/components/schema-chat/SchemaDialogs";
 
 interface Collection {
   id: string;
@@ -70,11 +50,10 @@ export default function SchemaStudioPage(): React.JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [selectedCollection, setSelectedCollection] = useState<string>("");
+  const [selectedCollection] = useState<string>("");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [sessionId, setSessionId] = useState<string>("");
   const [isInitializing, setIsInitializing] = useState(true);
-  const [agentMode, setAgentMode] = useState<"rabbit" | "thinking">("rabbit");
   const [showSchemaPopover, setShowSchemaPopover] = useState(false);
   const [savedSchemas, setSavedSchemas] = useState<SchemaSaveResponse[]>([]);
   const [isLoadingSchemas, setIsLoadingSchemas] = useState(false);
@@ -83,9 +62,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
   const [importText, setImportText] = useState<string>("");
   const [importTab, setImportTab] = useState<"load" | "import">("load");
   const [hasLoadedFromUrl, setHasLoadedFromUrl] = useState(false);
-  const [savedProjects, setSavedProjects] = useState<Array<{ id: string; name: string; savedAt: string; data: any }>>([]);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-  const [projectName, setProjectName] = useState<string>("");
   const [isEditingSchemaName, setIsEditingSchemaName] = useState(false);
   const [tempSchemaName, setTempSchemaName] = useState<string>("");
   const [isEditingSchemaDescription, setIsEditingSchemaDescription] = useState(false);
@@ -94,31 +70,20 @@ export default function SchemaStudioPage(): React.JSX.Element {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showNewSchemaDialog, setShowNewSchemaDialog] = useState(false);
   const [showLoadSchemaDialog, setShowLoadSchemaDialog] = useState(false);
-  const [showNavigationDialog, setShowNavigationDialog] = useState(false);
   const [pendingLoadSchemaId, setPendingLoadSchemaId] = useState<string | null>(null);
-  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const [saveSchemaName, setSaveSchemaName] = useState<string>("");
   const [saveSchemaDescription, setSaveSchemaDescription] = useState<string>("");
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [schemaOwnerId, setSchemaOwnerId] = useState<string | null>(null);
   const [saveDialogError, setSaveDialogError] = useState<string | null>(null);
-  const [isNewOrDuplicatedSchema, setIsNewOrDuplicatedSchema] = useState<boolean>(false);
   const [schemaStatus, setSchemaStatus] = useState<SchemaStatus>('draft');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
-
-  // Store original router methods to bypass interception when confirming navigation
-  const originalRouterMethodsRef = useRef<{
-    push: typeof router.push;
-    replace: typeof router.replace;
-    back: typeof router.back;
-  } | null>(null);
 
   // Get store methods
   const { 
     setFields, 
     updateMetadata, 
     initializeSession, 
-    updateField,
     schemaId,
     fields,
     metadata,
@@ -130,7 +95,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
   } = useSchemaEditorStore();
 
   const schemaName = metadata?.name || "Untitled Schema Project";
-  const displayName = projectName.trim() || schemaName;
+  const displayName = schemaName;
 
   // Prevent page reload when there are unsaved changes
   useUnsavedChangesWarning(
@@ -138,300 +103,24 @@ export default function SchemaStudioPage(): React.JSX.Element {
     "You have unsaved changes to your schema. Are you sure you want to leave?"
   );
 
-  // Initialize router methods ref on mount
-  useEffect(() => {
-    if (!originalRouterMethodsRef.current) {
-      originalRouterMethodsRef.current = {
-        push: router.push,
-        replace: router.replace,
-        back: router.back,
-      };
-    }
-  }, [router]);
-
-  // Intercept Next.js router navigation when there are unsaved changes
-  useEffect(() => {
-    if (!isDirty) {
-      return;
-    }
-
-    // Intercept Link clicks
-    const handleLinkClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-      
-      if (!link) return;
-      
-      const href = link.getAttribute('href');
-      if (!href) return;
-      
-      // Skip if it's the same page or external link
-      if (href === pathname || href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('#')) {
-        return;
-      }
-      
-      // Skip if it's a download link
-      if (link.hasAttribute('download')) {
-        return;
-      }
-      
-      // Prevent default navigation
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Show confirmation dialog
-      setPendingNavigationUrl(href);
-      setShowNavigationDialog(true);
-    };
-
-    // Intercept router.push calls by patching the router
-    const originalPush = router.push;
-    const originalReplace = router.replace;
-    const originalBack = router.back;
-
-    // Store original methods in ref so they can be accessed in handleConfirmNavigation
-    originalRouterMethodsRef.current = {
-      push: originalPush,
-      replace: originalReplace,
-      back: originalBack,
-    };
-
-    const interceptedPush = (href: string, options?: { scroll?: boolean }) => {
-      // Check if navigating to a different path
-      if (href !== pathname && isDirty) {
-        setPendingNavigationUrl(href);
-        setShowNavigationDialog(true);
-        return;
-      }
-      
-      // Same path or no unsaved changes, proceed normally
-      return originalPush(href, options);
-    };
-
-    const interceptedReplace = (href: string, options?: { scroll?: boolean }) => {
-      // Check if navigating to a different path
-      if (href !== pathname && isDirty) {
-        setPendingNavigationUrl(href);
-        setShowNavigationDialog(true);
-        return;
-      }
-      
-      // Same path or no unsaved changes, proceed normally
-      return originalReplace(href, options);
-    };
-
-    const interceptedBack = () => {
-      if (isDirty) {
-        setPendingNavigationUrl(null);
-        setShowNavigationDialog(true);
-        return;
-      }
-      
-      return originalBack();
-    };
-
-    // Patch router methods
-    (router as any).push = interceptedPush;
-    (router as any).replace = interceptedReplace;
-    (router as any).back = interceptedBack;
-
-    // Add click listener for Link components
-    document.addEventListener('click', handleLinkClick, true);
-
-    return () => {
-      // Restore original methods
-      (router as any).push = originalPush;
-      (router as any).replace = originalReplace;
-      (router as any).back = originalBack;
-      
-      // Remove click listener
-      document.removeEventListener('click', handleLinkClick, true);
-    };
-  }, [isDirty, router, pathname]);
-
-  // Handle confirmed navigation
-  const handleConfirmNavigation = () => {
-    // Use original router methods to bypass interception
-    const originalMethods = originalRouterMethodsRef.current;
-    if (!originalMethods) {
-      // Fallback to router methods if refs not set (shouldn't happen)
-      if (pendingNavigationUrl) {
-        router.push(pendingNavigationUrl);
-      } else {
-        router.back();
-      }
-    } else {
-      if (pendingNavigationUrl) {
-        originalMethods.push(pendingNavigationUrl);
-      } else {
-        originalMethods.back();
-      }
-    }
-    setShowNavigationDialog(false);
-    setPendingNavigationUrl(null);
-  };
+  const {
+    showNavigationDialog,
+    setShowNavigationDialog,
+    confirmNavigation,
+    cancelNavigation,
+  } = useSchemaNavigationInterception({
+    isDirty,
+    router,
+    pathname,
+  });
 
   // Don't auto-sync save dialog fields with metadata - only sync when dialog opens
 
-  // Generate placeholder data for preview from current schema fields
-  const generatePreviewData = React.useMemo(() => {
-    if (fields.length === 0) return {};
-
-    // Compile fields to JSON Schema
-    const compilationResult = compileSchemaFieldsToJSONSchema(fields, {
-      name: schemaName,
-      description: metadata?.description,
-    });
-
-    if (!compilationResult.success || !compilationResult.schema) {
-      return {};
-    }
-
-    const schema = compilationResult.schema;
-    const placeholderData: Record<string, any> = {};
-
-    const generatePlaceholder = (fieldName: string, fieldDef: any): any => {
-      if (!fieldDef || typeof fieldDef !== 'object') return null;
-
-      const fieldType = fieldDef.type || 'string';
-      const fieldNameFormatted = fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-      // Check if it's a date field
-      if (fieldDef.format === 'date' || (fieldDef.type === 'string' && fieldDef.format === 'date')) {
-        return '2024-01-15';
-      }
-
-      // Check if it's a datetime field
-      if (fieldDef.format === 'date-time' || fieldDef.format === 'datetime') {
-        return '2024-01-15T10:00:00Z';
-      }
-
-      // Check if it's an email field
-      if (fieldDef.format === 'email' || fieldType === 'email') {
-        return 'example@domain.com';
-      }
-
-      // Check if it's a URL field
-      if (fieldDef.format === 'uri' || fieldDef.format === 'url' || fieldType === 'url') {
-        return 'https://example.com';
-      }
-
-      // Check for enum
-      if (fieldDef.enum && Array.isArray(fieldDef.enum) && fieldDef.enum.length > 0) {
-        return fieldDef.enum[0];
-      }
-
-      switch (fieldType) {
-        case 'string':
-          // Use default if available
-          if (fieldDef.default !== undefined && fieldDef.default !== null) {
-            return fieldDef.default;
-          }
-          // Generate better sample text based on field name
-          const fieldNameLower = fieldName.toLowerCase();
-          if (fieldNameLower.includes('name') || fieldNameLower.includes('nazwa')) {
-            return 'John Doe';
-          }
-          if (fieldNameLower.includes('email') || fieldNameLower.includes('mail')) {
-            return 'example@email.com';
-          }
-          if (fieldNameLower.includes('phone') || fieldNameLower.includes('telefon')) {
-            return '+48 123 456 789';
-          }
-          if (fieldNameLower.includes('address') || fieldNameLower.includes('adres')) {
-            return '123 Main Street, Warsaw';
-          }
-          if (fieldNameLower.includes('question') || fieldNameLower.includes('pytanie')) {
-            return 'What is the tax rate for this transaction?';
-          }
-          if (fieldNameLower.includes('answer') || fieldNameLower.includes('odpowiedz')) {
-            return 'The tax rate is 23% according to current regulations.';
-          }
-          if (fieldNameLower.includes('description') || fieldNameLower.includes('opis')) {
-            return 'Detailed description of the field content';
-          }
-          if (fieldNameLower.includes('note') || fieldNameLower.includes('uwaga')) {
-            return 'Additional notes or comments';
-          }
-          if (fieldNameLower.includes('comment') || fieldNameLower.includes('komentarz')) {
-            return 'User comment or remark';
-          }
-          if (fieldNameLower.includes('title') || fieldNameLower.includes('tytul')) {
-            return 'Document Title';
-          }
-          if (fieldNameLower.includes('number') || fieldNameLower.includes('numer')) {
-            return '12345';
-          }
-          if (fieldNameLower.includes('code') || fieldNameLower.includes('kod')) {
-            return 'ABC123';
-          }
-          if (fieldNameLower.includes('id') || fieldNameLower.includes('identyfikator')) {
-            return 'ID-2024-001';
-          }
-          if (fieldNameLower.includes('status')) {
-            return 'Active';
-          }
-          if (fieldNameLower.includes('type')) {
-            return 'Standard';
-          }
-          // Default for other string fields
-          return 'Example text value';
-
-        case 'number':
-        case 'integer':
-          if (fieldDef.default !== undefined && fieldDef.default !== null) {
-            return fieldDef.default;
-          }
-          return 123;
-
-        case 'boolean':
-          if (fieldDef.default !== undefined && fieldDef.default !== null) {
-            return fieldDef.default;
-          }
-          return true;
-
-        case 'array':
-          if (fieldDef.items) {
-            const items = fieldDef.items;
-            if (items.type === 'object' && items.properties) {
-              // Array of objects
-              const sampleItem: Record<string, any> = {};
-              Object.entries(items.properties).forEach(([itemFieldName, itemFieldDef]: [string, any]) => {
-                sampleItem[itemFieldName] = generatePlaceholder(itemFieldName, itemFieldDef);
-              });
-              return [sampleItem];
-            } else if (items.type === 'string') {
-              return ['Item 1', 'Item 2', 'Item 3'];
-            } else if (items.type === 'number') {
-              return [1, 2, 3];
-            }
-          }
-          return ['Sample Item 1', 'Sample Item 2'];
-
-        case 'object':
-          if (fieldDef.properties) {
-            const nestedObj: Record<string, any> = {};
-            Object.entries(fieldDef.properties).forEach(([nestedFieldName, nestedFieldDef]: [string, any]) => {
-              nestedObj[nestedFieldName] = generatePlaceholder(nestedFieldName, nestedFieldDef);
-            });
-            return nestedObj;
-          }
-          return { sample: 'value' };
-
-        default:
-          return `Sample ${fieldNameFormatted}`;
-      }
-    };
-
-    // Generate placeholders for all top-level fields
-    if (schema.properties) {
-      Object.entries(schema.properties).forEach(([fieldName, fieldDef]: [string, any]) => {
-        placeholderData[fieldName] = generatePlaceholder(fieldName, fieldDef);
-      });
-    }
-
-    return placeholderData;
-  }, [fields, schemaName, metadata?.description]);
+  const generatePreviewData = useSchemaPreviewData(
+    fields,
+    schemaName,
+    metadata?.description
+  );
 
 
   const fetchCollections = async (): Promise<void> => {
@@ -444,40 +133,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
       console.error("Error fetching collections:", error);
       toast.error("Failed to load collections");
     }
-  };
-
-  const handleCollectionChange = (value: string): void => {
-    setSelectedCollection(value);
-    if (value === "none") {
-      toast.success("Schema is not scoped to any collection");
-    } else {
-      const collection = collections.find((c) => c.id === value);
-      toast.success(`Schema scoped to: ${collection?.name}`);
-    }
-  };
-
-  // Prepare collection options for SearchableDropdownButton
-  const collectionOptions = React.useMemo(() => {
-    const options = [
-      {
-        value: "none",
-        label: "No Collection",
-        description: "Schema applies to all documents",
-      },
-      ...collections.map((collection) => ({
-        value: collection.id,
-        label: collection.name,
-        description: collection.document_count !== undefined 
-          ? `${collection.document_count} documents`
-          : undefined,
-      })),
-    ];
-    return options;
-  }, [collections]);
-
-  const handleAgentModeChange = (mode: "rabbit" | "thinking"): void => {
-    setAgentMode(mode);
-    toast.success(`Agent mode changed to: ${mode === "rabbit" ? "Rabbit (Fast)" : "Thinking (Advanced)"}`);
   };
 
   const handleNewSession = (): void => {
@@ -498,7 +153,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
     setSelectedSchemaId("");
     setIsVerified(false); // Reset verification status for new schema
     setSchemaOwnerId(null); // Reset owner ID for new schema
-    setIsNewOrDuplicatedSchema(true); // Mark as new schema (will be saved as draft)
     setSchemaStatus('draft'); // Set status to draft for new schemas
     setShowNewSchemaDialog(false);
     
@@ -588,9 +242,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
       const schemaIdToUse = shouldSaveAsNew ? null : result.schema.id;
       initializeSession(currentSessionId, schemaIdToUse);
       
-      // Mark as new/duplicated if saving as new (will be saved as draft)
-      setIsNewOrDuplicatedSchema(shouldSaveAsNew);
-
       // Update fields in store - ensure all fields have the correct session_id
       const fieldsWithSession = result.fields.map(field => ({
         ...field,
@@ -626,8 +277,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
         router.replace(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false });
       } else {
         setSelectedSchemaId(loadSchemaId);
-        // Reset new/duplicated flag when loading existing schema
-        setIsNewOrDuplicatedSchema(false);
         // Update URL with schemaId parameter (without causing navigation)
         const params = new URLSearchParams(searchParams.toString());
         params.set('schemaId', loadSchemaId);
@@ -665,149 +314,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
 
     try {
       toast.loading('Importing schema...', { id: 'import-schema' });
-
-      // Parse the JSON text
-      const parsed = JSON.parse(importText);
-
-      // Normalize to CompiledJSONSchema format
-      // Support multiple formats:
-      // 1. Full JSON Schema with properties
-      // 2. Just properties object
-      // 3. Schema with "schema" field containing properties
-      let jsonSchema: any;
-      
-      if (parsed.properties) {
-        // Already a JSON Schema format
-        jsonSchema = {
-          type: 'object',
-          properties: parsed.properties,
-          required: Array.isArray(parsed.required) ? parsed.required : [],
-          additionalProperties: parsed.additionalProperties ?? false,
-        };
-      } else if (parsed.schema && parsed.schema.properties) {
-        // Schema with nested "schema" field
-        jsonSchema = {
-          type: 'object',
-          properties: parsed.schema.properties,
-          required: Array.isArray(parsed.schema.required) ? parsed.schema.required : [],
-          additionalProperties: parsed.schema.additionalProperties ?? false,
-        };
-      } else if (typeof parsed === 'object' && !parsed.type) {
-        // Just properties object
-        jsonSchema = {
-          type: 'object',
-          properties: parsed,
-          required: [],
-          additionalProperties: false,
-        };
-      } else {
-        throw new Error('Invalid schema format. Expected JSON Schema with properties or a properties object.');
-      }
-
-      // Use schemaService to parse JSON Schema to fields
-      // We'll create a temporary schema object and use the service's parsing logic
-      const tempSchema: SchemaSaveResponse = {
-        id: 'temp-import',
-        name: parsed.name || 'Imported Schema',
-        description: parsed.description || null,
-        category: parsed.category || 'imported',
-        type: 'json_schema',
-        text: JSON.stringify(jsonSchema),
-        dates: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Parse the JSON Schema to fields using the service's logic
-      // Since parseJsonSchemaToFields is private, we'll use loadSchema approach
-      // But we need to save it first, or we can parse it directly
-      // Let's parse it directly by creating a helper
-      const parseJsonSchemaToFields = (
-        schema: any,
-        parentId: string | null = null,
-        parentPath = 'root'
-      ): any[] => {
-        const fields: any[] = [];
-        const properties = schema.properties || {};
-        const required = Array.isArray(schema.required) ? schema.required : [];
-
-        let position = 0;
-
-        for (const [fieldName, property] of Object.entries(properties)) {
-          const fieldId = `field-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-          const fieldPath = `${parentPath}.${fieldName}`;
-
-          const field: any = {
-            id: fieldId,
-            session_id: '',
-            field_path: fieldPath,
-            field_name: fieldName,
-            field_type: (property as any).type || 'string',
-            description: (property as any).description,
-            is_required: required.includes(fieldName),
-            parent_field_id: parentId,
-            position: position++,
-            validation_rules: {},
-            visual_metadata: {},
-            created_by: 'user',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-
-          // Extract validation rules
-          const prop = property as any;
-          if (prop.pattern) field.validation_rules.pattern = prop.pattern;
-          if (prop.minLength !== undefined) field.validation_rules.minLength = prop.minLength;
-          if (prop.maxLength !== undefined) field.validation_rules.maxLength = prop.maxLength;
-          if (prop.minimum !== undefined) field.validation_rules.minimum = prop.minimum;
-          if (prop.maximum !== undefined) field.validation_rules.maximum = prop.maximum;
-          if (prop.enum) field.validation_rules.enum = prop.enum;
-
-          fields.push(field);
-
-          // Handle nested objects
-          if (prop.type === 'object' && prop.properties) {
-            const nestedSchema = {
-              type: 'object',
-              properties: prop.properties,
-              required: Array.isArray(prop.required) ? prop.required : [],
-              additionalProperties: false,
-            };
-            const nestedFields = parseJsonSchemaToFields(nestedSchema, fieldId, fieldPath);
-            fields.push(...nestedFields);
-          }
-
-          // Handle arrays with item schema
-          if (prop.type === 'array' && prop.items) {
-            const itemId = `field-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-            const itemField: any = {
-              id: itemId,
-              session_id: '',
-              field_path: `${fieldPath}[]`,
-              field_name: 'items',
-              field_type: prop.items.type || 'string',
-              description: prop.items.description,
-              is_required: false,
-              parent_field_id: fieldId,
-              position: 0,
-              validation_rules: {},
-              visual_metadata: {},
-              created_by: 'user',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-            fields.push(itemField);
-          }
-        }
-
-        return fields;
-      };
-
-      const parsedFields = parseJsonSchemaToFields(jsonSchema);
-
-      if (parsedFields.length === 0) {
-        throw new Error('No fields found in schema. Please check the JSON format.');
-      }
+      const parsed = parseImportTextToSchema(importText);
 
       // Ensure we have a session ID
       const currentSessionId = sessionId || `session-${Date.now()}-${Math.random().toString(36).substring(7)}`;
@@ -818,12 +325,10 @@ export default function SchemaStudioPage(): React.JSX.Element {
       // Initialize session (no schema ID for imported schemas)
       initializeSession(currentSessionId, null);
       
-      // Mark as new schema (will be saved as draft)
-      setIsNewOrDuplicatedSchema(true);
       setSchemaStatus('draft'); // Set status to draft for imported schemas
 
       // Update fields in store
-      const fieldsWithSession = parsedFields.map(field => ({
+      const fieldsWithSession = parsed.fields.map((field) => ({
         ...field,
         session_id: currentSessionId,
       }));
@@ -834,7 +339,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
       updateMetadata({
         name: parsed.name || 'Imported Schema',
         description: parsed.description || undefined,
-        field_count: parsedFields.length,
+        field_count: parsed.fields.length,
         last_saved: undefined,
       });
 
@@ -844,7 +349,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
 
       toast.success('Schema imported successfully', {
         id: 'import-schema',
-        description: `Imported "${parsed.name || 'Imported Schema'}" with ${parsedFields.length} fields`,
+        description: `Imported "${parsed.name || 'Imported Schema'}" with ${parsed.fields.length} fields`,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Invalid JSON format';
@@ -928,132 +433,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
   }, [isInitializing, sessionId, hasLoadedFromUrl, user, searchParams]);
 
   /**
-   * Fetch saved projects from localStorage
-   */
-  const fetchSavedProjects = (): void => {
-    try {
-      const projectsJson = localStorage.getItem('schema-studio-projects');
-      if (projectsJson) {
-        const projects = JSON.parse(projectsJson);
-        setSavedProjects(projects);
-      } else {
-        setSavedProjects([]);
-      }
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      setSavedProjects([]);
-    }
-  };
-
-  /**
-   * Save current project state
-   */
-  const handleSaveProject = (): void => {
-    const nameToSave = projectName.trim() || schemaName;
-    if (!nameToSave) {
-      toast.error('Project name is required');
-      return;
-    }
-
-    try {
-      const projectData = {
-        id: `project-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        name: nameToSave,
-        savedAt: new Date().toISOString(),
-        data: {
-          fields,
-          metadata,
-          selectedCollection,
-          agentMode,
-          sessionId,
-          schemaId,
-        },
-      };
-
-      const projectsJson = localStorage.getItem('schema-studio-projects');
-      const projects = projectsJson ? JSON.parse(projectsJson) : [];
-      projects.push(projectData);
-      localStorage.setItem('schema-studio-projects', JSON.stringify(projects));
-
-      setSavedProjects(projects);
-      setProjectName("");
-      toast.success('Project saved successfully', {
-        description: `"${projectData.name}" has been saved.`,
-      });
-    } catch (error) {
-      console.error('Error saving project:', error);
-      toast.error('Failed to save project');
-    }
-  };
-
-  /**
-   * Load a saved project
-   */
-  const handleLoadProject = (projectId: string): void => {
-    try {
-      const project = savedProjects.find(p => p.id === projectId);
-      if (!project) {
-        toast.error('Project not found');
-        return;
-      }
-
-      const confirmed = window.confirm(
-        'Loading this project will replace your current work. Continue?'
-      );
-
-      if (!confirmed) return;
-
-      // Restore state
-      if (project.data.fields) {
-        setFields(project.data.fields, true);
-      }
-      if (project.data.metadata) {
-        updateMetadata(project.data.metadata);
-      }
-      if (project.data.selectedCollection) {
-        setSelectedCollection(project.data.selectedCollection);
-      }
-      if (project.data.agentMode) {
-        setAgentMode(project.data.agentMode);
-      }
-      if (project.data.schemaId) {
-        initializeSession(sessionId, project.data.schemaId);
-      }
-
-      toast.success('Project loaded successfully', {
-        description: `"${project.name}" has been loaded.`,
-      });
-
-      // Removed - no longer using settings dialog
-    } catch (error) {
-      console.error('Error loading project:', error);
-      toast.error('Failed to load project');
-    }
-  };
-
-  /**
-   * Delete a saved project
-   */
-  const handleDeleteProject = (projectId: string): void => {
-    try {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this project? This action cannot be undone.'
-      );
-
-      if (!confirmed) return;
-
-      const projects = savedProjects.filter(p => p.id !== projectId);
-      localStorage.setItem('schema-studio-projects', JSON.stringify(projects));
-      setSavedProjects(projects);
-
-      toast.success('Project deleted successfully');
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      toast.error('Failed to delete project');
-    }
-  };
-
-  /**
    * Direct save for existing schemas (no dialog needed)
    */
   const handleDirectSave = async (): Promise<void> => {
@@ -1066,7 +445,8 @@ export default function SchemaStudioPage(): React.JSX.Element {
     }
 
     // Validate we have a schema name (should exist for existing schemas)
-    if (!metadata?.name || metadata.name.trim() === '') {
+    const currentSchemaName = metadata?.name?.trim();
+    if (!currentSchemaName) {
       toast.error('Schema name is required', {
         description: 'Please enter a name for your schema before saving.',
       });
@@ -1076,12 +456,17 @@ export default function SchemaStudioPage(): React.JSX.Element {
     setIsSaving(true);
 
     try {
+      const saveMetadata: SchemaMetadata & { status?: SchemaStatus } = {
+        ...(metadata ?? { field_count: fields.length }),
+        name: currentSchemaName,
+        description: metadata?.description || undefined,
+        status: schemaStatus,
+        field_count: fields.length,
+      };
+
       const result = await schemaService.saveSchema(schemaId, fields, {
-        ...metadata,
-        name: metadata.name.trim(),
-        description: metadata.description || undefined,
-        status: schemaStatus, // Include current status for new schemas
-      } as any);
+        ...saveMetadata,
+      });
 
       if (!result.success) {
         toast.error('Failed to save schema', {
@@ -1094,7 +479,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
         });
         markClean();
         toast.success('Schema saved successfully', {
-          description: `${metadata.name.trim()} has been saved to the database.`,
+          description: `${currentSchemaName} has been saved to the database.`,
         });
       }
     } catch (error) {
@@ -1159,13 +544,18 @@ export default function SchemaStudioPage(): React.JSX.Element {
       // - 'draft' for new/imported/duplicated schemas (set in initialization)
       // - loaded status for existing schemas
       // - user's selection if they changed it via the status selector
-      const result = await schemaService.saveSchema(schemaId, fields, {
-        ...metadata,
+      const saveMetadata: SchemaMetadata & { status?: SchemaStatus; is_verified?: boolean } = {
+        ...(metadata ?? { field_count: fields.length }),
         name: saveSchemaName.trim(),
         description: saveSchemaDescription.trim() || undefined,
-        status: schemaStatus, // Use state variable, not hardcoded value
+        status: schemaStatus,
         is_verified: isVerified,
-      } as any);
+        field_count: fields.length,
+      };
+
+      const result = await schemaService.saveSchema(schemaId, fields, {
+        ...saveMetadata,
+      });
 
       if (!result.success) {
         const errorMessage = result.errors[0] || 'An unknown error occurred';
@@ -1183,13 +573,9 @@ export default function SchemaStudioPage(): React.JSX.Element {
           if (result.schemaId) {
             initializeSession(sessionId, result.schemaId);
           }
-          // Reset new/duplicated flag after first save
-          setIsNewOrDuplicatedSchema(false);
         } else if (schemaId && user?.id) {
           // For existing schemas, ensure owner ID is set (user owns schemas they're editing)
           setSchemaOwnerId(user.id);
-          // Reset new/duplicated flag when updating existing schema
-          setIsNewOrDuplicatedSchema(false);
         }
         // Update schema status from server response (use server's status, not local calculation)
         if (result.schema?.status) {
@@ -1549,7 +935,6 @@ export default function SchemaStudioPage(): React.JSX.Element {
     // Reset schema-specific state
     setSelectedSchemaId('');
     setSchemaOwnerId(user?.id || null);
-    setIsNewOrDuplicatedSchema(true);
     setSchemaStatus('draft');
     setIsVerified(false);
 
@@ -2047,230 +1432,42 @@ export default function SchemaStudioPage(): React.JSX.Element {
       </div>
       </div>
 
-      {/* Extraction Result Preview Dialog */}
-      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className={cn(
-          "max-w-4xl max-h-[90vh]",
-          // Glassmorphism 2.0
-          "bg-white/80 dark:bg-slate-900/80",
-          "backdrop-blur-xl backdrop-saturate-[180%]",
-          "border border-primary/20 dark:border-primary/30",
-          "shadow-[0_18px_45px_0_rgba(15,23,42,0.15),0_8px_20px_0_rgba(139,92,246,0.1),inset_0_1px_0_0_rgba(255,255,255,0.6)]",
-          "dark:shadow-[0_18px_45px_0_rgba(0,0,0,0.4),0_8px_20px_0_rgba(139,92,246,0.15),inset_0_1px_0_0_rgba(255,255,255,0.1)]",
-        )}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-primary" />
-              Extraction Result Preview
-            </DialogTitle>
-            <DialogDescription>
-              Preview how extracted data will be displayed based on your schema
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
-            <div className="py-4">
-              {Object.keys(generatePreviewData).length === 0 ? (
-                <div className="flex items-center justify-center h-full min-h-[400px]">
-                  <div className="text-center">
-                    <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-sm text-muted-foreground">
-                      Add fields to see extraction preview
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <ExtractionDataViewer
-                  data={generatePreviewData}
-                  viewMode="document"
-                  globalLayout="list"
-                  hideCopyButtons={true}
-                />
-              )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      {/* Save Schema Dialog */}
-      <Dialog open={showSaveDialog} onOpenChange={(open) => {
-        setShowSaveDialog(open);
-        // Clear error when dialog closes
-        if (!open) {
-          setSaveDialogError(null);
-        }
-      }}>
-        <DialogContent className={cn(
-          "sm:max-w-[500px]",
-          "bg-white dark:bg-slate-900",
-          "border border-border",
-          "shadow-xl"
-        )}>
-          <DialogHeader>
-            <DialogTitle>Save Schema</DialogTitle>
-            <DialogDescription>
-              Enter a name and description for your schema. These values will be preserved when you close the dialog.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Error message display - appears right after description */}
-          {saveDialogError && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 mt-2">
-              <p className="text-sm text-destructive font-medium">{saveDialogError}</p>
-            </div>
-          )}
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="save-schema-name" className="text-sm font-semibold">
-                Schema Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="save-schema-name"
-                value={saveSchemaName}
-                onChange={(e) => {
-                  setSaveSchemaName(e.target.value);
-                  // Clear error when user starts typing
-                  if (saveDialogError) {
-                    setSaveDialogError(null);
-                  }
-                }}
-                placeholder="Enter schema name..."
-                className={cn(
-                  "rounded-lg",
-                  saveDialogError && "border-destructive focus-visible:ring-destructive"
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && saveSchemaName.trim() && !isSaving) {
-                    handleSave();
-                  }
-                }}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="save-schema-description" className="text-sm font-semibold">
-                Description
-              </Label>
-              <Textarea
-                id="save-schema-description"
-                value={saveSchemaDescription}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSaveSchemaDescription(e.target.value)}
-                placeholder="Enter schema description (optional)..."
-                className="rounded-lg min-h-[100px]"
-                rows={4}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <SecondaryButton
-              onClick={() => setShowSaveDialog(false)}
-              disabled={isSaving}
-              size="sm"
-            >
-              Cancel
-            </SecondaryButton>
-            <PrimaryButton
-              onClick={handleSave}
-              disabled={!saveSchemaName.trim() || isSaving || fields.length === 0}
-              size="sm"
-              isLoading={isSaving}
-              loadingText="Saving..."
-            >
-              Save Schema
-            </PrimaryButton>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* New Schema Confirmation Dialog */}
-      <AlertDialog open={showNewSchemaDialog} onOpenChange={setShowNewSchemaDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes to your current schema. Starting a new schema will discard all unsaved changes. This action cannot be undone.
-              <br /><br />
-              Are you sure you want to start a new schema?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={createNewSchema}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Start New Schema
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Load Schema Confirmation Dialog */}
-      <AlertDialog open={showLoadSchemaDialog} onOpenChange={setShowLoadSchemaDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes to your current schema. {pendingLoadSchemaId === schemaId ? 'Reloading this schema' : 'Loading another schema'} will discard all unsaved changes. This action cannot be undone.
-              <br /><br />
-              Are you sure you want to {pendingLoadSchemaId === schemaId ? 'reload' : 'load'} this schema?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setShowLoadSchemaDialog(false);
-                setPendingLoadSchemaId(null);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingLoadSchemaId) {
-                  performLoadSchema(pendingLoadSchemaId);
-                }
-              }}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {pendingLoadSchemaId === schemaId ? 'Reload Schema' : 'Load Schema'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Navigation Confirmation Dialog */}
-      <AlertDialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes to your current schema. Navigating away will discard all unsaved changes. This action cannot be undone.
-              <br /><br />
-              Are you sure you want to leave this page?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setShowNavigationDialog(false);
-                setPendingNavigationUrl(null);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmNavigation}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Leave Page
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <SchemaDialogs
+        showPreviewDialog={showPreviewDialog}
+        onPreviewOpenChange={setShowPreviewDialog}
+        previewData={generatePreviewData}
+        showSaveDialog={showSaveDialog}
+        onSaveOpenChange={setShowSaveDialog}
+        saveDialogError={saveDialogError}
+        onSaveDialogErrorChange={setSaveDialogError}
+        saveSchemaName={saveSchemaName}
+        onSaveSchemaNameChange={setSaveSchemaName}
+        saveSchemaDescription={saveSchemaDescription}
+        onSaveSchemaDescriptionChange={setSaveSchemaDescription}
+        isSaving={isSaving}
+        fieldsCount={fields.length}
+        onSave={handleSave}
+        showNewSchemaDialog={showNewSchemaDialog}
+        onNewSchemaOpenChange={setShowNewSchemaDialog}
+        onConfirmNewSchema={createNewSchema}
+        showLoadSchemaDialog={showLoadSchemaDialog}
+        onLoadSchemaOpenChange={setShowLoadSchemaDialog}
+        pendingLoadSchemaId={pendingLoadSchemaId}
+        currentSchemaId={schemaId}
+        onCancelLoadSchema={() => {
+          setShowLoadSchemaDialog(false);
+          setPendingLoadSchemaId(null);
+        }}
+        onConfirmLoadSchema={() => {
+          if (pendingLoadSchemaId) {
+            performLoadSchema(pendingLoadSchemaId);
+          }
+        }}
+        showNavigationDialog={showNavigationDialog}
+        onNavigationOpenChange={setShowNavigationDialog}
+        onCancelNavigation={cancelNavigation}
+        onConfirmNavigation={confirmNavigation}
+      />
     </>
   );
 }
-

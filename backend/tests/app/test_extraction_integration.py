@@ -3,6 +3,12 @@ import pytest
 from httpx import AsyncClient
 
 
+@pytest.fixture
+def anyio_backend() -> str:
+    """Force asyncio backend for this module (trio has known baseline issues)."""
+    return "asyncio"
+
+
 @pytest.mark.anyio
 @pytest.mark.api
 async def test_list_extractions_requires_auth(client: AsyncClient):

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,28 +18,18 @@ export default function EditPublicationPage({ params }: EditPublicationPageProps
   const { id } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
   const [publication, setPublication] = useState<PublicationWithResources | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push(`/auth/login?redirect=/publications/admin/${id}`);
-      return;
-    }
-
-    if (user && id) {
-      loadPublication();
-    }
-  }, [user, authLoading, id, router]);
-
-  const loadPublication = async () => {
+  const loadPublication = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getPublication(id);
 
       // Check if user can edit this publication
-      if (data.userId && data.userId !== user?.id) {
+      if (data.userId && data.userId !== userId) {
         setError("You don't have permission to edit this publication");
         return;
       }
@@ -50,7 +40,18 @@ export default function EditPublicationPage({ params }: EditPublicationPageProps
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, userId]);
+
+  useEffect(() => {
+    if (!authLoading && !userId) {
+      router.push(`/auth/login?redirect=/publications/admin/${id}`);
+      return;
+    }
+
+    if (userId && id) {
+      loadPublication();
+    }
+  }, [authLoading, userId, router, id, loadPublication]);
 
   if (authLoading || loading) {
     return (

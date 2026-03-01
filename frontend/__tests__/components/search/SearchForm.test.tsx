@@ -453,4 +453,64 @@ describe('SearchForm Component', () => {
       expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
     });
   });
+
+  describe('Autocomplete Suggestions', () => {
+    it('should render autocomplete suggestions when provided', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="vat"
+          autocompleteSuggestions={[
+            { id: 'doc-1', title: 'VAT refund for digital services', summary: 'Tax interpretation' },
+          ]}
+        />
+      );
+
+      expect(screen.getByText('Suggestions')).toBeInTheDocument();
+      expect(screen.getByText('VAT refund for digital services')).toBeInTheDocument();
+      expect(screen.getByText('Tax interpretation')).toBeInTheDocument();
+    });
+
+    it('should call suggestion select callback when suggestion is clicked', async () => {
+      const user = userEvent.setup();
+      const onSelectAutocompleteSuggestion = jest.fn();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="vat"
+          onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
+          autocompleteSuggestions={[
+            { id: 'doc-1', title: 'VAT refund for digital services' },
+          ]}
+        />
+      );
+
+      await user.click(screen.getByRole('option', { name: /use suggestion: VAT refund for digital services/i }));
+      expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('VAT refund for digital services');
+    });
+
+    it('should support keyboard navigation and Enter selection', async () => {
+      const user = userEvent.setup();
+      const onSelectAutocompleteSuggestion = jest.fn();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="vat"
+          onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
+          autocompleteSuggestions={[
+            { id: 'doc-1', title: 'VAT refund for digital services' },
+            { id: 'doc-2', title: 'VAT input tax deduction' },
+          ]}
+        />
+      );
+
+      const input = screen.getByRole('textbox');
+      input.focus();
+
+      await user.keyboard('{ArrowDown}{Enter}');
+      expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('VAT refund for digital services');
+    });
+  });
 });

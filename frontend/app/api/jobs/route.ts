@@ -130,12 +130,14 @@ export async function GET() {
     }
 
     // Fetch extraction jobs from Supabase
-    let { data: jobs, error: jobsError } = await supabase
+    const jobsQueryResult = await supabase
       .from('extraction_jobs')
       .select('*')
       .eq('user_id', userData.user.id)
       .order('created_at', { ascending: false })
       .limit(100);
+    let jobs = jobsQueryResult.data;
+    const jobsError = jobsQueryResult.error;
 
     if (jobsError) {
       console.error("Error fetching jobs:", jobsError);

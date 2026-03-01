@@ -568,7 +568,11 @@ export function PlaygroundTab({ sessionId, schemaId, collectionId: defaultCollec
               <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Test Your Schema</h3>
               <p className="text-sm">
-                Select a document and click "Run Extraction" to see how your schema performs.
+                Select a document and click
+                {" "}
+                &quot;Run Extraction&quot;
+                {" "}
+                to see how your schema performs.
               </p>
             </div>
           )}

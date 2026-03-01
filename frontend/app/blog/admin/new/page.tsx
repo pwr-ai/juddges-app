@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PostEditor } from "@/components/blog/admin/post-editor";
 import { ArrowLeft } from "lucide-react";
 import type { BlogPost } from "@/types/blog";
+import { createAdminPost, updateAdminPost } from "@/lib/blog/admin-api";
 import { toast } from "sonner";
 import {
   PageContainer,
@@ -15,16 +16,24 @@ import {
 export default function NewPostPage(): React.JSX.Element {
   const router = useRouter();
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [postId, setPostId] = useState<string | null>(null);
 
-  const handleSave = async (_postData: Partial<BlogPost>): Promise<void> => {
-    // TODO: Use postData when implementing API call
-    void _postData;
+  const handleSave = async (postData: Partial<BlogPost>): Promise<void> => {
     try {
-      // TODO: Implement API call to save draft
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
+      const payload: Partial<BlogPost> = {
+        ...postData,
+        status: "draft",
+      };
+
+      const savedPost = postId
+        ? await updateAdminPost(postId, payload)
+        : await createAdminPost(payload);
+
+      if (!postId) {
+        setPostId(savedPost.id);
+      }
       setLastSaved(new Date());
+
       toast.success("Draft saved successfully", {
         description: "Your draft has been saved.",
       });
@@ -46,9 +55,18 @@ export default function NewPostPage(): React.JSX.Element {
         return;
       }
 
-      // TODO: Implement API call to publish post
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const payload: Partial<BlogPost> = {
+        ...postData,
+        status: "published",
+        published_at: new Date().toISOString(),
+      };
+
+      if (postId) {
+        await updateAdminPost(postId, payload);
+      } else {
+        const createdPost = await createAdminPost(payload);
+        setPostId(createdPost.id);
+      }
       
       toast.success("Post published successfully", {
         description: "Your post is now live.",

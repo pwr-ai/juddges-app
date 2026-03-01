@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSearchStore } from '@/lib/store/searchStore';
 import { createClient } from '@/lib/supabase/client';
@@ -21,6 +21,7 @@ import {
 import { SearchLoadingModal } from '@/components/search';
 import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
+import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
 import { DocumentType } from '@/types/search';
 
@@ -162,6 +163,16 @@ function SearchPageContent(): React.JSX.Element | null {
   }, [filteredCount, pageSize]);
 
   const selectedCount = getSelectedDocumentCount();
+  const {
+    suggestions: autocompleteSuggestions,
+    isLoading: isAutocompleteLoading,
+    clearSuggestions,
+  } = useSearchAutocomplete(query, {
+    enabled: mounted && !isSearching,
+    debounceMs: 250,
+    minChars: 2,
+    limit: 8,
+  });
 
   // Search results hook
   const {
@@ -373,6 +384,7 @@ function SearchPageContent(): React.JSX.Element | null {
 
     // Clear error when starting a new search
     setError(null);
+    clearSuggestions();
     const modeToUse = overrideMode || searchType;
     setLastSearchMode(modeToUse);
     setHasPerformedSearch(true);
@@ -411,6 +423,7 @@ function SearchPageContent(): React.JSX.Element | null {
 
   const handleBack = (): void => {
     setQuery('');
+    clearSuggestions();
     setSearchMetadata([], 0, false);
     clearChunksCache();
     fullDocumentsMapRef.current.clear();
@@ -438,6 +451,14 @@ function SearchPageContent(): React.JSX.Element | null {
     totalResults: searchMetadata.length,
     searchTimestamp: searchTimestamp,
   }), [query, lastSearchMode, searchType, filters, documentTypes, selectedLanguages, searchMetadata.length, searchTimestamp]);
+
+  const handleAutocompleteSelection = useCallback(
+    (value: string): void => {
+      setQuery(value);
+      clearSuggestions();
+    },
+    [setQuery, clearSuggestions]
+  );
 
   const showExpanded = searchMetadata.length === 0 && !error && !(query && hasPerformedSearch);
 
@@ -555,6 +576,9 @@ function SearchPageContent(): React.JSX.Element | null {
                   hasError={!!error}
                   hasPerformedSearch={hasPerformedSearch}
                   onSearch={handleSearch}
+                  autocompleteSuggestions={autocompleteSuggestions}
+                  isAutocompleteLoading={isAutocompleteLoading}
+                  onSelectAutocompleteSuggestion={handleAutocompleteSelection}
                 />
 
               {/* SECONDARY ELEMENT: Compact Configuration - Moved below search */}
@@ -601,6 +625,9 @@ function SearchPageContent(): React.JSX.Element | null {
                 hasError={!!error}
                 hasPerformedSearch={hasPerformedSearch}
                 onSearch={handleSearch}
+                autocompleteSuggestions={autocompleteSuggestions}
+                isAutocompleteLoading={isAutocompleteLoading}
+                onSelectAutocompleteSuggestion={handleAutocompleteSelection}
               />
               {/* Configuration - SECONDARY, below search */}
               <SearchConfiguration

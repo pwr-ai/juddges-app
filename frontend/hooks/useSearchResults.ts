@@ -637,7 +637,6 @@ export function useSearchResults() {
       setIsSearching,
       setError,
       clearChunksCache,
-      setChunksForDocuments,
       setSearchMetadata,
       setPageSize,
       clearSelection,
@@ -863,4 +862,3 @@ export function useSearchResults() {
     fullDocumentsMapRef,
   };
 }
-

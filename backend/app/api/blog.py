@@ -2,14 +2,18 @@
 Blog API endpoints for managing blog posts, categories, tags, likes, and bookmarks.
 """
 
-from datetime import datetime
-from typing import Optional, List
+from datetime import datetime, timezone
+from typing import Optional, List, Any
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 from loguru import logger
 import re
 
-from ..dependencies import get_supabase_db, get_current_user
+from app.core.auth_jwt import (
+    AuthenticatedUser,
+    get_admin_supabase_client,
+    get_current_user,
+)
 
 
 router = APIRouter(prefix="/blog", tags=["blog"])
@@ -65,6 +69,16 @@ class BlogPostResponse(BaseModel):
     likes_count: int
     ai_summary: Optional[str]
     related_posts: Optional[List[dict]] = None
+
+
+class BlogStatsResponse(BaseModel):
+    total_posts: int
+    published: int
+    drafts: int
+    scheduled: int
+    total_views: int
+    total_likes: int
+    avg_read_time: float
 
 
 # ==============================================
@@ -135,6 +149,60 @@ async def increment_view_count(supabase, post_id: str):
         logger.error(f"Error incrementing view count: {e}")
 
 
+def ensure_user_can_access_post(
+    post: dict[str, Any], current_user: AuthenticatedUser
+) -> None:
+    """Allow access for post author or platform admin."""
+    if post.get("author_id") != current_user.id and not current_user.is_admin():
+        raise HTTPException(status_code=403, detail="Not authorized to access this post")
+
+
+def normalize_post_response(
+    post: dict[str, Any], tags: List[str], author: dict
+) -> dict[str, Any]:
+    """Normalize DB shape to frontend blog type shape."""
+    return {
+        "id": post["id"],
+        "slug": post["slug"],
+        "title": post["title"],
+        "excerpt": post.get("excerpt", ""),
+        "content": post.get("content"),
+        "featured_image": post.get("featured_image"),
+        "author": author,
+        "category": post.get("category", "Research"),
+        "tags": tags,
+        "status": post.get("status", "draft"),
+        "published_at": post.get("published_at"),
+        "created_at": post.get("created_at"),
+        "updated_at": post.get("updated_at"),
+        "read_time": post.get("read_time"),
+        "views": post.get("views", 0) or 0,
+        "likes": post.get("likes_count", 0) or 0,
+        "ai_summary": post.get("ai_summary"),
+    }
+
+
+def ensure_unique_slug(
+    supabase, desired_slug: str, exclude_post_id: Optional[str] = None
+) -> str:
+    """Ensure slug is unique by appending numeric suffix when needed."""
+    base_slug = desired_slug
+    candidate = base_slug
+    attempt = 1
+
+    while True:
+        query = supabase.table("blog_posts").select("id").eq("slug", candidate)
+        if exclude_post_id:
+            query = query.neq("id", exclude_post_id)
+        response = query.is_("deleted_at", "null").limit(1).execute()
+
+        if not response.data:
+            return candidate
+
+        attempt += 1
+        candidate = f"{base_slug}-{attempt}"
+
+
 # ==============================================
 # PUBLIC ENDPOINTS
 # ==============================================
@@ -151,12 +219,13 @@ async def list_posts(
         "published_at", pattern="^(published_at|views|likes_count|created_at)$"
     ),
     order: str = Query("desc", pattern="^(asc|desc)$"),
-    supabase=Depends(get_supabase_db),
 ):
     """
     List published blog posts with pagination and filters.
     """
     try:
+        supabase = get_admin_supabase_client()
+
         # Build query
         query = (
             supabase.table("blog_posts")
@@ -224,11 +293,13 @@ async def list_posts(
 
 
 @router.get("/posts/{slug}")
-async def get_post(slug: str, supabase=Depends(get_supabase_db)):
+async def get_post(slug: str):
     """
     Get a single published blog post by slug.
     """
     try:
+        supabase = get_admin_supabase_client()
+
         # Get post
         response = (
             supabase.table("blog_posts")
@@ -279,11 +350,13 @@ async def get_post(slug: str, supabase=Depends(get_supabase_db)):
 
 
 @router.get("/categories")
-async def list_categories(supabase=Depends(get_supabase_db)):
+async def list_categories():
     """
     Get all blog categories.
     """
     try:
+        supabase = get_admin_supabase_client()
+
         response = supabase.table("blog_categories").select("*").execute()
 
         # Add post count for each category
@@ -313,12 +386,14 @@ async def list_categories(supabase=Depends(get_supabase_db)):
 
 @router.post("/posts/{slug}/like")
 async def toggle_like(
-    slug: str, current_user=Depends(get_current_user), supabase=Depends(get_supabase_db)
+    slug: str, current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Toggle like status for a post.
     """
     try:
+        supabase = get_admin_supabase_client()
+
         # Get post
         post_response = (
             supabase.table("blog_posts")
@@ -338,7 +413,7 @@ async def toggle_like(
             supabase.table("blog_likes")
             .select("id")
             .eq("post_id", post_id)
-            .eq("user_id", current_user["id"])
+            .eq("user_id", current_user.id)
             .execute()
         )
 
@@ -351,7 +426,7 @@ async def toggle_like(
         else:
             # Like
             supabase.table("blog_likes").insert(
-                {"post_id": post_id, "user_id": current_user["id"]}
+                {"post_id": post_id, "user_id": current_user.id}
             ).execute()
             liked = True
 
@@ -375,12 +450,14 @@ async def toggle_like(
 
 @router.post("/posts/{slug}/bookmark")
 async def toggle_bookmark(
-    slug: str, current_user=Depends(get_current_user), supabase=Depends(get_supabase_db)
+    slug: str, current_user: AuthenticatedUser = Depends(get_current_user)
 ):
     """
     Toggle bookmark status for a post.
     """
     try:
+        supabase = get_admin_supabase_client()
+
         # Get post
         post_response = (
             supabase.table("blog_posts")
@@ -400,7 +477,7 @@ async def toggle_bookmark(
             supabase.table("blog_bookmarks")
             .select("id")
             .eq("post_id", post_id)
-            .eq("user_id", current_user["id"])
+            .eq("user_id", current_user.id)
             .execute()
         )
 
@@ -413,7 +490,7 @@ async def toggle_bookmark(
         else:
             # Add bookmark
             supabase.table("blog_bookmarks").insert(
-                {"post_id": post_id, "user_id": current_user["id"]}
+                {"post_id": post_id, "user_id": current_user.id}
             ).execute()
             bookmarked = True
 
@@ -428,16 +505,18 @@ async def toggle_bookmark(
 
 @router.get("/bookmarks")
 async def get_bookmarks(
-    current_user=Depends(get_current_user), supabase=Depends(get_supabase_db)
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Get all bookmarked posts for the current user.
     """
     try:
+        supabase = get_admin_supabase_client()
+
         response = (
             supabase.table("blog_bookmarks")
             .select("*, blog_posts(*)")
-            .eq("user_id", current_user["id"])
+            .eq("user_id", current_user.id)
             .execute()
         )
 
@@ -470,18 +549,23 @@ async def get_bookmarks(
 @router.post("/admin/posts")
 async def create_post(
     post: BlogPostCreate,
-    current_user=Depends(get_current_user),
-    supabase=Depends(get_supabase_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Create a new blog post (admin only).
     """
     try:
+        supabase = get_admin_supabase_client()
+
         # Generate slug if not provided
-        slug = post.slug or generate_slug(post.title)
+        raw_slug = post.slug or generate_slug(post.title)
+        slug = ensure_unique_slug(supabase, raw_slug)
 
         # Calculate read time
         read_time = calculate_read_time(post.content or "")
+        published_at = post.published_at
+        if post.status == "published" and not published_at:
+            published_at = datetime.now(timezone.utc)
 
         # Insert post
         post_data = {
@@ -490,15 +574,18 @@ async def create_post(
             "excerpt": post.excerpt,
             "content": post.content,
             "featured_image": post.featured_image,
-            "author_id": current_user["id"],
+            "author_id": current_user.id,
             "category": post.category,
             "status": post.status,
-            "published_at": post.published_at,
+            "published_at": published_at,
             "read_time": read_time,
             "ai_summary": post.ai_summary,
         }
 
         response = supabase.table("blog_posts").insert(post_data).execute()
+
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Blog post creation returned no data")
 
         created_post = response.data[0]
 
@@ -509,11 +596,269 @@ async def create_post(
             ]
             supabase.table("blog_tags").insert(tags_data).execute()
 
-        return {"success": True, "data": created_post}
+        tags = await get_post_tags(supabase, created_post["id"])
+        author = await get_post_author(supabase, created_post["author_id"])
+        normalized_post = normalize_post_response(created_post, tags, author)
+
+        return {"success": True, "data": normalized_post}
 
     except Exception as e:
         logger.error(f"Error creating post: {e}")
         raise HTTPException(status_code=500, detail="Failed to create blog post")
 
 
-# TODO: Add more admin endpoints (update, delete, stats, etc.)
+@router.get("/admin/posts")
+async def list_admin_posts(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None, pattern="^(draft|published|scheduled)$"),
+    search: Optional[str] = None,
+    sort: str = Query(
+        "updated_at", pattern="^(updated_at|created_at|published_at|views|likes_count|title)$"
+    ),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    List blog posts for admin UI.
+    Non-admin users only see their own posts.
+    """
+    try:
+        supabase = get_admin_supabase_client()
+        offset = (page - 1) * limit
+
+        list_query = supabase.table("blog_posts").select("*").is_("deleted_at", "null")
+        count_query = supabase.table("blog_posts").select("id", count="exact").is_(
+            "deleted_at", "null"
+        )
+
+        if not current_user.is_admin():
+            list_query = list_query.eq("author_id", current_user.id)
+            count_query = count_query.eq("author_id", current_user.id)
+
+        if status:
+            list_query = list_query.eq("status", status)
+            count_query = count_query.eq("status", status)
+
+        if search:
+            search_clause = f"title.ilike.%{search}%,excerpt.ilike.%{search}%"
+            list_query = list_query.or_(search_clause)
+            count_query = count_query.or_(search_clause)
+
+        response = (
+            list_query.order(sort, desc=(order == "desc"))
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        count_response = count_query.execute()
+
+        posts = []
+        for post in response.data or []:
+            tags = await get_post_tags(supabase, post["id"])
+            author = await get_post_author(supabase, post["author_id"])
+            posts.append(normalize_post_response(post, tags, author))
+
+        total = count_response.count or 0
+        total_pages = (total + limit - 1) // limit if total > 0 else 1
+
+        return {
+            "data": posts,
+            "pagination": {
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Error listing admin posts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch admin blog posts")
+
+
+@router.get("/admin/posts/{post_id}")
+async def get_admin_post(
+    post_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Get a single post for admin edit UI."""
+    try:
+        supabase = get_admin_supabase_client()
+        response = (
+            supabase.table("blog_posts")
+            .select("*")
+            .eq("id", post_id)
+            .is_("deleted_at", "null")
+            .single()
+            .execute()
+        )
+
+        post = response.data
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        ensure_user_can_access_post(post, current_user)
+
+        tags = await get_post_tags(supabase, post["id"])
+        author = await get_post_author(supabase, post["author_id"])
+        return {"success": True, "data": normalize_post_response(post, tags, author)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching admin post {post_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch blog post")
+
+
+@router.put("/admin/posts/{post_id}")
+async def update_post(
+    post_id: str,
+    post: BlogPostUpdate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Update an existing blog post."""
+    try:
+        supabase = get_admin_supabase_client()
+        existing_response = (
+            supabase.table("blog_posts")
+            .select("*")
+            .eq("id", post_id)
+            .is_("deleted_at", "null")
+            .single()
+            .execute()
+        )
+        existing_post = existing_response.data
+        if not existing_post:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        ensure_user_can_access_post(existing_post, current_user)
+
+        update_data: dict[str, Any] = {}
+        if post.title is not None:
+            update_data["title"] = post.title
+        if post.slug is not None:
+            update_data["slug"] = ensure_unique_slug(
+                supabase, generate_slug(post.slug), exclude_post_id=post_id
+            )
+        if post.excerpt is not None:
+            update_data["excerpt"] = post.excerpt
+        if post.content is not None:
+            update_data["content"] = post.content
+            update_data["read_time"] = calculate_read_time(post.content)
+        if post.featured_image is not None:
+            update_data["featured_image"] = post.featured_image
+        if post.category is not None:
+            update_data["category"] = post.category
+        if post.ai_summary is not None:
+            update_data["ai_summary"] = post.ai_summary
+        if post.status is not None:
+            update_data["status"] = post.status
+            if (
+                post.status == "published"
+                and existing_post.get("status") != "published"
+                and post.published_at is None
+            ):
+                update_data["published_at"] = datetime.now(timezone.utc).isoformat()
+        if post.published_at is not None:
+            update_data["published_at"] = post.published_at.isoformat()
+
+        if update_data:
+            update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+            supabase.table("blog_posts").update(update_data).eq("id", post_id).execute()
+
+        if post.tags is not None:
+            supabase.table("blog_tags").delete().eq("post_id", post_id).execute()
+            if post.tags:
+                tags_data = [{"post_id": post_id, "tag": tag} for tag in post.tags]
+                supabase.table("blog_tags").insert(tags_data).execute()
+
+        updated_response = (
+            supabase.table("blog_posts").select("*").eq("id", post_id).single().execute()
+        )
+        updated_post = updated_response.data
+        tags = await get_post_tags(supabase, post_id)
+        author = await get_post_author(supabase, updated_post["author_id"])
+
+        return {"success": True, "data": normalize_post_response(updated_post, tags, author)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating post {post_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update blog post")
+
+
+@router.delete("/admin/posts/{post_id}")
+async def delete_post(
+    post_id: str,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Soft-delete a blog post."""
+    try:
+        supabase = get_admin_supabase_client()
+        response = (
+            supabase.table("blog_posts")
+            .select("id, author_id")
+            .eq("id", post_id)
+            .is_("deleted_at", "null")
+            .single()
+            .execute()
+        )
+        post = response.data
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        ensure_user_can_access_post(post, current_user)
+
+        now = datetime.now(timezone.utc).isoformat()
+        supabase.table("blog_posts").update({"deleted_at": now, "updated_at": now}).eq(
+            "id", post_id
+        ).execute()
+
+        return {"success": True, "deleted_id": post_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting post {post_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete blog post")
+
+
+@router.get("/admin/stats", response_model=BlogStatsResponse)
+async def get_admin_blog_stats(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """Get blog statistics for admin UI."""
+    try:
+        supabase = get_admin_supabase_client()
+        query = supabase.table("blog_posts").select(
+            "status, views, likes_count, read_time"
+        ).is_("deleted_at", "null")
+
+        if not current_user.is_admin():
+            query = query.eq("author_id", current_user.id)
+
+        response = query.execute()
+        rows = response.data or []
+
+        total_posts = len(rows)
+        published = sum(1 for row in rows if row.get("status") == "published")
+        drafts = sum(1 for row in rows if row.get("status") == "draft")
+        scheduled = sum(1 for row in rows if row.get("status") == "scheduled")
+        total_views = sum((row.get("views", 0) or 0) for row in rows)
+        total_likes = sum((row.get("likes_count", 0) or 0) for row in rows)
+        read_times = [row.get("read_time", 0) or 0 for row in rows if row.get("read_time")]
+        avg_read_time = (
+            sum(read_times) / len(read_times) if len(read_times) > 0 else 0
+        )
+
+        return BlogStatsResponse(
+            total_posts=total_posts,
+            published=published,
+            drafts=drafts,
+            scheduled=scheduled,
+            total_views=total_views,
+            total_likes=total_likes,
+            avg_read_time=avg_read_time,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching blog stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch blog stats")

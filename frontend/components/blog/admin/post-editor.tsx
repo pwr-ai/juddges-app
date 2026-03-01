@@ -42,8 +42,8 @@ import type { BlogPost } from "@/types/blog";
 
 interface PostEditorProps {
   post?: BlogPost;
-  onSave: (post: Partial<BlogPost>) => void;
-  onPublish?: (post: Partial<BlogPost>) => void;
+  onSave: (post: Partial<BlogPost>) => Promise<void> | void;
+  onPublish?: (post: Partial<BlogPost>) => Promise<void> | void;
   onPreview?: () => void;
 }
 
@@ -61,7 +61,7 @@ export function PostEditor({
   onSave,
   onPublish,
   onPreview,
-}: PostEditorProps) {
+}: PostEditorProps): React.JSX.Element {
   const [title, setTitle] = useState(post?.title || "");
   const [excerpt, setExcerpt] = useState(post?.excerpt || "");
   const [content, setContent] = useState(post?.content || "");
@@ -76,18 +76,18 @@ export function PostEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const handleAddTag = () => {
+  const handleAddTag = (): void => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
       setTagInput("");
     }
   };
 
-  const handleRemoveTag = (tagToRemove: string) => {
+  const handleRemoveTag = (tagToRemove: string): void => {
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleGenerateSummary = async () => {
+  const handleGenerateSummary = async (): Promise<void> => {
     setIsGeneratingSummary(true);
     // Simulate AI summary generation
     setTimeout(() => {
@@ -100,29 +100,15 @@ export function PostEditor({
     }, 2000);
   };
 
-  const handleGenerateTags = async () => {
+  const handleGenerateTags = async (): Promise<void> => {
     // Simulate AI tag generation
     const mockTags = ["AI", "Legal Tech", "Innovation"];
     setTags([...new Set([...tags, ...mockTags])]);
   };
 
-  const handleSave = () => {
+  const handleSave = async (): Promise<void> => {
     setIsSaving(true);
-    const postData: Partial<BlogPost> = {
-      title,
-      excerpt,
-      content,
-      category,
-      tags,
-      featured_image: featuredImage,
-      ai_summary: aiSummary,
-    };
-    onSave(postData);
-    setTimeout(() => setIsSaving(false), 1000);
-  };
-
-  const handlePublish = () => {
-    if (onPublish) {
+    try {
       const postData: Partial<BlogPost> = {
         title,
         excerpt,
@@ -131,9 +117,31 @@ export function PostEditor({
         tags,
         featured_image: featuredImage,
         ai_summary: aiSummary,
-        status: "published",
       };
-      onPublish(postData);
+      await onSave(postData);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePublish = async (): Promise<void> => {
+    if (onPublish) {
+      setIsSaving(true);
+      try {
+        const postData: Partial<BlogPost> = {
+          title,
+          excerpt,
+          content,
+          category,
+          tags,
+          featured_image: featuredImage,
+          ai_summary: aiSummary,
+          status: "published",
+        };
+        await onPublish(postData);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -315,7 +323,7 @@ export function PostEditor({
                 className="w-full"
                 icon={Send}
                 onClick={handlePublish}
-                disabled={!title || !excerpt || !content}
+                disabled={!title || !excerpt || !content || isSaving}
               >
                 Publish Now
               </PrimaryButton>

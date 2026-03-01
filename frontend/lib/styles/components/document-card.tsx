@@ -1,0 +1,100 @@
+"use client";
+
+import Link from "next/link";
+import { ExternalLink, Trash2 } from "lucide-react";
+
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cleanDocumentIdForUrl } from "@/lib/document-utils";
+import type { SearchDocument } from "@/types/search";
+
+export interface DocumentCardProps {
+  document: SearchDocument;
+  onSaveToCollection?: (documentId: string) => void;
+  onRemove?: (documentId: string) => void;
+  showRemoveButton?: boolean;
+  showExtended?: boolean;
+  from?: string;
+  chatId?: string;
+}
+
+function buildDocumentHref(documentId: string, from?: string, chatId?: string): string {
+  const cleanId = cleanDocumentIdForUrl(documentId);
+  const params = new URLSearchParams();
+  if (from) {
+    params.set("from", from);
+  }
+  if (chatId) {
+    params.set("chatId", chatId);
+  }
+  const suffix = params.toString();
+  return suffix ? `/documents/${cleanId}?${suffix}` : `/documents/${cleanId}`;
+}
+
+export function DocumentCard({
+  document,
+  onSaveToCollection,
+  onRemove,
+  showRemoveButton = false,
+  showExtended = false,
+  from,
+  chatId,
+}: DocumentCardProps): React.JSX.Element {
+  const title = document.title || document.document_number || document.document_id;
+  const summary = document.summary || document.thesis || "No summary available.";
+  const href = buildDocumentHref(document.document_id, from, chatId);
+
+  return (
+    <Card className="h-full overflow-hidden">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-sm leading-5">{title}</CardTitle>
+          <Badge variant="outline" className="shrink-0 text-[10px]">
+            {document.document_type}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {(document.court_name || document.issuing_body?.name) && (
+          <p className="text-xs text-muted-foreground">
+            {document.court_name || document.issuing_body?.name}
+          </p>
+        )}
+        {document.date_issued && (
+          <p className="text-xs text-muted-foreground">{document.date_issued}</p>
+        )}
+        <p className={showExtended ? "text-sm whitespace-pre-wrap" : "text-sm line-clamp-3"}>
+          {summary}
+        </p>
+      </CardContent>
+      <CardFooter className="flex items-center gap-2">
+        <Button asChild size="sm" variant="outline" className="flex-1">
+          <Link href={href} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-1 h-3.5 w-3.5" />
+            View
+          </Link>
+        </Button>
+        {onSaveToCollection && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onSaveToCollection(document.document_id)}
+          >
+            Save
+          </Button>
+        )}
+        {showRemoveButton && onRemove && (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onRemove(document.document_id)}
+            aria-label="Remove document"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}

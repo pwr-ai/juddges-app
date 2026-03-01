@@ -124,6 +124,20 @@ sdist/
 var/
 wheels/
 
+# Allow tracking specific frontend style components needed by the app build.
+!frontend/lib/
+frontend/lib/*
+!frontend/lib/styles/
+frontend/lib/styles/*
+!frontend/lib/styles/components/
+frontend/lib/styles/components/*
+!frontend/lib/styles/components/document-card.tsx
+!frontend/lib/styles/components/search-document-card.tsx
+!frontend/lib/styles/components/search/
+frontend/lib/styles/components/search/*
+!frontend/lib/styles/components/search/SearchForm.tsx
+!frontend/lib/styles/components/search/SearchResultsSection.tsx
+
 # mypy
 .mypy_cache/
 .dmypy.json

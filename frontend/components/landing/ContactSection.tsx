@@ -14,7 +14,10 @@ interface ContactSectionProps {
   subtitle?: string;
 }
 
-export function ContactSection({ title, subtitle }: ContactSectionProps) {
+export function ContactSection({
+  title,
+  subtitle,
+}: ContactSectionProps): React.JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState({
@@ -22,9 +25,10 @@ export function ContactSection({ title, subtitle }: ContactSectionProps) {
     email: "",
     company: "",
     message: "",
+    website: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -45,7 +49,7 @@ export function ContactSection({ title, subtitle }: ContactSectionProps) {
       toast.success(data.message || "Thank you! We'll be in touch soon.");
 
       // Reset form
-      setFormData({ name: "", email: "", company: "", message: "" });
+      setFormData({ name: "", email: "", company: "", message: "", website: "" });
     } catch (error) {
       console.error("Contact form submission error:", error);
       toast.error(
@@ -60,7 +64,7 @@ export function ContactSection({ title, subtitle }: ContactSectionProps) {
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  ): void => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -108,6 +112,21 @@ export function ContactSection({ title, subtitle }: ContactSectionProps) {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Honeypot field - should remain empty */}
+                    <div className="hidden" aria-hidden="true">
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        name="website"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={formData.website}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
                     {/* Name */}
                     <div className="space-y-2">
                       <Label htmlFor="name">

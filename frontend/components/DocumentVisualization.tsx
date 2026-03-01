@@ -173,8 +173,9 @@ const DocumentVisualization: React.FC<DocumentVisualizationProps> = ({ className
   const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
+    const pendingTimeouts = pendingTimeoutsRef.current;
     return () => {
-      pendingTimeoutsRef.current.forEach(clearTimeout);
+      pendingTimeouts.forEach(clearTimeout);
     };
   }, []);
 

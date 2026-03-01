@@ -21,7 +21,7 @@ import {
   FileJson,
   Loader2,
 } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 // ============================================================================
 // Types
@@ -263,27 +263,35 @@ function downloadBlob(blob: Blob, filename: string): void {
 /**
  * Exports data to XLSX format
  */
-function exportToXLSX(
+async function exportToXLSX(
   data: Record<string, unknown>[],
   filename: string,
   sheetName = "Data"
-): void {
-  const worksheet = XLSX.utils.json_to_sheet(data);
+): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName.slice(0, 31));
 
-  // Auto-fit column widths
-  const colWidths = Object.keys(data[0] || {}).map((key) => {
+  const keys = Object.keys(data[0] || {});
+  worksheet.columns = keys.map((key) => {
     const maxLength = Math.max(
       key.length,
       ...data.map((row) => String(row[key] || "").length)
     );
-    return { wch: Math.min(maxLength + 2, 60) };
+    return {
+      header: key,
+      key,
+      width: Math.min(maxLength + 2, 60),
+    };
   });
-  worksheet["!cols"] = colWidths;
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
+  data.forEach((row) => {
+    const exportRow = Object.fromEntries(
+      keys.map((key) => [key, row[key] ?? ""])
+    );
+    worksheet.addRow(exportRow);
+  });
 
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const excelBuffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([excelBuffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
@@ -345,7 +353,11 @@ interface ColumnFilterProps {
   placeholder?: string;
 }
 
-function ColumnFilter({ value, onChange, placeholder = "Filter..." }: ColumnFilterProps) {
+function ColumnFilter({
+  value,
+  onChange,
+  placeholder = "Filter...",
+}: ColumnFilterProps): React.JSX.Element {
   return (
     <div className="relative mt-1.5">
       <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
@@ -390,7 +402,7 @@ function Pagination({
   pageSizeOptions,
   onPageChange,
   onPageSizeChange,
-}: PaginationProps) {
+}: PaginationProps): React.JSX.Element {
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
@@ -500,7 +512,12 @@ interface ExportDropdownProps {
   itemCount: number;
 }
 
-function ExportDropdown({ formats, onExport, isExporting, itemCount }: ExportDropdownProps) {
+function ExportDropdown({
+  formats,
+  onExport,
+  isExporting,
+  itemCount,
+}: ExportDropdownProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
 
   const formatIcons: Record<ExportFormat, React.ReactNode> = {
@@ -580,7 +597,7 @@ export function ExtractionResultsTable({
   className,
   emptyMessage = "No extraction results available",
   exportOptions = {},
-}: ExtractionResultsTableProps) {
+}: ExtractionResultsTableProps): React.JSX.Element {
   // Merge export options with defaults
   const {
     enabled: exportEnabled = true,
@@ -687,7 +704,7 @@ export function ExtractionResultsTable({
 
   // Export handler
   const handleExport = useCallback(
-    (format: ExportFormat) => {
+    async (format: ExportFormat) => {
       setIsExporting(true);
 
       try {
@@ -701,7 +718,7 @@ export function ExtractionResultsTable({
 
         switch (format) {
           case "xlsx":
-            exportToXLSX(exportData, exportFilename, "Extraction Results");
+            await exportToXLSX(exportData, exportFilename, "Extraction Results");
             break;
           case "csv":
             exportToCSV(exportData, exportFilename);
@@ -719,7 +736,7 @@ export function ExtractionResultsTable({
   );
 
   // Render sort icon
-  const renderSortIcon = (columnKey: string) => {
+  const renderSortIcon = (columnKey: string): React.JSX.Element => {
     if (sortState.column !== columnKey) {
       return <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400" />;
     }

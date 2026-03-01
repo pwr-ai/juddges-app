@@ -227,16 +227,17 @@ export function useUndoRedo(enableKeyboardShortcuts = true): UseUndoRedoReturn {
  */
 export function useScopedUndoRedo(enableKeyboardShortcuts = true): UseUndoRedoReturn {
   const undoRedo = useUndoRedo(enableKeyboardShortcuts);
+  const clearHistory = undoRedo.clear;
 
   useEffect(() => {
     // Clear history on mount to start fresh
-    undoRedo.clear();
+    clearHistory();
 
     // Clear history on unmount
     return () => {
-      undoRedo.clear();
+      clearHistory();
     };
-  }, []);
+  }, [clearHistory]);
 
   return undoRedo;
 }

@@ -354,7 +354,7 @@ export default function OCRProcessingPage(): React.JSX.Element {
 
   // Refresh history after a job completes
   useEffect(() => {
-    if (jobStatus && (jobStatus.status === 'completed' || jobStatus.status === 'failed')) {
+    if (jobStatus?.status === 'completed' || jobStatus?.status === 'failed') {
       loadJobHistory();
     }
   }, [jobStatus?.status, loadJobHistory]);

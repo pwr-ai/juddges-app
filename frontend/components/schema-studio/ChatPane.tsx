@@ -235,7 +235,11 @@ export function ChatPane({
                     <div className="flex items-start gap-2">
                       <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Describe what information to extract. Use questions like "Is there a penalty?" for boolean fields, or specify field types directly.
+                        Describe what information to extract. Use questions like
+                        {" "}
+                        &quot;Is there a penalty?&quot;
+                        {" "}
+                        for boolean fields, or specify field types directly.
                       </p>
                     </div>
                   </div>
