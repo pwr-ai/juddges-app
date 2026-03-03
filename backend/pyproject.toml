@@ -71,6 +71,12 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 addopts = "-ra -q --strict-markers"
+filterwarnings = [
+    "ignore:'enablePackrat' deprecated - use 'enable_packrat':DeprecationWarning:pyiceberg\\.expressions\\.parser",
+    "ignore:'escChar' argument is deprecated, use 'esc_char':DeprecationWarning:pyiceberg\\.expressions\\.parser",
+    "ignore:'unquoteResults' argument is deprecated, use 'unquote_results':DeprecationWarning:pyiceberg\\.expressions\\.parser",
+    "ignore:Using `@model_validator` with mode='after' on a classmethod is deprecated.*:DeprecationWarning:pyiceberg\\.table\\.metadata",
+]
 markers = [
     "integration: marks tests as integration tests (require external services)",
     "unit: marks tests as unit tests",

@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.schema_utils import prepare_schema_from_db
 from juddges_search.llms import get_llm
-from juddges_search.retrieval.fetch import get_documents_by_id
+from app.utils.document_fetcher import get_documents_by_id
 from app.core.supabase import get_supabase_client
 
 router = APIRouter(prefix="/playground", tags=["playground"])
