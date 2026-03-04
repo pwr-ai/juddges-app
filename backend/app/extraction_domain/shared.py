@@ -22,6 +22,30 @@ from app.models import (
 )
 from app.workers import extract_information_from_documents_task
 
+_IN_PROGRESS_STATES = {"PENDING", "STARTED", "PROCESSING", "RETRY"}
+_CANCELLED_STATES = {"REVOKED", "CANCELLED"}
+_FAILURE_STATES = {"FAILURE", "PARTIAL_FAILURE", "COMPLETED_WITH_FAILURES"}
+
+
+def _summarize_result_status(results: list[dict[str, Any]] | None) -> str | None:
+    """Summarize extraction results to COMPLETED/PARTIALLY_COMPLETED/FAILED."""
+    if not results:
+        return None
+
+    failed_count = sum(
+        1
+        for result in results
+        if isinstance(result, dict)
+        and result.get("status") == DocumentProcessingStatus.FAILED.value
+    )
+    total_count = len(results)
+
+    if failed_count == 0:
+        return "COMPLETED"
+    if failed_count < total_count:
+        return "PARTIALLY_COMPLETED"
+    return "FAILED"
+
 
 def simplify_job_status(
     celery_state: str, results: list[dict[str, Any]] | None = None
@@ -71,52 +95,24 @@ def simplify_job_status(
     normalized_state = (celery_state or "").upper()
 
     # Map intermediate states to "IN_PROGRESS"
-    if normalized_state in {"PENDING", "STARTED", "PROCESSING", "RETRY"}:
+    if normalized_state in _IN_PROGRESS_STATES:
         return "IN_PROGRESS"
 
     # Map cancellation states
-    if normalized_state in {"REVOKED", "CANCELLED"}:
+    if normalized_state in _CANCELLED_STATES:
         return "CANCELLED"
 
-    # For completed tasks, check results to determine status
-    if normalized_state == "SUCCESS" and results:
-        failed_count = sum(
-            1
-            for r in results
-            if isinstance(r, dict)
-            and r.get("status") == DocumentProcessingStatus.FAILED.value
-        )
-        total_count = len(results)
-
-        if failed_count == 0:
-            return "COMPLETED"
-        elif failed_count < total_count:
-            return "PARTIALLY_COMPLETED"
-        else:
-            return "FAILED"
+    if normalized_state == "SUCCESS":
+        return _summarize_result_status(results) or "COMPLETED"
 
     # Map failure states (including custom COMPLETED_WITH_FAILURES state from worker)
-    if normalized_state in {"FAILURE", "PARTIAL_FAILURE", "COMPLETED_WITH_FAILURES"}:
-        if results:
-            failed_count = sum(
-                1
-                for r in results
-                if isinstance(r, dict)
-                and r.get("status") == DocumentProcessingStatus.FAILED.value
-            )
-            total_count = len(results)
-            if failed_count == 0:
-                return "COMPLETED"
-            if failed_count < total_count:
-                return "PARTIALLY_COMPLETED"
-            return "FAILED"
+    if normalized_state in _FAILURE_STATES:
+        result_status = _summarize_result_status(results)
+        if result_status:
+            return result_status
         if normalized_state == "PARTIAL_FAILURE":
             return "PARTIALLY_COMPLETED"
         return "FAILED"
-
-    # Default for SUCCESS without results
-    if normalized_state == "SUCCESS":
-        return "COMPLETED"
 
     # Fallback: return as-is if unknown (keep uppercase)
     logger.warning(f"Unknown Celery state: {celery_state}, returning as-is")
