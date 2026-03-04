@@ -9,7 +9,7 @@ Provides endpoints for:
 5. Version history management
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
@@ -153,6 +153,98 @@ class MarketplaceStatsResponse(BaseModel):
     most_downloaded: list[MarketplaceListingItem]
 
 
+# ===== Internal Helpers =====
+
+
+def _build_published_listings_query(supabase: Any) -> Any:
+    """Create a query builder for published marketplace listings."""
+    return (
+        supabase.table("marketplace_listings")
+        .select("*", count="exact")
+        .eq("status", "published")
+    )
+
+
+def _apply_search_filter(query_builder: Any, search: str | None) -> Any:
+    """Apply full-text-like search over title and description."""
+    if not search:
+        return query_builder
+    return query_builder.or_(f"title.ilike.%{search}%,description.ilike.%{search}%")
+
+
+def _apply_category_filter(query_builder: Any, category: str | None) -> Any:
+    """Apply category filter if provided."""
+    if not category:
+        return query_builder
+    return query_builder.eq("category", category)
+
+
+def _apply_tags_filter(query_builder: Any, tags: str | None) -> Any:
+    """Apply tags contains filter from comma-separated input."""
+    if not tags:
+        return query_builder
+    tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    if not tag_list:
+        return query_builder
+    return query_builder.contains("tags", tag_list)
+
+
+def _apply_sort(query_builder: Any, sort_by: str) -> Any:
+    """Apply marketplace sort order."""
+    if sort_by == "newest":
+        return query_builder.order("published_at", desc=True)
+    if sort_by in {"popular", "most_downloaded"}:
+        return query_builder.order("download_count", desc=True)
+    if sort_by == "top_rated":
+        return query_builder.order("avg_rating", desc=True)
+    return query_builder
+
+
+def _apply_pagination(query_builder: Any, page: int, page_size: int) -> tuple[Any, int]:
+    """Apply range pagination and return query + offset."""
+    offset = (page - 1) * page_size
+    paged = query_builder.range(offset, offset + page_size - 1)
+    return paged, offset
+
+
+def _count_rows(supabase: Any, table: str, status: str | None = None) -> int:
+    """Count rows in a table with optional status filter."""
+    query_builder = supabase.table(table).select("id", count="exact")
+    if status:
+        query_builder = query_builder.eq("status", status)
+    response = query_builder.execute()
+    return response.count or 0
+
+
+def _build_category_counts(items: list[dict[str, Any]]) -> list[dict[str, int | str]]:
+    """Convert listing rows into sorted category counts."""
+    category_counts: dict[str, int] = {}
+    for item in items:
+        category = item.get("category", "general")
+        category_counts[category] = category_counts.get(category, 0) + 1
+    return [
+        {"name": name, "count": count}
+        for name, count in sorted(
+            category_counts.items(), key=lambda entry: entry[1], reverse=True
+        )
+    ]
+
+
+def _fetch_top_listings(
+    supabase: Any, order_column: str, limit: int = 5
+) -> list[MarketplaceListingItem]:
+    """Fetch top published listings by given order column."""
+    response = (
+        supabase.table("marketplace_listings")
+        .select("*")
+        .eq("status", "published")
+        .order(order_column, desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return [MarketplaceListingItem(**item) for item in (response.data or [])]
+
+
 # ===== Endpoints =====
 
 
@@ -180,41 +272,12 @@ async def browse_listings(
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        query_builder = (
-            supabase.table("marketplace_listings")
-            .select("*", count="exact")
-            .eq("status", "published")
-        )
-
-        # Search
-        if search:
-            query_builder = query_builder.or_(
-                f"title.ilike.%{search}%,description.ilike.%{search}%"
-            )
-
-        # Category filter
-        if category:
-            query_builder = query_builder.eq("category", category)
-
-        # Tags filter
-        if tags:
-            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
-            if tag_list:
-                query_builder = query_builder.contains("tags", tag_list)
-
-        # Sorting
-        if sort_by == "newest":
-            query_builder = query_builder.order("published_at", desc=True)
-        elif sort_by == "popular":
-            query_builder = query_builder.order("download_count", desc=True)
-        elif sort_by == "top_rated":
-            query_builder = query_builder.order("avg_rating", desc=True)
-        elif sort_by == "most_downloaded":
-            query_builder = query_builder.order("download_count", desc=True)
-
-        # Pagination
-        offset = (page - 1) * page_size
-        query_builder = query_builder.range(offset, offset + page_size - 1)
+        query_builder = _build_published_listings_query(supabase)
+        query_builder = _apply_search_filter(query_builder, search)
+        query_builder = _apply_category_filter(query_builder, category)
+        query_builder = _apply_tags_filter(query_builder, tags)
+        query_builder = _apply_sort(query_builder, sort_by)
+        query_builder, offset = _apply_pagination(query_builder, page, page_size)
 
         response = query_builder.execute()
         listings = response.data or []
@@ -249,72 +312,21 @@ async def get_marketplace_stats() -> MarketplaceStatsResponse:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        # Total published listings
-        listings_resp = (
-            supabase.table("marketplace_listings")
-            .select("id", count="exact")
-            .eq("status", "published")
-            .execute()
+        total_listings = _count_rows(
+            supabase, table="marketplace_listings", status="published"
         )
-        total_listings = listings_resp.count or 0
+        total_downloads = _count_rows(supabase, table="marketplace_downloads")
+        total_reviews = _count_rows(supabase, table="marketplace_reviews")
 
-        # Total downloads
-        downloads_resp = (
-            supabase.table("marketplace_downloads")
-            .select("id", count="exact")
-            .execute()
-        )
-        total_downloads = downloads_resp.count or 0
-
-        # Total reviews
-        reviews_resp = (
-            supabase.table("marketplace_reviews").select("id", count="exact").execute()
-        )
-        total_reviews = reviews_resp.count or 0
-
-        # Categories with counts
         cat_resp = (
             supabase.table("marketplace_listings")
             .select("category")
             .eq("status", "published")
             .execute()
         )
-        category_counts: dict[str, int] = {}
-        for item in cat_resp.data or []:
-            cat = item.get("category", "general")
-            category_counts[cat] = category_counts.get(cat, 0) + 1
-        categories = [
-            {"name": k, "count": v}
-            for k, v in sorted(
-                category_counts.items(), key=lambda x: x[1], reverse=True
-            )
-        ]
-
-        # Top rated
-        top_rated_resp = (
-            supabase.table("marketplace_listings")
-            .select("*")
-            .eq("status", "published")
-            .order("avg_rating", desc=True)
-            .limit(5)
-            .execute()
-        )
-        top_rated = [
-            MarketplaceListingItem(**item) for item in (top_rated_resp.data or [])
-        ]
-
-        # Most downloaded
-        most_dl_resp = (
-            supabase.table("marketplace_listings")
-            .select("*")
-            .eq("status", "published")
-            .order("download_count", desc=True)
-            .limit(5)
-            .execute()
-        )
-        most_downloaded = [
-            MarketplaceListingItem(**item) for item in (most_dl_resp.data or [])
-        ]
+        categories = _build_category_counts(cat_resp.data or [])
+        top_rated = _fetch_top_listings(supabase, order_column="avg_rating")
+        most_downloaded = _fetch_top_listings(supabase, order_column="download_count")
 
         return MarketplaceStatsResponse(
             total_listings=total_listings,

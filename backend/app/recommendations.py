@@ -8,7 +8,7 @@ and current research context. Uses a hybrid approach combining:
 - Recency and diversity scoring
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
@@ -82,6 +82,101 @@ INTERACTION_WEIGHTS = {
 }
 
 
+def _resolve_effective_strategy(
+    strategy: Literal["auto", "content_based", "history_based", "hybrid"],
+    user_id: str | None,
+    query: str | None,
+    document_id: str | None,
+) -> Literal["content_based", "history_based", "hybrid"]:
+    """Resolve auto strategy into a concrete recommendation strategy."""
+    if strategy != "auto":
+        return strategy
+    if document_id or query:
+        return "content_based"
+    if user_id:
+        return "hybrid"
+    return "content_based"
+
+
+def _merge_unique_recommendations(
+    base: list[RecommendationItem], extra: list[RecommendationItem]
+) -> list[RecommendationItem]:
+    """Merge recommendations, preserving uniqueness by document_id."""
+    existing_ids = {item.document_id for item in base}
+    merged = list(base)
+    for rec in extra:
+        if rec.document_id in existing_ids:
+            continue
+        existing_ids.add(rec.document_id)
+        merged.append(rec)
+    return merged
+
+
+def _embedding_source_text(document_data: dict[str, Any] | None) -> str | None:
+    """Build candidate text payload for embedding generation."""
+    if not document_data:
+        return None
+    return (
+        document_data.get("summary")
+        or document_data.get("title")
+        or document_data.get("full_text", "")[:2000]
+    )
+
+
+async def _resolve_embedding_for_context(
+    db: Any,
+    query: str | None,
+    document_id: str | None,
+) -> list[float] | None:
+    """Resolve embedding from source document first, then fallback to query."""
+    if document_id:
+        doc_data = await db.get_document_by_id(document_id)
+        if doc_data:
+            embedding = doc_data.get("embedding")
+            if embedding:
+                return embedding
+            text = _embedding_source_text(doc_data)
+            if text:
+                return await generate_embedding(text)
+
+    if query:
+        return await generate_embedding(query)
+
+    return None
+
+
+def _build_recommendation_item(
+    result: dict[str, Any], score: float, reason: str
+) -> RecommendationItem:
+    """Convert vector-search result dict to RecommendationItem."""
+    return RecommendationItem(
+        document_id=result.get("document_id", ""),
+        title=result.get("title"),
+        document_type=result.get("document_type"),
+        date_issued=result.get("date_issued"),
+        document_number=result.get("document_number"),
+        court_name=result.get("court_name"),
+        language=result.get("language"),
+        summary=_truncate(result.get("summary"), 200),
+        score=round(score, 3),
+        reason=reason,
+    )
+
+
+def _weighted_documents_from_interactions(
+    interactions: list[dict[str, Any]],
+) -> list[tuple[str, float]]:
+    """Build sorted document weight profile from interaction events."""
+    doc_weights: dict[str, float] = {}
+    for interaction in interactions:
+        doc_id = interaction.get("document_id")
+        if not doc_id:
+            continue
+        weight = INTERACTION_WEIGHTS.get(interaction.get("interaction_type"), 1.0)
+        doc_weights[doc_id] = doc_weights.get(doc_id, 0) + weight
+    return sorted(doc_weights.items(), key=lambda item: item[1], reverse=True)
+
+
 # ===== Endpoints =====
 
 
@@ -116,39 +211,29 @@ async def get_recommendations(
             raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        # Determine strategy
-        effective_strategy = strategy
-        if strategy == "auto":
-            if document_id:
-                effective_strategy = "content_based"
-            elif user_id:
-                effective_strategy = "hybrid"
-            elif query:
-                effective_strategy = "content_based"
-            else:
-                effective_strategy = "content_based"
+        effective_strategy = _resolve_effective_strategy(
+            strategy=strategy, user_id=user_id, query=query, document_id=document_id
+        )
 
         recommendations: list[RecommendationItem] = []
-
         if effective_strategy in ("content_based", "hybrid"):
-            content_recs = await _get_content_based_recommendations(
-                query=query, document_id=document_id, limit=limit
+            recommendations.extend(
+                await _get_content_based_recommendations(
+                    query=query, document_id=document_id, limit=limit
+                )
             )
-            recommendations.extend(content_recs)
 
         if effective_strategy in ("history_based", "hybrid") and user_id:
             history_recs = await _get_history_based_recommendations(
                 user_id=user_id, limit=limit
             )
-            # Merge: add history recs that aren't already in content recs
-            existing_ids = {r.document_id for r in recommendations}
-            for rec in history_recs:
-                if rec.document_id not in existing_ids:
-                    recommendations.append(rec)
+            recommendations = _merge_unique_recommendations(
+                base=recommendations, extra=history_recs
+            )
 
-        # Sort by score descending and limit
-        recommendations.sort(key=lambda r: r.score, reverse=True)
-        recommendations = recommendations[:limit]
+        recommendations = sorted(
+            recommendations, key=lambda item: item.score, reverse=True
+        )[:limit]
 
         return RecommendationsResponse(
             recommendations=recommendations,
@@ -214,24 +299,9 @@ async def _get_content_based_recommendations(
 ) -> list[RecommendationItem]:
     """Get recommendations based on content similarity."""
     db = get_vector_db()
-    embedding = None
-
-    if document_id:
-        # Get embedding from source document
-        doc_data = await db.get_document_by_id(document_id)
-        if doc_data:
-            embedding = doc_data.get("embedding")
-            if not embedding:
-                text = (
-                    doc_data.get("summary")
-                    or doc_data.get("title")
-                    or doc_data.get("full_text", "")[:2000]
-                )
-                if text:
-                    embedding = await generate_embedding(text)
-
-    if not embedding and query:
-        embedding = await generate_embedding(query)
+    embedding = await _resolve_embedding_for_context(
+        db=db, query=query, document_id=document_id
+    )
 
     if not embedding:
         # Fallback: get recent documents
@@ -244,7 +314,7 @@ async def _get_content_based_recommendations(
         match_threshold=0.3,
     )
 
-    results = []
+    results: list[RecommendationItem] = []
     for result in similar_results:
         # Skip the source document itself
         if document_id and result.get("document_id") == document_id:
@@ -254,16 +324,9 @@ async def _get_content_based_recommendations(
 
         similarity = result.get("similarity", 0.0)
         results.append(
-            RecommendationItem(
-                document_id=result.get("document_id", ""),
-                title=result.get("title"),
-                document_type=result.get("document_type"),
-                date_issued=result.get("date_issued"),
-                document_number=result.get("document_number"),
-                court_name=result.get("court_name"),
-                language=result.get("language"),
-                summary=_truncate(result.get("summary"), 200),
-                score=round(similarity, 3),
+            _build_recommendation_item(
+                result=result,
+                score=similarity,
                 reason=_content_reason(similarity, document_id, query),
             )
         )
@@ -291,28 +354,21 @@ async def _get_history_based_recommendations(
             .execute()
         )
 
-        interactions = response.data if response.data else []
+        interactions = response.data or []
 
         if not interactions:
             # Try search_queries table as fallback
             return await _get_search_history_recommendations(user_id, limit)
 
-        # Build weighted document profile
-        doc_weights: dict[str, float] = {}
-        for interaction in interactions:
-            doc_id = interaction["document_id"]
-            weight = INTERACTION_WEIGHTS.get(interaction["interaction_type"], 1.0)
-            doc_weights[doc_id] = doc_weights.get(doc_id, 0) + weight
-
         # Get top interacted documents
-        top_docs = sorted(doc_weights.items(), key=lambda x: x[1], reverse=True)[:5]
+        top_docs = _weighted_documents_from_interactions(interactions)[:5]
 
         if not top_docs:
             return []
 
         # For the most-interacted document, find similar ones
         db = get_vector_db()
-        all_recs = []
+        all_recs: list[RecommendationItem] = []
         seen_ids = {doc_id for doc_id, _ in top_docs}
 
         for doc_id, weight in top_docs[:3]:
@@ -322,11 +378,7 @@ async def _get_history_based_recommendations(
 
             embedding = doc_data.get("embedding")
             if not embedding:
-                text = (
-                    doc_data.get("summary")
-                    or doc_data.get("title")
-                    or doc_data.get("full_text", "")[:2000]
-                )
+                text = _embedding_source_text(doc_data)
                 if text:
                     embedding = await generate_embedding(text)
 
@@ -351,16 +403,9 @@ async def _get_history_based_recommendations(
                 boosted_score = min(boosted_score, 1.0)
 
                 all_recs.append(
-                    RecommendationItem(
-                        document_id=rid,
-                        title=result.get("title"),
-                        document_type=result.get("document_type"),
-                        date_issued=result.get("date_issued"),
-                        document_number=result.get("document_number"),
-                        court_name=result.get("court_name"),
-                        language=result.get("language"),
-                        summary=_truncate(result.get("summary"), 200),
-                        score=round(boosted_score, 3),
+                    _build_recommendation_item(
+                        result=result,
+                        score=boosted_score,
                         reason="Based on your research history",
                     )
                 )
@@ -392,7 +437,7 @@ async def _get_search_history_recommendations(
             .execute()
         )
 
-        queries = response.data if response.data else []
+        queries = response.data or []
         if not queries:
             return []
 
@@ -407,22 +452,15 @@ async def _get_search_history_recommendations(
             match_threshold=0.3,
         )
 
-        results = []
+        results: list[RecommendationItem] = []
         for result in similar:
             if len(results) >= limit:
                 break
             similarity = result.get("similarity", 0.0)
             results.append(
-                RecommendationItem(
-                    document_id=result.get("document_id", ""),
-                    title=result.get("title"),
-                    document_type=result.get("document_type"),
-                    date_issued=result.get("date_issued"),
-                    document_number=result.get("document_number"),
-                    court_name=result.get("court_name"),
-                    language=result.get("language"),
-                    summary=_truncate(result.get("summary"), 200),
-                    score=round(similarity, 3),
+                _build_recommendation_item(
+                    result=result,
+                    score=similarity,
                     reason="Related to your recent searches",
                 )
             )
