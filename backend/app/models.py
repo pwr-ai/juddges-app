@@ -1094,6 +1094,22 @@ class SearchChunksResponse(BaseModel):
         default=False,
         description="Whether query enhancement was applied (True for mode='thinking')",
     )
+    semantic_query: str | None = Field(
+        default=None,
+        description="Semantic/vector-optimized query used for embedding retrieval.",
+    )
+    keyword_query: str | None = Field(
+        default=None,
+        description="Keyword/full-text optimized query used for lexical retrieval.",
+    )
+    inferred_filters: dict[str, Any] | None = Field(
+        default=None,
+        description="LLM-inferred filters applied to search when not explicitly provided by the user.",
+    )
+    query_analysis_source: Literal["llm", "heuristic"] | None = Field(
+        default=None,
+        description="Source of query analysis for thinking mode.",
+    )
 
 
 # ===== Faceting Models =====
