@@ -3,7 +3,6 @@ import { getBackendUrl } from '../utils/backend-url';
 import { createClient } from '@/lib/supabase/server';
 import logger from '@/lib/logger';
 import {
-  ValidationError,
   UnauthorizedError,
   AppError,
   ErrorCode

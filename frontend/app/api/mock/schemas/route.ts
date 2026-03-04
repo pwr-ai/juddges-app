@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
  * GET /api/mock/schemas - Returns mocked extraction schemas
  */
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   const mockedSchemas = [
     {
       id: 'mock-schema-1',
@@ -62,4 +62,3 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     },
   });
 }
-
