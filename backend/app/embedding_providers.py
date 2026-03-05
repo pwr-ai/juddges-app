@@ -43,6 +43,14 @@ class EmbeddingModelConfig(BaseModel):
 
 # Pre-defined model configurations
 AVAILABLE_MODELS: dict[str, EmbeddingModelConfig] = {
+    "openai/text-embedding-3-small-768": EmbeddingModelConfig(
+        provider=EmbeddingProviderType.OPENAI,
+        model_name="text-embedding-3-small",
+        dimensions=768,
+        max_input_length=8000,
+        description="OpenAI small embedding model (768d) aligned with current judgments pgvector schema",
+        is_default=False,
+    ),
     "openai/text-embedding-3-small": EmbeddingModelConfig(
         provider=EmbeddingProviderType.OPENAI,
         model_name="text-embedding-3-small",
@@ -116,18 +124,24 @@ class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
 
     async def embed_text(self, text: str) -> list[float]:
         text = self._truncate_text(text)
-        response = await self._client.embeddings.create(
-            model=self.config.model_name,
-            input=text,
-        )
+        request_payload = {
+            "model": self.config.model_name,
+            "input": text,
+        }
+        if self.config.model_name.startswith("text-embedding-3"):
+            request_payload["dimensions"] = self.config.dimensions
+        response = await self._client.embeddings.create(**request_payload)
         return response.data[0].embedding
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         texts = [self._truncate_text(t) for t in texts]
-        response = await self._client.embeddings.create(
-            model=self.config.model_name,
-            input=texts,
-        )
+        request_payload = {
+            "model": self.config.model_name,
+            "input": texts,
+        }
+        if self.config.model_name.startswith("text-embedding-3"):
+            request_payload["dimensions"] = self.config.dimensions
+        response = await self._client.embeddings.create(**request_payload)
         return [item.embedding for item in response.data]
 
 
@@ -234,6 +248,11 @@ def get_default_model_id() -> str:
     active_model = os.getenv("EMBEDDING_MODEL_ID", "")
     if active_model and active_model in AVAILABLE_MODELS:
         return active_model
+
+    configured_dimension = os.getenv("EMBEDDING_DIMENSION", "").strip()
+    if configured_dimension == "768":
+        return "openai/text-embedding-3-small-768"
+
     # Fall back to the model marked as default
     for model_id, config in AVAILABLE_MODELS.items():
         if config.is_default:

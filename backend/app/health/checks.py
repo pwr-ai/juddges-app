@@ -401,6 +401,78 @@ async def check_langfuse(timeout: float = 5.0) -> ServiceHealth:
         )
 
 
+async def check_meilisearch(timeout: float = 3.0) -> ServiceHealth:
+    """
+    Check Meilisearch search engine health (optional service).
+
+    Args:
+        timeout: Maximum time to wait for response in seconds
+
+    Returns:
+        ServiceHealth: Health status of Meilisearch service
+    """
+    start_time = time.time()
+    service_name = "meilisearch"
+
+    try:
+        meilisearch_url = os.getenv("MEILISEARCH_URL")
+        if not meilisearch_url:
+            return ServiceHealth(
+                name=service_name,
+                status=ServiceStatus.UNKNOWN,
+                message="Meilisearch not configured (optional service)",
+                last_checked=datetime.now(timezone.utc),
+            )
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.get(f"{meilisearch_url.rstrip('/')}/health")
+            response_time = (time.time() - start_time) * 1000
+
+            if response.status_code == 200:
+                logger.debug("Meilisearch health check successful")
+                return ServiceHealth(
+                    name=service_name,
+                    status=ServiceStatus.HEALTHY,
+                    response_time_ms=round(response_time, 2),
+                    message="Meilisearch is accessible and healthy",
+                    last_checked=datetime.now(timezone.utc),
+                )
+            else:
+                logger.warning(
+                    f"Meilisearch health check returned status {response.status_code}"
+                )
+                return ServiceHealth(
+                    name=service_name,
+                    status=ServiceStatus.DEGRADED,
+                    response_time_ms=round(response_time, 2),
+                    message=f"Meilisearch returned unexpected status {response.status_code}",
+                    last_checked=datetime.now(timezone.utc),
+                )
+
+    except asyncio.TimeoutError:
+        response_time = (time.time() - start_time) * 1000
+        logger.warning(
+            f"Meilisearch health check timed out after {timeout}s (optional service)"
+        )
+        return ServiceHealth(
+            name=service_name,
+            status=ServiceStatus.DEGRADED,
+            response_time_ms=round(response_time, 2),
+            message=f"Connection timeout after {timeout}s",
+            last_checked=datetime.now(timezone.utc),
+        )
+    except Exception as e:
+        response_time = (time.time() - start_time) * 1000
+        logger.warning(f"Meilisearch health check failed: {e} (optional service)")
+        return ServiceHealth(
+            name=service_name,
+            status=ServiceStatus.DEGRADED,
+            response_time_ms=round(response_time, 2),
+            message=str(e),
+            last_checked=datetime.now(timezone.utc),
+        )
+
+
 async def check_all_services() -> dict[str, ServiceHealth]:
     """
     Check health of all services concurrently.
@@ -417,6 +489,7 @@ async def check_all_services() -> dict[str, ServiceHealth]:
         check_supabase(),
         check_celery(),
         check_langfuse(),
+        check_meilisearch(),
         return_exceptions=False,  # Let exceptions propagate
     )
 
@@ -427,6 +500,7 @@ async def check_all_services() -> dict[str, ServiceHealth]:
         "supabase": results[2],
         "celery": results[3],
         "langfuse": results[4],
+        "meilisearch": results[5],
     }
 
     logger.info(f"Health checks completed: {len(services)} services checked")

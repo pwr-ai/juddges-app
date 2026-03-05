@@ -2,7 +2,16 @@
 
 from typing import Any
 
+import pytest
+
 from app.server import app
+
+
+@pytest.fixture(autouse=True)
+def _clear_overrides():
+    """Ensure dependency overrides are cleaned up after each test."""
+    yield
+    app.dependency_overrides.clear()
 
 
 async def test_autocomplete_returns_503_when_meilisearch_not_configured(
@@ -30,13 +39,22 @@ async def test_autocomplete_returns_hits_from_search_service(
         ) -> dict[str, Any]:
             assert query == "contract"
             assert limit == 5
-            assert filters == "language = 'pl'"
+            assert filters == "jurisdiction = 'PL'"
             return {
                 "hits": [
                     {
                         "id": "doc-1",
                         "title": "Contract law overview",
-                        "_formatted": {"title": "<mark>Contract</mark> law overview"},
+                        "case_number": "II CSK 123/25",
+                        "jurisdiction": "PL",
+                        "court_name": "Supreme Court",
+                        "decision_date": "2025-06-01",
+                        "_formatted": {
+                            "title": "<mark>Contract</mark> law overview",
+                            "summary": "A case about <mark>contract</mark> disputes",
+                            "case_number": "II CSK 123/25",
+                            "court_name": "Supreme Court",
+                        },
                     }
                 ],
                 "query": query,
@@ -48,7 +66,7 @@ async def test_autocomplete_returns_hits_from_search_service(
 
     response = await authenticated_client.get(
         "/api/search/autocomplete",
-        params={"q": "contract", "limit": 5, "filters": "language = 'pl'"},
+        params={"q": "contract", "limit": 5, "filters": "jurisdiction = 'PL'"},
     )
 
     assert response.status_code == 200
@@ -58,6 +76,7 @@ async def test_autocomplete_returns_hits_from_search_service(
     assert payload["estimatedTotalHits"] == 1
     assert len(payload["hits"]) == 1
     assert payload["hits"][0]["id"] == "doc-1"
+    assert payload["hits"][0]["case_number"] == "II CSK 123/25"
 
 
 async def test_autocomplete_returns_502_when_search_backend_fails(

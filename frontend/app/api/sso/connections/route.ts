@@ -8,13 +8,37 @@ const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
  * POST /api/sso/connections - Create a new SSO connection (admin only)
  */
 
-export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+type AccessTokenResult =
+  | { ok: true; accessToken: string }
+  | { ok: false; response: NextResponse };
 
-    if (!session?.access_token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+async function getAccessToken(): Promise<AccessTokenResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { ok: false as const, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    return { ok: false as const, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+
+  return { ok: true as const, accessToken: session.access_token };
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  try {
+    const auth = await getAccessToken();
+    if (!auth.ok) {
+      return auth.response;
     }
 
     const status = request.nextUrl.searchParams.get('status');
@@ -25,7 +49,7 @@ export async function GET(request: NextRequest) {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${auth.accessToken}`,
       },
     });
 
@@ -40,13 +64,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await getAccessToken();
+    if (!auth.ok) {
+      return auth.response;
     }
 
     const body = await request.json();
@@ -55,7 +77,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${auth.accessToken}`,
       },
       body: JSON.stringify(body),
     });

@@ -89,13 +89,40 @@ services:
     networks:
       - app-dev-network
 
+  # ============================================================================
+  # Search Infrastructure (Optional, Development)
+  # ============================================================================
+
+  meilisearch-dev:
+    image: getmeili/meilisearch:v1.13
+    container_name: juddges-meilisearch-dev
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-dev-master-key}
+      - MEILI_ENV=development
+      - MEILI_LOG_LEVEL=INFO
+    volumes:
+      - meilisearch-data-dev:/meili_data
+    labels:
+      - "com.juddges.service=infrastructure"
+      - "com.juddges.service.type=search"
+      - "com.juddges.environment=development"
+    networks:
+      - app-dev-network
+
+  # ============================================================================
+  # Background Workers (Development)
+  # ============================================================================
+
   backend-worker-dev:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: development
     container_name: juddges-backend-worker-dev
-    command: celery -A app.workers worker --loglevel=info
+    command: celery -A app.workers worker --beat --loglevel=info
     restart: unless-stopped
     env_file:
       - .env
@@ -130,6 +157,9 @@ volumes:
     driver: local
   hf-cache-dev:
     name: juddges-hf-cache-dev
+    driver: local
+  meilisearch-data-dev:
+    name: juddges-meilisearch-data-dev
     driver: local
 
 # ==============================================================================

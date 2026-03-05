@@ -35,6 +35,18 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 
 celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
 
+# Auto-discover tasks in the app.tasks package
+celery_app.autodiscover_tasks(["app.tasks"])
+
+# Celery Beat schedule — periodic background jobs
+celery_app.conf.beat_schedule = {
+    "meilisearch-full-sync-every-6h": {
+        "task": "meilisearch.full_sync",
+        "schedule": 6 * 60 * 60,  # every 6 hours
+    },
+}
+celery_app.conf.timezone = "UTC"
+
 
 def _update_job_results_in_supabase(
     job_id: str,

@@ -10,6 +10,10 @@ export interface AutocompleteSuggestion {
   id: string;
   title: string;
   summary?: string;
+  caseNumber?: string;
+  jurisdiction?: string;
+  courtName?: string;
+  decisionDate?: string;
 }
 
 interface UseSearchAutocompleteOptions {
@@ -30,7 +34,16 @@ interface AutocompleteHit {
   document_id?: string;
   title?: string;
   summary?: string;
-  thesis?: string;
+  case_number?: string;
+  jurisdiction?: string;
+  court_name?: string;
+  decision_date?: string;
+  _formatted?: {
+    title?: string;
+    summary?: string;
+    case_number?: string;
+    court_name?: string;
+  };
 }
 
 interface AutocompleteResponse {
@@ -38,7 +51,9 @@ interface AutocompleteResponse {
 }
 
 function mapHitToSuggestion(hit: AutocompleteHit): AutocompleteSuggestion | null {
-  const title = (hit.title || "").trim();
+  // Prefer _formatted (highlighted) fields when available
+  const formatted = hit._formatted;
+  const title = (formatted?.title || hit.title || "").trim();
   if (!title) {
     return null;
   }
@@ -46,7 +61,11 @@ function mapHitToSuggestion(hit: AutocompleteHit): AutocompleteSuggestion | null
   return {
     id: String(hit.id || hit.document_id || title),
     title,
-    summary: (hit.summary || hit.thesis || "").trim() || undefined,
+    summary: (formatted?.summary || hit.summary || "").trim() || undefined,
+    caseNumber: (hit.case_number || "").trim() || undefined,
+    jurisdiction: hit.jurisdiction || undefined,
+    courtName: (formatted?.court_name || hit.court_name || "").trim() || undefined,
+    decisionDate: hit.decision_date || undefined,
   };
 }
 

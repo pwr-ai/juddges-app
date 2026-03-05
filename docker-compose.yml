@@ -132,6 +132,52 @@ services:
           cpus: '4'
           memory: 12G
 
+  # ============================================================================
+  # Search Infrastructure (Optional)
+  # ============================================================================
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.13
+    container_name: juddges-meilisearch
+    restart: unless-stopped
+    expose:
+      - "7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-}
+      - MEILI_ENV=production
+      - MEILI_MAX_INDEXING_MEMORY=1536MiB
+      - MEILI_LOG_LEVEL=WARN
+    volumes:
+      - meilisearch-data:/meili_data
+    labels:
+      - "com.juddges.service=infrastructure"
+      - "com.juddges.service.type=search"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================================================
+  # Background Workers
+  # ============================================================================
+
   backend-worker:
     image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
@@ -183,6 +229,47 @@ services:
         reservations:
           cpus: '1'
           memory: 2G
+
+  backend-beat:
+    image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: juddges-backend-beat
+    command: celery -A app.workers beat --loglevel=info
+    restart: unless-stopped
+    env_file:
+      - .env
+    labels:
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=beat-scheduler"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+
+volumes:
+  meilisearch-data:
+    name: juddges-meilisearch-data
+    driver: local
 
 # ==============================================================================
 # Networks
