@@ -1,6 +1,7 @@
 "use client";
 
-import { Mail, MapPin, Phone, Github, Globe, HelpCircle } from "lucide-react";
+import { useState } from "react";
+import { Mail, MapPin, Phone, Github, Globe, HelpCircle, Send, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import {
   PageContainer,
   Header,
@@ -9,8 +10,80 @@ import {
   SecondaryHeader,
   SecondaryButton,
 } from "@/lib/styles/components";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
+type FormStatus = "idle" | "submitting" | "success" | "error";
+
+interface FieldErrors {
+  name?: string;
+  email?: string;
+  company?: string;
+  message?: string;
+}
+
+function validateForm(data: { name: string; email: string; company: string; message: string }): FieldErrors {
+  const errors: FieldErrors = {};
+  if (data.name.length < 2) errors.name = "Name must be at least 2 characters";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = "Please enter a valid email address";
+  if (data.company.length < 2) errors.company = "Company must be at least 2 characters";
+  if (data.message.length < 10) errors.message = "Message must be at least 10 characters";
+  return errors;
+}
 
 export default function ContactPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [serverError, setServerError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFieldErrors({});
+    setServerError("");
+
+    const errors = validateForm({ name, email, company, message });
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    setStatus("submitting");
+
+    try {
+      const formData = new FormData(e.currentTarget as HTMLFormElement);
+      const website = formData.get("website") as string || undefined;
+
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, company, message, website }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setStatus("error");
+        setServerError(data.message || "Something went wrong. Please try again.");
+        return;
+      }
+
+      setStatus("success");
+      setName("");
+      setEmail("");
+      setCompany("");
+      setMessage("");
+    } catch {
+      setStatus("error");
+      setServerError("Network error. Please check your connection and try again.");
+    }
+  }
+
   return (
     <PageContainer width="standard" className="py-12">
       {/* Header */}
@@ -27,7 +100,126 @@ export default function ContactPage() {
         />
       </div>
 
-      <div className="grid gap-10">
+      <div className="grid lg:grid-cols-2 gap-10">
+        {/* Contact Form */}
+        <div>
+          <LightCard padding="lg">
+            <SecondaryHeader
+              icon={Send}
+              title="Send a Message"
+              className="mb-6"
+              showBorder={false}
+            />
+
+            {status === "success" ? (
+              <div className="flex flex-col items-center py-8 text-center gap-3">
+                <CheckCircle className="size-10 text-green-500" />
+                <p className="font-medium text-base">Message sent!</p>
+                <p className="text-sm text-muted-foreground">
+                  Thank you for reaching out. We&apos;ll get back to you within 2-3 business days.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setStatus("idle")}
+                >
+                  Send another message
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={120}
+                    aria-invalid={!!fieldErrors.name}
+                  />
+                  {fieldErrors.name && (
+                    <p className="text-xs text-destructive">{fieldErrors.name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    maxLength={254}
+                    aria-invalid={!!fieldErrors.email}
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-xs text-destructive">{fieldErrors.email}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company / Organization</Label>
+                  <Input
+                    id="company"
+                    placeholder="Your company or institution"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    maxLength={160}
+                    aria-invalid={!!fieldErrors.company}
+                  />
+                  {fieldErrors.company && (
+                    <p className="text-xs text-destructive">{fieldErrors.company}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="How can we help you?"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    maxLength={5000}
+                    rows={5}
+                    aria-invalid={!!fieldErrors.message}
+                  />
+                  {fieldErrors.message && (
+                    <p className="text-xs text-destructive">{fieldErrors.message}</p>
+                  )}
+                </div>
+
+                {/* Honeypot - hidden from users, catches bots */}
+                <div className="absolute opacity-0 -z-10" aria-hidden="true" tabIndex={-1}>
+                  <input name="website" type="text" autoComplete="off" tabIndex={-1} />
+                </div>
+
+                {serverError && (
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+                    <AlertCircle className="size-4 mt-0.5 shrink-0" />
+                    <p>{serverError}</p>
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full" disabled={status === "submitting"}>
+                  {status === "submitting" ? (
+                    <>
+                      <Loader2 className="size-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-4 mr-2" />
+                      Send Message
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
+          </LightCard>
+        </div>
+
         {/* Contact Information */}
         <div className="space-y-6">
           {/* Primary Contact */}
