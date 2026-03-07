@@ -14,6 +14,7 @@ from app.services.meilisearch_config import (
     transform_judgment_for_meilisearch,
 )
 from app.services.search import MeiliSearchService
+from app.services.sync_status import record_sync_completed, record_sync_failed
 from app.workers import celery_app
 
 
@@ -105,39 +106,44 @@ def full_sync_judgments_to_meilisearch(
     total_synced = 0
     offset = 0
 
-    while True:
-        resp = (
-            supabase_client.table("judgments")
-            .select("*")
-            .order("created_at")
-            .range(offset, offset + batch_size - 1)
-            .execute()
-        )
+    try:
+        while True:
+            resp = (
+                supabase_client.table("judgments")
+                .select("*")
+                .order("created_at")
+                .range(offset, offset + batch_size - 1)
+                .execute()
+            )
 
-        rows = resp.data or []
-        if not rows:
-            break
+            rows = resp.data or []
+            if not rows:
+                break
 
-        documents = [transform_judgment_for_meilisearch(row) for row in rows]
-        result = asyncio.run(service.upsert_documents(documents))
+            documents = [transform_judgment_for_meilisearch(row) for row in rows]
+            result = asyncio.run(service.upsert_documents(documents))
 
-        # Wait for the indexing task to finish before moving on
-        task_uid = result.get("taskUid")
-        if task_uid is not None:
-            asyncio.run(service.wait_for_task(task_uid, max_wait=120.0))
+            # Wait for the indexing task to finish before moving on
+            task_uid = result.get("taskUid")
+            if task_uid is not None:
+                asyncio.run(service.wait_for_task(task_uid, max_wait=120.0))
 
-        total_synced += len(documents)
-        offset += batch_size
+            total_synced += len(documents)
+            offset += batch_size
 
-        self.update_state(
-            state="PROGRESS",
-            meta={"synced": total_synced, "current_batch": len(documents)},
-        )
+            self.update_state(
+                state="PROGRESS",
+                meta={"synced": total_synced, "current_batch": len(documents)},
+            )
 
-        logger.info(
-            f"Meilisearch full sync: {total_synced} documents synced so far"
-        )
+            logger.info(
+                f"Meilisearch full sync: {total_synced} documents synced so far"
+            )
+    except Exception as exc:
+        record_sync_failed(str(exc))
+        raise
 
+    record_sync_completed(total_synced)
     logger.info(f"Meilisearch full sync complete: {total_synced} documents total")
     return {"status": "completed", "total_synced": total_synced}
 

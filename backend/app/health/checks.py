@@ -411,8 +411,11 @@ async def check_meilisearch(timeout: float = 3.0) -> ServiceHealth:
     Returns:
         ServiceHealth: Health status of Meilisearch service
     """
+    from app.services.sync_status import get_sync_status
+
     start_time = time.time()
     service_name = "meilisearch"
+    sync_info = get_sync_status()
 
     try:
         meilisearch_url = os.getenv("MEILISEARCH_URL")
@@ -422,6 +425,7 @@ async def check_meilisearch(timeout: float = 3.0) -> ServiceHealth:
                 status=ServiceStatus.UNKNOWN,
                 message="Meilisearch not configured (optional service)",
                 last_checked=datetime.now(timezone.utc),
+                metadata={"sync": sync_info},
             )
 
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -430,12 +434,17 @@ async def check_meilisearch(timeout: float = 3.0) -> ServiceHealth:
 
             if response.status_code == 200:
                 logger.debug("Meilisearch health check successful")
+                status = ServiceStatus.HEALTHY
+                if sync_info.get("status") == "stale":
+                    status = ServiceStatus.DEGRADED
                 return ServiceHealth(
                     name=service_name,
-                    status=ServiceStatus.HEALTHY,
+                    status=status,
                     response_time_ms=round(response_time, 2),
-                    message="Meilisearch is accessible and healthy",
+                    message="Meilisearch is accessible and healthy"
+                    + (" (sync stale)" if status == ServiceStatus.DEGRADED else ""),
                     last_checked=datetime.now(timezone.utc),
+                    metadata={"sync": sync_info},
                 )
             else:
                 logger.warning(
