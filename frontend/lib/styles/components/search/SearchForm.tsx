@@ -2,6 +2,7 @@
 
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
+import DOMPurify from "dompurify";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,13 @@ import { DocumentType } from "@/types/search";
 type SearchMode = "rabbit" | "thinking";
 
 /**
- * Sanitize HTML from Meilisearch highlights: strip everything except {@code <mark>} tags.
+ * Sanitize HTML from Meilisearch highlights: allow only {@code <mark>} tags via DOMPurify.
  */
 function sanitizeHighlight(html: string): string {
-  return html
-    .replace(/<(?!\/?mark\b)[^>]*>/gi, "")
-    .replace(/&(?!amp;|lt;|gt;|quot;|#\d+;)/g, "&amp;");
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["mark"],
+    ALLOWED_ATTR: [],
+  });
 }
 
 

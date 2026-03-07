@@ -359,15 +359,10 @@ ALLOWED_ORIGINS = (
     ]
 )
 
-# Add production origins if set
+# Add production origins if set (HTTPS only for security)
 if os.getenv("VIRTUAL_HOST_FRONTEND"):
     frontend_host = os.getenv("VIRTUAL_HOST_FRONTEND")
-    ALLOWED_ORIGINS.extend(
-        [
-            f"https://{frontend_host}",
-            f"http://{frontend_host}",  # For local testing
-        ]
-    )
+    ALLOWED_ORIGINS.append(f"https://{frontend_host}")
 
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 
@@ -410,6 +405,19 @@ async def add_security_headers(request: Request, call_next):
 
     # Referrer-Policy: Control referrer information
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Content-Security-Policy: Mitigate XSS and injection attacks
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
 
     return response
 
