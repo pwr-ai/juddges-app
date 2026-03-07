@@ -11,8 +11,8 @@ Date: 2025-10-12
 import csv
 import io
 import json
-from datetime import datetime, timedelta, timezone
-from typing import List, Literal, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from loguru import logger
@@ -20,7 +20,6 @@ from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.services.audit_service import AuditService
-
 
 # Router configuration
 router = APIRouter(prefix="/api/audit", tags=["Audit Trail"])
@@ -35,11 +34,11 @@ class AuditLogEntry(BaseModel):
     id: str = Field(description="Audit log ID")
     action_type: str = Field(description="Type of action performed")
     created_at: str = Field(description="Timestamp (ISO 8601)")
-    resource_type: Optional[str] = Field(None, description="Type of resource affected")
-    resource_id: Optional[str] = Field(None, description="ID of resource affected")
-    session_id: Optional[str] = Field(None, description="Session identifier")
-    model_used: Optional[str] = Field(None, description="AI model used")
-    request_duration_ms: Optional[int] = Field(
+    resource_type: str | None = Field(None, description="Type of resource affected")
+    resource_id: str | None = Field(None, description="ID of resource affected")
+    session_id: str | None = Field(None, description="Session identifier")
+    model_used: str | None = Field(None, description="AI model used")
+    request_duration_ms: int | None = Field(
         None, description="Request duration in milliseconds"
     )
 
@@ -48,7 +47,7 @@ class AuditTrailResponse(BaseModel):
     """Response model for audit trail retrieval."""
 
     user_id: str = Field(description="User identifier")
-    audit_logs: List[AuditLogEntry] = Field(description="List of audit log entries")
+    audit_logs: list[AuditLogEntry] = Field(description="List of audit log entries")
     total_count: int = Field(description="Total number of records matching filters")
     limit: int = Field(description="Page size limit")
     offset: int = Field(description="Pagination offset")
@@ -64,7 +63,7 @@ class AuditStatistics(BaseModel):
     total_sessions: int = Field(description="Number of unique sessions")
     date_range: dict = Field(description="Date range of activity")
     action_breakdown: dict = Field(description="Breakdown by action type")
-    most_recent_activity: Optional[str] = Field(
+    most_recent_activity: str | None = Field(
         None, description="Most recent activity timestamp"
     )
 
@@ -75,13 +74,13 @@ class AuditStatistics(BaseModel):
 @router.get("/my-activity", response_model=AuditTrailResponse)
 async def get_my_audit_trail(
     user: AuthenticatedUser = Depends(get_current_user),
-    start_date: Optional[str] = Query(
+    start_date: str | None = Query(
         None, description="Start date (ISO 8601 format, default: 90 days ago)"
     ),
-    end_date: Optional[str] = Query(
+    end_date: str | None = Query(
         None, description="End date (ISO 8601 format, default: now)"
     ),
-    action_types: Optional[List[str]] = Query(
+    action_types: list[str] | None = Query(
         None, description="Filter by specific action types"
     ),
     limit: int = Query(
@@ -158,7 +157,7 @@ async def get_my_audit_trail(
     except Exception as e:
         logger.error(f"Failed to retrieve audit trail for user {user.id}: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve audit trail: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve audit trail: {e!s}"
         )
 
 
@@ -187,7 +186,7 @@ async def get_my_activity_statistics(
     """
     try:
         # Calculate date range
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         start_date = end_date - timedelta(days=days)
 
         # Get audit trail for statistics
@@ -203,7 +202,7 @@ async def get_my_activity_statistics(
         # Calculate statistics
         total_actions = len(audit_logs)
         unique_sessions = len(
-            set(log.get("session_id") for log in audit_logs if log.get("session_id"))
+            {log.get("session_id") for log in audit_logs if log.get("session_id")}
         )
 
         # Breakdown by action type
@@ -235,7 +234,7 @@ async def get_my_activity_statistics(
     except Exception as e:
         logger.error(f"Failed to retrieve activity statistics for user {user.id}: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve statistics: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve statistics: {e!s}"
         )
 
 
@@ -245,10 +244,10 @@ async def export_my_audit_trail(
     format: Literal["json", "csv"] = Query(
         "json", description="Export format (json or csv)"
     ),
-    start_date: Optional[str] = Query(
+    start_date: str | None = Query(
         None, description="Start date (ISO 8601 format, default: 90 days ago)"
     ),
-    end_date: Optional[str] = Query(
+    end_date: str | None = Query(
         None, description="End date (ISO 8601 format, default: now)"
     ),
 ):
@@ -299,7 +298,7 @@ async def export_my_audit_trail(
         )
 
         # Generate filename
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"audit_trail_{user.id[:8]}_{timestamp}.{format}"
 
         if format == "json":
@@ -312,7 +311,7 @@ async def export_my_audit_trail(
                 headers={"Content-Disposition": f'attachment; filename="{filename}"'},
             )
 
-        elif format == "csv":
+        if format == "csv":
             # Export as CSV
             output = io.StringIO()
             if audit_logs:
@@ -351,7 +350,7 @@ async def export_my_audit_trail(
     except Exception as e:
         logger.error(f"Failed to export audit trail for user {user.id}: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to export audit trail: {str(e)}"
+            status_code=500, detail=f"Failed to export audit trail: {e!s}"
         )
 
 

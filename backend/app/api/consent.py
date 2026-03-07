@@ -8,8 +8,8 @@ Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -20,7 +20,6 @@ from app.core.auth_jwt import (
     get_admin_supabase_client,
     get_current_user,
 )
-
 
 # Router configuration
 router = APIRouter(prefix="/api/consent", tags=["User Consent"])
@@ -42,7 +41,7 @@ class ConsentUpdateRequest(BaseModel):
 
     accepted: bool = Field(description="Whether consent is accepted or revoked")
 
-    version: Optional[str] = Field(
+    version: str | None = Field(
         None,
         description="Version of the document being accepted (e.g., 'v1.0', '2024-10-12')",
     )
@@ -56,30 +55,30 @@ class ConsentStatusResponse(BaseModel):
     professional_acknowledgment_accepted: bool = Field(
         description="Whether user accepted professional acknowledgment"
     )
-    professional_acknowledgment_date: Optional[str] = Field(
+    professional_acknowledgment_date: str | None = Field(
         None, description="Date of acceptance"
     )
-    professional_acknowledgment_version: Optional[str] = Field(
+    professional_acknowledgment_version: str | None = Field(
         None, description="Version accepted"
     )
 
     terms_accepted: bool = Field(description="Whether user accepted terms of service")
-    terms_accepted_date: Optional[str] = None
-    terms_accepted_version: Optional[str] = None
+    terms_accepted_date: str | None = None
+    terms_accepted_version: str | None = None
 
     privacy_policy_accepted: bool = Field(
         description="Whether user accepted privacy policy"
     )
-    privacy_policy_accepted_date: Optional[str] = None
-    privacy_policy_accepted_version: Optional[str] = None
+    privacy_policy_accepted_date: str | None = None
+    privacy_policy_accepted_version: str | None = None
 
     data_processing_consent: bool = Field(
         description="Whether user consented to data processing"
     )
-    data_processing_consent_date: Optional[str] = None
+    data_processing_consent_date: str | None = None
 
     marketing_consent: bool = Field(description="Whether user consented to marketing")
-    marketing_consent_date: Optional[str] = None
+    marketing_consent_date: str | None = None
 
     is_compliant: bool = Field(description="Whether all required consents are obtained")
 
@@ -91,7 +90,7 @@ class ConsentHistoryEntry(BaseModel):
 
     consent_type: str
     accepted: bool
-    version: Optional[str]
+    version: str | None
     timestamp: str
 
 
@@ -99,7 +98,7 @@ class ConsentHistoryResponse(BaseModel):
     """Response model for consent history."""
 
     user_id: str
-    consent_history: List[ConsentHistoryEntry] = Field(
+    consent_history: list[ConsentHistoryEntry] = Field(
         description="Chronological list of consent changes"
     )
 
@@ -109,13 +108,13 @@ class ConsentUpdateResponse(BaseModel):
 
     status: Literal["success", "failed"]
     message: str
-    consent_status: Optional[ConsentStatusResponse] = None
+    consent_status: ConsentStatusResponse | None = None
 
 
 # ===== Helper Functions =====
 
 
-def _check_compliance(consent_data: Dict) -> bool:
+def _check_compliance(consent_data: dict) -> bool:
     """
     Check if user has all required consents.
 
@@ -218,9 +217,7 @@ async def update_consent(
             marketing_consent=consent_data.get("marketing_consent", False),
             marketing_consent_date=consent_data.get("marketing_consent_date"),
             is_compliant=is_compliant,
-            last_updated=consent_data.get(
-                "updated_at", datetime.now(timezone.utc).isoformat()
-            ),
+            last_updated=consent_data.get("updated_at", datetime.now(UTC).isoformat()),
         )
 
         action_word = "accepted" if request.accepted else "revoked"
@@ -241,7 +238,7 @@ async def update_consent(
         logger.error(f"Failed to update consent for user {user.id}: {e}")
         return ConsentUpdateResponse(
             status="failed",
-            message=f"Failed to update consent: {str(e)}",
+            message=f"Failed to update consent: {e!s}",
             consent_status=None,
         )
 
@@ -281,7 +278,7 @@ async def get_consent_status(user: AuthenticatedUser = Depends(get_current_user)
                 data_processing_consent=False,
                 marketing_consent=False,
                 is_compliant=False,
-                last_updated=datetime.now(timezone.utc).isoformat(),
+                last_updated=datetime.now(UTC).isoformat(),
             )
 
         consent_data = result.data[0]
@@ -321,15 +318,13 @@ async def get_consent_status(user: AuthenticatedUser = Depends(get_current_user)
             marketing_consent=consent_data.get("marketing_consent", False),
             marketing_consent_date=consent_data.get("marketing_consent_date"),
             is_compliant=is_compliant,
-            last_updated=consent_data.get(
-                "updated_at", datetime.now(timezone.utc).isoformat()
-            ),
+            last_updated=consent_data.get("updated_at", datetime.now(UTC).isoformat()),
         )
 
     except Exception as e:
         logger.error(f"Failed to retrieve consent status for user {user.id}: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve consent status: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve consent status: {e!s}"
         )
 
 
@@ -376,7 +371,7 @@ async def get_consent_history(user: AuthenticatedUser = Depends(get_current_user
     except Exception as e:
         logger.error(f"Failed to retrieve consent history for user {user.id}: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve consent history: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve consent history: {e!s}"
         )
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 # Read the generated schemas
 schemas_file = Path(__file__).parent.parent / "lawyer_schemas.json"
 
-with open(schemas_file, "r", encoding="utf-8") as f:
+with open(schemas_file, encoding="utf-8") as f:
     schemas = json.load(f)
 
 # Generate SQL INSERT statements

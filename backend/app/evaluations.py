@@ -5,8 +5,8 @@ This module provides endpoints for creating and managing extraction evaluations,
 which form the ground truth dataset for measuring schema accuracy.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Literal, Optional
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from loguru import logger
@@ -30,10 +30,10 @@ class FieldEvaluation(BaseModel):
     field_path: str = Field(description="Dot-notation path (e.g., 'parties.0.name')")
     field_name: str = Field(description="Display name of the field")
     is_correct: bool = Field(description="Whether the extracted value is correct")
-    extracted_value: Optional[Any] = Field(
+    extracted_value: Any | None = Field(
         default=None, description="The value that was extracted"
     )
-    evaluator_notes: Optional[str] = Field(default=None, max_length=500)
+    evaluator_notes: str | None = Field(default=None, max_length=500)
 
 
 class CreateEvaluationRequest(BaseModel):
@@ -43,14 +43,14 @@ class CreateEvaluationRequest(BaseModel):
         description="UUID of the schema version being evaluated"
     )
     document_id: str = Field(description="Document ID")
-    playground_run_id: Optional[str] = Field(
+    playground_run_id: str | None = Field(
         default=None, description="Optional link to playground test run"
     )
 
     overall_rating: Literal["correct", "incorrect"] = Field(
         description="Overall extraction quality rating"
     )
-    overall_notes: Optional[str] = Field(default=None, max_length=2000)
+    overall_notes: str | None = Field(default=None, max_length=2000)
 
     field_evaluations: list[FieldEvaluation] = Field(
         default_factory=list, description="Field-level evaluations"
@@ -64,9 +64,9 @@ class CreateEvaluationRequest(BaseModel):
 class UpdateEvaluationRequest(BaseModel):
     """Request to update an existing evaluation."""
 
-    overall_rating: Optional[Literal["correct", "incorrect"]] = None
-    overall_notes: Optional[str] = None
-    field_evaluations: Optional[list[FieldEvaluation]] = None
+    overall_rating: Literal["correct", "incorrect"] | None = None
+    overall_notes: str | None = None
+    field_evaluations: list[FieldEvaluation] | None = None
 
 
 class EvaluationResponse(BaseModel):
@@ -75,11 +75,11 @@ class EvaluationResponse(BaseModel):
     id: str
     schema_version_id: str
     document_id: str
-    playground_run_id: Optional[str]
+    playground_run_id: str | None
     overall_rating: str
-    overall_notes: Optional[str]
+    overall_notes: str | None
     extracted_data: dict[str, Any]
-    evaluator_user_id: Optional[str]
+    evaluator_user_id: str | None
     created_at: str
     updated_at: str
     field_evaluations: list[FieldEvaluation] = Field(default_factory=list)
@@ -105,7 +105,7 @@ class SchemaEvaluationsResponse(BaseModel):
     """Response containing evaluations for a schema with stats."""
 
     schema_id: str
-    schema_version_id: Optional[str]
+    schema_version_id: str | None
     stats: AccuracyStats
     evaluations: list[EvaluationResponse]
     total: int
@@ -331,7 +331,7 @@ async def create_evaluation(
             )
 
         # Create evaluation
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         result = (
             supabase.table("extraction_evaluations")
             .insert(
@@ -388,7 +388,7 @@ async def create_evaluation(
         logger.error(f"Failed to create evaluation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create evaluation: {str(e)}",
+            detail=f"Failed to create evaluation: {e!s}",
         )
 
 
@@ -446,7 +446,7 @@ async def get_evaluation(
         logger.error(f"Failed to get evaluation {evaluation_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get evaluation: {str(e)}",
+            detail=f"Failed to get evaluation: {e!s}",
         )
 
 
@@ -497,7 +497,7 @@ async def update_evaluation(
             )
 
         # Build update data
-        update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+        update_data = {"updated_at": datetime.now(UTC).isoformat()}
 
         if request.overall_rating is not None:
             update_data["overall_rating"] = request.overall_rating
@@ -550,7 +550,7 @@ async def update_evaluation(
         logger.error(f"Failed to update evaluation {evaluation_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update evaluation: {str(e)}",
+            detail=f"Failed to update evaluation: {e!s}",
         )
 
 
@@ -606,7 +606,7 @@ async def delete_evaluation(
         logger.error(f"Failed to delete evaluation {evaluation_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete evaluation: {str(e)}",
+            detail=f"Failed to delete evaluation: {e!s}",
         )
 
 
@@ -618,7 +618,7 @@ async def delete_evaluation(
 )
 async def get_schema_evaluations(
     schema_id: str,
-    schema_version_id: Optional[str] = Query(
+    schema_version_id: str | None = Query(
         None, description="Filter by specific version"
     ),
     page: int = Query(1, ge=1),
@@ -745,7 +745,7 @@ async def get_schema_evaluations(
         logger.error(f"Failed to get schema evaluations: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get evaluations: {str(e)}",
+            detail=f"Failed to get evaluations: {e!s}",
         )
 
 
@@ -757,7 +757,7 @@ async def get_schema_evaluations(
 )
 async def get_document_evaluations(
     document_id: str,
-    schema_id: Optional[str] = Query(None, description="Filter by specific schema"),
+    schema_id: str | None = Query(None, description="Filter by specific schema"),
     current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> list[EvaluationResponse]:
     """
@@ -816,7 +816,7 @@ async def get_document_evaluations(
         logger.error(f"Failed to get document evaluations: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get evaluations: {str(e)}",
+            detail=f"Failed to get evaluations: {e!s}",
         )
 
 

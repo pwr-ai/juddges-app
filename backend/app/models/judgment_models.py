@@ -6,10 +6,10 @@ and support the legal coding scheme for detailed case analysis.
 """
 
 from datetime import date, datetime
-from typing import Optional, List, Dict, Any, Literal
+from typing import Any, Literal
 from uuid import UUID
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # =============================================================================
 # CODING SCHEME MODELS
@@ -20,31 +20,29 @@ from pydantic import BaseModel, Field
 class CourtHearingData(BaseModel):
     """Court hearing information (Section 2 of coding scheme)."""
 
-    neutral_citation_number: Optional[str] = Field(
+    neutral_citation_number: str | None = Field(
         None,
         description="Neutral citation number including year, e.g., '[2023] EWCA Crim 123'",
         examples=["[2023] EWCA Crim 123"],
     )
-    case_number_hearing: Optional[str] = Field(
+    case_number_hearing: str | None = Field(
         None, description="Case number at hearing", alias="caseNumber"
     )
-    appeal_date: Optional[date] = Field(
-        None, description="Date of appeal court judgment"
-    )
-    appeal_judges: Optional[List[str]] = Field(
+    appeal_date: date | None = Field(None, description="Date of appeal court judgment")
+    appeal_judges: list[str] | None = Field(
         None,
         description="Names of appeal court judges",
         examples=[["Lord Justice Smith", "Mr Justice Jones"]],
     )
-    case_name: Optional[str] = Field(
+    case_name: str | None = Field(
         None,
         description="Case name, e.g., 'Regina v. Casim Scott'",
         examples=["Regina v. Casim Scott"],
     )
-    offender_representative: Optional[str] = Field(
+    offender_representative: str | None = Field(
         None, description="Name of offender's legal representative"
     )
-    crown_representative: Optional[str] = Field(
+    crown_representative: str | None = Field(
         None, description="Name of Crown/Attorney General representative"
     )
 
@@ -56,10 +54,10 @@ class CourtHearingData(BaseModel):
 class PleaInformation(BaseModel):
     """Plea information for the offender."""
 
-    confessed: Optional[bool] = Field(
+    confessed: bool | None = Field(
         None, description="Did offender confess/plead guilty?"
     )
-    plea_point: Optional[
+    plea_point: (
         Literal[
             "police_presence",
             "first_court_appearance",
@@ -68,7 +66,8 @@ class PleaInformation(BaseModel):
             "after_first_day_trial",
             "dont_know",
         ]
-    ] = Field(
+        | None
+    ) = Field(
         None, description="At what point during proceedings did offender plead guilty?"
     )
 
@@ -76,13 +75,13 @@ class PleaInformation(BaseModel):
 class OffenderInformation(BaseModel):
     """Offender demographic and status information."""
 
-    gender: Optional[
-        Literal["male", "female", "all_male", "all_female", "male_and_female"]
-    ] = Field(None, description="Offender(s) gender")
-    age_at_offence: Optional[int] = Field(
+    gender: (
+        Literal["male", "female", "all_male", "all_female", "male_and_female"] | None
+    ) = Field(None, description="Offender(s) gender")
+    age_at_offence: int | None = Field(
         None, description="Offender(s) age at time of offence", ge=0, le=150
     )
-    employment_status: Optional[
+    employment_status: (
         Literal[
             "employed",
             "self_employed",
@@ -92,41 +91,44 @@ class OffenderInformation(BaseModel):
             "other",
             "dont_know",
         ]
-    ] = Field(None, description="Employment status at time of offence")
+        | None
+    ) = Field(None, description="Employment status at time of offence")
 
-    accommodation_status: Optional[
+    accommodation_status: (
         Literal["fixed_address", "homeless", "temporary_accommodation", "dont_know"]
-    ] = Field(None, description="Accommodation status at time of offence")
+        | None
+    ) = Field(None, description="Accommodation status at time of offence")
 
-    mental_health: Optional[str] = Field(
+    mental_health: str | None = Field(
         None,
         description="Mental health status, e.g., 'had_mental_health_problems', 'learning_difficulties'",
     )
-    intoxicated: Optional[
+    intoxicated: (
         Literal[
             "yes_drinking", "yes_drugs", "yes_drinking_and_drugs", "no", "dont_know"
         ]
-    ] = Field(None, description="Was offender intoxicated at time of offence?")
+        | None
+    ) = Field(None, description="Was offender intoxicated at time of offence?")
 
-    victim_relationship: Optional[
-        Literal["stranger", "relative", "acquaintance", "dont_know"]
-    ] = Field(None, description="Offender-victim relationship")
+    victim_relationship: (
+        Literal["stranger", "relative", "acquaintance", "dont_know"] | None
+    ) = Field(None, description="Offender-victim relationship")
 
 
 class VictimInformation(BaseModel):
     """Victim demographic and status information."""
 
-    victim_type: Optional[Literal["individual", "organisation"]] = Field(
+    victim_type: Literal["individual", "organisation"] | None = Field(
         None, description="Type of victim"
     )
-    count: Optional[int] = Field(None, description="Number of victims", ge=0)
-    gender: Optional[
-        Literal["male", "female", "all_male", "all_female", "male_and_female"]
-    ] = Field(None, description="Victim(s) gender")
-    age_at_offence: Optional[int] = Field(
+    count: int | None = Field(None, description="Number of victims", ge=0)
+    gender: (
+        Literal["male", "female", "all_male", "all_female", "male_and_female"] | None
+    ) = Field(None, description="Victim(s) gender")
+    age_at_offence: int | None = Field(
         None, description="Victim(s) age at time of offence", ge=0, le=150
     )
-    employment_status: Optional[
+    employment_status: (
         Literal[
             "employed",
             "self_employed",
@@ -136,89 +138,93 @@ class VictimInformation(BaseModel):
             "other",
             "dont_know",
         ]
-    ] = None
+        | None
+    ) = None
 
-    accommodation_status: Optional[
+    accommodation_status: (
         Literal["fixed_address", "homeless", "temporary_accommodation", "dont_know"]
-    ] = None
+        | None
+    ) = None
 
-    mental_health: Optional[str] = None
-    intoxicated: Optional[
+    mental_health: str | None = None
+    intoxicated: (
         Literal[
             "yes_drinking", "yes_drugs", "yes_drinking_and_drugs", "no", "dont_know"
         ]
-    ] = None
+        | None
+    ) = None
 
 
 class OffenceTrialData(BaseModel):
     """Offence, trial, and sentence information (Section 3 of coding scheme)."""
 
     # Conviction details
-    conviction_courts: Optional[List[str]] = Field(
+    conviction_courts: list[str] | None = Field(
         None, description="Court name(s) where offender convicted/pled guilty"
     )
-    conviction_dates: Optional[List[str]] = Field(
+    conviction_dates: list[str] | None = Field(
         None, description="Conviction/guilty plea date(s) in ISO format"
     )
-    convicted_offences: Optional[List[str]] = Field(
+    convicted_offences: list[str] | None = Field(
         None, description="Offence(s) offender was convicted of"
     )
-    acquitted_offences: Optional[List[str]] = Field(
+    acquitted_offences: list[str] | None = Field(
         None, description="Offence(s) offender was acquitted of"
     )
 
     # Plea information
-    plea: Optional[PleaInformation] = None
+    plea: PleaInformation | None = None
 
     # Remand information
-    remand_decision: Optional[
+    remand_decision: (
         Literal[
             "unconditional_bail", "conditional_bail", "remanded_custody", "dont_know"
         ]
-    ] = None
-    remand_custody_duration: Optional[str] = Field(
+        | None
+    ) = None
+    remand_custody_duration: str | None = Field(
         None, description="Duration of custody remand"
     )
 
     # Sentencing details
-    sentence_court: Optional[str] = Field(
+    sentence_court: str | None = Field(
         None, description="Court where offender sentenced"
     )
-    sentences: Optional[List[str]] = Field(None, description="Sentence(s) received")
-    sentence_serve_type: Optional[
-        Literal["all_concurrent", "all_consecutive", "combination", "dont_know"]
-    ] = Field(None, description="How multiple sentences are to be served")
+    sentences: list[str] | None = Field(None, description="Sentence(s) received")
+    sentence_serve_type: (
+        Literal["all_concurrent", "all_consecutive", "combination", "dont_know"] | None
+    ) = Field(None, description="How multiple sentences are to be served")
 
-    ancillary_orders: Optional[List[str]] = Field(
+    ancillary_orders: list[str] | None = Field(
         None,
         description="Ancillary orders applied (e.g., restraining orders, compensation orders)",
     )
 
     # Offender and victim information
-    offender: Optional[OffenderInformation] = None
-    victim: Optional[VictimInformation] = None
+    offender: OffenderInformation | None = None
+    victim: VictimInformation | None = None
 
     # Evidence presented
-    prosecution_evidence: Optional[List[str]] = Field(
+    prosecution_evidence: list[str] | None = Field(
         None,
         description="Types of evidence prosecution presented at trial",
         examples=[["CCTV", "victim_testimony", "DNA_match"]],
     )
-    defence_evidence: Optional[List[str]] = Field(
+    defence_evidence: list[str] | None = Field(
         None, description="Types of evidence defence presented at trial"
     )
 
     # Sentencing factors
-    pre_sentence_report: Optional[Literal["low", "medium", "high", "dont_know"]] = (
-        Field(None, description="Pre-sentence report risk assessment")
+    pre_sentence_report: Literal["low", "medium", "high", "dont_know"] | None = Field(
+        None, description="Pre-sentence report risk assessment"
     )
-    aggravating_factors: Optional[List[str]] = Field(
+    aggravating_factors: list[str] | None = Field(
         None, description="Aggravating factors mentioned by court"
     )
-    mitigating_factors: Optional[List[str]] = Field(
+    mitigating_factors: list[str] | None = Field(
         None, description="Mitigating factors mentioned by court"
     )
-    victim_impact_statement: Optional[bool] = Field(
+    victim_impact_statement: bool | None = Field(
         None, description="Was victim impact statement given at sentencing?"
     )
 
@@ -227,23 +233,23 @@ class OffenceTrialData(BaseModel):
 class CoDefendantInfo(BaseModel):
     """Co-defendant information."""
 
-    present: Optional[bool] = Field(None, description="Were there co-defendants?")
-    count: Optional[int] = Field(None, description="Number of co-defendants", ge=0)
+    present: bool | None = Field(None, description="Were there co-defendants?")
+    count: int | None = Field(None, description="Number of co-defendants", ge=0)
 
 
 class AppealReasons(BaseModel):
     """Reasons given by appeal court for various decisions."""
 
-    quash_conviction: Optional[List[str]] = Field(
+    quash_conviction: list[str] | None = Field(
         None, description="Reasons why conviction is unsafe/quashed"
     )
-    sentence_excessive: Optional[List[str]] = Field(
+    sentence_excessive: list[str] | None = Field(
         None, description="Reasons why sentence is unduly excessive"
     )
-    sentence_lenient: Optional[List[str]] = Field(
+    sentence_lenient: list[str] | None = Field(
         None, description="Reasons why sentence is unduly lenient"
     )
-    dismissed: Optional[List[str]] = Field(
+    dismissed: list[str] | None = Field(
         None, description="Reasons why appeal was dismissed/failed"
     )
 
@@ -251,12 +257,12 @@ class AppealReasons(BaseModel):
 class AppealData(BaseModel):
     """Appeal information (Section 4 of coding scheme)."""
 
-    appellant: Optional[Literal["offender", "attorney_general", "other"]] = Field(
+    appellant: Literal["offender", "attorney_general", "other"] | None = Field(
         None, description="Who is the appellant?"
     )
-    co_defendants: Optional[CoDefendantInfo] = None
+    co_defendants: CoDefendantInfo | None = None
 
-    appeal_against: Optional[
+    appeal_against: (
         Literal[
             "conviction_unsafe",
             "sentence_excessive",
@@ -264,18 +270,19 @@ class AppealData(BaseModel):
             "both_conviction_and_sentence",
             "other",
         ]
-    ] = Field(None, description="What is the appeal against?")
+        | None
+    ) = Field(None, description="What is the appeal against?")
 
-    appeal_grounds: Optional[List[str]] = Field(
+    appeal_grounds: list[str] | None = Field(
         None,
         description="Ground(s) for appeal",
         examples=[["trial_judge_summing_up", "evidence_admissibility"]],
     )
-    sentencing_guidelines: Optional[List[str]] = Field(
+    sentencing_guidelines: list[str] | None = Field(
         None, description="Sentencing guidelines/laws/acts mentioned by appeal court"
     )
 
-    appeal_outcome: Optional[
+    appeal_outcome: (
         Literal[
             "dismissed",
             "allowed_conviction_quashed",
@@ -284,9 +291,10 @@ class AppealData(BaseModel):
             "mixed_decision",
             "other",
         ]
-    ] = Field(None, description="Outcome of appeal")
+        | None
+    ) = Field(None, description="Outcome of appeal")
 
-    reasons: Optional[AppealReasons] = Field(
+    reasons: AppealReasons | None = Field(
         None, description="Appeal court's reasoning for the decision"
     )
 
@@ -305,79 +313,79 @@ class Judgment(BaseModel):
     # Core metadata
     case_number: str = Field(description="Case number/reference")
     jurisdiction: Literal["PL", "UK"] = Field(description="Jurisdiction code")
-    language: Optional[str] = Field(
+    language: str | None = Field(
         None, description="Language code (ISO 639-1): pl, en, uk"
     )
-    country: Optional[str] = Field(None, description="Country name or code")
+    country: str | None = Field(None, description="Country name or code")
 
-    court_name: Optional[str] = Field(None, description="Name of the court")
-    court_level: Optional[str] = Field(
+    court_name: str | None = Field(None, description="Name of the court")
+    court_level: str | None = Field(
         None,
         description="Court hierarchy level",
         examples=["Supreme Court", "Court of Appeal", "District Court"],
     )
-    decision_date: Optional[date] = Field(None, description="Date of decision")
-    publication_date: Optional[date] = Field(None, description="Date of publication")
+    decision_date: date | None = Field(None, description="Date of decision")
+    publication_date: date | None = Field(None, description="Date of publication")
 
     # Content
-    title: Optional[str] = Field(None, description="Judgment title")
-    summary: Optional[str] = Field(None, description="Summary/abstract")
+    title: str | None = Field(None, description="Judgment title")
+    summary: str | None = Field(None, description="Summary/abstract")
     full_text: str = Field(description="Full text of judgment")
 
     # Legal details
-    judges: Optional[Dict[str, Any]] = Field(
+    judges: dict[str, Any] | None = Field(
         None, description="Judge information (names, roles)"
     )
-    case_type: Optional[str] = Field(
+    case_type: str | None = Field(
         None,
         description="Type of case",
         examples=["Criminal", "Civil", "Administrative"],
     )
-    decision_type: Optional[str] = Field(
+    decision_type: str | None = Field(
         None, description="Type of decision", examples=["Judgment", "Order", "Ruling"]
     )
-    outcome: Optional[str] = Field(
+    outcome: str | None = Field(
         None, description="Case outcome", examples=["Granted", "Dismissed", "Remanded"]
     )
 
     # Classification
-    keywords: Optional[List[str]] = Field(default_factory=list, description="Keywords")
-    legal_topics: Optional[List[str]] = Field(
+    keywords: list[str] | None = Field(default_factory=list, description="Keywords")
+    legal_topics: list[str] | None = Field(
         default_factory=list, description="Legal topics"
     )
-    cited_legislation: Optional[List[str]] = Field(
+    cited_legislation: list[str] | None = Field(
         default_factory=list, description="Cited legislation/acts"
     )
 
     # Vector embedding
-    embedding: Optional[List[float]] = Field(
+    embedding: list[float] | None = Field(
         None, description="1536-dimensional embedding vector for semantic search"
     )
 
     # Coding scheme data (flexible JSONB fields)
-    court_hearing_data: Optional[CourtHearingData] = Field(
+    court_hearing_data: CourtHearingData | None = Field(
         None, description="Court hearing details (Section 2)"
     )
-    offence_trial_data: Optional[OffenceTrialData] = Field(
+    offence_trial_data: OffenceTrialData | None = Field(
         None, description="Offence/trial/sentence details (Section 3)"
     )
-    appeal_data: Optional[AppealData] = Field(
+    appeal_data: AppealData | None = Field(
         None, description="Appeal information (Section 4)"
     )
 
     # Flexible metadata
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         default_factory=dict, description="Additional metadata"
     )
 
     # Source information
-    source_dataset: Optional[str] = Field(None, description="Source dataset name")
-    source_id: Optional[str] = Field(None, description="Original source ID")
-    source_url: Optional[str] = Field(None, description="URL to original judgment")
+    source_dataset: str | None = Field(None, description="Source dataset name")
+    source_id: str | None = Field(None, description="Original source ID")
+    source_url: str | None = Field(None, description="URL to original judgment")
 
     # Timestamps
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+    created_at: datetime | None = Field(None, description="Creation timestamp")
+    updated_at: datetime | None = Field(None, description="Last update timestamp")
 
     class Config:
         from_attributes = True
@@ -425,56 +433,56 @@ class JudgmentCreateRequest(BaseModel):
 
     case_number: str
     jurisdiction: Literal["PL", "UK"]
-    language: Optional[str] = None
-    country: Optional[str] = None
-    court_name: Optional[str] = None
-    court_level: Optional[str] = None
-    decision_date: Optional[date] = None
-    publication_date: Optional[date] = None
-    title: Optional[str] = None
-    summary: Optional[str] = None
+    language: str | None = None
+    country: str | None = None
+    court_name: str | None = None
+    court_level: str | None = None
+    decision_date: date | None = None
+    publication_date: date | None = None
+    title: str | None = None
+    summary: str | None = None
     full_text: str
-    judges: Optional[Dict[str, Any]] = None
-    case_type: Optional[str] = None
-    decision_type: Optional[str] = None
-    outcome: Optional[str] = None
-    keywords: Optional[List[str]] = None
-    legal_topics: Optional[List[str]] = None
-    cited_legislation: Optional[List[str]] = None
-    court_hearing_data: Optional[CourtHearingData] = None
-    offence_trial_data: Optional[OffenceTrialData] = None
-    appeal_data: Optional[AppealData] = None
-    metadata: Optional[Dict[str, Any]] = None
-    source_dataset: Optional[str] = None
-    source_id: Optional[str] = None
-    source_url: Optional[str] = None
+    judges: dict[str, Any] | None = None
+    case_type: str | None = None
+    decision_type: str | None = None
+    outcome: str | None = None
+    keywords: list[str] | None = None
+    legal_topics: list[str] | None = None
+    cited_legislation: list[str] | None = None
+    court_hearing_data: CourtHearingData | None = None
+    offence_trial_data: OffenceTrialData | None = None
+    appeal_data: AppealData | None = None
+    metadata: dict[str, Any] | None = None
+    source_dataset: str | None = None
+    source_id: str | None = None
+    source_url: str | None = None
 
 
 class JudgmentUpdateRequest(BaseModel):
     """Request model for updating an existing judgment."""
 
-    case_number: Optional[str] = None
-    language: Optional[str] = None
-    country: Optional[str] = None
-    court_name: Optional[str] = None
-    court_level: Optional[str] = None
-    decision_date: Optional[date] = None
-    publication_date: Optional[date] = None
-    title: Optional[str] = None
-    summary: Optional[str] = None
-    full_text: Optional[str] = None
-    judges: Optional[Dict[str, Any]] = None
-    case_type: Optional[str] = None
-    decision_type: Optional[str] = None
-    outcome: Optional[str] = None
-    keywords: Optional[List[str]] = None
-    legal_topics: Optional[List[str]] = None
-    cited_legislation: Optional[List[str]] = None
-    court_hearing_data: Optional[CourtHearingData] = None
-    offence_trial_data: Optional[OffenceTrialData] = None
-    appeal_data: Optional[AppealData] = None
-    metadata: Optional[Dict[str, Any]] = None
-    source_url: Optional[str] = None
+    case_number: str | None = None
+    language: str | None = None
+    country: str | None = None
+    court_name: str | None = None
+    court_level: str | None = None
+    decision_date: date | None = None
+    publication_date: date | None = None
+    title: str | None = None
+    summary: str | None = None
+    full_text: str | None = None
+    judges: dict[str, Any] | None = None
+    case_type: str | None = None
+    decision_type: str | None = None
+    outcome: str | None = None
+    keywords: list[str] | None = None
+    legal_topics: list[str] | None = None
+    cited_legislation: list[str] | None = None
+    court_hearing_data: CourtHearingData | None = None
+    offence_trial_data: OffenceTrialData | None = None
+    appeal_data: AppealData | None = None
+    metadata: dict[str, Any] | None = None
+    source_url: str | None = None
 
 
 class JudgmentResponse(Judgment):
@@ -486,7 +494,7 @@ class JudgmentResponse(Judgment):
 class JudgmentListResponse(BaseModel):
     """Response model for listing judgments."""
 
-    judgments: List[Judgment]
+    judgments: list[Judgment]
     total: int
     offset: int
     limit: int
@@ -501,19 +509,19 @@ class JudgmentListResponse(BaseModel):
 class HybridSearchResult(Judgment):
     """Search result with scoring information."""
 
-    vector_score: Optional[float] = Field(
+    vector_score: float | None = Field(
         None, description="Vector similarity score (0-1)"
     )
-    text_score: Optional[float] = Field(None, description="Full-text search score")
-    combined_score: Optional[float] = Field(None, description="Combined hybrid score")
+    text_score: float | None = Field(None, description="Full-text search score")
+    combined_score: float | None = Field(None, description="Combined hybrid score")
 
 
 class HybridSearchResponse(BaseModel):
     """Response model for hybrid search results."""
 
-    results: List[HybridSearchResult]
+    results: list[HybridSearchResult]
     total: int
     query_time_ms: float
-    search_params: Dict[str, Any] = Field(
+    search_params: dict[str, Any] = Field(
         description="Parameters used for search (for debugging)"
     )

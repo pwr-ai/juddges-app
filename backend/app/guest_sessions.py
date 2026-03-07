@@ -10,11 +10,10 @@ Date: 2025-10-09
 
 import os
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import redis.asyncio as redis
-from fastapi import APIRouter, HTTPException, Response, Cookie
+from fastapi import APIRouter, Cookie, HTTPException, Response
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -22,7 +21,7 @@ from pydantic import BaseModel, Field
 IS_PRODUCTION = os.getenv("PYTHON_ENV", "development") == "production"
 
 # Redis client for session storage (sessions expire after 24 hours)
-redis_client: Optional[redis.Redis] = None
+redis_client: redis.Redis | None = None
 
 
 def get_redis_client():
@@ -82,7 +81,7 @@ class GuestUsageResponse(BaseModel):
     )
     limit_reached: bool = Field(description="Whether the usage limit has been reached")
     expires_at: str = Field(description="Session expiration timestamp (ISO 8601)")
-    upgrade_message: Optional[str] = Field(
+    upgrade_message: str | None = Field(
         default=None,
         description="Message prompting user to upgrade (shown when limit is close)",
     )
@@ -120,7 +119,7 @@ UPGRADE_WARNING_THRESHOLD = 2  # Show upgrade message when 2 searches remain
 
 
 async def get_or_create_guest_session(
-    session_id: Optional[str] = Cookie(None, alias="guest_session_id"),
+    session_id: str | None = Cookie(None, alias="guest_session_id"),
 ) -> str:
     """
     Get existing guest session or create a new one.
@@ -147,8 +146,8 @@ async def get_or_create_guest_session(
     # Initialize session data
     session_data = {
         "searches_used": "0",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "last_activity": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
+        "last_activity": datetime.now(UTC).isoformat(),
     }
 
     # Store session with expiry (24 hours)
@@ -189,7 +188,7 @@ async def get_guest_usage(session_id: str) -> dict:
 
     # Get TTL for expiration time
     ttl = await client.ttl(session_key)
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
+    expires_at = datetime.now(UTC) + timedelta(seconds=ttl)
 
     return {
         "session_id": session_id,
@@ -214,9 +213,7 @@ async def increment_guest_search_count(session_id: str) -> bool:
     session_key = f"guest:session:{session_id}"
 
     # Update last activity
-    await client.hset(
-        session_key, "last_activity", datetime.now(timezone.utc).isoformat()
-    )
+    await client.hset(session_key, "last_activity", datetime.now(UTC).isoformat())
 
     # Increment search count
     searches_used = await client.hincrby(session_key, "searches_used", 1)
@@ -246,7 +243,7 @@ async def create_guest_session(response: Response):
         session_id = await get_or_create_guest_session()
 
         # Set cookie (HttpOnly for security, SameSite=Lax for CSRF protection)
-        expires = datetime.now(timezone.utc) + timedelta(hours=SESSION_EXPIRY_HOURS)
+        expires = datetime.now(UTC) + timedelta(hours=SESSION_EXPIRY_HOURS)
         response.set_cookie(
             key="guest_session_id",
             value=session_id,
@@ -368,13 +365,13 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
             status="failed",
             user_id=request.user_id,
             searches_migrated=0,
-            message=f"Failed to convert guest session: {str(e)}",
+            message=f"Failed to convert guest session: {e!s}",
         )
 
 
 @router.delete("/session")
 async def delete_guest_session(
-    session_id: Optional[str] = Cookie(None, alias="guest_session_id"),
+    session_id: str | None = Cookie(None, alias="guest_session_id"),
     response: Response = None,
 ):
     """
@@ -425,7 +422,7 @@ async def delete_guest_session(
 
 
 async def check_guest_rate_limit(
-    session_id: Optional[str] = Cookie(None, alias="guest_session_id"),
+    session_id: str | None = Cookie(None, alias="guest_session_id"),
 ) -> tuple[str, bool]:
     """
     Check if guest has reached rate limit.

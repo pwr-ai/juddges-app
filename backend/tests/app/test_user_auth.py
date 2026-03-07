@@ -9,9 +9,9 @@ Tests for user-based authentication including:
 
 import pytest
 from httpx import AsyncClient
-from typing import Dict
-from app.server import app
+
 from app.collections import get_current_user
+from app.server import app
 
 
 @pytest.mark.anyio
@@ -20,7 +20,7 @@ class TestUserAuthentication:
     """Test user authentication via X-User-ID header."""
 
     async def test_user_id_header_required_for_collections(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that X-User-ID header is required for user-specific endpoints."""
         # Request without user ID should fail
@@ -30,7 +30,7 @@ class TestUserAuthentication:
         )
 
     async def test_valid_user_id_grants_access(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that valid user ID grants access to user endpoints."""
         headers = {**valid_api_headers, "X-User-ID": "test-user-123"}
@@ -39,7 +39,7 @@ class TestUserAuthentication:
         assert response.status_code != 401, "Valid user ID should not return 401"
 
     async def test_empty_user_id_rejected(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that empty user ID is rejected."""
         headers = {**valid_api_headers, "X-User-ID": ""}
@@ -50,7 +50,7 @@ class TestUserAuthentication:
         )
 
     async def test_user_id_format_validation(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that user ID format is validated."""
         # Test various user ID formats
@@ -78,8 +78,8 @@ class TestUserIsolation:
     async def test_user_collections_isolated(
         self,
         client: AsyncClient,
-        valid_api_headers: Dict[str, str],
-        sample_collection_data: Dict,
+        valid_api_headers: dict[str, str],
+        sample_collection_data: dict,
     ):
         """Test that users can only see their own collections."""
         # Create collection as user A
@@ -114,8 +114,8 @@ class TestUserIsolation:
     async def test_user_cannot_access_other_user_collection(
         self,
         client: AsyncClient,
-        valid_api_headers: Dict[str, str],
-        sample_collection_data: Dict,
+        valid_api_headers: dict[str, str],
+        sample_collection_data: dict,
     ):
         """Test that users cannot access collections belonging to other users."""
         # Create collection as user A
@@ -143,8 +143,8 @@ class TestUserIsolation:
     async def test_user_cannot_modify_other_user_collection(
         self,
         client: AsyncClient,
-        valid_api_headers: Dict[str, str],
-        sample_collection_data: Dict,
+        valid_api_headers: dict[str, str],
+        sample_collection_data: dict,
     ):
         """Test that users cannot modify collections belonging to other users."""
         # Create collection as user A
@@ -175,8 +175,8 @@ class TestUserIsolation:
     async def test_user_cannot_delete_other_user_collection(
         self,
         client: AsyncClient,
-        valid_api_headers: Dict[str, str],
-        sample_collection_data: Dict,
+        valid_api_headers: dict[str, str],
+        sample_collection_data: dict,
     ):
         """Test that users cannot delete collections belonging to other users."""
         # Create collection as user A
@@ -208,7 +208,7 @@ class TestOptionalAuthentication:
     """Test endpoints with optional authentication."""
 
     async def test_optional_auth_allows_guest_access(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that endpoints with optional auth work for both guests and users."""
         # Guest access (only API key, no user ID)
@@ -225,7 +225,7 @@ class TestOptionalAuthentication:
         )
 
     async def test_analytics_optional_auth(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that analytics endpoints work with optional authentication."""
         # Without user ID (guest)
@@ -250,7 +250,7 @@ class TestAuthenticationCombinations:
     """Test various combinations of authentication methods."""
 
     async def test_both_api_key_and_user_id(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that both API key and user ID can be provided together."""
         headers = {**valid_api_headers, "X-User-ID": "test-user-123"}
@@ -268,7 +268,7 @@ class TestAuthenticationCombinations:
         assert response.status_code in [401, 403]
 
     async def test_dependency_override_for_testing(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that authentication can be overridden for testing."""
 
@@ -294,7 +294,7 @@ class TestUserIdSecurity:
     """Test security aspects of user ID authentication."""
 
     async def test_user_id_injection_protection(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that user ID is protected against injection attacks."""
         malicious_user_ids = [
@@ -310,11 +310,11 @@ class TestUserIdSecurity:
             response = await client.get("/collections", headers=headers)
             # Should not cause server error
             assert response.status_code < 500, (
-                f"Malicious user ID should not cause server error: {repr(user_id)}"
+                f"Malicious user ID should not cause server error: {user_id!r}"
             )
 
     async def test_very_long_user_id_handled(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that very long user IDs are handled gracefully."""
         long_user_id = "a" * 10000
@@ -325,7 +325,7 @@ class TestUserIdSecurity:
         assert response.status_code < 500
 
     async def test_unicode_in_user_id(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that Unicode characters in user ID are handled correctly."""
         unicode_user_ids = [

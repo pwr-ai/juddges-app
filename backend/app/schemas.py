@@ -12,32 +12,32 @@ import json
 import re
 import shutil
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from loguru import logger
-from pydantic import BaseModel, Field, ConfigDict, field_validator
-from werkzeug.utils import secure_filename
-
-from supabase import Client
-from app.core.supabase import supabase_client
-from langgraph.types import Command
 from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.info_extraction.oai_schema_validation import validate_openai_schema
 from juddges_search.info_extraction.schema_utils import (
     SchemaProcessingError,
     prepare_schema_from_db,
 )
-from juddges_search.info_extraction.oai_schema_validation import validate_openai_schema
 from juddges_search.llms import get_default_llm
 from juddges_search.models import DocumentType
+from langgraph.types import Command
+from loguru import logger
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,
     load_prompts,
 )
+from supabase import Client
+from werkzeug.utils import secure_filename
+
+from app.core.supabase import supabase_client
 
 router = APIRouter(prefix="/schemas", tags=["schemas"])
 
@@ -50,7 +50,7 @@ async def cleanup_expired_sessions():
     """Background task to clean up expired generation sessions."""
     while True:
         await asyncio.sleep(300)  # Every 5 minutes
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired = [
             sid
             for sid, (_, created) in _generation_sessions.items()
@@ -139,12 +139,12 @@ async def list_schemas_from_db(
         logger.error(f"Failed to list schemas from database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list schemas from database: {str(e)}",
+            detail=f"Failed to list schemas from database: {e!s}",
         )
 
 
 def _fetch_schema_from_db(
-    schema_id: str, client: Optional[Client] = None
+    schema_id: str, client: Client | None = None
 ) -> dict[str, Any]:
     """Fetch schema from database by ID."""
     db_client = client or supabase_client
@@ -201,7 +201,7 @@ async def get_schema_from_db(schema_id: str) -> dict[str, Any]:
         logger.error(f"Failed to get schema {schema_id} from database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve schema from database: {str(e)}",
+            detail=f"Failed to retrieve schema from database: {e!s}",
         )
 
 
@@ -272,19 +272,19 @@ async def get_converted_schema_from_db(
         logger.error(f"Schema conversion failed for {schema_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Schema conversion failed: {str(e)}",
+            detail=f"Schema conversion failed: {e!s}",
         )
     except ValueError as e:
         logger.error(f"Schema conversion failed for {schema_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Schema conversion failed: {str(e)}",
+            detail=f"Schema conversion failed: {e!s}",
         )
     except Exception as e:
         logger.error(f"Failed to convert schema {schema_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to convert schema: {str(e)}",
+            detail=f"Failed to convert schema: {e!s}",
         )
 
 
@@ -311,7 +311,7 @@ async def list_schemas() -> list[str]:
         logger.error(f"Failed to list schemas: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list schemas: {str(e)}",
+            detail=f"Failed to list schemas: {e!s}",
         )
 
 
@@ -341,13 +341,13 @@ async def get_schema(schema_id: str) -> dict[str, Any]:
         logger.warning(f"Schema not found: {schema_id} - {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Schema '{schema_id}' not found: {str(e)}",
+            detail=f"Schema '{schema_id}' not found: {e!s}",
         )
     except Exception as e:
         logger.error(f"Failed to get schema {schema_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve schema: {str(e)}",
+            detail=f"Failed to retrieve schema: {e!s}",
         )
 
 
@@ -488,7 +488,7 @@ class CreateSchemaRequest(BaseModel):
             # Catch unexpected errors during validation
             logger.error(f"Unexpected error during schema validation: {e}")
             raise ValueError(
-                f"Schema validation failed due to unexpected error: {str(e)}. "
+                f"Schema validation failed due to unexpected error: {e!s}. "
                 "Please check your schema format."
             )
 
@@ -592,7 +592,7 @@ def _load_schema_metadata(schema_id: str) -> SchemaMetadata | None:
         return None
 
     try:
-        with open(meta_path, "r") as f:
+        with open(meta_path) as f:
             data = json.load(f)
         return SchemaMetadata(**data)
     except Exception as e:
@@ -625,7 +625,7 @@ def _create_backup(schema_id: str) -> None:
 
     if existing_files:
         original_file = existing_files[0]
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         backup_path = (
             schema_dir / f"{schema_id}{original_file.suffix}.backup_{timestamp}"
         )
@@ -700,7 +700,7 @@ async def create_schema(params: CreateSchemaRequest) -> dict[str, Any]:
             logger.error(f"Schema validation failed for {schema_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid schema structure: {str(e)}",
+                detail=f"Invalid schema structure: {e!s}",
             )
 
         # Save schema to YAML file (using internal format)
@@ -710,7 +710,7 @@ async def create_schema(params: CreateSchemaRequest) -> dict[str, Any]:
         metadata = SchemaMetadata(
             schema_id=schema_id,
             description=params.description,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
             is_system=False,
         )
         _save_schema_metadata(metadata)
@@ -730,7 +730,7 @@ async def create_schema(params: CreateSchemaRequest) -> dict[str, Any]:
         logger.error(f"Failed to create schema: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create schema: {str(e)}",
+            detail=f"Failed to create schema: {e!s}",
         )
 
 
@@ -786,7 +786,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
             logger.warning(f"Schema not found for update: {schema_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Schema '{schema_id}' not found: {str(e)}",
+                detail=f"Schema '{schema_id}' not found: {e!s}",
             )
 
         # Load existing metadata
@@ -796,7 +796,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
             metadata = SchemaMetadata(
                 schema_id=schema_id,
                 description="Legacy schema",
-                created_at=datetime.now(timezone.utc).isoformat(),
+                created_at=datetime.now(UTC).isoformat(),
                 is_system=False,
             )
 
@@ -822,7 +822,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
                 logger.error(f"Schema validation failed for {schema_id}: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid schema structure: {str(e)}",
+                    detail=f"Invalid schema structure: {e!s}",
                 )
         else:
             # Re-validate existing schema for consistency
@@ -833,7 +833,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
             metadata.description = params.description
 
         # Update metadata timestamp
-        metadata.updated_at = datetime.now(timezone.utc).isoformat()
+        metadata.updated_at = datetime.now(UTC).isoformat()
         _save_schema_metadata(metadata)
 
         logger.info(f"Updated schema: {schema_id}")
@@ -851,7 +851,7 @@ async def update_schema(schema_id: str, params: UpdateSchemaRequest) -> dict[str
         logger.error(f"Failed to update schema {schema_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update schema: {str(e)}",
+            detail=f"Failed to update schema: {e!s}",
         )
 
 
@@ -918,7 +918,7 @@ async def delete_schema(schema_id: str, force: bool = False) -> DeleteSchemaResp
         else:
             # Archive (soft delete)
             archive_dir = _get_archive_directory()
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
             archive_path = (
                 archive_dir / f"{schema_id}{schema_file.suffix}.archived_{timestamp}"
             )
@@ -952,7 +952,7 @@ async def delete_schema(schema_id: str, force: bool = False) -> DeleteSchemaResp
         logger.error(f"Failed to delete schema {schema_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete schema: {str(e)}",
+            detail=f"Failed to delete schema: {e!s}",
         )
 
 
@@ -1061,7 +1061,7 @@ def get_or_create_generation_agent(
         graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
     )
 
-    _generation_sessions[session_id] = (agent, datetime.now(timezone.utc))
+    _generation_sessions[session_id] = (agent, datetime.now(UTC))
     return agent
 
 
@@ -1123,7 +1123,7 @@ async def start_schema_generation(
             conversation_id=session_id,
             collection_id=params.collection_id,
             confidence_score=None,
-            session_metadata={"created_at": datetime.now(timezone.utc).isoformat()},
+            session_metadata={"created_at": datetime.now(UTC).isoformat()},
         )
 
         response = await agent.graph.ainvoke(
@@ -1142,7 +1142,7 @@ async def start_schema_generation(
         logger.error(f"Failed to start schema generation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start schema generation: {str(e)}",
+            detail=f"Failed to start schema generation: {e!s}",
         )
 
 
@@ -1211,7 +1211,7 @@ async def refine_schema(
         logger.error(f"Failed to refine schema for session {session_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to refine schema: {str(e)}",
+            detail=f"Failed to refine schema: {e!s}",
         )
 
 
@@ -1256,7 +1256,7 @@ async def get_generation_session(session_id: str) -> dict[str, Any]:
         logger.error(f"Failed to get generation session {session_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve session: {str(e)}",
+            detail=f"Failed to retrieve session: {e!s}",
         )
 
 
@@ -1291,7 +1291,7 @@ async def cancel_generation_session(session_id: str) -> None:
         logger.error(f"Failed to cancel generation session {session_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to cancel session: {str(e)}",
+            detail=f"Failed to cancel session: {e!s}",
         )
 
 
@@ -1645,7 +1645,7 @@ def compile_fields_to_json_schema(
             required.append(field_name)
 
     # Build complete schema
-    compiled_schema = {
+    return {
         "$id": "information_extraction_schema",
         "title": schema_title,
         "type": "object",
@@ -1654,8 +1654,6 @@ def compile_fields_to_json_schema(
         "required": required,
         "additionalProperties": False,
     }
-
-    return compiled_schema
 
 
 def validate_schema_compatibility(
@@ -1917,7 +1915,7 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to validate schema: {str(e)}",
+            detail=f"Failed to validate schema: {e!s}",
         )
 
 
@@ -1986,7 +1984,7 @@ async def compile_schema_fields(params: SchemaCompileRequest) -> dict[str, Any]:
             logger.warning(f"Field compilation failed: {e}")
             return {
                 "valid": False,
-                "errors": [f"Compilation error: {str(e)}"],
+                "errors": [f"Compilation error: {e!s}"],
                 "warnings": [],
                 "compiled_schema": None,
                 "field_count": len(params.fields),
@@ -2023,7 +2021,7 @@ async def compile_schema_fields(params: SchemaCompileRequest) -> dict[str, Any]:
         logger.error(f"Unexpected error during schema compilation: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to compile schema: {str(e)}",
+            detail=f"Failed to compile schema: {e!s}",
         )
 
 
@@ -2038,9 +2036,9 @@ class SchemaVersionSummary(BaseModel):
     id: str
     version_number: int
     change_type: str
-    change_summary: Optional[str]
-    changed_fields: Optional[list[str]]
-    user_id: Optional[str]
+    change_summary: str | None
+    changed_fields: list[str] | None
+    user_id: str | None
     created_at: str
 
 
@@ -2053,10 +2051,10 @@ class SchemaVersionDetail(BaseModel):
     schema_snapshot: dict[str, Any]
     field_snapshot: list[dict[str, Any]]
     change_type: str
-    change_summary: Optional[str]
-    changed_fields: Optional[list[str]]
-    diff_from_previous: Optional[dict[str, Any]]
-    user_id: Optional[str]
+    change_summary: str | None
+    changed_fields: list[str] | None
+    diff_from_previous: dict[str, Any] | None
+    user_id: str | None
     created_at: str
 
 
@@ -2074,7 +2072,7 @@ class VersionComparisonResponse(BaseModel):
 class RollbackRequest(BaseModel):
     """Request for rolling back to a schema version."""
 
-    change_summary: Optional[str] = Field(
+    change_summary: str | None = Field(
         default=None, description="Optional note explaining why rolling back"
     )
 
@@ -2188,7 +2186,7 @@ async def list_schema_versions(
         logger.error(f"Failed to list schema versions: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list versions: {str(e)}",
+            detail=f"Failed to list versions: {e!s}",
         )
 
 
@@ -2250,7 +2248,7 @@ async def get_schema_version(
         logger.error(f"Failed to get schema version: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get version: {str(e)}",
+            detail=f"Failed to get version: {e!s}",
         )
 
 
@@ -2384,7 +2382,7 @@ async def compare_schema_versions(
         logger.error(f"Failed to compare versions: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to compare versions: {str(e)}",
+            detail=f"Failed to compare versions: {e!s}",
         )
 
 
@@ -2488,5 +2486,5 @@ async def rollback_schema_version(
         logger.error(f"Failed to rollback schema version: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to rollback: {str(e)}",
+            detail=f"Failed to rollback: {e!s}",
         )

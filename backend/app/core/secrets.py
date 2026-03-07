@@ -10,14 +10,13 @@ Usage:
     openai.api_key = get_openai_key()
 """
 
-from functools import lru_cache
-from typing import Dict, Optional
 import os
+from functools import lru_cache
 
 from loguru import logger
 
 try:
-    from supabase import create_client, Client
+    from supabase import Client, create_client
     from supabase.client import ClientOptions
 
     SUPABASE_AVAILABLE = True
@@ -30,8 +29,8 @@ class SecretsManager:
     """Manage secrets from Supabase Vault and environment variables."""
 
     def __init__(self):
-        self._vault_secrets: Optional[Dict[str, str]] = None
-        self._supabase: Optional[Client] = None
+        self._vault_secrets: dict[str, str] | None = None
+        self._supabase: Client | None = None
         self._vault_enabled = True
 
     def _init_supabase(self) -> bool:
@@ -70,7 +69,7 @@ class SecretsManager:
             self._vault_enabled = False
             return False
 
-    def load_vault_secrets(self, force_reload: bool = False) -> Dict[str, str]:
+    def load_vault_secrets(self, force_reload: bool = False) -> dict[str, str]:
         """
         Load and cache secrets from Supabase Vault.
 
@@ -130,8 +129,8 @@ class SecretsManager:
             return {}
 
     def get_secret(
-        self, name: str, fallback_env: Optional[str] = None, required: bool = False
-    ) -> Optional[str]:
+        self, name: str, fallback_env: str | None = None, required: bool = False
+    ) -> str | None:
         """
         Get secret from Vault, with optional fallback to environment variable.
 
@@ -186,7 +185,7 @@ class SecretsManager:
             "openai_api_key", fallback_env="OPENAI_API_KEY", required=True
         )
 
-    def refresh_secrets(self) -> Dict[str, str]:
+    def refresh_secrets(self) -> dict[str, str]:
         """
         Force reload secrets from Vault.
 
@@ -207,7 +206,7 @@ class SecretsManager:
         return list(vault_secrets.keys())
 
 
-@lru_cache()
+@lru_cache
 def get_secrets_manager() -> SecretsManager:
     """
     Get cached secrets manager instance.
@@ -224,7 +223,7 @@ def get_openai_key() -> str:
     return get_secrets_manager().get_openai_key()
 
 
-def refresh_secrets() -> Dict[str, str]:
+def refresh_secrets() -> dict[str, str]:
     """Force reload secrets from Vault."""
     return get_secrets_manager().refresh_secrets()
 
@@ -257,7 +256,7 @@ if __name__ == "__main__":
         table.add_column("Secret Name", style="cyan")
         table.add_column("Status", style="green")
 
-        for name in secrets.keys():
+        for name in secrets:
             table.add_row(name, "✓ Available")
 
         console.print(table)

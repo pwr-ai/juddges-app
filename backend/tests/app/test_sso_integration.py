@@ -1,4 +1,5 @@
 """Integration tests for SSO management endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -7,7 +8,9 @@ from httpx import AsyncClient
 @pytest.mark.api
 async def test_check_domain_sso_public(client: AsyncClient):
     """Check domain SSO should be accessible publicly."""
-    response = await client.get("/api/sso/check-domain", params={"domain": "example.com"})
+    response = await client.get(
+        "/api/sso/check-domain", params={"domain": "example.com"}
+    )
     # Public endpoint - should not return 401
     assert response.status_code in [200, 422, 500]
 

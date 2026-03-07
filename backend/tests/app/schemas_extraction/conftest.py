@@ -4,10 +4,11 @@ Pytest fixtures for schema and extraction API tests.
 
 import os
 import uuid
-from typing import Any, AsyncGenerator, Dict
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 # Set test environment variables before importing app
 os.environ.setdefault("BACKEND_API_KEY", "test-api-key-12345")
@@ -32,7 +33,7 @@ def test_api_key() -> str:
 
 
 @pytest.fixture
-def auth_headers(test_api_key: str) -> Dict[str, str]:
+def auth_headers(test_api_key: str) -> dict[str, str]:
     """Return authentication headers with API key."""
     return {"X-API-Key": test_api_key, "Content-Type": "application/json"}
 
@@ -47,7 +48,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-def sample_schema_data() -> Dict[str, Any]:
+def sample_schema_data() -> dict[str, Any]:
     """Sample schema data for testing."""
     return {
         "name": "Contract Schema",
@@ -90,7 +91,7 @@ def sample_schema_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def minimal_schema_data() -> Dict[str, Any]:
+def minimal_schema_data() -> dict[str, Any]:
     """Minimal valid schema data."""
     return {
         "name": "Minimal Schema",
@@ -107,7 +108,7 @@ def minimal_schema_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def complex_schema_data() -> Dict[str, Any]:
+def complex_schema_data() -> dict[str, Any]:
     """Complex schema with nested objects and arrays."""
     return {
         "name": "Court Judgment Schema",
@@ -186,18 +187,18 @@ def sample_document_text() -> str:
     """Sample document text for extraction testing."""
     return """
     CONTRACT AGREEMENT
-    
+
     This contract is entered into on January 15, 2024, between:
-    
+
     Party A: Tech Solutions Inc., represented by John Smith (CEO)
     Party B: Legal Services Ltd., represented by Jane Doe (Managing Director)
-    
+
     TERMS:
     1. Party A agrees to provide software development services
     2. Party B agrees to pay $50,000 for the services
     3. Project duration: 6 months
     4. Payment terms: 50% upfront, 50% on completion
-    
+
     SIGNATURES:
     John Smith, January 15, 2024
     Jane Doe, January 15, 2024
@@ -210,32 +211,32 @@ def sample_judgment_text() -> str:
     return """
     SUPREME COURT OF POLAND
     Case No: II CSK 123/2024
-    
+
     Judgment delivered on February 10, 2024
-    
+
     JUDGES:
     - Judge Anna Kowalski (Presiding)
     - Judge Jan Nowak
     - Judge Maria Wisniewski
-    
+
     PARTIES:
     Plaintiff: John Smith, represented by Attorney Mark Brown
     Defendant: ABC Corporation Ltd., represented by Attorney Sarah Johnson
-    
+
     VERDICT:
     The court rules in favor of the plaintiff. The defendant is ordered to pay
     damages in the amount of 100,000 PLN plus court costs.
-    
+
     LEGAL BASIS:
     - Civil Code Art. 415
     - Civil Procedure Code Art. 233
-    
+
     Reasoning follows...
     """
 
 
 @pytest.fixture
-def sample_extraction_request() -> Dict[str, Any]:
+def sample_extraction_request() -> dict[str, Any]:
     """Sample extraction request data."""
     return {
         "schema_id": "test-schema-123",
@@ -249,7 +250,7 @@ def sample_extraction_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_bulk_extraction_request() -> Dict[str, Any]:
+def sample_bulk_extraction_request() -> dict[str, Any]:
     """Sample bulk extraction request."""
     return {
         "schema_id": "test-schema-123",
@@ -259,7 +260,7 @@ def sample_bulk_extraction_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def invalid_schema_data() -> Dict[str, Any]:
+def invalid_schema_data() -> dict[str, Any]:
     """Invalid schema data for negative testing."""
     return {
         "name": "Invalid Schema",
@@ -274,7 +275,7 @@ def invalid_schema_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def schema_with_missing_required() -> Dict[str, Any]:
+def schema_with_missing_required() -> dict[str, Any]:
     """Schema data missing required fields."""
     return {"description": "Missing name field", "fields": []}
 
@@ -298,7 +299,7 @@ def mock_session_id() -> str:
 
 
 @pytest.fixture
-def ai_generation_request() -> Dict[str, Any]:
+def ai_generation_request() -> dict[str, Any]:
     """Sample AI schema generation request."""
     return {
         "description": "I need to extract party names, dates, and amounts from contracts",
@@ -308,7 +309,7 @@ def ai_generation_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def chat_refinement_request() -> Dict[str, Any]:
+def chat_refinement_request() -> dict[str, Any]:
     """Sample chat refinement request."""
     return {
         "message": "Add extraction of contract duration",
@@ -317,7 +318,7 @@ def chat_refinement_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def schema_test_request() -> Dict[str, Any]:
+def schema_test_request() -> dict[str, Any]:
     """Schema test request data."""
     return {
         "document_id": "test-doc-789",
@@ -327,7 +328,7 @@ def schema_test_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def prompt_data() -> Dict[str, Any]:
+def prompt_data() -> dict[str, Any]:
     """Sample prompt data for extraction."""
     return {
         "id": "test-prompt-001",
@@ -339,7 +340,7 @@ def prompt_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def filter_request() -> Dict[str, Any]:
+def filter_request() -> dict[str, Any]:
     """Sample filter request for extracted data."""
     return {
         "filters": {
@@ -353,7 +354,7 @@ def filter_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def facet_request() -> Dict[str, Any]:
+def facet_request() -> dict[str, Any]:
     """Sample facet aggregation request."""
     return {
         "fields": ["jurisdiction", "court_type", "verdict"],

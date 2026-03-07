@@ -1,6 +1,7 @@
 """Tests for search metadata enhancement (Task 2)."""
 
 import pytest
+
 from app.documents import search_documents
 from app.models import SearchChunksRequest
 

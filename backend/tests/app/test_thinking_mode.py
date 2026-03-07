@@ -1,5 +1,7 @@
 import os
+
 import pytest
+
 from app.models import SearchChunksRequest
 
 # Skip integration tests if API keys are not configured (e.g., dummy keys)

@@ -4,7 +4,6 @@ import asyncio
 import random
 import statistics
 import time
-from typing import List
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -19,7 +18,7 @@ class TestSearchPerformance:
     @pytest.mark.anyio
     async def test_semantic_search_latency(self):
         """Test semantic search response time with p50, p95, p99 metrics."""
-        latencies: List[float] = []
+        latencies: list[float] = []
         test_queries = [
             "contract law",
             "tort liability",
@@ -130,7 +129,7 @@ class TestSearchPerformance:
     @pytest.mark.anyio
     async def test_search_with_filters_performance(self):
         """Test search performance with various filters applied."""
-        latencies: List[float] = []
+        latencies: list[float] = []
 
         test_cases = [
             {"query": "contract", "limit": 10},
@@ -181,7 +180,7 @@ class TestDatabasePerformance:
             pytest.skip("juddges_search package not available")
 
         # Generate random embeddings for testing
-        latencies: List[float] = []
+        latencies: list[float] = []
 
         for _ in range(10):
             query_embedding = [random.random() for _ in range(1536)]
@@ -227,7 +226,7 @@ class TestDatabasePerformance:
         except ImportError:
             pytest.skip("juddges_search package not available")
 
-        latencies: List[float] = []
+        latencies: list[float] = []
         queries = [
             "contract AND law",
             "tort OR liability",
@@ -275,7 +274,7 @@ class TestAPIEndpointPerformance:
     @pytest.mark.anyio
     async def test_health_check_latency(self):
         """Test health check endpoint latency."""
-        latencies: List[float] = []
+        latencies: list[float] = []
 
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
@@ -304,7 +303,7 @@ class TestAPIEndpointPerformance:
     @pytest.mark.anyio
     async def test_document_retrieval_performance(self):
         """Test document retrieval endpoint performance."""
-        latencies: List[float] = []
+        latencies: list[float] = []
 
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"

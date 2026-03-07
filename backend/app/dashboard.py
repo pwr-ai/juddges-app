@@ -3,14 +3,14 @@
 import json
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from loguru import logger
 from pydantic import BaseModel
-from supabase import create_client, Client
+from supabase import Client, create_client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
@@ -39,9 +39,7 @@ except Exception as e:
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 DASHBOARD_READ_RATE_LIMIT = os.getenv("DASHBOARD_READ_RATE_LIMIT", "100/minute")
-DASHBOARD_REFRESH_RATE_LIMIT = os.getenv(
-    "DASHBOARD_REFRESH_RATE_LIMIT", "20/minute"
-)
+DASHBOARD_REFRESH_RATE_LIMIT = os.getenv("DASHBOARD_REFRESH_RATE_LIMIT", "20/minute")
 
 
 def _get_required_env(name: str) -> str:
@@ -90,7 +88,7 @@ class DashboardStats(BaseModel):
     tax_interpretations_pl: int = 0  # Polish tax interpretations
     tax_interpretations_uk: int = 0  # UK tax interpretations
     added_this_week: int
-    last_updated: Optional[str] = None
+    last_updated: str | None = None
 
 
 class DocumentSummary(BaseModel):
@@ -99,14 +97,14 @@ class DocumentSummary(BaseModel):
     id: str
     title: str
     document_type: str
-    publication_date: Optional[str]
-    ai_summary: Optional[str]
-    key_topics: Optional[list[str]]
-    jurisdiction: Optional[str]
+    publication_date: str | None
+    ai_summary: str | None
+    key_topics: list[str] | None
+    jurisdiction: str | None
     language: str
-    issuing_body: Optional[dict]
-    document_number: Optional[str] = None
-    document_id: Optional[str] = None
+    issuing_body: dict | None
+    document_number: str | None = None
+    document_id: str | None = None
 
 
 class TrendingTopic(BaseModel):
@@ -145,7 +143,9 @@ def _default_dashboard_stats() -> DashboardStats:
     )
 
 
-async def _get_cached_dashboard_stats(cache_key: str, now: datetime) -> DashboardStats | None:
+async def _get_cached_dashboard_stats(
+    cache_key: str, now: datetime
+) -> DashboardStats | None:
     """Get dashboard stats from Redis first, then in-memory cache."""
     if REDIS_AVAILABLE and redis_client:
         try:
@@ -184,7 +184,7 @@ def _parse_doc_type_stats(
     rows: list[dict[str, Any]] | None,
 ) -> tuple[dict[str, int], datetime | None]:
     """Parse doc_type_stats rows into dashboard metric fields."""
-    counts = {field_name: 0 for field_name in _DOC_TYPE_TO_FIELD.values()}
+    counts = dict.fromkeys(_DOC_TYPE_TO_FIELD.values(), 0)
     last_updated: datetime | None = None
 
     for row in rows or []:
@@ -202,7 +202,7 @@ def _parse_doc_type_stats(
 
 async def _fetch_added_this_week_count() -> int:
     """Fetch count of documents added in the last 7 days."""
-    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    one_week_ago = datetime.now(UTC) - timedelta(days=7)
     try:
         response = (
             supabase.table("legal_documents")
@@ -218,11 +218,15 @@ async def _fetch_added_this_week_count() -> int:
         return 0
 
 
-async def _update_dashboard_cache(cache_key: str, stats: DashboardStats, now: datetime) -> None:
+async def _update_dashboard_cache(
+    cache_key: str, stats: DashboardStats, now: datetime
+) -> None:
     """Persist stats to Redis and in-memory fallback cache."""
     if REDIS_AVAILABLE and redis_client:
         try:
-            await redis_client.setex(cache_key, _cache_ttl, json.dumps(stats.model_dump()))
+            await redis_client.setex(
+                cache_key, _cache_ttl, json.dumps(stats.model_dump())
+            )
             logger.debug("Updated Redis dashboard stats cache")
         except Exception as e:
             logger.warning(f"Redis cache write failed: {e}")
@@ -249,7 +253,7 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
     Results are cached for 4 hours in Redis and in-memory cache.
     """
     cache_key = "dashboard:stats"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cached_stats = await _get_cached_dashboard_stats(cache_key, now)
     if cached_stats:
         return cached_stats
@@ -328,14 +332,15 @@ async def refresh_dashboard_stats(
 
     except Exception as e:
         logger.error(f"Error clearing dashboard cache: {e}")
-        return {"status": "error", "message": f"Failed to clear cache: {str(e)}"}
+        return {"status": "error", "message": f"Failed to clear cache: {e!s}"}
 
 
 @router.get("/recent-documents", response_model=list[DocumentSummary])
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_recent_documents(
     request: Request,
-    limit: int = Query(default=5, ge=1, le=20), api_key: str = Depends(verify_api_key)
+    limit: int = Query(default=5, ge=1, le=20),
+    api_key: str = Depends(verify_api_key),
 ):
     """
     Get highlighted documents for dashboard.
@@ -536,7 +541,8 @@ def _to_document_summary(doc: dict[str, Any]) -> DocumentSummary:
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_featured_examples(
     request: Request,
-    limit: int = Query(default=5, ge=1, le=10), api_key: str = Depends(verify_api_key)
+    limit: int = Query(default=5, ge=1, le=10),
+    api_key: str = Depends(verify_api_key),
 ):
     """
     Get curated featured example documents for new users.
@@ -581,7 +587,7 @@ async def get_featured_examples(
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_trending_topics(
     request: Request,
-    category: Optional[str] = None,
+    category: str | None = None,
     limit: int = Query(default=5, ge=1, le=10),
     api_key: str = Depends(verify_api_key),
 ):
@@ -698,7 +704,7 @@ async def test_document_counts(
 
         # Get recent documents count
         try:
-            one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+            one_week_ago = datetime.now(UTC) - timedelta(days=7)
             recent_response = (
                 supabase.table("legal_documents")
                 .select("document_id", count="exact")

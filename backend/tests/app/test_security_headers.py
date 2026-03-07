@@ -9,7 +9,6 @@ Tests for security headers and CORS configuration including:
 
 import pytest
 from httpx import AsyncClient
-from typing import Dict
 
 
 @pytest.mark.anyio
@@ -18,7 +17,7 @@ class TestSecurityHeaders:
     """Test that security headers are properly configured."""
 
     async def test_security_headers_present(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that all required security headers are present."""
         response = await client.get("/health/healthz")
@@ -70,7 +69,7 @@ class TestSecurityHeaders:
             assert "default-src" in csp or "script-src" in csp
 
     async def test_security_headers_on_all_endpoints(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that security headers are present on all endpoints."""
         endpoints = [
@@ -291,7 +290,7 @@ class TestSecurityBestPractices:
             assert "traceback" not in detail or "development" in detail
 
     async def test_rate_limit_headers_if_present(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that rate limit headers are present if rate limiting is enabled."""
         response = await client.get("/documents", headers=valid_api_headers)
@@ -316,7 +315,7 @@ class TestSecurityBestPractices:
                 assert value.isdigit(), f"{header} should be numeric"
 
     async def test_json_content_type(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that JSON responses have correct Content-Type."""
         response = await client.get("/documents", headers=valid_api_headers)
@@ -328,7 +327,7 @@ class TestSecurityBestPractices:
             )
 
     async def test_gzip_compression_support(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that GZip compression is supported."""
         headers = {**valid_api_headers, "Accept-Encoding": "gzip"}
@@ -340,7 +339,7 @@ class TestSecurityBestPractices:
         assert response.status_code < 500
 
     async def test_request_id_tracking(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that request ID is supported for tracking."""
         headers = {**valid_api_headers, "X-Request-ID": "test-request-123"}

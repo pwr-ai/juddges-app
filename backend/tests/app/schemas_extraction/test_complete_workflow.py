@@ -9,11 +9,11 @@ Tests complete workflows:
 - Error handling and recovery
 """
 
-import pytest
-from httpx import AsyncClient
 import asyncio
 import os
 
+import pytest
+from httpx import AsyncClient
 
 RUN_AI_TESTS = os.getenv("RUN_AI_TESTS", "").lower() in {"1", "true", "yes"}
 

@@ -1,9 +1,9 @@
 """Validation utility functions for request/response models."""
 
-from typing import List, Any
+from typing import Any
 
 
-def validate_array_size(arr: List[Any], max_size: int, field_name: str) -> List[Any]:
+def validate_array_size(arr: list[Any], max_size: int, field_name: str) -> list[Any]:
     """
     Validate that an array doesn't exceed maximum size.
 

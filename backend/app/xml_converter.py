@@ -30,15 +30,15 @@ def convert_xml_to_html(xml_content):
             .right-align { text-align: right; }
             .center-align { text-align: center; }
             .court-composition { background-color: #f9f9f9; padding: 10px; border-left: 3px solid #007acc; }
-            .table { 
-                border-collapse: collapse; 
-                width: 100%; 
-                margin: 10px 0; 
+            .table {
+                border-collapse: collapse;
+                width: 100%;
+                margin: 10px 0;
                 border: 1px solid #ddd;
             }
-            .table td { 
-                padding: 8px 12px; 
-                border: 1px solid #ddd; 
+            .table td {
+                padding: 8px 12px;
+                border: 1px solid #ddd;
                 vertical-align: top;
             }
             .table colgroup col {
@@ -47,11 +47,11 @@ def convert_xml_to_html(xml_content):
             .metadata { font-size: 0.9em; color: #666; }
             ol { margin: 10px 0; padding-left: 20px; text-align: left; }
             li { margin: 5px 0; text-align: left; }
-            .roman-list { 
-                list-style-type: upper-roman; 
-                margin: 10px 0; 
-                padding-left: 20px; 
-                text-align: left; 
+            .roman-list {
+                list-style-type: upper-roman;
+                margin: 10px 0;
+                padding-left: 20px;
+                text-align: left;
             }
             .bullet-list {
                 list-style-type: disc;
@@ -59,19 +59,19 @@ def convert_xml_to_html(xml_content):
                 padding-left: 20px;
                 text-align: left;
             }
-            .legal-reference { 
-                color: #0066cc; 
-                text-decoration: underline; 
-                cursor: help; 
+            .legal-reference {
+                color: #0066cc;
+                text-decoration: underline;
+                cursor: help;
                 font-weight: 500;
             }
-            .legal-reference:hover { 
-                color: #004499; 
-                background-color: #f0f8ff; 
+            .legal-reference:hover {
+                color: #004499;
+                background-color: #f0f8ff;
             }
-            sup { 
-                font-size: 0.8em; 
-                vertical-align: super; 
+            sup {
+                font-size: 0.8em;
+                vertical-align: super;
             }
             .anonymized {
                 background-color: #f0f0f0;

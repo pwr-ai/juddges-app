@@ -11,10 +11,10 @@ and current research context. Uses a hybrid approach combining:
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from juddges_search.db.supabase_db import get_vector_db
 from app.core.supabase import get_supabase_client
 from app.documents import generate_embedding
 from app.models import validate_id_format
@@ -531,15 +531,13 @@ def _content_reason(
     if document_id:
         if similarity > 0.8:
             return "Highly similar to the document you're viewing"
-        elif similarity > 0.6:
+        if similarity > 0.6:
             return "Similar content to the document you're viewing"
-        else:
-            return "Related to the document you're viewing"
-    elif query:
+        return "Related to the document you're viewing"
+    if query:
         if similarity > 0.8:
             return "Closely matches your search"
-        elif similarity > 0.6:
+        if similarity > 0.6:
             return "Related to your search"
-        else:
-            return "May be relevant to your search"
+        return "May be relevant to your search"
     return "Recommended for you"

@@ -1,9 +1,10 @@
 """Router for serving example questions for chat interface."""
 
 import asyncio
+
 from fastapi import APIRouter
-from pydantic import BaseModel
 from loguru import logger
+from pydantic import BaseModel
 
 from app.core.supabase import get_supabase_client
 

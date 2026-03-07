@@ -1,8 +1,9 @@
 import os
+
 import pytest
 from juddges_search.chains.query_enhancement import (
-    enhance_query,
     create_query_enhancement_chain,
+    enhance_query,
 )
 from langchain_openai import ChatOpenAI
 

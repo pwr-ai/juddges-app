@@ -1,15 +1,16 @@
 import os
 import sys
 import uuid
+from datetime import datetime
+
 import vecs
 from datasets import load_dataset
-from datetime import datetime
 from dotenv import load_dotenv
 
 # Add parent directory to path to allow importing from packages
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from juddges_search.models import LegalDocument, DocumentType
+from juddges_search.models import DocumentType, LegalDocument
 
 load_dotenv()
 
@@ -36,8 +37,7 @@ def create_collection_if_not_exists(vx):
         # Note: This script just inserts records. If we need vectors, we need an embedding service.
         # For this "simple way" fork, we might just store metadata first, or generate dummy vectors.
         # Since the user said "we will add supabase vectors", I'll assume standard 1536 dim.
-        docs = vx.get_or_create_collection(name=COLLECTION_NAME, dimension=1536)
-        return docs
+        return vx.get_or_create_collection(name=COLLECTION_NAME, dimension=1536)
     except Exception as e:
         print(f"Error creating collection: {e}")
         sys.exit(1)

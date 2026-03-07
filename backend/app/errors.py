@@ -7,6 +7,7 @@ for all API endpoints.
 
 from enum import Enum
 from typing import Any
+
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
@@ -263,6 +264,7 @@ def handle_errors(func):
             # Your code here
     """
     from functools import wraps
+
     from loguru import logger
 
     @wraps(func)

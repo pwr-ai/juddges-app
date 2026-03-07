@@ -6,8 +6,8 @@ ensuring consistent behavior between GraphQL and REST interfaces.
 """
 
 import asyncio
-from datetime import datetime, timezone
-from typing import AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 
 import strawberry
 from loguru import logger
@@ -67,9 +67,9 @@ class SearchDocumentsInput:
     query: str
     mode: str = "rabbit"
     alpha: float = 0.5
-    languages: Optional[list[str]] = None
-    document_types: Optional[list[str]] = None
-    return_properties: Optional[list[str]] = None
+    languages: list[str] | None = None
+    document_types: list[str] | None = None
+    return_properties: list[str] | None = None
 
 
 @strawberry.input
@@ -79,9 +79,9 @@ class SearchChunksInput:
     query: str
     limit_docs: int = 20
     alpha: float = 0.7
-    languages: Optional[list[str]] = None
-    document_types: Optional[list[str]] = None
-    segment_types: Optional[list[str]] = None
+    languages: list[str] | None = None
+    document_types: list[str] | None = None
+    segment_types: list[str] | None = None
     fetch_full_documents: bool = False
     mode: str = "rabbit"
     offset: int = 0
@@ -100,8 +100,8 @@ class ExtractionInput:
     """Input for submitting an extraction job."""
 
     collection_id: str
-    schema_id: Optional[str] = None
-    document_ids: Optional[list[str]] = None
+    schema_id: str | None = None
+    document_ids: list[str] | None = None
     extraction_context: str = "Extract structured information from legal documents."
     language: str = "pl"
 
@@ -112,8 +112,9 @@ class ExtractionInput:
 @strawberry.type
 class Query:
     @strawberry.field(description="Get a single document by its ID")
-    async def document(self, document_id: str) -> Optional[LegalDocumentType]:
+    async def document(self, document_id: str) -> LegalDocumentType | None:
         from juddges_search.db.supabase_db import get_vector_db
+
         from app.documents import _convert_supabase_to_legal_document
         from app.models import validate_id_format
 
@@ -133,8 +134,9 @@ class Query:
     @strawberry.field(
         description="Get the full text of a document (separate query to avoid large default payloads)"
     )
-    async def document_full_text(self, document_id: str) -> Optional[str]:
+    async def document_full_text(self, document_id: str) -> str | None:
         from juddges_search.db.supabase_db import get_vector_db
+
         from app.models import validate_id_format
 
         try:
@@ -152,6 +154,7 @@ class Query:
     @strawberry.field(description="Get multiple documents by their IDs")
     async def documents(self, document_ids: list[str]) -> list[LegalDocumentType]:
         from juddges_search.db.supabase_db import get_vector_db
+
         from app.documents import _convert_supabase_to_legal_document
 
         if not document_ids or len(document_ids) > 100:
@@ -252,8 +255,8 @@ class Query:
     @strawberry.field(description="List extraction jobs with optional filters")
     async def extraction_jobs(
         self,
-        status: Optional[str] = None,
-        collection_id: Optional[str] = None,
+        status: str | None = None,
+        collection_id: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> list[ExtractionJobType]:
@@ -269,7 +272,7 @@ class Query:
         return [convert_extraction_job(job) for job in response.jobs]
 
     @strawberry.field(description="Get a single extraction job by its ID")
-    async def extraction_job(self, job_id: str) -> Optional[ExtractionJobType]:
+    async def extraction_job(self, job_id: str) -> ExtractionJobType | None:
         from app.extraction import get_extraction_job
 
         try:
@@ -302,7 +305,7 @@ class Mutation:
         return ExtractionJobType(
             job_id=response.task_id,
             status=response.status,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
         )
 
 
@@ -326,7 +329,7 @@ class Subscription:
                     yield event
                     if event.status in ("completed", "failed"):
                         break
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Send heartbeat to keep the connection alive
                     yield ExtractionProgressEvent(
                         job_id=job_id,
@@ -347,13 +350,13 @@ class Subscription:
                     _document_indexed_events.get(), timeout=30.0
                 )
                 yield event
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Send heartbeat
                 yield DocumentIndexedEvent(
                     document_id="heartbeat",
                     document_type="heartbeat",
                     title=None,
-                    indexed_at=datetime.now(timezone.utc).isoformat(),
+                    indexed_at=datetime.now(UTC).isoformat(),
                 )
 
 

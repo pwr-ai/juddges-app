@@ -2,6 +2,7 @@
 Integration tests for dashboard endpoints.
 Tests /dashboard/* routes for stats, documents, and trending topics.
 """
+
 import pytest
 from httpx import AsyncClient
 
@@ -113,7 +114,9 @@ async def test_dashboard_trending_topics_with_auth(authenticated_client: AsyncCl
 
 @pytest.mark.anyio
 @pytest.mark.api
-async def test_dashboard_trending_topics_filter_by_category(authenticated_client: AsyncClient):
+async def test_dashboard_trending_topics_filter_by_category(
+    authenticated_client: AsyncClient,
+):
     """Trending topics should filter by category."""
     response = await authenticated_client.get(
         "/dashboard/trending-topics", params={"category": "Tax Law"}

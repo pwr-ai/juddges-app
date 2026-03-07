@@ -8,15 +8,14 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, Literal, Optional
+from datetime import UTC, datetime
+from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.auth_jwt import get_optional_user, get_user_db_client, AuthenticatedUser
-
+from app.core.auth_jwt import AuthenticatedUser, get_optional_user, get_user_db_client
 
 # Router configuration
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
@@ -29,25 +28,25 @@ class EventProperties(BaseModel):
     """Generic event properties (flexible schema)."""
 
     # Common properties
-    query: Optional[str] = None
-    document_id: Optional[str] = None
-    collection_id: Optional[str] = None
-    feature_name: Optional[str] = None
-    duration_ms: Optional[int] = None
-    result_count: Optional[int] = None
+    query: str | None = None
+    document_id: str | None = None
+    collection_id: str | None = None
+    feature_name: str | None = None
+    duration_ms: int | None = None
+    result_count: int | None = None
 
     # Search-specific
-    search_type: Optional[str] = None
-    filters_applied: Optional[Dict[str, Any]] = None
-    clicked_result_position: Optional[int] = None
+    search_type: str | None = None
+    filters_applied: dict[str, Any] | None = None
+    clicked_result_position: int | None = None
 
     # Feature usage
-    feature_version: Optional[str] = None
-    success: Optional[bool] = None
-    error_message: Optional[str] = None
+    feature_version: str | None = None
+    success: bool | None = None
+    error_message: str | None = None
 
     # Custom properties
-    custom_properties: Optional[Dict[str, Any]] = Field(
+    custom_properties: dict[str, Any] | None = Field(
         default_factory=dict, description="Additional custom event properties"
     )
 
@@ -59,13 +58,13 @@ class TrackEventRequest(BaseModel):
         description="Event name (e.g., 'search_performed', 'document_viewed')",
         examples=["search_performed", "document_viewed", "feature_used"],
     )
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         None, description="Session ID (for tracking user sessions)"
     )
-    properties: Optional[EventProperties] = Field(
+    properties: EventProperties | None = Field(
         None, description="Event properties (flexible schema)"
     )
-    timestamp: Optional[str] = Field(
+    timestamp: str | None = Field(
         None, description="Event timestamp (ISO 8601) - defaults to current time"
     )
 
@@ -74,15 +73,13 @@ class TrackSearchRequest(BaseModel):
     """Search-specific tracking request."""
 
     query: str = Field(description="Search query text")
-    session_id: Optional[str] = Field(None, description="Session ID")
+    session_id: str | None = Field(None, description="Session ID")
     result_count: int = Field(description="Number of results returned")
-    filters: Optional[Dict[str, Any]] = Field(
+    filters: dict[str, Any] | None = Field(
         None, description="Filters applied (document types, languages, etc.)"
     )
-    duration_ms: Optional[int] = Field(
-        None, description="Search duration in milliseconds"
-    )
-    clicked_result: Optional[Dict[str, Any]] = Field(
+    duration_ms: int | None = Field(None, description="Search duration in milliseconds")
+    clicked_result: dict[str, Any] | None = Field(
         None, description="Information about clicked result (if any)"
     )
 
@@ -91,7 +88,7 @@ class EventResponse(BaseModel):
     """Response for event tracking."""
 
     status: Literal["success", "failed"]
-    event_id: Optional[str] = Field(None, description="ID of the tracked event")
+    event_id: str | None = Field(None, description="ID of the tracked event")
     message: str
 
 
@@ -99,10 +96,10 @@ class SessionSummary(BaseModel):
     """Summary of a user session."""
 
     session_id: str
-    user_id: Optional[str]
+    user_id: str | None
     started_at: str
-    ended_at: Optional[str]
-    duration_seconds: Optional[int]
+    ended_at: str | None
+    duration_seconds: int | None
     events_count: int
     searches_count: int
     documents_viewed: int
@@ -165,7 +162,7 @@ Expected Supabase tables (create these manually or via migration):
 @router.post("/track", response_model=EventResponse)
 async def track_event(
     request: TrackEventRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Track a generic analytics event.
@@ -210,7 +207,7 @@ async def track_event(
             "user_id": user_id,
             "session_id": request.session_id,
             "properties": properties or {},
-            "created_at": request.timestamp or datetime.now(timezone.utc).isoformat(),
+            "created_at": request.timestamp or datetime.now(UTC).isoformat(),
         }
 
         result = client.table("events").insert(event_data).execute()
@@ -229,14 +226,14 @@ async def track_event(
     except Exception as e:
         logger.error(f"Failed to track event: {e}")
         return EventResponse(
-            status="failed", event_id=None, message=f"Failed to track event: {str(e)}"
+            status="failed", event_id=None, message=f"Failed to track event: {e!s}"
         )
 
 
 @router.post("/search", response_model=EventResponse)
 async def track_search(
     request: TrackSearchRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Track a search query for analytics.
@@ -275,7 +272,7 @@ async def track_search(
             "filters": request.filters,
             "duration_ms": request.duration_ms,
             "clicked_result": request.clicked_result,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         result = client.table("search_queries").insert(search_data).execute()
@@ -295,18 +292,18 @@ async def track_search(
     except Exception as e:
         logger.error(f"Failed to track search: {e}")
         return EventResponse(
-            status="failed", event_id=None, message=f"Failed to track search: {str(e)}"
+            status="failed", event_id=None, message=f"Failed to track search: {e!s}"
         )
 
 
 @router.post("/feature", response_model=EventResponse)
 async def track_feature_usage(
     feature_name: str,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     success: bool = True,
-    properties: Optional[Dict[str, Any]] = None,
-    error_message: Optional[str] = None,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    properties: dict[str, Any] | None = None,
+    error_message: str | None = None,
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Track feature usage for product analytics.
@@ -351,7 +348,7 @@ async def track_feature_usage(
             "properties": properties or {},
             "success": success,
             "error_message": error_message,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         result = client.table("feature_usage").insert(usage_data).execute()
@@ -373,13 +370,13 @@ async def track_feature_usage(
         return EventResponse(
             status="failed",
             event_id=None,
-            message=f"Failed to track feature usage: {str(e)}",
+            message=f"Failed to track feature usage: {e!s}",
         )
 
 
 @router.get("/session/{session_id}", response_model=SessionSummary)
 async def get_session_summary(
-    session_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    session_id: str, user: AuthenticatedUser | None = Depends(get_optional_user)
 ):
     """
     Get analytics summary for a specific session.
@@ -459,7 +456,7 @@ async def get_session_summary(
     except Exception as e:
         logger.error(f"Failed to get session summary: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve session summary: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve session summary: {e!s}"
         )
 
 

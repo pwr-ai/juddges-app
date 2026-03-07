@@ -1,9 +1,7 @@
 """Unit tests for Meilisearch sync: transform function and config setup."""
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from uuid import uuid4
-
-import pytest
 
 from app.services.meilisearch_config import (
     MEILISEARCH_INDEX_SETTINGS,
@@ -40,8 +38,8 @@ class TestTransformJudgmentForMeilisearch:
             "source_dataset": "HFforLegal/case-law",
             "source_id": "abc123",
             "source_url": "https://example.com/case/123",
-            "created_at": datetime(2025, 1, 1, tzinfo=timezone.utc),
-            "updated_at": datetime(2025, 6, 15, tzinfo=timezone.utc),
+            "created_at": datetime(2025, 1, 1, tzinfo=UTC),
+            "updated_at": datetime(2025, 6, 15, tzinfo=UTC),
         }
         row.update(overrides)
         return row

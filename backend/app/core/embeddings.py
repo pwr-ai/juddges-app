@@ -8,7 +8,7 @@ This module provides unified embedding generation supporting:
 """
 
 import os
-from typing import List, Optional
+
 import requests
 from loguru import logger
 
@@ -33,7 +33,7 @@ class EmbeddingService:
             f"batch_size={self.batch_size}"
         )
 
-    def generate_embedding(self, text: str) -> Optional[List[float]]:
+    def generate_embedding(self, text: str) -> list[float] | None:
         """
         Generate embedding for a single text.
 
@@ -46,9 +46,7 @@ class EmbeddingService:
         embeddings = self.generate_embeddings_batch([text])
         return embeddings[0] if embeddings else None
 
-    def generate_embeddings_batch(
-        self, texts: List[str]
-    ) -> List[Optional[List[float]]]:
+    def generate_embeddings_batch(self, texts: list[str]) -> list[list[float] | None]:
         """
         Generate embeddings for multiple texts in batch (much faster).
 
@@ -79,8 +77,8 @@ class EmbeddingService:
         return self._generate_openai_batch(texts)
 
     def _generate_transformers_batch(
-        self, texts: List[str]
-    ) -> List[Optional[List[float]]]:
+        self, texts: list[str]
+    ) -> list[list[float] | None]:
         """
         Generate embeddings using Sentence Transformers inference service (batch).
 
@@ -123,7 +121,7 @@ class EmbeddingService:
         )
         return vectors
 
-    def _generate_openai_batch(self, texts: List[str]) -> List[Optional[List[float]]]:
+    def _generate_openai_batch(self, texts: list[str]) -> list[list[float] | None]:
         """
         Generate embeddings using OpenAI API (batch, fallback).
 
@@ -151,8 +149,7 @@ class EmbeddingService:
             )
 
             # Extract embeddings in order
-            embeddings = [item.embedding for item in response.data]
-            return embeddings
+            return [item.embedding for item in response.data]
 
         except Exception as e:
             logger.error(f"OpenAI batch embedding generation failed: {e}")
@@ -175,7 +172,7 @@ class EmbeddingService:
 
 
 # Singleton instance
-_embedding_service: Optional[EmbeddingService] = None
+_embedding_service: EmbeddingService | None = None
 
 
 def get_embedding_service() -> EmbeddingService:

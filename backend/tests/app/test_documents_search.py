@@ -10,7 +10,6 @@ Tests:
 import pytest
 from httpx import AsyncClient
 
-
 # ============================================================================
 # Main Search Tests (POST /documents/search)
 # ============================================================================

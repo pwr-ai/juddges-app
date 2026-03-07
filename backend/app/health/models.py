@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,17 +29,15 @@ class ServiceHealth(BaseModel):
 
     name: str = Field(..., description="Service name")
     status: ServiceStatus = Field(..., description="Current service status")
-    response_time_ms: Optional[float] = Field(
+    response_time_ms: float | None = Field(
         None, description="Response time in milliseconds"
     )
-    message: Optional[str] = Field(None, description="Additional status information")
-    error: Optional[str] = Field(
-        None, description="Error message if service is unhealthy"
-    )
+    message: str | None = Field(None, description="Additional status information")
+    error: str | None = Field(None, description="Error message if service is unhealthy")
     last_checked: datetime = Field(
         default_factory=datetime.utcnow, description="Timestamp of last check"
     )
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         None, description="Extra service-specific metadata"
     )
 
@@ -86,7 +84,7 @@ class DetailedStatusResponse(BaseModel):
     )
     version: str = Field(..., description="Application version")
     environment: str = Field(..., description="Deployment environment")
-    services: Dict[str, ServiceHealth] = Field(
+    services: dict[str, ServiceHealth] = Field(
         ..., description="Individual service health checks"
     )
     response_time_ms: float = Field(..., description="Total time to perform all checks")
@@ -122,7 +120,7 @@ class DependencyInfo(BaseModel):
         ..., description="Whether service is critical for system operation"
     )
     description: str = Field(..., description="Service description")
-    health_check_url: Optional[str] = Field(
+    health_check_url: str | None = Field(
         None, description="URL for service health check"
     )
 
@@ -141,10 +139,10 @@ class DependencyInfo(BaseModel):
 class DependenciesResponse(BaseModel):
     """Response listing all system dependencies."""
 
-    critical: Dict[str, DependencyInfo] = Field(
+    critical: dict[str, DependencyInfo] = Field(
         ..., description="Critical dependencies"
     )
-    optional: Dict[str, DependencyInfo] = Field(
+    optional: dict[str, DependencyInfo] = Field(
         ..., description="Optional dependencies"
     )
 

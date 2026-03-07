@@ -10,21 +10,21 @@ This module provides:
 
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from loguru import logger
 
 from app.core.supabase import get_supabase_client
 from app.models import (
+    OCRCorrectionRequest,
+    OCRCorrectionResponse,
+    OCRJobListResponse,
     OCRJobRequest,
     OCRJobResponse,
     OCRJobStatus,
-    OCRJobListResponse,
-    OCRCorrectionRequest,
-    OCRCorrectionResponse,
-    OCRQualityMetrics,
     OCRPageResult,
+    OCRQualityMetrics,
     validate_id_format,
 )
 
@@ -274,7 +274,7 @@ async def submit_ocr_job(
             "page_count": ocr_result["page_count"],
             "language_detected": ocr_result["language_detected"],
             "quality_metrics": ocr_result["quality_metrics"],
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
         }
 
         supabase.table("ocr_jobs").update(update_data).eq("id", job_id).execute()
@@ -307,7 +307,7 @@ async def submit_ocr_job(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OCR processing error: {str(e)}", exc_info=True)
+        logger.error(f"OCR processing error: {e!s}", exc_info=True)
         # If job was created, mark it as failed
         try:
             supabase = get_supabase_client()
@@ -319,7 +319,7 @@ async def submit_ocr_job(
             ).eq("id", job_id).execute()
         except Exception:
             pass
-        raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"OCR processing failed: {e!s}")
 
 
 @router.post(
@@ -372,7 +372,7 @@ async def submit_ocr_job_text(
             "page_count": ocr_result["page_count"],
             "language_detected": ocr_result["language_detected"],
             "quality_metrics": ocr_result["quality_metrics"],
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
         }
 
         supabase.table("ocr_jobs").update(update_data).eq("id", job_id).execute()
@@ -403,8 +403,8 @@ async def submit_ocr_job_text(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OCR text processing error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
+        logger.error(f"OCR text processing error: {e!s}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"OCR processing failed: {e!s}")
 
 
 @router.get(
@@ -443,7 +443,7 @@ async def get_ocr_job(job_id: str) -> OCRJobStatus:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching OCR job {job_id}: {str(e)}", exc_info=True)
+        logger.error(f"Error fetching OCR job {job_id}: {e!s}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch OCR job status")
 
 
@@ -488,7 +488,7 @@ async def list_ocr_jobs(
         )
 
     except Exception as e:
-        logger.error(f"Error listing OCR jobs: {str(e)}", exc_info=True)
+        logger.error(f"Error listing OCR jobs: {e!s}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to list OCR jobs")
 
 
@@ -524,7 +524,7 @@ async def submit_ocr_correction(
                 detail=f"Cannot correct job with status '{job['status']}'. Job must be completed.",
             )
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
 
         # Update job with corrections
         update_data = {
@@ -558,5 +558,5 @@ async def submit_ocr_correction(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error applying OCR corrections: {str(e)}", exc_info=True)
+        logger.error(f"Error applying OCR corrections: {e!s}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to apply corrections")

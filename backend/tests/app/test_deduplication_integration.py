@@ -1,4 +1,5 @@
 """Integration tests for deduplication endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -31,5 +32,7 @@ async def test_dedup_scan_requires_auth(client: AsyncClient):
 @pytest.mark.api
 async def test_dedup_check_requires_auth(client: AsyncClient):
     """Check document duplicates should reject unauthenticated requests."""
-    response = await client.post("/deduplication/check", json={"document_id": "test-123"})
+    response = await client.post(
+        "/deduplication/check", json={"document_id": "test-123"}
+    )
     assert response.status_code in [401, 403]

@@ -9,7 +9,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-
 AllowedJurisdiction = Literal["PL", "UK"]
 
 
@@ -253,6 +252,6 @@ async def analyze_query_with_fallback(
     try:
         result = await analyze_query(query, llm=llm)
         return result, "llm", None
-    except Exception as e:  # noqa: BLE001 - explicit fallback path
+    except Exception as e:
         fallback = _heuristic_query_analysis(query)
         return fallback, "heuristic", str(e)

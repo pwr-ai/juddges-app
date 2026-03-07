@@ -1,4 +1,5 @@
 """Integration tests for example questions endpoint."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -19,4 +20,4 @@ async def test_example_questions_with_auth(authenticated_client: AsyncClient):
     assert response.status_code in [200, 500]
     if response.status_code == 200:
         data = response.json()
-        assert isinstance(data, (dict, list))
+        assert isinstance(data, dict | list)

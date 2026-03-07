@@ -2,6 +2,7 @@
 Integration tests for feedback endpoints.
 Tests /api/feedback/* routes for search and feature feedback.
 """
+
 import pytest
 from httpx import AsyncClient
 

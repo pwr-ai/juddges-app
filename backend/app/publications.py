@@ -1,13 +1,13 @@
 """Publications API endpoints for managing research publications with schema and collection links."""
 
 from enum import Enum
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends, Header, Path, Query
-from pydantic import BaseModel, Field, field_validator
-from juddges_search.db.supabase_db import get_publications_db
-from app.models import validate_id_format
-from loguru import logger
 
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from juddges_search.db.supabase_db import get_publications_db
+from loguru import logger
+from pydantic import BaseModel, Field, field_validator
+
+from app.models import validate_id_format
 
 router = APIRouter(prefix="/publications", tags=["publications"])
 
@@ -35,110 +35,110 @@ class PublicationStatus(str, Enum):
 # Request/Response Models
 class PublicationAuthor(BaseModel):
     name: str = Field(min_length=1, max_length=255)
-    affiliation: Optional[str] = Field(None, max_length=500)
-    url: Optional[str] = Field(None, max_length=500)
+    affiliation: str | None = Field(None, max_length=500)
+    url: str | None = Field(None, max_length=500)
 
 
 class PublicationLinks(BaseModel):
-    pdf: Optional[str] = None
-    arxiv: Optional[str] = None
-    doi: Optional[str] = None
-    code: Optional[str] = None
-    website: Optional[str] = None
-    video: Optional[str] = None
+    pdf: str | None = None
+    arxiv: str | None = None
+    doi: str | None = None
+    code: str | None = None
+    website: str | None = None
+    video: str | None = None
 
 
 class SchemaLink(BaseModel):
     schema_id: str
-    description: Optional[str] = None
-    created_at: Optional[str] = None
+    description: str | None = None
+    created_at: str | None = None
 
 
 class CollectionLink(BaseModel):
     collection_id: str
-    description: Optional[str] = None
-    created_at: Optional[str] = None
+    description: str | None = None
+    created_at: str | None = None
 
 
 class ExtractionJobLink(BaseModel):
     job_id: str
-    job_status: Optional[str] = None
-    description: Optional[str] = None
-    created_at: Optional[str] = None
+    job_status: str | None = None
+    description: str | None = None
+    created_at: str | None = None
 
 
 class Publication(BaseModel):
     id: str
     title: str
-    authors: List[PublicationAuthor]
+    authors: list[PublicationAuthor]
     venue: str
-    venue_short: Optional[str] = None
+    venue_short: str | None = None
     year: int
-    month: Optional[int] = None
+    month: int | None = None
     abstract: str
     project: PublicationProject
     type: PublicationType
     status: PublicationStatus
     links: PublicationLinks
-    tags: Optional[List[str]] = None
-    citations: Optional[int] = None
-    manuscript_number: Optional[str] = None
-    acceptance_date: Optional[str] = None
-    publication_date: Optional[str] = None
+    tags: list[str] | None = None
+    citations: int | None = None
+    manuscript_number: str | None = None
+    acceptance_date: str | None = None
+    publication_date: str | None = None
     created_at: str
     updated_at: str
 
 
 class PublicationWithResources(Publication):
-    schemas: List[SchemaLink] = []
-    collections: List[CollectionLink] = []
-    extraction_jobs: List[ExtractionJobLink] = []
+    schemas: list[SchemaLink] = []
+    collections: list[CollectionLink] = []
+    extraction_jobs: list[ExtractionJobLink] = []
 
 
 class CreatePublicationRequest(BaseModel):
     title: str = Field(min_length=1, max_length=500)
-    authors: List[PublicationAuthor] = Field(min_length=1)
+    authors: list[PublicationAuthor] = Field(min_length=1)
     venue: str = Field(min_length=1, max_length=500)
-    venue_short: Optional[str] = Field(None, max_length=50)
+    venue_short: str | None = Field(None, max_length=50)
     year: int = Field(ge=1900, le=2100)
-    month: Optional[int] = Field(None, ge=1, le=12)
+    month: int | None = Field(None, ge=1, le=12)
     abstract: str = Field(min_length=1, max_length=10000)
     project: PublicationProject
     type: PublicationType
     status: PublicationStatus
-    links: Optional[PublicationLinks] = None
-    tags: Optional[List[str]] = None
-    citations: Optional[int] = Field(None, ge=0)
-    manuscript_number: Optional[str] = Field(None, max_length=100)
-    acceptance_date: Optional[str] = None
-    publication_date: Optional[str] = None
-    schema_ids: Optional[List[str]] = None
-    collection_ids: Optional[List[str]] = None
-    extraction_job_ids: Optional[List[str]] = None
+    links: PublicationLinks | None = None
+    tags: list[str] | None = None
+    citations: int | None = Field(None, ge=0)
+    manuscript_number: str | None = Field(None, max_length=100)
+    acceptance_date: str | None = None
+    publication_date: str | None = None
+    schema_ids: list[str] | None = None
+    collection_ids: list[str] | None = None
+    extraction_job_ids: list[str] | None = None
 
 
 class UpdatePublicationRequest(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=500)
-    authors: Optional[List[PublicationAuthor]] = None
-    venue: Optional[str] = Field(None, min_length=1, max_length=500)
-    venue_short: Optional[str] = Field(None, max_length=50)
-    year: Optional[int] = Field(None, ge=1900, le=2100)
-    month: Optional[int] = Field(None, ge=1, le=12)
-    abstract: Optional[str] = Field(None, min_length=1, max_length=10000)
-    project: Optional[PublicationProject] = None
-    type: Optional[PublicationType] = None
-    status: Optional[PublicationStatus] = None
-    links: Optional[PublicationLinks] = None
-    tags: Optional[List[str]] = None
-    citations: Optional[int] = Field(None, ge=0)
-    manuscript_number: Optional[str] = Field(None, max_length=100)
-    acceptance_date: Optional[str] = None
-    publication_date: Optional[str] = None
+    title: str | None = Field(None, min_length=1, max_length=500)
+    authors: list[PublicationAuthor] | None = None
+    venue: str | None = Field(None, min_length=1, max_length=500)
+    venue_short: str | None = Field(None, max_length=50)
+    year: int | None = Field(None, ge=1900, le=2100)
+    month: int | None = Field(None, ge=1, le=12)
+    abstract: str | None = Field(None, min_length=1, max_length=10000)
+    project: PublicationProject | None = None
+    type: PublicationType | None = None
+    status: PublicationStatus | None = None
+    links: PublicationLinks | None = None
+    tags: list[str] | None = None
+    citations: int | None = Field(None, ge=0)
+    manuscript_number: str | None = Field(None, max_length=100)
+    acceptance_date: str | None = None
+    publication_date: str | None = None
 
 
 class LinkSchemaRequest(BaseModel):
     schema_id: str = Field(min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000)
 
     @field_validator("schema_id")
     @classmethod
@@ -148,7 +148,7 @@ class LinkSchemaRequest(BaseModel):
 
 class LinkCollectionRequest(BaseModel):
     collection_id: str = Field(min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000)
 
     @field_validator("collection_id")
     @classmethod
@@ -158,7 +158,7 @@ class LinkCollectionRequest(BaseModel):
 
 class LinkExtractionJobRequest(BaseModel):
     job_id: str = Field(min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000)
 
     @field_validator("job_id")
     @classmethod
@@ -166,7 +166,7 @@ class LinkExtractionJobRequest(BaseModel):
         return validate_id_format(v, "job_id")
 
 
-def get_current_user(x_user_id: str = Header(None, alias="X-User-ID")) -> Optional[str]:
+def get_current_user(x_user_id: str = Header(None, alias="X-User-ID")) -> str | None:
     """Extract optional user ID from request header."""
     return x_user_id
 
@@ -232,14 +232,12 @@ def transform_publication(data: dict) -> PublicationWithResources:
     )
 
 
-@router.get("", response_model=List[PublicationWithResources])
+@router.get("", response_model=list[PublicationWithResources])
 async def list_publications(
-    project: Optional[PublicationProject] = Query(
-        None, description="Filter by project"
-    ),
-    year: Optional[int] = Query(None, ge=1900, le=2100, description="Filter by year"),
-    status: Optional[PublicationStatus] = Query(None, description="Filter by status"),
-    pub_type: Optional[PublicationType] = Query(
+    project: PublicationProject | None = Query(None, description="Filter by project"),
+    year: int | None = Query(None, ge=1900, le=2100, description="Filter by year"),
+    status: PublicationStatus | None = Query(None, description="Filter by status"),
+    pub_type: PublicationType | None = Query(
         None, alias="type", description="Filter by type"
     ),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of results"),
@@ -262,7 +260,7 @@ async def list_publications(
 async def create_publication(
     request: CreatePublicationRequest,
     db=Depends(get_publications_db),
-    user_id: Optional[str] = Depends(get_current_user),
+    user_id: str | None = Depends(get_current_user),
 ):
     """Create a new publication."""
     data = {
@@ -319,7 +317,7 @@ async def update_publication(
     request: UpdatePublicationRequest,
     publication_id: str = Path(..., description="Publication ID to update"),
     db=Depends(get_publications_db),
-    user_id: Optional[str] = Depends(get_current_user),
+    user_id: str | None = Depends(get_current_user),
 ):
     """Update an existing publication."""
     try:
@@ -374,7 +372,7 @@ async def update_publication(
 async def delete_publication(
     publication_id: str = Path(..., description="Publication ID to delete"),
     db=Depends(get_publications_db),
-    user_id: Optional[str] = Depends(get_current_user),
+    user_id: str | None = Depends(get_current_user),
 ):
     """Delete a publication."""
     try:
@@ -390,7 +388,7 @@ async def delete_publication(
 
 
 # Schema linking endpoints
-@router.get("/{publication_id}/schemas", response_model=List[SchemaLink])
+@router.get("/{publication_id}/schemas", response_model=list[SchemaLink])
 async def get_publication_schemas(
     publication_id: str = Path(..., description="Publication ID"),
     db=Depends(get_publications_db),
@@ -446,7 +444,7 @@ async def remove_schema_link(
 
 
 # Collection linking endpoints
-@router.get("/{publication_id}/collections", response_model=List[CollectionLink])
+@router.get("/{publication_id}/collections", response_model=list[CollectionLink])
 async def get_publication_collections(
     publication_id: str = Path(..., description="Publication ID"),
     db=Depends(get_publications_db),
@@ -507,7 +505,7 @@ async def remove_collection_link(
 
 
 # Extraction job linking endpoints
-@router.get("/{publication_id}/extraction-jobs", response_model=List[ExtractionJobLink])
+@router.get("/{publication_id}/extraction-jobs", response_model=list[ExtractionJobLink])
 async def get_publication_extraction_jobs(
     publication_id: str = Path(..., description="Publication ID"),
     db=Depends(get_publications_db),

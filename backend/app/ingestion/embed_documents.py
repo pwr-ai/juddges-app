@@ -13,14 +13,11 @@ import argparse
 import asyncio
 import os
 import time
-from typing import Optional
 
+from backend.app.core.supabase import get_supabase_client
 from loguru import logger
 from openai import AsyncOpenAI
 from supabase import Client
-
-from backend.app.core.supabase import get_supabase_client
-
 
 # Configuration
 EMBEDDING_MODEL = "text-embedding-3-small"
@@ -52,7 +49,7 @@ class EmbeddingGenerator:
             "tokens_used": 0,
         }
 
-    async def generate_embedding(self, text: str) -> Optional[list[float]]:
+    async def generate_embedding(self, text: str) -> list[float] | None:
         """Generate embedding for a single text using OpenAI API."""
         if not text or len(text.strip()) == 0:
             return None
@@ -77,10 +74,11 @@ class EmbeddingGenerator:
                         f"Embedding generation failed after {MAX_RETRIES} attempts: {e}"
                     )
                     return None
+        return None
 
     async def generate_batch_embeddings(
         self, texts: list[str]
-    ) -> list[Optional[list[float]]]:
+    ) -> list[list[float] | None]:
         """Generate embeddings for a batch of texts."""
         # Filter out empty texts but keep track of positions
         valid_indices = []
@@ -120,9 +118,10 @@ class EmbeddingGenerator:
                         f"Batch embedding failed after {MAX_RETRIES} attempts: {e}"
                     )
                     return [None] * len(texts)
+        return None
 
     def get_documents_without_embeddings(
-        self, limit: Optional[int] = None, offset: int = 0
+        self, limit: int | None = None, offset: int = 0
     ) -> list[dict]:
         """Fetch documents that don't have embeddings yet."""
         query = (
@@ -150,7 +149,7 @@ class EmbeddingGenerator:
         self,
         supabase_document_id: int,
         embedding: list[float],
-        summary_embedding: Optional[list[float]] = None,
+        summary_embedding: list[float] | None = None,
     ) -> bool:
         """Update a document with its embedding."""
         if self.dry_run:
@@ -207,7 +206,7 @@ class EmbeddingGenerator:
 
         return successful
 
-    async def run(self, limit: Optional[int] = None) -> dict:
+    async def run(self, limit: int | None = None) -> dict:
         """Run the embedding generation process."""
         total_without_embeddings = self.get_total_documents_without_embeddings()
         logger.info(f"Total documents without embeddings: {total_without_embeddings}")

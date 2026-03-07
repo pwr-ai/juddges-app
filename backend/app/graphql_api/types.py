@@ -7,10 +7,8 @@ converted to Strawberry's type system for GraphQL schema generation.
 
 import enum
 from datetime import datetime
-from typing import Optional
 
 import strawberry
-
 
 # ===== Enums =====
 
@@ -35,22 +33,22 @@ class DocumentProcessingStatusEnum(enum.Enum):
 
 @strawberry.type
 class IssuingBodyType:
-    name: Optional[str] = None
-    jurisdiction: Optional[str] = None
-    type: Optional[str] = None
+    name: str | None = None
+    jurisdiction: str | None = None
+    type: str | None = None
 
 
 @strawberry.type
 class LegalReferenceType:
-    ref_type: Optional[str] = None
-    text: Optional[str] = None
-    normalized_citation: Optional[str] = None
+    ref_type: str | None = None
+    text: str | None = None
+    normalized_citation: str | None = None
 
 
 @strawberry.type
 class LegalConceptType:
-    concept_name: Optional[str] = None
-    concept_type: Optional[str] = None
+    concept_name: str | None = None
+    concept_type: str | None = None
 
 
 # ===== Core Document Types =====
@@ -62,28 +60,28 @@ class LegalDocumentType:
 
     document_id: str
     document_type: str
-    title: Optional[str] = None
-    date_issued: Optional[datetime] = None
-    issuing_body: Optional[IssuingBodyType] = None
-    language: Optional[str] = None
-    victims_count: Optional[int] = None
-    offenders_count: Optional[int] = None
+    title: str | None = None
+    date_issued: datetime | None = None
+    issuing_body: IssuingBodyType | None = None
+    language: str | None = None
+    victims_count: int | None = None
+    offenders_count: int | None = None
     case_type: str = "criminal"
-    document_number: Optional[str] = None
-    country: Optional[str] = None
-    summary: Optional[str] = None
-    keywords: Optional[list[str]] = None
-    thesis: Optional[str] = None
-    court_name: Optional[str] = None
-    department_name: Optional[str] = None
-    presiding_judge: Optional[str] = None
-    judges: Optional[list[str]] = None
-    legal_bases: Optional[list[str]] = None
-    parties: Optional[str] = None
-    outcome: Optional[str] = None
-    source_url: Optional[str] = None
-    publication_date: Optional[datetime] = None
-    ingestion_date: Optional[datetime] = None
+    document_number: str | None = None
+    country: str | None = None
+    summary: str | None = None
+    keywords: list[str] | None = None
+    thesis: str | None = None
+    court_name: str | None = None
+    department_name: str | None = None
+    presiding_judge: str | None = None
+    judges: list[str] | None = None
+    legal_bases: list[str] | None = None
+    parties: str | None = None
+    outcome: str | None = None
+    source_url: str | None = None
+    publication_date: datetime | None = None
+    ingestion_date: datetime | None = None
     # full_text excluded by default to avoid large payloads — available via dedicated field
 
 
@@ -94,18 +92,18 @@ class LegalDocumentMetadataType:
     uuid: str
     document_id: str
     document_type: str
-    language: Optional[str] = None
-    victims_count: Optional[int] = None
-    offenders_count: Optional[int] = None
+    language: str | None = None
+    victims_count: int | None = None
+    offenders_count: int | None = None
     case_type: str = "criminal"
-    keywords: Optional[list[str]] = None
-    date_issued: Optional[datetime] = None
-    score: Optional[float] = None
-    title: Optional[str] = None
-    summary: Optional[str] = None
-    court_name: Optional[str] = None
-    document_number: Optional[str] = None
-    thesis: Optional[str] = None
+    keywords: list[str] | None = None
+    date_issued: datetime | None = None
+    score: float | None = None
+    title: str | None = None
+    summary: str | None = None
+    court_name: str | None = None
+    document_number: str | None = None
+    thesis: str | None = None
 
 
 @strawberry.type
@@ -113,15 +111,15 @@ class DocumentChunkType:
     """A chunk or segment of a legal document."""
 
     document_id: str
-    document_type: Optional[str] = None
-    language: Optional[str] = None
+    document_type: str | None = None
+    language: str | None = None
     chunk_id: int
     chunk_text: str
-    segment_type: Optional[str] = None
-    position: Optional[int] = None
-    confidence_score: Optional[float] = None
-    cited_references: Optional[list[str]] = None
-    tags: Optional[list[str]] = None
+    segment_type: str | None = None
+    position: int | None = None
+    confidence_score: float | None = None
+    cited_references: list[str] | None = None
+    tags: list[str] | None = None
 
 
 # ===== Search Response Types =====
@@ -132,9 +130,9 @@ class PaginationMetadataType:
     offset: int
     limit: int
     loaded_count: int
-    estimated_total: Optional[int] = None
+    estimated_total: int | None = None
     has_more: bool = False
-    next_offset: Optional[int] = None
+    next_offset: int | None = None
 
 
 @strawberry.type
@@ -144,7 +142,7 @@ class SearchDocumentsResultType:
     documents: list[LegalDocumentMetadataType]
     total_count: int
     is_capped: bool
-    query_time_ms: Optional[float] = None
+    query_time_ms: float | None = None
 
 
 @strawberry.type
@@ -152,11 +150,11 @@ class SearchChunksResultType:
     """Result of a chunk-based search."""
 
     chunks: list[DocumentChunkType]
-    documents: Optional[list[LegalDocumentType]] = None
+    documents: list[LegalDocumentType] | None = None
     total_chunks: int
     unique_documents: int
-    query_time_ms: Optional[float] = None
-    pagination: Optional[PaginationMetadataType] = None
+    query_time_ms: float | None = None
+    pagination: PaginationMetadataType | None = None
 
 
 @strawberry.type
@@ -164,12 +162,12 @@ class SimilarDocumentResultType:
     document_id: str
     db_id: str
     similarity_score: float
-    title: Optional[str] = None
-    document_type: Optional[str] = None
-    date_issued: Optional[str] = None
-    document_number: Optional[str] = None
-    country: Optional[str] = None
-    language: Optional[str] = None
+    title: str | None = None
+    document_type: str | None = None
+    date_issued: str | None = None
+    document_number: str | None = None
+    country: str | None = None
+    language: str | None = None
 
 
 @strawberry.type
@@ -185,16 +183,16 @@ class SimilarDocumentsResultType:
 @strawberry.type
 class ExtractionJobType:
     job_id: str
-    collection_id: Optional[str] = None
+    collection_id: str | None = None
     status: str
     created_at: str
-    updated_at: Optional[str] = None
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    total_documents: Optional[int] = None
-    completed_documents: Optional[int] = None
-    elapsed_time_seconds: Optional[int] = None
-    estimated_time_remaining_seconds: Optional[int] = None
+    updated_at: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    total_documents: int | None = None
+    completed_documents: int | None = None
+    elapsed_time_seconds: int | None = None
+    estimated_time_remaining_seconds: int | None = None
 
 
 @strawberry.type
@@ -204,8 +202,8 @@ class ExtractionResultType:
     status: str
     created_at: str
     updated_at: str
-    extracted_data: Optional[strawberry.scalars.JSON] = None
-    error_message: Optional[str] = None
+    extracted_data: strawberry.scalars.JSON | None = None
+    error_message: str | None = None
 
 
 # ===== Subscription Event Types =====
@@ -220,8 +218,8 @@ class ExtractionProgressEvent:
     completed_documents: int
     total_documents: int
     progress_percent: float
-    current_document_id: Optional[str] = None
-    error_message: Optional[str] = None
+    current_document_id: str | None = None
+    error_message: str | None = None
 
 
 @strawberry.type
@@ -230,7 +228,7 @@ class DocumentIndexedEvent:
 
     document_id: str
     document_type: str
-    title: Optional[str] = None
+    title: str | None = None
     indexed_at: str
 
 

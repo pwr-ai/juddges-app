@@ -9,7 +9,6 @@ Tests:
 import pytest
 from httpx import AsyncClient
 
-
 # ============================================================================
 # Similar Documents Tests (GET /documents/{id}/similar)
 # ============================================================================
@@ -168,7 +167,7 @@ async def test_get_similar_documents_response_structure(
                 # Might have similarity score
                 if "score" in doc or "similarity" in doc:
                     score = doc.get("score", doc.get("similarity"))
-                    assert isinstance(score, (int, float))
+                    assert isinstance(score, int | float)
                     assert 0 <= score <= 1 or score >= 0  # Depends on scoring method
 
 
@@ -277,7 +276,7 @@ async def test_batch_similar_documents_success(authenticated_client: AsyncClient
             data = response.json()
 
             # Check response structure
-            assert isinstance(data, dict) or isinstance(data, list)
+            assert isinstance(data, dict | list)
 
 
 @pytest.mark.anyio
@@ -345,7 +344,7 @@ async def test_batch_similar_documents_mixed_valid_invalid(
         docs = list_response.json().get("documents", [])
         if docs:
             valid_ids = [doc["id"] for doc in docs]
-            mixed_ids = valid_ids + ["fake-1", "fake-2"]
+            mixed_ids = [*valid_ids, "fake-1", "fake-2"]
 
             response = await authenticated_client.post(
                 "/documents/similar/batch", json={"document_ids": mixed_ids, "limit": 5}

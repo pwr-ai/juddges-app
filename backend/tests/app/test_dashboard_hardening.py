@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
-from httpx import AsyncClient
 
 from app import dashboard as dashboard_module
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
 
 @pytest.fixture

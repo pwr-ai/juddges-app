@@ -174,9 +174,7 @@ class MeiliSearchService:
             f"/documents?primaryKey={primary_key}"
         )
 
-        async with httpx.AsyncClient(
-            timeout=max(self.timeout_seconds, 30.0)
-        ) as client:
+        async with httpx.AsyncClient(timeout=max(self.timeout_seconds, 30.0)) as client:
             response = await client.post(
                 url, json=documents, headers=self._admin_headers()
             )

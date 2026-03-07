@@ -1,8 +1,8 @@
 """Integration tests for schema generation workflow."""
 
 import pytest
-from langchain_openai import ChatOpenAI
 from juddges_search.models import DocumentType
+from langchain_openai import ChatOpenAI
 
 from schema_generator_agent.agents.schema_generator import SchemaGenerator, load_prompts
 

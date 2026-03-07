@@ -5,20 +5,20 @@ These tests verify the search functionality using mocked Supabase client
 to avoid requiring a live database connection.
 """
 
-import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from typing import List, Dict, Any
+from typing import Any
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+from juddges_search.models import DocumentChunk
 from juddges_search.retrieval.supabase_search import (
     SupabaseSearchClient,
     get_search_client,
-    search_chunks,
-    search_chunks_vector,
-    search_chunks_term,
-    search_documents,
     reset_search_client,
+    search_chunks,
+    search_chunks_term,
+    search_chunks_vector,
+    search_documents,
 )
-from juddges_search.models import DocumentChunk
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def mock_supabase_client():
 
 
 @pytest.fixture
-def sample_chunk_data() -> List[Dict[str, Any]]:
+def sample_chunk_data() -> list[dict[str, Any]]:
     """Sample chunk data for testing."""
     return [
         {
@@ -68,7 +68,7 @@ def sample_chunk_data() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_document_data() -> List[Dict[str, Any]]:
+def sample_document_data() -> list[dict[str, Any]]:
     """Sample document data for testing."""
     return [
         {
@@ -384,23 +384,23 @@ class TestPublicAPI:
             )
         ]
 
-        with patch(
-            "juddges_search.retrieval.supabase_search.SupabaseSearchClient"
-        ) as MockClient:
-            with patch(
-                "juddges_search.retrieval.supabase_search.embed_texts"
-            ) as mock_embed:
-                mock_embed.return_value = [0.1] * 1536
-                mock_instance = MockClient.return_value
-                mock_instance.vector_search_chunks = AsyncMock(return_value=mock_chunks)
+        with (
+            patch(
+                "juddges_search.retrieval.supabase_search.SupabaseSearchClient"
+            ) as MockClient,
+            patch("juddges_search.retrieval.supabase_search.embed_texts") as mock_embed,
+        ):
+            mock_embed.return_value = [0.1] * 1536
+            mock_instance = MockClient.return_value
+            mock_instance.vector_search_chunks = AsyncMock(return_value=mock_chunks)
 
-                reset_search_client()
+            reset_search_client()
 
-                results = await search_chunks_vector(query="test query", max_chunks=10)
+            results = await search_chunks_vector(query="test query", max_chunks=10)
 
-                assert len(results) == 1
-                mock_embed.assert_called_once_with("test query")
-                mock_instance.vector_search_chunks.assert_called_once()
+            assert len(results) == 1
+            mock_embed.assert_called_once_with("test query")
+            mock_instance.vector_search_chunks.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_search_chunks_term(self, monkeypatch):
@@ -451,32 +451,32 @@ class TestPublicAPI:
         mock_select.limit.return_value = mock_limit
         mock_limit.execute.return_value = mock_response
 
-        with patch(
-            "juddges_search.retrieval.supabase_search.create_client",
-            return_value=mock_client,
+        with (
+            patch(
+                "juddges_search.retrieval.supabase_search.create_client",
+                return_value=mock_client,
+            ),
+            patch("juddges_search.retrieval.supabase_search.embed_texts") as mock_embed,
         ):
+            mock_embed.return_value = [0.1] * 1536
+
+            reset_search_client()
+
+            # Need to patch the client.table access through get_search_client
             with patch(
-                "juddges_search.retrieval.supabase_search.embed_texts"
-            ) as mock_embed:
-                mock_embed.return_value = [0.1] * 1536
+                "juddges_search.retrieval.supabase_search.get_search_client"
+            ) as mock_get_client:
+                mock_search_client = Mock()
+                mock_search_client.client = mock_client
+                mock_get_client.return_value = mock_search_client
 
-                reset_search_client()
+                results = await search_documents(
+                    query="contract dispute", max_results=10
+                )
 
-                # Need to patch the client.table access through get_search_client
-                with patch(
-                    "juddges_search.retrieval.supabase_search.get_search_client"
-                ) as mock_get_client:
-                    mock_search_client = Mock()
-                    mock_search_client.client = mock_client
-                    mock_get_client.return_value = mock_search_client
-
-                    results = await search_documents(
-                        query="contract dispute", max_results=10
-                    )
-
-                    assert len(results) == 2
-                    assert results[0]["document_id"] == "II FSK 1234/21"
-                    assert results[0]["court_name"] == "Supreme Court"
+                assert len(results) == 2
+                assert results[0]["document_id"] == "II FSK 1234/21"
+                assert results[0]["court_name"] == "Supreme Court"
 
 
 @pytest.mark.unit

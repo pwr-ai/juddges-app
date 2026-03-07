@@ -10,7 +10,6 @@ Tests:
 import pytest
 from httpx import AsyncClient
 
-
 # ============================================================================
 # List Documents Tests (GET /documents)
 # ============================================================================
@@ -118,7 +117,7 @@ async def test_list_documents_with_vectors(authenticated_client: AsyncClient):
     if data["documents"]:
         # Some documents might have vectors
         for doc in data["documents"]:
-            if "embedding" in doc and doc["embedding"]:
+            if doc.get("embedding"):
                 assert isinstance(doc["embedding"], list)
                 # OpenAI embeddings are 1536 dimensions
                 assert len(doc["embedding"]) == 1536
@@ -322,7 +321,7 @@ async def test_get_documents_sample_with_vectors(authenticated_client: AsyncClie
     if response.status_code == 200:
         data = response.json()
         for doc in data["documents"]:
-            if "embedding" in doc and doc["embedding"]:
+            if doc.get("embedding"):
                 assert isinstance(doc["embedding"], list)
 
 

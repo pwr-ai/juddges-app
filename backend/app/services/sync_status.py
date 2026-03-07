@@ -6,10 +6,11 @@ Redis so the API process can read status written by the Celery worker.
 
 from __future__ import annotations
 
-import os
+import contextlib
 import json
+import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -32,7 +33,9 @@ def _get_redis():
         host = os.getenv("REDIS_HOST", "localhost")
         port = int(os.getenv("REDIS_PORT", "6379"))
         password = os.getenv("REDIS_AUTH") or None
-        return redis.Redis(host=host, port=port, password=password, decode_responses=True)
+        return redis.Redis(
+            host=host, port=port, password=password, decode_responses=True
+        )
     except Exception:
         return None
 
@@ -41,7 +44,7 @@ def record_sync_completed(total_synced: int) -> None:
     """Called after a successful full sync."""
     global _last_sync
     _last_sync = {
-        "completed_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": datetime.now(UTC).isoformat(),
         "total_synced": total_synced,
         "epoch": time.time(),
     }
@@ -57,7 +60,7 @@ def record_sync_completed(total_synced: int) -> None:
 def record_sync_failed(error: str) -> None:
     """Called when a full sync fails."""
     global _last_sync
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     _last_sync = {
         "completed_at": _last_sync["completed_at"] if _last_sync else None,
         "total_synced": _last_sync.get("total_synced") if _last_sync else None,
@@ -67,10 +70,8 @@ def record_sync_failed(error: str) -> None:
     }
     r = _get_redis()
     if r:
-        try:
+        with contextlib.suppress(Exception):
             r.set(REDIS_SYNC_KEY, json.dumps(_last_sync), ex=86400)
-        except Exception:
-            pass
 
 
 def get_sync_status() -> dict[str, Any]:

@@ -5,7 +5,6 @@ from pprint import pprint
 import requests
 from dotenv import dotenv_values
 
-
 SUBMIT_URL = "{api_url}/extractions/submit"
 RESULTS_URL = "{api_url}/extractions/results/{task_id}"
 
@@ -82,11 +81,10 @@ def main() -> None:
                 print(f"Task is {status}, waiting for 1 second...")
                 time.sleep(1)
                 continue
-            else:
-                if status == "SUCCESS":
-                    print("\nExtraction results:")
-                    pprint(resp.json())
-                    break
+            if status == "SUCCESS":
+                print("\nExtraction results:")
+                pprint(resp.json())
+                break
 
 
 if __name__ == "__main__":

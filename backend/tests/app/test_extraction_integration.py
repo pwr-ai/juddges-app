@@ -1,4 +1,5 @@
 """Integration tests for extraction endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -21,7 +22,9 @@ async def test_list_extractions_requires_auth(client: AsyncClient):
 @pytest.mark.api
 async def test_list_extractions_with_auth(authenticated_client: AsyncClient):
     """List extractions should return data with valid auth."""
-    response = await authenticated_client.get("/extractions", params={"user_id": "test-user"})
+    response = await authenticated_client.get(
+        "/extractions", params={"user_id": "test-user"}
+    )
     assert response.status_code in [200, 422, 500]
 
 
@@ -29,7 +32,9 @@ async def test_list_extractions_with_auth(authenticated_client: AsyncClient):
 @pytest.mark.api
 async def test_create_extraction_requires_auth(client: AsyncClient):
     """Create extraction should reject unauthenticated requests."""
-    response = await client.post("/extractions", json={"document_ids": ["test-123"], "schema_id": "schema-1"})
+    response = await client.post(
+        "/extractions", json={"document_ids": ["test-123"], "schema_id": "schema-1"}
+    )
     assert response.status_code in [401, 403]
 
 

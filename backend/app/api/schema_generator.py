@@ -7,35 +7,34 @@ schema generation functionality.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
-from loguru import logger
-from pydantic import BaseModel, Field, ConfigDict
-
-from langgraph.types import Command
-from juddges_search.models import DocumentType
-from juddges_search.llms import get_default_llm
-from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.chains.schema_generation import generate_schema
+from juddges_search.info_extraction.extractor import InformationExtractor
+from juddges_search.llms import get_default_llm
+from juddges_search.models import DocumentType
+from langgraph.types import Command
+from loguru import logger
+from pydantic import BaseModel, ConfigDict, Field
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,
     load_prompts,
 )
 
-# Import from schemas module to reuse session management
-from app.schemas import _generation_sessions
-
 # Import standardized error handling
 from app.errors import (
-    RateLimitError,
-    GenerationTimeoutError,
-    DatabaseError,
     AppException,
+    DatabaseError,
     ErrorCode,
+    GenerationTimeoutError,
+    RateLimitError,
 )
+
+# Import from schemas module to reuse session management
+from app.schemas import _generation_sessions
 
 router = APIRouter(prefix="/schema-generator", tags=["schema-generator-chat"])
 
@@ -252,7 +251,7 @@ def get_or_create_agent(
         graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
     )
 
-    _generation_sessions[session_id] = (agent, datetime.now(timezone.utc))
+    _generation_sessions[session_id] = (agent, datetime.now(UTC))
     return agent
 
 
@@ -373,7 +372,7 @@ async def schema_chat(
                 conversation_id=session_id,
                 collection_id=params.collection_id,
                 confidence_score=None,
-                session_metadata={"created_at": datetime.now(timezone.utc).isoformat()},
+                session_metadata={"created_at": datetime.now(UTC).isoformat()},
             )
 
             try:
@@ -396,20 +395,19 @@ async def schema_chat(
                     raise RateLimitError(
                         "AI service rate limit reached. Please try again in a few moments."
                     ).to_http_exception()
-                elif "timeout" in error_str:
+                if "timeout" in error_str:
                     raise GenerationTimeoutError(
                         "Schema generation timed out. Please try with a shorter prompt or try again later."
                     ).to_http_exception()
-                elif "checkpointer" in error_str or "database" in error_str:
+                if "checkpointer" in error_str or "database" in error_str:
                     raise DatabaseError(
                         "Session storage service temporarily unavailable. Please try again later."
                     ).to_http_exception()
-                else:
-                    raise AppException(
-                        message=f"Failed to generate schema: {str(e)}",
-                        code=ErrorCode.INTERNAL_ERROR,
-                        status_code=500,
-                    ).to_http_exception()
+                raise AppException(
+                    message=f"Failed to generate schema: {e!s}",
+                    code=ErrorCode.INTERNAL_ERROR,
+                    status_code=500,
+                ).to_http_exception()
         else:
             # Continuation - use existing session with user feedback
             logger.info(f"Refining existing session: {session_id}")
@@ -431,20 +429,19 @@ async def schema_chat(
                     raise RateLimitError(
                         "AI service rate limit reached. Please try again in a few moments."
                     ).to_http_exception()
-                elif "timeout" in error_str:
+                if "timeout" in error_str:
                     raise GenerationTimeoutError(
                         "Schema refinement timed out. Please try with a shorter message or try again later."
                     ).to_http_exception()
-                elif "checkpointer" in error_str or "database" in error_str:
+                if "checkpointer" in error_str or "database" in error_str:
                     raise DatabaseError(
                         "Session storage service temporarily unavailable. Please try again later."
                     ).to_http_exception()
-                else:
-                    raise AppException(
-                        message=f"Failed to refine schema: {str(e)}",
-                        code=ErrorCode.INTERNAL_ERROR,
-                        status_code=500,
-                    ).to_http_exception()
+                raise AppException(
+                    message=f"Failed to refine schema: {e!s}",
+                    code=ErrorCode.INTERNAL_ERROR,
+                    status_code=500,
+                ).to_http_exception()
 
         # Extract response data
         confidence = None
@@ -539,7 +536,7 @@ async def test_schema(
         from app.utils.document_fetcher import get_documents_by_id
 
         for doc_id in params.document_ids:
-            start_time = datetime.now(timezone.utc)
+            start_time = datetime.now(UTC)
 
             try:
                 # Retrieve document from Supabase by ID
@@ -548,7 +545,7 @@ async def test_schema(
                     document = documents[0] if documents else None
                 except Exception as e:
                     logger.error(f"Database query failed for document {doc_id}: {e}")
-                    raise ValueError(f"Failed to retrieve document {doc_id}: {str(e)}")
+                    raise ValueError(f"Failed to retrieve document {doc_id}: {e!s}")
 
                 if not document:
                     raise ValueError(f"Document {doc_id} not found in collection")
@@ -568,9 +565,7 @@ async def test_schema(
                     extractor = InformationExtractor(llm=get_default_llm())
                 except Exception as e:
                     logger.error(f"Failed to initialize InformationExtractor: {e}")
-                    raise ValueError(
-                        f"Failed to initialize extraction engine: {str(e)}"
-                    )
+                    raise ValueError(f"Failed to initialize extraction engine: {e!s}")
 
                 # Perform extraction with error handling
                 try:
@@ -580,11 +575,9 @@ async def test_schema(
                     )
                 except Exception as e:
                     logger.error(f"Extraction failed for document {doc_id}: {e}")
-                    raise ValueError(f"Extraction failed: {str(e)}")
+                    raise ValueError(f"Extraction failed: {e!s}")
 
-                execution_time = (
-                    datetime.now(timezone.utc) - start_time
-                ).total_seconds() * 1000
+                execution_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 total_time += execution_time
 
                 results.append(
@@ -600,9 +593,7 @@ async def test_schema(
 
             except ValueError as e:
                 # User-friendly errors (document not found, missing content, etc.)
-                execution_time = (
-                    datetime.now(timezone.utc) - start_time
-                ).total_seconds() * 1000
+                execution_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 total_time += execution_time
 
                 logger.warning(f"Document processing error for {doc_id}: {e}")
@@ -620,9 +611,7 @@ async def test_schema(
 
             except Exception as e:
                 # Unexpected errors
-                execution_time = (
-                    datetime.now(timezone.utc) - start_time
-                ).total_seconds() * 1000
+                execution_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 total_time += execution_time
 
                 logger.error(
@@ -635,7 +624,7 @@ async def test_schema(
                         document_id=doc_id,
                         success=False,
                         extracted_data=None,
-                        error=f"Unexpected error: {str(e)}",
+                        error=f"Unexpected error: {e!s}",
                         execution_time=execution_time,
                     ).model_dump()
                 )
@@ -673,7 +662,7 @@ async def test_schema(
     except Exception as e:
         logger.error(f"Failed to test schema: {e}", exc_info=True)
         raise AppException(
-            message=f"Failed to test schema: {str(e)}", code=ErrorCode.INTERNAL_ERROR
+            message=f"Failed to test schema: {e!s}", code=ErrorCode.INTERNAL_ERROR
         ).to_http_exception()
 
 
@@ -757,12 +746,12 @@ async def generate_schema_simple(
         logger.warning(f"Schema generation validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Schema generation failed: {str(e)}",
+            detail=f"Schema generation failed: {e!s}",
         )
     except Exception as e:
         logger.error(f"Schema generation error: {e}", exc_info=True)
         raise AppException(
-            message=f"Failed to generate schema: {str(e)}",
+            message=f"Failed to generate schema: {e!s}",
             code=ErrorCode.INTERNAL_ERROR,
         ).to_http_exception()
 
@@ -788,17 +777,16 @@ def _generate_simple_response_message(
             f"Your {existing_field_count} existing field(s) have been preserved. "
             f"The new fields are marked for review - check them in the visual editor."
         )
-    else:
-        # New schema generation
-        field_names = list(properties.keys())[:5]
-        fields_preview = ", ".join(field_names)
+    # New schema generation
+    field_names = list(properties.keys())[:5]
+    fields_preview = ", ".join(field_names)
 
-        if field_count > 5:
-            fields_preview += f", and {field_count - 5} more"
+    if field_count > 5:
+        fields_preview += f", and {field_count - 5} more"
 
-        return (
-            f"I've generated an extraction schema with {field_count} field(s): "
-            f"{fields_preview}. "
-            f"Each field is configured for OpenAI structured output compatibility. "
-            f"Review the schema and let me know if you'd like any modifications."
-        )
+    return (
+        f"I've generated an extraction schema with {field_count} field(s): "
+        f"{fields_preview}. "
+        f"Each field is configured for OpenAI structured output compatibility. "
+        f"Review the schema and let me know if you'd like any modifications."
+    )

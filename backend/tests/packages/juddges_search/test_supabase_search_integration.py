@@ -10,18 +10,17 @@ Run with: poetry run pytest tests/packages/juddges_search/test_supabase_search_i
 """
 
 import os
-import pytest
 
+import pytest
+from juddges_search.models import DocumentChunk
 from juddges_search.retrieval.supabase_search import (
     SupabaseSearchClient,
-    search_chunks,
-    search_chunks_vector,
-    search_chunks_term,
-    search_documents,
     reset_search_client,
+    search_chunks,
+    search_chunks_term,
+    search_chunks_vector,
+    search_documents,
 )
-from juddges_search.models import DocumentChunk
-
 
 # Skip all tests if Supabase credentials are not available
 pytestmark = pytest.mark.skipif(

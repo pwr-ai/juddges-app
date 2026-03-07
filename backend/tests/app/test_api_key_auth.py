@@ -8,10 +8,10 @@ Tests for API key authentication including security measures like:
 - Constant-time comparison
 """
 
-import pytest
 import time
+
+import pytest
 from httpx import AsyncClient
-from typing import Dict
 
 
 @pytest.mark.anyio
@@ -20,7 +20,7 @@ class TestAPIKeyAuthentication:
     """Test API key authentication functionality."""
 
     async def test_valid_api_key_grants_access(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that valid API key grants access to protected endpoints."""
         response = await client.get("/documents", headers=valid_api_headers)
@@ -41,7 +41,7 @@ class TestAPIKeyAuthentication:
         assert "detail" in data, "Error response should contain detail field"
 
     async def test_invalid_api_key_rejected(
-        self, client: AsyncClient, invalid_api_headers: Dict[str, str]
+        self, client: AsyncClient, invalid_api_headers: dict[str, str]
     ):
         """Test that invalid API key is rejected with 401."""
         response = await client.get("/documents", headers=invalid_api_headers)
@@ -73,7 +73,7 @@ class TestAPIKeyAuthentication:
             headers = {"X-API-Key": api_key}
             response = await client.get("/documents", headers=headers)
             assert response.status_code == 401, (
-                f"API key with whitespace should be rejected: {repr(api_key)}"
+                f"API key with whitespace should be rejected: {api_key!r}"
             )
 
     async def test_api_key_case_sensitivity(
@@ -166,7 +166,7 @@ class TestAPIKeyAuthentication:
         for headers in wrong_headers:
             response = await client.get("/documents", headers=headers)
             assert response.status_code in [401, 403], (
-                f"Wrong header {list(headers.keys())[0]} should be rejected"
+                f"Wrong header {next(iter(headers.keys()))} should be rejected"
             )
 
     async def test_api_key_not_in_query_params(
@@ -228,14 +228,14 @@ class TestAPIKeyAuthentication:
             response = await client.get("/documents", headers=headers)
 
             assert response.status_code == 401, (
-                f"Special character key should be rejected: {repr(key)}"
+                f"Special character key should be rejected: {key!r}"
             )
             assert response.status_code < 500, (
-                f"Special character key should not cause server error: {repr(key)}"
+                f"Special character key should not cause server error: {key!r}"
             )
 
     async def test_api_key_works_across_endpoints(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that valid API key works for multiple protected endpoints."""
         protected_endpoints = [
@@ -251,7 +251,7 @@ class TestAPIKeyAuthentication:
             )
 
     async def test_api_key_persists_across_requests(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that API key authentication is stateless (no session dependency)."""
         # Make multiple requests with same API key

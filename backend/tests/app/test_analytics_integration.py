@@ -4,9 +4,10 @@ Integration tests for analytics and feedback endpoints.
 Tests the /analytics and /feedback routers.
 """
 
+from datetime import datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
-from datetime import datetime, timedelta
 
 
 @pytest.mark.anyio
@@ -65,7 +66,7 @@ async def test_analytics_user_metrics(authenticated_client: AsyncClient):
 
     if response.status_code == 200:
         data = response.json()
-        assert isinstance(data, (dict, list))
+        assert isinstance(data, dict | list)
 
 
 @pytest.mark.anyio
@@ -80,7 +81,7 @@ async def test_analytics_document_metrics(authenticated_client: AsyncClient):
     if response.status_code == 200:
         data = response.json()
         # Should contain document metrics
-        assert isinstance(data, (dict, list))
+        assert isinstance(data, dict | list)
 
 
 @pytest.mark.anyio

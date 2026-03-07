@@ -4,10 +4,11 @@ Integration tests for collections management endpoints.
 Tests the /collections router with actual HTTP requests.
 """
 
+import uuid
+from typing import Any
+
 import pytest
 from httpx import AsyncClient
-from typing import Dict, Any
-import uuid
 
 
 @pytest.mark.anyio
@@ -44,7 +45,7 @@ async def test_list_collections(authenticated_client: AsyncClient):
 @pytest.mark.collections
 @pytest.mark.integration
 async def test_create_collection(
-    authenticated_client: AsyncClient, sample_collection_data: Dict[str, Any]
+    authenticated_client: AsyncClient, sample_collection_data: dict[str, Any]
 ):
     """Test creating a new collection."""
     # Create unique collection name to avoid conflicts
@@ -87,7 +88,7 @@ async def test_create_collection_minimal(authenticated_client: AsyncClient):
 @pytest.mark.collections
 @pytest.mark.integration
 async def test_create_duplicate_collection_name(
-    authenticated_client: AsyncClient, sample_collection_data: Dict[str, Any]
+    authenticated_client: AsyncClient, sample_collection_data: dict[str, Any]
 ):
     """Test that duplicate collection names are handled properly."""
     collection_name = f"Duplicate Test {uuid.uuid4().hex[:8]}"
@@ -300,7 +301,7 @@ async def test_list_collection_documents(authenticated_client: AsyncClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert isinstance(data, (list, dict))
+    assert isinstance(data, list | dict)
 
 
 @pytest.mark.anyio

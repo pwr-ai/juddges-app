@@ -5,14 +5,16 @@ Integration-style tests for blog admin endpoints with mocked Supabase backend.
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from httpx import AsyncClient
 
-from app.server import app
 from app.core.auth_jwt import get_current_user
+from app.server import app
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
 
 @pytest.fixture
@@ -37,7 +39,7 @@ class FakeResponse:
 
 
 class FakeQuery:
-    def __init__(self, supabase: "FakeSupabase", table_name: str):
+    def __init__(self, supabase: FakeSupabase, table_name: str):
         self.supabase = supabase
         self.table_name = table_name
         self.filters: list[tuple[str, str, Any]] = []
@@ -50,51 +52,51 @@ class FakeQuery:
         self.delete_mode = False
         self.count_exact = False
 
-    def select(self, _fields: str = "*", count: str | None = None) -> "FakeQuery":
+    def select(self, _fields: str = "*", count: str | None = None) -> FakeQuery:
         self.count_exact = count == "exact"
         return self
 
-    def eq(self, key: str, value: Any) -> "FakeQuery":
+    def eq(self, key: str, value: Any) -> FakeQuery:
         self.filters.append(("eq", key, value))
         return self
 
-    def neq(self, key: str, value: Any) -> "FakeQuery":
+    def neq(self, key: str, value: Any) -> FakeQuery:
         self.filters.append(("neq", key, value))
         return self
 
-    def is_(self, key: str, value: Any) -> "FakeQuery":
+    def is_(self, key: str, value: Any) -> FakeQuery:
         self.filters.append(("is", key, value))
         return self
 
-    def or_(self, _clause: str) -> "FakeQuery":
+    def or_(self, _clause: str) -> FakeQuery:
         # Search filtering is not needed for these tests.
         return self
 
-    def limit(self, value: int) -> "FakeQuery":
+    def limit(self, value: int) -> FakeQuery:
         self.limit_value = value
         return self
 
-    def range(self, start: int, end: int) -> "FakeQuery":
+    def range(self, start: int, end: int) -> FakeQuery:
         self.range_value = (start, end)
         return self
 
-    def order(self, field: str, desc: bool = False) -> "FakeQuery":
+    def order(self, field: str, desc: bool = False) -> FakeQuery:
         self.order_value = (field, desc)
         return self
 
-    def single(self) -> "FakeQuery":
+    def single(self) -> FakeQuery:
         self.single_result = True
         return self
 
-    def insert(self, value: Any) -> "FakeQuery":
+    def insert(self, value: Any) -> FakeQuery:
         self.insert_value = value
         return self
 
-    def update(self, value: dict[str, Any]) -> "FakeQuery":
+    def update(self, value: dict[str, Any]) -> FakeQuery:
         self.update_value = value
         return self
 
-    def delete(self) -> "FakeQuery":
+    def delete(self) -> FakeQuery:
         self.delete_mode = True
         return self
 
@@ -112,7 +114,9 @@ class FakeQuery:
         return True
 
     def _filtered_rows(self) -> list[dict[str, Any]]:
-        rows = [row for row in self.supabase.tables[self.table_name] if self._matches(row)]
+        rows = [
+            row for row in self.supabase.tables[self.table_name] if self._matches(row)
+        ]
 
         if self.order_value:
             field, desc = self.order_value
@@ -126,7 +130,7 @@ class FakeQuery:
         return rows
 
     def execute(self) -> FakeResponse:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         table = self.supabase.tables[self.table_name]
 
         if self.insert_value is not None:
@@ -167,7 +171,9 @@ class FakeQuery:
         count = len(filtered_rows) if self.count_exact else None
 
         if self.single_result:
-            return FakeResponse(data=deepcopy(filtered_rows[0]) if filtered_rows else None)
+            return FakeResponse(
+                data=deepcopy(filtered_rows[0]) if filtered_rows else None
+            )
         return FakeResponse(data=deepcopy(filtered_rows), count=count)
 
 
@@ -191,8 +197,8 @@ class FakeSupabase:
                     "ai_summary": None,
                     "views": 10,
                     "likes_count": 2,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
+                    "updated_at": datetime.now(UTC).isoformat(),
                     "deleted_at": None,
                 }
             ],
@@ -271,7 +277,9 @@ async def test_blog_admin_crud_happy_path(
         assert stats["total_posts"] >= 2
         assert stats["published"] >= 1
 
-        delete_response = await authenticated_client.delete(f"/blog/admin/posts/{post_id}")
+        delete_response = await authenticated_client.delete(
+            f"/blog/admin/posts/{post_id}"
+        )
         assert delete_response.status_code == 200
         assert delete_response.json()["success"] is True
     finally:

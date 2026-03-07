@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from juddges_search.info_extraction import BaseSchemaExtractor
 from loguru import logger
 
-from juddges_search.info_extraction import BaseSchemaExtractor
-
+from app.extraction_domain.shared import get_current_user, supabase
 from app.models import (
     BaseSchemaDefinitionResponse,
     BaseSchemaExtractionRequest,
@@ -21,7 +21,6 @@ from app.models import (
     FilterFieldConfig,
     FilterOptionsResponse,
 )
-from app.extraction_domain.shared import get_current_user, supabase
 
 router = APIRouter()
 
@@ -54,8 +53,9 @@ async def export_extraction_results(
     - Each row represents a document
     - Columns are flattened schema fields
     """
-    import pandas as pd
     from io import BytesIO
+
+    import pandas as pd
     from fastapi.responses import StreamingResponse
 
     # Validate format
@@ -225,7 +225,7 @@ async def export_extraction_results(
             if schema_name
             else ""
         )
-        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date_str = datetime.now(UTC).strftime("%Y-%m-%d")
 
         filename_parts = [p for p in [safe_collection, safe_schema, date_str] if p]
         filename = "_".join(filename_parts)
@@ -275,7 +275,7 @@ async def export_extraction_results(
             status_code=500,
             detail={
                 "error": "Export Failed",
-                "message": f"Failed to export results: {str(e)}",
+                "message": f"Failed to export results: {e!s}",
                 "code": "EXPORT_FAILED",
             },
         )
@@ -384,7 +384,7 @@ async def extract_with_base_schema(
                             "extracted_data": extracted_data,
                             "jurisdiction": jurisdiction,
                             "extraction_status": "completed",
-                            "extracted_at": datetime.now(timezone.utc).isoformat(),
+                            "extracted_at": datetime.now(UTC).isoformat(),
                         }
                     ).eq("document_id", doc_id).execute()
                 except Exception as e:

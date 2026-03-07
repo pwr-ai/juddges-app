@@ -14,10 +14,9 @@ from typing import Any
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
+from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
-
-from juddges_search.db.supabase_db import get_vector_db
 
 router = APIRouter(prefix="/topic-modeling", tags=["topic-modeling"])
 
@@ -167,7 +166,6 @@ STOPWORDS = {
     "an",
     "in",
     "of",
-    "to",
     "and",
     "is",
     "for",
@@ -192,7 +190,6 @@ STOPWORDS = {
     "oraz",
     "kan",
     "par",
-    "ust",
     "jego",
     "ich",
     "który",
@@ -387,18 +384,14 @@ def _detect_trend(weights: list[float]) -> tuple[str, float]:
     slope = np.sum((x - x_mean) * (y - y_mean)) / ss_xx
 
     # Normalize slope relative to mean weight
-    if y_mean > 0:
-        relative_slope = slope / y_mean
-    else:
-        relative_slope = 0.0
+    relative_slope = slope / y_mean if y_mean > 0 else 0.0
 
     # Classify trend
     if relative_slope > 0.1:
         return "emerging", round(float(slope), 6)
-    elif relative_slope < -0.1:
+    if relative_slope < -0.1:
         return "declining", round(float(slope), 6)
-    else:
-        return "stable", round(float(slope), 6)
+    return "stable", round(float(slope), 6)
 
 
 def _assign_time_periods(
@@ -503,11 +496,11 @@ async def _fetch_documents_for_topic_modeling(
 def _build_doc_token_sets(texts: list[str]) -> list[set[str]]:
     """Build token sets for coherence calculation."""
     return [
-        set(
+        {
             word
             for word in text.split()
             if len(word) > 2 and word not in STOPWORDS and word.isalpha()
-        )
+        }
         for text in texts
     ]
 
@@ -553,12 +546,16 @@ def _build_top_documents_for_topic(
                 document_id=doc["document_id"],
                 title=doc.get("title"),
                 document_type=doc.get("document_type"),
-                date_issued=(str(doc["date_issued"]) if doc.get("date_issued") else None),
+                date_issued=(
+                    str(doc["date_issued"]) if doc.get("date_issued") else None
+                ),
                 relevance=round(relevance, 4),
             )
         )
 
-    doc_count = sum(1 for relevance in doc_relevances if relevance > 0.05 * max_relevance)
+    doc_count = sum(
+        1 for relevance in doc_relevances if relevance > 0.05 * max_relevance
+    )
     return top_documents, doc_count
 
 
@@ -576,11 +573,15 @@ def _build_topic_time_series(
 
     for period_idx, (period_label, period_start, period_end) in enumerate(periods):
         period_doc_indices = [
-            idx for idx, assigned_period in doc_to_period.items() if assigned_period == period_idx
+            idx
+            for idx, assigned_period in doc_to_period.items()
+            if assigned_period == period_idx
         ]
         period_doc_count = len(period_doc_indices)
         if period_doc_count > 0:
-            topic_weight = float(np.mean([doc_relevances[idx] for idx in period_doc_indices]))
+            topic_weight = float(
+                np.mean([doc_relevances[idx] for idx in period_doc_indices])
+            )
         else:
             topic_weight = 0.0
 

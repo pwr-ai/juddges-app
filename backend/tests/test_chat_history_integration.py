@@ -15,10 +15,11 @@ Example:
 """
 
 import os
-import pytest
 from unittest.mock import AsyncMock
-from langchain_core.messages import HumanMessage, AIMessage
+
+import pytest
 from juddges_search.chains.models import DocumentRetrievalInput, Response
+from langchain_core.messages import AIMessage, HumanMessage
 from loguru import logger
 
 # Import chat_chain for integration tests that use it

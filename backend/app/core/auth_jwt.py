@@ -9,20 +9,20 @@ Date: 2025-10-11
 """
 
 import os
-from typing import Optional, Dict, Any
+from typing import Any
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 from supabase import Client, create_client
 from supabase.client import ClientOptions
-
 
 # Security scheme for Bearer token authentication
 security = HTTPBearer()
 
 
 # Global Supabase clients (separate from user-specific clients)
-_admin_supabase_client: Optional[Client] = None
+_admin_supabase_client: Client | None = None
 
 
 def get_admin_supabase_client() -> Client:
@@ -113,7 +113,7 @@ class AuthenticatedUser:
         raw_claims: All JWT claims
     """
 
-    def __init__(self, user_data: Dict[str, Any], access_token: str):
+    def __init__(self, user_data: dict[str, Any], access_token: str):
         """
         Initialize authenticated user from Supabase user data.
 
@@ -129,7 +129,7 @@ class AuthenticatedUser:
         self.iat: int = user_data.get("iat", 0)
         self.sub: str = user_data.get("sub", self.id)
         self.raw_token: str = access_token
-        self.raw_claims: Dict[str, Any] = user_data
+        self.raw_claims: dict[str, Any] = user_data
 
         # User metadata (if available)
         self.user_metadata = user_data.get("user_metadata", {})
@@ -215,19 +215,19 @@ async def get_current_user(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Authentication error: {str(e)}")
+        logger.error(f"Authentication error: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Failed to authenticate: {str(e)}",
+            detail=f"Failed to authenticate: {e!s}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+    credentials: HTTPAuthorizationCredentials | None = Depends(
         HTTPBearer(auto_error=False)
     ),
-) -> Optional[AuthenticatedUser]:
+) -> AuthenticatedUser | None:
     """
     Dependency to optionally get the current authenticated user.
 

@@ -2,21 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Body, HTTPException, Path, Query
+from juddges_search.info_extraction.extractor import InformationExtractor
 from loguru import logger
 from werkzeug.utils import secure_filename
 
-from juddges_search.info_extraction.extractor import InformationExtractor
-
-from app.models import (
-    CreatePromptRequest,
-    DeletePromptResponse,
-    PromptMetadata,
-    PromptResponse,
-    UpdatePromptRequest,
-)
 from app.extraction_domain.shared import (
     PROMPTS_DIR,
     archive_prompt,
@@ -27,6 +19,13 @@ from app.extraction_domain.shared import (
     prompt_exists,
     save_prompt_metadata,
     validate_jinja2_template,
+)
+from app.models import (
+    CreatePromptRequest,
+    DeletePromptResponse,
+    PromptMetadata,
+    PromptResponse,
+    UpdatePromptRequest,
 )
 
 router = APIRouter()
@@ -43,8 +42,8 @@ async def list_prompts() -> list[str]:
     try:
         return InformationExtractor.list_prompts()
     except Exception as e:
-        logger.error(f"Error listing prompts: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error listing prompts: {str(e)}")
+        logger.error(f"Error listing prompts: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error listing prompts: {e!s}")
 
 
 @router.get(
@@ -61,10 +60,8 @@ async def get_prompt(prompt_id: str = Path(..., description="Prompt ID")) -> str
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Prompt '{prompt_id}' not found")
     except Exception as e:
-        logger.error(f"Error retrieving prompt {prompt_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Error retrieving prompt: {str(e)}"
-        )
+        logger.error(f"Error retrieving prompt {prompt_id}: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving prompt: {e!s}")
 
 
 @router.post(
@@ -101,7 +98,7 @@ async def create_prompt(
     try:
         validate_jinja2_template(request.template)
     except ValueError as e:
-        logger.error(f"Invalid Jinja2 template for prompt {prompt_id}: {str(e)}")
+        logger.error(f"Invalid Jinja2 template for prompt {prompt_id}: {e!s}")
         raise HTTPException(status_code=400, detail=str(e))
 
     # Ensure prompts directory exists
@@ -114,13 +111,13 @@ async def create_prompt(
             f.write(request.template)
         logger.info(f"Created prompt template file: {prompt_path}")
     except Exception as e:
-        logger.error(f"Error writing prompt file {prompt_id}: {str(e)}")
+        logger.error(f"Error writing prompt file {prompt_id}: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Error saving prompt template: {str(e)}"
+            status_code=500, detail=f"Error saving prompt template: {e!s}"
         )
 
     # Create and save metadata
-    created_at = datetime.now(timezone.utc).isoformat()
+    created_at = datetime.now(UTC).isoformat()
     metadata = PromptMetadata(
         prompt_id=prompt_id,
         description=request.description,
@@ -188,9 +185,9 @@ async def update_prompt(
     try:
         existing_template = InformationExtractor.get_prompt_template(prompt_id)
     except Exception as e:
-        logger.error(f"Error loading existing template for {prompt_id}: {str(e)}")
+        logger.error(f"Error loading existing template for {prompt_id}: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Error loading existing template: {str(e)}"
+            status_code=500, detail=f"Error loading existing template: {e!s}"
         )
 
     # Validate new template if provided
@@ -201,15 +198,15 @@ async def update_prompt(
         try:
             validate_jinja2_template(request.template)
         except ValueError as e:
-            logger.error(f"Invalid Jinja2 template for prompt {prompt_id}: {str(e)}")
+            logger.error(f"Invalid Jinja2 template for prompt {prompt_id}: {e!s}")
             raise HTTPException(status_code=400, detail=str(e))
 
     # Create backup before updating
     try:
         create_backup(prompt_id)
     except ValueError as e:
-        logger.error(f"Error creating backup for prompt {prompt_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error creating backup: {str(e)}")
+        logger.error(f"Error creating backup for prompt {prompt_id}: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error creating backup: {e!s}")
 
     # Update template file if template changed
     if request.template is not None:
@@ -219,13 +216,13 @@ async def update_prompt(
                 f.write(request.template)
             logger.info(f"Updated prompt template file: {prompt_path}")
         except Exception as e:
-            logger.error(f"Error writing prompt file {prompt_id}: {str(e)}")
+            logger.error(f"Error writing prompt file {prompt_id}: {e!s}")
             raise HTTPException(
-                status_code=500, detail=f"Error saving prompt template: {str(e)}"
+                status_code=500, detail=f"Error saving prompt template: {e!s}"
             )
 
     # Update metadata
-    updated_at = datetime.now(timezone.utc).isoformat()
+    updated_at = datetime.now(UTC).isoformat()
     if request.description is not None:
         metadata.description = request.description
     if request.variables is not None:
@@ -298,7 +295,7 @@ async def delete_prompt(
             message=f"Prompt '{prompt_id}' has been archived successfully",
         )
     except ValueError as e:
-        logger.error(f"Error archiving prompt {prompt_id}: {str(e)}")
+        logger.error(f"Error archiving prompt {prompt_id}: {e!s}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -327,5 +324,5 @@ async def list_schemas() -> list[str]:
     try:
         return InformationExtractor.list_schemas()
     except Exception as e:
-        logger.error(f"Error listing schemas: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error listing schemas: {str(e)}")
+        logger.error(f"Error listing schemas: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error listing schemas: {e!s}")

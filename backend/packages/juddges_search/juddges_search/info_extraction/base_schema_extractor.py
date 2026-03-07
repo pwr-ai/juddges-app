@@ -85,11 +85,7 @@ class BaseSchemaExtractor:
             Schema variant with stable field keys
         """
         normalized = (locale or "en").strip().lower()
-        return (
-            json.loads(json.dumps(self.pl_schema))
-            if normalized == "pl"
-            else json.loads(json.dumps(self.en_schema))
-        )
+        return json.loads(json.dumps(self.pl_schema)) if normalized == "pl" else json.loads(json.dumps(self.en_schema))
 
     def _build_extraction_prompt(
         self,
@@ -308,14 +304,12 @@ Extract all information according to the schema. Return a valid JSON object."""
                                 )
 
                 # Validate boolean types
-                if field_def.get("type") == "boolean":
-                    if not isinstance(data[field_name], bool):
-                        errors.append(f"Field '{field_name}' should be a boolean, got {type(data[field_name])}")
+                if field_def.get("type") == "boolean" and not isinstance(data[field_name], bool):
+                    errors.append(f"Field '{field_name}' should be a boolean, got {type(data[field_name])}")
 
                 # Validate number types
-                if field_def.get("type") == "number":
-                    if not isinstance(data[field_name], (int, float)):
-                        errors.append(f"Field '{field_name}' should be a number, got {type(data[field_name])}")
+                if field_def.get("type") == "number" and not isinstance(data[field_name], (int, float)):
+                    errors.append(f"Field '{field_name}' should be a number, got {type(data[field_name])}")
 
         is_valid = len(errors) == 0
         return is_valid, errors

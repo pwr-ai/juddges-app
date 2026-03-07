@@ -1,4 +1,5 @@
 """Integration tests for research assistant endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -7,7 +8,9 @@ from httpx import AsyncClient
 @pytest.mark.api
 async def test_analyze_research_without_auth(client: AsyncClient):
     """Research analysis works without auth (returns non-personalized results)."""
-    response = await client.post("/research-assistant/analyze", json={"query": "test research"})
+    response = await client.post(
+        "/research-assistant/analyze", json={"query": "test research"}
+    )
     # Optional auth: unauthenticated requests succeed but without user-specific context
     assert response.status_code == 200
 

@@ -8,12 +8,11 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
-from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
-from pydantic import BaseModel, Field
 from loguru import logger
-
+from pydantic import BaseModel, Field
 
 # ===== Models =====
 
@@ -21,7 +20,7 @@ from loguru import logger
 class AuthoritySignals(BaseModel):
     """Authority and credibility signals for a legal document."""
 
-    court_level: Optional[str] = Field(
+    court_level: str | None = Field(
         None,
         description="Court hierarchy level (Supreme, Regional, Local)",
         examples=["Supreme Court"],
@@ -32,7 +31,7 @@ class AuthoritySignals(BaseModel):
         le=1.0,
         description="Normalized court level score (Supreme=1.0, Regional=0.6, Local=0.3)",
     )
-    citation_count: Optional[int] = Field(
+    citation_count: int | None = Field(
         None, description="Number of times this document has been cited", examples=[23]
     )
     citation_score: float = Field(
@@ -47,10 +46,10 @@ class AuthoritySignals(BaseModel):
         le=1.0,
         description="Recency score (recent documents score higher)",
     )
-    document_year: Optional[int] = Field(
+    document_year: int | None = Field(
         None, description="Year the document was issued", examples=[2024]
     )
-    precedent_strength: Optional[str] = Field(
+    precedent_strength: str | None = Field(
         None,
         description="Legal precedent strength classification",
         examples=["Binding", "Persuasive", "Informative"],
@@ -80,7 +79,7 @@ class RelevanceReason(BaseModel):
         description="Human-readable explanation of this factor",
         examples=["Strong semantic similarity to search query"],
     )
-    matched_content: Optional[List[str]] = Field(
+    matched_content: list[str] | None = Field(
         None,
         description="Specific content that matched (keywords, phrases, concepts)",
         examples=[["podatek VAT", "usługi cyfrowe"]],
@@ -93,10 +92,10 @@ class DocumentPreview(BaseModel):
     summary: str = Field(
         description="Brief 2-3 sentence summary of document", max_length=500
     )
-    key_facts: Optional[List[str]] = Field(
+    key_facts: list[str] | None = Field(
         None, description="Key facts extracted from document", max_length=3
     )
-    holding: Optional[str] = Field(
+    holding: str | None = Field(
         None,
         description="Main holding or decision (for court judgments)",
         max_length=300,
@@ -114,16 +113,16 @@ class SearchResultEnhanced(BaseModel):
         description="Confidence level in the ranking"
     )
     rank_position: int = Field(ge=1, description="Position in search results (1-based)")
-    explanations: List[RelevanceReason] = Field(
+    explanations: list[RelevanceReason] = Field(
         description="Detailed explanations of why this result is relevant"
     )
     authority_signals: AuthoritySignals = Field(
         description="Authority and credibility indicators"
     )
-    preview: Optional[DocumentPreview] = Field(
+    preview: DocumentPreview | None = Field(
         None, description="Quick preview for hover tooltip"
     )
-    highlighted_excerpts: Optional[List[str]] = Field(
+    highlighted_excerpts: list[str] | None = Field(
         None,
         description="Relevant text excerpts with query terms highlighted",
         max_length=3,
@@ -174,7 +173,7 @@ class IntelligentRanker:
     }
 
     @staticmethod
-    def calculate_court_level_score(court: Optional[str]) -> float:
+    def calculate_court_level_score(court: str | None) -> float:
         """
         Calculate normalized court level score.
 
@@ -196,7 +195,7 @@ class IntelligentRanker:
 
     @staticmethod
     def calculate_recency_score(
-        year: Optional[int], current_year: Optional[int] = None
+        year: int | None, current_year: int | None = None
     ) -> float:
         """
         Calculate recency score with exponential decay.
@@ -214,7 +213,7 @@ class IntelligentRanker:
             return 0.3  # Low score for unknown year
 
         if current_year is None:
-            current_year = datetime.now(timezone.utc).year
+            current_year = datetime.now(UTC).year
 
         age = current_year - year
 
@@ -222,18 +221,17 @@ class IntelligentRanker:
         # Recent documents (0-2 years) score 0.9-1.0
         if age <= 0:
             return 1.0
-        elif age <= 2:
+        if age <= 2:
             return 0.9
-        elif age <= 5:
+        if age <= 5:
             return 0.7
-        elif age <= 10:
+        if age <= 10:
             return 0.4
-        else:
-            return max(0.1, 0.4 * (0.8 ** (age - 10)))
+        return max(0.1, 0.4 * (0.8 ** (age - 10)))
 
     @staticmethod
     def calculate_citation_score(
-        citation_count: Optional[int], max_citations: int = 100
+        citation_count: int | None, max_citations: int = 100
     ) -> float:
         """
         Calculate citation score (normalized).
@@ -260,11 +258,11 @@ class IntelligentRanker:
     def calculate_combined_score(
         semantic_similarity: float,
         keyword_match: float,
-        court: Optional[str],
-        year: Optional[int],
-        citation_count: Optional[int],
-        document_type: Optional[str],
-    ) -> tuple[float, List[RelevanceReason]]:
+        court: str | None,
+        year: int | None,
+        citation_count: int | None,
+        document_type: str | None,
+    ) -> tuple[float, list[RelevanceReason]]:
         """
         Calculate combined relevance score with explanations.
 
@@ -343,27 +341,25 @@ class IntelligentRanker:
         """Generate human-readable explanation for semantic similarity."""
         if score >= 0.8:
             return "Very strong semantic similarity to your search query"
-        elif score >= 0.6:
+        if score >= 0.6:
             return "Good semantic match - discusses similar legal concepts"
-        elif score >= 0.4:
+        if score >= 0.4:
             return "Moderate semantic similarity - related legal topics"
-        else:
-            return "Weak semantic match - tangentially related"
+        return "Weak semantic match - tangentially related"
 
     @staticmethod
     def _explain_keywords(score: float) -> str:
         """Generate human-readable explanation for keyword matching."""
         if score >= 0.8:
             return "Contains many exact keyword matches from your query"
-        elif score >= 0.6:
+        if score >= 0.6:
             return "Good keyword coverage - several query terms found"
-        elif score >= 0.4:
+        if score >= 0.4:
             return "Some keyword matches present"
-        else:
-            return "Few direct keyword matches"
+        return "Few direct keyword matches"
 
     @staticmethod
-    def _explain_authority(court: Optional[str], citations: Optional[int]) -> str:
+    def _explain_authority(court: str | None, citations: int | None) -> str:
         """Generate human-readable explanation for authority signals."""
         parts = []
 
@@ -387,27 +383,26 @@ class IntelligentRanker:
         return " | ".join(parts) if parts else "Standard authority level"
 
     @staticmethod
-    def _explain_recency(year: Optional[int]) -> str:
+    def _explain_recency(year: int | None) -> str:
         """Generate human-readable explanation for recency."""
         if not year:
             return "Date unknown"
 
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
         age = current_year - year
 
         if age <= 0:
             return f"Very recent - from {year}"
-        elif age <= 2:
+        if age <= 2:
             return f"Recent - from {year}"
-        elif age <= 5:
+        if age <= 5:
             return f"Relatively recent - from {year}"
-        elif age <= 10:
+        if age <= 10:
             return f"Older precedent - from {year}"
-        else:
-            return f"Historical precedent - from {year}"
+        return f"Historical precedent - from {year}"
 
     @staticmethod
-    def _explain_type(doc_type: Optional[str]) -> str:
+    def _explain_type(doc_type: str | None) -> str:
         """Generate human-readable explanation for document type."""
         if not doc_type:
             return "Document type unknown"
@@ -435,16 +430,15 @@ class IntelligentRanker:
         """
         if score >= 70:
             return "high"
-        elif score >= 40:
+        if score >= 40:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
 
 # ===== Helper Functions =====
 
 
-def extract_keywords_from_query(query: str) -> List[str]:
+def extract_keywords_from_query(query: str) -> list[str]:
     """
     Extract important keywords from search query.
 
@@ -492,7 +486,7 @@ def extract_keywords_from_query(query: str) -> List[str]:
 
 
 def highlight_text_excerpt(
-    text: str, keywords: List[str], max_length: int = 200
+    text: str, keywords: list[str], max_length: int = 200
 ) -> str:
     """
     Extract and highlight relevant text excerpt containing keywords.

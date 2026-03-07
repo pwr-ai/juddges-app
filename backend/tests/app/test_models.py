@@ -2,8 +2,9 @@ from copy import deepcopy
 
 import pytest
 from juddges_search.info_extraction.extractor import InformationExtractor
-from app.models import DocumentExtractionRequest
 from pydantic import ValidationError
+
+from app.models import DocumentExtractionRequest
 
 schema_ids = InformationExtractor.list_schemas()
 prompt_ids = InformationExtractor.list_prompts()

@@ -4,10 +4,10 @@ This module provides helper functions to fetch judgment documents from Supabase
 database by their IDs.
 """
 
-from typing import Optional
-from loguru import logger
-from app.core.supabase import get_supabase_client
 from juddges_search.models import LegalDocument
+from loguru import logger
+
+from app.core.supabase import get_supabase_client
 
 
 async def get_documents_by_id(
@@ -105,7 +105,7 @@ async def get_documents_by_id(
 
 async def get_document_by_id(
     document_id: str, return_vectors: bool = False
-) -> Optional[LegalDocument]:
+) -> LegalDocument | None:
     """Get a single document by ID from Supabase.
 
     Args:

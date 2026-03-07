@@ -1,9 +1,9 @@
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends, Header, Path
-from pydantic import BaseModel, Field, field_validator
+from fastapi import APIRouter, Depends, Header, HTTPException, Path
 from juddges_search.db.supabase_db import get_collections_db
-from app.models import validate_id_format
 from loguru import logger
+from pydantic import BaseModel, Field, field_validator
+
+from app.models import validate_id_format
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 
@@ -12,19 +12,19 @@ class Collection(BaseModel):
     id: str
     user_id: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     created_at: str
     updated_at: str
 
 
 class CollectionWithDocuments(Collection):
-    documents: List[str] = []
+    documents: list[str] = []
     document_count: int = 0
 
 
 class CreateCollectionRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000)
 
 
 class UpdateCollectionRequest(BaseModel):
@@ -33,7 +33,7 @@ class UpdateCollectionRequest(BaseModel):
 
 class AddDocumentRequest(BaseModel):
     document_id: str = Field(min_length=1, max_length=255)
-    collection_id: Optional[str] = Field(
+    collection_id: str | None = Field(
         None, description="Collection ID (ignored, from URL)"
     )
 
@@ -74,7 +74,7 @@ def transform_collection(data) -> CollectionWithDocuments:
     )
 
 
-@router.get("", response_model=List[CollectionWithDocuments])
+@router.get("", response_model=list[CollectionWithDocuments])
 async def list_collections(
     db=Depends(get_collections_db), user_id: str = Depends(get_current_user)
 ):
@@ -95,7 +95,7 @@ async def create_collection(
 @router.get("/{collection_id}", response_model=CollectionWithDocuments)
 async def get_collection(
     collection_id: str = Path(..., description="Collection ID to retrieve"),
-    limit: Optional[int] = None,
+    limit: int | None = None,
     offset: int = 0,
     db=Depends(get_collections_db),
     user_id: str = Depends(get_current_user),
@@ -171,8 +171,7 @@ async def get_collection_documents(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    documents = await db.get_collection_documents(collection_id, user_id)
-    return documents
+    return await db.get_collection_documents(collection_id, user_id)
 
 
 @router.post("/{collection_id}/documents")
@@ -199,13 +198,13 @@ async def add_document(
 class AddDocumentsRequest(BaseModel):
     """Request model for adding multiple documents to a collection."""
 
-    document_ids: List[str] = Field(
+    document_ids: list[str] = Field(
         description="List of document IDs to add", min_length=1
     )
 
     @field_validator("document_ids")
     @classmethod
-    def validate_document_ids(cls, v: List[str]) -> List[str]:
+    def validate_document_ids(cls, v: list[str]) -> list[str]:
         validated = []
         for doc_id in v:
             validated.append(validate_id_format(doc_id.strip(), "document_id"))
@@ -291,7 +290,7 @@ async def remove_document_by_url(
         collection_id = validate_id_format(collection_id, "collection_id")
         document_id = validate_id_format(document_id, "document_id")
     except ValueError as e:
-        logger.warning(f"Invalid ID format: {str(e)}")
+        logger.warning(f"Invalid ID format: {e!s}")
         raise HTTPException(status_code=400, detail=str(e))
 
     await db.remove_document(collection_id, document_id, user_id)

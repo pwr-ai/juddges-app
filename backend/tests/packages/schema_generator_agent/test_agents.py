@@ -1,17 +1,17 @@
 """Unit tests for individual schema generator agents."""
 
 import pytest
-from langchain_openai import ChatOpenAI
 from juddges_search.models import DocumentType
+from langchain_openai import ChatOpenAI
 
+from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.basic_agents import (
-    ProblemDefinerHelperAgent,
     ProblemDefinerAgent,
-    SchemaGeneratorAgent,
+    ProblemDefinerHelperAgent,
     SchemaAssessmentAgent,
+    SchemaGeneratorAgent,
     SchemaRefinerAgent,
 )
-from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import load_prompts
 
 

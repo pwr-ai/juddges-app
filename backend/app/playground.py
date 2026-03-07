@@ -7,18 +7,18 @@ immediate feedback.
 """
 
 import time
-from datetime import datetime, timezone
-from typing import Any, Literal, Optional
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from fastapi import APIRouter, Header, HTTPException, status
-from loguru import logger
-from pydantic import BaseModel, Field
-
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.schema_utils import prepare_schema_from_db
 from juddges_search.llms import get_llm
-from app.utils.document_fetcher import get_documents_by_id
+from loguru import logger
+from pydantic import BaseModel, Field
+
 from app.core.supabase import get_supabase_client
+from app.utils.document_fetcher import get_documents_by_id
 
 router = APIRouter(prefix="/playground", tags=["playground"])
 
@@ -35,16 +35,16 @@ class PlaygroundExtractionRequest(BaseModel):
     schema_id: str = Field(
         description="UUID of the schema to use from extraction_schemas table"
     )
-    schema_version_id: Optional[str] = Field(
+    schema_version_id: str | None = Field(
         default=None,
         description="Optional: specific version ID from schema_versions table. If not provided, uses current schema.",
     )
     document_id: str = Field(description="Document ID to extract from")
-    extraction_context: Optional[str] = Field(
+    extraction_context: str | None = Field(
         default="Extract structured information from the legal document.",
         description="Context instructions for extraction",
     )
-    additional_instructions: Optional[str] = Field(
+    additional_instructions: str | None = Field(
         default=None, description="Additional qualitative instructions"
     )
     language: str = Field(
@@ -68,12 +68,10 @@ class PlaygroundExtractionResponse(BaseModel):
     document_id: str
     schema_id: str
     schema_version: int = Field(description="Version number used for extraction")
-    schema_version_id: Optional[str] = Field(
-        description="UUID of the schema version used"
-    )
+    schema_version_id: str | None = Field(description="UUID of the schema version used")
     status: Literal["success", "failed"]
-    extracted_data: Optional[dict[str, Any]] = None
-    error_message: Optional[str] = None
+    extracted_data: dict[str, Any] | None = None
+    error_message: str | None = None
 
     # Timing information
     timing: PlaygroundTiming
@@ -83,8 +81,8 @@ class PlaygroundExtractionResponse(BaseModel):
     field_count: int
 
     # Document metadata
-    document_title: Optional[str] = None
-    document_type: Optional[str] = None
+    document_title: str | None = None
+    document_type: str | None = None
 
 
 class PlaygroundTestRun(BaseModel):
@@ -92,7 +90,7 @@ class PlaygroundTestRun(BaseModel):
 
     id: str
     schema_id: str
-    schema_version_id: Optional[str]
+    schema_version_id: str | None
     document_id: str
     status: str
     execution_time_ms: int
@@ -103,8 +101,8 @@ class PlaygroundTestRun(BaseModel):
 
 
 def _fetch_schema_with_version(
-    schema_id: str, schema_version_id: Optional[str] = None
-) -> tuple[dict[str, Any], int, Optional[str]]:
+    schema_id: str, schema_version_id: str | None = None
+) -> tuple[dict[str, Any], int, str | None]:
     """
     Fetch schema from database, optionally from a specific version.
 
@@ -162,45 +160,44 @@ def _fetch_schema_with_version(
             version_data["version_number"],
             version_data["id"],
         )
-    else:
-        # Fetch current schema
-        response = (
-            supabase.table("extraction_schemas")
-            .select("name, description, text, schema_version")
-            .eq("id", schema_id)
-            .single()
-            .execute()
+    # Fetch current schema
+    response = (
+        supabase.table("extraction_schemas")
+        .select("name, description, text, schema_version")
+        .eq("id", schema_id)
+        .single()
+        .execute()
+    )
+
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Schema '{schema_id}' not found",
         )
 
-        if not response.data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Schema '{schema_id}' not found",
-            )
-
-        return (
-            {
-                "name": response.data["name"],
-                "description": response.data.get("description", ""),
-                "text": response.data["text"],
-            },
-            response.data.get("schema_version", 1),
-            None,
-        )
+    return (
+        {
+            "name": response.data["name"],
+            "description": response.data.get("description", ""),
+            "text": response.data["text"],
+        },
+        response.data.get("schema_version", 1),
+        None,
+    )
 
 
 def _save_playground_run(
     schema_id: str,
-    schema_version_id: Optional[str],
+    schema_version_id: str | None,
     document_id: str,
     user_id: str,
     extraction_result: dict[str, Any],
     execution_time_ms: int,
     status: str,
-    error_message: Optional[str] = None,
-    document_metadata: Optional[dict[str, Any]] = None,
-    model_info: Optional[dict[str, Any]] = None,
-) -> Optional[str]:
+    error_message: str | None = None,
+    document_metadata: dict[str, Any] | None = None,
+    model_info: dict[str, Any] | None = None,
+) -> str | None:
     """Save playground test run to database for history tracking."""
     if not supabase:
         return None
@@ -271,7 +268,7 @@ async def playground_extract(
     - schema info and document metadata
     """
     start_time = time.time()
-    started_at = datetime.now(timezone.utc).isoformat()
+    started_at = datetime.now(UTC).isoformat()
 
     logger.info(
         f"Playground extraction started: schema={request.schema_id}, "
@@ -345,7 +342,7 @@ async def playground_extract(
         extraction_ms = (time.time() - extraction_start) * 1000
 
         # Step 4: Calculate timing
-        completed_at = datetime.now(timezone.utc).isoformat()
+        completed_at = datetime.now(UTC).isoformat()
         total_ms = (time.time() - start_time) * 1000
 
         timing = PlaygroundTiming(
@@ -398,7 +395,7 @@ async def playground_extract(
         raise
     except Exception as e:
         # Calculate timing even for failures
-        completed_at = datetime.now(timezone.utc).isoformat()
+        completed_at = datetime.now(UTC).isoformat()
         total_ms = (time.time() - start_time) * 1000
 
         error_message = str(e)
@@ -506,7 +503,7 @@ async def list_playground_runs(
         logger.error(f"Failed to list playground runs: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve playground runs: {str(e)}",
+            detail=f"Failed to retrieve playground runs: {e!s}",
         )
 
 
@@ -553,5 +550,5 @@ async def get_playground_run(
         logger.error(f"Failed to get playground run {run_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve playground run: {str(e)}",
+            detail=f"Failed to retrieve playground run: {e!s}",
         )

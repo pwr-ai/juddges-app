@@ -3,7 +3,6 @@
 import os
 import time
 from datetime import UTC, datetime, timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
@@ -22,8 +21,8 @@ from app.health.models import (
 router = APIRouter(prefix="/health", tags=["Health"])
 
 # Cache for status responses (30 second TTL)
-_status_cache: Optional[DetailedStatusResponse] = None
-_cache_timestamp: Optional[datetime] = None
+_status_cache: DetailedStatusResponse | None = None
+_cache_timestamp: datetime | None = None
 _cache_ttl_seconds = 30
 
 
@@ -65,15 +64,12 @@ def _get_system_status(services: dict) -> SystemStatus:
     # All critical services healthy - check optional services
     optional_degraded = False
     for service_name, service_health in services.items():
-        if service_name not in critical_services:
-            if service_health.status in [
-                ServiceStatus.DEGRADED,
-                ServiceStatus.UNHEALTHY,
-            ]:
-                optional_degraded = True
-                logger.info(
-                    f"Optional service {service_name} is {service_health.status}"
-                )
+        if service_name not in critical_services and service_health.status in [
+            ServiceStatus.DEGRADED,
+            ServiceStatus.UNHEALTHY,
+        ]:
+            optional_degraded = True
+            logger.info(f"Optional service {service_name} is {service_health.status}")
 
     if optional_degraded:
         return SystemStatus.DEGRADED
@@ -90,7 +86,7 @@ def _is_cache_valid() -> bool:
     return age < timedelta(seconds=_cache_ttl_seconds)
 
 
-async def _get_cached_status() -> Optional[DetailedStatusResponse]:
+async def _get_cached_status() -> DetailedStatusResponse | None:
     """Get cached status if available and valid."""
     if _is_cache_valid():
         logger.debug("Returning cached status response")

@@ -1,8 +1,9 @@
 """Tests for prompt file validation and structure."""
 
+from pathlib import Path
+
 import pytest
 import yaml
-from pathlib import Path
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def test_all_prompts_exist(prompt_dir):
 def test_prompts_have_valid_yaml(prompt_dir):
     """Test that all prompt files are valid YAML."""
     for prompt_file in prompt_dir.glob("*.yaml"):
-        with open(prompt_file, "r") as f:
+        with open(prompt_file) as f:
             try:
                 data = yaml.safe_load(f)
                 assert data is not None, f"Empty YAML in {prompt_file.name}"
@@ -46,7 +47,7 @@ def test_prompts_have_valid_yaml(prompt_dir):
 def test_prompts_contain_required_content(prompt_dir):
     """Test that prompts contain required content fields."""
     for prompt_file in prompt_dir.glob("*.yaml"):
-        with open(prompt_file, "r") as f:
+        with open(prompt_file) as f:
             data = yaml.safe_load(f)
 
             # Prompts should have some content (flexible checking)
@@ -66,7 +67,7 @@ def test_problem_definer_helper_prompt_structure(prompt_dir):
     """Test specific structure of problem_definer_helper prompt."""
     prompt_file = prompt_dir / "problem_definer_helper.yaml"
 
-    with open(prompt_file, "r") as f:
+    with open(prompt_file) as f:
         data = yaml.safe_load(f)
 
     # Should have problem_definer_helper_prompt key
@@ -87,7 +88,7 @@ def test_problem_definer_prompt_structure(prompt_dir):
     """Test specific structure of problem_definer prompt."""
     prompt_file = prompt_dir / "problem_definer.yaml"
 
-    with open(prompt_file, "r") as f:
+    with open(prompt_file) as f:
         data = yaml.safe_load(f)
 
     assert "problem_definer_prompt" in data
@@ -100,7 +101,7 @@ def test_schema_generator_prompt_structure(prompt_dir):
     """Test specific structure of schema_generator prompt."""
     prompt_file = prompt_dir / "schema_generator.yaml"
 
-    with open(prompt_file, "r") as f:
+    with open(prompt_file) as f:
         data = yaml.safe_load(f)
 
     assert "schema_generator_prompt" in data
@@ -116,7 +117,7 @@ def test_schema_assessment_prompt_structure(prompt_dir):
     """Test specific structure of schema_assessment prompt."""
     prompt_file = prompt_dir / "schema_assessment.yaml"
 
-    with open(prompt_file, "r") as f:
+    with open(prompt_file) as f:
         data = yaml.safe_load(f)
 
     assert "schema_assessment_prompt" in data
@@ -132,7 +133,7 @@ def test_schema_refiner_prompt_structure(prompt_dir):
     """Test specific structure of schema_refiner prompt."""
     prompt_file = prompt_dir / "schema_refiner.yaml"
 
-    with open(prompt_file, "r") as f:
+    with open(prompt_file) as f:
         data = yaml.safe_load(f)
 
     assert "schema_refiner_prompt" in data
@@ -149,7 +150,7 @@ def test_query_generator_prompt_structure(prompt_dir):
     """Test specific structure of query_generator prompt."""
     prompt_file = prompt_dir / "query_generator.yaml"
 
-    with open(prompt_file, "r") as f:
+    with open(prompt_file) as f:
         data = yaml.safe_load(f)
 
     assert "query_generator_prompt" in data
@@ -161,7 +162,7 @@ def test_query_generator_prompt_structure(prompt_dir):
 def test_prompts_no_syntax_errors(prompt_dir):
     """Test that prompts don't have obvious syntax errors."""
     for prompt_file in prompt_dir.glob("*.yaml"):
-        with open(prompt_file, "r") as f:
+        with open(prompt_file) as f:
             data = yaml.safe_load(f)
 
             # If it's a dict, check each value
@@ -180,7 +181,7 @@ def test_all_prompts_are_readable(prompt_dir):
     """Test that all prompt files can be read without errors."""
     for prompt_file in prompt_dir.glob("*.yaml"):
         try:
-            with open(prompt_file, "r", encoding="utf-8") as f:
+            with open(prompt_file, encoding="utf-8") as f:
                 content = f.read()
                 assert len(content) > 0, f"Empty file: {prompt_file.name}"
         except Exception as e:
@@ -192,11 +193,11 @@ def test_prompts_use_consistent_formatting(prompt_dir):
     import re
 
     for prompt_file in prompt_dir.glob("*.yaml"):
-        with open(prompt_file, "r") as f:
+        with open(prompt_file) as f:
             data = yaml.safe_load(f)
 
             if isinstance(data, dict):
-                for key, value in data.items():
+                for value in data.values():
                     if isinstance(value, str) and "{" in value:
                         # Find template placeholders (single braces with simple identifiers)
                         # Skip JSON examples (which contain nested structures)

@@ -7,69 +7,70 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import RedirectResponse
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langserve import add_routes
-from psycopg.rows import dict_row
-from psycopg_pool import AsyncConnectionPool
-from loguru import logger
-
 from juddges_search.chains.chat import chat_chain
 from juddges_search.chains.enhance_query import enhance_query_chain
 from juddges_search.chains.qa import chain
-from app.auth import verify_api_key
-from app.collections import router as collections_router
-from app.publications import router as publications_router
-from app.dashboard import router as dashboard_router
-from app.documents import router as documents_router
-from app.example_questions import router as example_questions_router
-from app.extraction import router as extraction_router
-from app.schema_generation_agent import router as schema_generator_agent_router
-from app.schemas import router as schemas_router, cleanup_expired_sessions
-from app.api.schema_generator import router as schema_generator_router
-from app.playground import router as playground_router
-from app.evaluations import router as evaluations_router
-from app.summarization import router as summarization_router
-from app.precedents import router as precedents_router
-from app.deduplication import router as deduplication_router
-from app.versioning import router as versioning_router
-from app.ocr import router as ocr_router
-from app.clustering import router as clustering_router
-from app.recommendations import router as recommendations_router
-from app.research_assistant import router as research_assistant_router
-from app.topic_modeling import router as topic_modeling_router
-from app.experiments import router as experiments_router
-from app.argumentation import router as argumentation_router
-from app.embeddings_api import router as embeddings_router
-from app.marketplace import router as marketplace_router
-from app.timeline_extraction import router as timeline_router
-from app.graphql_api.router import graphql_router
-from app.rate_limiter import limiter, RATE_LIMIT_STORAGE_URI, DEFAULT_RATE_LIMITS
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langserve import add_routes
+from loguru import logger
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 
-# Import Day 1 feature routers
-from app.guest_sessions import router as guest_sessions_router
+# Rate limiting imports
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
 from app.analytics import router as analytics_router
-from app.feedback import router as feedback_router
+
+# Import admin router (JWT + require_admin auth, no API key dependency)
+from app.api.admin import router as admin_router
 
 # Import audit trail and compliance routers
 from app.api.audit import router as audit_router
 from app.api.blog import router as blog_router
 from app.api.consent import router as consent_router
 from app.api.legal import router as legal_router
+from app.api.schema_generator import router as schema_generator_router
 from app.api.search import router as search_router
 from app.api.sso import router as sso_router
+from app.argumentation import router as argumentation_router
+from app.auth import verify_api_key
+from app.clustering import router as clustering_router
+from app.collections import router as collections_router
+from app.dashboard import router as dashboard_router
+from app.deduplication import router as deduplication_router
+from app.documents import router as documents_router
+from app.embeddings_api import router as embeddings_router
+from app.evaluations import router as evaluations_router
+from app.example_questions import router as example_questions_router
+from app.experiments import router as experiments_router
+from app.extraction import router as extraction_router
+from app.feedback import router as feedback_router
+from app.graphql_api.router import graphql_router
 
-# Import admin router (JWT + require_admin auth, no API key dependency)
-from app.api.admin import router as admin_router
+# Import Day 1 feature routers
+from app.guest_sessions import router as guest_sessions_router
 
 # Import health check router
 from app.health import router as health_router
 
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
-
-# Rate limiting imports
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from app.marketplace import router as marketplace_router
+from app.ocr import router as ocr_router
+from app.playground import router as playground_router
+from app.precedents import router as precedents_router
+from app.publications import router as publications_router
+from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
+from app.recommendations import router as recommendations_router
+from app.research_assistant import router as research_assistant_router
+from app.schema_generation_agent import router as schema_generator_agent_router
+from app.schemas import cleanup_expired_sessions
+from app.schemas import router as schemas_router
+from app.summarization import router as summarization_router
+from app.timeline_extraction import router as timeline_router
+from app.topic_modeling import router as topic_modeling_router
+from app.versioning import router as versioning_router
 
 # Suppress SSL ResourceWarnings from httpx/supabase/langchain clients
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ssl.SSLSocket.*")

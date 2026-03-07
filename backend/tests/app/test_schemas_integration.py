@@ -4,10 +4,11 @@ Integration tests for schema management and generation endpoints.
 Tests the /schemas router with actual HTTP requests.
 """
 
+import uuid
+from typing import Any
+
 import pytest
 from httpx import AsyncClient
-from typing import Dict, Any
-import uuid
 
 
 @pytest.mark.anyio
@@ -46,7 +47,7 @@ async def test_list_db_schemas(authenticated_client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
 
-    assert isinstance(data, (list, dict))
+    assert isinstance(data, list | dict)
 
 
 @pytest.mark.anyio
@@ -54,7 +55,7 @@ async def test_list_db_schemas(authenticated_client: AsyncClient):
 @pytest.mark.schemas
 @pytest.mark.integration
 async def test_create_schema(
-    authenticated_client: AsyncClient, sample_schema_data: Dict[str, Any]
+    authenticated_client: AsyncClient, sample_schema_data: dict[str, Any]
 ):
     """Test creating a new schema."""
     # Make schema name unique

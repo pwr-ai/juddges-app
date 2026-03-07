@@ -2,6 +2,7 @@
 Integration tests for publications endpoints.
 Tests /publications/* routes for publication CRUD and resource linking.
 """
+
 import pytest
 from httpx import AsyncClient
 

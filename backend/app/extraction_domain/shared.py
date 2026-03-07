@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path as FilePath
 from typing import Any
 
@@ -319,8 +319,7 @@ def _fetch_schema_from_db(schema_id: str, include_metadata: bool = False) -> dic
                 "description": response.data.get("description", ""),
                 "text": response.data["text"],
             }
-        else:
-            return response.data["text"]
+        return response.data["text"]
 
     except HTTPException:
         raise
@@ -332,7 +331,7 @@ def _fetch_schema_from_db(schema_id: str, include_metadata: bool = False) -> dic
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Schema Retrieval Error",
-                "message": f"Failed to retrieve schema from database: {str(e)}. Please try again or contact support.",
+                "message": f"Failed to retrieve schema from database: {e!s}. Please try again or contact support.",
                 "code": "SCHEMA_FETCH_ERROR",
             },
         )
@@ -427,7 +426,7 @@ def update_job_status_in_supabase(
 
         update_data = {
             "status": db_status,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
         # Add optional fields
@@ -439,7 +438,7 @@ def update_job_status_in_supabase(
 
         # Set completed_at for terminal states
         if db_status in ["SUCCESS", "FAILURE"]:
-            update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+            update_data["completed_at"] = datetime.now(UTC).isoformat()
 
         if error_message:
             update_data["error_message"] = error_message
@@ -458,11 +457,10 @@ def update_job_status_in_supabase(
                 f"updated {len(result.data)} row(s)"
             )
             return True
-        else:
-            logger.warning(
-                f"No rows updated in Supabase for job {job_id} - job might not exist or job_id mismatch"
-            )
-            return False
+        logger.warning(
+            f"No rows updated in Supabase for job {job_id} - job might not exist or job_id mismatch"
+        )
+        return False
 
     except Exception as e:
         logger.error(f"Failed to update Supabase for job {job_id}: {e}", exc_info=True)
@@ -508,9 +506,9 @@ def validate_jinja2_template(template: str) -> None:
     try:
         jinja2.Template(template)
     except jinja2.exceptions.TemplateSyntaxError as e:
-        raise ValueError(f"Invalid Jinja2 template syntax: {str(e)}")
+        raise ValueError(f"Invalid Jinja2 template syntax: {e!s}")
     except Exception as e:
-        raise ValueError(f"Error validating template: {str(e)}")
+        raise ValueError(f"Error validating template: {e!s}")
 
 
 def load_prompt_metadata(prompt_id: str) -> PromptMetadata:
@@ -527,17 +525,17 @@ def load_prompt_metadata(prompt_id: str) -> PromptMetadata:
             prompt_id=prompt_id,
             description="System prompt",
             variables=[],
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
             is_system=prompt_id in SYSTEM_PROMPTS,
         )
 
     try:
-        with open(metadata_path, "r") as f:
+        with open(metadata_path) as f:
             data = json.load(f)
             return PromptMetadata(**data)
     except Exception as e:
-        logger.error(f"Error loading metadata for prompt {prompt_id}: {str(e)}")
-        raise ValueError(f"Error loading prompt metadata: {str(e)}")
+        logger.error(f"Error loading metadata for prompt {prompt_id}: {e!s}")
+        raise ValueError(f"Error loading prompt metadata: {e!s}")
 
 
 def save_prompt_metadata(metadata: PromptMetadata) -> None:
@@ -549,8 +547,8 @@ def save_prompt_metadata(metadata: PromptMetadata) -> None:
             json.dump(metadata.model_dump(), f, indent=2)
         logger.info(f"Saved metadata for prompt {metadata.prompt_id}")
     except Exception as e:
-        logger.error(f"Error saving metadata for prompt {metadata.prompt_id}: {str(e)}")
-        raise ValueError(f"Error saving prompt metadata: {str(e)}")
+        logger.error(f"Error saving metadata for prompt {metadata.prompt_id}: {e!s}")
+        raise ValueError(f"Error saving prompt metadata: {e!s}")
 
 
 def prompt_exists(prompt_id: str) -> bool:
@@ -571,26 +569,24 @@ def create_backup(prompt_id: str) -> None:
     if not prompt_path.exists():
         return
 
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     backup_prompt_path = PROMPTS_DIR / f"{prompt_id}.jinja2.backup_{timestamp}"
     backup_metadata_path = PROMPTS_DIR / f"{prompt_id}.json.backup_{timestamp}"
 
     try:
         # Backup template
-        with open(prompt_path, "r") as src:
-            with open(backup_prompt_path, "w") as dst:
-                dst.write(src.read())
+        with open(prompt_path) as src, open(backup_prompt_path, "w") as dst:
+            dst.write(src.read())
 
         # Backup metadata if exists
         if metadata_path.exists():
-            with open(metadata_path, "r") as src:
-                with open(backup_metadata_path, "w") as dst:
-                    dst.write(src.read())
+            with open(metadata_path) as src, open(backup_metadata_path, "w") as dst:
+                dst.write(src.read())
 
         logger.info(f"Created backup for prompt {prompt_id} with timestamp {timestamp}")
     except Exception as e:
-        logger.error(f"Error creating backup for prompt {prompt_id}: {str(e)}")
-        raise ValueError(f"Error creating backup: {str(e)}")
+        logger.error(f"Error creating backup for prompt {prompt_id}: {e!s}")
+        raise ValueError(f"Error creating backup: {e!s}")
 
 
 def archive_prompt(prompt_id: str) -> None:
@@ -614,8 +610,8 @@ def archive_prompt(prompt_id: str) -> None:
 
         logger.info(f"Archived prompt {prompt_id} to {PROMPTS_ARCHIVE_DIR}")
     except Exception as e:
-        logger.error(f"Error archiving prompt {prompt_id}: {str(e)}")
-        raise ValueError(f"Error archiving prompt: {str(e)}")
+        logger.error(f"Error archiving prompt {prompt_id}: {e!s}")
+        raise ValueError(f"Error archiving prompt: {e!s}")
 
 
 def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:

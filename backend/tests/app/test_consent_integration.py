@@ -1,4 +1,5 @@
 """Integration tests for consent management endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

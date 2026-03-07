@@ -1,9 +1,12 @@
 import asyncio
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
+from celery import Celery, Task
+from celery.exceptions import Retry
+from dotenv import load_dotenv
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.oai_schema_validation import (
     OaiSchemaValidationError,
@@ -13,10 +16,6 @@ from juddges_search.info_extraction.schema_utils import (
     prepare_schema_from_db,
 )
 from juddges_search.llms import get_llm
-from app.utils.document_fetcher import get_documents_by_id
-from celery import Celery, Task
-from celery.exceptions import Retry
-from dotenv import load_dotenv
 from loguru import logger
 
 from app.core.supabase import supabase_client
@@ -26,6 +25,7 @@ from app.models import (
     DocumentProcessingStatus,
 )
 from app.schemas import _fetch_schema_from_db
+from app.utils.document_fetcher import get_documents_by_id
 
 load_dotenv()
 BROKER_URL = os.environ["CELERY_BROKER_URL"]
@@ -80,7 +80,7 @@ def _update_job_results_in_supabase(
             "results": results,
             "completed_documents": completed_documents,
             "status": status,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
         result = (
@@ -95,11 +95,10 @@ def _update_job_results_in_supabase(
                 f"Updated Supabase results for job {job_id}: {completed_documents} docs processed"
             )
             return True
-        else:
-            logger.warning(
-                f"No rows updated in Supabase for job {job_id} - job might not exist"
-            )
-            return False
+        logger.warning(
+            f"No rows updated in Supabase for job {job_id} - job might not exist"
+        )
+        return False
 
     except Exception as e:
         logger.error(f"Failed to update Supabase results for job {job_id}: {e}")
@@ -217,7 +216,7 @@ def extract_information_from_documents_task(
     try:
         # Track job start time
         job_start_time = time.time()
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
 
         # Update state with timing metadata
         self.update_state(
@@ -263,7 +262,7 @@ def extract_information_from_documents_task(
                 logger.error(
                     f"Failed to fetch schema from database: {e}", exc_info=True
                 )
-                raise ValueError(f"Failed to fetch schema from database: {str(e)}")
+                raise ValueError(f"Failed to fetch schema from database: {e!s}")
 
         logger.info(
             f"Preparing schema from database format, schema type: {type(user_schema)}"
@@ -343,10 +342,10 @@ def extract_information_from_documents_task(
                         collection_id=request.collection_id,
                         document_id=doc.document_id,
                         status=DocumentProcessingStatus.COMPLETED,
-                        created_at=datetime.now(timezone.utc).isoformat(),
-                        updated_at=datetime.now(timezone.utc).isoformat(),
-                        started_at=datetime.now(timezone.utc).isoformat(),
-                        completed_at=datetime.now(timezone.utc).isoformat(),
+                        created_at=datetime.now(UTC).isoformat(),
+                        updated_at=datetime.now(UTC).isoformat(),
+                        started_at=datetime.now(UTC).isoformat(),
+                        completed_at=datetime.now(UTC).isoformat(),
                         error_message=None,
                         extracted_data=extracted_data,
                     ).model_dump(mode="json")
@@ -362,10 +361,10 @@ def extract_information_from_documents_task(
                         collection_id=request.collection_id,
                         document_id=doc.document_id,
                         status=DocumentProcessingStatus.FAILED,
-                        created_at=datetime.now(timezone.utc).isoformat(),
-                        updated_at=datetime.now(timezone.utc).isoformat(),
-                        started_at=datetime.now(timezone.utc).isoformat(),
-                        completed_at=datetime.now(timezone.utc).isoformat(),
+                        created_at=datetime.now(UTC).isoformat(),
+                        updated_at=datetime.now(UTC).isoformat(),
+                        started_at=datetime.now(UTC).isoformat(),
+                        completed_at=datetime.now(UTC).isoformat(),
                         error_message=str(doc_error),
                         extracted_data=None,
                     ).model_dump(mode="json")
@@ -406,7 +405,7 @@ def extract_information_from_documents_task(
             )
 
         # Check results and update task state accordingly
-        datetime.now(timezone.utc)
+        datetime.now(UTC)
         # NOTE: Do NOT call update_state() with final states (SUCCESS, FAILURE, etc.) before returning!
         # When we call update_state() and then return a value, Celery's Redis backend may store
         # the metadata from update_state() instead of the actual return value when fetching with .get().
@@ -451,10 +450,10 @@ def extract_information_from_documents_task(
                     collection_id=request.collection_id,
                     document_id=doc_id,
                     status=DocumentProcessingStatus.FAILED,
-                    created_at=datetime.now(timezone.utc).isoformat(),
-                    updated_at=datetime.now(timezone.utc).isoformat(),
-                    started_at=datetime.now(timezone.utc).isoformat(),
-                    completed_at=datetime.now(timezone.utc).isoformat(),
+                    created_at=datetime.now(UTC).isoformat(),
+                    updated_at=datetime.now(UTC).isoformat(),
+                    started_at=datetime.now(UTC).isoformat(),
+                    completed_at=datetime.now(UTC).isoformat(),
                     error_message=full_error_msg,
                     extracted_data=None,
                 ).model_dump(mode="json")

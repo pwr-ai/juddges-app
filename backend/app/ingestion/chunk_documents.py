@@ -19,15 +19,12 @@ import asyncio
 import os
 import re
 import time
-from typing import Optional
 
 import tiktoken
+from backend.app.core.supabase import get_supabase_client
 from loguru import logger
 from openai import AsyncOpenAI
 from supabase import Client
-
-from backend.app.core.supabase import get_supabase_client
-
 
 # Configuration
 EMBEDDING_MODEL = "text-embedding-3-small"
@@ -94,7 +91,7 @@ class DocumentChunker:
 
     def detect_section(
         self, line: str, language: str = "pl"
-    ) -> tuple[Optional[str], bool]:
+    ) -> tuple[str | None, bool]:
         """
         Detect if a line is a section header.
         Returns (section_title, is_key_section) or (None, False).
@@ -193,7 +190,7 @@ class DocumentChunker:
                     else:
                         break
 
-                current_chunk = overlap_lines + [line]
+                current_chunk = [*overlap_lines, line]
                 current_tokens = overlap_tokens + line_tokens
             else:
                 current_chunk.append(line)
@@ -218,7 +215,7 @@ class DocumentChunker:
 
     async def generate_chunk_embeddings(
         self, chunks: list[dict]
-    ) -> list[Optional[list[float]]]:
+    ) -> list[list[float] | None]:
         """Generate embeddings for a batch of chunks."""
         if not chunks:
             return []
@@ -243,16 +240,17 @@ class DocumentChunker:
                 else:
                     logger.error(f"Chunk embedding failed: {e}")
                     return [None] * len(chunks)
+        return None
 
     def get_documents_without_chunks(
-        self, limit: Optional[int] = None, offset: int = 0
+        self, limit: int | None = None, offset: int = 0
     ) -> list[dict]:
         """Fetch documents that don't have chunks yet."""
         # Get document IDs that already have chunks
         existing_chunks = (
             self.supabase.table("document_chunks").select("document_id").execute()
         )
-        existing_doc_ids = set(c["document_id"] for c in (existing_chunks.data or []))
+        existing_doc_ids = {c["document_id"] for c in (existing_chunks.data or [])}
 
         # Fetch documents
         query = (
@@ -340,7 +338,7 @@ class DocumentChunker:
                 self.stats["failed"] += 1
         return total_chunks
 
-    async def run(self, limit: Optional[int] = None) -> dict:
+    async def run(self, limit: int | None = None) -> dict:
         """Run the chunking process."""
         logger.info("Fetching documents without chunks...")
 

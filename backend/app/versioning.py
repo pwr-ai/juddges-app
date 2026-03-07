@@ -10,14 +10,12 @@ Provides:
 
 import difflib
 import hashlib
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Path, Query
+from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
-
-from juddges_search.db.supabase_db import get_vector_db
-
 
 router = APIRouter(prefix="/documents", tags=["versioning"])
 
@@ -31,9 +29,9 @@ class DocumentVersion(BaseModel):
     id: str
     document_id: str
     version_number: int
-    title: Optional[str] = None
+    title: str | None = None
     content_hash: str
-    change_description: Optional[str] = None
+    change_description: str | None = None
     change_type: str
     created_by: str = "system"
     created_at: str
@@ -45,7 +43,7 @@ class VersionHistoryResponse(BaseModel):
 
     document_id: str
     current_version: int
-    versions: List[DocumentVersion]
+    versions: list[DocumentVersion]
     total_versions: int
 
 
@@ -55,15 +53,15 @@ class VersionDetailResponse(BaseModel):
     id: str
     document_id: str
     version_number: int
-    title: Optional[str] = None
+    title: str | None = None
     full_text: str
-    summary: Optional[str] = None
+    summary: str | None = None
     content_hash: str
-    change_description: Optional[str] = None
+    change_description: str | None = None
     change_type: str
     created_by: str
     created_at: str
-    extracted_data: Dict[str, Any] = Field(default_factory=dict)
+    extracted_data: dict[str, Any] = Field(default_factory=dict)
 
 
 class VersionDiffResponse(BaseModel):
@@ -73,17 +71,17 @@ class VersionDiffResponse(BaseModel):
     from_version: int
     to_version: int
     diff_html: str
-    diff_stats: Dict[str, int]
-    from_title: Optional[str] = None
-    to_title: Optional[str] = None
-    from_created_at: Optional[str] = None
-    to_created_at: Optional[str] = None
+    diff_stats: dict[str, int]
+    from_title: str | None = None
+    to_title: str | None = None
+    from_created_at: str | None = None
+    to_created_at: str | None = None
 
 
 class CreateVersionRequest(BaseModel):
     """Request to create a manual version snapshot."""
 
-    change_description: Optional[str] = Field(
+    change_description: str | None = Field(
         default=None,
         max_length=500,
         description="Description of what changed",
@@ -101,7 +99,7 @@ class RevertVersionRequest(BaseModel):
         ge=1,
         description="Version number to revert to",
     )
-    change_description: Optional[str] = Field(
+    change_description: str | None = Field(
         default=None,
         max_length=500,
         description="Description of why reverting",
@@ -520,13 +518,13 @@ async def create_version_snapshot(
 
 @router.post(
     "/{document_id}/versions/revert",
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
     summary="Revert document to a previous version",
 )
 async def revert_to_version(
     request: RevertVersionRequest,
     document_id: str = Path(..., description="Document ID"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Revert a document to a specific previous version.
 
     This creates a new version snapshot of the current state before reverting,

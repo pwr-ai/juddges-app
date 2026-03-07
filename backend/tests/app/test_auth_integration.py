@@ -6,7 +6,6 @@ Tests API key verification, JWT authentication, and access control.
 
 import pytest
 from httpx import AsyncClient
-from typing import Dict
 
 
 @pytest.mark.anyio
@@ -32,7 +31,7 @@ async def test_api_key_required_for_protected_endpoints(client: AsyncClient):
 @pytest.mark.api
 @pytest.mark.auth
 async def test_invalid_api_key_rejected(
-    client: AsyncClient, invalid_api_headers: Dict[str, str]
+    client: AsyncClient, invalid_api_headers: dict[str, str]
 ):
     """Test that invalid API keys are rejected."""
     response = await client.get("/documents", headers=invalid_api_headers)
@@ -48,7 +47,7 @@ async def test_invalid_api_key_rejected(
 @pytest.mark.api
 @pytest.mark.auth
 async def test_valid_api_key_accepted(
-    client: AsyncClient, valid_api_headers: Dict[str, str]
+    client: AsyncClient, valid_api_headers: dict[str, str]
 ):
     """Test that valid API key grants access."""
     response = await client.get("/documents", headers=valid_api_headers)
@@ -146,7 +145,7 @@ async def test_public_endpoints_no_auth_required(client: AsyncClient):
 @pytest.mark.api
 @pytest.mark.auth
 async def test_cors_headers_present(
-    client: AsyncClient, valid_api_headers: Dict[str, str]
+    client: AsyncClient, valid_api_headers: dict[str, str]
 ):
     """Test that CORS headers are present in responses."""
     response = await client.options("/documents", headers=valid_api_headers)
@@ -163,7 +162,7 @@ async def test_cors_headers_present(
 @pytest.mark.anyio
 @pytest.mark.api
 @pytest.mark.auth
-async def test_rate_limiting(client: AsyncClient, valid_api_headers: Dict[str, str]):
+async def test_rate_limiting(client: AsyncClient, valid_api_headers: dict[str, str]):
     """Test rate limiting on API endpoints (if implemented)."""
     # Make multiple rapid requests
     responses = []
@@ -186,7 +185,7 @@ async def test_rate_limiting(client: AsyncClient, valid_api_headers: Dict[str, s
 @pytest.mark.api
 @pytest.mark.auth
 async def test_jwt_authentication_if_supported(
-    client: AsyncClient, valid_jwt_headers: Dict[str, str]
+    client: AsyncClient, valid_jwt_headers: dict[str, str]
 ):
     """Test JWT token authentication (if supported)."""
     # Endpoints that may use JWT (user-specific operations)
@@ -243,7 +242,7 @@ async def test_multiple_auth_methods(client: AsyncClient, test_api_key: str):
 @pytest.mark.api
 @pytest.mark.auth
 async def test_security_headers_present(
-    client: AsyncClient, valid_api_headers: Dict[str, str]
+    client: AsyncClient, valid_api_headers: dict[str, str]
 ):
     """Test that security headers are present in responses."""
     await client.get("/documents", headers=valid_api_headers)

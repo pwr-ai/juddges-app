@@ -291,7 +291,7 @@ class TestFacetCounts:
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, dict) or isinstance(data, list)
+        assert isinstance(data, dict | list)
 
     @pytest.mark.anyio
     async def test_get_facet_counts_specific_fields(
@@ -349,7 +349,7 @@ class TestFilterOptions:
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, dict) or isinstance(data, list)
+        assert isinstance(data, dict | list)
 
     @pytest.mark.anyio
     async def test_filter_options_structure(

@@ -422,12 +422,10 @@ async def get_listing_detail(listing_id: str) -> MarketplaceListingDetail:
         data = response.data
         schema_info = data.pop("extraction_schemas", None)
 
-        listing = MarketplaceListingDetail(
+        return MarketplaceListingDetail(
             **data,
             schema_data=schema_info.get("text") if schema_info else None,
         )
-
-        return listing
 
     except HTTPException:
         raise

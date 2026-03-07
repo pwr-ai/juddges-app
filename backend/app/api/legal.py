@@ -8,8 +8,8 @@ Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -17,8 +17,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
-from app.services.retention_service import RetentionService, RetentionConfig
-
+from app.services.retention_service import RetentionConfig, RetentionService
 
 # Router configuration
 router = APIRouter(prefix="/api/legal", tags=["Legal & Compliance"])
@@ -34,13 +33,13 @@ class DataDeletionRequest(BaseModel):
         default="full_deletion", description="Type of deletion request"
     )
 
-    data_types: Optional[List[str]] = Field(
+    data_types: list[str] | None = Field(
         None,
         description="Specific data types to delete (for partial deletion)",
         examples=[["audit_logs", "analytics", "feedback"]],
     )
 
-    reason: Optional[str] = Field(
+    reason: str | None = Field(
         None, max_length=500, description="Reason for deletion (optional)"
     )
 
@@ -49,7 +48,7 @@ class DataDeletionResponse(BaseModel):
     """Response for data deletion request."""
 
     status: Literal["success", "failed"]
-    request_id: Optional[str] = None
+    request_id: str | None = None
     message: str
     processing_time: str = Field(
         default="30 days", description="Time frame for processing (GDPR requirement)"
@@ -61,7 +60,7 @@ class DataExportResponse(BaseModel):
 
     status: Literal["success", "failed"]
     message: str
-    export_data: Optional[Dict] = None
+    export_data: dict | None = None
 
 
 class RetentionPolicyInfo(BaseModel):
@@ -79,22 +78,22 @@ class DPAInfoResponse(BaseModel):
 
     version: str = Field(default="1.0")
     effective_date: str
-    data_processor: Dict = Field(
+    data_processor: dict = Field(
         description="Information about data processor (Juddges)"
     )
     data_controller: str = Field(
         default="User", description="Data controller (typically the user)"
     )
-    processing_purposes: List[str] = Field(description="Purposes for data processing")
-    data_categories: List[str] = Field(
+    processing_purposes: list[str] = Field(description="Purposes for data processing")
+    data_categories: list[str] = Field(
         description="Categories of personal data processed"
     )
-    data_subjects: List[str] = Field(description="Categories of data subjects")
-    retention_periods: List[RetentionPolicyInfo] = Field(
+    data_subjects: list[str] = Field(description="Categories of data subjects")
+    retention_periods: list[RetentionPolicyInfo] = Field(
         description="Data retention periods by category"
     )
-    sub_processors: List[Dict] = Field(description="List of sub-processors")
-    security_measures: List[str] = Field(
+    sub_processors: list[dict] = Field(description="List of sub-processors")
+    security_measures: list[str] = Field(
         description="Technical and organizational security measures"
     )
 
@@ -103,7 +102,7 @@ class DPAInfoResponse(BaseModel):
 
 
 @router.get("/dpa", response_model=DPAInfoResponse)
-async def get_dpa_info(user: Optional[AuthenticatedUser] = Depends(get_optional_user)):
+async def get_dpa_info(user: AuthenticatedUser | None = Depends(get_optional_user)):
     """
     Get Data Processing Agreement (DPA) information.
 
@@ -124,7 +123,7 @@ async def get_dpa_info(user: Optional[AuthenticatedUser] = Depends(get_optional_
             logger.info(f"User {user.id} accessed DPA information")
 
         # Define DPA information
-        dpa_info = DPAInfoResponse(
+        return DPAInfoResponse(
             version="1.0",
             effective_date="2025-01-01",
             data_processor={
@@ -221,12 +220,10 @@ async def get_dpa_info(user: Optional[AuthenticatedUser] = Depends(get_optional_
             ],
         )
 
-        return dpa_info
-
     except Exception as e:
         logger.error(f"Failed to retrieve DPA information: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve DPA information: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve DPA information: {e!s}"
         )
 
 
@@ -268,14 +265,13 @@ async def request_data_export(
                 message="Data exported successfully",
                 export_data=result["data"],
             )
-        else:
-            raise Exception("Export failed")
+        raise Exception("Export failed")
 
     except Exception as e:
         logger.error(f"Failed to export data for user {user.id}: {e}")
         return DataExportResponse(
             status="failed",
-            message=f"Failed to export data: {str(e)}",
+            message=f"Failed to export data: {e!s}",
             export_data=None,
         )
 
@@ -331,22 +327,21 @@ async def request_data_deletion(
                 message=result["message"],
                 processing_time="30 days (GDPR requirement)",
             )
-        else:
-            raise Exception("Failed to create deletion request")
+        raise Exception("Failed to create deletion request")
 
     except Exception as e:
         logger.error(f"Failed to create data deletion request for user {user.id}: {e}")
         return DataDeletionResponse(
             status="failed",
             request_id=None,
-            message=f"Failed to create deletion request: {str(e)}",
+            message=f"Failed to create deletion request: {e!s}",
             processing_time="N/A",
         )
 
 
-@router.get("/retention-policies", response_model=List[RetentionPolicyInfo])
+@router.get("/retention-policies", response_model=list[RetentionPolicyInfo])
 async def get_retention_policies(
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Get information about data retention policies.
@@ -364,7 +359,7 @@ async def get_retention_policies(
         if user:
             logger.info(f"User {user.id} accessed retention policies")
 
-        policies = [
+        return [
             RetentionPolicyInfo(
                 data_type="audit_logs",
                 retention_period_days=RetentionConfig.AUDIT_LOGS,
@@ -409,18 +404,16 @@ async def get_retention_policies(
             ),
         ]
 
-        return policies
-
     except Exception as e:
         logger.error(f"Failed to retrieve retention policies: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve retention policies: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve retention policies: {e!s}"
         )
 
 
 @router.get("/privacy-policy")
 async def get_privacy_policy(
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Get privacy policy (placeholder - should return actual policy document).
@@ -437,14 +430,14 @@ async def get_privacy_policy(
             "effective_date": "2025-01-01",
             "message": "Privacy policy document should be hosted separately and referenced here.",
             "url": "/docs/privacy-policy.html",
-            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "last_updated": datetime.now(UTC).isoformat(),
         }
     )
 
 
 @router.get("/terms-of-service")
 async def get_terms_of_service(
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Get terms of service (placeholder - should return actual terms document).
@@ -461,7 +454,7 @@ async def get_terms_of_service(
             "effective_date": "2025-01-01",
             "message": "Terms of service document should be hosted separately and referenced here.",
             "url": "/docs/terms-of-service.html",
-            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "last_updated": datetime.now(UTC).isoformat(),
         }
     )
 

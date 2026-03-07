@@ -10,14 +10,14 @@ This package contains:
 """
 
 from app.services.audit_service import AuditService, log_audit_background
-from app.services.retention_service import RetentionService, RetentionConfig
+from app.services.retention_service import RetentionConfig, RetentionService
 from app.services.search import MeiliSearchService, SearchServiceError
 
 __all__ = [
     "AuditService",
-    "log_audit_background",
-    "RetentionService",
-    "RetentionConfig",
     "MeiliSearchService",
+    "RetentionConfig",
+    "RetentionService",
     "SearchServiceError",
+    "log_audit_background",
 ]

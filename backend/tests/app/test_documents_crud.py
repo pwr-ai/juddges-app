@@ -10,7 +10,6 @@ Tests:
 import pytest
 from httpx import AsyncClient
 
-
 # ============================================================================
 # Get Single Document Tests (GET /documents/{id})
 # ============================================================================
@@ -251,7 +250,7 @@ async def test_batch_documents_mixed_valid_invalid(authenticated_client: AsyncCl
         docs = list_response.json().get("documents", [])
         if docs:
             valid_ids = [doc["id"] for doc in docs]
-            mixed_ids = valid_ids + ["fake-id-1", "fake-id-2"]
+            mixed_ids = [*valid_ids, "fake-id-1", "fake-id-2"]
 
             response = await authenticated_client.post(
                 "/documents/batch", json={"document_ids": mixed_ids}

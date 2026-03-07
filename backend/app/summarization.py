@@ -9,11 +9,6 @@ multi-document synthesis.
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from loguru import logger
-from pydantic import BaseModel, Field, field_validator
-
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from juddges_search.prompts.summarization import (
@@ -23,6 +18,11 @@ from juddges_search.prompts.summarization import (
     SUMMARY_LENGTH_MAP,
     SUMMARY_TYPE_PROMPTS,
 )
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from loguru import logger
+from pydantic import BaseModel, Field, field_validator
+
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/summarize", tags=["summarization"])

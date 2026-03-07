@@ -10,7 +10,6 @@ Supports switching between different embedding providers:
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional
 
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -205,10 +204,7 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
         model = self._get_model()
         # Run in thread pool since SentenceTransformer is synchronous
         loop = asyncio.get_event_loop()
-        embedding = await loop.run_in_executor(
-            None, lambda: model.encode(text).tolist()
-        )
-        return embedding
+        return await loop.run_in_executor(None, lambda: model.encode(text).tolist())
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         import asyncio
@@ -216,10 +212,9 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
         texts = [self._truncate_text(t) for t in texts]
         model = self._get_model()
         loop = asyncio.get_event_loop()
-        embeddings = await loop.run_in_executor(
+        return await loop.run_in_executor(
             None, lambda: [model.encode(t).tolist() for t in texts]
         )
-        return embeddings
 
 
 # Provider factory
@@ -230,8 +225,8 @@ _PROVIDER_CLASSES = {
 }
 
 # Singleton provider cache
-_active_provider: Optional[BaseEmbeddingProvider] = None
-_active_model_id: Optional[str] = None
+_active_provider: BaseEmbeddingProvider | None = None
+_active_model_id: str | None = None
 
 
 def get_model_config(model_id: str) -> EmbeddingModelConfig:
@@ -260,7 +255,7 @@ def get_default_model_id() -> str:
     return "openai/text-embedding-3-small"
 
 
-def get_embedding_provider(model_id: Optional[str] = None) -> BaseEmbeddingProvider:
+def get_embedding_provider(model_id: str | None = None) -> BaseEmbeddingProvider:
     """Get the embedding provider for a given model (or the default).
 
     Uses a singleton pattern - the provider is cached and reused.

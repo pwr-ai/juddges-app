@@ -17,8 +17,8 @@ Date: 2025-10-12
 """
 
 import hashlib
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import BackgroundTasks
 from loguru import logger
@@ -84,7 +84,7 @@ class AuditService:
                     sanitized[key] = AuditService._sanitize_data(value, max_depth - 1)
             return sanitized
 
-        elif isinstance(data, list):
+        if isinstance(data, list):
             # Limit list size to prevent abuse
             if len(data) > 100:
                 return [
@@ -93,18 +93,17 @@ class AuditService:
                 ] + ["[TRUNCATED]"]
             return [AuditService._sanitize_data(item, max_depth - 1) for item in data]
 
-        elif isinstance(data, str):
+        if isinstance(data, str):
             # Truncate very long strings
             if len(data) > AuditService.MAX_INPUT_LENGTH:
                 return data[: AuditService.MAX_INPUT_LENGTH] + "...[TRUNCATED]"
             return data
 
-        else:
-            # Return primitive types as-is
-            return data
+        # Return primitive types as-is
+        return data
 
     @staticmethod
-    def _anonymize_ip(ip_address: Optional[str]) -> Optional[str]:
+    def _anonymize_ip(ip_address: str | None) -> str | None:
         """
         Anonymize IP address by hashing it.
 
@@ -128,14 +127,14 @@ class AuditService:
     async def log_query(
         user_id: str,
         query: str,
-        response: Dict[str, Any],
-        session_id: Optional[str] = None,
-        model_used: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        duration_ms: Optional[int] = None,
-    ) -> Optional[str]:
+        response: dict[str, Any],
+        session_id: str | None = None,
+        model_used: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        duration_ms: int | None = None,
+    ) -> str | None:
         """
         Log a user query and AI response.
 
@@ -177,7 +176,7 @@ class AuditService:
                 else None,  # Truncate user agent
                 "request_duration_ms": duration_ms,
                 "resource_type": "query",
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -199,10 +198,10 @@ class AuditService:
         user_id: str,
         document_id: str,
         action: str,  # 'view', 'download', 'upload'
-        session_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-    ) -> Optional[str]:
+        session_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        ip_address: str | None = None,
+    ) -> str | None:
         """
         Log document access (view, download, upload).
 
@@ -240,7 +239,7 @@ class AuditService:
                 "ip_address": AuditService._anonymize_ip(ip_address),
                 "resource_type": "document",
                 "resource_id": document_id,
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -260,11 +259,11 @@ class AuditService:
     async def log_export(
         user_id: str,
         export_type: str,  # 'audit_trail', 'user_data', 'analysis_results'
-        data_range: Optional[Dict[str, str]] = None,
-        session_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-    ) -> Optional[str]:
+        data_range: dict[str, str] | None = None,
+        session_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        ip_address: str | None = None,
+    ) -> str | None:
         """
         Log data export operations.
 
@@ -297,7 +296,7 @@ class AuditService:
                 "output_data": {},
                 "ip_address": AuditService._anonymize_ip(ip_address),
                 "resource_type": "export",
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -317,20 +316,20 @@ class AuditService:
     async def log_action(
         user_id: str,
         action_type: str,
-        input_data: Optional[Dict[str, Any]] = None,
-        output_data: Optional[Dict[str, Any]] = None,
-        session_id: Optional[str] = None,
-        resource_type: Optional[str] = None,
-        resource_id: Optional[str] = None,
-        model_used: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        duration_ms: Optional[int] = None,
-        http_method: Optional[str] = None,
-        http_status_code: Optional[int] = None,
-        api_endpoint: Optional[str] = None,
-        error_message: Optional[str] = None,
-    ) -> Optional[str]:
+        input_data: dict[str, Any] | None = None,
+        output_data: dict[str, Any] | None = None,
+        session_id: str | None = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        model_used: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        duration_ms: int | None = None,
+        http_method: str | None = None,
+        http_status_code: int | None = None,
+        api_endpoint: str | None = None,
+        error_message: str | None = None,
+    ) -> str | None:
         """
         Generic method to log any user action.
 
@@ -374,7 +373,7 @@ class AuditService:
                 "http_status_code": http_status_code,
                 "api_endpoint": api_endpoint,
                 "error_message": error_message,
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             result = client.table("audit_logs").insert(log_entry).execute()
@@ -393,12 +392,12 @@ class AuditService:
     @staticmethod
     async def get_user_audit_trail(
         user_id: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        action_types: Optional[List[str]] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        action_types: list[str] | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Retrieve audit trail for a specific user.
 
@@ -418,9 +417,9 @@ class AuditService:
 
             # Set default date range
             if not start_date:
-                start_date = datetime.now(timezone.utc) - timedelta(days=90)
+                start_date = datetime.now(UTC) - timedelta(days=90)
             if not end_date:
-                end_date = datetime.now(timezone.utc)
+                end_date = datetime.now(UTC)
 
             # Build query
             query = client.table("audit_logs").select("*").eq("user_id", user_id)

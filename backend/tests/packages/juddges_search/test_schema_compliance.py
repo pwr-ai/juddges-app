@@ -59,16 +59,16 @@ def _validate_schema(
     parents = parents or []
 
     if treat_as_fields_list:
-        for key in schema.keys():
+        for key in schema:
             if key in allowed_keys:
                 pytest.fail(
-                    f"Key {'->'.join(parents + [key])} is reserved as special for JSON Schema"
+                    f"Key {'->'.join([*parents, key])} is reserved as special for JSON Schema"
                 )
             _validate_schema(
                 schema=schema[key],
                 allowed_keys=allowed_keys,
                 obligatory_keys=obligatory_keys,
-                parents=parents + [key],
+                parents=[*parents, key],
                 treat_as_fields_list=False,
             )
     else:
@@ -78,10 +78,10 @@ def _validate_schema(
                     f"Key {'->'.join(parents)} does not have obligatory '{key}' field"
                 )
 
-        for key in schema.keys():
+        for key in schema:
             if key not in allowed_keys:
                 pytest.fail(
-                    f"Key {'->'.join(parents + [key])} is not allowed to be used in schema"
+                    f"Key {'->'.join([*parents, key])} is not allowed to be used in schema"
                 )
 
     if "properties" in schema:
@@ -92,6 +92,6 @@ def _validate_schema(
             schema=schema["properties"],
             allowed_keys=allowed_keys,
             obligatory_keys=obligatory_keys,
-            parents=parents + [key],
+            parents=[*parents, key],
             treat_as_fields_list=True,
         )

@@ -1,4 +1,5 @@
 """Integration tests for audit trail endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

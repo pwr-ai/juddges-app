@@ -4,6 +4,7 @@ Pytest configuration and fixtures for Juddges backend tests.
 
 import sys
 from pathlib import Path
+
 import pytest
 
 # Add backend and packages to Python path for tests

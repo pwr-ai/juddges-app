@@ -6,13 +6,12 @@ duplicating the same initialization code across multiple files.
 """
 
 import os
-from typing import Optional
 
 from loguru import logger
 from supabase import Client, ClientOptions, create_client
 
 
-def _create_supabase_client() -> Optional[Client]:
+def _create_supabase_client() -> Client | None:
     """
     Create and configure a Supabase client.
 
@@ -41,10 +40,10 @@ def _create_supabase_client() -> Optional[Client]:
 
 
 # Singleton client instance - created once on module import
-supabase_client: Optional[Client] = _create_supabase_client()
+supabase_client: Client | None = _create_supabase_client()
 
 
-def get_supabase_client() -> Optional[Client]:
+def get_supabase_client() -> Client | None:
     """
     Get the shared Supabase client instance.
 

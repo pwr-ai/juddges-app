@@ -1,4 +1,5 @@
 """Integration tests for experiments (A/B testing) endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

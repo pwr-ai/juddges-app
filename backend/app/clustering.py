@@ -8,16 +8,16 @@ Provides:
 - Cluster statistics and document membership
 """
 
+import contextlib
 import time
 from collections import Counter
 from typing import Any
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
+from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
-
-from juddges_search.db.supabase_db import get_vector_db
 
 router = APIRouter(prefix="/clustering", tags=["clustering"])
 
@@ -127,7 +127,7 @@ def _extract_keywords_tfidf(
     """
     cluster_texts: dict[int, list[str]] = {i: [] for i in range(num_clusters)}
 
-    for doc, label in zip(documents, labels):
+    for doc, label in zip(documents, labels, strict=False):
         text_parts = []
         if doc.get("title"):
             text_parts.append(doc["title"])
@@ -174,7 +174,6 @@ def _extract_keywords_tfidf(
         "an",
         "in",
         "of",
-        "to",
         "and",
         "is",
         "for",
@@ -213,7 +212,7 @@ def _extract_keywords_tfidf(
 
     # Compute IDF (how many clusters contain this word)
     word_cluster_count: Counter = Counter()
-    for cluster_id, counts in cluster_word_counts.items():
+    for counts in cluster_word_counts.values():
         for word in counts:
             word_cluster_count[word] += 1
 
@@ -457,10 +456,8 @@ async def get_semantic_clusters(request: ClusteringRequest) -> ClusteringRespons
     for i, doc in enumerate(docs_with_embeddings):
         year = None
         if doc.get("date_issued"):
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 year = int(str(doc["date_issued"])[:4])
-            except (ValueError, TypeError):
-                pass
 
         nodes.append(
             ClusterNode(

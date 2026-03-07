@@ -14,8 +14,9 @@ Author: Juddges Backend Team
 Date: 2025-10-12
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+import contextlib
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from loguru import logger
 from supabase import Client
@@ -69,7 +70,7 @@ class RetentionService:
     """
 
     @staticmethod
-    async def archive_expired_audit_logs() -> Dict[str, Any]:
+    async def archive_expired_audit_logs() -> dict[str, Any]:
         """
         Archive expired audit logs (mark for archival, don't delete).
 
@@ -93,7 +94,7 @@ class RetentionService:
             return {
                 "status": "success",
                 "archived_count": archived_count,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -101,11 +102,11 @@ class RetentionService:
             return {
                 "status": "failed",
                 "error": str(e),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
     @staticmethod
-    async def export_user_data(user_id: str, format: str = "json") -> Dict[str, Any]:
+    async def export_user_data(user_id: str, format: str = "json") -> dict[str, Any]:
         """
         Export all user data for GDPR compliance (right to data portability).
 
@@ -128,7 +129,7 @@ class RetentionService:
 
             export_data = {
                 "user_id": user_id,
-                "export_date": datetime.now(timezone.utc).isoformat(),
+                "export_date": datetime.now(UTC).isoformat(),
                 "format": format,
             }
 
@@ -142,7 +143,7 @@ class RetentionService:
             export_data["consent"] = consent_result.data
 
             # Export audit logs (last 2 years for performance)
-            two_years_ago = datetime.now(timezone.utc) - timedelta(days=730)
+            two_years_ago = datetime.now(UTC) - timedelta(days=730)
             audit_result = (
                 client.table("audit_logs")
                 .select(
@@ -191,7 +192,7 @@ class RetentionService:
             return {
                 "status": "success",
                 "data": export_data,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -202,9 +203,9 @@ class RetentionService:
     async def request_data_deletion(
         user_id: str,
         request_type: str = "full_deletion",
-        data_types: Optional[List[str]] = None,
-        reason: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        data_types: list[str] | None = None,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
         """
         Create a data deletion request (GDPR right to erasure).
 
@@ -240,7 +241,7 @@ class RetentionService:
                 "data_types": data_types or [],
                 "reason": reason,
                 "status": "pending",
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
             result = (
@@ -261,7 +262,7 @@ class RetentionService:
                     "request_id": request_id,
                     "message": "Data deletion request created. It will be processed within 30 days as required by GDPR.",
                     "request_details": result.data[0],
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
 
         except Exception as e:
@@ -273,7 +274,7 @@ class RetentionService:
     @staticmethod
     async def process_deletion_request(
         request_id: str, processed_by: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process a data deletion request (admin only).
 
@@ -309,7 +310,7 @@ class RetentionService:
             client.table("data_deletion_requests").update(
                 {
                     "status": "in_progress",
-                    "started_at": datetime.now(timezone.utc).isoformat(),
+                    "started_at": datetime.now(UTC).isoformat(),
                     "processed_by": processed_by,
                 }
             ).eq("id", request_id).execute()
@@ -337,7 +338,7 @@ class RetentionService:
             client.table("data_deletion_requests").update(
                 {
                     "status": "completed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": datetime.now(UTC).isoformat(),
                     "deletion_summary": deletion_summary,
                 }
             ).eq("id", request_id).execute()
@@ -351,19 +352,17 @@ class RetentionService:
                 "status": "success",
                 "request_id": request_id,
                 "deletion_summary": deletion_summary,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
             logger.error(f"Failed to process deletion request {request_id}: {e}")
 
             # Update request as failed
-            try:
+            with contextlib.suppress(Exception):
                 client.table("data_deletion_requests").update(
                     {"status": "failed", "error_message": str(e)}
                 ).eq("id", request_id).execute()
-            except Exception:
-                pass
 
             raise
 

@@ -2,28 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Union
+from datetime import UTC, datetime
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from loguru import logger
 
-from app.models import (
-    BatchExtractionResponse,
-    BulkExtractionJobInfo,
-    BulkExtractionRequest,
-    BulkExtractionResponse,
-    CancelJobResponse,
-    DocumentExtractionRequest,
-    DocumentExtractionResponse,
-    DocumentExtractionSubmissionResponse,
-    DocumentProcessingStatus,
-    ExtractionJobSummary,
-    ListExtractionJobsResponse,
-    SimpleExtractionRequest,
-)
-from app.workers import celery_app, extract_information_from_documents_task
 from app.extraction_domain.shared import (
     _check_supabase_available,
     _convert_simplified_schema,
@@ -39,6 +23,21 @@ from app.extraction_domain.shared import (
     supabase,
     update_job_status_in_supabase,
 )
+from app.models import (
+    BatchExtractionResponse,
+    BulkExtractionJobInfo,
+    BulkExtractionRequest,
+    BulkExtractionResponse,
+    CancelJobResponse,
+    DocumentExtractionRequest,
+    DocumentExtractionResponse,
+    DocumentExtractionSubmissionResponse,
+    DocumentProcessingStatus,
+    ExtractionJobSummary,
+    ListExtractionJobsResponse,
+    SimpleExtractionRequest,
+)
+from app.workers import celery_app, extract_information_from_documents_task
 
 router = APIRouter()
 
@@ -135,14 +134,14 @@ def _load_job_record(job_id: str) -> dict | None:
         return None
 
 
-def _deserialize_existing_results(existing_results: object) -> list[DocumentExtractionResponse] | None:
+def _deserialize_existing_results(
+    existing_results: object,
+) -> list[DocumentExtractionResponse] | None:
     """Deserialize stored extraction results into response models."""
     if not existing_results:
         return None
     return [
-        DocumentExtractionResponse(**result)
-        if isinstance(result, dict)
-        else result
+        DocumentExtractionResponse(**result) if isinstance(result, dict) else result
         for result in existing_results
     ]
 
@@ -246,7 +245,7 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
         supabase.table("extraction_jobs").update(
             {
                 "job_id": new_task.id,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
         ).eq("job_id", job_id).execute()
 
@@ -286,7 +285,11 @@ def _handle_not_ready_task(
 
         simplified_status = simplify_job_status(task_state)
         task_info = task_result.info
-        completed_docs = task_info.get("completed_documents") if isinstance(task_info, dict) else None
+        completed_docs = (
+            task_info.get("completed_documents")
+            if isinstance(task_info, dict)
+            else None
+        )
         update_job_status_in_supabase(
             job_id, simplified_status, completed_documents=completed_docs
         )
@@ -323,13 +326,17 @@ def _handle_failed_task(
         update_job_status_in_supabase(
             job_id, simplified_status, error_message=error_message
         )
-        return BatchExtractionResponse(task_id=job_id, status=simplified_status, results=[])
+        return BatchExtractionResponse(
+            task_id=job_id, status=simplified_status, results=[]
+        )
     except Exception as failed_check_error:
         logger.warning(f"Error checking if task {job_id} failed: {failed_check_error}")
         return None
 
 
-def _parse_task_results(results: object) -> tuple[list[DocumentExtractionResponse], list[dict]]:
+def _parse_task_results(
+    results: object,
+) -> tuple[list[DocumentExtractionResponse], list[dict]]:
     """Validate raw task results and convert them to response models."""
     if not isinstance(results, list):
         logger.error(
@@ -358,9 +365,7 @@ def _count_processed_documents(results: list[dict]) -> int | None:
     if not results:
         return None
     return sum(
-        1
-        for result in results
-        if result.get("status") in _TERMINAL_DOCUMENT_STATUSES
+        1 for result in results if result.get("status") in _TERMINAL_DOCUMENT_STATUSES
     )
 
 
@@ -372,7 +377,7 @@ def _count_processed_documents(results: list[dict]) -> int | None:
     description="Submit a new extraction job. Supports both full and simple modes.",
 )
 async def create_extraction_job(
-    request: Union[DocumentExtractionRequest, SimpleExtractionRequest],
+    request: DocumentExtractionRequest | SimpleExtractionRequest,
 ) -> DocumentExtractionSubmissionResponse:
     """
     Create a new extraction job.
@@ -433,7 +438,7 @@ async def create_extraction_job(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal Server Error",
-                "message": f"An unexpected error occurred while creating the extraction job: {str(e)}. Please try again or contact support.",
+                "message": f"An unexpected error occurred while creating the extraction job: {e!s}. Please try again or contact support.",
                 "code": "INTERNAL_ERROR",
             },
         )
@@ -447,7 +452,7 @@ async def create_extraction_job(
     description="Submit a new extraction job using schemas from Supabase database. Supports both full and simple modes.",
 )
 async def create_extraction_job_db(
-    request: Union[DocumentExtractionRequest, SimpleExtractionRequest],
+    request: DocumentExtractionRequest | SimpleExtractionRequest,
 ) -> DocumentExtractionSubmissionResponse:
     """
     Create a new extraction job using InformationExtractor with schemas from Supabase.
@@ -548,7 +553,7 @@ async def create_extraction_job_db(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal Server Error",
-                "message": f"An unexpected error occurred while creating the extraction job: {str(e)}. Please try again or contact support.",
+                "message": f"An unexpected error occurred while creating the extraction job: {e!s}. Please try again or contact support.",
                 "code": "INTERNAL_ERROR",
             },
         )
@@ -677,7 +682,7 @@ async def create_bulk_extraction(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Bulk Extraction Failed",
-                "message": f"An error occurred while creating bulk extraction jobs: {str(e)}",
+                "message": f"An error occurred while creating bulk extraction jobs: {e!s}",
                 "code": "BULK_EXTRACTION_FAILED",
             },
         )
@@ -867,7 +872,7 @@ async def list_extraction_jobs(
         # Combine all active tasks
         all_active = []
         for worker_tasks in [active_tasks, scheduled_tasks, reserved_tasks]:
-            for worker_name, tasks in worker_tasks.items():
+            for tasks in worker_tasks.values():
                 all_active.extend(tasks)
 
         # Build list of job summaries
@@ -893,10 +898,8 @@ async def list_extraction_jobs(
             simplified_status = simplify_job_status(raw_status)
 
             # Apply status filter if specified (map simplified status back for filtering)
-            if status:
-                # Allow filtering by both simplified and raw statuses for backward compatibility
-                if simplified_status != status and raw_status != status:
-                    continue
+            if status and simplified_status != status and raw_status != status:
+                continue
 
             jobs.append(
                 ExtractionJobSummary(
@@ -904,7 +907,7 @@ async def list_extraction_jobs(
                     collection_id=collection_id,
                     status=simplified_status,
                     created_at=datetime.now(
-                        timezone.utc
+                        UTC
                     ).isoformat(),  # Not available from inspect
                     updated_at=None,
                     total_documents=None,
@@ -944,7 +947,7 @@ async def list_extraction_jobs(
     except Exception as e:
         logger.error("Error listing extraction jobs: {}", str(e))
         raise HTTPException(
-            status_code=500, detail=f"Error listing extraction jobs: {str(e)}"
+            status_code=500, detail=f"Error listing extraction jobs: {e!s}"
         )
 
 
@@ -1024,7 +1027,7 @@ async def cancel_or_delete_extraction_job(
 
     except Exception as e:
         logger.error("Error cancelling job {}: {}", job_id, str(e))
-        raise HTTPException(status_code=500, detail=f"Error cancelling job: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error cancelling job: {e!s}")
 
 
 @router.delete(
@@ -1092,16 +1095,15 @@ async def delete_extraction_job(
             return CancelJobResponse(
                 task_id=job_id, status="deleted", message="Job deleted successfully"
             )
-        else:
-            logger.warning(f"No rows deleted for job {job_id}")
-            return CancelJobResponse(
-                task_id=job_id,
-                status="not_found",
-                message="Job not found or already deleted",
-            )
+        logger.warning(f"No rows deleted for job {job_id}")
+        return CancelJobResponse(
+            task_id=job_id,
+            status="not_found",
+            message="Job not found or already deleted",
+        )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting job {job_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error deleting job: {str(e)}")
+        logger.error(f"Error deleting job {job_id}: {e!s}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error deleting job: {e!s}")

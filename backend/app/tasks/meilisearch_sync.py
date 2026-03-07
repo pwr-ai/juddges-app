@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from celery import Task
 from loguru import logger
 
 from app.core.supabase import supabase_client
@@ -16,6 +15,9 @@ from app.services.meilisearch_config import (
 from app.services.search import MeiliSearchService
 from app.services.sync_status import record_sync_completed, record_sync_failed
 from app.workers import celery_app
+
+if TYPE_CHECKING:
+    from celery import Task
 
 
 def _get_service() -> MeiliSearchService:
@@ -60,10 +62,7 @@ def sync_judgment_to_meilisearch(
         return {"status": "skipped", "reason": "no_supabase"}
 
     resp = (
-        supabase_client.table("judgments")
-        .select("*")
-        .eq("id", judgment_id)
-        .execute()
+        supabase_client.table("judgments").select("*").eq("id", judgment_id).execute()
     )
     if not resp.data:
         logger.warning(f"Judgment {judgment_id} not found in Supabase")

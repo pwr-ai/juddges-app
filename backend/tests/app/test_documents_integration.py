@@ -4,9 +4,10 @@ Integration tests for document search and retrieval endpoints.
 Tests the /documents router with actual HTTP requests.
 """
 
+from typing import Any
+
 import pytest
 from httpx import AsyncClient
-from typing import Dict, Any
 
 
 @pytest.mark.anyio
@@ -27,7 +28,7 @@ async def test_documents_require_api_key(client: AsyncClient):
 @pytest.mark.api
 @pytest.mark.auth
 async def test_invalid_api_key_rejected(
-    client: AsyncClient, invalid_api_headers: Dict[str, str]
+    client: AsyncClient, invalid_api_headers: dict[str, str]
 ):
     """Test that invalid API key is properly rejected."""
     response = await client.get("/documents", headers=invalid_api_headers)
@@ -82,7 +83,7 @@ async def test_get_documents_with_filters(authenticated_client: AsyncClient):
 @pytest.mark.search
 @pytest.mark.integration
 async def test_search_documents_basic(
-    authenticated_client: AsyncClient, sample_search_request: Dict[str, Any]
+    authenticated_client: AsyncClient, sample_search_request: dict[str, Any]
 ):
     """Test basic document search functionality."""
     response = await authenticated_client.post(
@@ -399,4 +400,4 @@ async def test_batch_document_retrieval(authenticated_client: AsyncClient):
         # May or may not be implemented
         if response.status_code == 200:
             results = response.json()
-            assert isinstance(results, (list, dict))
+            assert isinstance(results, list | dict)

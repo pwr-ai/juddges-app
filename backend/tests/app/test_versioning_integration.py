@@ -1,4 +1,5 @@
 """Integration tests for versioning endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -23,5 +24,7 @@ async def test_version_history_with_auth(authenticated_client: AsyncClient):
 @pytest.mark.api
 async def test_create_version_requires_auth(client: AsyncClient):
     """Creating version snapshot should reject unauthenticated requests."""
-    response = await client.post("/documents/test-doc-123/versions", json={"reason": "test"})
+    response = await client.post(
+        "/documents/test-doc-123/versions", json={"reason": "test"}
+    )
     assert response.status_code in [401, 403]

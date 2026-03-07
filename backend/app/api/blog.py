@@ -2,19 +2,19 @@
 Blog API endpoints for managing blog posts, categories, tags, likes, and bookmarks.
 """
 
-from datetime import datetime, timezone
-from typing import Optional, List, Any
-from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel, Field
-from loguru import logger
 import re
+from datetime import UTC, datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
+from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import (
     AuthenticatedUser,
     get_admin_supabase_client,
     get_current_user,
 )
-
 
 router = APIRouter(prefix="/blog", tags=["blog"])
 
@@ -26,28 +26,28 @@ router = APIRouter(prefix="/blog", tags=["blog"])
 
 class BlogPostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    slug: Optional[str] = Field(None, max_length=255)
+    slug: str | None = Field(None, max_length=255)
     excerpt: str = Field(..., min_length=1)
-    content: Optional[str] = None
-    featured_image: Optional[str] = Field(None, max_length=500)
+    content: str | None = None
+    featured_image: str | None = Field(None, max_length=500)
     category: str = Field(..., min_length=1, max_length=100)
-    tags: List[str] = []
+    tags: list[str] = []
     status: str = Field(default="draft", pattern="^(draft|published|scheduled)$")
-    published_at: Optional[datetime] = None
-    ai_summary: Optional[str] = None
+    published_at: datetime | None = None
+    ai_summary: str | None = None
 
 
 class BlogPostUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    slug: Optional[str] = Field(None, max_length=255)
-    excerpt: Optional[str] = None
-    content: Optional[str] = None
-    featured_image: Optional[str] = Field(None, max_length=500)
-    category: Optional[str] = None
-    tags: Optional[List[str]] = None
-    status: Optional[str] = Field(None, pattern="^(draft|published|scheduled)$")
-    published_at: Optional[datetime] = None
-    ai_summary: Optional[str] = None
+    title: str | None = Field(None, min_length=1, max_length=255)
+    slug: str | None = Field(None, max_length=255)
+    excerpt: str | None = None
+    content: str | None = None
+    featured_image: str | None = Field(None, max_length=500)
+    category: str | None = None
+    tags: list[str] | None = None
+    status: str | None = Field(None, pattern="^(draft|published|scheduled)$")
+    published_at: datetime | None = None
+    ai_summary: str | None = None
 
 
 class BlogPostResponse(BaseModel):
@@ -55,20 +55,20 @@ class BlogPostResponse(BaseModel):
     slug: str
     title: str
     excerpt: str
-    content: Optional[str]
-    featured_image: Optional[str]
+    content: str | None
+    featured_image: str | None
     author: dict
     category: str
-    tags: List[str]
+    tags: list[str]
     status: str
-    published_at: Optional[datetime]
+    published_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    read_time: Optional[int]
+    read_time: int | None
     views: int
     likes_count: int
-    ai_summary: Optional[str]
-    related_posts: Optional[List[dict]] = None
+    ai_summary: str | None
+    related_posts: list[dict] | None = None
 
 
 class BlogStatsResponse(BaseModel):
@@ -102,7 +102,7 @@ def calculate_read_time(content: str) -> int:
     return max(1, round(words / 200))
 
 
-async def get_post_tags(supabase, post_id: str) -> List[str]:
+async def get_post_tags(supabase, post_id: str) -> list[str]:
     """Get tags for a post."""
     try:
         response = (
@@ -154,11 +154,13 @@ def ensure_user_can_access_post(
 ) -> None:
     """Allow access for post author or platform admin."""
     if post.get("author_id") != current_user.id and not current_user.is_admin():
-        raise HTTPException(status_code=403, detail="Not authorized to access this post")
+        raise HTTPException(
+            status_code=403, detail="Not authorized to access this post"
+        )
 
 
 def normalize_post_response(
-    post: dict[str, Any], tags: List[str], author: dict
+    post: dict[str, Any], tags: list[str], author: dict
 ) -> dict[str, Any]:
     """Normalize DB shape to frontend blog type shape."""
     return {
@@ -183,7 +185,7 @@ def normalize_post_response(
 
 
 def ensure_unique_slug(
-    supabase, desired_slug: str, exclude_post_id: Optional[str] = None
+    supabase, desired_slug: str, exclude_post_id: str | None = None
 ) -> str:
     """Ensure slug is unique by appending numeric suffix when needed."""
     base_slug = desired_slug
@@ -212,9 +214,9 @@ def ensure_unique_slug(
 async def list_posts(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=50),
-    category: Optional[str] = None,
-    tag: Optional[str] = None,
-    search: Optional[str] = None,
+    category: str | None = None,
+    tag: str | None = None,
+    search: str | None = None,
     sort: str = Query(
         "published_at", pattern="^(published_at|views|likes_count|created_at)$"
     ),
@@ -565,7 +567,7 @@ async def create_post(
         read_time = calculate_read_time(post.content or "")
         published_at = post.published_at
         if post.status == "published" and not published_at:
-            published_at = datetime.now(timezone.utc)
+            published_at = datetime.now(UTC)
 
         # Insert post
         post_data = {
@@ -585,7 +587,9 @@ async def create_post(
         response = supabase.table("blog_posts").insert(post_data).execute()
 
         if not response.data:
-            raise HTTPException(status_code=500, detail="Blog post creation returned no data")
+            raise HTTPException(
+                status_code=500, detail="Blog post creation returned no data"
+            )
 
         created_post = response.data[0]
 
@@ -611,10 +615,11 @@ async def create_post(
 async def list_admin_posts(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    status: Optional[str] = Query(None, pattern="^(draft|published|scheduled)$"),
-    search: Optional[str] = None,
+    status: str | None = Query(None, pattern="^(draft|published|scheduled)$"),
+    search: str | None = None,
     sort: str = Query(
-        "updated_at", pattern="^(updated_at|created_at|published_at|views|likes_count|title)$"
+        "updated_at",
+        pattern="^(updated_at|created_at|published_at|views|likes_count|title)$",
     ),
     order: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: AuthenticatedUser = Depends(get_current_user),
@@ -628,8 +633,10 @@ async def list_admin_posts(
         offset = (page - 1) * limit
 
         list_query = supabase.table("blog_posts").select("*").is_("deleted_at", "null")
-        count_query = supabase.table("blog_posts").select("id", count="exact").is_(
-            "deleted_at", "null"
+        count_query = (
+            supabase.table("blog_posts")
+            .select("id", count="exact")
+            .is_("deleted_at", "null")
         )
 
         if not current_user.is_admin():
@@ -758,12 +765,12 @@ async def update_post(
                 and existing_post.get("status") != "published"
                 and post.published_at is None
             ):
-                update_data["published_at"] = datetime.now(timezone.utc).isoformat()
+                update_data["published_at"] = datetime.now(UTC).isoformat()
         if post.published_at is not None:
             update_data["published_at"] = post.published_at.isoformat()
 
         if update_data:
-            update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+            update_data["updated_at"] = datetime.now(UTC).isoformat()
             supabase.table("blog_posts").update(update_data).eq("id", post_id).execute()
 
         if post.tags is not None:
@@ -773,13 +780,20 @@ async def update_post(
                 supabase.table("blog_tags").insert(tags_data).execute()
 
         updated_response = (
-            supabase.table("blog_posts").select("*").eq("id", post_id).single().execute()
+            supabase.table("blog_posts")
+            .select("*")
+            .eq("id", post_id)
+            .single()
+            .execute()
         )
         updated_post = updated_response.data
         tags = await get_post_tags(supabase, post_id)
         author = await get_post_author(supabase, updated_post["author_id"])
 
-        return {"success": True, "data": normalize_post_response(updated_post, tags, author)}
+        return {
+            "success": True,
+            "data": normalize_post_response(updated_post, tags, author),
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -809,7 +823,7 @@ async def delete_post(
 
         ensure_user_can_access_post(post, current_user)
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         supabase.table("blog_posts").update({"deleted_at": now, "updated_at": now}).eq(
             "id", post_id
         ).execute()
@@ -829,9 +843,11 @@ async def get_admin_blog_stats(
     """Get blog statistics for admin UI."""
     try:
         supabase = get_admin_supabase_client()
-        query = supabase.table("blog_posts").select(
-            "status, views, likes_count, read_time"
-        ).is_("deleted_at", "null")
+        query = (
+            supabase.table("blog_posts")
+            .select("status, views, likes_count, read_time")
+            .is_("deleted_at", "null")
+        )
 
         if not current_user.is_admin():
             query = query.eq("author_id", current_user.id)
@@ -845,10 +861,10 @@ async def get_admin_blog_stats(
         scheduled = sum(1 for row in rows if row.get("status") == "scheduled")
         total_views = sum((row.get("views", 0) or 0) for row in rows)
         total_likes = sum((row.get("likes_count", 0) or 0) for row in rows)
-        read_times = [row.get("read_time", 0) or 0 for row in rows if row.get("read_time")]
-        avg_read_time = (
-            sum(read_times) / len(read_times) if len(read_times) > 0 else 0
-        )
+        read_times = [
+            row.get("read_time", 0) or 0 for row in rows if row.get("read_time")
+        ]
+        avg_read_time = sum(read_times) / len(read_times) if len(read_times) > 0 else 0
 
         return BlogStatsResponse(
             total_posts=total_posts,

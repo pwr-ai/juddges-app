@@ -2,6 +2,7 @@
 Integration tests for admin endpoints.
 Tests /api/admin/* routes - these require admin JWT auth (require_admin).
 """
+
 import pytest
 from httpx import AsyncClient
 

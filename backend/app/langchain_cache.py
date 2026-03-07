@@ -7,10 +7,9 @@ The cache uses PostgreSQL to persist LLM responses across application restarts.
 
 import os
 
-from loguru import logger
-
 from langchain_community.cache import SQLAlchemyMd5Cache
 from langchain_core.globals import set_llm_cache
+from loguru import logger
 from sqlalchemy import create_engine
 
 
@@ -31,10 +30,18 @@ def setup_langchain_cache() -> None:
     """
     try:
         database_url = os.getenv("LANGCHAIN_CACHE_DATABASE_URL")
+        if not database_url:
+            logger.warning(
+                "LANGCHAIN_CACHE_DATABASE_URL not set — skipping cache setup"
+            )
+            return
 
-        logger.info(
-            f"Setting up LangChain PostgreSQL cache at {database_url.split('@')[1]}"
-        )
+        # Extract only the host portion for safe logging (never log credentials)
+        from urllib.parse import urlparse
+
+        parsed = urlparse(database_url)
+        safe_host = f"{parsed.hostname}:{parsed.port or 5432}/{parsed.path.lstrip('/')}"
+        logger.info(f"Setting up LangChain PostgreSQL cache at {safe_host}")
 
         engine = create_engine(database_url)
         set_llm_cache(SQLAlchemyMd5Cache(engine))

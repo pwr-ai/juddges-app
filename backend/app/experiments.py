@@ -7,19 +7,18 @@ Supports A/B tests, multivariate tests, and feature flags.
 Author: Juddges Backend Team
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import (
+    AuthenticatedUser,
     get_optional_user,
     get_user_db_client,
-    AuthenticatedUser,
 )
-
 
 router = APIRouter(prefix="/api/experiments", tags=["Experiments"])
 
@@ -29,57 +28,55 @@ router = APIRouter(prefix="/api/experiments", tags=["Experiments"])
 
 class VariantInput(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     is_control: bool = False
     weight: int = Field(default=50, ge=1, le=100)
-    config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    config: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class CreateExperimentRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    description: Optional[str] = None
-    hypothesis: Optional[str] = None
+    description: str | None = None
+    hypothesis: str | None = None
     experiment_type: Literal["ab_test", "multivariate", "feature_flag"] = "ab_test"
     target_audience: Literal[
         "all_users", "new_users", "returning_users", "percentage"
     ] = "all_users"
     target_percentage: int = Field(default=100, ge=1, le=100)
     primary_metric: str = "conversion"
-    secondary_metrics: Optional[List[str]] = Field(default_factory=list)
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    feature_area: Optional[
-        Literal["ui", "search", "chat", "prompts", "navigation", "other"]
-    ] = None
-    variants: List[VariantInput] = Field(min_length=2)
+    secondary_metrics: list[str] | None = Field(default_factory=list)
+    start_date: str | None = None
+    end_date: str | None = None
+    feature_area: (
+        Literal["ui", "search", "chat", "prompts", "navigation", "other"] | None
+    ) = None
+    variants: list[VariantInput] = Field(min_length=2)
 
 
 class UpdateExperimentRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    hypothesis: Optional[str] = None
-    status: Optional[Literal["draft", "running", "paused", "completed", "archived"]] = (
-        None
-    )
-    target_audience: Optional[
-        Literal["all_users", "new_users", "returning_users", "percentage"]
-    ] = None
-    target_percentage: Optional[int] = Field(default=None, ge=1, le=100)
-    primary_metric: Optional[str] = None
-    secondary_metrics: Optional[List[str]] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    feature_area: Optional[
-        Literal["ui", "search", "chat", "prompts", "navigation", "other"]
-    ] = None
+    name: str | None = None
+    description: str | None = None
+    hypothesis: str | None = None
+    status: Literal["draft", "running", "paused", "completed", "archived"] | None = None
+    target_audience: (
+        Literal["all_users", "new_users", "returning_users", "percentage"] | None
+    ) = None
+    target_percentage: int | None = Field(default=None, ge=1, le=100)
+    primary_metric: str | None = None
+    secondary_metrics: list[str] | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    feature_area: (
+        Literal["ui", "search", "chat", "prompts", "navigation", "other"] | None
+    ) = None
 
 
 class TrackExperimentEventRequest(BaseModel):
     experiment_id: str
     variant_id: str
     event_type: str = Field(min_length=1)
-    event_value: Optional[float] = None
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    event_value: float | None = None
+    metadata: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class VariantResult(BaseModel):
@@ -90,16 +87,16 @@ class VariantResult(BaseModel):
     total_events: int
     conversion_count: int
     conversion_rate: float
-    avg_event_value: Optional[float]
+    avg_event_value: float | None
 
 
 class ExperimentResultsResponse(BaseModel):
     experiment_id: str
     experiment_name: str
     status: str
-    variants: List[VariantResult]
+    variants: list[VariantResult]
     total_participants: int
-    statistical_significance: Optional[float] = None
+    statistical_significance: float | None = None
 
 
 # ===== API Endpoints =====
@@ -107,9 +104,9 @@ class ExperimentResultsResponse(BaseModel):
 
 @router.get("")
 async def list_experiments(
-    status: Optional[str] = None,
-    feature_area: Optional[str] = None,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    status: str | None = None,
+    feature_area: str | None = None,
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """List all experiments, optionally filtered by status or feature area."""
     if not user:
@@ -139,7 +136,7 @@ async def list_experiments(
 @router.get("/{experiment_id}")
 async def get_experiment(
     experiment_id: str,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Get a single experiment with its variants."""
     if not user:
@@ -170,7 +167,7 @@ async def get_experiment(
 @router.post("")
 async def create_experiment(
     request: CreateExperimentRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Create a new experiment with variants."""
     if not user:
@@ -228,7 +225,7 @@ async def create_experiment(
 async def update_experiment(
     experiment_id: str,
     request: UpdateExperimentRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Update an experiment's properties."""
     if not user:
@@ -237,7 +234,7 @@ async def update_experiment(
     try:
         client = get_user_db_client(user)
 
-        update_data = {k: v for k, v in request.dict(exclude_none=True).items()}
+        update_data = dict(request.dict(exclude_none=True).items())
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
 
@@ -265,7 +262,7 @@ async def update_experiment(
 
 @router.get("/active/running")
 async def get_active_experiments(
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Get all currently running experiments with variants - used by frontend for variant assignment."""
     if not user:
@@ -273,7 +270,7 @@ async def get_active_experiments(
 
     try:
         client = get_user_db_client(user)
-        datetime.now(timezone.utc).isoformat()
+        datetime.now(UTC).isoformat()
 
         result = (
             client.table("experiments")
@@ -310,7 +307,7 @@ async def get_active_experiments(
 async def assign_variant(
     experiment_id: str,
     variant_id: str,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Assign a user to a variant. Uses upsert to handle re-assignments."""
     if not user:
@@ -323,7 +320,7 @@ async def assign_variant(
             "experiment_id": experiment_id,
             "variant_id": variant_id,
             "user_id": user.id,
-            "assigned_at": datetime.now(timezone.utc).isoformat(),
+            "assigned_at": datetime.now(UTC).isoformat(),
         }
 
         result = (
@@ -348,7 +345,7 @@ async def assign_variant(
 @router.post("/track")
 async def track_experiment_event(
     request: TrackExperimentEventRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Track an event for an experiment variant."""
     if not user:
@@ -364,7 +361,7 @@ async def track_experiment_event(
             "event_type": request.event_type,
             "event_value": request.event_value,
             "metadata": request.metadata or {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         result = client.table("experiment_events").insert(event_data).execute()
@@ -385,7 +382,7 @@ async def track_experiment_event(
 @router.get("/{experiment_id}/results")
 async def get_experiment_results(
     experiment_id: str,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """Get experiment results with per-variant statistics."""
     if not user:
@@ -454,14 +451,14 @@ async def get_experiment_results(
             conversion_rate = 0.0
             if user_count > 0:
                 len(
-                    set(
+                    {
                         a["variant_id"]
                         for a in v_assignments
                         if any(
                             e["event_type"] == "conversion" and e["variant_id"] == vid
                             for e in v_events
                         )
-                    )
+                    }
                 )
                 conversion_rate = (
                     round(len(v_conversions) / user_count * 100, 2)

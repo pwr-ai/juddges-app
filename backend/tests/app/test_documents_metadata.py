@@ -9,7 +9,6 @@ Tests:
 import pytest
 from httpx import AsyncClient
 
-
 # ============================================================================
 # Document Metadata Tests (GET /documents/{id}/metadata)
 # ============================================================================

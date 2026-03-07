@@ -1,15 +1,13 @@
 """Similarity graph utility functions for document similarity calculations."""
 
 from collections import deque
-from typing import List
 
 import numpy as np
+from juddges_search.models import LegalDocument
 from loguru import logger
 
-from juddges_search.models import LegalDocument
 
-
-def calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+def calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
     """
     Calculate cosine similarity between two vectors.
 
@@ -36,8 +34,8 @@ def calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 def calculate_pairwise_similarities(
-    documents: List[LegalDocument], threshold: float
-) -> List[tuple[str, str, float]]:
+    documents: list[LegalDocument], threshold: float
+) -> list[tuple[str, str, float]]:
     """
     Calculate pairwise similarities between documents using their vector embeddings.
 
@@ -66,7 +64,7 @@ def calculate_pairwise_similarities(
         # Handle both dict and list vector formats
         if isinstance(doc.vectors, dict):
             vector = doc.vectors.get("base") or (
-                list(doc.vectors.values())[0] if doc.vectors else None
+                next(iter(doc.vectors.values())) if doc.vectors else None
             )
         else:
             vector = doc.vectors
@@ -102,7 +100,7 @@ def calculate_pairwise_similarities(
 
     # Extract edges from mask
     edge_indices = np.where(edge_mask)
-    for i, j in zip(edge_indices[0], edge_indices[1]):
+    for i, j in zip(edge_indices[0], edge_indices[1], strict=False):
         similarity = float(max(0.0, min(1.0, similarity_matrix[i, j])))
         edges.append((doc_ids[i], doc_ids[j], similarity))
 
@@ -111,7 +109,7 @@ def calculate_pairwise_similarities(
 
 
 def calculate_clusters(
-    documents: List[LegalDocument], edges: List[tuple[str, str, float]]
+    documents: list[LegalDocument], edges: list[tuple[str, str, float]]
 ) -> dict[str, int]:
     """
     Calculate cluster IDs using simple connected components algorithm.

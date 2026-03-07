@@ -1,16 +1,16 @@
 """Edge case tests for schema generation."""
 
 import pytest
-from langchain_openai import ChatOpenAI
 from juddges_search.models import DocumentType
+from langchain_openai import ChatOpenAI
 
+from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,
     load_prompts,
     route_after_assessment,
     route_after_data_assessment_merger,
 )
-from schema_generator_agent.agents.agent_state import AgentState
 
 
 @pytest.fixture
@@ -244,6 +244,7 @@ def test_route_after_data_assessment_merger_complete():
 def test_empty_user_input_handling():
     """Test that empty user input is handled gracefully."""
     from langchain_openai import ChatOpenAI
+
     from schema_generator_agent.agents.basic_agents import ProblemDefinerHelperAgent
 
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
@@ -280,6 +281,7 @@ def test_empty_user_input_handling():
 def test_very_long_user_input():
     """Test handling of very long user input."""
     from langchain_openai import ChatOpenAI
+
     from schema_generator_agent.agents.basic_agents import ProblemDefinerHelperAgent
 
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)

@@ -15,10 +15,10 @@ router.include_router(prompts_router, prefix="/extractions")
 router.include_router(results_router, prefix="/extractions")
 
 __all__ = [
-    "router",
+    "get_current_user",
     "jobs_router",
     "prompts_router",
     "results_router",
-    "get_current_user",
+    "router",
     "simplify_job_status",
 ]

@@ -14,7 +14,6 @@ from app.services.search_analytics import (
     record_search_query,
 )
 
-
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
 
@@ -113,4 +112,3 @@ async def zero_result_queries_endpoint(
     """Return queries that produced zero search results."""
     rows = await get_zero_result_queries(days=days, limit=limit)
     return [ZeroResultQueryItem(**r) for r in rows]
-

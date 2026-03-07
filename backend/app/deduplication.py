@@ -9,14 +9,13 @@ Provides:
 
 import hashlib
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
+from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
-
-from juddges_search.db.supabase_db import get_vector_db
 
 router = APIRouter(prefix="/deduplication", tags=["deduplication"])
 
@@ -29,16 +28,16 @@ class DuplicatePair(BaseModel):
 
     document_id_a: str
     document_id_b: str
-    title_a: Optional[str] = None
-    title_b: Optional[str] = None
-    document_type_a: Optional[str] = None
-    document_type_b: Optional[str] = None
-    date_issued_a: Optional[str] = None
-    date_issued_b: Optional[str] = None
+    title_a: str | None = None
+    title_b: str | None = None
+    document_type_a: str | None = None
+    document_type_b: str | None = None
+    date_issued_a: str | None = None
+    date_issued_b: str | None = None
     similarity_score: float = Field(ge=0.0, le=1.0)
     duplicate_type: str = Field(description="'exact' or 'near_duplicate'")
-    content_hash_a: Optional[str] = None
-    content_hash_b: Optional[str] = None
+    content_hash_a: str | None = None
+    content_hash_b: str | None = None
 
 
 class DuplicateGroup(BaseModel):
@@ -47,7 +46,7 @@ class DuplicateGroup(BaseModel):
     group_id: str
     canonical_document_id: str
     duplicate_type: str
-    members: List[Dict[str, Any]]
+    members: list[dict[str, Any]]
     member_count: int
 
 
@@ -79,8 +78,8 @@ class ScanRequest(BaseModel):
 class ScanResponse(BaseModel):
     """Response from a deduplication scan."""
 
-    exact_duplicates: List[DuplicatePair]
-    near_duplicates: List[DuplicatePair]
+    exact_duplicates: list[DuplicatePair]
+    near_duplicates: list[DuplicatePair]
     total_documents_scanned: int
     total_exact_duplicates: int
     total_near_duplicates: int
@@ -105,9 +104,9 @@ class CheckDocumentResponse(BaseModel):
     document_id: str
     has_exact_duplicate: bool
     has_near_duplicates: bool
-    exact_duplicates: List[Dict[str, Any]]
-    near_duplicates: List[DuplicatePair]
-    content_hash: Optional[str] = None
+    exact_duplicates: list[dict[str, Any]]
+    near_duplicates: list[DuplicatePair]
+    content_hash: str | None = None
 
 
 class DeduplicationStatsResponse(BaseModel):
@@ -265,12 +264,12 @@ async def scan_for_duplicates(request: ScanRequest) -> ScanResponse:
             scan_time_ms=0.0,
         )
 
-    exact_duplicates: List[DuplicatePair] = []
-    near_duplicates: List[DuplicatePair] = []
+    exact_duplicates: list[DuplicatePair] = []
+    near_duplicates: list[DuplicatePair] = []
 
     # --- Exact duplicate detection via content hashing ---
     if request.include_exact:
-        hash_to_docs: Dict[str, List[Dict]] = {}
+        hash_to_docs: dict[str, list[dict]] = {}
         for doc in docs:
             full_text = doc.get("full_text", "")
             if not full_text:
@@ -412,7 +411,7 @@ async def check_document_duplicates(
     content_hash = compute_content_hash(full_text) if full_text else None
 
     # Check for exact duplicates by hash
-    exact_duplicates: List[Dict[str, Any]] = []
+    exact_duplicates: list[dict[str, Any]] = []
     if content_hash:
         try:
             hash_resp = (
@@ -456,7 +455,7 @@ async def check_document_duplicates(
                 logger.warning(f"Error checking text-based duplicates: {e}")
 
     # Check for near-duplicates by embedding similarity
-    near_duplicates: List[DuplicatePair] = []
+    near_duplicates: list[DuplicatePair] = []
     embedding = doc_data.get("embedding")
     if embedding and isinstance(embedding, list) and len(embedding) > 0:
         try:
@@ -513,7 +512,7 @@ async def check_document_duplicates(
 )
 async def compute_hashes(
     limit: int = Query(100, ge=1, le=500, description="Maximum documents to process"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compute and store SHA-256 content hashes for documents that don't have one yet."""
     db = get_vector_db()
 

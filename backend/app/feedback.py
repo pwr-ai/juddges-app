@@ -8,15 +8,14 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
-from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.auth_jwt import get_optional_user, get_user_db_client, AuthenticatedUser
-
+from app.core.auth_jwt import AuthenticatedUser, get_optional_user, get_user_db_client
 
 # Router configuration
 router = APIRouter(prefix="/api/feedback", tags=["User Feedback"])
@@ -29,43 +28,43 @@ class SearchFeedbackContext(BaseModel):
     """Enriched search context for evaluation dataset building."""
 
     # Filter state at time of search
-    filters: Optional[dict] = Field(
+    filters: dict | None = Field(
         None,
         description="Active filters: courts, date_from, date_to, document_types, languages, keywords, legal_concepts, issuing_bodies",
     )
 
     # Search parameters
-    search_params: Optional[dict] = Field(
+    search_params: dict | None = Field(
         None,
         description="Search params: mode (rabbit/thinking), embedding_model, top_k, reranking_enabled, reranking_model",
     )
 
     # Result context
-    result_context: Optional[dict] = Field(
+    result_context: dict | None = Field(
         None,
         description="Result context: total_results, retrieval_score, reranking_score, page_number, page_size",
     )
 
     # Document identifiers and metadata
-    document: Optional[dict] = Field(
+    document: dict | None = Field(
         None,
         description="Document info: document_id, document_number, uuid, title, document_type, court, date, language, country",
     )
 
     # User interaction timing
-    interaction: Optional[dict] = Field(
+    interaction: dict | None = Field(
         None,
         description="Interaction timing: search_timestamp, feedback_timestamp, time_to_feedback_ms, document_opened, chunks_expanded",
     )
 
     # Chunk information (if feedback on specific chunk)
-    chunk_info: Optional[dict] = Field(
+    chunk_info: dict | None = Field(
         None,
         description="Chunk info: chunk_id, chunk_score, chunk_position, chunk_text",
     )
 
     # All chunks displayed for this document
-    chunks: Optional[list] = Field(
+    chunks: list | None = Field(
         None,
         description="All displayed chunks: [{chunk_id, chunk_text, chunk_score, position}]",
     )
@@ -79,14 +78,14 @@ class SearchFeedbackRequest(BaseModel):
     rating: Literal["relevant", "not_relevant", "somewhat_relevant"] = Field(
         description="Relevance rating for this result"
     )
-    session_id: Optional[str] = Field(None, description="Session ID for tracking")
-    result_position: Optional[int] = Field(
+    session_id: str | None = Field(None, description="Session ID for tracking")
+    result_position: int | None = Field(
         None, description="Position of this result in search results (1-based)", ge=1
     )
-    reason: Optional[str] = Field(
+    reason: str | None = Field(
         None, description="Optional text reason for the rating", max_length=500
     )
-    search_context: Optional[dict] = Field(
+    search_context: dict | None = Field(
         None,
         description="""Enriched search context for evaluation dataset. Structure:
         {
@@ -105,7 +104,7 @@ class SearchFeedbackResponse(BaseModel):
     """Response for search feedback submission."""
 
     status: Literal["success", "failed"]
-    feedback_id: Optional[str] = None
+    feedback_id: str | None = None
     message: str
 
 
@@ -115,7 +114,7 @@ class FeatureFeedbackRequest(BaseModel):
     feedback_type: Literal["bug_report", "feature_request", "improvement", "praise"] = (
         Field(description="Type of feedback")
     )
-    feature_name: Optional[str] = Field(
+    feature_name: str | None = Field(
         None,
         description="Name of the feature this feedback relates to",
         examples=["search", "collections", "document_viewer", "ai_chat"],
@@ -131,13 +130,11 @@ class FeatureFeedbackRequest(BaseModel):
         min_length=10,
         max_length=2000,
     )
-    user_email: Optional[str] = Field(
-        None, description="Email for follow-up (optional)"
-    )
+    user_email: str | None = Field(None, description="Email for follow-up (optional)")
     priority: Literal["low", "medium", "high", "critical"] = Field(
         default="medium", description="User-perceived priority"
     )
-    attachments: Optional[List[str]] = Field(
+    attachments: list[str] | None = Field(
         None, description="URLs to screenshots or other attachments", max_length=5
     )
 
@@ -146,9 +143,9 @@ class FeatureFeedbackResponse(BaseModel):
     """Response for feature feedback submission."""
 
     status: Literal["success", "failed"]
-    feedback_id: Optional[str] = None
+    feedback_id: str | None = None
     message: str
-    thank_you_message: Optional[str] = None
+    thank_you_message: str | None = None
 
 
 class FeedbackSummary(BaseModel):
@@ -158,8 +155,8 @@ class FeedbackSummary(BaseModel):
     positive_count: int
     negative_count: int
     neutral_count: int
-    average_rating: Optional[float] = None
-    recent_feedback: List[dict] = Field(
+    average_rating: float | None = None
+    recent_feedback: list[dict] = Field(
         default_factory=list, description="Sample of recent feedback items"
     )
 
@@ -272,7 +269,7 @@ Expected Supabase tables (create these manually or via migration):
 @router.post("/search", response_model=SearchFeedbackResponse)
 async def submit_search_feedback(
     request: SearchFeedbackRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Submit feedback on search result relevance.
@@ -312,7 +309,7 @@ async def submit_search_feedback(
             "result_position": request.result_position,
             "reason": request.reason,
             "search_context": request.search_context or {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         result = client.table("search_feedback").insert(feedback_data).execute()
@@ -340,14 +337,14 @@ async def submit_search_feedback(
         return SearchFeedbackResponse(
             status="failed",
             feedback_id=None,
-            message=f"Failed to submit feedback: {str(e)}",
+            message=f"Failed to submit feedback: {e!s}",
         )
 
 
 @router.post("/feature", response_model=FeatureFeedbackResponse)
 async def submit_feature_feedback(
     request: FeatureFeedbackRequest,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Submit general feature feedback or feature request.
@@ -397,8 +394,8 @@ async def submit_feature_feedback(
             "status": "new",  # Initial status
             "attachments": request.attachments or [],
             "upvotes": 0,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
         }
 
         result = client.table("feature_requests").insert(feedback_data).execute()
@@ -433,17 +430,17 @@ async def submit_feature_feedback(
         return FeatureFeedbackResponse(
             status="failed",
             feedback_id=None,
-            message=f"Failed to submit feedback: {str(e)}",
+            message=f"Failed to submit feedback: {e!s}",
             thank_you_message=None,
         )
 
 
 @router.get("/search/summary", response_model=FeedbackSummary)
 async def get_search_feedback_summary(
-    document_id: Optional[str] = None,
-    search_query: Optional[str] = None,
+    document_id: str | None = None,
+    search_query: str | None = None,
     limit: int = 10,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Get summary of search feedback.
@@ -527,16 +524,16 @@ async def get_search_feedback_summary(
     except Exception as e:
         logger.error(f"Failed to get feedback summary: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve feedback summary: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve feedback summary: {e!s}"
         )
 
 
 @router.get("/feature/recent")
 async def get_recent_feature_feedback(
-    feedback_type: Optional[str] = None,
-    feature_name: Optional[str] = None,
+    feedback_type: str | None = None,
+    feature_name: str | None = None,
     limit: int = 20,
-    user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Get recent feature feedback and requests.
@@ -593,13 +590,13 @@ async def get_recent_feature_feedback(
     except Exception as e:
         logger.error(f"Failed to get recent feedback: {e}")
         raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve recent feedback: {str(e)}"
+            status_code=500, detail=f"Failed to retrieve recent feedback: {e!s}"
         )
 
 
 @router.post("/feature/{feedback_id}/upvote")
 async def upvote_feature_request(
-    feedback_id: str, user: Optional[AuthenticatedUser] = Depends(get_optional_user)
+    feedback_id: str, user: AuthenticatedUser | None = Depends(get_optional_user)
 ):
     """
     Upvote a feature request to show support.
@@ -666,7 +663,7 @@ async def upvote_feature_request(
         raise
     except Exception as e:
         logger.error(f"Failed to upvote feature request: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to upvote: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upvote: {e!s}")
 
 
 logger.info("Feedback module initialized")

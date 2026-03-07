@@ -10,12 +10,11 @@ from app.services.search import MeiliSearchService, SearchServiceError
 
 def _mock_response(status_code: int, json_data: dict) -> httpx.Response:
     """Create an httpx.Response with a request attached (required for raise_for_status)."""
-    resp = httpx.Response(
+    return httpx.Response(
         status_code,
         json=json_data,
         request=httpx.Request("GET", "http://test"),
     )
-    return resp
 
 
 @pytest.fixture
@@ -45,9 +44,7 @@ class TestConfiguredProperties:
         assert service.configured is True
 
     def test_configured_false_no_url(self):
-        svc = MeiliSearchService(
-            base_url=None, api_key="key", index_name="idx"
-        )
+        svc = MeiliSearchService(base_url=None, api_key="key", index_name="idx")
         assert svc.configured is False
 
     def test_admin_configured_true(self, service):
@@ -78,9 +75,7 @@ class TestAutocomplete:
 
     @pytest.mark.asyncio
     async def test_autocomplete_raises_when_not_configured(self):
-        svc = MeiliSearchService(
-            base_url=None, api_key=None, index_name="idx"
-        )
+        svc = MeiliSearchService(base_url=None, api_key=None, index_name="idx")
         with pytest.raises(SearchServiceError, match="not configured"):
             await svc.autocomplete("test")
 
@@ -92,7 +87,9 @@ class TestAutocomplete:
             mock_post.return_value = mock_resp
             await service.autocomplete("test", filters="jurisdiction = 'PL'")
 
-        payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
+        payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get(
+            "json"
+        )
         assert payload["filter"] == "jurisdiction = 'PL'"
 
 
@@ -172,9 +169,7 @@ class TestAdminMethods:
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_resp
             with pytest.raises(SearchServiceError, match="did not complete"):
-                await service.wait_for_task(
-                    7, poll_interval=0.01, max_wait=0.03
-                )
+                await service.wait_for_task(7, poll_interval=0.01, max_wait=0.03)
 
     @pytest.mark.asyncio
     async def test_health(self, service):
@@ -188,9 +183,7 @@ class TestAdminMethods:
 
     @pytest.mark.asyncio
     async def test_get_index_stats(self, service):
-        mock_resp = _mock_response(
-            200, {"numberOfDocuments": 42, "isIndexing": False}
-        )
+        mock_resp = _mock_response(200, {"numberOfDocuments": 42, "isIndexing": False})
 
         with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
             mock_get.return_value = mock_resp

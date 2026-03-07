@@ -8,10 +8,10 @@ Tests for rate limiting functionality including:
 - Bypass for authenticated users (if applicable)
 """
 
-import pytest
 import asyncio
+
+import pytest
 from httpx import AsyncClient
-from typing import Dict
 
 
 @pytest.mark.anyio
@@ -21,7 +21,7 @@ class TestRateLimiting:
     """Test rate limiting functionality."""
 
     async def test_rate_limit_not_triggered_under_threshold(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that normal usage doesn't trigger rate limiting."""
         # Make reasonable number of requests
@@ -33,12 +33,12 @@ class TestRateLimiting:
             await asyncio.sleep(0.1)  # Small delay between requests
 
     async def test_rate_limit_enforced_when_exceeded(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that rate limiting is enforced after exceeding limit."""
         # Make many rapid requests
 
-        for i in range(150):  # Assuming limit is around 100 per minute
+        for _i in range(150):  # Assuming limit is around 100 per minute
             response = await client.get("/health/healthz", headers=valid_api_headers)
 
             if response.status_code == 429:
@@ -53,13 +53,13 @@ class TestRateLimiting:
         # This test documents expected behavior if it is enabled
 
     async def test_rate_limit_reset_after_window(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that rate limit resets after time window."""
         # Make requests until rate limited
         rate_limited_response = None
 
-        for i in range(150):
+        for _i in range(150):
             response = await client.get("/health/healthz", headers=valid_api_headers)
             if response.status_code == 429:
                 rate_limited_response = response
@@ -80,7 +80,7 @@ class TestRateLimiting:
                 # May or may not succeed depending on actual reset time
 
     async def test_rate_limit_headers_present(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that rate limit headers are present in responses."""
         response = await client.get("/documents", headers=valid_api_headers)
@@ -95,7 +95,7 @@ class TestRateLimiting:
         }
 
         # If any rate limit header is present, document it
-        for header, description in rate_limit_headers.items():
+        for header in rate_limit_headers:
             if header in headers:
                 value = headers[header]
                 # Should be numeric
@@ -103,11 +103,11 @@ class TestRateLimiting:
                     assert value.isdigit(), f"{header} should be numeric: {value}"
 
     async def test_rate_limit_429_response_format(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that 429 responses have correct format."""
         # Try to trigger rate limit
-        for i in range(200):
+        for _i in range(200):
             response = await client.get("/health/healthz", headers=valid_api_headers)
 
             if response.status_code == 429:
@@ -128,7 +128,7 @@ class TestRateLimiting:
                 break
 
     async def test_different_endpoints_share_rate_limit(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test whether different endpoints share the same rate limit."""
         endpoints = ["/health/healthz", "/docs", "/openapi.json"]
@@ -146,12 +146,12 @@ class TestRateLimiting:
         # Document whether rate limits are shared or per-endpoint
 
     async def test_rate_limit_per_ip_or_per_key(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test whether rate limiting is per IP or per API key."""
         # Make many requests with same API key
         responses_same_key = []
-        for i in range(100):
+        for _i in range(100):
             response = await client.get("/health/healthz", headers=valid_api_headers)
             responses_same_key.append(response)
 
@@ -168,7 +168,7 @@ class TestRateLimitBypass:
     """Test rate limit bypass mechanisms for privileged users."""
 
     async def test_authenticated_users_higher_limits(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that authenticated users may have higher rate limits."""
         # Authenticated requests with user ID
@@ -176,13 +176,13 @@ class TestRateLimitBypass:
 
         # Make many requests
         auth_responses = []
-        for i in range(100):
+        for _i in range(100):
             response = await client.get("/documents", headers=auth_headers)
             auth_responses.append(response)
 
         # Compare to unauthenticated requests
         unauth_responses = []
-        for i in range(100):
+        for _i in range(100):
             response = await client.get("/documents", headers=valid_api_headers)
             unauth_responses.append(response)
 
@@ -223,7 +223,7 @@ class TestRateLimitSecurity:
         # (if rate limiting is enabled)
 
     async def test_rate_limit_prevents_enumeration(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test that rate limiting helps prevent user enumeration."""
         # Simulate user enumeration attempt
@@ -238,7 +238,7 @@ class TestRateLimitSecurity:
                 break
 
     async def test_distributed_rate_limit_attack(
-        self, client: AsyncClient, valid_api_headers: Dict[str, str]
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
         """Test behavior under distributed attack simulation."""
         # Simulate requests from different "sources"

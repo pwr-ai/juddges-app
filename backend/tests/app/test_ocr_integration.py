@@ -1,4 +1,5 @@
 """Integration tests for OCR endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

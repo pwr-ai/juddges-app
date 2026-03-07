@@ -22,12 +22,15 @@ import time
 from datetime import date
 from importlib import import_module
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from httpx import AsyncClient
 
 import app.documents as documents_module
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
+
 results_router_module = import_module("app.extraction_domain.results_router")
 
 
@@ -66,7 +69,9 @@ def _has_real_openai_key() -> bool:
     return key.startswith("sk-")
 
 
-def _heuristic_judge_validity(query: str, chunks: list[dict[str, Any]]) -> dict[str, Any]:
+def _heuristic_judge_validity(
+    query: str, chunks: list[dict[str, Any]]
+) -> dict[str, Any]:
     """Initial relevance judge used in tests.
 
     This is intentionally lightweight and deterministic for CI:
@@ -95,7 +100,9 @@ def _heuristic_judge_validity(query: str, chunks: list[dict[str, Any]]) -> dict[
         )
 
     valid_ratio = (
-        sum(1 for j in judgments if j["is_valid"]) / len(judgments) if judgments else 0.0
+        sum(1 for j in judgments if j["is_valid"]) / len(judgments)
+        if judgments
+        else 0.0
     )
     avg_score = (
         sum(float(j["score"]) for j in judgments) / len(judgments) if judgments else 0.0
@@ -151,10 +158,14 @@ async def _judge_validity(query: str, chunks: list[dict[str, Any]]) -> dict[str,
             )
 
         valid_ratio = (
-            sum(1 for j in judgments if j["is_valid"]) / len(judgments) if judgments else 0.0
+            sum(1 for j in judgments if j["is_valid"]) / len(judgments)
+            if judgments
+            else 0.0
         )
         avg_score = (
-            sum(float(j["score"]) for j in judgments) / len(judgments) if judgments else 0.0
+            sum(float(j["score"]) for j in judgments) / len(judgments)
+            if judgments
+            else 0.0
         )
         return {
             "judge_name": "openai:gpt-4o-mini",
@@ -174,7 +185,9 @@ def _to_date(value: str | date | None) -> date | None:
     return date.fromisoformat(value)
 
 
-def _array_overlaps(row_values: list[str] | None, filter_values: list[str] | None) -> bool:
+def _array_overlaps(
+    row_values: list[str] | None, filter_values: list[str] | None
+) -> bool:
     if filter_values is None:
         return True
     if not row_values:
@@ -223,15 +236,24 @@ class _FakeSupabase:
 
         for row in self._rows:
             row_date = _to_date(row.get("decision_date"))
-            if filter_jurisdictions and row.get("jurisdiction") not in filter_jurisdictions:
+            if (
+                filter_jurisdictions
+                and row.get("jurisdiction") not in filter_jurisdictions
+            ):
                 continue
             if filter_court_names and row.get("court_name") not in filter_court_names:
                 continue
-            if filter_court_levels and row.get("court_level") not in filter_court_levels:
+            if (
+                filter_court_levels
+                and row.get("court_level") not in filter_court_levels
+            ):
                 continue
             if filter_case_types and row.get("case_type") not in filter_case_types:
                 continue
-            if filter_decision_types and row.get("decision_type") not in filter_decision_types:
+            if (
+                filter_decision_types
+                and row.get("decision_type") not in filter_decision_types
+            ):
                 continue
             if filter_outcomes and row.get("outcome") not in filter_outcomes:
                 continue
@@ -243,7 +265,9 @@ class _FakeSupabase:
                 continue
             if not _array_overlaps(row.get("legal_topics"), filter_legal_topics):
                 continue
-            if not _array_overlaps(row.get("cited_legislation"), filter_cited_legislation):
+            if not _array_overlaps(
+                row.get("cited_legislation"), filter_cited_legislation
+            ):
                 continue
 
             text_tokens = _tokenize(
@@ -257,7 +281,9 @@ class _FakeSupabase:
             )
             semantic_tokens = set(row.get("semantic_tags", []))
             text_score = len(query_tokens & text_tokens) / max(len(query_tokens), 1)
-            vector_score = len(query_tokens & semantic_tokens) / max(len(query_tokens), 1)
+            vector_score = len(query_tokens & semantic_tokens) / max(
+                len(query_tokens), 1
+            )
             combined_score = (alpha * vector_score) + ((1.0 - alpha) * text_score)
 
             if search_text and combined_score == 0:
@@ -304,7 +330,9 @@ class _FakeSupabase:
         matched.sort(key=lambda r: r["combined_score"], reverse=True)
         return matched[offset : offset + limit]
 
-    def _filter_documents_by_extracted_data(self, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def _filter_documents_by_extracted_data(
+        self, params: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         p_filters = params.get("p_filters") or {}
         p_text_query = (params.get("p_text_query") or "").lower().strip()
         p_limit = int(params.get("p_limit", 50))
@@ -327,7 +355,9 @@ class _FakeSupabase:
                 expected_outcomes = p_filters["appeal_outcome"]
                 if not isinstance(expected_outcomes, list):
                     expected_outcomes = [expected_outcomes]
-                if not _array_overlaps(row.get("base_appeal_outcome"), expected_outcomes):
+                if not _array_overlaps(
+                    row.get("base_appeal_outcome"), expected_outcomes
+                ):
                     continue
 
             if p_text_query:
@@ -627,7 +657,12 @@ async def test_case_04_thinking_mode(
     response, latency_ms = await _post_with_timing(
         authenticated_client,
         "/documents/search",
-        {"query": "challenge vat ruling", "mode": "thinking", "alpha": 0.5, "limit_docs": 10},
+        {
+            "query": "challenge vat ruling",
+            "mode": "thinking",
+            "alpha": 0.5,
+            "limit_docs": 10,
+        },
     )
     assert response.status_code == 200
     assert latency_ms < 2000
@@ -814,7 +849,11 @@ async def test_latency_and_judged_accuracy_summary(
         avg_scores.append(judge["avg_score"])
         valid_ratios.append(judge["valid_ratio"])
 
-    p95 = statistics.quantiles(latencies, n=20)[18] if len(latencies) >= 20 else max(latencies)
+    p95 = (
+        statistics.quantiles(latencies, n=20)[18]
+        if len(latencies) >= 20
+        else max(latencies)
+    )
     avg_latency = statistics.mean(latencies)
     avg_judge_score = statistics.mean(avg_scores)
     avg_valid_ratio = statistics.mean(valid_ratios)

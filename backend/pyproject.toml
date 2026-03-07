@@ -82,6 +82,35 @@ markers = [
     "unit: marks tests as unit tests",
 ]
 
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "C4", "SIM", "RET", "PTH", "PERF", "B", "S", "RUF", "TC", "FA"]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "S101",   # assert usage (needed in tests)
+    "B008",   # function call in default arg (FastAPI Depends pattern)
+    "B904",   # raise from in except (TODO: fix incrementally)
+    "PTH123", # open() vs Path.open() (style preference)
+    "S311",   # random module (non-security uses are fine)
+    "PERF401", # list comprehension (TODO: fix incrementally)
+    "S110",    # try-except-pass (TODO: add logging incrementally)
+    "RUF012",  # mutable class variable (Pydantic models use this pattern)
+    "S608",    # SQL string concat (only in admin scripts)
+    "PTH118",  # os.path.join (sys.path manipulation needs os.path)
+    "PTH120",  # os.path.dirname (sys.path manipulation needs os.path)
+    "S314",    # XML parsing (xml_converter uses lxml safely)
+    "S104",    # bind all interfaces (intentional for Docker)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["S101", "S106", "SIM102"]
+"scripts/**/*.py" = ["S608"]
+"examples/**/*.py" = ["S113"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

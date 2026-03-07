@@ -2,6 +2,7 @@
 Integration tests for guest session endpoints.
 Tests /api/guest/* routes for session management.
 """
+
 import pytest
 from httpx import AsyncClient
 

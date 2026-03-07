@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from app.services.search import MeiliSearchService
+if TYPE_CHECKING:
+    from app.services.search import MeiliSearchService
 
 # Index settings applied when the index is first created or reconfigured.
 # Order of searchableAttributes affects relevance ranking — earlier = higher weight.

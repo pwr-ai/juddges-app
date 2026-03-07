@@ -10,8 +10,8 @@ Includes:
 - SSO login event audit log
 """
 
-from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -22,7 +22,6 @@ from app.core.auth_jwt import (
     get_admin_supabase_client,
     require_admin,
 )
-
 
 router = APIRouter(prefix="/api/sso", tags=["SSO Management"])
 
@@ -52,7 +51,7 @@ class SSOConnectionCreateSAML(SSOConnectionBase):
     saml_entity_id: str = Field(description="IdP Entity ID")
     saml_sso_url: str = Field(description="IdP SSO Login URL")
     saml_certificate: str = Field(description="IdP X.509 certificate (PEM format)")
-    saml_metadata_url: Optional[str] = Field(
+    saml_metadata_url: str | None = Field(
         None, description="IdP metadata URL for auto-config"
     )
 
@@ -65,7 +64,7 @@ class SSOConnectionCreateOAuth(SSOConnectionBase):
     oauth_client_secret: str = Field(description="OAuth client secret")
     oauth_authorization_url: str = Field(description="Authorization endpoint URL")
     oauth_token_url: str = Field(description="Token endpoint URL")
-    oauth_userinfo_url: Optional[str] = Field(None, description="UserInfo endpoint URL")
+    oauth_userinfo_url: str | None = Field(None, description="UserInfo endpoint URL")
     oauth_scopes: str = Field(
         default="openid email profile", description="OAuth scopes"
     )
@@ -83,21 +82,21 @@ class SSOConnectionResponse(BaseModel):
     domain: str
     auto_provision_users: bool
     default_account_type: str
-    supabase_provider_id: Optional[str] = None
+    supabase_provider_id: str | None = None
     created_at: str
     updated_at: str
 
     # SAML fields (only for SAML connections)
-    saml_entity_id: Optional[str] = None
-    saml_sso_url: Optional[str] = None
-    saml_metadata_url: Optional[str] = None
+    saml_entity_id: str | None = None
+    saml_sso_url: str | None = None
+    saml_metadata_url: str | None = None
 
     # OAuth fields (only for OAuth connections)
-    oauth_client_id: Optional[str] = None
-    oauth_authorization_url: Optional[str] = None
-    oauth_token_url: Optional[str] = None
-    oauth_userinfo_url: Optional[str] = None
-    oauth_scopes: Optional[str] = None
+    oauth_client_id: str | None = None
+    oauth_authorization_url: str | None = None
+    oauth_token_url: str | None = None
+    oauth_userinfo_url: str | None = None
+    oauth_scopes: str | None = None
 
 
 class SSOConnectionUpdateStatus(BaseModel):
@@ -110,10 +109,10 @@ class SSODomainCheckResponse(BaseModel):
     """Response for domain-based SSO discovery."""
 
     sso_enabled: bool
-    provider_type: Optional[str] = None
-    connection_id: Optional[str] = None
-    connection_name: Optional[str] = None
-    organization: Optional[str] = None
+    provider_type: str | None = None
+    connection_id: str | None = None
+    connection_name: str | None = None
+    organization: str | None = None
 
 
 class SSOLoginEventResponse(BaseModel):
@@ -121,12 +120,12 @@ class SSOLoginEventResponse(BaseModel):
 
     id: str
     connection_id: str
-    connection_name: Optional[str] = None
-    user_id: Optional[str] = None
+    connection_name: str | None = None
+    user_id: str | None = None
     email: str
     event_type: str
-    ip_address: Optional[str] = None
-    error_message: Optional[str] = None
+    ip_address: str | None = None
+    error_message: str | None = None
     created_at: str
 
 
@@ -137,8 +136,7 @@ def _slugify(name: str) -> str:
     slug = name.lower().strip()
     slug = re.sub(r"[^\w\s-]", "", slug)
     slug = re.sub(r"[\s_]+", "-", slug)
-    slug = re.sub(r"-+", "-", slug)
-    return slug
+    return re.sub(r"-+", "-", slug)
 
 
 # ===== Public Endpoints (for login flow) =====
@@ -189,11 +187,11 @@ async def check_domain_sso(
 
 @router.get(
     "/connections",
-    response_model=List[SSOConnectionResponse],
+    response_model=list[SSOConnectionResponse],
     summary="List all SSO connections",
 )
 async def list_connections(
-    status: Optional[str] = Query(None, description="Filter by status"),
+    status: str | None = Query(None, description="Filter by status"),
     admin: AuthenticatedUser = Depends(require_admin),
 ):
     """List all SSO connections. Admin only."""
@@ -359,7 +357,7 @@ async def update_connection_status(
             .update(
                 {
                     "status": update.status,
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(UTC).isoformat(),
                 }
             )
             .eq("id", connection_id)
@@ -406,7 +404,7 @@ async def delete_connection(
 
 @router.get(
     "/connections/{connection_id}/events",
-    response_model=List[SSOLoginEventResponse],
+    response_model=list[SSOLoginEventResponse],
     summary="Get SSO login events for a connection",
 )
 async def get_connection_events(

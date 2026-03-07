@@ -1,4 +1,5 @@
 """Integration tests for playground endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -7,7 +8,9 @@ from httpx import AsyncClient
 @pytest.mark.api
 async def test_playground_extract_requires_auth(client: AsyncClient):
     """Playground extract should reject unauthenticated requests."""
-    response = await client.post("/playground/extract", json={"text": "test", "schema_id": "s1"})
+    response = await client.post(
+        "/playground/extract", json={"text": "test", "schema_id": "s1"}
+    )
     assert response.status_code in [401, 403]
 
 

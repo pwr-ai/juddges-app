@@ -9,15 +9,15 @@ Provides intelligent research assistance by:
 - Saving and managing research contexts
 """
 
-from typing import Literal, Optional
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import AuthenticatedUser, get_optional_user
-from juddges_search.db.supabase_db import get_vector_db
 from app.core.supabase import get_supabase_client
 from app.documents import generate_embedding
 from app.models import validate_id_format
@@ -175,7 +175,7 @@ class SaveResearchContextRequest(BaseModel):
 )
 async def analyze_research(
     request: AnalyzeResearchRequest,
-    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    current_user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> AnalyzeResearchResponse:
     """Analyze user's research context using LLM to identify topics, gaps, and next steps."""
     user_id = current_user.id if current_user else None
@@ -231,7 +231,7 @@ async def analyze_research(
     description="Get lightweight suggestions without full LLM analysis.",
 )
 async def get_suggestions(
-    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    current_user: AuthenticatedUser | None = Depends(get_optional_user),
     query: str | None = Query(default=None, description="Optional query context"),
     document_id: str | None = Query(
         default=None, description="Optional document ID for similar documents"
@@ -325,7 +325,7 @@ async def get_suggestions(
     description="List user's saved research contexts.",
 )
 async def list_research_contexts(
-    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    current_user: AuthenticatedUser | None = Depends(get_optional_user),
     limit: int = Query(10, ge=1, le=50, description="Number of contexts to return"),
     status: str = Query("active", description="Filter by status"),
 ) -> list[SavedResearchContext]:
@@ -380,11 +380,13 @@ async def list_research_contexts(
 )
 async def save_research_context(
     request: SaveResearchContextRequest,
-    current_user: Optional[AuthenticatedUser] = Depends(get_optional_user),
+    current_user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> SavedResearchContext:
     """Save a research context. Requires authentication."""
     if not current_user:
-        raise HTTPException(status_code=401, detail="Authentication required to save context.")
+        raise HTTPException(
+            status_code=401, detail="Authentication required to save context."
+        )
     user_id = current_user.id
 
     try:
@@ -594,9 +596,7 @@ Respond ONLY with valid JSON in this exact format:
         # Parse JSON response
         import json
 
-        analysis = json.loads(content)
-
-        return analysis
+        return json.loads(content)
 
     except Exception as e:
         logger.error(f"Error analyzing with LLM: {e}")
@@ -727,8 +727,8 @@ async def _get_trending_topics(user_id: str | None, limit: int = 5) -> list[str]
             return []
 
         # Simple keyword extraction (count word frequencies)
-        from collections import Counter
         import re
+        from collections import Counter
 
         words = []
         for item in response.data:

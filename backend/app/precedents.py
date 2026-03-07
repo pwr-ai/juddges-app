@@ -8,13 +8,13 @@ and legal issues. Uses semantic similarity and legal reasoning to rank results.
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from juddges_search.db.supabase_db import get_vector_db
+from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from juddges_search.db.supabase_db import get_vector_db
-from juddges_search.llms import get_default_llm
 from app.documents import generate_embedding
 from app.models import validate_id_format
 
@@ -306,7 +306,7 @@ async def _analyze_precedents(
     chain = chat_prompt | llm | parser
 
     try:
-        result = await chain.ainvoke(
+        return await chain.ainvoke(
             {
                 "prompt": PRECEDENT_ANALYSIS_PROMPT.format(
                     query=query,
@@ -314,7 +314,6 @@ async def _analyze_precedents(
                 )
             }
         )
-        return result
     except Exception as e:
         logger.error(f"Precedent analysis LLM error: {e}")
         return {"analyses": [], "enhanced_query": None}
@@ -434,7 +433,9 @@ def _build_precedent_match(
         else None,
         summary=doc.get("summary"),
         similarity_score=round(similarity, 4),
-        relevance_score=round(relevance_score, 4) if relevance_score is not None else None,
+        relevance_score=round(relevance_score, 4)
+        if relevance_score is not None
+        else None,
         matching_factors=analysis_data.get("matching_factors", []),
         relevance_explanation=analysis_data.get("relevance_explanation"),
     )

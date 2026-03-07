@@ -10,14 +10,14 @@ from pathlib import Path
 # Read the generated schemas
 schemas_file = Path(__file__).parent.parent / "lawyer_schemas.json"
 
-with open(schemas_file, "r", encoding="utf-8") as f:
+with open(schemas_file, encoding="utf-8") as f:
     schemas = json.load(f)
 
 # Start transaction
 print("BEGIN;")
 print()
 
-for i, schema in enumerate(schemas, 1):
+for _i, schema in enumerate(schemas, 1):
     # Prepare the INSERT statement with proper escaping
     text_json = json.dumps(schema["text"]).replace("'", "''")
     dates_json = json.dumps(schema["dates"]).replace("'", "''")

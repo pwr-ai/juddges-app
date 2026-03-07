@@ -18,7 +18,7 @@ import { PWAProvider } from "@/components/PWAProvider";
 export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isDebugPage = pathname?.includes("/extractions/debug");
-  
+
   // Pages that should use icon-only sidebar (expand on hover)
   // TEMPORARILY DISABLED: Icon mode disabled for the whole application
   const iconOnlyPages = [
@@ -28,22 +28,14 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
     "/schemas/",
     "/schema-chat",
   ];
-  
+
   // Temporarily disable icon mode for the whole application
   const shouldUseIconOnly = false; // iconOnlyPages.some((page) => pathname?.startsWith(page));
-  
-  // Always call useAuth (hooks must be called unconditionally)
-  // But for debug pages, we'll ignore the loading state
-  let authLoading = false;
-  try {
-    const auth = useAuth();
-    authLoading = isDebugPage ? false : auth.loading;
-  } catch (error) {
-    // If useAuth fails (e.g., AuthProvider not available), treat as not loading
-    console.warn("[AppLayoutWrapper] Auth not available, skipping auth check");
-    authLoading = false;
-  }
-  
+
+  // Hooks must be called unconditionally (Rules of Hooks)
+  const auth = useAuth();
+  const authLoading = isDebugPage ? false : auth.loading;
+
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 

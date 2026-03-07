@@ -1,4 +1,5 @@
 """Integration tests for embeddings API endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

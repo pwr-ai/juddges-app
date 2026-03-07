@@ -1,4 +1,5 @@
 """Integration tests for legal compliance endpoints."""
+
 import pytest
 from httpx import AsyncClient
 

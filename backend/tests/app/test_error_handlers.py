@@ -6,7 +6,7 @@ This module tests the custom exception classes and global error handlers.
 
 import pytest
 from fastapi import status
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 
 class TestCustomExceptions:
@@ -71,16 +71,16 @@ class TestErrorResponses:
     def test_all_errors_have_codes(self):
         """Test that all custom exceptions have error codes."""
         from app.errors import (
-            DocumentNotFoundError,
             CollectionNotFoundError,
-            SchemaNotFoundError,
-            ValidationError,
-            InvalidInputError,
-            OperationFailedError,
             DatabaseError,
-            TaskSubmissionError,
+            DocumentNotFoundError,
+            InvalidInputError,
             MissingUserIDError,
+            OperationFailedError,
+            SchemaNotFoundError,
+            TaskSubmissionError,
             UnauthorizedError,
+            ValidationError,
         )
 
         exceptions = [

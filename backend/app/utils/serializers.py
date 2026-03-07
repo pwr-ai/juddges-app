@@ -1,6 +1,7 @@
 """Serialization utility functions for document responses."""
 
 from juddges_search.models import LegalDocument
+
 from app.utils.date_utils import serialize_date
 
 

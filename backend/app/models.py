@@ -1,22 +1,22 @@
 import re
 import uuid
 from enum import Enum
-from typing import Any, ClassVar, Literal, Optional, Union
+from typing import Any, ClassVar, Literal
 
 from juddges_search.chains.models import QuestionDict
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.models import DocumentChunk, LegalDocument, LegalDocumentMetadata
 from juddges_search.retrieval.config import (
+    MAX_CHUNKS_PER_FETCH_REQUEST,
     MAX_INVALID_UUIDS_TO_SHOW,
+    OPTIMIZED_CHUNK_ALPHA,
     OPTIMIZED_CHUNK_DOCS_LIMIT,
     OPTIMIZED_CHUNK_FETCH_LIMIT,
-    OPTIMIZED_CHUNK_ALPHA,
-    MAX_CHUNKS_PER_FETCH_REQUEST,
 )
-from app.config import settings
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from werkzeug.utils import secure_filename
 
+from app.config import settings
 
 # ===== Pagination Models =====
 
@@ -97,7 +97,7 @@ class DocumentRetrievalResponse(BaseModel):
     question: str | QuestionDict = Field(
         description="Question text or structured question input"
     )
-    question_rewritten: Optional[Union[str, QuestionDict]] = Field(
+    question_rewritten: str | QuestionDict | None = Field(
         default=None,
         description="Rewritten/enhanced question text or structured question input",
     )
@@ -295,8 +295,7 @@ class DocumentExtractionRequest(SimpleExtractionRequest):
     @field_validator("prompt_id")
     @classmethod
     def validate_prompt_id(cls, prompt_id: str):
-        prompt_id = secure_filename(prompt_id)
-        return prompt_id
+        return secure_filename(prompt_id)
 
     @field_validator("user_schema")
     @classmethod
@@ -521,13 +520,13 @@ class CreatePromptRequest(BaseModel):
 
 
 class UpdatePromptRequest(BaseModel):
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, min_length=1, max_length=500, description="Updated description"
     )
-    template: Optional[str] = Field(
+    template: str | None = Field(
         None, min_length=10, description="Updated Jinja2 template content"
     )
-    variables: Optional[list[str]] = Field(
+    variables: list[str] | None = Field(
         None, description="Updated list of expected variables"
     )
 
@@ -537,7 +536,7 @@ class PromptMetadata(BaseModel):
     description: str
     variables: list[str]
     created_at: str
-    updated_at: Optional[str] = None
+    updated_at: str | None = None
     is_system: bool = Field(
         default=False, description="Whether this is a system prompt (cannot be deleted)"
     )
@@ -549,7 +548,7 @@ class PromptResponse(BaseModel):
     template: str
     variables: list[str]
     created_at: str
-    updated_at: Optional[str] = None
+    updated_at: str | None = None
     is_system: bool = False
 
 

@@ -11,56 +11,55 @@ This module provides:
 
 import asyncio
 import os
-import re
 import random
+import re
 import time
-from datetime import datetime, timezone
-from typing import List, Optional, Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Path, Response
+from fastapi import APIRouter, HTTPException, Path, Query, Response
+from juddges_search.db.supabase_db import get_vector_db
+from juddges_search.models import DocumentType, IssuingBody, LegalDocument
 from loguru import logger
 
-from juddges_search.models import LegalDocument, DocumentType, IssuingBody
-from juddges_search.db.supabase_db import get_vector_db
-from app.utils.date_utils import parse_date
+from app.config import settings
 from app.models import (
-    DocumentRetrievalRequest,
-    DocumentRetrievalResponse,
-    SimilarDocumentsRequest,
-    SimilarDocumentsResponse,
-    SimilarDocumentResult,
-    DocumentRequest,
-    DocumentResponse,
     BatchDocumentsRequest,
     BatchDocumentsResponse,
-    SearchChunksRequest,
-    SearchChunksResponse,
+    CitationEdge,
+    CitationNetworkResponse,
+    CitationNetworkStatistics,
+    CitationNode,
+    DocumentRequest,
+    DocumentResponse,
+    DocumentRetrievalRequest,
+    DocumentRetrievalResponse,
     FacetsResponse,
     PaginationMetadata,
-    CitationNetworkResponse,
-    CitationNode,
-    CitationEdge,
-    CitationNetworkStatistics,
+    SearchChunksRequest,
+    SearchChunksResponse,
+    SimilarDocumentResult,
+    SimilarDocumentsRequest,
+    SimilarDocumentsResponse,
     validate_id_format,
 )
-from app.config import settings
 from app.utils import (
     validate_array_size,
     validate_string_length,
 )
-
+from app.utils.date_utils import parse_date
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 JUDGMENTS_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 
 # Cache for document IDs with configurable TTL
-_document_ids_cache: Dict[str, Any] = {
+_document_ids_cache: dict[str, Any] = {
     "ttl_seconds": settings.CACHE_TTL_SECONDS,
 }
 _cache_lock = asyncio.Lock()
 
 
-async def generate_embedding(text: str) -> List[float]:
+async def generate_embedding(text: str) -> list[float]:
     """Generate embedding for text using the active embedding provider.
 
     Uses the configured embedding provider (OpenAI, Cohere, or local model)
@@ -79,7 +78,7 @@ async def generate_embedding(text: str) -> List[float]:
 
 
 def _convert_judgment_to_legal_document(
-    judgment_data: Dict[str, Any],
+    judgment_data: dict[str, Any],
     include_vectors: bool = False,
 ) -> LegalDocument:
     """Convert judgment table data to LegalDocument model.
@@ -148,7 +147,7 @@ def _convert_judgment_to_legal_document(
 
 
 def _convert_supabase_to_legal_document(
-    doc_data: Dict[str, Any],
+    doc_data: dict[str, Any],
     include_vectors: bool = False,
 ) -> LegalDocument:
     """Convert Supabase document data to LegalDocument model.
@@ -280,7 +279,7 @@ def _build_document_metadata_dict(doc: LegalDocument) -> dict:
     return metadata
 
 
-async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[str]:
+async def _get_cached_document_ids(only_with_coordinates: bool = False) -> list[str]:
     """Get all document IDs with caching.
 
     Args:
@@ -292,7 +291,7 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[
     cache_key = "with_coords" if only_with_coordinates else "all"
 
     async with _cache_lock:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if cache_key not in _document_ids_cache:
             _document_ids_cache[cache_key] = {"data": None, "timestamp": None}
 
@@ -335,7 +334,7 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> List[
     # Update cache
     async with _cache_lock:
         _document_ids_cache[cache_key]["data"] = document_ids
-        _document_ids_cache[cache_key]["timestamp"] = datetime.now(timezone.utc)
+        _document_ids_cache[cache_key]["timestamp"] = datetime.now(UTC)
 
     return document_ids
 
@@ -590,7 +589,7 @@ async def get_citation_network(
     min_shared_refs: int = Query(
         1, ge=1, le=10, description="Minimum shared references for an edge"
     ),
-    document_types: Optional[str] = Query(
+    document_types: str | None = Query(
         None, description="Comma-separated document types to filter"
     ),
 ) -> CitationNetworkResponse:
@@ -638,7 +637,7 @@ async def get_citation_network(
         return CitationNetworkResponse(nodes=nodes, edges=edges, statistics=statistics)
 
     except Exception as e:
-        logger.error(f"Error building citation network: {str(e)}", exc_info=True)
+        logger.error(f"Error building citation network: {e!s}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error building citation network")
 
 
@@ -671,7 +670,7 @@ async def get_document_metadata(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving document metadata {document_id}: {str(e)}")
+        logger.error(f"Error retrieving document metadata {document_id}: {e!s}")
         raise HTTPException(
             status_code=500, detail="Error retrieving document metadata."
         )
@@ -761,7 +760,7 @@ async def get_similar_to_document(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error finding similar documents for {document_id}: {str(e)}")
+        logger.error(f"Error finding similar documents for {document_id}: {e!s}")
         raise HTTPException(status_code=500, detail="Error finding similar documents.")
 
 
@@ -797,7 +796,7 @@ async def get_document_by_id(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error retrieving document {document_id}: {str(e)}")
+        logger.error(f"Error retrieving document {document_id}: {e!s}")
         raise HTTPException(status_code=500, detail="Error retrieving document.")
 
 
@@ -918,9 +917,11 @@ async def search_documents(request: SearchChunksRequest):
 
             enhancement_start = time.perf_counter()
             logger.info(f"Analyzing query in thinking mode: {query}")
-            analysis, query_analysis_source, query_analysis_error = (
-                await analyze_query_with_fallback(query)
-            )
+            (
+                analysis,
+                query_analysis_source,
+                query_analysis_error,
+            ) = await analyze_query_with_fallback(query)
             enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
 
             if query_analysis_source == "heuristic":
@@ -1019,10 +1020,10 @@ async def search_documents(request: SearchChunksRequest):
 
         # Map languages to search_language parameter (default to Polish)
         search_language = "polish"
-        if request.languages:
-            # Use English if 'en' or 'uk' in languages
-            if "en" in request.languages or "uk" in request.languages:
-                search_language = "english"
+        if request.languages and (
+            "en" in request.languages or "uk" in request.languages
+        ):
+            search_language = "english"
 
         # Perform hybrid search using the new database function
         from app.core.supabase import get_supabase_client
@@ -1140,8 +1141,8 @@ async def search_documents(request: SearchChunksRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Search error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.error(f"Search error: {e!s}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Search failed: {e!s}")
 
 
 @router.post(
@@ -1215,7 +1216,7 @@ async def get_facets(
         ).execute()
 
         # Group facets by type
-        grouped_facets: Dict[str, list] = {}
+        grouped_facets: dict[str, list] = {}
         for row in response.data or []:
             facet_type = row["facet_type"]
             if facet_type not in grouped_facets:
@@ -1230,8 +1231,8 @@ async def get_facets(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Facets retrieval error: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to get facets: {str(e)}")
+        logger.error(f"Facets retrieval error: {e!s}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get facets: {e!s}")
 
 
 # ===== POST Endpoints - Similar Documents =====
@@ -1239,7 +1240,7 @@ async def get_facets(
 
 @router.post(
     "/similar",
-    response_model=List[SimilarDocumentsResponse],
+    response_model=list[SimilarDocumentsResponse],
     summary="Find similar documents (batch)",
 )
 async def find_similar_documents_batch(request: SimilarDocumentsRequest):
@@ -1266,9 +1267,9 @@ async def find_similar_documents_batch(request: SimilarDocumentsRequest):
         return all_responses
 
     except Exception as e:
-        logger.error(f"Error finding similar documents: {str(e)}")
+        logger.error(f"Error finding similar documents: {e!s}")
         raise HTTPException(
-            status_code=500, detail=f"Error finding similar documents: {str(e)}"
+            status_code=500, detail=f"Error finding similar documents: {e!s}"
         )
 
 
@@ -1280,10 +1281,9 @@ async def get_embedding_stats():
     """Get statistics about embedding coverage in the database."""
     try:
         db = get_vector_db()
-        stats = await db.get_embedding_stats()
-        return stats
+        return await db.get_embedding_stats()
     except Exception as e:
-        logger.error(f"Error getting embedding stats: {str(e)}")
+        logger.error(f"Error getting embedding stats: {e!s}")
         raise HTTPException(
             status_code=500, detail="Error getting embedding statistics"
         )

@@ -12,10 +12,10 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.embedding_providers import (
-    list_available_models,
     get_default_model_id,
-    get_model_config,
     get_embedding_provider,
+    get_model_config,
+    list_available_models,
     set_active_model,
 )
 
@@ -138,5 +138,5 @@ async def test_embedding(request: TestEmbeddingRequest):
         logger.error(f"Test embedding failed for model {model_id}: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Embedding generation failed: {str(e)}",
+            detail=f"Embedding generation failed: {e!s}",
         )

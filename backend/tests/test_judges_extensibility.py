@@ -1,10 +1,10 @@
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../packages/juddges_search"))
 
-from juddges_search.models import LegalDocument, DocumentType
+from juddges_search.models import DocumentType, LegalDocument
 
 
 def test_extensibility():
@@ -23,9 +23,8 @@ def test_extensibility():
             print(f"Extra field in dump: {doc.model_dump()['extra_field']}")
             print(f"Victims count: {doc.victims_count}")
             return True
-        else:
-            print("Extra field NOT found in model_dump()")
-            return False
+        print("Extra field NOT found in model_dump()")
+        return False
     except Exception as e:
         print(f"Model validation failed: {e}")
         return False

@@ -9,13 +9,13 @@ find potential counter-arguments.
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
+from juddges_search.db.supabase_db import get_vector_db
+from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from juddges_search.db.supabase_db import get_vector_db
-from juddges_search.llms import get_default_llm
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/argumentation", tags=["argumentation"])

@@ -1,4 +1,5 @@
 """Integration tests for evaluations endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -7,7 +8,9 @@ from httpx import AsyncClient
 @pytest.mark.api
 async def test_create_evaluation_requires_auth(client: AsyncClient):
     """Create evaluation should reject unauthenticated requests."""
-    response = await client.post("/evaluations", json={"schema_id": "s1", "document_id": "d1", "score": 0.9})
+    response = await client.post(
+        "/evaluations", json={"schema_id": "s1", "document_id": "d1", "score": 0.9}
+    )
     assert response.status_code in [401, 403]
 
 

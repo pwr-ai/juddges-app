@@ -10,6 +10,7 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   experimental: {
+    reactCompiler: true,
     serverActions: {
       bodySizeLimit: '2mb',
     },

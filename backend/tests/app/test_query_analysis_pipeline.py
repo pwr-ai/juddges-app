@@ -65,14 +65,18 @@ async def test_thinking_mode_uses_separate_semantic_and_keyword_queries(monkeypa
         return [0.123, 0.456, 0.789]
 
     async def fake_analyze_query_with_fallback(_query: str):
-        return QueryAnalysisResult(
-            semantic_query="semantic contract breach remedies",
-            keyword_query="contract breach damages",
-            jurisdictions=["UK"],
-            case_types=["Civil"],
-            keywords=["contract"],
-            date_from="2024-01-01",
-        ), "llm", None
+        return (
+            QueryAnalysisResult(
+                semantic_query="semantic contract breach remedies",
+                keyword_query="contract breach damages",
+                jurisdictions=["UK"],
+                case_types=["Civil"],
+                keywords=["contract"],
+                date_from="2024-01-01",
+            ),
+            "llm",
+            None,
+        )
 
     monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(
@@ -119,12 +123,16 @@ async def test_explicit_filters_override_inferred_filters(monkeypatch):
         return [0.123, 0.456, 0.789]
 
     async def fake_analyze_query_with_fallback(_query: str):
-        return QueryAnalysisResult(
-            semantic_query="semantic contract breach remedies",
-            keyword_query="contract breach damages",
-            jurisdictions=["UK"],
-            case_types=["Civil"],
-        ), "llm", None
+        return (
+            QueryAnalysisResult(
+                semantic_query="semantic contract breach remedies",
+                keyword_query="contract breach damages",
+                jurisdictions=["UK"],
+                case_types=["Civil"],
+            ),
+            "llm",
+            None,
+        )
 
     monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(
@@ -162,12 +170,16 @@ async def test_thinking_mode_heuristic_fallback_source(monkeypatch):
         return [0.123, 0.456, 0.789]
 
     async def fake_analyze_query_with_fallback(_query: str):
-        return QueryAnalysisResult(
-            semantic_query="contract dispute agreement breach",
-            keyword_query="contract dispute",
-            jurisdictions=["UK"],
-            case_types=["Civil"],
-        ), "heuristic", "invalid_api_key"
+        return (
+            QueryAnalysisResult(
+                semantic_query="contract dispute agreement breach",
+                keyword_query="contract dispute",
+                jurisdictions=["UK"],
+                case_types=["Civil"],
+            ),
+            "heuristic",
+            "invalid_api_key",
+        )
 
     monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(

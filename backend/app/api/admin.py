@@ -8,15 +8,18 @@ Author: Juddges Backend Team
 Date: 2026-02-23
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.auth_jwt import AuthenticatedUser, get_admin_supabase_client, require_admin
-
+from app.core.auth_jwt import (
+    AuthenticatedUser,
+    get_admin_supabase_client,
+    require_admin,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -31,16 +34,18 @@ class PlatformStats(BaseModel):
     total_documents: int = Field(description="Total documents in the platform")
     searches_today: int = Field(description="Number of searches performed today")
     active_sessions_24h: int = Field(description="Unique sessions active in last 24h")
-    documents_added_this_week: int = Field(description="Documents added in the last 7 days")
+    documents_added_this_week: int = Field(
+        description="Documents added in the last 7 days"
+    )
 
 
 class UserListItem(BaseModel):
     """Single user entry in the admin user list."""
 
     id: str
-    email: Optional[str] = None
-    created_at: Optional[str] = None
-    last_sign_in_at: Optional[str] = None
+    email: str | None = None
+    created_at: str | None = None
+    last_sign_in_at: str | None = None
     app_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -50,32 +55,32 @@ class UserListResponse(BaseModel):
     users: list[UserListItem]
     page: int
     per_page: int
-    total: Optional[int] = None
+    total: int | None = None
 
 
 class ActivityLogEntry(BaseModel):
     """Single activity log entry from the audit_logs table."""
 
     id: str
-    user_id: Optional[str] = None
-    action_type: Optional[str] = None
-    created_at: Optional[str] = None
-    resource_type: Optional[str] = None
-    resource_id: Optional[str] = None
-    session_id: Optional[str] = None
+    user_id: str | None = None
+    action_type: str | None = None
+    created_at: str | None = None
+    resource_type: str | None = None
+    resource_id: str | None = None
+    session_id: str | None = None
 
 
 class SearchQueryEntry(BaseModel):
     """Single search query entry."""
 
     id: str
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    query: Optional[str] = None
-    result_count: Optional[int] = None
-    filters: Optional[dict[str, Any]] = None
-    duration_ms: Optional[int] = None
-    created_at: Optional[str] = None
+    user_id: str | None = None
+    session_id: str | None = None
+    query: str | None = None
+    result_count: int | None = None
+    filters: dict[str, Any] | None = None
+    duration_ms: int | None = None
+    created_at: str | None = None
 
 
 class SearchQueriesResponse(BaseModel):
@@ -94,7 +99,9 @@ class DocumentStats(BaseModel):
     by_type: dict[str, int] = Field(default_factory=dict)
     by_country: dict[str, int] = Field(default_factory=dict)
     by_language: dict[str, int] = Field(default_factory=dict)
-    added_this_week: int = Field(default=0, description="Documents added in the last 7 days")
+    added_this_week: int = Field(
+        default=0, description="Documents added in the last 7 days"
+    )
 
 
 class ServiceHealthEntry(BaseModel):
@@ -102,9 +109,9 @@ class ServiceHealthEntry(BaseModel):
 
     name: str
     status: str
-    message: Optional[str] = None
-    error: Optional[str] = None
-    response_time_ms: Optional[float] = None
+    message: str | None = None
+    error: str | None = None
+    response_time_ms: float | None = None
 
 
 class SystemHealthResponse(BaseModel):
@@ -138,11 +145,9 @@ async def get_platform_stats(
     Individual sub-queries fail gracefully, returning zero on error.
     """
     client = get_admin_supabase_client()
-    today_start = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    last_24h = datetime.now(timezone.utc) - timedelta(hours=24)
-    last_week = datetime.now(timezone.utc) - timedelta(days=7)
+    today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    last_24h = datetime.now(UTC) - timedelta(hours=24)
+    last_week = datetime.now(UTC) - timedelta(days=7)
 
     # Total users via Supabase Auth Admin API
     total_users = 0
@@ -201,7 +206,11 @@ async def get_platform_stats(
         )
         if events_response.data:
             active_sessions_24h = len(
-                {row["session_id"] for row in events_response.data if row.get("session_id")}
+                {
+                    row["session_id"]
+                    for row in events_response.data
+                    if row.get("session_id")
+                }
             )
     except Exception as e:
         logger.warning(f"Admin stats: could not fetch active sessions: {e}")
@@ -277,7 +286,9 @@ async def list_users(
                 )
             )
 
-        logger.info(f"Admin user list fetched by {admin.email}: page={page}, count={len(users)}")
+        logger.info(
+            f"Admin user list fetched by {admin.email}: page={page}, count={len(users)}"
+        )
 
         return UserListResponse(users=users, page=page, per_page=per_page)
 
@@ -288,7 +299,9 @@ async def list_users(
 
 @router.get("/activity", response_model=list[ActivityLogEntry])
 async def get_recent_activity(
-    limit: int = Query(default=20, ge=1, le=100, description="Number of entries to return"),
+    limit: int = Query(
+        default=20, ge=1, le=100, description="Number of entries to return"
+    ),
     admin: AuthenticatedUser = Depends(require_admin),
 ) -> list[ActivityLogEntry]:
     """
@@ -301,7 +314,9 @@ async def get_recent_activity(
     try:
         response = (
             client.table("audit_logs")
-            .select("id, user_id, action_type, created_at, resource_type, resource_id, session_id")
+            .select(
+                "id, user_id, action_type, created_at, resource_type, resource_id, session_id"
+            )
             .order("created_at", desc=True)
             .limit(limit)
             .execute()
@@ -331,7 +346,9 @@ async def get_recent_activity(
 
 @router.get("/search-queries", response_model=SearchQueriesResponse)
 async def get_search_queries(
-    limit: int = Query(default=50, ge=1, le=200, description="Number of queries to return"),
+    limit: int = Query(
+        default=50, ge=1, le=200, description="Number of queries to return"
+    ),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     admin: AuthenticatedUser = Depends(require_admin),
 ) -> SearchQueriesResponse:
@@ -347,9 +364,7 @@ async def get_search_queries(
     total = 0
     try:
         count_response = (
-            client.table("search_queries")
-            .select("id", count="exact")
-            .execute()
+            client.table("search_queries").select("id", count="exact").execute()
         )
         total = count_response.count or 0
     except Exception as e:
@@ -384,7 +399,9 @@ async def get_search_queries(
         logger.info(
             f"Admin search queries fetched by {admin.email}: page={page}, count={len(entries)}"
         )
-        return SearchQueriesResponse(queries=entries, total=total, page=page, limit=limit)
+        return SearchQueriesResponse(
+            queries=entries, total=total, page=page, limit=limit
+        )
 
     except Exception as e:
         logger.warning(f"Admin get_search_queries failed: {e}")
@@ -402,7 +419,7 @@ async def get_document_stats(
     legal_documents for country/language breakdowns and recent additions.
     """
     client = get_admin_supabase_client()
-    last_week = datetime.now(timezone.utc) - timedelta(days=7)
+    last_week = datetime.now(UTC) - timedelta(days=7)
 
     # Total documents
     total = 0
@@ -419,7 +436,9 @@ async def get_document_stats(
     # Counts by type from doc_type_stats (return as dict)
     by_type: dict[str, int] = {}
     try:
-        stats_response = client.table("doc_type_stats").select("doc_type, count").execute()
+        stats_response = (
+            client.table("doc_type_stats").select("doc_type, count").execute()
+        )
         for row in stats_response.data or []:
             doc_type = row.get("doc_type", "unknown")
             if doc_type != "TOTAL":
@@ -430,11 +449,7 @@ async def get_document_stats(
     # Counts by country (return as dict)
     by_country: dict[str, int] = {}
     try:
-        country_response = (
-            client.table("legal_documents")
-            .select("country")
-            .execute()
-        )
+        country_response = client.table("legal_documents").select("country").execute()
         for row in country_response.data or []:
             country = row.get("country") or "unknown"
             by_country[country] = by_country.get(country, 0) + 1
@@ -444,11 +459,7 @@ async def get_document_stats(
     # Counts by language (return as dict)
     by_language: dict[str, int] = {}
     try:
-        lang_response = (
-            client.table("legal_documents")
-            .select("language")
-            .execute()
-        )
+        lang_response = client.table("legal_documents").select("language").execute()
         for row in lang_response.data or []:
             lang = row.get("language") or "unknown"
             by_language[lang] = by_language.get(lang, 0) + 1
@@ -491,7 +502,7 @@ async def get_system_health(
     """
     # Lazy import to avoid module-level circular import chain through
     # app.health.__init__ -> app.health.router -> app.auth
-    from app.health.checks import check_all_services  # noqa: PLC0415
+    from app.health.checks import check_all_services
 
     try:
         services_health = await check_all_services()
@@ -510,7 +521,9 @@ async def get_system_health(
 
         raw_status = h.get("status", "unknown")
         # ServiceStatus is a str enum; .value gives "healthy", "degraded", etc.
-        status_str = raw_status.value if hasattr(raw_status, "value") else str(raw_status)
+        status_str = (
+            raw_status.value if hasattr(raw_status, "value") else str(raw_status)
+        )
         services[name] = ServiceHealthEntry(
             name=h.get("name", name),
             status=status_str,
@@ -528,12 +541,14 @@ async def get_system_health(
     else:
         overall_status = "healthy"
 
-    logger.info(f"Admin system health fetched by {admin.email}: {len(services)} services")
+    logger.info(
+        f"Admin system health fetched by {admin.email}: {len(services)} services"
+    )
 
     return SystemHealthResponse(
         status=overall_status,
         services=services,
-        checked_at=datetime.now(timezone.utc).isoformat(),
+        checked_at=datetime.now(UTC).isoformat(),
     )
 
 
@@ -557,9 +572,7 @@ async def get_content_stats(
     try:
         # Total posts
         total_response = (
-            client.table("blog_posts")
-            .select("id", count="exact")
-            .execute()
+            client.table("blog_posts").select("id", count="exact").execute()
         )
         total_posts = total_response.count or 0
     except Exception as e:
@@ -591,11 +604,7 @@ async def get_content_stats(
 
     try:
         # Total views (sum of views column)
-        views_response = (
-            client.table("blog_posts")
-            .select("views")
-            .execute()
-        )
+        views_response = client.table("blog_posts").select("views").execute()
         total_views = sum(row.get("views", 0) or 0 for row in views_response.data or [])
     except Exception as e:
         logger.warning(f"Admin content stats: could not fetch total_views: {e}")
