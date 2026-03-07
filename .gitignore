@@ -2,12 +2,16 @@
 
 # Environment variables
 # .env.example is tracked (template with variable names only)
-# .env is gitignored (contains actual values)
+# All .env files are gitignored (contain actual values)
 .env
 .env.local
 .env.*.local
 .env.production
 .env.secrets
+# Catch nested .env files in subdirectories (e.g., backend/packages/*/.env)
+**/.env
+**/.env.local
+**/.env.secrets
 
 # Dependencies
 node_modules/
