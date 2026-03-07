@@ -143,7 +143,7 @@ services:
     expose:
       - "7700"
     environment:
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-}
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:?MEILI_MASTER_KEY must be set for production Meilisearch}
       - MEILI_ENV=production
       - MEILI_MAX_INDEXING_MEMORY=1536MiB
       - MEILI_LOG_LEVEL=WARN
