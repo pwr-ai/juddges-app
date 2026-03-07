@@ -235,6 +235,9 @@ async def submit_ocr_job(
         )
 
     try:
+        if language_hint:
+            logger.info(f"OCR language hint provided: {language_hint}")
+
         # Read file content
         file_content = await file.read()
         if len(file_content) > 50 * 1024 * 1024:  # 50MB limit

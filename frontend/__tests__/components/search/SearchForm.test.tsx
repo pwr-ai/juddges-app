@@ -73,9 +73,9 @@ describe('SearchForm Component', () => {
       render(<SearchForm {...defaultProps} />);
 
       expect(screen.getByText(/popular searches/i)).toBeInTheDocument();
-      expect(screen.getByText('Swiss franc loans')).toBeInTheDocument();
-      expect(screen.getByText('IP Box tax relief')).toBeInTheDocument();
-      expect(screen.getByText('VAT regulations')).toBeInTheDocument();
+      expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
+      expect(screen.getByText('Intellectual property')).toBeInTheDocument();
+      expect(screen.getByText('Prawo pracy')).toBeInTheDocument();
     });
 
     it('should not show popular searches when search has been performed', () => {
@@ -188,16 +188,16 @@ describe('SearchForm Component', () => {
         />
       );
 
-      const swissFrancChip = screen.getByText('Swiss franc loans');
-      await user.click(swissFrancChip);
+      const frankChip = screen.getByText('Kredyty frankowe');
+      await user.click(frankChip);
 
-      expect(setQuery).toHaveBeenCalledWith('Swiss franc loans');
+      expect(setQuery).toHaveBeenCalledWith('Kredyty frankowe');
       expect(setSearchType).toHaveBeenCalledWith('thinking');
       expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
-      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
+      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
     });
 
-    it('should populate IP Box query with correct settings', async () => {
+    it('should populate IP query with correct settings', async () => {
       const user = userEvent.setup();
       const setQuery = jest.fn();
       const setDocumentTypes = jest.fn();
@@ -212,12 +212,12 @@ describe('SearchForm Component', () => {
         />
       );
 
-      const ipBoxChip = screen.getByText('IP Box tax relief');
-      await user.click(ipBoxChip);
+      const ipChip = screen.getByText('Intellectual property');
+      await user.click(ipChip);
 
-      expect(setQuery).toHaveBeenCalledWith('IP Box tax relief');
-      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.TAX_INTERPRETATION]);
-      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
+      expect(setQuery).toHaveBeenCalledWith('Intellectual property');
+      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
+      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
     });
 
     it('should focus input after clicking popular search', async () => {
@@ -226,8 +226,8 @@ describe('SearchForm Component', () => {
 
       render(<SearchForm {...defaultProps} ref={ref} />);
 
-      const vatChip = screen.getByText('VAT regulations');
-      await user.click(vatChip);
+      const prawoChip = screen.getByText('Prawo pracy');
+      await user.click(prawoChip);
 
       await waitFor(() => {
         expect(ref.current).toHaveFocus();
@@ -443,13 +443,13 @@ describe('SearchForm Component', () => {
       );
 
       // Click popular search
-      const popularSearch = screen.getByText('VAT regulations');
+      const popularSearch = screen.getByText('Prawo pracy');
       await user.click(popularSearch);
 
       // Verify all settings are configured
-      expect(setQuery).toHaveBeenCalledWith('VAT regulations');
+      expect(setQuery).toHaveBeenCalledWith('Prawo pracy');
       expect(setSearchType).toHaveBeenCalledWith('thinking');
-      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.TAX_INTERPRETATION]);
+      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
       expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
     });
   });

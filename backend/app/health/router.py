@@ -294,6 +294,14 @@ async def list_dependencies():
             if os.getenv("LANGFUSE_HOST")
             else None,
         ),
+        "meilisearch": DependencyInfo(
+            name="meilisearch",
+            critical=False,
+            description="Search engine for autocomplete/search-as-you-type (optional)",
+            health_check_url=os.getenv("MEILISEARCH_URL", "").rstrip("/") + "/health"
+            if os.getenv("MEILISEARCH_URL")
+            else None,
+        ),
     }
 
     return DependenciesResponse(

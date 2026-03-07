@@ -9,7 +9,7 @@ Date: 2025-10-09
 """
 
 from datetime import datetime, timezone
-from typing import List, Optional, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 from loguru import logger
@@ -195,7 +195,9 @@ class IntelligentRanker:
         return 0.5  # Default for unrecognized courts
 
     @staticmethod
-    def calculate_recency_score(year: Optional[int], current_year: int = None) -> float:
+    def calculate_recency_score(
+        year: Optional[int], current_year: Optional[int] = None
+    ) -> float:
         """
         Calculate recency score with exponential decay.
 

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import logger from '@/lib/logger';
 
 const routeLogger = logger.child('deduplication-stats');
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   try {
     const backendUrl = process.env.API_BASE_URL || 'http://backend:8000';
     const apiKey = process.env.BACKEND_API_KEY || '';

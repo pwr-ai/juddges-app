@@ -42,6 +42,327 @@ from app.extraction_domain.shared import (
 
 router = APIRouter()
 
+_TASK_NOT_CAPTURED_MARKERS = ("not found", "does not exist", "pending")
+_WORKER_UNAVAILABLE_MARKERS = (
+    "worker",
+    "celery",
+    "broker",
+    "backend",
+    "connection",
+    "timeout",
+    "not available",
+)
+_RESULT_METADATA_MARKERS = ("started_at", "elapsed_time_seconds", "exc_type")
+_TERMINAL_DOCUMENT_STATUSES = {
+    DocumentProcessingStatus.COMPLETED.value,
+    DocumentProcessingStatus.FAILED.value,
+    DocumentProcessingStatus.PARTIALLY_COMPLETED.value,
+}
+
+
+def _pending_batch_response(job_id: str) -> BatchExtractionResponse:
+    """Build PENDING response payload."""
+    return BatchExtractionResponse(task_id=job_id, status="PENDING", results=None)
+
+
+def _in_progress_batch_response(job_id: str) -> BatchExtractionResponse:
+    """Build IN_PROGRESS response payload."""
+    return BatchExtractionResponse(task_id=job_id, status="IN_PROGRESS", results=None)
+
+
+def _worker_unavailable_error() -> HTTPException:
+    """Create standardized worker-unavailable HTTP error."""
+    return HTTPException(
+        status_code=503,
+        detail={
+            "error": "Service Unavailable",
+            "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
+            "code": "WORKER_UNAVAILABLE",
+        },
+    )
+
+
+def _is_worker_unavailable_message(error_message: str) -> bool:
+    """Check whether an error message indicates worker/backend unavailability."""
+    lowered = error_message.lower()
+    return any(marker in lowered for marker in _WORKER_UNAVAILABLE_MARKERS)
+
+
+def _is_task_not_captured_error(state_error: Exception) -> bool:
+    """Check whether task state exception indicates task not captured yet."""
+    error_msg = str(state_error).lower()
+    return any(marker in error_msg for marker in _TASK_NOT_CAPTURED_MARKERS)
+
+
+def _is_metadata_result_payload(results: object) -> bool:
+    """Check if Celery returned metadata payload instead of list results."""
+    return isinstance(results, dict) and any(
+        key in results for key in _RESULT_METADATA_MARKERS
+    )
+
+
+def _safe_get_task_state(task_result: AsyncResult, job_id: str) -> str | None:
+    """Safely retrieve task state; return None when task is not captured yet."""
+    try:
+        return task_result.state
+    except Exception as state_error:
+        if _is_task_not_captured_error(state_error):
+            logger.warning(
+                f"Task {job_id} not found or not captured by worker: {state_error}"
+            )
+            return None
+        logger.error(f"Failed to get task state for job {job_id}: {state_error}")
+        raise _worker_unavailable_error()
+
+
+def _load_job_record(job_id: str) -> dict | None:
+    """Load extraction job row from Supabase."""
+    if not supabase:
+        return None
+    try:
+        job_data = (
+            supabase.table("extraction_jobs")
+            .select("*")
+            .eq("job_id", job_id)
+            .single()
+            .execute()
+        )
+        return job_data.data
+    except Exception as supabase_error:
+        logger.warning(
+            f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}"
+        )
+        return None
+
+
+def _deserialize_existing_results(existing_results: object) -> list[DocumentExtractionResponse] | None:
+    """Deserialize stored extraction results into response models."""
+    if not existing_results:
+        return None
+    return [
+        DocumentExtractionResponse(**result)
+        if isinstance(result, dict)
+        else result
+        for result in existing_results
+    ]
+
+
+def _preserve_existing_job_progress(
+    job_id: str, job_data: dict
+) -> BatchExtractionResponse | None:
+    """Preserve existing job progress from Supabase when Celery state is missing."""
+    completed_documents = job_data.get("completed_documents", 0) or 0
+    total_documents = job_data.get("total_documents", 0) or 0
+    existing_status = job_data.get("status", "PENDING")
+    existing_results = job_data.get("results")
+
+    if completed_documents <= 0 and not existing_results:
+        return None
+
+    logger.info(
+        f"Job {job_id} has existing progress: {completed_documents}/{total_documents} docs, "
+        f"status={existing_status}. Preserving state instead of resetting to PENDING."
+    )
+
+    if completed_documents >= total_documents and total_documents > 0:
+        final_status = "COMPLETED"
+        if existing_status not in ["SUCCESS", "COMPLETED", "PARTIALLY_COMPLETED"]:
+            update_job_status_in_supabase(
+                job_id, final_status, completed_documents=completed_documents
+            )
+    elif completed_documents > 0:
+        final_status = "PARTIALLY_COMPLETED"
+        if existing_status not in [
+            "SUCCESS",
+            "COMPLETED",
+            "PARTIALLY_COMPLETED",
+            "FAILURE",
+        ]:
+            update_job_status_in_supabase(
+                job_id, final_status, completed_documents=completed_documents
+            )
+    else:
+        final_status = existing_status
+
+    return BatchExtractionResponse(
+        task_id=job_id,
+        status=final_status,
+        results=_deserialize_existing_results(existing_results),
+    )
+
+
+def _build_resubmit_request_from_job(
+    job_data: dict, schema_data: dict
+) -> DocumentExtractionRequest:
+    """Build a new extraction request from persisted job and schema data."""
+    user_schema = {
+        "name": schema_data["name"],
+        "description": schema_data.get("description", ""),
+        "text": schema_data["text"],
+    }
+    return DocumentExtractionRequest(
+        collection_id=job_data["collection_id"],
+        schema_id=job_data["schema_id"],
+        document_ids=job_data.get("document_ids", []),
+        language=job_data.get("language", "pl"),
+        extraction_context=job_data.get(
+            "extraction_context",
+            "Extract structured information from legal documents using the provided schema.",
+        ),
+        user_schema=user_schema,
+        prompt_id=job_data.get("prompt_id", "info_extraction"),
+    )
+
+
+def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | None:
+    """Resubmit extraction job when no worker ever captured the original task."""
+    collection_id = job_data.get("collection_id")
+    schema_id = job_data.get("schema_id")
+    document_ids = job_data.get("document_ids", [])
+    if not (collection_id and schema_id and document_ids):
+        return None
+    if not supabase:
+        return None
+
+    schema_response = (
+        supabase.table("extraction_schemas")
+        .select("name, description, text")
+        .eq("id", schema_id)
+        .single()
+        .execute()
+    )
+    if not schema_response.data:
+        return None
+
+    try:
+        resubmit_request = _build_resubmit_request_from_job(
+            job_data=job_data, schema_data=schema_response.data
+        )
+        new_task = extract_information_from_documents_task.delay(
+            resubmit_request.model_dump(mode="json")
+        )
+        logger.info(f"Resubmitted job {job_id} as new job {new_task.id}")
+
+        supabase.table("extraction_jobs").update(
+            {
+                "job_id": new_task.id,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        ).eq("job_id", job_id).execute()
+
+        return _in_progress_batch_response(new_task.id)
+    except Exception as resubmit_error:
+        logger.error(f"Failed to resubmit job {job_id}: {resubmit_error}")
+        return None
+
+
+def _resolve_pending_job(job_id: str) -> BatchExtractionResponse:
+    """Resolve pending state by preserving existing progress or resubmitting when possible."""
+    logger.warning(
+        f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
+    )
+    job_data = _load_job_record(job_id)
+    if not job_data:
+        return _pending_batch_response(job_id)
+
+    preserved_response = _preserve_existing_job_progress(job_id, job_data)
+    if preserved_response:
+        return preserved_response
+
+    logger.info(f"Job {job_id} has no progress, attempting to resubmit")
+    resubmitted_response = _try_resubmit_job(job_id, job_data)
+    if resubmitted_response:
+        return resubmitted_response
+    return _pending_batch_response(job_id)
+
+
+def _handle_not_ready_task(
+    task_result: AsyncResult, task_state: str, job_id: str
+) -> BatchExtractionResponse | None:
+    """Handle task states that are still in progress."""
+    try:
+        if task_result.ready():
+            return None
+
+        simplified_status = simplify_job_status(task_state)
+        task_info = task_result.info
+        completed_docs = task_info.get("completed_documents") if isinstance(task_info, dict) else None
+        update_job_status_in_supabase(
+            job_id, simplified_status, completed_documents=completed_docs
+        )
+        return BatchExtractionResponse(
+            task_id=job_id,
+            status=simplified_status,
+            results=None,
+        )
+    except Exception as ready_error:
+        logger.warning(f"Error checking if task {job_id} is ready: {ready_error}")
+        if not task_result.info:
+            return _pending_batch_response(job_id)
+        return _in_progress_batch_response(job_id)
+
+
+def _handle_failed_task(
+    task_result: AsyncResult, task_state: str, job_id: str
+) -> BatchExtractionResponse | None:
+    """Handle failed terminal task states."""
+    try:
+        if not task_result.failed():
+            return None
+
+        error_info = task_result.info
+        error_type = type(error_info).__name__ if error_info else "TaskError"
+        error_message = str(error_info) if error_info else "Task failed"
+        logger.error(
+            "Extraction job {} failed: {}: {}",
+            job_id,
+            error_type,
+            error_message,
+        )
+        simplified_status = simplify_job_status(task_state)
+        update_job_status_in_supabase(
+            job_id, simplified_status, error_message=error_message
+        )
+        return BatchExtractionResponse(task_id=job_id, status=simplified_status, results=[])
+    except Exception as failed_check_error:
+        logger.warning(f"Error checking if task {job_id} failed: {failed_check_error}")
+        return None
+
+
+def _parse_task_results(results: object) -> tuple[list[DocumentExtractionResponse], list[dict]]:
+    """Validate raw task results and convert them to response models."""
+    if not isinstance(results, list):
+        logger.error(
+            f"Unexpected results type from Celery task: {type(results)}, expected list. Results: {results!r}"
+        )
+        raise ValueError(f"Expected list of results, got {type(results).__name__}")
+
+    responses: list[DocumentExtractionResponse] = []
+    normalized_results: list[dict] = []
+    for idx, result in enumerate(results):
+        if not isinstance(result, dict):
+            logger.error(
+                f"Result item {idx} is not a dict: {type(result).__name__} = {result!r}"
+            )
+            raise TypeError(
+                f"Result item {idx} must be a dict, got {type(result).__name__}: {result!r}"
+            )
+        normalized_results.append(result)
+        responses.append(DocumentExtractionResponse(**result))
+
+    return responses, normalized_results
+
+
+def _count_processed_documents(results: list[dict]) -> int | None:
+    """Count processed documents from normalized extraction results."""
+    if not results:
+        return None
+    return sum(
+        1
+        for result in results
+        if result.get("status") in _TERMINAL_DOCUMENT_STATUSES
+    )
+
 
 @router.post(
     "",
@@ -385,296 +706,28 @@ async def get_extraction_job(
     - **CANCELLED**: Job was cancelled
     """
     try:
-        # Don't pre-check workers - just try to get the task result
-        # The result backend might have the data even if workers aren't currently active
         task_result = AsyncResult(id=job_id, app=celery_app)
+        task_state = _safe_get_task_state(task_result, job_id)
+        if task_state is None:
+            return _pending_batch_response(job_id)
 
-        # Safely check task state - handle cases where task doesn't exist or hasn't been captured
-        try:
-            task_state = task_result.state
-        except Exception as state_error:
-            # Task might not exist if worker wasn't running when it was submitted
-            error_msg = str(state_error).lower()
-            if (
-                "not found" in error_msg
-                or "does not exist" in error_msg
-                or "pending" in error_msg
-            ):
-                logger.warning(
-                    f"Task {job_id} not found or not captured by worker: {state_error}"
-                )
-                # Return as PENDING - task is queued but not captured yet
-                return BatchExtractionResponse(
-                    task_id=job_id,
-                    status="PENDING",
-                    results=None,
-                )
-            logger.error(f"Failed to get task state for job {job_id}: {state_error}")
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "error": "Service Unavailable",
-                    "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
-                    "code": "WORKER_UNAVAILABLE",
-                },
-            )
-
-        # If task state is PENDING and has no info, either:
-        # 1. Task hasn't been captured by a worker yet (new job)
-        # 2. Celery task data has expired (old job) - preserve existing state
         if task_state == "PENDING" and not task_result.info:
-            logger.warning(
-                f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
-            )
+            return _resolve_pending_job(job_id)
 
-            # First, check if the job already has progress in Supabase
-            # This handles the case where Celery task data has expired but job was partially/fully processed
-            if supabase:
-                try:
-                    job_data = (
-                        supabase.table("extraction_jobs")
-                        .select("*")
-                        .eq("job_id", job_id)
-                        .single()
-                        .execute()
-                    )
-                    if job_data.data:
-                        completed_documents = (
-                            job_data.data.get("completed_documents", 0) or 0
-                        )
-                        total_documents = job_data.data.get("total_documents", 0) or 0
-                        existing_status = job_data.data.get("status", "PENDING")
-                        existing_results = job_data.data.get("results")
+        not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
+        if not_ready_response:
+            return not_ready_response
 
-                        # If job has completed documents or results, preserve the state - don't reset to PENDING
-                        if completed_documents > 0 or existing_results:
-                            logger.info(
-                                f"Job {job_id} has existing progress: {completed_documents}/{total_documents} docs, "
-                                f"status={existing_status}. Preserving state instead of resetting to PENDING."
-                            )
+        failed_response = _handle_failed_task(task_result, task_state, job_id)
+        if failed_response:
+            return failed_response
 
-                            # Determine the appropriate status based on existing state
-                            if (
-                                completed_documents >= total_documents
-                                and total_documents > 0
-                            ):
-                                # All documents processed - should be SUCCESS
-                                final_status = "COMPLETED"
-                                if existing_status not in [
-                                    "SUCCESS",
-                                    "COMPLETED",
-                                    "PARTIALLY_COMPLETED",
-                                ]:
-                                    # Update Supabase to reflect completion
-                                    update_job_status_in_supabase(
-                                        job_id,
-                                        final_status,
-                                        completed_documents=completed_documents,
-                                    )
-                            elif completed_documents > 0:
-                                # Partially processed - job was interrupted
-                                final_status = "PARTIALLY_COMPLETED"
-                                if existing_status not in [
-                                    "SUCCESS",
-                                    "COMPLETED",
-                                    "PARTIALLY_COMPLETED",
-                                    "FAILURE",
-                                ]:
-                                    # Update Supabase to reflect partial completion (Celery data lost)
-                                    update_job_status_in_supabase(
-                                        job_id,
-                                        final_status,
-                                        completed_documents=completed_documents,
-                                    )
-                            else:
-                                final_status = existing_status
-
-                            # Return results if available
-                            results = None
-                            if existing_results:
-                                results = [
-                                    DocumentExtractionResponse(**r)
-                                    if isinstance(r, dict)
-                                    else r
-                                    for r in existing_results
-                                ]
-
-                            return BatchExtractionResponse(
-                                task_id=job_id,
-                                status=final_status,
-                                results=results,
-                            )
-
-                        # Job has no progress yet - try to resubmit
-                        logger.info(
-                            f"Job {job_id} has no progress, attempting to resubmit"
-                        )
-                        collection_id = job_data.data.get("collection_id")
-                        schema_id = job_data.data.get("schema_id")
-                        document_ids = job_data.data.get("document_ids", [])
-                        language = job_data.data.get("language", "pl")
-                        extraction_context = job_data.data.get(
-                            "extraction_context",
-                            "Extract structured information from legal documents using the provided schema.",
-                        )
-
-                        if collection_id and schema_id and document_ids:
-                            # Fetch schema from database
-                            schema_response = (
-                                supabase.table("extraction_schemas")
-                                .select("name, description, text")
-                                .eq("id", schema_id)
-                                .single()
-                                .execute()
-                            )
-                            if schema_response.data:
-                                user_schema = {
-                                    "name": schema_response.data["name"],
-                                    "description": schema_response.data.get(
-                                        "description", ""
-                                    ),
-                                    "text": schema_response.data["text"],
-                                }
-
-                                # Get prompt_id from job data, default to 'info_extraction'
-                                prompt_id = job_data.data.get(
-                                    "prompt_id", "info_extraction"
-                                )
-
-                                # Create request object
-                                resubmit_request = DocumentExtractionRequest(
-                                    collection_id=collection_id,
-                                    schema_id=schema_id,
-                                    document_ids=document_ids,
-                                    language=language,
-                                    extraction_context=extraction_context,
-                                    user_schema=user_schema,
-                                    prompt_id=prompt_id,
-                                )
-
-                                # Resubmit the task
-                                try:
-                                    new_task = (
-                                        extract_information_from_documents_task.delay(
-                                            resubmit_request.model_dump(mode="json")
-                                        )
-                                    )
-                                    logger.info(
-                                        f"Resubmitted job {job_id} as new job {new_task.id}"
-                                    )
-
-                                    # Update the job record with new job_id
-                                    supabase.table("extraction_jobs").update(
-                                        {
-                                            "job_id": new_task.id,
-                                            "updated_at": datetime.now(
-                                                timezone.utc
-                                            ).isoformat(),
-                                        }
-                                    ).eq("job_id", job_id).execute()
-
-                                    # Return the new job status
-                                    return BatchExtractionResponse(
-                                        task_id=new_task.id,
-                                        status="IN_PROGRESS",
-                                        results=None,
-                                    )
-                                except Exception as resubmit_error:
-                                    logger.error(
-                                        f"Failed to resubmit job {job_id}: {resubmit_error}"
-                                    )
-                except Exception as supabase_error:
-                    logger.warning(
-                        f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}"
-                    )
-
-            # If resubmission failed or Supabase not available, return PENDING status
-            # Note: Using PENDING instead of QUEUED to match database constraint
-            return BatchExtractionResponse(
-                task_id=job_id,
-                status="PENDING",
-                results=None,
-            )
-
-        # Check if task is still running/retrying
-        try:
-            if not task_result.ready():
-                # Task has been captured (has info), so use normal status mapping
-                simplified_status = simplify_job_status(task_state)
-
-                # Update Supabase with current status for in-progress jobs
-                task_info = task_result.info
-                completed_docs = None
-                if isinstance(task_info, dict):
-                    completed_docs = task_info.get("completed_documents")
-                update_job_status_in_supabase(
-                    job_id, simplified_status, completed_documents=completed_docs
-                )
-
-                return BatchExtractionResponse(
-                    task_id=job_id,
-                    status=simplified_status,
-                    results=None,
-                )
-        except Exception as ready_error:
-            logger.warning(f"Error checking if task {job_id} is ready: {ready_error}")
-            # If we can't check ready state and task has no info, it's pending
-            if not task_result.info:
-                return BatchExtractionResponse(
-                    task_id=job_id,
-                    status="PENDING",
-                    results=None,
-                )
-            # Otherwise assume it's in progress
-            return BatchExtractionResponse(
-                task_id=job_id,
-                status="IN_PROGRESS",
-                results=None,
-            )
-
-        # Task is complete - handle failure states gracefully
-        try:
-            if task_result.failed():
-                error_info = task_result.info
-                error_type = type(error_info).__name__ if error_info else "TaskError"
-                error_message = str(error_info) if error_info else "Task failed"
-                logger.error(
-                    "Extraction job {} failed: {}: {}",
-                    job_id,
-                    error_type,
-                    error_message,
-                )
-                simplified_status = simplify_job_status(task_state)
-
-                # Update Supabase with failure status
-                update_job_status_in_supabase(
-                    job_id, simplified_status, error_message=error_message
-                )
-
-                return BatchExtractionResponse(
-                    task_id=job_id,
-                    status=simplified_status,
-                    results=[],
-                )
-        except Exception as failed_check_error:
-            logger.warning(
-                f"Error checking if task {job_id} failed: {failed_check_error}"
-            )
-
-        # Task completed successfully - get results
         try:
             results = task_result.get()
-
-            # Handle case where Celery returns task metadata instead of actual results
-            # This can happen when task manually calls update_state(state="FAILURE"/"SUCCESS")
-            if isinstance(results, dict) and any(
-                key in results
-                for key in ["started_at", "elapsed_time_seconds", "exc_type"]
-            ):
+            if _is_metadata_result_payload(results):
                 logger.warning(
                     f"Celery returned task metadata instead of results for job {job_id}: {results}"
                 )
-                # Check if there's error information in the metadata
                 error_msg = (
                     results.get("error")
                     or results.get("exc_message")
@@ -690,111 +743,39 @@ async def get_extraction_job(
                     results=[],
                 )
 
-            # Validate results format - each item should be a dict
-            if not isinstance(results, list):
-                logger.error(
-                    f"Unexpected results type from Celery task: {type(results)}, expected list. Results: {results!r}"
-                )
-                raise ValueError(
-                    f"Expected list of results, got {type(results).__name__}"
-                )
-
-            responses = []
-            for idx, res in enumerate(results):
-                if isinstance(res, dict):
-                    responses.append(DocumentExtractionResponse(**res))
-                else:
-                    logger.error(
-                        f"Result item {idx} is not a dict: {type(res).__name__} = {res!r}"
-                    )
-                    raise TypeError(
-                        f"Result item {idx} must be a dict, got {type(res).__name__}: {res!r}"
-                    )
-
-            # Simplify status based on results
-            simplified_status = simplify_job_status(task_state, results)
-
-            # Update Supabase with the latest status and results
-            processed_count = None
-            if results:
-                processed_count = sum(
-                    1
-                    for r in results
-                    if isinstance(r, dict)
-                    and r.get("status")
-                    in [
-                        DocumentProcessingStatus.COMPLETED.value,
-                        DocumentProcessingStatus.FAILED.value,
-                        DocumentProcessingStatus.PARTIALLY_COMPLETED.value,
-                    ]
-                )
+            responses, normalized_results = _parse_task_results(results)
+            simplified_status = simplify_job_status(task_state, normalized_results)
+            processed_count = _count_processed_documents(normalized_results)
             update_job_status_in_supabase(
                 job_id,
                 simplified_status,
                 completed_documents=processed_count,
-                results=results,
+                results=normalized_results,
             )
-
             return BatchExtractionResponse(
                 task_id=job_id,
                 status=simplified_status,
                 results=responses,
             )
         except Exception as get_error:
-            error_msg = str(get_error)
-            # Check if this is a worker unavailable error
-            if (
-                "worker" in error_msg.lower()
-                or "not available" in error_msg.lower()
-                or "timeout" in error_msg.lower()
-            ):
+            if _is_worker_unavailable_message(str(get_error)):
                 logger.error(
                     f"Worker unavailable when getting results for job {job_id}: {get_error}"
                 )
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "error": "Service Unavailable",
-                        "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
-                        "code": "WORKER_UNAVAILABLE",
-                    },
-                )
-            # Re-raise other errors
+                raise _worker_unavailable_error()
             raise
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
         error_type = type(e).__name__
         error_message = str(e)
 
-        # Check if this is a worker/Celery connection error
-        error_lower = error_message.lower()
-        if any(
-            keyword in error_lower
-            for keyword in [
-                "worker",
-                "celery",
-                "broker",
-                "backend",
-                "connection",
-                "timeout",
-                "not available",
-            ]
-        ):
+        if _is_worker_unavailable_message(error_message):
             logger.warning(
                 f"Celery worker unavailable when retrieving job {job_id}: {error_message}"
             )
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "error": "Service Unavailable",
-                    "message": "The extraction service is temporarily unavailable. Please try again in a few moments.",
-                    "code": "WORKER_UNAVAILABLE",
-                },
-            )
+            raise _worker_unavailable_error()
 
-        # Use logger.exception() which automatically includes exception info
         logger.exception(
             "Error retrieving extraction job {}: {}: {}",
             job_id,

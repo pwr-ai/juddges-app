@@ -10,6 +10,7 @@ This module provides:
 """
 
 import asyncio
+import os
 import re
 import random
 import time
@@ -50,6 +51,7 @@ from app.utils import (
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+JUDGMENTS_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 
 # Cache for document IDs with configurable TTL
 _document_ids_cache: Dict[str, Any] = {
@@ -904,31 +906,115 @@ async def search_documents(request: SearchChunksRequest):
     )
 
     try:
-        # Enhance query if in "thinking" mode
-        search_query = query
+        # Analyze/rewrite query if in "thinking" mode
+        semantic_query = query
+        keyword_query = query
         enhanced_query_text = None
+        inferred_filters: dict[str, Any] | None = None
         enhancement_time_ms = 0
+        query_analysis_source = None
         if request.mode == "thinking":
-            try:
-                from juddges_search.chains.query_enhancement import enhance_query
+            from app.query_analysis import analyze_query_with_fallback
 
-                enhancement_start = time.perf_counter()
-                logger.info(f"Enhancing query in thinking mode: {query}")
-                enhanced_query_text = await enhance_query(query)
-                search_query = enhanced_query_text
-                enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
-                logger.info(f"Enhanced query: {enhanced_query_text}")
-            except Exception as e:
-                logger.warning(f"Query enhancement failed, using original query: {e}")
-                # Fall back to original query if enhancement fails
-                enhanced_query_text = None
+            enhancement_start = time.perf_counter()
+            logger.info(f"Analyzing query in thinking mode: {query}")
+            analysis, query_analysis_source, query_analysis_error = (
+                await analyze_query_with_fallback(query)
+            )
+            enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
+
+            if query_analysis_source == "heuristic":
+                logger.warning(
+                    "LLM query analysis failed; using heuristic fallback",
+                    error=query_analysis_error,
+                )
+
+            semantic_query = (analysis.semantic_query or query).strip() or query
+            keyword_query = (analysis.keyword_query or query).strip() or query
+            enhanced_query_text = (
+                semantic_query
+                if semantic_query != query
+                else (keyword_query if keyword_query != query else None)
+            )
+
+            # Apply inferred filters only when request didn't provide explicit ones.
+            effective_filters = {
+                "jurisdictions": request.jurisdictions,
+                "court_names": request.court_names,
+                "court_levels": request.court_levels,
+                "case_types": request.case_types,
+                "decision_types": request.decision_types,
+                "outcomes": request.outcomes,
+                "keywords": request.keywords,
+                "legal_topics": request.legal_topics,
+                "cited_legislation": request.cited_legislation,
+                "date_from": request.date_from,
+                "date_to": request.date_to,
+            }
+
+            inferred_filters = {}
+            for key in (
+                "jurisdictions",
+                "court_names",
+                "court_levels",
+                "case_types",
+                "decision_types",
+                "outcomes",
+                "keywords",
+                "legal_topics",
+                "cited_legislation",
+            ):
+                if effective_filters[key] is None:
+                    inferred_value = getattr(analysis, key, None)
+                    if inferred_value:
+                        effective_filters[key] = inferred_value
+                        inferred_filters[key] = inferred_value
+
+            for key in ("date_from", "date_to"):
+                if not effective_filters[key]:
+                    inferred_value = getattr(analysis, key, None)
+                    if inferred_value:
+                        effective_filters[key] = inferred_value
+                        inferred_filters[key] = inferred_value
+
+            request.jurisdictions = effective_filters["jurisdictions"]
+            request.court_names = effective_filters["court_names"]
+            request.court_levels = effective_filters["court_levels"]
+            request.case_types = effective_filters["case_types"]
+            request.decision_types = effective_filters["decision_types"]
+            request.outcomes = effective_filters["outcomes"]
+            request.keywords = effective_filters["keywords"]
+            request.legal_topics = effective_filters["legal_topics"]
+            request.cited_legislation = effective_filters["cited_legislation"]
+            request.date_from = effective_filters["date_from"]
+            request.date_to = effective_filters["date_to"]
+
+            if not inferred_filters:
+                inferred_filters = None
+
+            logger.info(
+                "Query analysis completed",
+                semantic_query=semantic_query,
+                keyword_query=keyword_query,
+                source=query_analysis_source,
+                inferred_filters=list((inferred_filters or {}).keys()),
+            )
 
         # Generate embedding for query (if vector search is enabled)
         query_embedding = None
         embedding_time_ms = 0
         if request.alpha > 0:  # Vector search component enabled
             embedding_start = time.perf_counter()
-            query_embedding = await generate_embedding(search_query)
+            query_embedding = await generate_embedding(semantic_query)
+            if len(query_embedding) != JUDGMENTS_EMBEDDING_DIMENSION:
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Embedding dimension mismatch: expected "
+                        f"{JUDGMENTS_EMBEDDING_DIMENSION}, got {len(query_embedding)}. "
+                        "Check EMBEDDING_DIMENSION and EMBEDDING_MODEL_ID configuration."
+                    ),
+                )
             embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
 
         # Map languages to search_language parameter (default to Polish)
@@ -955,7 +1041,7 @@ async def search_documents(request: SearchChunksRequest):
             "search_judgments_hybrid",
             {
                 "query_embedding": query_embedding,
-                "search_text": search_query
+                "search_text": keyword_query
                 if request.alpha < 1.0
                 else None,  # Skip text search if pure vector
                 "search_language": search_language,
@@ -1045,6 +1131,10 @@ async def search_documents(request: SearchChunksRequest):
             pagination=pagination,
             enhanced_query=enhanced_query_text if request.mode == "thinking" else None,
             query_enhancement_used=request.mode == "thinking",
+            semantic_query=semantic_query if request.mode == "thinking" else None,
+            keyword_query=keyword_query if request.mode == "thinking" else None,
+            inferred_filters=inferred_filters if request.mode == "thinking" else None,
+            query_analysis_source=query_analysis_source,
         )
 
     except HTTPException:

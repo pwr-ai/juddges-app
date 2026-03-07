@@ -101,7 +101,7 @@ def validate_environment_variables():
         "MEILISEARCH_URL": "Meilisearch endpoint URL (for autocomplete search)",
         "MEILISEARCH_SEARCH_KEY": "Meilisearch search key (preferred for query-only use)",
         "MEILISEARCH_ADMIN_KEY": "Meilisearch admin key (fallback if search key not set)",
-        "MEILISEARCH_INDEX_NAME": "Meilisearch index name (default: documents)",
+        "MEILISEARCH_INDEX_NAME": "Meilisearch index name (default: judgments)",
     }
 
     missing_required = []
@@ -204,7 +204,23 @@ async def lifespan(app: FastAPI):
             "Using shared Supabase client for database and vector search operations"
         )
 
-        # Step 6: Preload datasets (DISABLED - datasets are loaded on-demand)
+        # Step 6: Initialize Meilisearch index (optional — non-blocking)
+        try:
+            from app.services.meilisearch_config import setup_meilisearch_index
+            from app.services.search import MeiliSearchService
+
+            meili_service = MeiliSearchService.from_env()
+            if meili_service.admin_configured:
+                logger.info("Setting up Meilisearch index...")
+                await setup_meilisearch_index(meili_service)
+            else:
+                logger.info(
+                    "Meilisearch admin key not configured — skipping index setup"
+                )
+        except Exception as e:
+            logger.warning(f"Meilisearch index setup failed (non-fatal): {e}")
+
+        # Step 7: Preload datasets (DISABLED - datasets are loaded on-demand)
         # Dataset preloading has been disabled to speed up application startup.
         # Datasets will be loaded automatically when first requested.
         logger.info("Dataset preloading disabled - datasets will load on first request")

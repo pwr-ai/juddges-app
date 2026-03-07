@@ -481,6 +481,178 @@ def _assign_time_periods(
     return periods, doc_to_period
 
 
+async def _fetch_documents_for_topic_modeling(
+    db: Any, request: TopicModelingRequest
+) -> list[dict[str, Any]]:
+    """Fetch documents for topic modeling with optional document type filter."""
+    select_fields = "document_id, title, document_type, date_issued, summary, keywords"
+    try:
+        query = db.client.table("legal_documents").select(select_fields)
+        if request.document_types:
+            query = query.in_("document_type", request.document_types)
+        response = query.limit(request.sample_size).execute()
+    except Exception as e:
+        logger.error(f"Error fetching documents for topic modeling: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch documents from database",
+        )
+    return response.data or []
+
+
+def _build_doc_token_sets(texts: list[str]) -> list[set[str]]:
+    """Build token sets for coherence calculation."""
+    return [
+        set(
+            word
+            for word in text.split()
+            if len(word) > 2 and word not in STOPWORDS and word.isalpha()
+        )
+        for text in texts
+    ]
+
+
+def _extract_topic_keywords(
+    topic_weights: np.ndarray, vocabulary: list[str], num_keywords: int
+) -> tuple[list[TopicKeyword], list[str]]:
+    """Extract top weighted keywords and plain word list for a topic."""
+    top_word_indices = np.argsort(topic_weights)[::-1][:num_keywords]
+    keywords: list[TopicKeyword] = []
+    topic_words: list[str] = []
+
+    for word_idx in top_word_indices:
+        if word_idx >= len(vocabulary):
+            continue
+        word = vocabulary[word_idx]
+        weight = float(topic_weights[word_idx])
+        if weight <= 0:
+            continue
+        keywords.append(TopicKeyword(word=word, weight=round(weight, 4)))
+        topic_words.append(word)
+
+    return keywords, topic_words
+
+
+def _build_top_documents_for_topic(
+    docs: list[dict[str, Any]],
+    doc_relevances: np.ndarray,
+    max_docs_per_topic: int = 10,
+) -> tuple[list[TopicDocument], int]:
+    """Build top representative documents and topic document count."""
+    top_doc_indices = np.argsort(doc_relevances)[::-1][:max_docs_per_topic]
+    max_relevance = doc_relevances.max() if doc_relevances.max() > 0 else 1.0
+
+    top_documents: list[TopicDocument] = []
+    for doc_idx in top_doc_indices:
+        doc = docs[doc_idx]
+        relevance = float(doc_relevances[doc_idx]) / max_relevance
+        if relevance <= 0.05:
+            continue
+        top_documents.append(
+            TopicDocument(
+                document_id=doc["document_id"],
+                title=doc.get("title"),
+                document_type=doc.get("document_type"),
+                date_issued=(str(doc["date_issued"]) if doc.get("date_issued") else None),
+                relevance=round(relevance, 4),
+            )
+        )
+
+    doc_count = sum(1 for relevance in doc_relevances if relevance > 0.05 * max_relevance)
+    return top_documents, doc_count
+
+
+def _build_topic_time_series(
+    periods: list[tuple[str, str, str]],
+    doc_to_period: dict[int, int],
+    doc_relevances: np.ndarray,
+) -> tuple[list[TimePeriod], list[float]]:
+    """Build time-series prevalence for a topic."""
+    if not periods:
+        return [], []
+
+    time_series: list[TimePeriod] = []
+    period_weights: list[float] = []
+
+    for period_idx, (period_label, period_start, period_end) in enumerate(periods):
+        period_doc_indices = [
+            idx for idx, assigned_period in doc_to_period.items() if assigned_period == period_idx
+        ]
+        period_doc_count = len(period_doc_indices)
+        if period_doc_count > 0:
+            topic_weight = float(np.mean([doc_relevances[idx] for idx in period_doc_indices]))
+        else:
+            topic_weight = 0.0
+
+        period_weights.append(topic_weight)
+        time_series.append(
+            TimePeriod(
+                period_label=period_label,
+                start_date=period_start,
+                end_date=period_end,
+                document_count=period_doc_count,
+                topic_weight=round(topic_weight, 4),
+            )
+        )
+
+    return time_series, period_weights
+
+
+def _build_topics(
+    docs: list[dict[str, Any]],
+    request: TopicModelingRequest,
+    num_topics: int,
+    W: np.ndarray,
+    H: np.ndarray,
+    vocabulary: list[str],
+    periods: list[tuple[str, str, str]],
+    doc_to_period: dict[int, int],
+    doc_token_sets: list[set[str]],
+) -> list[Topic]:
+    """Build topic response objects from decomposition matrices."""
+    topics: list[Topic] = []
+
+    for topic_idx in range(num_topics):
+        topic_weights = H[topic_idx]
+        keywords, topic_words = _extract_topic_keywords(
+            topic_weights=topic_weights,
+            vocabulary=vocabulary,
+            num_keywords=request.num_keywords,
+        )
+        if not keywords:
+            continue
+
+        doc_relevances = W[:, topic_idx]
+        top_documents, doc_count = _build_top_documents_for_topic(docs, doc_relevances)
+        time_series, period_weights = _build_topic_time_series(
+            periods=periods,
+            doc_to_period=doc_to_period,
+            doc_relevances=doc_relevances,
+        )
+
+        coherence = _compute_topic_coherence(topic_words, doc_token_sets)
+        coherence_normalized = max(0.0, min(1.0, (coherence + 10) / 10))
+        trend_label, trend_slope = _detect_trend(period_weights)
+        label = " / ".join(keyword.word for keyword in keywords[:3])
+
+        topics.append(
+            Topic(
+                topic_id=topic_idx,
+                label=label,
+                keywords=keywords,
+                document_count=doc_count,
+                coherence_score=round(coherence_normalized, 4),
+                trend=trend_label,
+                trend_slope=trend_slope,
+                time_series=time_series,
+                top_documents=top_documents,
+            )
+        )
+
+    topics.sort(key=lambda topic: topic.document_count, reverse=True)
+    return topics
+
+
 # ===== Endpoints =====
 
 
@@ -499,24 +671,7 @@ async def analyze_topics(request: TopicModelingRequest) -> TopicModelingResponse
     """
     start_time = time.perf_counter()
     db = get_vector_db()
-
-    # Fetch documents
-    select_fields = "document_id, title, document_type, date_issued, summary, keywords"
-    try:
-        query = db.client.table("legal_documents").select(select_fields)
-
-        if request.document_types:
-            query = query.in_("document_type", request.document_types)
-
-        response = query.limit(request.sample_size).execute()
-    except Exception as e:
-        logger.error(f"Error fetching documents for topic modeling: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to fetch documents from database",
-        )
-
-    docs = response.data or []
+    docs = await _fetch_documents_for_topic_modeling(db, request)
 
     if len(docs) < request.num_topics:
         raise HTTPException(
@@ -542,119 +697,18 @@ async def analyze_topics(request: TopicModelingRequest) -> TopicModelingResponse
     # Assign time periods
     periods, doc_to_period = _assign_time_periods(docs, request.time_periods)
 
-    # Build tokenized doc sets for coherence computation
-    doc_token_sets = [
-        set(
-            w for w in text.split() if len(w) > 2 and w not in STOPWORDS and w.isalpha()
-        )
-        for text in texts
-    ]
-
-    # Build topics
-    topics: list[Topic] = []
-    max_docs_per_topic = 10
-
-    for topic_idx in range(num_topics):
-        # Extract top keywords for this topic
-        topic_weights = H[topic_idx]
-        top_word_indices = np.argsort(topic_weights)[::-1][: request.num_keywords]
-
-        keywords = []
-        topic_words = []
-        for word_idx in top_word_indices:
-            if word_idx < len(vocabulary):
-                word = vocabulary[word_idx]
-                weight = float(topic_weights[word_idx])
-                if weight > 0:
-                    keywords.append(TopicKeyword(word=word, weight=round(weight, 4)))
-                    topic_words.append(word)
-
-        if not keywords:
-            continue
-
-        # Generate label from top 3 keywords
-        label = " / ".join(kw.word for kw in keywords[:3])
-
-        # Find documents most associated with this topic
-        doc_relevances = W[:, topic_idx]
-        top_doc_indices = np.argsort(doc_relevances)[::-1][:max_docs_per_topic]
-
-        # Normalize relevance to [0, 1]
-        max_relevance = doc_relevances.max() if doc_relevances.max() > 0 else 1.0
-
-        top_documents = []
-        for doc_idx in top_doc_indices:
-            doc = docs[doc_idx]
-            relevance = float(doc_relevances[doc_idx]) / max_relevance
-            if relevance > 0.05:  # Skip very low relevance
-                top_documents.append(
-                    TopicDocument(
-                        document_id=doc["document_id"],
-                        title=doc.get("title"),
-                        document_type=doc.get("document_type"),
-                        date_issued=(
-                            str(doc["date_issued"]) if doc.get("date_issued") else None
-                        ),
-                        relevance=round(relevance, 4),
-                    )
-                )
-
-        doc_count = sum(1 for r in doc_relevances if r > 0.05 * max_relevance)
-
-        # Compute topic coherence
-        coherence = _compute_topic_coherence(topic_words, doc_token_sets)
-        # Normalize to [0, 1] range
-        coherence_normalized = max(0.0, min(1.0, (coherence + 10) / 10))
-
-        # Build time series
-        time_series: list[TimePeriod] = []
-        period_weights: list[float] = []
-
-        if periods:
-            for period_idx, (plabel, pstart, pend) in enumerate(periods):
-                # Find docs in this period and their topic weights
-                period_doc_indices = [
-                    idx for idx, p in doc_to_period.items() if p == period_idx
-                ]
-                period_doc_count = len(period_doc_indices)
-
-                if period_doc_count > 0:
-                    topic_weight = float(
-                        np.mean([doc_relevances[idx] for idx in period_doc_indices])
-                    )
-                else:
-                    topic_weight = 0.0
-
-                period_weights.append(topic_weight)
-                time_series.append(
-                    TimePeriod(
-                        period_label=plabel,
-                        start_date=pstart,
-                        end_date=pend,
-                        document_count=period_doc_count,
-                        topic_weight=round(topic_weight, 4),
-                    )
-                )
-
-        # Detect trend
-        trend_label, trend_slope = _detect_trend(period_weights)
-
-        topics.append(
-            Topic(
-                topic_id=topic_idx,
-                label=label,
-                keywords=keywords,
-                document_count=doc_count,
-                coherence_score=round(coherence_normalized, 4),
-                trend=trend_label,
-                trend_slope=trend_slope,
-                time_series=time_series,
-                top_documents=top_documents,
-            )
-        )
-
-    # Sort topics by document count (most prevalent first)
-    topics.sort(key=lambda t: t.document_count, reverse=True)
+    doc_token_sets = _build_doc_token_sets(texts)
+    topics = _build_topics(
+        docs=docs,
+        request=request,
+        num_topics=num_topics,
+        W=W,
+        H=H,
+        vocabulary=vocabulary,
+        periods=periods,
+        doc_to_period=doc_to_period,
+        doc_token_sets=doc_token_sets,
+    )
 
     # Compute statistics
     processing_time_ms = (time.perf_counter() - start_time) * 1000

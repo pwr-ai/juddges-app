@@ -10,6 +10,16 @@ import { DocumentType } from "@/types/search";
 
 type SearchMode = "rabbit" | "thinking";
 
+/**
+ * Sanitize HTML from Meilisearch highlights: strip everything except {@code <mark>} tags.
+ */
+function sanitizeHighlight(html: string): string {
+  return html
+    .replace(/<(?!\/?mark\b)[^>]*>/gi, "")
+    .replace(/&(?!amp;|lt;|gt;|quot;|#\d+;)/g, "&amp;");
+}
+
+
 export interface SearchFormProps {
   query: string;
   setQuery: (value: string) => void;
@@ -40,21 +50,21 @@ type PopularSearch = {
 
 const POPULAR_SEARCHES: PopularSearch[] = [
   {
-    label: "Swiss franc loans",
+    label: "Kredyty frankowe",
+    mode: "thinking",
+    documentTypes: [DocumentType.JUDGMENT],
+    languages: new Set(["pl"]),
+  },
+  {
+    label: "Intellectual property",
     mode: "thinking",
     documentTypes: [DocumentType.JUDGMENT],
     languages: new Set(["uk"]),
   },
   {
-    label: "IP Box tax relief",
+    label: "Prawo pracy",
     mode: "thinking",
-    documentTypes: [DocumentType.TAX_INTERPRETATION],
-    languages: new Set(["pl"]),
-  },
-  {
-    label: "VAT regulations",
-    mode: "thinking",
-    documentTypes: [DocumentType.TAX_INTERPRETATION],
+    documentTypes: [DocumentType.JUDGMENT],
     languages: new Set(["pl"]),
   },
 ];
@@ -206,9 +216,14 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                   onClick={() => handleSuggestionSelect(item.title)}
                   aria-label={`Use suggestion: ${item.title}`}
                 >
-                  <div className="font-medium">{item.title}</div>
+                  <div className="font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHighlight(item.title) }} />
+                  {(item.caseNumber || item.courtName) ? (
+                    <div className="text-xs text-muted-foreground">
+                      {[item.caseNumber, item.courtName, item.decisionDate].filter(Boolean).join(" · ")}
+                    </div>
+                  ) : null}
                   {item.summary ? (
-                    <div className="text-xs text-muted-foreground line-clamp-1">{item.summary}</div>
+                    <div className="text-xs text-muted-foreground line-clamp-1" dangerouslySetInnerHTML={{ __html: sanitizeHighlight(item.summary) }} />
                   ) : null}
                 </button>
               ))}

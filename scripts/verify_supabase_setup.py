@@ -21,7 +21,6 @@ from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
 from supabase import Client, create_client
 
@@ -58,6 +57,8 @@ REQUIRED_FUNCTIONS = [
     "get_my_profile",
     "is_admin",
 ]
+
+EXPECTED_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 
 
 # =============================================================================
@@ -165,7 +166,10 @@ def check_functions(client: Client) -> Tuple[bool, Dict[str, bool]]:
             if func == "search_judgments_by_embedding":
                 # Try calling with dummy params (will fail but function exists)
                 try:
-                    client.rpc(func, {"query_embedding": [0.0] * 1536}).execute()
+                    client.rpc(
+                        func,
+                        {"query_embedding": [0.0] * EXPECTED_EMBEDDING_DIMENSION},
+                    ).execute()
                     functions_status[func] = True
                 except Exception as e:
                     # If we get a specific error about params, function exists
@@ -216,7 +220,7 @@ def main():
     env_ok, missing_vars = check_env_vars()
 
     if not env_ok:
-        console.print(f"[red]✗ Missing environment variables:[/red]")
+        console.print("[red]✗ Missing environment variables:[/red]")
         for var in missing_vars:
             console.print(f"  - {var}")
         console.print("\n[yellow]Please set these in your .env file[/yellow]")

@@ -446,20 +446,13 @@
   .glass-page-background {
     position: relative;
     min-height: 100vh;
-    /* Refined gradient with warm undertones — subtle depth without distraction */
-    background:
-      radial-gradient(circle at 85% 15%, rgba(219, 234, 254, 0.02) 0, transparent 55%),
-      radial-gradient(circle at 80% 85%, rgba(199, 210, 254, 0.015) 0, transparent 55%),
-      linear-gradient(135deg, #fcfaf7 0%, #f9f7f3 50%, #f6f4f0 100%);
+    /* Professional, non-gradient page surface */
+    background: #f8f7f4;
     background-attachment: fixed;
   }
 
   .dark .glass-page-background {
-    /* Dark mode version with refined colors - extremely subtle, no purple, slightly darker */
-    background:
-      radial-gradient(circle at 85% 15%, rgba(30, 58, 138, 0.015) 0, transparent 55%),
-      radial-gradient(circle at 80% 85%, rgba(55, 48, 163, 0.01) 0, transparent 55%),
-      linear-gradient(135deg, #0e0c16 0%, #14121e 50%, #191722 100%);
+    background: #12131a;
     background-attachment: fixed;
   }
 
@@ -646,12 +639,8 @@
     outline: none;
     cursor: pointer;
     
-    /* 2. THE MATERIAL (Clean Blue Gradient) */
-    background: linear-gradient(
-      180deg, 
-      #3B82F6 0%,   /* Blue 500 */
-      #2563EB 100%  /* Blue 600 */
-    );
+    /* 2. THE MATERIAL (solid professional blue) */
+    background: #2563EB;
     
     /* 3. SIMPLE SHADOWS */
     box-shadow: 
@@ -673,11 +662,7 @@
   }
 
   .dark .glass-button {
-    background: linear-gradient(
-      180deg, 
-      #2563EB 0%,   /* Blue 600 */
-      #1E40AF 100%  /* Blue 700 */
-    );
+    background: #1D4ED8;
     box-shadow: 
       inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
       0 4px 12px rgba(30, 64, 175, 0.4);
@@ -726,22 +711,14 @@
   /* HOVER STATE */
   .glass-button:hover {
     transform: translateY(-1px);
-    background: linear-gradient(
-      180deg, 
-      #60A5FA 0%,   /* Blue 400 */
-      #3B82F6 100%  /* Blue 500 */
-    );
+    background: #1D4ED8;
     box-shadow: 
       inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
       0 6px 16px rgba(37, 99, 235, 0.4);
   }
 
   .dark .glass-button:hover {
-    background: linear-gradient(
-      180deg, 
-      #3B82F6 0%, 
-      #2563EB 100%
-    );
+    background: #1E40AF;
     box-shadow: 
       inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
       0 6px 16px rgba(30, 64, 175, 0.5);
@@ -962,12 +939,7 @@
 
 .animate-shimmer {
   animation: shimmer 2s infinite linear;
-  background: linear-gradient(
-    to right,
-    oklch(var(--muted) / 0.5) 0%,
-    oklch(var(--muted-foreground) / 0.2) 50%,
-    oklch(var(--muted) / 0.5) 100%
-  );
+  background: oklch(var(--muted) / 0.45);
   background-size: 1000px 100%;
 }
 
@@ -1032,6 +1004,63 @@ a {
 /* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
+}
+
+/* Professional visual cleanup: flatten decorative gradients across the app */
+@layer base {
+  :where(
+    [class*="bg-gradient"],
+    [class*="bg-[linear-gradient"],
+    [class*="bg-[radial-gradient"],
+    [class*="bg-[conic-gradient"]
+  ) {
+    background-image: none !important;
+    background-color: oklch(var(--muted) / 0.3);
+  }
+
+  :where(button, [role="button"], a):where(
+    [class*="bg-gradient"],
+    [class*="bg-[linear-gradient"],
+    [class*="bg-[radial-gradient"],
+    [class*="bg-[conic-gradient"]
+  ) {
+    background-image: none !important;
+    background-color: oklch(var(--primary));
+    border-color: oklch(var(--primary) / 0.4);
+    color: oklch(var(--primary-foreground)) !important;
+    box-shadow: 0 1px 2px oklch(var(--foreground) / 0.15);
+  }
+
+  :where([class*="bg-clip-text"][class*="text-transparent"]) {
+    background-image: none !important;
+    -webkit-text-fill-color: currentColor !important;
+    color: oklch(var(--foreground)) !important;
+  }
+
+  :where([style*="gradient("]) {
+    background-image: none !important;
+    background-color: oklch(var(--muted) / 0.28) !important;
+  }
+
+  :where(
+    [class*="before:bg-gradient"],
+    [class*="before:bg-[linear-gradient"],
+    [class*="before:bg-[radial-gradient"],
+    [class*="before:bg-[conic-gradient"]
+  )::before {
+    background-image: none !important;
+    background-color: oklch(var(--muted) / 0.25) !important;
+  }
+
+  :where(
+    [class*="after:bg-gradient"],
+    [class*="after:bg-[linear-gradient"],
+    [class*="after:bg-[radial-gradient"],
+    [class*="after:bg-[conic-gradient"]
+  )::after {
+    background-image: none !important;
+    background-color: oklch(var(--muted) / 0.25) !important;
+  }
 }
 
 /* ============================================

@@ -320,6 +320,137 @@ async def _analyze_precedents(
         return {"analyses": [], "enhanced_query": None}
 
 
+def _empty_precedents_response(
+    query: str, enhanced_query: str | None
+) -> FindPrecedentsResponse:
+    """Build a consistent empty response payload."""
+    return FindPrecedentsResponse(
+        query=query,
+        precedents=[],
+        total_found=0,
+        search_strategy="semantic_similarity",
+        enhanced_query=enhanced_query,
+    )
+
+
+async def _build_search_text(request: FindPrecedentsRequest) -> str:
+    """Build semantic search text, enriched with source document context when available."""
+    search_text = request.query
+    if not request.document_id:
+        return search_text
+
+    doc_data = await _fetch_document_context(request.document_id)
+    if not doc_data:
+        logger.warning(
+            f"Source document {request.document_id} not found, using query only"
+        )
+        return search_text
+
+    doc_context = doc_data.get("summary") or doc_data.get("thesis") or ""
+    if not doc_context:
+        return search_text
+
+    return f"{request.query}\n\nContext from document: {doc_context[:2000]}"
+
+
+async def _search_precedent_candidates(
+    db: Any, embedding: list[float], limit: int
+) -> list[dict[str, Any]]:
+    """Run vector similarity search with service-level error handling."""
+    search_kwargs: dict[str, Any] = {
+        "query_embedding": embedding,
+        "match_count": min(limit * 2, 50),
+        "match_threshold": 0.3,
+    }
+    try:
+        return await db.search_by_vector(**search_kwargs)
+    except Exception as e:
+        logger.error(f"Vector search failed: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Search service temporarily unavailable. Please try again.",
+        )
+
+
+async def _load_candidate_documents(
+    similar_results: list[dict[str, Any]], limit: int
+) -> list[dict[str, Any]]:
+    """Fetch full document data for top candidate IDs and attach similarity score."""
+    candidate_ids = [result.get("document_id") for result in similar_results[:limit]]
+    similarity_map = {
+        result.get("document_id"): result.get("similarity", 0.0)
+        for result in similar_results
+    }
+
+    candidates_data: list[dict[str, Any]] = []
+    for doc_id in candidate_ids:
+        if not doc_id:
+            continue
+        doc_data = await _fetch_document_context(doc_id)
+        if not doc_data:
+            continue
+        doc_data["_similarity_score"] = similarity_map.get(doc_id, 0.0)
+        candidates_data.append(doc_data)
+
+    return candidates_data
+
+
+async def _build_analysis_map(
+    request: FindPrecedentsRequest, candidates_data: list[dict[str, Any]]
+) -> tuple[dict[str, dict[str, Any]], str | None]:
+    """Run optional AI precedent analysis and map analysis by document ID."""
+    if not request.include_analysis or not candidates_data:
+        return {}, None
+
+    analysis_result = await _analyze_precedents(request.query, candidates_data)
+    analysis_map: dict[str, dict[str, Any]] = {}
+    for analysis in analysis_result.get("analyses", []):
+        doc_id = analysis.get("document_id")
+        if doc_id:
+            analysis_map[doc_id] = analysis
+    return analysis_map, analysis_result.get("enhanced_query")
+
+
+def _build_precedent_match(
+    doc: dict[str, Any], analysis: dict[str, Any] | None = None
+) -> PrecedentMatch:
+    """Build API response model for a single precedent candidate."""
+    analysis_data = analysis or {}
+    doc_id = doc.get("document_id", "")
+    similarity = doc.get("_similarity_score", 0.0)
+    relevance_score = analysis_data.get("relevance_score")
+    date_val = doc.get("date_issued")
+    date_str = str(date_val) if date_val and not isinstance(date_val, str) else date_val
+
+    return PrecedentMatch(
+        document_id=doc_id,
+        title=doc.get("title"),
+        document_type=doc.get("document_type"),
+        date_issued=date_str,
+        court_name=doc.get("court_name"),
+        outcome=doc.get("outcome"),
+        legal_bases=doc.get("legal_bases")
+        if isinstance(doc.get("legal_bases"), list)
+        else None,
+        summary=doc.get("summary"),
+        similarity_score=round(similarity, 4),
+        relevance_score=round(relevance_score, 4) if relevance_score is not None else None,
+        matching_factors=analysis_data.get("matching_factors", []),
+        relevance_explanation=analysis_data.get("relevance_explanation"),
+    )
+
+
+def _rank_precedents(precedents: list[PrecedentMatch]) -> list[PrecedentMatch]:
+    """Sort precedents by weighted semantic + AI relevance score."""
+    return sorted(
+        precedents,
+        key=lambda p: (
+            0.4 * p.similarity_score + 0.6 * (p.relevance_score or p.similarity_score)
+        ),
+        reverse=True,
+    )
+
+
 # ===== Endpoint =====
 
 
@@ -341,153 +472,43 @@ async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsRespo
     )
 
     db = get_vector_db()
-    search_text = request.query
-    enhanced_query = None
-
-    # If a source document ID is provided, enrich the query with document context
-    if request.document_id:
-        doc_data = await _fetch_document_context(request.document_id)
-        if doc_data:
-            doc_context = doc_data.get("summary") or doc_data.get("thesis") or ""
-            if doc_context:
-                search_text = (
-                    f"{request.query}\n\nContext from document: {doc_context[:2000]}"
-                )
-        else:
-            logger.warning(
-                f"Source document {request.document_id} not found, using query only"
-            )
-
-    # Enhance the query for better semantic matching
-    enhanced_text, legal_concepts = await _enhance_query(search_text)
-    if enhanced_text != search_text:
-        enhanced_query = enhanced_text
+    search_text = await _build_search_text(request)
+    enhanced_text, _ = await _enhance_query(search_text)
+    enhanced_query = enhanced_text if enhanced_text != search_text else None
+    if enhanced_query:
         logger.info(f"Enhanced query: {enhanced_text[:200]}...")
 
-    # Generate embedding for the enhanced query
     embedding = await generate_embedding(enhanced_text)
-
-    # Build filters for the search
-    search_kwargs: dict[str, Any] = {
-        "query_embedding": embedding,
-        "match_count": min(request.limit * 2, 50),  # Fetch extra for filtering
-        "match_threshold": 0.3,
-    }
-
-    # Execute vector similarity search
-    try:
-        similar_results = await db.search_by_vector(**search_kwargs)
-    except Exception as e:
-        logger.error(f"Vector search failed: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Search service temporarily unavailable. Please try again.",
-        )
-
+    similar_results = await _search_precedent_candidates(
+        db=db, embedding=embedding, limit=request.limit
+    )
     if not similar_results:
-        return FindPrecedentsResponse(
-            query=request.query,
-            precedents=[],
-            total_found=0,
-            search_strategy="semantic_similarity",
-            enhanced_query=enhanced_query,
-        )
+        return _empty_precedents_response(request.query, enhanced_query)
 
-    # Filter out the source document if provided
     if request.document_id:
         similar_results = [
-            r for r in similar_results if r.get("document_id") != request.document_id
+            result
+            for result in similar_results
+            if result.get("document_id") != request.document_id
         ]
-
-    # Apply additional filters
     if request.filters:
         similar_results = _apply_filters(similar_results, request.filters)
 
-    # Fetch full document data for top candidates
-    candidate_ids = [r.get("document_id") for r in similar_results[: request.limit]]
-    candidates_data = []
-    for doc_id in candidate_ids:
-        if doc_id:
-            doc_data = await _fetch_document_context(doc_id)
-            if doc_data:
-                # Attach similarity score from search results
-                for r in similar_results:
-                    if r.get("document_id") == doc_id:
-                        doc_data["_similarity_score"] = r.get("similarity", 0.0)
-                        break
-                candidates_data.append(doc_data)
-
+    candidates_data = await _load_candidate_documents(similar_results, request.limit)
     if not candidates_data:
-        return FindPrecedentsResponse(
-            query=request.query,
-            precedents=[],
-            total_found=0,
-            search_strategy="semantic_similarity",
-            enhanced_query=enhanced_query,
-        )
+        return _empty_precedents_response(request.query, enhanced_query)
 
-    # Run AI analysis if requested
-    analysis_map: dict[str, dict] = {}
-    if request.include_analysis and candidates_data:
-        analysis_result = await _analyze_precedents(request.query, candidates_data)
-        for analysis in analysis_result.get("analyses", []):
-            doc_id = analysis.get("document_id")
-            if doc_id:
-                analysis_map[doc_id] = analysis
-        if analysis_result.get("enhanced_query") and not enhanced_query:
-            enhanced_query = analysis_result["enhanced_query"]
-
-    # Build response with combined scoring
-    precedents = []
-    for doc in candidates_data:
-        doc_id = doc.get("document_id", "")
-        similarity = doc.get("_similarity_score", 0.0)
-        analysis = analysis_map.get(doc_id, {})
-
-        relevance_score = analysis.get("relevance_score")
-        if relevance_score is not None:
-            # Combined score: 40% semantic similarity + 60% AI relevance
-            0.4 * similarity + 0.6 * relevance_score
-        else:
-            pass
-
-        # Format date
-        date_val = doc.get("date_issued")
-        date_str = None
-        if date_val:
-            date_str = str(date_val) if not isinstance(date_val, str) else date_val
-
-        precedents.append(
-            PrecedentMatch(
-                document_id=doc_id,
-                title=doc.get("title"),
-                document_type=doc.get("document_type"),
-                date_issued=date_str,
-                court_name=doc.get("court_name"),
-                outcome=doc.get("outcome"),
-                legal_bases=doc.get("legal_bases")
-                if isinstance(doc.get("legal_bases"), list)
-                else None,
-                summary=doc.get("summary"),
-                similarity_score=round(similarity, 4),
-                relevance_score=round(relevance_score, 4)
-                if relevance_score is not None
-                else None,
-                matching_factors=analysis.get("matching_factors", []),
-                relevance_explanation=analysis.get("relevance_explanation"),
-            )
-        )
-
-    # Sort by combined score (AI relevance weighted higher)
-    precedents.sort(
-        key=lambda p: (
-            0.4 * p.similarity_score + 0.6 * (p.relevance_score or p.similarity_score)
-        ),
-        reverse=True,
+    analysis_map, analysis_enhanced_query = await _build_analysis_map(
+        request, candidates_data
     )
+    if analysis_enhanced_query and not enhanced_query:
+        enhanced_query = analysis_enhanced_query
 
-    # Trim to requested limit
-    precedents = precedents[: request.limit]
+    precedents = [
+        _build_precedent_match(doc, analysis_map.get(doc.get("document_id", "")))
+        for doc in candidates_data
+    ]
+    precedents = _rank_precedents(precedents)[: request.limit]
 
     search_strategy = (
         "semantic_similarity + ai_analysis"

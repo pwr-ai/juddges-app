@@ -374,7 +374,8 @@ async def convert_guest_to_user(request: ConvertGuestRequest):
 
 @router.delete("/session")
 async def delete_guest_session(
-    session_id: str = Cookie(None, alias="guest_session_id"), response: Response = None
+    session_id: Optional[str] = Cookie(None, alias="guest_session_id"),
+    response: Response = None,
 ):
     """
     Delete a guest session.

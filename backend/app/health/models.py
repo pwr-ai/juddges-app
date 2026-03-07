@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -38,6 +38,9 @@ class ServiceHealth(BaseModel):
     )
     last_checked: datetime = Field(
         default_factory=datetime.utcnow, description="Timestamp of last check"
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, description="Extra service-specific metadata"
     )
 
     model_config = ConfigDict(

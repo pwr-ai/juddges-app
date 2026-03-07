@@ -2,9 +2,10 @@
 
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from loguru import logger
@@ -118,6 +119,119 @@ class TrendingTopic(BaseModel):
     category: str
 
 
+_DOC_TYPE_TO_FIELD = {
+    "TOTAL": "total_documents",
+    "judgment": "judgments",
+    "judgment_pl": "judgments_pl",
+    "judgment_uk": "judgments_uk",
+    "tax_interpretation": "tax_interpretations",
+    "tax_interpretation_pl": "tax_interpretations_pl",
+    "tax_interpretation_uk": "tax_interpretations_uk",
+}
+
+
+def _default_dashboard_stats() -> DashboardStats:
+    """Return zeroed dashboard stats used on backend errors."""
+    return DashboardStats(
+        total_documents=0,
+        judgments=0,
+        judgments_pl=0,
+        judgments_uk=0,
+        tax_interpretations=0,
+        tax_interpretations_pl=0,
+        tax_interpretations_uk=0,
+        added_this_week=0,
+        last_updated=None,
+    )
+
+
+async def _get_cached_dashboard_stats(cache_key: str, now: datetime) -> DashboardStats | None:
+    """Get dashboard stats from Redis first, then in-memory cache."""
+    if REDIS_AVAILABLE and redis_client:
+        try:
+            cached_data = await redis_client.get(cache_key)
+            if cached_data:
+                logger.debug("Returning Redis cached dashboard stats")
+                return DashboardStats(**json.loads(cached_data))
+        except Exception as e:
+            logger.warning(f"Redis cache read failed: {e}")
+
+    if (
+        _stats_cache["data"] is not None
+        and _stats_cache["timestamp"] is not None
+        and (now - _stats_cache["timestamp"]).total_seconds() < _cache_ttl
+    ):
+        logger.debug("Returning in-memory cached dashboard stats")
+        return _stats_cache["data"]
+
+    return None
+
+
+def _parse_row_timestamp(created_at: Any) -> datetime | None:
+    """Parse a created_at value into datetime when possible."""
+    if not created_at:
+        return None
+    try:
+        if isinstance(created_at, str):
+            return datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        return created_at
+    except Exception as e:
+        logger.warning(f"Could not parse created_at timestamp: {e}")
+        return None
+
+
+def _parse_doc_type_stats(
+    rows: list[dict[str, Any]] | None,
+) -> tuple[dict[str, int], datetime | None]:
+    """Parse doc_type_stats rows into dashboard metric fields."""
+    counts = {field_name: 0 for field_name in _DOC_TYPE_TO_FIELD.values()}
+    last_updated: datetime | None = None
+
+    for row in rows or []:
+        doc_type = row.get("doc_type", "")
+        field_name = _DOC_TYPE_TO_FIELD.get(doc_type)
+        if field_name:
+            counts[field_name] = row.get("count", 0)
+
+        row_time = _parse_row_timestamp(row.get("created_at"))
+        if row_time and (last_updated is None or row_time > last_updated):
+            last_updated = row_time
+
+    return counts, last_updated
+
+
+async def _fetch_added_this_week_count() -> int:
+    """Fetch count of documents added in the last 7 days."""
+    one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    try:
+        response = (
+            supabase.table("legal_documents")
+            .select("document_id", count="exact")
+            .gte("ingestion_date", one_week_ago.isoformat())
+            .execute()
+        )
+        added_count = response.count or 0
+        logger.info(f"Documents added this week (from Supabase): {added_count:,}")
+        return added_count
+    except Exception as e:
+        logger.warning(f"Could not fetch 'added_this_week' from Supabase: {e}")
+        return 0
+
+
+async def _update_dashboard_cache(cache_key: str, stats: DashboardStats, now: datetime) -> None:
+    """Persist stats to Redis and in-memory fallback cache."""
+    if REDIS_AVAILABLE and redis_client:
+        try:
+            await redis_client.setex(cache_key, _cache_ttl, json.dumps(stats.model_dump()))
+            logger.debug("Updated Redis dashboard stats cache")
+        except Exception as e:
+            logger.warning(f"Redis cache write failed: {e}")
+
+    _stats_cache["data"] = stats
+    _stats_cache["timestamp"] = now
+    logger.debug("Updated in-memory dashboard stats cache")
+
+
 @router.get("/stats", response_model=DashboardStats)
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_api_key)):
@@ -135,149 +249,48 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
     Results are cached for 4 hours in Redis and in-memory cache.
     """
     cache_key = "dashboard:stats"
-
-    # Try Redis cache first
-    if REDIS_AVAILABLE and redis_client:
-        try:
-            cached_data = await redis_client.get(cache_key)
-            if cached_data:
-                logger.debug("Returning Redis cached dashboard stats")
-                return DashboardStats(**json.loads(cached_data))
-        except Exception as e:
-            logger.warning(f"Redis cache read failed: {e}")
-
-    # Fallback to in-memory cache
     now = datetime.now(timezone.utc)
-    if (
-        _stats_cache["data"] is not None
-        and _stats_cache["timestamp"] is not None
-        and (now - _stats_cache["timestamp"]).total_seconds() < _cache_ttl
-    ):
-        logger.debug("Returning in-memory cached dashboard stats")
-        return _stats_cache["data"]
+    cached_stats = await _get_cached_dashboard_stats(cache_key, now)
+    if cached_stats:
+        return cached_stats
 
     try:
         # Fetch document counts from doc_type_stats table (pre-computed)
         logger.info("Fetching dashboard stats from doc_type_stats table...")
-
-        # Query the doc_type_stats table
         stats_response = supabase.table("doc_type_stats").select("*").execute()
-
-        # Parse stats from table
-        total_documents = 0
-        judgments = 0
-        judgments_pl = 0
-        judgments_uk = 0
-        tax_interpretations = 0
-        tax_interpretations_pl = 0
-        tax_interpretations_uk = 0
-        last_updated = None
-
-        for row in stats_response.data:
-            doc_type = row.get("doc_type", "")
-            count = row.get("count", 0)
-            created_at = row.get("created_at")
-
-            if doc_type == "TOTAL":
-                total_documents = count
-            elif doc_type == "judgment":
-                judgments = count
-            elif doc_type == "judgment_pl":
-                judgments_pl = count
-            elif doc_type == "judgment_uk":
-                judgments_uk = count
-            elif doc_type == "tax_interpretation":
-                tax_interpretations = count
-            elif doc_type == "tax_interpretation_pl":
-                tax_interpretations_pl = count
-            elif doc_type == "tax_interpretation_uk":
-                tax_interpretations_uk = count
-
-            # Track most recent update time
-            if created_at:
-                try:
-                    # Parse timestamp string to datetime
-                    if isinstance(created_at, str):
-                        row_time = datetime.fromisoformat(
-                            created_at.replace("Z", "+00:00")
-                        )
-                    else:
-                        row_time = created_at
-
-                    if last_updated is None or row_time > last_updated:
-                        last_updated = row_time
-                except Exception as e:
-                    logger.warning(f"Could not parse created_at timestamp: {e}")
-
-        # Convert last_updated datetime to ISO string for JSON serialization
+        counts, last_updated = _parse_doc_type_stats(stats_response.data)
         last_updated_str = last_updated.isoformat() if last_updated else None
 
-        # Get "added_this_week" count from Supabase
         logger.info("Fetching 'added_this_week' count...")
-        added_this_week = 0
-        one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-
-        try:
-            response = (
-                supabase.table("legal_documents")
-                .select("document_id", count="exact")
-                .gte("ingestion_date", one_week_ago.isoformat())
-                .execute()
-            )
-            added_this_week = response.count or 0
-            logger.info(
-                f"Documents added this week (from Supabase): {added_this_week:,}"
-            )
-        except Exception as e:
-            logger.warning(f"Could not fetch 'added_this_week' from Supabase: {e}")
+        added_this_week = await _fetch_added_this_week_count()
 
         logger.info(
-            f"Stats from table: {total_documents:,} total, {judgments:,} judgments ({judgments_pl:,} PL, {judgments_uk:,} UK), {tax_interpretations:,} tax interpretations ({tax_interpretations_pl:,} PL, {tax_interpretations_uk:,} UK)"
+            "Stats from table: "
+            f"{counts['total_documents']:,} total, "
+            f"{counts['judgments']:,} judgments "
+            f"({counts['judgments_pl']:,} PL, {counts['judgments_uk']:,} UK), "
+            f"{counts['tax_interpretations']:,} tax interpretations "
+            f"({counts['tax_interpretations_pl']:,} PL, {counts['tax_interpretations_uk']:,} UK)"
         )
 
         stats = DashboardStats(
-            total_documents=total_documents,
-            judgments=judgments,
-            judgments_pl=judgments_pl,
-            judgments_uk=judgments_uk,
-            tax_interpretations=tax_interpretations,
-            tax_interpretations_pl=tax_interpretations_pl,
-            tax_interpretations_uk=tax_interpretations_uk,
+            total_documents=counts["total_documents"],
+            judgments=counts["judgments"],
+            judgments_pl=counts["judgments_pl"],
+            judgments_uk=counts["judgments_uk"],
+            tax_interpretations=counts["tax_interpretations"],
+            tax_interpretations_pl=counts["tax_interpretations_pl"],
+            tax_interpretations_uk=counts["tax_interpretations_uk"],
             added_this_week=added_this_week,
             last_updated=last_updated_str,
         )
 
-        # Update Redis cache
-        if REDIS_AVAILABLE and redis_client:
-            try:
-                await redis_client.setex(
-                    cache_key, _cache_ttl, json.dumps(stats.model_dump())
-                )
-                logger.debug("Updated Redis dashboard stats cache")
-            except Exception as e:
-                logger.warning(f"Redis cache write failed: {e}")
-
-        # Update in-memory cache as fallback
-        _stats_cache["data"] = stats
-        _stats_cache["timestamp"] = now
-        logger.debug("Updated in-memory dashboard stats cache")
-
+        await _update_dashboard_cache(cache_key, stats, now)
         return stats
 
     except Exception as e:
         logger.error(f"Error fetching dashboard stats: {e}")
-        # Return default values on error
-        return DashboardStats(
-            total_documents=0,
-            judgments=0,
-            judgments_pl=0,
-            judgments_uk=0,
-            tax_interpretations=0,
-            tax_interpretations_pl=0,
-            tax_interpretations_uk=0,
-            added_this_week=0,
-            last_updated=None,
-        )
+        return _default_dashboard_stats()
 
 
 @router.post("/refresh-stats")
@@ -419,6 +432,106 @@ async def get_recent_documents(
         return []
 
 
+_PL_DOCKET_PATTERN = re.compile(
+    r"Sygn\.?\s*akt[:\s]+([IVX]+\s+[A-Z]+\s+\d+/\d+)", re.IGNORECASE
+)
+_UK_CASE_PATTERN = re.compile(r"Case No[:\s]+(\d{4}/\d+[A-Z]*\d*)", re.IGNORECASE)
+_NEUTRAL_CITATION_PATTERN = re.compile(
+    r"\[(\d{4})\]\s+([A-Z]+)\s+([A-Za-z]+)[\.\s]+(\d+)", re.IGNORECASE
+)
+_COURT_PATTERNS = [
+    re.compile(r"(Sąd\s+(?:Okręgowy|Rejonowy|Apelacyjny)\s+w\s+\w+)", re.IGNORECASE),
+    re.compile(r"(COURT OF APPEAL[^\n]*)", re.IGNORECASE),
+    re.compile(r"(Crown Court at\s+\w+)", re.IGNORECASE),
+]
+
+
+def _truncate_with_ellipsis(text: str, max_len: int) -> str:
+    """Truncate text for display and append ellipsis if needed."""
+    return text[:max_len] + "..." if len(text) > max_len else text
+
+
+def _extract_docket_number(text_preview: str) -> str:
+    """Extract docket or case reference from free text preview."""
+    pl_match = _PL_DOCKET_PATTERN.search(text_preview)
+    if pl_match:
+        return pl_match.group(1)
+
+    uk_match = _UK_CASE_PATTERN.search(text_preview)
+    if uk_match:
+        return uk_match.group(1)
+
+    neutral_match = _NEUTRAL_CITATION_PATTERN.search(text_preview)
+    if neutral_match:
+        return (
+            f"[{neutral_match.group(1)}] {neutral_match.group(2)} "
+            f"{neutral_match.group(3)} {neutral_match.group(4)}"
+        )
+    return ""
+
+
+def _extract_court_name(text_preview: str) -> str:
+    """Extract court name from text using known patterns."""
+    for pattern in _COURT_PATTERNS:
+        court_match = pattern.search(text_preview)
+        if court_match:
+            return court_match.group(1).strip()
+    return ""
+
+
+def _derive_featured_title(doc: dict[str, Any]) -> str:
+    """Generate a robust fallback title when source title is missing."""
+    title = doc.get("title")
+    if title:
+        return title
+
+    full_text = doc.get("full_text", "")
+    docket_number = doc.get("docket_number", "")
+    court_name = doc.get("court_name", "")
+    judgment_date = doc.get("judgment_date", "")
+    judgment_id = doc.get("judgment_id", "")
+
+    if full_text and not docket_number:
+        text_preview = full_text[:500]
+        docket_number = _extract_docket_number(text_preview)
+        if not court_name:
+            court_name = _extract_court_name(text_preview)
+
+    if docket_number:
+        if court_name:
+            return f"{_truncate_with_ellipsis(court_name, 40)}: {docket_number}"
+        return f"Case {docket_number}"
+
+    if court_name and judgment_date and judgment_date != "None":
+        return f"{_truncate_with_ellipsis(court_name, 40)} - {judgment_date[:10]}"
+
+    if judgment_id:
+        if "_" in judgment_id:
+            parts = judgment_id.split("_")
+            preferred_id = parts[0] if len(parts[0]) > 5 else judgment_id[:20]
+            return f"Judgment {preferred_id}"
+        return f"Judgment {judgment_id[:20]}"
+
+    return f"Document {doc.get('id', 'N/A')[:8]}"
+
+
+def _to_document_summary(doc: dict[str, Any]) -> DocumentSummary:
+    """Convert raw document row to dashboard DocumentSummary."""
+    return DocumentSummary(
+        id=doc.get("id", ""),
+        title=_derive_featured_title(doc),
+        document_type=doc.get("document_type") or "unknown",
+        publication_date=doc.get("date_issued")
+        or doc.get("publication_date")
+        or doc.get("judgment_date"),
+        ai_summary=None,
+        key_topics=None,
+        jurisdiction=doc.get("country"),
+        language=doc.get("language", "pl"),
+        issuing_body=doc.get("issuing_body"),
+    )
+
+
 @router.get("/featured-examples", response_model=list[DocumentSummary])
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_featured_examples(
@@ -437,7 +550,6 @@ async def get_featured_examples(
         List of featured documents
     """
     try:
-        # For MVP: Return random selection of diverse document types
         response = (
             supabase.table("documents")
             .select("*")
@@ -447,106 +559,12 @@ async def get_featured_examples(
             .execute()
         )
 
-        # Try to get diverse types
-        featured = []
-        seen_types = set()
-
-        for doc in response.data:
+        featured: list[DocumentSummary] = []
+        seen_types: set[str | None] = set()
+        for doc in response.data or []:
             doc_type = doc.get("document_type")
             if doc_type not in seen_types or len(featured) < limit:
-                # Generate fallback title from available fields
-                title = doc.get("title")
-                if not title:
-                    # Try to extract meaningful information from full_text first
-                    full_text = doc.get("full_text", "")
-                    docket_number = doc.get("docket_number", "")
-                    court_name = doc.get("court_name", "")
-                    judgment_date = doc.get("judgment_date", "")
-                    judgment_id = doc.get("judgment_id", "")
-
-                    # Extract case number from full_text if available
-                    if full_text and not docket_number:
-                        import re
-
-                        text_preview = full_text[:500]
-
-                        # Polish case number patterns
-                        pl_pattern = re.search(
-                            r"Sygn\.?\s*akt[:\s]+([IVX]+\s+[A-Z]+\s+\d+/\d+)",
-                            text_preview,
-                        )
-                        if pl_pattern:
-                            docket_number = pl_pattern.group(1)
-                        else:
-                            # UK case number patterns
-                            uk_pattern = re.search(
-                                r"Case No[:\s]+(\d{4}/\d+[A-Z]*\d*)", text_preview
-                            )
-                            if uk_pattern:
-                                docket_number = uk_pattern.group(1)
-                            else:
-                                # Neutral citation
-                                neutral_pattern = re.search(
-                                    r"\[(\d{4})\]\s+([A-Z]+)\s+([A-Za-z]+)[\.\s]+(\d+)",
-                                    text_preview,
-                                )
-                                if neutral_pattern:
-                                    docket_number = f"[{neutral_pattern.group(1)}] {neutral_pattern.group(2)} {neutral_pattern.group(3)} {neutral_pattern.group(4)}"
-
-                        # Extract court name from text if not available
-                        if not court_name:
-                            court_patterns = [
-                                r"(Sąd\s+(?:Okręgowy|Rejonowy|Apelacyjny)\s+w\s+\w+)",
-                                r"(COURT OF APPEAL[^\n]*)",
-                                r"(Crown Court at\s+\w+)",
-                            ]
-                            for pattern in court_patterns:
-                                court_match = re.search(pattern, text_preview)
-                                if court_match:
-                                    court_name = court_match.group(1).strip()
-                                    break
-
-                    # Build title from extracted information
-                    if docket_number:
-                        title = f"Case {docket_number}"
-                        if court_name:
-                            court_short = (
-                                court_name[:40] + "..."
-                                if len(court_name) > 40
-                                else court_name
-                            )
-                            title = f"{court_short}: {docket_number}"
-                    elif court_name and judgment_date and judgment_date != "None":
-                        court_short = (
-                            court_name[:40] + "..."
-                            if len(court_name) > 40
-                            else court_name
-                        )
-                        title = f"{court_short} - {judgment_date[:10]}"
-                    elif judgment_id:
-                        if "_" in judgment_id:
-                            parts = judgment_id.split("_")
-                            title = f"Judgment {parts[0] if len(parts[0]) > 5 else judgment_id[:20]}"
-                        else:
-                            title = f"Judgment {judgment_id[:20]}"
-                    else:
-                        title = f"Document {doc.get('id', 'N/A')[:8]}"
-
-                featured.append(
-                    DocumentSummary(
-                        id=doc.get("id", ""),
-                        title=title,
-                        document_type=doc_type,
-                        publication_date=doc.get("date_issued")
-                        or doc.get("publication_date")
-                        or doc.get("judgment_date"),
-                        ai_summary=None,
-                        key_topics=None,
-                        jurisdiction=doc.get("country"),
-                        language=doc.get("language", "pl"),
-                        issuing_body=doc.get("issuing_body"),
-                    )
-                )
+                featured.append(_to_document_summary(doc))
                 seen_types.add(doc_type)
 
                 if len(featured) >= limit:
