@@ -1089,19 +1089,25 @@ async def search_documents(request: SearchChunksRequest):
         # Generate embedding for query (if vector search is enabled)
         query_embedding = None
         embedding_time_ms = 0
+        vector_fallback = False
         if request.alpha > 0:  # Vector search component enabled
-            embedding_start = time.perf_counter()
-            query_embedding = await generate_embedding(semantic_query)
-            if len(query_embedding) != JUDGMENTS_EMBEDDING_DIMENSION:
-                raise HTTPException(
-                    status_code=500,
-                    detail=(
-                        "Embedding dimension mismatch: expected "
-                        f"{JUDGMENTS_EMBEDDING_DIMENSION}, got {len(query_embedding)}. "
-                        "Check EMBEDDING_DIMENSION and EMBEDDING_MODEL_ID configuration."
-                    ),
+            try:
+                embedding_start = time.perf_counter()
+                query_embedding = await generate_embedding(semantic_query)
+                if len(query_embedding) != JUDGMENTS_EMBEDDING_DIMENSION:
+                    logger.warning(
+                        f"Embedding dimension mismatch: expected {JUDGMENTS_EMBEDDING_DIMENSION}, "
+                        f"got {len(query_embedding)}. Falling back to text-only search."
+                    )
+                    query_embedding = None
+                    vector_fallback = True
+                embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
+            except Exception as emb_err:
+                logger.warning(
+                    f"Embedding generation failed, falling back to text-only search: {emb_err}"
                 )
-            embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
+                query_embedding = None
+                vector_fallback = True
 
         # Detect search language from explicit filter, inferred jurisdiction, or query content
         search_language = _detect_search_language(
@@ -1186,6 +1192,7 @@ async def search_documents(request: SearchChunksRequest):
             if request.mode == "thinking"
             else 0,
             "embedding_ms": round(embedding_time_ms, 2),
+            "vector_fallback": vector_fallback,
             "search_ms": round(search_time_ms, 2),
             "total_ms": round(total_time_ms, 2),
         }

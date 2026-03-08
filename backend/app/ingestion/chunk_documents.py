@@ -26,9 +26,9 @@ from loguru import logger
 from openai import AsyncOpenAI
 from supabase import Client
 
-# Configuration
+# Configuration — dimensions must match DB schema (vector(768))
 EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_DIMENSIONS = 1536
+EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 DEFAULT_BATCH_SIZE = 50
 MAX_RETRIES = 3
 RETRY_DELAY = 2.0
