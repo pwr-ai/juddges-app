@@ -1,7 +1,7 @@
-"""Unit tests for search language detection and expanded query analysis heuristics."""
+"""Unit tests for search language detection, query classification, and expanded heuristics."""
 
 from app.documents import _detect_search_language
-from app.query_analysis import _heuristic_query_analysis
+from app.query_analysis import _heuristic_query_analysis, classify_and_route_query
 
 # ============================================================================
 # _detect_search_language tests
@@ -130,3 +130,76 @@ class TestHeuristicQueryAnalysisExpanded:
         result = _heuristic_query_analysis("cases between 2010 and 2020")
         assert result.date_from == "2010-01-01"
         assert result.date_to == "2020-12-31"
+
+    def test_query_type_included_in_result(self):
+        result = _heuristic_query_analysis("III KK 123/20")
+        assert result.query_type == "case_number"
+
+
+# ============================================================================
+# classify_and_route_query tests
+# ============================================================================
+
+
+class TestClassifyAndRouteQuery:
+    """Tests for query type classification and alpha routing."""
+
+    # -- Case numbers --
+
+    def test_polish_case_number(self):
+        qtype, alpha = classify_and_route_query("III KK 123/20")
+        assert qtype == "case_number"
+        assert alpha == 0.1
+
+    def test_polish_case_number_with_context(self):
+        qtype, _ = classify_and_route_query("wyrok w sprawie II K 45/21")
+        assert qtype == "case_number"
+
+    def test_uk_neutral_citation(self):
+        qtype, alpha = classify_and_route_query("[2020] UKSC 1")
+        assert qtype == "case_number"
+        assert alpha == 0.1
+
+    def test_uk_ewca_citation(self):
+        qtype, _ = classify_and_route_query("[2019] EWCA Civ 123")
+        assert qtype == "case_number"
+
+    # -- Statute references --
+
+    def test_polish_article_reference(self):
+        qtype, alpha = classify_and_route_query("art. 148 kk")
+        assert qtype == "statute_reference"
+        assert alpha == 0.2
+
+    def test_paragraph_symbol(self):
+        qtype, _ = classify_and_route_query("§ 5 ust. 1")
+        assert qtype == "statute_reference"
+
+    def test_uk_section_reference(self):
+        qtype, _ = classify_and_route_query("Section 2 Criminal Justice Act")
+        assert qtype == "statute_reference"
+
+    # -- Exact phrase --
+
+    def test_quoted_phrase(self):
+        qtype, alpha = classify_and_route_query('"strict liability"')
+        assert qtype == "exact_phrase"
+        assert alpha == 0.15
+
+    # -- Conceptual --
+
+    def test_conceptual_long_query(self):
+        qtype, alpha = classify_and_route_query("duty of care in medical negligence")
+        assert qtype == "conceptual"
+        assert alpha == 0.8
+
+    # -- Mixed / default --
+
+    def test_short_generic_query(self):
+        qtype, alpha = classify_and_route_query("murder")
+        assert qtype == "mixed"
+        assert alpha == 0.5
+
+    def test_two_word_query(self):
+        qtype, _ = classify_and_route_query("contract breach")
+        assert qtype == "mixed"

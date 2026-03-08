@@ -65,6 +65,10 @@ class QueryAnalysisResult(BaseModel):
         default=None,
         description="Inferred decision date upper bound in ISO format YYYY-MM-DD.",
     )
+    query_type: str | None = Field(
+        default=None,
+        description="Detected query type for diagnostic purposes (case_number, statute_reference, exact_phrase, conceptual, mixed).",
+    )
 
 
 QUERY_ANALYSIS_PROMPT = ChatPromptTemplate.from_messages(
@@ -195,6 +199,72 @@ def _contains_any_terms(text: str, terms: tuple[str, ...]) -> bool:
     return False
 
 
+# Polish case number: optional roman numeral division + department code + digits/year
+# e.g. "II K 123/20", "III KK 45/21", "I ACa 789/19", "V CSK 12/22"
+_POLISH_CASE_RE = re.compile(
+    r"\b(?:I{1,3}|IV|V|VI|VII|VIII|IX|X)?\s*"
+    r"[A-Z]{1,5}(?:a|b)?\s+"
+    r"\d{1,5}/\d{2,4}\b"
+)
+
+# UK neutral citations: [YYYY] COURT digits, e.g. "[2020] UKSC 1", "[2019] EWCA Civ 123"
+_UK_CASE_RE = re.compile(
+    r"\[\d{4}\]\s+(?:UKSC|UKHL|EWCA|EWHC|UKUT|UKFTT|UKPC|UKAT)"
+    r"(?:\s+(?:Civ|Crim|Admin|QB|Ch|Fam|Pat|IP|Costs|TCC|Comm|Admlty))?"
+    r"\s+\d+"
+)
+
+# Polish statute references: "art. 148 kk", "Art. 2 kpc", "§ 5 ust. 1", or "§12"
+# UK statute references: "Section 2 Criminal Justice Act", "s. 47 PACE"
+_STATUTE_RE = re.compile(
+    r"(?:"
+    r"\bArt(?:ykuł|ykul|\.)\s*\d+"  # Polish: Art. 148 or Artykuł 148
+    r"|\bart\.\s*\d+"  # Polish short: art. 148
+    r"|§\s*\d+"  # § symbol
+    r"|\bSection\s+\d+"  # UK: Section 2
+    r"|\bs\.\s*\d+"  # UK short: s. 47
+    r"|\b(?:kk|kpc|kpk|kc|kpa|kks|kro|kw)\b"  # Polish code abbrevs
+    r"|Criminal Justice Act"
+    r"|(?:Police and Criminal Evidence|Misuse of Drugs|Theft|Fraud) Act"
+    r")",
+    re.IGNORECASE,
+)
+
+# Queries wrapped in double quotes
+_EXACT_PHRASE_RE = re.compile(r'^\s*"[^"]+"\s*$')
+
+
+def classify_and_route_query(query: str) -> tuple[str, float]:
+    """Classify query type and return (query_type, recommended_alpha).
+
+    Query types and their optimal alpha:
+    - 'case_number': queries like "III KK 123/20", "C-123/19" → alpha=0.1 (mostly text)
+    - 'statute_reference': queries like "art. 148 kk", "Section 2 Criminal Justice Act" → alpha=0.2
+    - 'exact_phrase': quoted queries like '"strict liability"' → alpha=0.15
+    - 'conceptual': abstract concepts like "duty of care in medical negligence" → alpha=0.8 (mostly vector)
+    - 'mixed': default/fallback → alpha=0.5
+    """
+    # Exact-phrase check first — the surrounding quotes are the decisive signal.
+    if _EXACT_PHRASE_RE.match(query):
+        return "exact_phrase", 0.15
+
+    # Case number detection takes priority over statute references because a
+    # case number string may also contain department codes that look like statute
+    # abbreviations (e.g. "KK" in "III KK 45/21").
+    if _POLISH_CASE_RE.search(query) or _UK_CASE_RE.search(query):
+        return "case_number", 0.1
+
+    if _STATUTE_RE.search(query):
+        return "statute_reference", 0.2
+
+    # Conceptual queries: 4+ words and none of the specific identifier patterns above.
+    word_count = len(query.split())
+    if word_count >= 4:
+        return "conceptual", 0.8
+
+    return "mixed", 0.5
+
+
 def _heuristic_query_analysis(query: str) -> QueryAnalysisResult:
     """Best-effort deterministic fallback when LLM analysis is unavailable."""
     lower = query.lower()
@@ -237,6 +307,7 @@ def _heuristic_query_analysis(query: str) -> QueryAnalysisResult:
         court_levels = ["High Court"]
 
     date_from, date_to = _extract_year_bounds(query)
+    query_type, _ = classify_and_route_query(query)
 
     return QueryAnalysisResult(
         semantic_query=semantic_query,
@@ -247,6 +318,7 @@ def _heuristic_query_analysis(query: str) -> QueryAnalysisResult:
         keywords=None,
         date_from=date_from,
         date_to=date_to,
+        query_type=query_type,
     )
 
 
