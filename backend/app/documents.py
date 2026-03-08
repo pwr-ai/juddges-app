@@ -1086,11 +1086,26 @@ async def search_documents(request: SearchChunksRequest):
                 inferred_filters=list((inferred_filters or {}).keys()),
             )
 
+        # Auto-adjust alpha based on query type classification
+        from app.query_analysis import classify_and_route_query
+
+        query_type, recommended_alpha = classify_and_route_query(query)
+        effective_alpha = request.alpha
+        alpha_was_routed = False
+        # Only override if user sent the default alpha (0.5)
+        if request.alpha == 0.5 and query_type != "mixed":
+            effective_alpha = recommended_alpha
+            alpha_was_routed = True
+            logger.info(
+                f"Query classified as '{query_type}', adjusting alpha "
+                f"{request.alpha} → {effective_alpha}"
+            )
+
         # Generate embedding for query (if vector search is enabled)
         query_embedding = None
         embedding_time_ms = 0
         vector_fallback = False
-        if request.alpha > 0:  # Vector search component enabled
+        if effective_alpha > 0:  # Vector search component enabled
             try:
                 embedding_start = time.perf_counter()
                 query_embedding = await generate_embedding(semantic_query)
@@ -1132,7 +1147,7 @@ async def search_documents(request: SearchChunksRequest):
             {
                 "query_embedding": query_embedding,
                 "search_text": keyword_query
-                if request.alpha < 1.0
+                if effective_alpha < 1.0
                 else None,  # Skip text search if pure vector
                 "search_language": search_language,
                 "filter_jurisdictions": request.jurisdictions,
@@ -1147,7 +1162,7 @@ async def search_documents(request: SearchChunksRequest):
                 "filter_date_from": request.date_from,
                 "filter_date_to": request.date_to,
                 "similarity_threshold": 0.5,
-                "hybrid_alpha": request.alpha,
+                "hybrid_alpha": effective_alpha,
                 "result_limit": request.limit_docs or 20,
                 "result_offset": request.offset or 0,
                 "rrf_k": 60,
@@ -1157,6 +1172,17 @@ async def search_documents(request: SearchChunksRequest):
 
         results = response.data or []
         search_time_ms = (time.perf_counter() - search_start) * 1000
+
+        # Optional cross-encoder reranking (active when COHERE_API_KEY is set)
+        rerank_time_ms = 0
+        if results:
+            from app.reranker import rerank_results
+
+            rerank_start = time.perf_counter()
+            results = await rerank_results(
+                query=query, results=results, top_k=request.limit_docs or 20
+            )
+            rerank_time_ms = (time.perf_counter() - rerank_start) * 1000
 
         # Convert to chunks format for compatibility
         chunks = []
@@ -1195,7 +1221,11 @@ async def search_documents(request: SearchChunksRequest):
             "embedding_ms": round(embedding_time_ms, 2),
             "vector_fallback": vector_fallback,
             "search_ms": round(search_time_ms, 2),
+            "rerank_ms": round(rerank_time_ms, 2),
             "total_ms": round(total_time_ms, 2),
+            "query_type": query_type,
+            "effective_alpha": effective_alpha,
+            "alpha_was_routed": alpha_was_routed,
         }
 
         logger.info(
