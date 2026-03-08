@@ -150,10 +150,15 @@ def _expand_semantic_query(query: str) -> str:
         "appeal": {"appellate", "challenge"},
         "tax": {"vat", "fiscal"},
         "vat": {"tax"},
-        "criminal": {"offence", "sentencing"},
+        "criminal": {"offence", "sentencing", "conviction"},
         "fraud": {"deception", "dishonesty"},
         "lease": {"tenancy", "property"},
         "termination": {"rescission", "ending"},
+        "murder": {"homicide", "manslaughter", "killing"},
+        "conviction": {"convicted", "guilty", "sentence"},
+        "damages": {"compensation", "remedy"},
+        "sentencing": {"sentence", "punishment"},
+        "property": {"estate", "land", "ownership"},
     }
 
     expanded = set(tokens)
@@ -207,6 +212,7 @@ def _heuristic_query_analysis(query: str) -> QueryAnalysisResult:
     has_pl = bool(
         re.search(r"\bpl\b", lower)
         or any(token in lower for token in ("poland", "polish", "polski", "polska"))
+        or re.search(r"[ąćęłńóśźż]", lower)  # Polish diacritics indicate PL
     )
     if has_uk:
         jurisdictions = ["UK"]

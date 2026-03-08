@@ -21,6 +21,7 @@ from supabase.client import ClientOptions
 
 from juddges_search.models import DocumentChunk
 from juddges_search.embeddings import embed_texts
+from juddges_search.retrieval.aggregation import reciprocal_rank_fusion
 
 
 class SupabaseSearchClient:
@@ -219,14 +220,8 @@ class SupabaseSearchClient:
                 document_types=document_types,
             )
 
-            # Merge and re-rank results
-            combined_results = self._merge_search_results(
-                vector_results,
-                text_results,
-                vector_weight,
-                text_weight,
-                match_count,
-            )
+            # Merge using Reciprocal Rank Fusion (rank-based, no score normalization needed)
+            combined_results = reciprocal_rank_fusion([vector_results, text_results], k=60)[:match_count]
 
             logger.info(f"Hybrid search returned {len(combined_results)} chunks")
             return combined_results

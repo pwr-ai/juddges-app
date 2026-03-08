@@ -77,6 +77,91 @@ async def generate_embedding(text: str) -> list[float]:
     return await provider.embed_text(text)
 
 
+# Common Polish characters and words for language detection
+_POLISH_CHARS = re.compile(r"[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]")
+_POLISH_STOPWORDS = frozenset(
+    {
+        "i",
+        "w",
+        "z",
+        "na",
+        "do",
+        "nie",
+        "się",
+        "jest",
+        "za",
+        "od",
+        "że",
+        "jak",
+        "ale",
+        "co",
+        "to",
+        "ten",
+        "ta",
+        "po",
+        "dla",
+        "jej",
+        "jego",
+        "ich",
+        "tym",
+        "przez",
+        "tak",
+        "już",
+        "są",
+        "tej",
+        "te",
+        "tego",
+        "być",
+        "sąd",
+        "wyrok",
+        "orzeczenie",
+        "sprawy",
+        "karny",
+        "cywilny",
+        "apelacyjny",
+        "odpowiedzialność",
+    }
+)
+
+
+def _detect_search_language(
+    query: str,
+    languages: list[str] | None,
+    jurisdictions: list[str] | None,
+) -> str:
+    """Detect appropriate PostgreSQL text search configuration.
+
+    Priority: explicit language filter > jurisdiction filter > query content heuristic.
+    Returns 'english' or 'simple' (for Polish and unknown languages).
+    """
+    # 1. Explicit language filter
+    if languages:
+        if "en" in languages or "uk" in languages:
+            return "english"
+        if "pl" in languages:
+            return "simple"
+
+    # 2. Jurisdiction filter implies language
+    if jurisdictions:
+        if jurisdictions == ["UK"]:
+            return "english"
+        if jurisdictions == ["PL"]:
+            return "simple"
+
+    # 3. Content-based heuristic: detect Polish from characters or stopwords
+    lower = query.lower()
+    if _POLISH_CHARS.search(query):
+        return "simple"
+
+    query_tokens = set(re.findall(r"\w+", lower))
+    polish_overlap = query_tokens & _POLISH_STOPWORDS
+    if len(polish_overlap) >= 2:
+        return "simple"
+
+    # Default to English for FTS stemming benefits
+    return "english"
+
+
 def _convert_judgment_to_legal_document(
     judgment_data: dict[str, Any],
     include_vectors: bool = False,
@@ -1018,12 +1103,10 @@ async def search_documents(request: SearchChunksRequest):
                 )
             embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
 
-        # Map languages to search_language parameter (default to Polish)
-        search_language = "polish"
-        if request.languages and (
-            "en" in request.languages or "uk" in request.languages
-        ):
-            search_language = "english"
+        # Detect search language from explicit filter, inferred jurisdiction, or query content
+        search_language = _detect_search_language(
+            keyword_query, request.languages, request.jurisdictions
+        )
 
         # Perform hybrid search using the new database function
         from app.core.supabase import get_supabase_client
@@ -1037,7 +1120,7 @@ async def search_documents(request: SearchChunksRequest):
 
         search_start = time.perf_counter()
 
-        # Call the new search_judgments_hybrid RPC function
+        # Call search_judgments_hybrid RPC with RRF fusion
         response = supabase.rpc(
             "search_judgments_hybrid",
             {
@@ -1057,9 +1140,11 @@ async def search_documents(request: SearchChunksRequest):
                 "filter_cited_legislation": request.cited_legislation,
                 "filter_date_from": request.date_from,
                 "filter_date_to": request.date_to,
+                "similarity_threshold": 0.5,
                 "hybrid_alpha": request.alpha,
                 "result_limit": request.limit_docs or 20,
                 "result_offset": request.offset or 0,
+                "rrf_k": 60,
             },
         ).execute()
 
