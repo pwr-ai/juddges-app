@@ -255,7 +255,7 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
 
 1. **PostgreSQL (via Supabase)**: Main database for structured data
    - `judgments` table: Stores court decisions with metadata
-   - Includes `embedding` column (vector(1536)) for semantic search
+   - Includes `embedding` column (vector(768)) for semantic search
    - Full-text search using PostgreSQL GIN indexes
    - RLS (Row Level Security) for access control
 
@@ -596,7 +596,7 @@ Key fields:
 - `full_text`: Complete judgment text
 - `judges`: JSONB array of judges
 - `keywords`: Text array for filtering
-- `embedding`: vector(1536) for semantic search
+- `embedding`: vector(768) for semantic search
 - `metadata`: JSONB for flexible data
 
 #### Ingestion

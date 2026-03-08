@@ -363,7 +363,7 @@ CREATE TABLE judgments (
   decision_type TEXT,                   -- Judgment, Order, etc.
   outcome TEXT,                         -- Upheld, Overturned, etc.
   source_url TEXT,
-  embedding vector(1536),               -- OpenAI embedding
+  embedding vector(768),                -- OpenAI embedding
   metadata JSONB,                       -- Flexible metadata
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -398,7 +398,7 @@ CREATE INDEX idx_judgments_embedding ON judgments
 ```sql
 -- Semantic search by vector embedding
 CREATE OR REPLACE FUNCTION search_judgments_by_embedding(
-  query_embedding vector(1536),
+  query_embedding vector(768),
   match_threshold float DEFAULT 0.7,
   match_count int DEFAULT 10
 )
@@ -460,7 +460,7 @@ $$;
 **pgvector Configuration:**
 - **Algorithm**: HNSW (Hierarchical Navigable Small World)
 - **Distance Metric**: Cosine similarity
-- **Embedding Dimension**: 1536 (OpenAI text-embedding-3-small)
+- **Embedding Dimension**: 768
 - **Index Parameters**:
   - `m = 16`: Max connections per layer
   - `ef_construction = 64`: Build-time search width

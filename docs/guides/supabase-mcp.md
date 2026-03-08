@@ -95,7 +95,7 @@ Search judgments by vector similarity:
 -- First, you'd generate an embedding for the query
 -- Then search using the function we created:
 SELECT * FROM search_judgments_by_embedding(
-  ARRAY[0.1, 0.2, ...]::vector(1536),  -- Your query embedding
+  ARRAY[0.1, 0.2, ...]::vector(768),   -- Your query embedding
   0.7,  -- Similarity threshold
   10,   -- Number of results
   'PL'  -- Filter by jurisdiction (optional)

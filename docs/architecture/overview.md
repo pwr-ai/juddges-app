@@ -144,7 +144,7 @@ juddges-app/
 - `full_text`: Complete judgment text
 - `judges`: JSONB array of judges
 - `keywords`: Text array for filtering
-- `embedding`: vector(1536) for semantic search
+- `embedding`: vector(768) for semantic search
 - `metadata`: JSONB for flexible data
 
 **Indexes**:
@@ -319,7 +319,7 @@ python ingest_judgments.py --uk 100
 - **Quality**: State-of-the-art semantic understanding
 - **Stability**: Production-ready API
 - **Cost**: Reasonable at ~$0.0001 per 1K tokens
-- **Compatibility**: Standard 1536-dim vectors
+- **Compatibility**: Standard 768-dim vectors
 
 ### 4. Why Sample Size 100+100?
 - **Testing**: Large enough to test search quality

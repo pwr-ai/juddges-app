@@ -152,7 +152,7 @@ CREATE TABLE judgments (
   full_text TEXT,
   judges JSONB,
   keywords TEXT[],
-  embedding vector(1536),
+  embedding vector(768),
   metadata JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

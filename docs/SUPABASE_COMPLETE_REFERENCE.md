@@ -656,7 +656,7 @@ CREATE TABLE documents (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
-    embedding extensions.vector(1536),
+    embedding extensions.vector(768),
     fts TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', content)) STORED,
     user_id UUID REFERENCES auth.users(id),
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -751,7 +751,7 @@ COMMIT;
 
 ```sql
 CREATE OR REPLACE FUNCTION match_documents(
-    query_embedding extensions.vector(1536),
+    query_embedding extensions.vector(768),
     match_threshold FLOAT DEFAULT 0.78,
     match_count INT DEFAULT 10
 )
@@ -859,7 +859,7 @@ results = vector_store.similarity_search("tenant eviction rights", k=5)
 ```sql
 CREATE OR REPLACE FUNCTION hybrid_search(
     query_text TEXT,
-    query_embedding extensions.vector(1536),
+    query_embedding extensions.vector(768),
     match_count INT,
     full_text_weight FLOAT DEFAULT 1.0,
     semantic_weight FLOAT DEFAULT 1.0,
@@ -936,7 +936,7 @@ CREATE TABLE documents (
     id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
-    embedding halfvec(1536),
+    embedding halfvec(768),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

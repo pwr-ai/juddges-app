@@ -164,7 +164,7 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
 **Dual Database Approach:**
 - **PostgreSQL (via Supabase)**: Main database for structured data
   - `judgments` table: Stores court decisions with metadata
-  - Includes `embedding` column (vector(1536)) for semantic search
+  - Includes `embedding` column (vector(768)) for semantic search
   - Full-text search using PostgreSQL GIN indexes
 
 - **Vector Search**: Uses Supabase pgvector

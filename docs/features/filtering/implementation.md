@@ -35,7 +35,7 @@ This document describes the implementation of enhanced server-side filtering for
 **Purpose**: Hybrid search combining vector similarity + full-text search + rich filtering
 
 **Parameters**:
-- `query_embedding` (vector(1536)) - For vector similarity search
+- `query_embedding` (vector(768)) - For vector similarity search
 - `search_text` (text) - For full-text search
 - `search_language` (text) - 'polish' or 'english'
 - **Filter parameters** (all optional, NULL = no filter):
