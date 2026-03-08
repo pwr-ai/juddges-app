@@ -1114,10 +1114,10 @@ async def search_documents(request: SearchChunksRequest):
             keyword_query, request.languages, request.jurisdictions
         )
 
-        # Perform hybrid search using the new database function
-        from app.core.supabase import get_supabase_client
+        # Use async Supabase client to avoid blocking the event loop
+        from app.core.supabase import get_async_supabase_client
 
-        supabase = get_supabase_client()
+        supabase = await get_async_supabase_client()
 
         if not supabase:
             raise HTTPException(
@@ -1127,7 +1127,7 @@ async def search_documents(request: SearchChunksRequest):
         search_start = time.perf_counter()
 
         # Call search_judgments_hybrid RPC with RRF fusion
-        response = supabase.rpc(
+        rpc_query = supabase.rpc(
             "search_judgments_hybrid",
             {
                 "query_embedding": query_embedding,
@@ -1152,7 +1152,8 @@ async def search_documents(request: SearchChunksRequest):
                 "result_offset": request.offset or 0,
                 "rrf_k": 60,
             },
-        ).execute()
+        )
+        response = await rpc_query.execute()
 
         results = response.data or []
         search_time_ms = (time.perf_counter() - search_start) * 1000
