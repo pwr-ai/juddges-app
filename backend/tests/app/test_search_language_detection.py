@@ -11,19 +11,18 @@ from app.query_analysis import _heuristic_query_analysis
 class TestDetectSearchLanguage:
     """Tests for the Polish/English language auto-detection."""
 
-    def test_english_query_defaults_to_english(self):
-        assert (
-            _detect_search_language("murder conviction appeal", None, None) == "english"
-        )
+    def test_english_query_defaults_to_auto(self):
+        # Plain English without explicit filters → auto (per-document detection)
+        assert _detect_search_language("murder conviction appeal", None, None) == "auto"
 
     def test_polish_diacritics_detected(self):
-        assert _detect_search_language("wyrok sąd apelacyjny", None, None) == "simple"
+        assert _detect_search_language("wyrok sąd apelacyjny", None, None) == "polish"
 
     def test_polish_diacritics_odpowiedzialnosc(self):
-        assert _detect_search_language("odpowiedzialność karna", None, None) == "simple"
+        assert _detect_search_language("odpowiedzialność karna", None, None) == "polish"
 
     def test_polish_stopwords_detected(self):
-        assert _detect_search_language("wyrok karny sąd", None, None) == "simple"
+        assert _detect_search_language("wyrok karny sąd", None, None) == "polish"
 
     def test_explicit_en_language_filter(self):
         assert _detect_search_language("wyrok sąd", ["en"], None) == "english"
@@ -32,16 +31,17 @@ class TestDetectSearchLanguage:
         assert _detect_search_language("coś po polsku", ["uk"], None) == "english"
 
     def test_explicit_pl_language_filter(self):
-        assert _detect_search_language("murder appeal", ["pl"], None) == "simple"
+        assert _detect_search_language("murder appeal", ["pl"], None) == "polish"
 
     def test_uk_jurisdiction_filter(self):
         assert _detect_search_language("generic query", None, ["UK"]) == "english"
 
     def test_pl_jurisdiction_filter(self):
-        assert _detect_search_language("generic query", None, ["PL"]) == "simple"
+        assert _detect_search_language("generic query", None, ["PL"]) == "polish"
 
-    def test_mixed_jurisdictions_defaults_to_english(self):
-        assert _detect_search_language("generic query", None, ["PL", "UK"]) == "english"
+    def test_mixed_jurisdictions_defaults_to_auto(self):
+        # Mixed jurisdictions → auto (per-document detection in SQL)
+        assert _detect_search_language("generic query", None, ["PL", "UK"]) == "auto"
 
     def test_language_filter_takes_priority_over_content(self):
         # Polish text but English language filter should return English
@@ -53,16 +53,17 @@ class TestDetectSearchLanguage:
 
     def test_single_polish_stopword_not_enough(self):
         # Need at least 2 Polish stopwords to trigger detection
-        assert _detect_search_language("jest important", None, None) == "english"
+        # Single stopword without diacritics → auto
+        assert _detect_search_language("jest important", None, None) == "auto"
 
     def test_two_polish_stopwords_trigger_detection(self):
-        assert _detect_search_language("nie jest dobrze", None, None) == "simple"
+        assert _detect_search_language("nie jest dobrze", None, None) == "polish"
 
-    def test_empty_query_defaults_to_english(self):
-        assert _detect_search_language("", None, None) == "english"
+    def test_empty_query_defaults_to_auto(self):
+        assert _detect_search_language("", None, None) == "auto"
 
-    def test_numeric_query_defaults_to_english(self):
-        assert _detect_search_language("12345", None, None) == "english"
+    def test_numeric_query_defaults_to_auto(self):
+        assert _detect_search_language("12345", None, None) == "auto"
 
 
 # ============================================================================

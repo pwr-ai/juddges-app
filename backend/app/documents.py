@@ -132,34 +132,34 @@ def _detect_search_language(
     """Detect appropriate PostgreSQL text search configuration.
 
     Priority: explicit language filter > jurisdiction filter > query content heuristic.
-    Returns 'english' or 'simple' (for Polish and unknown languages).
+    Returns 'english', 'polish' (with unaccent), or 'auto' (per-document detection).
     """
     # 1. Explicit language filter
     if languages:
         if "en" in languages or "uk" in languages:
             return "english"
         if "pl" in languages:
-            return "simple"
+            return "polish"
 
     # 2. Jurisdiction filter implies language
     if jurisdictions:
         if jurisdictions == ["UK"]:
             return "english"
         if jurisdictions == ["PL"]:
-            return "simple"
+            return "polish"
 
     # 3. Content-based heuristic: detect Polish from characters or stopwords
     lower = query.lower()
     if _POLISH_CHARS.search(query):
-        return "simple"
+        return "polish"
 
     query_tokens = set(re.findall(r"\w+", lower))
     polish_overlap = query_tokens & _POLISH_STOPWORDS
     if len(polish_overlap) >= 2:
-        return "simple"
+        return "polish"
 
-    # Default to English for FTS stemming benefits
-    return "english"
+    # 4. Mixed or unknown → let SQL function detect per-document
+    return "auto"
 
 
 def _convert_judgment_to_legal_document(
