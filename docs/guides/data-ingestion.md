@@ -30,7 +30,7 @@ This guide explains how judgment data from HuggingFace is ingested into your Sup
 
 **Estimated Size**:
 - ~50,000+ Polish cases available
-- Sample ingestion: 100 cases
+- Target sample: 3,000 cases (part of 6K+ goal)
 - Average case size: 5-15 KB
 
 ### 2. UK Judgments
@@ -111,12 +111,12 @@ The ingestion script transforms raw HuggingFace data into our unified schema:
 
 ### Embedding Generation
 
-For each judgment, we generate a 1536-dimensional vector embedding using OpenAI's `text-embedding-ada-002` model:
+For each judgment, we generate a vector embedding using OpenAI's `text-embedding-3-small` model (768 dimensions by default):
 
 ```python
 # Example embedding generation
 embedding = openai.embeddings.create(
-    model="text-embedding-ada-002",
+    model="text-embedding-3-small",
     input=full_text[:32000]  # Truncate to ~8k tokens
 )
 ```
@@ -140,24 +140,27 @@ export SUPABASE_URL="https://your-project.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 export OPENAI_API_KEY="sk-your-key"  # Optional
 
-# Ingest Polish and UK judgments
-python ingest_judgments.py --polish 100 --uk 100
+# Ingest full target dataset (6K+ judgments)
+python ingest_judgments.py --polish 3000 --uk 3000
 ```
 
 ### Command-Line Options
 
 ```bash
 # Ingest only Polish judgments
-python ingest_judgments.py --polish 100 --skip-uk
+python ingest_judgments.py --polish 3000 --skip-uk
 
 # Ingest only UK judgments
-python ingest_judgments.py --uk 100 --skip-polish
+python ingest_judgments.py --uk 3000 --skip-polish
 
 # Small test sample
 python ingest_judgments.py --polish 10 --uk 10
 
+# Development sample (faster)
+python ingest_judgments.py --polish 100 --uk 100
+
 # Skip embeddings to save API costs
-python ingest_judgments.py --polish 100 --uk 100 --no-embeddings
+python ingest_judgments.py --polish 3000 --uk 3000 --no-embeddings
 ```
 
 ### Using .env File
@@ -172,7 +175,7 @@ OPENAI_API_KEY=sk-your-openai-key
 
 Then run:
 ```bash
-python ingest_judgments.py --polish 100 --uk 100
+python ingest_judgments.py --polish 3000 --uk 3000
 ```
 
 ## 📈 Performance & Costs
@@ -183,7 +186,9 @@ python ingest_judgments.py --polish 100 --uk 100
 |-----------|-------------------|-----------------|
 | 10 cases | ~30 seconds | ~1 minute |
 | 100 cases | ~3 minutes | ~8-10 minutes |
-| 1000 cases | ~30 minutes | ~80-100 minutes |
+| 1,000 cases | ~30 minutes | ~80-100 minutes |
+| 3,000 cases | ~1.5 hours | ~3-4 hours |
+| 6,000 cases | ~3 hours | ~6-8 hours |
 
 **Bottleneck**: OpenAI API calls for embedding generation (rate limits: 3000 req/min)
 
@@ -198,11 +203,13 @@ python ingest_judgments.py --polish 100 --uk 100
 
 ### API Costs (OpenAI)
 
-- **Embedding model**: text-embedding-ada-002
-- **Cost**: $0.0001 per 1K tokens
+- **Embedding model**: text-embedding-3-small
+- **Cost**: $0.00002 per 1K tokens
 - **Average judgment**: 2K-5K tokens
 - **100 judgments**: ~$0.30-$0.50
-- **1000 judgments**: ~$3-$5
+- **1,000 judgments**: ~$3-$5
+- **3,000 judgments**: ~$9-$15
+- **6,000 judgments**: ~$18-$30 (full target dataset)
 
 ## 🔍 Data Quality Checks
 

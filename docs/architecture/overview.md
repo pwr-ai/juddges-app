@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-**Juddges App** is a fork of the AI-Tax platform, specialized for searching and analyzing judicial decisions from Poland and the United Kingdom. The app provides semantic search capabilities across 200+ court judgments using modern AI and vector database technology.
+**Juddges App** is a fork of the AI-Tax platform, specialized for searching and analyzing judicial decisions from Poland and the United Kingdom. The app provides semantic search capabilities across 6,000+ sampled court judgments using modern AI and vector database technology.
 
 ## 📊 Key Features
 
@@ -11,7 +11,7 @@
 - **Full-Text Search**: PostgreSQL-powered text search with ranking
 - **Structured Data**: Comprehensive metadata including judges, dates, keywords
 - **Modern Stack**: Next.js 15, FastAPI, Supabase, pgvector
-- **Scalable Architecture**: Ready to scale from 200 to 200,000+ judgments
+- **Scalable Architecture**: Ready to scale from 6,000 to 200,000+ judgments
 
 ## 🗂️ Repository Structure
 
@@ -173,7 +173,7 @@ juddges-app/
 
 **Ingestion Command**:
 ```bash
-python ingest_judgments.py --polish 100
+python ingest_judgments.py --polish 3000
 ```
 
 ---
@@ -192,7 +192,7 @@ python ingest_judgments.py --polish 100
 
 **Ingestion Command**:
 ```bash
-python ingest_judgments.py --uk 100
+python ingest_judgments.py --uk 3000
 ```
 
 ---
@@ -215,18 +215,19 @@ python ingest_judgments.py --uk 100
 
 ### Performance Metrics
 
-| Operation | Time (100 cases) | Cost |
-|-----------|------------------|------|
-| Download | ~30 seconds | Free |
-| Transform | ~1 minute | Free |
-| Embeddings | ~5-7 minutes | ~$0.40 |
-| Insert | ~1 minute | Free |
-| **Total** | **~8-10 minutes** | **~$0.40** |
+| Operation | Time (100 cases) | Time (3000 cases) | Cost (3000) |
+|-----------|------------------|--------------------|-------------|
+| Download | ~30 seconds | ~5 minutes | Free |
+| Transform | ~1 minute | ~15 minutes | Free |
+| Embeddings | ~5-7 minutes | ~2-3 hours | ~$12 |
+| Insert | ~1 minute | ~10 minutes | Free |
+| **Total** | **~8-10 minutes** | **~3-4 hours** | **~$12** |
 
 ### Storage Requirements
 
 - **100 judgments**: ~2-3 MB
 - **1,000 judgments**: ~20-30 MB
+- **6,000 judgments**: ~120-180 MB (current target)
 - **10,000 judgments**: ~200-300 MB
 
 ---
@@ -239,40 +240,49 @@ python ingest_judgments.py --uk 100
 - [x] Create database migration
 - [x] Build ingestion script
 
-### Phase 2: Copy Boilerplate (TODO)
-- [ ] Copy frontend from AI-Tax
-- [ ] Copy backend from AI-Tax
-- [ ] Update branding (AI-Tax → Juddges)
-- [ ] Configure environment variables
-- [ ] Test local development setup
+### Phase 2: Copy Boilerplate ✅
+- [x] Copy frontend from AI-Tax
+- [x] Copy backend from AI-Tax
+- [x] Update branding (AI-Tax → Juddges)
+- [x] Configure environment variables
+- [x] Test local development setup
 
-### Phase 3: Customize for Judgments (TODO)
-- [ ] Create judgment search UI
-- [ ] Implement semantic search endpoint
-- [ ] Add jurisdiction filters
-- [ ] Create judgment detail page
-- [ ] Add keyword-based navigation
+### Phase 3: Customize for Judgments ✅
+- [x] Create judgment search UI
+- [x] Implement semantic search endpoint
+- [x] Add jurisdiction filters
+- [x] Create judgment detail page
+- [x] Add keyword-based navigation
 
-### Phase 4: Data Ingestion (TODO)
-- [ ] Run Supabase migrations
-- [ ] Ingest 100 Polish judgments
-- [ ] Ingest 100 UK judgments
-- [ ] Verify data quality
-- [ ] Test search functionality
+### Phase 4: Data Ingestion ✅
+- [x] Run Supabase migrations
+- [x] Ingest Polish judgments
+- [x] Ingest UK judgments
+- [x] Verify data quality
+- [x] Test search functionality
 
-### Phase 5: Features (TODO)
-- [ ] Add RAG-based chat for legal Q&A
+### Phase 5: Features (In Progress)
+- [x] Add RAG-based chat for legal Q&A
+- [x] Create analytics dashboard
 - [ ] Implement judgment comparison
 - [ ] Add citation tracking
-- [ ] Create analytics dashboard
 - [ ] Build export functionality
 
-### Phase 6: Deployment (TODO)
-- [ ] Set up production Supabase project
-- [ ] Configure CI/CD pipeline
-- [ ] Deploy to production
-- [ ] Set up monitoring
-- [ ] Create user documentation
+### Phase 6: Deployment ✅
+- [x] Set up production Supabase project
+- [x] Configure CI/CD pipeline
+- [x] Deploy to production (Docker Hub + deploy scripts)
+- [x] Set up monitoring (Langfuse)
+- [x] Create user documentation
+
+### Phase 7: Search Quality & Data Scale (In Progress)
+- [ ] Curate 6K+ Polish judgment dataset with topic coverage (issue #12)
+- [ ] Topic analysis of 6K UK judgments (issue #10)
+- [ ] Cross-jurisdictional search query generation (issue #11)
+- [ ] Search quality evaluation framework (issue #13)
+- [ ] Query classification and alpha routing
+- [x] Cross-encoder reranking with Cohere API
+- [x] Polish text search with unaccent + per-document language detection
 
 ---
 
@@ -286,7 +296,7 @@ python ingest_judgments.py --uk 100
 - **Forms**: React Hook Form + Zod
 
 ### Backend
-- **Framework**: FastAPI (Python 3.11+)
+- **Framework**: FastAPI (Python 3.12+)
 - **Database**: PostgreSQL (via Supabase)
 - **Vector DB**: pgvector extension
 - **Auth**: Supabase Auth
@@ -321,11 +331,12 @@ python ingest_judgments.py --uk 100
 - **Cost**: Reasonable at ~$0.0001 per 1K tokens
 - **Compatibility**: Standard 768-dim vectors
 
-### 4. Why Sample Size 100+100?
-- **Testing**: Large enough to test search quality
-- **Cost**: ~$0.80 for embeddings
-- **Speed**: ~15-20 minutes total ingestion
-- **Scalability**: Easy to increase later
+### 4. Why Target 6K+ Documents?
+- **Search quality**: Sufficient corpus for meaningful semantic search evaluation
+- **Coverage**: ~3K Polish + ~3K UK ensures balanced cross-jurisdictional coverage
+- **Topic diversity**: Enables representative topic analysis across legal domains
+- **Cost**: ~$24 for embeddings (manageable one-time cost)
+- **Scalability**: Architecture supports 200K+ with HNSW indexes
 
 ---
 
@@ -344,9 +355,9 @@ python ingest_judgments.py --uk 100
 
 | Dataset Size | Search Time | Storage |
 |--------------|-------------|---------|
-| 200 cases | <100ms | ~5 MB |
-| 2,000 cases | <200ms | ~50 MB |
-| 20,000 cases | <500ms | ~500 MB |
+| 6,000 cases | <150ms | ~120 MB |
+| 20,000 cases | <300ms | ~500 MB |
+| 50,000 cases | <500ms | ~1.5 GB |
 | 200,000 cases | <1s | ~5 GB |
 
 ---
@@ -400,5 +411,5 @@ The Juddges App foundation is now complete! You have:
 
 ---
 
-*Generated: February 9, 2026*
-*Version: 1.0.0*
+*Last updated: March 9, 2026*
+*Version: 2.0.0*

@@ -143,6 +143,11 @@ python ingest_judgments.py --polish 10 --uk 10
 
 This will load 20 sample judgments (10 Polish + 10 UK) for testing.
 
+For the full target dataset (6K+ documents), run:
+```bash
+python ingest_judgments.py --polish 3000 --uk 3000
+```
+
 ## Project Architecture
 
 ### Monorepo Structure
@@ -610,8 +615,11 @@ pip install -r requirements.txt
 # Ingest sample data (quick test)
 python ingest_judgments.py --polish 10 --uk 10
 
-# Ingest larger dataset
+# Ingest development dataset
 python ingest_judgments.py --polish 100 --uk 100
+
+# Ingest full target dataset (6K+ documents)
+python ingest_judgments.py --polish 3000 --uk 3000
 
 # Check available datasets
 python ingest_judgments.py --help

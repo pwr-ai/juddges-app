@@ -7,7 +7,7 @@ Complete step-by-step guide to set up your Juddges App.
 Before you begin, ensure you have:
 
 - [ ] **Node.js 18+** installed ([Download](https://nodejs.org/))
-- [ ] **Python 3.11+** installed ([Download](https://www.python.org/))
+- [ ] **Python 3.12+** installed ([Download](https://www.python.org/))
 - [ ] **Docker & Docker Compose** installed ([Download](https://www.docker.com/))
 - [ ] **Git** installed
 - [ ] **Supabase account** ([Sign up free](https://supabase.com/))
@@ -94,11 +94,14 @@ Alternatively, you can run the migration directly in Supabase:
 cd scripts
 pip install -r requirements.txt
 
-# Ingest 100 Polish + 100 UK judgments (takes ~5-10 minutes)
+# Ingest sample data for development (takes ~5-10 minutes)
 python ingest_judgments.py --polish 100 --uk 100
 
-# Or start with smaller sample for testing
+# Quick test with minimal data
 python ingest_judgments.py --polish 10 --uk 10
+
+# Full target dataset: 6K+ judgments (takes ~3-4 hours)
+python ingest_judgments.py --polish 3000 --uk 3000
 ```
 
 **Note:** If you skip `--openai-api-key`, judgments will be ingested without embeddings (semantic search won't work, but text search will).

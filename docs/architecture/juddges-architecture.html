@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juddges App - Architecture Overview</title>
+  <style>
+    :root {
+      --blue: #4299e1;
+      --blue-dark: #2b6cb0;
+      --orange: #ed8936;
+      --orange-dark: #c05621;
+      --purple: #9f7aea;
+      --purple-dark: #6b46c1;
+      --green: #48bb78;
+      --green-dark: #276749;
+      --red: #fc8181;
+      --red-dark: #c53030;
+      --gray: #718096;
+      --gray-light: #e2e8f0;
+      --gray-bg: #f7fafc;
+      --text: #2d3748;
+      --text-light: #4a5568;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text); background: #fff; max-width: 1280px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+
+    .hero {
+      background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 40%, #6b46c1 100%);
+      color: white; padding: 40px; border-radius: 16px; margin-bottom: 40px;
+      position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: ''; position: absolute; top: -50%; right: -20%; width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .hero h1 { font-size: 2.2em; margin-bottom: 8px; position: relative; z-index: 1; }
+    .hero p { opacity: 0.9; font-size: 1.1em; position: relative; z-index: 1; }
+    .hero .meta { margin-top: 16px; font-size: 0.85em; opacity: 0.7; position: relative; z-index: 1; }
+
+    .section { margin: 40px 0; }
+    .section h2 { font-size: 1.5em; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 3px solid var(--blue); display: inline-block; }
+    .section h3 { font-size: 1.15em; margin: 16px 0 10px; color: var(--text-light); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+    @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+    .card { background: var(--gray-bg); border-radius: 12px; padding: 20px; border: 1px solid var(--gray-light); }
+    .card h4 { font-size: 0.95em; margin-bottom: 8px; }
+    .card p, .card li { font-size: 0.88em; color: var(--text-light); }
+    .card ul { padding-left: 16px; }
+    .card ul li { margin: 4px 0; }
+
+    .card-blue { border-left: 4px solid var(--blue); }
+    .card-orange { border-left: 4px solid var(--orange); }
+    .card-purple { border-left: 4px solid var(--purple); }
+    .card-green { border-left: 4px solid var(--green); }
+    .card-red { border-left: 4px solid var(--red); }
+
+    .stat { text-align: center; padding: 16px; }
+    .stat .num { font-size: 2em; font-weight: 700; }
+    .stat .label { font-size: 0.8em; color: var(--text-light); margin-top: 4px; }
+    .stat-blue .num { color: var(--blue-dark); }
+    .stat-orange .num { color: var(--orange-dark); }
+    .stat-purple .num { color: var(--purple-dark); }
+    .stat-green .num { color: var(--green-dark); }
+
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600; margin: 2px; }
+    .badge-blue { background: #bee3f8; color: var(--blue-dark); }
+    .badge-orange { background: #feebc8; color: var(--orange-dark); }
+    .badge-purple { background: #e9d8fd; color: var(--purple-dark); }
+    .badge-green { background: #c6f6d5; color: var(--green-dark); }
+    .badge-red { background: #fed7d7; color: var(--red-dark); }
+
+    .diagram-container { background: white; border: 1px solid var(--gray-light); border-radius: 12px; padding: 20px; margin: 20px 0; overflow-x: auto; }
+    svg text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88em; }
+    th { background: var(--gray-bg); text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--gray-light); font-weight: 600; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--gray-light); }
+    tr:hover { background: var(--gray-bg); }
+
+    .dep-chain { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 0; }
+    .dep-node { background: var(--gray-bg); border: 2px solid var(--blue); border-radius: 8px; padding: 6px 14px; font-size: 0.85em; font-weight: 600; }
+    .dep-node.done { background: #c6f6d5; border-color: var(--green); }
+    .dep-node.active { background: #bee3f8; border-color: var(--blue); }
+    .dep-node.blocked { background: #feebc8; border-color: var(--orange); }
+    .dep-arrow { color: var(--gray); font-size: 1.2em; }
+  </style>
+</head>
+<body>
+
+<!-- ==================== HERO ==================== -->
+<div class="hero">
+  <h1>Juddges App Architecture</h1>
+  <p>AI-powered judicial decision search and analysis platform for Polish and UK court judgments</p>
+  <div class="meta">Version 2.0 | Last updated: March 9, 2026 | Branch: search-eval/2026-03-08-improvements</div>
+</div>
+
+<!-- ==================== KEY METRICS ==================== -->
+<div class="section">
+  <h2>Project at a Glance</h2>
+  <div class="grid-4">
+    <div class="card stat stat-blue"><div class="num">6K+</div><div class="label">Target Documents<br>(Polish + UK)</div></div>
+    <div class="card stat stat-purple"><div class="num">30+</div><div class="label">API Routers<br>(FastAPI)</div></div>
+    <div class="card stat stat-orange"><div class="num">3</div><div class="label">Search Strategies<br>(BM25 + Vector + RRF)</div></div>
+    <div class="card stat stat-green"><div class="num">2</div><div class="label">Jurisdictions<br>(PL + UK)</div></div>
+  </div>
+</div>
+
+<!-- ==================== BUSINESS CONTEXT ==================== -->
+<div class="section">
+  <h2>Business Context</h2>
+  <div class="grid-2">
+    <div class="card card-blue">
+      <h4>Objective</h4>
+      <p>Provide legal researchers and practitioners with semantic search across court judgments from Poland and the United Kingdom, combining full-text retrieval with AI-powered relevance ranking.</p>
+    </div>
+    <div class="card card-green">
+      <h4>Target Users</h4>
+      <ul>
+        <li>Legal researchers and academics</li>
+        <li>Lawyers and law firms</li>
+        <li>Policy analysts and government bodies</li>
+        <li>Law students studying comparative law</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <h4>Key Value Propositions</h4>
+      <ul>
+        <li>Cross-jurisdictional search (PL + UK in one platform)</li>
+        <li>Semantic understanding of legal concepts</li>
+        <li>RAG-based chat for legal Q&A</li>
+        <li>Structured metadata (judges, dates, courts, keywords)</li>
+      </ul>
+    </div>
+    <div class="card card-orange">
+      <h4>Data Sources</h4>
+      <ul>
+        <li><strong>Polish</strong>: HFforLegal/case-law (~50K+ cases, sampling ~3K)</li>
+        <li><strong>UK</strong>: JuDDGES/en-appealcourt (6,154 judgments)</li>
+        <li>Embeddings: OpenAI text-embedding-3-small (768d)</li>
+        <li>Reranking: Cohere rerank-v3.5</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SYSTEM ARCHITECTURE ==================== -->
+<div class="section">
+  <h2>System Architecture</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 1100 680" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#718096"/>
+        </marker>
+        <marker id="arrow-blue" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#4299e1"/>
+        </marker>
+        <filter id="shadow"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-opacity="0.1"/></filter>
+      </defs>
+
+      <!-- Title -->
+      <text x="550" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#2d3748">Layered System Architecture</text>
+
+      <!-- === CLIENT LAYER === -->
+      <rect x="30" y="50" width="1040" height="80" rx="10" fill="#ebf8ff" stroke="#bee3f8" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="50" y="72" font-size="11" font-weight="700" fill="#2b6cb0">CLIENT LAYER</text>
+
+      <!-- Browser -->
+      <rect x="60" y="82" width="160" height="36" rx="6" fill="#4299e1"/>
+      <text x="140" y="105" text-anchor="middle" font-size="11" fill="white" font-weight="600">Next.js 15 Frontend</text>
+
+      <!-- Port -->
+      <rect x="240" y="82" width="80" height="36" rx="6" fill="#2b6cb0"/>
+      <text x="280" y="105" text-anchor="middle" font-size="10" fill="white">:3007 dev</text>
+
+      <!-- Technologies -->
+      <rect x="340" y="82" width="90" height="36" rx="6" fill="white" stroke="#bee3f8"/>
+      <text x="385" y="100" text-anchor="middle" font-size="9" fill="#2b6cb0">React 19</text>
+      <text x="385" y="112" text-anchor="middle" font-size="8" fill="#718096">Tailwind 4</text>
+
+      <rect x="445" y="82" width="90" height="36" rx="6" fill="white" stroke="#bee3f8"/>
+      <text x="490" y="100" text-anchor="middle" font-size="9" fill="#2b6cb0">Zustand</text>
+      <text x="490" y="112" text-anchor="middle" font-size="8" fill="#718096">React Query</text>
+
+      <rect x="550" y="82" width="90" height="36" rx="6" fill="white" stroke="#bee3f8"/>
+      <text x="595" y="100" text-anchor="middle" font-size="9" fill="#2b6cb0">Radix UI</text>
+      <text x="595" y="112" text-anchor="middle" font-size="8" fill="#718096">TipTap Editor</text>
+
+      <rect x="655" y="82" width="90" height="36" rx="6" fill="white" stroke="#bee3f8"/>
+      <text x="700" y="100" text-anchor="middle" font-size="9" fill="#2b6cb0">Supabase Auth</text>
+      <text x="700" y="112" text-anchor="middle" font-size="8" fill="#718096">JWT Tokens</text>
+
+      <rect x="760" y="82" width="130" height="36" rx="6" fill="white" stroke="#bee3f8"/>
+      <text x="825" y="100" text-anchor="middle" font-size="9" fill="#2b6cb0">Playwright + Jest</text>
+      <text x="825" y="112" text-anchor="middle" font-size="8" fill="#718096">E2E + Unit Tests</text>
+
+      <!-- Arrow down -->
+      <path d="M550,130 L550,155" stroke="#718096" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+      <text x="560" y="147" font-size="8" fill="#718096">CORS / fetch</text>
+
+      <!-- === API LAYER === -->
+      <rect x="30" y="160" width="1040" height="105" rx="10" fill="#faf5ff" stroke="#e9d8fd" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="50" y="182" font-size="11" font-weight="700" fill="#6b46c1">API LAYER — FastAPI (Python 3.12+)</text>
+      <text x="970" y="182" font-size="9" fill="#9f7aea">:8004 dev | :8002 prod</text>
+
+      <!-- Routers -->
+      <rect x="60" y="192" width="100" height="32" rx="5" fill="#9f7aea"/>
+      <text x="110" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Search API</text>
+
+      <rect x="170" y="192" width="100" height="32" rx="5" fill="#9f7aea"/>
+      <text x="220" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Documents</text>
+
+      <rect x="280" y="192" width="100" height="32" rx="5" fill="#9f7aea"/>
+      <text x="330" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Analytics</text>
+
+      <rect x="390" y="192" width="100" height="32" rx="5" fill="#9f7aea"/>
+      <text x="440" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Chat / QA</text>
+
+      <rect x="500" y="192" width="100" height="32" rx="5" fill="#9f7aea"/>
+      <text x="550" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Feedback</text>
+
+      <rect x="610" y="192" width="100" height="32" rx="5" fill="#9f7aea"/>
+      <text x="660" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Schema Gen</text>
+
+      <rect x="720" y="192" width="100" height="32" rx="5" fill="#b794f4"/>
+      <text x="770" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Health</text>
+
+      <rect x="830" y="192" width="100" height="32" rx="5" fill="#b794f4"/>
+      <text x="880" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">Embeddings</text>
+
+      <rect x="940" y="192" width="100" height="32" rx="5" fill="#b794f4"/>
+      <text x="990" y="212" text-anchor="middle" font-size="9" fill="white" font-weight="600">+20 more</text>
+
+      <!-- Middleware -->
+      <rect x="60" y="232" width="140" height="24" rx="4" fill="white" stroke="#e9d8fd"/>
+      <text x="130" y="248" text-anchor="middle" font-size="8" fill="#6b46c1">CORS + GZip Middleware</text>
+
+      <rect x="210" y="232" width="140" height="24" rx="4" fill="white" stroke="#e9d8fd"/>
+      <text x="280" y="248" text-anchor="middle" font-size="8" fill="#6b46c1">SlowAPI Rate Limiting</text>
+
+      <rect x="360" y="232" width="140" height="24" rx="4" fill="white" stroke="#e9d8fd"/>
+      <text x="430" y="248" text-anchor="middle" font-size="8" fill="#6b46c1">LangServe (chains)</text>
+
+      <rect x="510" y="232" width="140" height="24" rx="4" fill="white" stroke="#e9d8fd"/>
+      <text x="580" y="248" text-anchor="middle" font-size="8" fill="#6b46c1">Supabase JWT Auth</text>
+
+      <rect x="660" y="232" width="140" height="24" rx="4" fill="white" stroke="#e9d8fd"/>
+      <text x="730" y="248" text-anchor="middle" font-size="8" fill="#6b46c1">Langfuse Observability</text>
+
+      <!-- Arrow down -->
+      <path d="M550,265 L550,290" stroke="#718096" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+
+      <!-- === AI/ML LAYER === -->
+      <rect x="30" y="295" width="1040" height="100" rx="10" fill="#fffff0" stroke="#fefcbf" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="50" y="317" font-size="11" font-weight="700" fill="#975a16">AI / ML LAYER</text>
+
+      <!-- Packages -->
+      <rect x="60" y="327" width="200" height="55" rx="8" fill="#ed8936" filter="url(#shadow)"/>
+      <text x="160" y="348" text-anchor="middle" font-size="10" fill="white" font-weight="700">juddges_search</text>
+      <text x="160" y="362" text-anchor="middle" font-size="8" fill="white" opacity="0.9">RAG chains | Vector DB ops</text>
+      <text x="160" y="374" text-anchor="middle" font-size="8" fill="white" opacity="0.9">LangChain | Chat + QA</text>
+
+      <rect x="280" y="327" width="200" height="55" rx="8" fill="#ed8936" filter="url(#shadow)"/>
+      <text x="380" y="348" text-anchor="middle" font-size="10" fill="white" font-weight="700">schema_generator_agent</text>
+      <text x="380" y="362" text-anchor="middle" font-size="8" fill="white" opacity="0.9">LangGraph agent workflows</text>
+      <text x="380" y="374" text-anchor="middle" font-size="8" fill="white" opacity="0.9">Structured data extraction</text>
+
+      <!-- External AI -->
+      <rect x="510" y="327" width="130" height="55" rx="8" fill="white" stroke="#ed8936" stroke-width="2"/>
+      <text x="575" y="348" text-anchor="middle" font-size="9" fill="#c05621" font-weight="600">OpenAI API</text>
+      <text x="575" y="362" text-anchor="middle" font-size="8" fill="#718096">GPT-4o (chat)</text>
+      <text x="575" y="374" text-anchor="middle" font-size="8" fill="#718096">embed-3-small</text>
+
+      <rect x="660" y="327" width="130" height="55" rx="8" fill="white" stroke="#ed8936" stroke-width="2"/>
+      <text x="725" y="348" text-anchor="middle" font-size="9" fill="#c05621" font-weight="600">Cohere API</text>
+      <text x="725" y="362" text-anchor="middle" font-size="8" fill="#718096">rerank-v3.5</text>
+      <text x="725" y="374" text-anchor="middle" font-size="8" fill="#718096">Cross-encoder</text>
+
+      <rect x="810" y="327" width="130" height="55" rx="8" fill="white" stroke="#ed8936" stroke-width="2"/>
+      <text x="875" y="348" text-anchor="middle" font-size="9" fill="#c05621" font-weight="600">Query Analysis</text>
+      <text x="875" y="362" text-anchor="middle" font-size="8" fill="#718096">Classification</text>
+      <text x="875" y="374" text-anchor="middle" font-size="8" fill="#718096">Alpha routing</text>
+
+      <!-- Arrow down -->
+      <path d="M550,395 L550,420" stroke="#718096" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+
+      <!-- === DATA LAYER === -->
+      <rect x="30" y="425" width="1040" height="105" rx="10" fill="#f0fff4" stroke="#c6f6d5" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="50" y="447" font-size="11" font-weight="700" fill="#276749">DATA LAYER</text>
+
+      <!-- Supabase PostgreSQL -->
+      <rect x="60" y="457" width="250" height="60" rx="8" fill="#48bb78" filter="url(#shadow)"/>
+      <text x="185" y="478" text-anchor="middle" font-size="10" fill="white" font-weight="700">Supabase PostgreSQL</text>
+      <text x="185" y="492" text-anchor="middle" font-size="8" fill="white" opacity="0.9">judgments table | RLS | GIN indexes</text>
+      <text x="185" y="504" text-anchor="middle" font-size="8" fill="white" opacity="0.9">Auth | Storage | Realtime</text>
+
+      <!-- pgvector -->
+      <rect x="330" y="457" width="180" height="60" rx="8" fill="#38a169" filter="url(#shadow)"/>
+      <text x="420" y="478" text-anchor="middle" font-size="10" fill="white" font-weight="700">pgvector Extension</text>
+      <text x="420" y="492" text-anchor="middle" font-size="8" fill="white" opacity="0.9">HNSW index (768d vectors)</text>
+      <text x="420" y="504" text-anchor="middle" font-size="8" fill="white" opacity="0.9">Cosine similarity search</text>
+
+      <!-- Redis -->
+      <rect x="530" y="457" width="150" height="60" rx="8" fill="white" stroke="#48bb78" stroke-width="2"/>
+      <text x="605" y="478" text-anchor="middle" font-size="10" fill="#276749" font-weight="600">Redis</text>
+      <text x="605" y="492" text-anchor="middle" font-size="8" fill="#718096">Guest sessions</text>
+      <text x="605" y="504" text-anchor="middle" font-size="8" fill="#718096">Celery task broker</text>
+
+      <!-- LangGraph Postgres -->
+      <rect x="700" y="457" width="170" height="60" rx="8" fill="white" stroke="#48bb78" stroke-width="2"/>
+      <text x="785" y="478" text-anchor="middle" font-size="10" fill="#276749" font-weight="600">LangGraph Postgres</text>
+      <text x="785" y="492" text-anchor="middle" font-size="8" fill="#718096">Chat checkpointer</text>
+      <text x="785" y="504" text-anchor="middle" font-size="8" fill="#718096">Conversation state</text>
+
+      <!-- HuggingFace -->
+      <rect x="890" y="457" width="160" height="60" rx="8" fill="white" stroke="#48bb78" stroke-width="2"/>
+      <text x="970" y="478" text-anchor="middle" font-size="10" fill="#276749" font-weight="600">HuggingFace Hub</text>
+      <text x="970" y="492" text-anchor="middle" font-size="8" fill="#718096">HFforLegal/case-law</text>
+      <text x="970" y="504" text-anchor="middle" font-size="8" fill="#718096">JuDDGES/en-appealcourt</text>
+
+      <!-- === INFRA LAYER === -->
+      <rect x="30" y="545" width="1040" height="70" rx="10" fill="#fff5f5" stroke="#fed7d7" stroke-width="1.5" filter="url(#shadow)"/>
+      <text x="50" y="567" font-size="11" font-weight="700" fill="#c53030">INFRASTRUCTURE</text>
+
+      <rect x="60" y="577" width="140" height="28" rx="5" fill="white" stroke="#fed7d7"/>
+      <text x="130" y="596" text-anchor="middle" font-size="9" fill="#c53030">Docker Compose</text>
+
+      <rect x="215" y="577" width="140" height="28" rx="5" fill="white" stroke="#fed7d7"/>
+      <text x="285" y="596" text-anchor="middle" font-size="9" fill="#c53030">GitHub Actions CI</text>
+
+      <rect x="370" y="577" width="140" height="28" rx="5" fill="white" stroke="#fed7d7"/>
+      <text x="440" y="596" text-anchor="middle" font-size="9" fill="#c53030">Docker Hub Registry</text>
+
+      <rect x="525" y="577" width="140" height="28" rx="5" fill="white" stroke="#fed7d7"/>
+      <text x="595" y="596" text-anchor="middle" font-size="9" fill="#c53030">Semver Tagging</text>
+
+      <rect x="680" y="577" width="140" height="28" rx="5" fill="white" stroke="#fed7d7"/>
+      <text x="750" y="596" text-anchor="middle" font-size="9" fill="#c53030">Celery Workers</text>
+
+      <rect x="835" y="577" width="140" height="28" rx="5" fill="white" stroke="#fed7d7"/>
+      <text x="905" y="596" text-anchor="middle" font-size="9" fill="#c53030">Langfuse Monitoring</text>
+
+      <!-- Layer labels (right side) -->
+      <text x="1080" y="95" font-size="9" fill="#2b6cb0" text-anchor="end" transform="rotate(-90, 1080, 95)">FRONTEND</text>
+      <text x="1080" y="210" font-size="9" fill="#6b46c1" text-anchor="end" transform="rotate(-90, 1080, 210)">BACKEND</text>
+      <text x="1080" y="345" font-size="9" fill="#975a16" text-anchor="end" transform="rotate(-90, 1080, 345)">AI/ML</text>
+      <text x="1080" y="480" font-size="9" fill="#276749" text-anchor="end" transform="rotate(-90, 1080, 480)">DATA</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ==================== SEARCH PIPELINE ==================== -->
+<div class="section">
+  <h2>Search Pipeline (Core Feature)</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 1100 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#718096"/>
+        </marker>
+      </defs>
+
+      <text x="550" y="25" text-anchor="middle" font-size="15" font-weight="700" fill="#2d3748">Hybrid Search Pipeline</text>
+
+      <!-- Step 1: Query Input -->
+      <rect x="30" y="50" width="140" height="60" rx="10" fill="#4299e1" filter="url(#shadow)"/>
+      <text x="100" y="75" text-anchor="middle" font-size="11" fill="white" font-weight="700">User Query</text>
+      <text x="100" y="90" text-anchor="middle" font-size="8" fill="white" opacity="0.8">"prawo karne"</text>
+
+      <path d="M170,80 L200,80" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <!-- Step 2: Query Classification -->
+      <rect x="205" y="40" width="150" height="80" rx="10" fill="#9f7aea" filter="url(#shadow)"/>
+      <text x="280" y="63" text-anchor="middle" font-size="10" fill="white" font-weight="700">Query Classification</text>
+      <text x="280" y="78" text-anchor="middle" font-size="8" fill="white" opacity="0.8">Regex + heuristics</text>
+      <text x="280" y="92" text-anchor="middle" font-size="8" fill="white" opacity="0.8">Language detect (PL/EN)</text>
+      <text x="280" y="106" text-anchor="middle" font-size="8" fill="white" opacity="0.8">Alpha routing (0.0-1.0)</text>
+
+      <path d="M355,80 L385,80" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <!-- Step 3: Parallel Retrieval -->
+      <rect x="390" y="15" width="200" height="130" rx="10" fill="#f7fafc" stroke="#e2e8f0" stroke-width="2" filter="url(#shadow)"/>
+      <text x="490" y="35" text-anchor="middle" font-size="10" font-weight="700" fill="#2d3748">Parallel Retrieval</text>
+
+      <!-- BM25 -->
+      <rect x="405" y="45" width="80" height="45" rx="6" fill="#ed8936"/>
+      <text x="445" y="65" text-anchor="middle" font-size="9" fill="white" font-weight="600">BM25</text>
+      <text x="445" y="78" text-anchor="middle" font-size="7" fill="white">tsvector</text>
+
+      <!-- Vector -->
+      <rect x="495" y="45" width="80" height="45" rx="6" fill="#48bb78"/>
+      <text x="535" y="65" text-anchor="middle" font-size="9" fill="white" font-weight="600">pgvector</text>
+      <text x="535" y="78" text-anchor="middle" font-size="7" fill="white">HNSW ANN</text>
+
+      <!-- RRF -->
+      <rect x="420" y="100" width="140" height="35" rx="6" fill="#6b46c1"/>
+      <text x="490" y="122" text-anchor="middle" font-size="9" fill="white" font-weight="600">RRF Fusion (k=60)</text>
+
+      <!-- Arrow from BM25 and Vector to RRF -->
+      <path d="M445,90 L470,100" stroke="#718096" stroke-width="1.5"/>
+      <path d="M535,90 L510,100" stroke="#718096" stroke-width="1.5"/>
+
+      <path d="M590,117 L620,117" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <!-- Step 4: Reranking -->
+      <rect x="625" y="50" width="140" height="60" rx="10" fill="#ed8936" filter="url(#shadow)"/>
+      <text x="695" y="73" text-anchor="middle" font-size="10" fill="white" font-weight="700">Cohere Rerank</text>
+      <text x="695" y="88" text-anchor="middle" font-size="8" fill="white" opacity="0.8">rerank-v3.5</text>
+      <text x="695" y="100" text-anchor="middle" font-size="7" fill="white" opacity="0.6">(optional)</text>
+
+      <path d="M765,80 L795,80" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <!-- Step 5: Response -->
+      <rect x="800" y="50" width="140" height="60" rx="10" fill="#48bb78" filter="url(#shadow)"/>
+      <text x="870" y="73" text-anchor="middle" font-size="10" fill="white" font-weight="700">Response Build</text>
+      <text x="870" y="88" text-anchor="middle" font-size="8" fill="white" opacity="0.8">Chunks + scores</text>
+      <text x="870" y="100" text-anchor="middle" font-size="8" fill="white" opacity="0.6">+ timing metadata</text>
+
+      <!-- Output -->
+      <path d="M940,80 L970,80" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+      <rect x="975" y="55" width="100" height="50" rx="10" fill="#4299e1"/>
+      <text x="1025" y="78" text-anchor="middle" font-size="10" fill="white" font-weight="700">Results</text>
+      <text x="1025" y="92" text-anchor="middle" font-size="8" fill="white" opacity="0.8">JSON</text>
+
+      <!-- Bottom section: Data Ingestion Pipeline -->
+      <text x="550" y="185" text-anchor="middle" font-size="15" font-weight="700" fill="#2d3748">Data Ingestion Pipeline</text>
+
+      <rect x="30" y="205" width="150" height="55" rx="10" fill="#4299e1" filter="url(#shadow)"/>
+      <text x="105" y="228" text-anchor="middle" font-size="10" fill="white" font-weight="700">HuggingFace Hub</text>
+      <text x="105" y="243" text-anchor="middle" font-size="8" fill="white" opacity="0.8">datasets library</text>
+
+      <path d="M180,232 L220,232" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <rect x="225" y="205" width="150" height="55" rx="10" fill="#9f7aea" filter="url(#shadow)"/>
+      <text x="300" y="228" text-anchor="middle" font-size="10" fill="white" font-weight="700">Transform</text>
+      <text x="300" y="243" text-anchor="middle" font-size="8" fill="white" opacity="0.8">PL/UK schema mapping</text>
+
+      <path d="M375,232 L415,232" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <rect x="420" y="205" width="150" height="55" rx="10" fill="#ed8936" filter="url(#shadow)"/>
+      <text x="495" y="228" text-anchor="middle" font-size="10" fill="white" font-weight="700">Embed</text>
+      <text x="495" y="243" text-anchor="middle" font-size="8" fill="white" opacity="0.8">text-embedding-3-small</text>
+
+      <path d="M570,232 L610,232" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <rect x="615" y="205" width="150" height="55" rx="10" fill="#48bb78" filter="url(#shadow)"/>
+      <text x="690" y="228" text-anchor="middle" font-size="10" fill="white" font-weight="700">Insert to Supabase</text>
+      <text x="690" y="243" text-anchor="middle" font-size="8" fill="white" opacity="0.8">judgments + vectors</text>
+
+      <path d="M765,232 L805,232" stroke="#718096" stroke-width="2" marker-end="url(#arr2)"/>
+
+      <rect x="810" y="205" width="150" height="55" rx="10" fill="#38a169" filter="url(#shadow)"/>
+      <text x="885" y="228" text-anchor="middle" font-size="10" fill="white" font-weight="700">Verify Quality</text>
+      <text x="885" y="243" text-anchor="middle" font-size="8" fill="white" opacity="0.8">SQL checks + counts</text>
+
+      <!-- Scale targets -->
+      <rect x="30" y="280" width="930" height="90" rx="10" fill="#f7fafc" stroke="#e2e8f0"/>
+      <text x="50" y="302" font-size="11" font-weight="700" fill="#2d3748">Scale Targets</text>
+
+      <rect x="50" y="312" width="160" height="45" rx="6" fill="white" stroke="#bee3f8"/>
+      <text x="130" y="332" text-anchor="middle" font-size="10" fill="#2b6cb0" font-weight="600">6K documents</text>
+      <text x="130" y="347" text-anchor="middle" font-size="8" fill="#718096">&lt;150ms search | ~120 MB</text>
+
+      <rect x="225" y="312" width="160" height="45" rx="6" fill="white" stroke="#c6f6d5"/>
+      <text x="305" y="332" text-anchor="middle" font-size="10" fill="#276749" font-weight="600">20K documents</text>
+      <text x="305" y="347" text-anchor="middle" font-size="8" fill="#718096">&lt;300ms search | ~500 MB</text>
+
+      <rect x="400" y="312" width="160" height="45" rx="6" fill="white" stroke="#fefcbf"/>
+      <text x="480" y="332" text-anchor="middle" font-size="10" fill="#975a16" font-weight="600">50K documents</text>
+      <text x="480" y="347" text-anchor="middle" font-size="8" fill="#718096">&lt;500ms search | ~1.5 GB</text>
+
+      <rect x="575" y="312" width="160" height="45" rx="6" fill="white" stroke="#fed7d7"/>
+      <text x="655" y="332" text-anchor="middle" font-size="10" fill="#c53030" font-weight="600">200K documents</text>
+      <text x="655" y="347" text-anchor="middle" font-size="8" fill="#718096">&lt;1s search | ~5 GB</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ==================== DEPLOYMENT ==================== -->
+<div class="section">
+  <h2>Deployment Architecture</h2>
+  <div class="diagram-container">
+    <svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr3" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#718096"/>
+        </marker>
+      </defs>
+
+      <!-- Dev environment -->
+      <rect x="20" y="10" width="300" height="120" rx="10" fill="#ebf8ff" stroke="#bee3f8" stroke-width="1.5"/>
+      <text x="170" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#2b6cb0">Development</text>
+      <text x="170" y="46" text-anchor="middle" font-size="8" fill="#718096">docker-compose.dev.yml</text>
+
+      <rect x="35" y="55" width="90" height="32" rx="5" fill="#4299e1"/>
+      <text x="80" y="75" text-anchor="middle" font-size="8" fill="white">frontend:3007</text>
+
+      <rect x="135" y="55" width="90" height="32" rx="5" fill="#9f7aea"/>
+      <text x="180" y="75" text-anchor="middle" font-size="8" fill="white">backend:8004</text>
+
+      <rect x="35" y="95" width="90" height="28" rx="5" fill="white" stroke="#bee3f8"/>
+      <text x="80" y="114" text-anchor="middle" font-size="8" fill="#2b6cb0">Hot reload</text>
+
+      <rect x="135" y="95" width="90" height="28" rx="5" fill="white" stroke="#bee3f8"/>
+      <text x="180" y="114" text-anchor="middle" font-size="8" fill="#2b6cb0">Volume mounts</text>
+
+      <rect x="235" y="55" width="70" height="32" rx="5" fill="#48bb78"/>
+      <text x="270" y="75" text-anchor="middle" font-size="8" fill="white">worker</text>
+
+      <!-- Arrow to CI -->
+      <path d="M320,70 L370,70" stroke="#718096" stroke-width="2" marker-end="url(#arr3)"/>
+      <text x="345" y="63" font-size="7" fill="#718096">git push</text>
+
+      <!-- CI/CD -->
+      <rect x="375" y="10" width="240" height="120" rx="10" fill="#faf5ff" stroke="#e9d8fd" stroke-width="1.5"/>
+      <text x="495" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#6b46c1">CI/CD Pipeline</text>
+      <text x="495" y="46" text-anchor="middle" font-size="8" fill="#718096">GitHub Actions</text>
+
+      <rect x="390" y="55" width="100" height="28" rx="5" fill="white" stroke="#e9d8fd"/>
+      <text x="440" y="73" text-anchor="middle" font-size="8" fill="#6b46c1">Ruff lint</text>
+
+      <rect x="500" y="55" width="100" height="28" rx="5" fill="white" stroke="#e9d8fd"/>
+      <text x="550" y="73" text-anchor="middle" font-size="8" fill="#6b46c1">ESLint</text>
+
+      <rect x="390" y="90" width="100" height="28" rx="5" fill="white" stroke="#e9d8fd"/>
+      <text x="440" y="108" text-anchor="middle" font-size="8" fill="#6b46c1">pytest</text>
+
+      <rect x="500" y="90" width="100" height="28" rx="5" fill="white" stroke="#e9d8fd"/>
+      <text x="550" y="108" text-anchor="middle" font-size="8" fill="#6b46c1">pip/npm audit</text>
+
+      <!-- Arrow to Registry -->
+      <path d="M615,70 L665,70" stroke="#718096" stroke-width="2" marker-end="url(#arr3)"/>
+      <text x="630" y="63" font-size="7" fill="#718096">build &amp; push</text>
+
+      <!-- Docker Hub -->
+      <rect x="670" y="20" width="160" height="100" rx="10" fill="#fff5f5" stroke="#fed7d7" stroke-width="1.5"/>
+      <text x="750" y="42" text-anchor="middle" font-size="11" font-weight="700" fill="#c53030">Docker Hub</text>
+
+      <rect x="685" y="52" width="130" height="24" rx="4" fill="white" stroke="#fed7d7"/>
+      <text x="750" y="68" text-anchor="middle" font-size="7" fill="#c53030">juddges-frontend:v*</text>
+
+      <rect x="685" y="82" width="130" height="24" rx="4" fill="white" stroke="#fed7d7"/>
+      <text x="750" y="98" text-anchor="middle" font-size="7" fill="#c53030">juddges-backend:v*</text>
+
+      <!-- Arrow to Prod -->
+      <path d="M830,70 L870,70" stroke="#718096" stroke-width="2" marker-end="url(#arr3)"/>
+      <text x="842" y="63" font-size="7" fill="#718096">pull</text>
+
+      <!-- Production -->
+      <rect x="875" y="10" width="115" height="120" rx="10" fill="#f0fff4" stroke="#c6f6d5" stroke-width="1.5"/>
+      <text x="932" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#276749">Production</text>
+
+      <rect x="885" y="48" width="96" height="24" rx="4" fill="#48bb78"/>
+      <text x="933" y="64" text-anchor="middle" font-size="8" fill="white">frontend:3006</text>
+
+      <rect x="885" y="78" width="96" height="24" rx="4" fill="#48bb78"/>
+      <text x="933" y="94" text-anchor="middle" font-size="8" fill="white">backend:8002</text>
+
+      <rect x="885" y="108" width="96" height="16" rx="3" fill="white" stroke="#c6f6d5"/>
+      <text x="933" y="120" text-anchor="middle" font-size="7" fill="#276749">worker</text>
+
+      <!-- Version management -->
+      <rect x="20" y="150" width="970" height="120" rx="10" fill="#f7fafc" stroke="#e2e8f0"/>
+      <text x="50" y="172" font-size="11" font-weight="700" fill="#2d3748">Version Management &amp; Scripts</text>
+
+      <rect x="40" y="185" width="200" height="35" rx="6" fill="white" stroke="#e2e8f0"/>
+      <text x="140" y="207" text-anchor="middle" font-size="9" fill="#2d3748">build_and_push_prod.sh</text>
+      <text x="140" y="218" text-anchor="middle" font-size="7" fill="#718096">Semantic versioning + Docker build</text>
+
+      <rect x="260" y="185" width="200" height="35" rx="6" fill="white" stroke="#e2e8f0"/>
+      <text x="360" y="207" text-anchor="middle" font-size="9" fill="#2d3748">deploy_prod.sh</text>
+      <text x="360" y="218" text-anchor="middle" font-size="7" fill="#718096">Pull + restart + health check</text>
+
+      <rect x="480" y="185" width="200" height="35" rx="6" fill="white" stroke="#e2e8f0"/>
+      <text x="580" y="207" text-anchor="middle" font-size="9" fill="#2d3748">Git Tags (v0.1.0, v1.0.0)</text>
+      <text x="580" y="218" text-anchor="middle" font-size="7" fill="#718096">Source of truth for versions</text>
+
+      <rect x="700" y="185" width="200" height="35" rx="6" fill="white" stroke="#e2e8f0"/>
+      <text x="800" y="207" text-anchor="middle" font-size="9" fill="#2d3748">.deploy-history</text>
+      <text x="800" y="218" text-anchor="middle" font-size="7" fill="#718096">Rollback support log</text>
+
+      <!-- Env vars -->
+      <rect x="40" y="230" width="200" height="28" rx="5" fill="white" stroke="#fefcbf"/>
+      <text x="140" y="249" text-anchor="middle" font-size="8" fill="#975a16">JUDDGES_IMAGE_TAG (latest)</text>
+
+      <rect x="260" y="230" width="200" height="28" rx="5" fill="white" stroke="#fefcbf"/>
+      <text x="360" y="249" text-anchor="middle" font-size="8" fill="#975a16">DOCKER_USERNAME (laugustyniak)</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ==================== OPEN ISSUES ==================== -->
+<div class="section">
+  <h2>Open Issues &amp; Roadmap</h2>
+
+  <h3>Issue Dependency Chain (6K Data Goal)</h3>
+  <div class="dep-chain">
+    <div class="dep-node active">#10 UK Topic Analysis</div>
+    <div class="dep-arrow">&rarr;</div>
+    <div class="dep-node blocked">#11 Cross-lingual Queries</div>
+    <div class="dep-arrow">&rarr;</div>
+    <div class="dep-node blocked">#12 Curate 6K PL Dataset</div>
+    <div class="dep-arrow">&rarr;</div>
+    <div class="dep-node blocked">#29 Ingestion Optimization</div>
+    <div class="dep-arrow">&rarr;</div>
+    <div class="dep-node blocked">#31 Benchmark at Scale</div>
+  </div>
+  <div class="dep-chain" style="margin-top: -4px;">
+    <div class="dep-node active" style="border-color: var(--green);">#13 Search Logs Eval</div>
+    <span style="font-size: 0.8em; color: var(--gray); margin-left: 8px;">(independent, can start immediately)</span>
+  </div>
+
+  <div style="margin-top: 24px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Issue</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Effort</th>
+          <th>Blockers</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>#10</strong> UK topic analysis (6K judgments)</td><td><span class="badge badge-purple">data/ml</span></td><td><span class="badge badge-blue">ready</span></td><td>4-6h</td><td>Fix table ref in topic_modeling.py</td></tr>
+        <tr><td><strong>#11</strong> Cross-jurisdictional queries</td><td><span class="badge badge-purple">data/ml</span></td><td><span class="badge badge-orange">blocked</span></td><td>2-4h</td><td>Needs #10 output</td></tr>
+        <tr><td><strong>#12</strong> Curate 6K Polish dataset</td><td><span class="badge badge-purple">data/ml</span></td><td><span class="badge badge-orange">blocked</span></td><td>3-5h</td><td>Needs #10 + verify HF dataset</td></tr>
+        <tr><td><strong>#13</strong> Search logs as eval source</td><td><span class="badge badge-green">search</span></td><td><span class="badge badge-green">ready now</span></td><td>2-3h</td><td>None</td></tr>
+        <tr><td><strong>#15</strong> Supabase client race condition</td><td><span class="badge badge-red">bug</span></td><td><span class="badge badge-green">ready now</span></td><td>1h</td><td>None</td></tr>
+        <tr><td><strong>#16</strong> Search proxy non-JSON crash</td><td><span class="badge badge-red">bug</span></td><td><span class="badge badge-green">ready now</span></td><td>1h</td><td>None</td></tr>
+        <tr><td><strong>#19</strong> Missing TypeScript typecheck in CI</td><td><span class="badge badge-blue">ci/cd</span></td><td><span class="badge badge-green">ready now</span></td><td>30m</td><td>None</td></tr>
+        <tr><td><strong>#20</strong> Enhance CI security scanning</td><td><span class="badge badge-blue">ci/cd</span></td><td><span class="badge badge-blue">ready</span></td><td>2-3h</td><td>Partially done already</td></tr>
+        <tr><td><strong>#24</strong> CORS empty-string origins</td><td><span class="badge badge-red">security</span></td><td><span class="badge badge-green">ready now</span></td><td>30m</td><td>None</td></tr>
+        <tr><td><strong>#26</strong> Frontend test coverage threshold</td><td><span class="badge badge-blue">ci/cd</span></td><td><span class="badge badge-green">ready now</span></td><td>1h</td><td>Backend already done</td></tr>
+        <tr><td><strong>#29</strong> Ingestion checkpoint/resume</td><td><span class="badge badge-orange">infra</span></td><td><span class="badge badge-orange">blocked</span></td><td>3-4h</td><td>Needed before 6K ingestion</td></tr>
+        <tr><td><strong>#30</strong> Remove dead embeddings code</td><td><span class="badge badge-green">cleanup</span></td><td><span class="badge badge-green">ready now</span></td><td>15m</td><td>None</td></tr>
+        <tr><td><strong>#31</strong> Benchmark search at 6K scale</td><td><span class="badge badge-orange">perf</span></td><td><span class="badge badge-orange">blocked</span></td><td>3-4h</td><td>Needs 6K data first</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 28px;">Recently Closed (Already Resolved)</h3>
+  <div class="grid-4" style="margin-top: 10px;">
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#17</strong> Health check version &mdash; already env-driven</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#18</strong> Node.js mismatch &mdash; both use v24</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#21</strong> Reranker httpx &mdash; already singleton</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#22</strong> Reranker tests &mdash; 20+ tests exist</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#23</strong> Embedding tests &mdash; 26+ tests exist</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#25</strong> ESLint pre-commit &mdash; already configured</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#27</strong> Error boundary &mdash; already implemented</span>
+    </div>
+    <div class="card" style="padding: 10px; background: #f0fff4; border: 1px solid #c6f6d5;">
+      <span style="font-size: 0.8em; color: #276749;"><strong>#28</strong> tsc in CI &mdash; duplicate of #19</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TECH STACK ==================== -->
+<div class="section">
+  <h2>Technology Stack</h2>
+  <div class="grid-3">
+    <div class="card card-blue">
+      <h4>Frontend</h4>
+      <ul>
+        <li><strong>Next.js 15</strong> (App Router)</li>
+        <li><strong>React 19</strong> + Radix UI</li>
+        <li><strong>Tailwind CSS 4</strong></li>
+        <li><strong>Zustand</strong> (global state)</li>
+        <li><strong>React Query</strong> (server state)</li>
+        <li><strong>TipTap</strong> (rich text editor)</li>
+        <li><strong>Playwright + Jest</strong> (testing)</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <h4>Backend</h4>
+      <ul>
+        <li><strong>FastAPI</strong> (Python 3.12+)</li>
+        <li><strong>LangChain / LangGraph</strong></li>
+        <li><strong>OpenAI API</strong> (GPT-4o, embed-3-small)</li>
+        <li><strong>Cohere</strong> (rerank-v3.5)</li>
+        <li><strong>Celery + Redis</strong> (task queue)</li>
+        <li><strong>Langfuse</strong> (observability)</li>
+        <li><strong>Ruff + pytest</strong> (quality)</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <h4>Data &amp; Infrastructure</h4>
+      <ul>
+        <li><strong>Supabase</strong> (PostgreSQL + Auth)</li>
+        <li><strong>pgvector</strong> (HNSW, 768d)</li>
+        <li><strong>Docker Compose</strong> (dev + prod)</li>
+        <li><strong>Docker Hub</strong> (image registry)</li>
+        <li><strong>GitHub Actions</strong> (CI/CD)</li>
+        <li><strong>HuggingFace Hub</strong> (datasets)</li>
+        <li><strong>Semver git tags</strong> (versioning)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MONOREPO STRUCTURE ==================== -->
+<div class="section">
+  <h2>Monorepo Structure</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Directory Layout</h4>
+      <pre style="font-size: 0.8em; line-height: 1.5; color: var(--text-light); overflow-x: auto;">
+juddges-app/
+├── frontend/              Next.js 15 app
+│   ├── app/              App Router pages
+│   │   ├── (app)/        Authenticated shell
+│   │   ├── auth/         Login/signup
+│   │   ├── search/       Search interface
+│   │   └── chat/         RAG chat
+│   ├── components/       React components
+│   │   ├── ui/           Radix primitives
+│   │   ├── errors/       Error boundaries
+│   │   └── search/       Search components
+│   └── lib/              Utilities + hooks
+│
+├── backend/              FastAPI app
+│   ├── app/              30+ API routers
+│   │   ├── server.py     Entry point
+│   │   ├── reranker.py   Cohere reranking
+│   │   ├── query_analysis.py
+│   │   └── ...
+│   ├── packages/
+│   │   ├── juddges_search/
+│   │   └── schema_generator_agent/
+│   └── tests/
+│
+├── supabase/migrations/  SQL schemas
+├── scripts/              Ingestion pipeline
+├── docs/                 Documentation
+└── .github/workflows/    CI/CD</pre>
+    </div>
+    <div class="card">
+      <h4>Backend Packages (editable installs)</h4>
+      <div style="margin: 12px 0;">
+        <div style="background: #faf5ff; padding: 12px; border-radius: 8px; border-left: 3px solid #9f7aea; margin-bottom: 10px;">
+          <strong style="font-size: 0.9em;">juddges_search</strong>
+          <p style="font-size: 0.8em; color: var(--text-light); margin: 4px 0 0;">RAG chains, vector DB ops, chat/QA chains. LangChain integration for AI-powered search.</p>
+        </div>
+        <div style="background: #fffff0; padding: 12px; border-radius: 8px; border-left: 3px solid #ed8936;">
+          <strong style="font-size: 0.9em;">schema_generator_agent</strong>
+          <p style="font-size: 0.8em; color: var(--text-light); margin: 4px 0 0;">LangGraph-based agent for extracting structured data from legal documents.</p>
+        </div>
+      </div>
+
+      <h4 style="margin-top: 16px;">Key Backend Routers</h4>
+      <div style="font-size: 0.8em; columns: 2; column-gap: 16px; color: var(--text-light); line-height: 1.8;">
+        <div>search</div>
+        <div>documents</div>
+        <div>analytics</div>
+        <div>feedback</div>
+        <div>chat / QA</div>
+        <div>schemas</div>
+        <div>embeddings</div>
+        <div>health</div>
+        <div>collections</div>
+        <div>topic_modeling</div>
+        <div>clustering</div>
+        <div>recommendations</div>
+        <div>admin / SSO</div>
+        <div>guest_sessions</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--gray-light); text-align: center; color: var(--gray); font-size: 0.8em;">
+  Juddges App Architecture Diagram | Generated: March 9, 2026 | 13 open issues | 8 closed this session
+</div>
+
+</body>
+</html>
