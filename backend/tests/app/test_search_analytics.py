@@ -1,8 +1,10 @@
-"""Unit tests for search analytics recording and the autocomplete analytics endpoints."""
+"""Unit tests for search analytics recording, autocomplete analytics, and eval export."""
 
 from unittest.mock import MagicMock, patch
 
-from app.services.search_analytics import record_search_query
+import pytest
+
+from app.services.search_analytics import export_eval_queries, record_search_query
 
 
 class TestRecordSearchQuery:
@@ -46,6 +48,220 @@ class TestRecordSearchQuery:
         mock_client.table.side_effect = RuntimeError("db down")
         # Should not raise
         record_search_query("test", hit_count=0)
+
+
+class TestExportEvalQueries:
+    """Test the eval query export function."""
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client", None)
+    async def test_returns_empty_without_supabase(self):
+        result = await export_eval_queries()
+        assert result["queries"] == []
+        assert "error" in result["metadata"]
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_exports_from_rpc(self, mock_client):
+        """Test that export_eval_queries uses the RPC and returns deduped queries."""
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "query": "contract law",
+                    "search_count": 10,
+                    "avg_hits": 5.2,
+                    "avg_processing_ms": 120.0,
+                },
+                {
+                    "query": "tort liability",
+                    "search_count": 3,
+                    "avg_hits": 8.0,
+                    "avg_processing_ms": 95.0,
+                },
+            ]
+        )
+
+        # Mock feedback table returning empty
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_select = MagicMock()
+        mock_table.select.return_value = mock_select
+        mock_gte = MagicMock()
+        mock_select.gte.return_value = mock_gte
+        mock_order = MagicMock()
+        mock_gte.order.return_value = mock_order
+        mock_order.limit.return_value = mock_order
+        mock_order.execute.return_value = MagicMock(data=[])
+
+        result = await export_eval_queries(days=7, min_frequency=1)
+
+        assert len(result["queries"]) == 2
+        assert result["queries"][0]["query"] == "contract law"
+        assert result["queries"][0]["query_source"] == "user_logs"
+        assert result["queries"][0]["frequency"] == 10
+        assert result["queries"][0]["has_ground_truth"] is False
+        assert result["metadata"]["total_queries"] == 2
+        assert result["metadata"]["unlabeled_queries"] == 2
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_merges_feedback_labels(self, mock_client):
+        """Test that feedback labels are attached to matching queries."""
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "query": "contract law",
+                    "search_count": 5,
+                    "avg_hits": 3.0,
+                    "avg_processing_ms": 100.0,
+                },
+            ]
+        )
+
+        # Mock feedback table
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_select = MagicMock()
+        mock_table.select.return_value = mock_select
+        mock_gte = MagicMock()
+        mock_select.gte.return_value = mock_gte
+        mock_order = MagicMock()
+        mock_gte.order.return_value = mock_order
+        mock_order.limit.return_value = mock_order
+        mock_order.execute.return_value = MagicMock(
+            data=[
+                {
+                    "search_query": "contract law",
+                    "document_id": "doc-123",
+                    "rating": "relevant",
+                    "result_position": 1,
+                    "reason": "exact match",
+                },
+                {
+                    "search_query": "employment dispute",
+                    "document_id": "doc-456",
+                    "rating": "not_relevant",
+                    "result_position": 3,
+                    "reason": None,
+                },
+            ]
+        )
+
+        result = await export_eval_queries(days=30)
+
+        # "contract law" from logs + has feedback
+        contract = next(q for q in result["queries"] if q["query"] == "contract law")
+        assert contract["has_ground_truth"] is True
+        assert len(contract["relevance_labels"]) == 1
+        assert contract["relevance_labels"][0]["rating"] == "relevant"
+
+        # "employment dispute" from feedback only
+        employment = next(
+            q for q in result["queries"] if "employment" in q["query"].lower()
+        )
+        assert employment["query_source"] == "feedback_rated"
+        assert employment["has_ground_truth"] is True
+        assert employment["frequency"] == 0
+
+        assert result["metadata"]["labeled_queries"] == 2
+        assert result["metadata"]["source_breakdown"]["feedback_rated"] == 1
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_deduplicates_case_insensitive(self, mock_client):
+        """Test that queries are deduped case-insensitively."""
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "query": "Contract Law",
+                    "search_count": 3,
+                    "avg_hits": 2.0,
+                    "avg_processing_ms": 50.0,
+                },
+                {
+                    "query": "contract law",
+                    "search_count": 5,
+                    "avg_hits": 3.0,
+                    "avg_processing_ms": 60.0,
+                },
+            ]
+        )
+
+        # No feedback
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_select = MagicMock()
+        mock_table.select.return_value = mock_select
+        mock_gte = MagicMock()
+        mock_select.gte.return_value = mock_gte
+        mock_order = MagicMock()
+        mock_gte.order.return_value = mock_order
+        mock_order.limit.return_value = mock_order
+        mock_order.execute.return_value = MagicMock(data=[])
+
+        result = await export_eval_queries()
+
+        # Only one query after dedup (first one wins)
+        assert len(result["queries"]) == 1
+        assert result["queries"][0]["query"] == "Contract Law"
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_skip_feedback_when_disabled(self, mock_client):
+        """Test include_feedback=False skips the feedback fetch."""
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "query": "test",
+                    "search_count": 1,
+                    "avg_hits": 1.0,
+                    "avg_processing_ms": 10.0,
+                },
+            ]
+        )
+
+        result = await export_eval_queries(include_feedback=False)
+
+        # Should NOT call .table("search_feedback")
+        mock_client.table.assert_not_called()
+        assert len(result["queries"]) == 1
+        assert result["queries"][0]["has_ground_truth"] is False
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_min_frequency_filter(self, mock_client):
+        """Test that min_frequency filters out low-frequency queries."""
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "query": "popular",
+                    "search_count": 10,
+                    "avg_hits": 5.0,
+                    "avg_processing_ms": 50.0,
+                },
+                {
+                    "query": "rare",
+                    "search_count": 1,
+                    "avg_hits": 1.0,
+                    "avg_processing_ms": 20.0,
+                },
+            ]
+        )
+
+        result = await export_eval_queries(min_frequency=5, include_feedback=False)
+
+        assert len(result["queries"]) == 1
+        assert result["queries"][0]["query"] == "popular"
 
 
 class TestSyncStatus:

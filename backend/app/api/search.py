@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from app.services.search import MeiliSearchService
 from app.services.search_analytics import (
+    export_eval_queries,
     get_popular_queries,
     get_zero_result_queries,
     record_search_query,
@@ -112,3 +113,79 @@ async def zero_result_queries_endpoint(
     """Return queries that produced zero search results."""
     rows = await get_zero_result_queries(days=days, limit=limit)
     return [ZeroResultQueryItem(**r) for r in rows]
+
+
+# ── Eval query export ────────────────────────────────────────────────────
+
+
+class RelevanceLabel(BaseModel):
+    """A single user-provided relevance label for a query-document pair."""
+
+    search_query: str
+    document_id: str
+    rating: str  # relevant | not_relevant | somewhat_relevant
+    result_position: int | None = None
+    reason: str | None = None
+
+
+class EvalQuery(BaseModel):
+    """A query from the evaluation dataset with optional ground-truth labels."""
+
+    query: str
+    query_source: str  # user_logs | feedback_rated
+    frequency: int = 0
+    avg_hit_count: float | None = None
+    avg_processing_ms: float | None = None
+    relevance_labels: list[RelevanceLabel] = Field(default_factory=list)
+    has_ground_truth: bool = False
+
+
+class EvalExportMetadata(BaseModel):
+    """Statistics about the exported eval dataset."""
+
+    exported_at: str
+    days: int
+    min_frequency: int
+    total_queries: int
+    labeled_queries: int
+    unlabeled_queries: int
+    source_breakdown: dict[str, int] = Field(default_factory=dict)
+
+
+class EvalExportResponse(BaseModel):
+    """Full eval query export response."""
+
+    queries: list[EvalQuery]
+    metadata: EvalExportMetadata
+
+
+@router.get("/analytics/eval-queries", response_model=EvalExportResponse)
+async def eval_queries_endpoint(
+    days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+    min_frequency: int = Query(
+        1, ge=1, le=100, description="Minimum query frequency to include"
+    ),
+    limit: int = Query(500, ge=1, le=5000, description="Maximum queries to return"),
+    include_feedback: bool = Query(
+        True, description="Include user relevance labels from search_feedback"
+    ),
+) -> EvalExportResponse:
+    """Export deduplicated search queries as an evaluation dataset.
+
+    Combines user search logs (from ``search_analytics``) with user-rated
+    relevance labels (from ``search_feedback``) into a single dataset
+    suitable for offline search quality evaluation.
+
+    Each query includes:
+    - ``query_source``: whether it came from logs or feedback
+    - ``frequency``: how often users searched this query
+    - ``relevance_labels``: list of user-provided relevance ratings (if any)
+    - ``has_ground_truth``: whether at least one rating exists
+    """
+    data = await export_eval_queries(
+        days=days,
+        min_frequency=min_frequency,
+        limit=limit,
+        include_feedback=include_feedback,
+    )
+    return EvalExportResponse(**data)
