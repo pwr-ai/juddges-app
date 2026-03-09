@@ -131,6 +131,7 @@ wheels/
 # Allow tracking specific frontend style components needed by the app build.
 !frontend/lib/
 frontend/lib/*
+!frontend/lib/stats/
 !frontend/lib/styles/
 frontend/lib/styles/*
 !frontend/lib/styles/components/

@@ -1,0 +1,825 @@
+{
+  "uk": {
+    "total": 6050,
+    "text_length_chars": {
+      "min": 1232,
+      "max": 436490,
+      "mean": 26274,
+      "median": 20164,
+      "stdev": 21950,
+      "p25": 12662,
+      "p75": 32803
+    },
+    "text_length_words": {
+      "min": 246,
+      "max": 73515,
+      "mean": 4606,
+      "median": 3547
+    },
+    "text_length_sentences": {
+      "min": 5,
+      "max": 3602,
+      "mean": 229,
+      "median": 180
+    },
+    "length_distribution": {
+      "10-20K": 2058,
+      "20-30K": 1307,
+      "30-50K": 1109,
+      "<5K": 138,
+      "50-100K": 551,
+      "5-10K": 803,
+      ">100K": 84
+    },
+    "word_distribution": {
+      "2-3K": 1261,
+      "3-5K": 1663,
+      "5-10K": 1457,
+      "1-2K": 1037,
+      "<1K": 188,
+      ">10K": 444
+    },
+    "year_distribution": {
+      "2003": 167,
+      "2004": 240,
+      "2005": 261,
+      "2006": 320,
+      "2007": 321,
+      "2008": 441,
+      "2009": 442,
+      "2010": 381,
+      "2011": 314,
+      "2012": 192,
+      "2013": 223,
+      "2014": 190,
+      "2015": 169,
+      "2016": 192,
+      "2017": 237,
+      "2018": 318,
+      "2019": 327,
+      "2020": 231,
+      "2021": 181,
+      "2022": 287,
+      "2023": 441,
+      "2024": 175
+    },
+    "judges": {
+      "total_unique": 1766,
+      "avg_per_case": 2.5,
+      "cases_with_judges": 6050,
+      "top_10": [
+        {
+          "name": "LORD JUSTICE HOLROYDE",
+          "count": 231
+        },
+        {
+          "name": "LORD JUSTICE SIMON",
+          "count": 188
+        },
+        {
+          "name": "LORD JUSTICE HOOPER",
+          "count": 186
+        },
+        {
+          "name": "LORD JUSTICE MOSES",
+          "count": 144
+        },
+        {
+          "name": "LORD JUSTICE DAVIS",
+          "count": 143
+        },
+        {
+          "name": "LORD JUSTICE THOMAS",
+          "count": 137
+        },
+        {
+          "name": "MR JUSTICE SWEENEY",
+          "count": 134
+        },
+        {
+          "name": "LORD JUSTICE HUGHES",
+          "count": 124
+        },
+        {
+          "name": "LORD JUSTICE TREACY",
+          "count": 123
+        },
+        {
+          "name": "LORD JUSTICE PITCHFORD",
+          "count": 123
+        }
+      ]
+    },
+    "panel_size_distribution": {
+      "1": 577,
+      "2": 2274,
+      "3": 2911,
+      "4": 218,
+      "5": 48,
+      "6": 10,
+      "7": 9,
+      "8": 2,
+      "11": 1
+    },
+    "court_distribution": {
+      "crown_court": 5369,
+      "supreme_court": 660,
+      "martial_court": 11,
+      "high_court_division_court": 7,
+      "high_court_administrative_court": 1,
+      "civil_criminal_court": 1,
+      "division_court": 1
+    },
+    "vocabulary": {
+      "total_tokens_sample": 4633278,
+      "unique_tokens_sample": 38133,
+      "type_token_ratio": 0.0082,
+      "top_50_words": [
+        {
+          "word": "the",
+          "count": 377415
+        },
+        {
+          "word": "of",
+          "count": 165520
+        },
+        {
+          "word": "to",
+          "count": 148190
+        },
+        {
+          "word": "that",
+          "count": 106429
+        },
+        {
+          "word": "in",
+          "count": 103914
+        },
+        {
+          "word": "and",
+          "count": 94506
+        },
+        {
+          "word": "a",
+          "count": 92537
+        },
+        {
+          "word": "was",
+          "count": 83220
+        },
+        {
+          "word": "he",
+          "count": 52901
+        },
+        {
+          "word": "on",
+          "count": 45211
+        },
+        {
+          "word": "is",
+          "count": 42769
+        },
+        {
+          "word": "it",
+          "count": 41821
+        },
+        {
+          "word": "had",
+          "count": 38643
+        },
+        {
+          "word": "not",
+          "count": 37780
+        },
+        {
+          "word": "for",
+          "count": 37465
+        },
+        {
+          "word": "as",
+          "count": 33010
+        },
+        {
+          "word": "be",
+          "count": 31233
+        },
+        {
+          "word": "by",
+          "count": 29676
+        },
+        {
+          "word": "his",
+          "count": 28353
+        },
+        {
+          "word": "which",
+          "count": 28006
+        },
+        {
+          "word": "s",
+          "count": 27337
+        },
+        {
+          "word": "at",
+          "count": 26365
+        },
+        {
+          "word": "this",
+          "count": 26340
+        },
+        {
+          "word": "with",
+          "count": 25898
+        },
+        {
+          "word": "have",
+          "count": 24146
+        },
+        {
+          "word": "or",
+          "count": 23760
+        },
+        {
+          "word": "appellant",
+          "count": 22675
+        },
+        {
+          "word": "judge",
+          "count": 22250
+        },
+        {
+          "word": "evidence",
+          "count": 21167
+        },
+        {
+          "word": "been",
+          "count": 21083
+        },
+        {
+          "word": "an",
+          "count": 19766
+        },
+        {
+          "word": "we",
+          "count": 19510
+        },
+        {
+          "word": "were",
+          "count": 18544
+        },
+        {
+          "word": "mr",
+          "count": 18129
+        },
+        {
+          "word": "court",
+          "count": 18082
+        },
+        {
+          "word": "case",
+          "count": 17175
+        },
+        {
+          "word": "there",
+          "count": 17111
+        },
+        {
+          "word": "she",
+          "count": 16558
+        },
+        {
+          "word": "from",
+          "count": 16090
+        },
+        {
+          "word": "her",
+          "count": 16030
+        },
+        {
+          "word": "no",
+          "count": 15364
+        },
+        {
+          "word": "would",
+          "count": 14829
+        },
+        {
+          "word": "sentence",
+          "count": 12745
+        },
+        {
+          "word": "but",
+          "count": 12452
+        },
+        {
+          "word": "any",
+          "count": 11319
+        },
+        {
+          "word": "said",
+          "count": 11003
+        },
+        {
+          "word": "jury",
+          "count": 10972
+        },
+        {
+          "word": "they",
+          "count": 10967
+        },
+        {
+          "word": "if",
+          "count": 10964
+        },
+        {
+          "word": "are",
+          "count": 10582
+        }
+      ]
+    },
+    "avg_sentence_length": 24.4,
+    "cases_with_citation": 6050,
+    "decade_distribution": {
+      "2000s": 2192,
+      "2010s": 2543,
+      "2020s": 1315
+    }
+  },
+  "pl": {
+    "total": 6050,
+    "text_length_chars": {
+      "min": 572,
+      "max": 737564,
+      "mean": 31304,
+      "median": 20270,
+      "stdev": 45466,
+      "p25": 9473,
+      "p75": 36307
+    },
+    "text_length_words": {
+      "min": 77,
+      "max": 104512,
+      "mean": 4405,
+      "median": 2838
+    },
+    "text_length_sentences": {
+      "min": 5,
+      "max": 31976,
+      "mean": 718,
+      "median": 377
+    },
+    "length_distribution": {
+      "10-20K": 1393,
+      "5-10K": 712,
+      "<5K": 885,
+      "30-50K": 1041,
+      "20-30K": 1097,
+      "50-100K": 655,
+      ">100K": 267
+    },
+    "word_distribution": {
+      "1-2K": 1051,
+      "<1K": 1175,
+      "2-3K": 951,
+      "5-10K": 1046,
+      "3-5K": 1321,
+      ">10K": 506
+    },
+    "year_distribution": {
+      "2012": 323,
+      "2013": 812,
+      "2014": 556,
+      "2015": 491,
+      "2016": 354,
+      "2017": 288,
+      "2018": 199,
+      "2019": 275,
+      "2020": 362,
+      "2021": 473,
+      "2022": 541,
+      "2023": 773,
+      "2024": 482,
+      "2025": 121
+    },
+    "judges": {
+      "total_unique": 876,
+      "avg_per_case": 2.59,
+      "cases_with_judges": 5589,
+      "top_10": [
+        {
+          "name": "Jerzy Skorupka",
+          "count": 279
+        },
+        {
+          "name": "Cezariusz Ba\u0107kowski",
+          "count": 267
+        },
+        {
+          "name": "Wies\u0142aw P\u0119dziwiatr",
+          "count": 247
+        },
+        {
+          "name": "Andrzej Kot",
+          "count": 243
+        },
+        {
+          "name": "Anna Zdziarska",
+          "count": 228
+        },
+        {
+          "name": "Bogus\u0142aw Tocicki",
+          "count": 225
+        },
+        {
+          "name": "Witold Franckiewicz",
+          "count": 160
+        },
+        {
+          "name": "Rafa\u0142 Kaniok",
+          "count": 152
+        },
+        {
+          "name": "Adam Wrzosek",
+          "count": 143
+        },
+        {
+          "name": "Piotr Brodniak",
+          "count": 142
+        }
+      ]
+    },
+    "panel_size_distribution": {
+      "0": 461,
+      "1": 486,
+      "2": 314,
+      "3": 4694,
+      "4": 17,
+      "5": 77,
+      "6": 1
+    },
+    "court_distribution": {
+      "S\u0105d Apelacyjnyw Warszawie": 1076,
+      "S\u0105d Apelacyjny w Katowicach": 1003,
+      "S\u0105d Apelacyjnywe Wroc\u0142awiu": 899,
+      "S\u0105d Apelacyjny w Poznaniu": 701,
+      "S\u0105d Apelacyjnyw Szczecinie": 584,
+      "S\u0105d Apelacyjny w Gda\u0144sku": 340,
+      "S\u0105d Apelacyjny we Wroc\u0142awiu": 302,
+      "S\u0105d Apelacyjnyw Bia\u0142ymstoku": 270,
+      "S\u0105d Apelacyjny w Krakowie": 214,
+      "S\u0105d Apelacyjny w \u0141odzi": 209,
+      "S\u0105d Apelacyjny w Lublinie": 155,
+      "S\u0105d Apelacyjny w Warszawie": 141,
+      "S\u0105d Apelacyjny w Szczecinie": 80,
+      "S\u0105d Apelacyjny w Rzeszowie": 60,
+      "S\u0105d Apelacyjny w Bia\u0142ymstoku": 16
+    },
+    "judgment_type_distribution": {
+      "SENTENCE, REASON": 3724,
+      "SENTENCE": 972,
+      "REASON": 615,
+      "DECISION, REASON": 572,
+      "REGULATION, DECISION, REASON": 135,
+      "DECISION": 13,
+      "REGULATION": 6,
+      "SENTENCE, OTHER": 6,
+      "REGULATION, REASON": 4,
+      "REGULATION, DECISION": 2
+    },
+    "vocabulary": {
+      "total_tokens_sample": 4342965,
+      "unique_tokens_sample": 98897,
+      "type_token_ratio": 0.0228,
+      "top_50_words": [
+        {
+          "word": "w",
+          "count": 188857
+        },
+        {
+          "word": "k",
+          "count": 107474
+        },
+        {
+          "word": "z",
+          "count": 83104
+        },
+        {
+          "word": "i",
+          "count": 80575
+        },
+        {
+          "word": "na",
+          "count": 71684
+        },
+        {
+          "word": "1",
+          "count": 66813
+        },
+        {
+          "word": "nie",
+          "count": 52387
+        },
+        {
+          "word": "do",
+          "count": 49176
+        },
+        {
+          "word": "o",
+          "count": 41196
+        },
+        {
+          "word": "\u017ce",
+          "count": 38511
+        },
+        {
+          "word": "si\u0119",
+          "count": 30639
+        },
+        {
+          "word": "2",
+          "count": 30035
+        },
+        {
+          "word": "a",
+          "count": 29676
+        },
+        {
+          "word": "p",
+          "count": 24783
+        },
+        {
+          "word": "s\u0105d",
+          "count": 24436
+        },
+        {
+          "word": "zart",
+          "count": 24204
+        },
+        {
+          "word": "r",
+          "count": 24090
+        },
+        {
+          "word": "przez",
+          "count": 23646
+        },
+        {
+          "word": "za",
+          "count": 22881
+        },
+        {
+          "word": "to",
+          "count": 19040
+        },
+        {
+          "word": "oskar\u017conego",
+          "count": 17227
+        },
+        {
+          "word": "co",
+          "count": 16701
+        },
+        {
+          "word": "od",
+          "count": 16521
+        },
+        {
+          "word": "wyroku",
+          "count": 16452
+        },
+        {
+          "word": "tym",
+          "count": 16187
+        },
+        {
+          "word": "jest",
+          "count": 15973
+        },
+        {
+          "word": "dnia",
+          "count": 15862
+        },
+        {
+          "word": "3",
+          "count": 15393
+        },
+        {
+          "word": "oraz",
+          "count": 15015
+        },
+        {
+          "word": "s",
+          "count": 14870
+        },
+        {
+          "word": "art",
+          "count": 13945
+        },
+        {
+          "word": "zw",
+          "count": 13367
+        },
+        {
+          "word": "s\u0105du",
+          "count": 13321
+        },
+        {
+          "word": "pkt",
+          "count": 13248
+        },
+        {
+          "word": "roku",
+          "count": 11883
+        },
+        {
+          "word": "kary",
+          "count": 11717
+        },
+        {
+          "word": "m",
+          "count": 11433
+        },
+        {
+          "word": "z\u0142",
+          "count": 11211
+        },
+        {
+          "word": "tego",
+          "count": 11149
+        },
+        {
+          "word": "i\u017c",
+          "count": 10685
+        },
+        {
+          "word": "jego",
+          "count": 10578
+        },
+        {
+          "word": "wolno\u015bci",
+          "count": 10159
+        },
+        {
+          "word": "pozbawienia",
+          "count": 9970
+        },
+        {
+          "word": "po",
+          "count": 9396
+        },
+        {
+          "word": "jak",
+          "count": 9377
+        },
+        {
+          "word": "instancji",
+          "count": 9196
+        },
+        {
+          "word": "zakresie",
+          "count": 9141
+        },
+        {
+          "word": "czynu",
+          "count": 9047
+        },
+        {
+          "word": "4",
+          "count": 8863
+        },
+        {
+          "word": "sprawie",
+          "count": 8842
+        }
+      ]
+    },
+    "avg_sentence_length": 13.4,
+    "keyword_distribution": [
+      {
+        "keyword": "Oszustwo",
+        "count": 299
+      },
+      {
+        "keyword": "Narkomania",
+        "count": 247
+      },
+      {
+        "keyword": "Zab\u00f3jstwo",
+        "count": 237
+      },
+      {
+        "keyword": "Dowody",
+        "count": 218
+      },
+      {
+        "keyword": "Rozb\u00f3j",
+        "count": 185
+      },
+      {
+        "keyword": "Odszkodowanie Za Nies\u0142uszne Skazanie, Tymczasowe Aresztowanie Lub Zatrzymanie",
+        "count": 169
+      },
+      {
+        "keyword": "Przest\u0119pstwa Przeciwko Mieniu",
+        "count": 159
+      },
+      {
+        "keyword": "\"Ustawa Lutowa\"",
+        "count": 149
+      },
+      {
+        "keyword": "Przest\u0119pstwo przeciwko mieniu",
+        "count": 149
+      },
+      {
+        "keyword": "Przest\u0119pstwo przeciwko \u017cyciu",
+        "count": 146
+      },
+      {
+        "keyword": "Zado\u015b\u0107uczynienie",
+        "count": 144
+      },
+      {
+        "keyword": "Przest\u0119pstwo Przeciwko \u017byciu",
+        "count": 144
+      },
+      {
+        "keyword": "Przest\u0119pstwo Przeciwko Mieniu",
+        "count": 134
+      },
+      {
+        "keyword": "Odszkodowanie",
+        "count": 131
+      },
+      {
+        "keyword": "Przest\u0119pstwa Przeciwko \u017byciu",
+        "count": 113
+      },
+      {
+        "keyword": "Przest\u0119pstwo przeciwko zdrowiu",
+        "count": 110
+      },
+      {
+        "keyword": "Skarga na przewlek\u0142o\u015b\u0107",
+        "count": 102
+      },
+      {
+        "keyword": "Kara",
+        "count": 100
+      },
+      {
+        "keyword": "Swobodna ocena dowod\u00f3w",
+        "count": 98
+      },
+      {
+        "keyword": "Zamiar",
+        "count": 92
+      },
+      {
+        "keyword": "Wyrok \u0141\u0105czny",
+        "count": 89
+      },
+      {
+        "keyword": "Usi\u0142owanie",
+        "count": 81
+      },
+      {
+        "keyword": "Narkotyki",
+        "count": 73
+      },
+      {
+        "keyword": "Wyrok \u0142\u0105czny",
+        "count": 71
+      },
+      {
+        "keyword": "Przyw\u0142aszczenie",
+        "count": 70
+      },
+      {
+        "keyword": "Odszkodowanie za nies\u0142uszne skazanie, tymczasowe aresztowanie lub zatrzymanie",
+        "count": 69
+      },
+      {
+        "keyword": "Ustawa lutowa",
+        "count": 65
+      },
+      {
+        "keyword": "Przest\u0119pstwo Przeciwko Zdrowiu",
+        "count": 64
+      },
+      {
+        "keyword": "Przest\u0119pczo\u015b\u0107 Zorganizowana",
+        "count": 59
+      },
+      {
+        "keyword": "Przest\u0119pstwa Przeciwko Zdrowiu",
+        "count": 57
+      }
+    ],
+    "cases_with_keywords": 4639,
+    "decade_distribution": {
+      "2010s": 3298,
+      "2020s": 2752
+    }
+  }
+}

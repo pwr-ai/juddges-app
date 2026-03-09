@@ -20,6 +20,7 @@ import {
   FileJson,
   FileInput,
   FileSearch,
+  BarChart3,
   LogIn,
   UserPlus,
 } from "lucide-react";
@@ -50,13 +51,13 @@ import {
   TooltipTrigger,
 } from "@/lib/styles/components/tooltip";
 // Helper component to conditionally show tooltips only in icon mode
-function ConditionalTooltip({ 
-  children, 
-  content, 
-  isIconMode 
-}: { 
-  children: React.ReactNode; 
-  content: string; 
+function ConditionalTooltip({
+  children,
+  content,
+  isIconMode
+}: {
+  children: React.ReactNode;
+  content: string;
   isIconMode: boolean;
 }): React.JSX.Element {
   if (isIconMode) {
@@ -81,7 +82,7 @@ export function AppSidebar(): React.JSX.Element {
   const { open: openCommandPalette } = useCommandPaletteSafe();
   const { t } = useTranslation();
   const isAdmin = user?.app_metadata?.is_admin === true;
-  
+
   // Get sidebar state to check if it's in icon mode
   // useSidebar must be called unconditionally, but it's only available within SidebarProvider
   let sidebarState: "expanded" | "collapsed" = "expanded";
@@ -93,7 +94,7 @@ export function AppSidebar(): React.JSX.Element {
   } catch {
     // Sidebar context not available (e.g., outside SidebarProvider), use default
   }
-  
+
   const isIconMode = iconMode && sidebarState === "collapsed";
 
   // Show loading state only while auth is loading
@@ -129,11 +130,11 @@ export function AppSidebar(): React.JSX.Element {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none" />
 
             <Link href="/" className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
-              <JuddgesLogo 
-                size="md" 
-                showText={false} 
-                showGlow={true} 
-                className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto" 
+              <JuddgesLogo
+                size="md"
+                showText={false}
+                showGlow={true}
+                className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
               />
             </Link>
           </SidebarHeader>
@@ -190,6 +191,15 @@ export function AppSidebar(): React.JSX.Element {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === "/dataset-comparison"}>
+                      <Link href="/dataset-comparison">
+                        <BarChart3 />
+                        <span>Dataset Comparison</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -241,11 +251,11 @@ export function AppSidebar(): React.JSX.Element {
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none" />
 
           <Link href="/" className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
-            <JuddgesLogo 
-              size="md" 
-              showText={false} 
-              showGlow={true} 
-              className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto" 
+            <JuddgesLogo
+              size="md"
+              showText={false}
+              showGlow={true}
+              className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
             />
           </Link>
         </SidebarHeader>
@@ -318,6 +328,17 @@ export function AppSidebar(): React.JSX.Element {
                       <Link href="/schemas/base">
                         <FileJson />
                         <span>Base Schema</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </ConditionalTooltip>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <ConditionalTooltip content="Dataset Comparison" isIconMode={isIconMode}>
+                    <SidebarMenuButton asChild isActive={pathname === "/dataset-comparison"}>
+                      <Link href="/dataset-comparison">
+                        <BarChart3 />
+                        <span>Dataset Comparison</span>
                       </Link>
                     </SidebarMenuButton>
                   </ConditionalTooltip>

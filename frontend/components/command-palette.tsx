@@ -33,6 +33,7 @@ import {
   Bookmark,
   FileSearch,
   FileJson,
+  BarChart3,
 } from "lucide-react";
 
 interface CommandItem {
@@ -90,6 +91,15 @@ const navigationItems: CommandItem[] = [
     icon: <FileJson className="h-4 w-4" />,
     href: "/schemas/base",
     keywords: ["base schema", "schema", "extraction", "json"],
+    category: "navigation",
+  },
+  {
+    id: "dataset-comparison",
+    label: "Dataset Comparison",
+    description: "Compare UK and Polish judgment datasets",
+    icon: <BarChart3 className="h-4 w-4" />,
+    href: "/dataset-comparison",
+    keywords: ["dataset", "comparison", "statistics", "analytics", "charts", "polish", "uk"],
     category: "navigation",
   },
 ];

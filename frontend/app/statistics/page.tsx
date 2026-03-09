@@ -183,7 +183,13 @@ export default function StatisticsPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Database Statistics</h1>
-            <p className="text-gray-600">Overview of indexed documents and chunks in the legal database</p>
+            <p className="text-gray-600">
+              Overview of indexed documents and chunks in the legal database
+              {' '}&middot;{' '}
+              <a href="/dataset-comparison" className="text-blue-600 hover:underline">
+                Dataset Comparison Dashboard
+              </a>
+            </p>
           </div>
           <Button
             onClick={precomputeStatistics}
