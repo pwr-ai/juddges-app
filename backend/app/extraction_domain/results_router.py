@@ -270,7 +270,7 @@ async def export_extraction_results(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error exporting job {job_id}: {e}", exc_info=True)
+        logger.opt(exception=e).error("Error exporting job {}.", job_id)
         raise HTTPException(
             status_code=500,
             detail={
@@ -331,7 +331,7 @@ async def extract_with_base_schema(
             # Fetch document from Supabase
             doc_response = (
                 supabase.table("judgments")
-                .select("id, full_text, language, court_name")
+                .select("id, full_text, jurisdiction, court_name")
                 .eq("id", doc_id)
                 .maybe_single()
                 .execute()
@@ -365,9 +365,13 @@ async def extract_with_base_schema(
 
             # Perform extraction
             jurisdiction_override = request.jurisdiction_override  # type: ignore
+            jurisdiction = doc.get("jurisdiction")
+            language_hint = (
+                "pl" if jurisdiction == "PL" else "en" if jurisdiction == "UK" else None
+            )
             extracted_data, jurisdiction = await extractor.extract(
                 document_text=full_text,
-                language=doc.get("language"),
+                language=language_hint,
                 court_name=doc.get("court_name"),
                 jurisdiction_override=jurisdiction_override,
                 additional_instructions=request.additional_instructions,
@@ -379,14 +383,15 @@ async def extract_with_base_schema(
             # Store in Supabase
             if supabase:
                 try:
-                    supabase.table("legal_documents").update(
+                    supabase.table("judgments").update(
                         {
-                            "extracted_data": extracted_data,
-                            "jurisdiction": jurisdiction,
-                            "extraction_status": "completed",
-                            "extracted_at": datetime.now(UTC).isoformat(),
+                            "base_raw_extraction": extracted_data,
+                            "base_extraction_status": "completed",
+                            "base_extraction_model": request.llm_name,
+                            "base_extraction_error": None,
+                            "base_extracted_at": datetime.now(UTC).isoformat(),
                         }
-                    ).eq("document_id", doc_id).execute()
+                    ).eq("id", doc_id).execute()
                 except Exception as e:
                     logger.warning(f"Failed to store extracted data for {doc_id}: {e}")
 
@@ -402,9 +407,7 @@ async def extract_with_base_schema(
             successful += 1
 
         except Exception as e:
-            logger.error(
-                f"Failed to extract from document {doc_id}: {e}", exc_info=True
-            )
+            logger.opt(exception=e).error("Failed to extract from document {}.", doc_id)
             results.append(
                 BaseSchemaExtractionResult(
                     document_id=doc_id,

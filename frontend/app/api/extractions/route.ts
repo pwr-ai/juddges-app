@@ -48,20 +48,20 @@ async function parseBackendError(response: Response): Promise<{ message: string;
   const defaultCode = 'BACKEND_ERROR';
 
   try {
-    const errorData = await response.json();
-    const detail = errorData.detail;
-    const message = typeof detail === 'string'
-      ? detail
-      : detail?.message || detail?.error || errorData.message || errorData.error || defaultMessage;
-    const code = detail?.code || errorData.code || defaultCode;
-    return { message, code };
-  } catch {
+    const text = await response.text();
     try {
-      const text = await response.text();
-      return { message: text || defaultMessage, code: defaultCode };
+      const errorData = JSON.parse(text);
+      const detail = errorData.detail;
+      const message = typeof detail === 'string'
+        ? detail
+        : detail?.message || detail?.error || errorData.message || errorData.error || defaultMessage;
+      const code = detail?.code || errorData.code || defaultCode;
+      return { message, code };
     } catch {
-      return { message: defaultMessage, code: defaultCode };
+      return { message: text || defaultMessage, code: defaultCode };
     }
+  } catch {
+    return { message: defaultMessage, code: defaultCode };
   }
 }
 
@@ -370,9 +370,9 @@ export async function GET(request: NextRequest) {
         // Count all processed documents (both completed and failed) as completed_documents
         // This represents documents that have finished processing, regardless of success/failure
         const processedCount = jobData.results.filter(
-          (r: { status: string }) => 
-            r.status === 'completed' || 
-            r.status === 'failed' || 
+          (r: { status: string }) =>
+            r.status === 'completed' ||
+            r.status === 'failed' ||
             r.status === 'partially_completed'
         ).length;
         updateData.completed_documents = processedCount;
@@ -380,9 +380,9 @@ export async function GET(request: NextRequest) {
       }
 
       // Update completed_at for terminal states (SUCCESS, FAILURE, COMPLETED, PARTIALLY_COMPLETED)
-      if (jobData.status === 'SUCCESS' || 
-          jobData.status === 'FAILURE' || 
-          jobData.status === 'COMPLETED' || 
+      if (jobData.status === 'SUCCESS' ||
+          jobData.status === 'FAILURE' ||
+          jobData.status === 'COMPLETED' ||
           jobData.status === 'PARTIALLY_COMPLETED') {
         updateData.completed_at = new Date().toISOString();
       }
@@ -394,19 +394,19 @@ export async function GET(request: NextRequest) {
         .select();
 
       if (updateError) {
-        apiLogger.error('Failed to update job status in Supabase', updateError, { 
-          job_id, 
-          updateData 
+        apiLogger.error('Failed to update job status in Supabase', updateError, {
+          job_id,
+          updateData
         });
       } else if (!updateResult || updateResult.length === 0) {
-        apiLogger.warn('No rows updated in Supabase - job might not exist or job_id mismatch', { 
+        apiLogger.warn('No rows updated in Supabase - job might not exist or job_id mismatch', {
           job_id,
           updateData,
           backendStatus: jobData.status
         });
       } else {
-        apiLogger.info('Successfully updated job status in Supabase', { 
-          job_id, 
+        apiLogger.info('Successfully updated job status in Supabase', {
+          job_id,
           status: jobData.status,
           completed_documents: updateData.completed_documents,
           updatedRows: updateResult.length,

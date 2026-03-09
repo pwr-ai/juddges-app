@@ -10,8 +10,9 @@ from typing import Any
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-# Set test environment variables before importing app
-os.environ.setdefault("BACKEND_API_KEY", "test-api-key-12345")
+# Set test environment variables before importing app.
+# BACKEND_API_KEY must be deterministic for auth tests because app auth caches it at import time.
+os.environ["BACKEND_API_KEY"] = "test-api-key-12345"
 os.environ.setdefault("SUPABASE_URL", "http://test-supabase.local")
 os.environ.setdefault("NEXT_PUBLIC_SUPABASE_URL", "http://test-supabase.local")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")

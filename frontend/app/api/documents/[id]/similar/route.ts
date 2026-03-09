@@ -69,22 +69,21 @@ export async function GET(
       let errorDetails = `Backend service returned error status ${response.status}`;
 
       try {
-        const errorData = await response.json();
-        if (errorData.detail) {
-          errorDetails = typeof errorData.detail === 'string'
-            ? errorData.detail
-            : JSON.stringify(errorData.detail);
-        }
-      } catch {
-        // If we can't parse JSON, try text
+        const errorText = await response.text();
         try {
-          const errorText = await response.text();
+          const errorData = JSON.parse(errorText);
+          if (errorData.detail) {
+            errorDetails = typeof errorData.detail === 'string'
+              ? errorData.detail
+              : JSON.stringify(errorData.detail);
+          }
+        } catch {
           if (errorText) {
             errorDetails = errorText;
           }
-        } catch {
-          errorDetails = `${errorDetails}: ${response.statusText}`;
         }
+      } catch {
+        errorDetails = `${errorDetails}: ${response.statusText}`;
       }
 
       apiLogger.error('Backend error fetching similar documents', {

@@ -1,4 +1,5 @@
 import json
+import re
 import warnings
 from copy import deepcopy
 from pathlib import Path
@@ -87,8 +88,9 @@ class InformationExtractor:
         if "schema" in prompt_fill_values:
             raise ValueError("Schema cannot be provided in prompt_fill_values, using structured output")
         prompt_fill_values["schema"] = None
+        prepared_schema = self.prepare_structured_output_schema(self.schema)
         model = self.model.with_structured_output(
-            self.schema,
+            prepared_schema,
             method="json_schema",
             strict=True,
         )
@@ -97,6 +99,23 @@ class InformationExtractor:
             prompt_fill_values,
             config={"callbacks": callbacks, "run_name": "extraction_information_structured"},
         )
+
+    @staticmethod
+    def prepare_structured_output_schema(schema: dict[str, Any]) -> dict[str, Any]:
+        """Normalize schema metadata for OpenAI json_schema structured output."""
+        prepared = deepcopy(schema)
+        raw_title = prepared.get("title")
+        if isinstance(raw_title, str) and raw_title.strip():
+            safe_title = raw_title.strip()
+        else:
+            safe_title = "information_extraction_schema"
+
+        safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", safe_title).strip("_")
+        if not safe_title:
+            safe_title = "information_extraction_schema"
+
+        prepared["title"] = safe_title[:64]
+        return prepared
 
     def estimate_prompt_cost(self, prompts: list[str], verbose: bool = False) -> float:
         total_cost = sum(

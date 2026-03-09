@@ -19,20 +19,20 @@ async function parseBackendError(response: Response): Promise<{ message: string;
   const defaultCode = 'BACKEND_ERROR';
 
   try {
-    const errorData = await response.json();
-    const detail = errorData.detail;
-    const message = typeof detail === 'string'
-      ? detail
-      : detail?.message || detail?.error || errorData.message || errorData.error || defaultMessage;
-    const code = detail?.code || errorData.code || defaultCode;
-    return { message, code };
-  } catch {
+    const text = await response.text();
     try {
-      const text = await response.text();
-      return { message: text || defaultMessage, code: defaultCode };
+      const errorData = JSON.parse(text);
+      const detail = errorData.detail;
+      const message = typeof detail === 'string'
+        ? detail
+        : detail?.message || detail?.error || errorData.message || errorData.error || defaultMessage;
+      const code = detail?.code || errorData.code || defaultCode;
+      return { message, code };
     } catch {
-      return { message: defaultMessage, code: defaultCode };
+      return { message: text || defaultMessage, code: defaultCode };
     }
+  } catch {
+    return { message: defaultMessage, code: defaultCode };
   }
 }
 
@@ -135,5 +135,3 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
-
-

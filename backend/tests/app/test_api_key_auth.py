@@ -158,7 +158,6 @@ class TestAPIKeyAuthentication:
         wrong_headers = [
             {"Authorization": test_api_key},
             {"Api-Key": test_api_key},
-            {"X-Api-Key": test_api_key.lower()},  # Wrong case in header
             {"API-KEY": test_api_key},
             {"Bearer": test_api_key},
         ]
@@ -168,6 +167,10 @@ class TestAPIKeyAuthentication:
             assert response.status_code in [401, 403], (
                 f"Wrong header {next(iter(headers.keys()))} should be rejected"
             )
+
+        # Header names are case-insensitive per HTTP spec, so this variant is valid.
+        response = await client.get("/documents", headers={"X-Api-Key": test_api_key})
+        assert response.status_code not in [401, 403]
 
     async def test_api_key_not_in_query_params(
         self, client: AsyncClient, test_api_key: str

@@ -1,6 +1,6 @@
 """Search quality tests with initial judge scoring and latency checks.
 
-These tests cover 10 varied search scenarios:
+These tests cover varied search scenarios:
 1. Basic keyword search
 2. Pure semantic (alpha=1.0) search
 3. Hybrid search
@@ -11,6 +11,14 @@ These tests cover 10 varied search scenarios:
 8. Pagination page 1
 9. Pagination page 2
 10. Base-schema extracted-data filtering
+11. Misspelled query baseline
+12. Multilingual Polish query with jurisdiction filter
+13. Boolean-style query parsing behavior
+14. Conflicting filters returning no results
+15. Adversarial query stability
+16. Invalid mode validation
+17. Invalid alpha validation
+18. Base-schema filter no-match path
 """
 
 from __future__ import annotations
@@ -21,7 +29,6 @@ import statistics
 import time
 from datetime import date
 from importlib import import_module
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -32,6 +39,7 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 results_router_module = import_module("app.extraction_domain.results_router")
+query_analysis_module = import_module("app.query_analysis")
 
 
 def _tokenize(text: str | None) -> set[str]:
@@ -196,6 +204,26 @@ def _array_overlaps(
 
 
 class _FakeSupabase:
+    class _ExecuteResult:
+        def __init__(self, data: list[dict[str, Any]]):
+            self.data = data
+
+        def __await__(self):
+            async def _wrapped():
+                return self
+
+            return _wrapped().__await__()
+
+    class _RPCResult:
+        def __init__(self, data: list[dict[str, Any]]):
+            self._data = data
+
+        def execute(self):
+            # Compatible with both call styles:
+            # - response = rpc.execute()            (sync)
+            # - response = await rpc.execute()      (async)
+            return _FakeSupabase._ExecuteResult(self._data)
+
     def __init__(self, rows: list[dict[str, Any]], embedding_lookup: dict[str, str]):
         self._rows = rows
         self._embedding_lookup = embedding_lookup
@@ -203,10 +231,10 @@ class _FakeSupabase:
     def rpc(self, fn_name: str, params: dict[str, Any]):
         if fn_name == "search_judgments_hybrid":
             data = self._search_judgments_hybrid(params)
-            return SimpleNamespace(execute=lambda: SimpleNamespace(data=data))
+            return self._RPCResult(data)
         if fn_name == "filter_documents_by_extracted_data":
             data = self._filter_documents_by_extracted_data(params)
-            return SimpleNamespace(execute=lambda: SimpleNamespace(data=data))
+            return self._RPCResult(data)
         raise AssertionError(f"Unexpected RPC: {fn_name}")
 
     def _search_judgments_hybrid(self, params: dict[str, Any]) -> list[dict[str, Any]]:
@@ -571,8 +599,31 @@ def mocked_search_stack(monkeypatch: pytest.MonkeyPatch):
 
     fake_supabase = _FakeSupabase(rows=rows, embedding_lookup=embedding_lookup)
 
+    async def fake_get_async_supabase_client():
+        return fake_supabase
+
+    async def fake_analyze_query_with_fallback(query: str, llm=None):
+        return (
+            query_analysis_module.QueryAnalysisResult(
+                semantic_query=query,
+                keyword_query=query,
+                query_type="mixed",
+            ),
+            "heuristic",
+            None,
+        )
+
     monkeypatch.setattr(documents_module, "generate_embedding", fake_generate_embedding)
     monkeypatch.setattr("app.core.supabase.get_supabase_client", lambda: fake_supabase)
+    monkeypatch.setattr(
+        "app.core.supabase.get_async_supabase_client",
+        fake_get_async_supabase_client,
+    )
+    monkeypatch.setattr(
+        query_analysis_module,
+        "analyze_query_with_fallback",
+        fake_analyze_query_with_fallback,
+    )
     monkeypatch.setattr(results_router_module, "supabase", fake_supabase)
 
     return {"rows": rows}
@@ -814,6 +865,171 @@ async def test_case_10_base_schema_filtering(
     assert data["documents"]
     assert data["total_count"] >= 1
     assert data["documents"][0]["extracted_data"]["appellant"] == "prosecution"
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_11_misspelled_query_baseline(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    """Baseline quality check: typo query currently returns no matches."""
+    response, latency_ms = await _post_with_timing(
+        authenticated_client,
+        "/documents/search",
+        {"query": "contrcat brech", "alpha": 0.0, "mode": "rabbit", "limit_docs": 10},
+    )
+    assert response.status_code == 200
+    assert latency_ms < 1500
+    data = response.json()
+    assert data["documents"] == []
+    assert data["chunks"] == []
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_12_multilingual_polish_query_with_filter(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response, latency_ms = await _post_with_timing(
+        authenticated_client,
+        "/documents/search",
+        {
+            "query": "podatek vat apelacja",
+            "languages": ["pl"],
+            "jurisdictions": ["PL"],
+            "alpha": 0.0,
+            "mode": "rabbit",
+            "limit_docs": 10,
+        },
+    )
+    assert response.status_code == 200
+    assert latency_ms < 1500
+    data = response.json()
+    assert data["documents"]
+    assert all(doc["country"] == "PL" for doc in data["documents"])
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_13_boolean_style_query(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response, latency_ms = await _post_with_timing(
+        authenticated_client,
+        "/documents/search",
+        {
+            "query": "fraud AND sentencing",
+            "alpha": 0.5,
+            "mode": "rabbit",
+            "limit_docs": 10,
+        },
+    )
+    assert response.status_code == 200
+    assert latency_ms < 1500
+    data = response.json()
+    assert data["documents"]
+    assert any(doc["document_number"] == "UK-CC-2022-220" for doc in data["documents"])
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_14_conflicting_filters_return_empty(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response, latency_ms = await _post_with_timing(
+        authenticated_client,
+        "/documents/search",
+        {
+            "query": "appeal",
+            "jurisdictions": ["PL"],
+            "court_names": ["Court of Appeal"],
+            "limit_docs": 10,
+        },
+    )
+    assert response.status_code == 200
+    assert latency_ms < 1500
+    data = response.json()
+    assert data["documents"] == []
+    assert data["chunks"] == []
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_15_adversarial_query_stability(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response, latency_ms = await _post_with_timing(
+        authenticated_client,
+        "/documents/search",
+        {
+            "query": "'; DROP TABLE judgments;--",
+            "alpha": 0.0,
+            "mode": "rabbit",
+            "limit_docs": 10,
+        },
+    )
+    assert response.status_code == 200
+    assert latency_ms < 1500
+    data = response.json()
+    assert isinstance(data["documents"], list)
+    assert isinstance(data["chunks"], list)
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_16_invalid_mode_validation(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response = await authenticated_client.post(
+        "/documents/search",
+        json={"query": "contract breach", "mode": "turbo"},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_17_invalid_alpha_validation(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response = await authenticated_client.post(
+        "/documents/search",
+        json={"query": "contract breach", "alpha": 1.5},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.search
+async def test_case_18_base_schema_filtering_no_match(
+    authenticated_client: AsyncClient, mocked_search_stack: dict[str, Any]
+):
+    response, latency_ms = await _post_with_timing(
+        authenticated_client,
+        "/extractions/base-schema/filter",
+        {
+            "filters": {
+                "appellant": "prosecution",
+                "appeal_outcome": ["outcome_conviction_quashed"],
+            },
+            "text_query": "non-existent-phrase",
+            "limit": 50,
+            "offset": 0,
+        },
+    )
+    assert response.status_code == 200
+    assert latency_ms < 1500
+    data = response.json()
+    assert data["documents"] == []
+    assert data["total_count"] == 0
 
 
 @pytest.mark.anyio

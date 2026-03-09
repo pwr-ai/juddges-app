@@ -8,7 +8,7 @@ Juddges App is a specialized legal AI application focused on court judgments and
 
 ## Features
 
-- 🔍 **Semantic Search**: Vector-based search across 200+ judgments (100 Polish + 100 UK)
+- 🔍 **Semantic Search**: Vector-based search across 6,000+ sampled judgments (Polish + UK)
 - 🇵🇱 **Polish Judgments**: Polish court decisions with full-text search
 - 🇬🇧 **UK Judgments**: England & Wales Court of Appeal decisions
 - 🤖 **AI-Powered Analysis**: RAG-based chat for legal research
@@ -25,7 +25,7 @@ Juddges App is a specialized legal AI application focused on court judgments and
 - **Rich Text**: TipTap editor for document annotations
 
 ### Backend
-- **API Framework**: FastAPI (Python 3.11+)
+- **API Framework**: FastAPI (Python 3.12+)
 - **Database**: PostgreSQL with pgvector extension
 - **Vector Search**: Semantic search with embeddings
 - **Authentication**: Supabase Auth
@@ -40,7 +40,7 @@ Juddges App is a specialized legal AI application focused on court judgments and
 ### Prerequisites
 - Docker & Docker Compose
 - Node.js 18+
-- Python 3.11+
+- Python 3.12+
 - Supabase account
 
 ### Environment Setup
@@ -79,7 +79,12 @@ Load sample judgments into the database:
 
 ```bash
 cd scripts
-python ingest_judgments.py --polish 100 --uk 100
+python ingest_judgments.py --polish 3000 --uk 3000
+```
+
+For a quick test with fewer documents:
+```bash
+python ingest_judgments.py --polish 10 --uk 10
 ```
 
 ## 📚 Documentation

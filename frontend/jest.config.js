@@ -48,6 +48,15 @@ const customJestConfig = {
     '/tests/',
     '/__tests__/',
   ],
+  // Coverage thresholds — start low, increase as coverage improves
+  coverageThreshold: {
+    global: {
+      statements: 3,
+      branches: 2,
+      functions: 3,
+      lines: 3,
+    },
+  },
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

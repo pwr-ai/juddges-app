@@ -33,11 +33,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!response.ok) {
       let errorDetail = 'Failed to search documents';
+      const text = await response.text();
       try {
-        const data = await response.json();
+        const data = JSON.parse(text);
         errorDetail = data.detail || errorDetail;
       } catch {
-        const text = await response.text();
         errorDetail = `Backend error ${response.status}: ${text.slice(0, 200)}`;
       }
       routeLogger.error('Backend error', { status: response.status, error: errorDetail });

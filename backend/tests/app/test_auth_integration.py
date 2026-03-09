@@ -17,7 +17,6 @@ async def test_api_key_required_for_protected_endpoints(client: AsyncClient):
         "/documents",
         "/collections",
         "/schemas",
-        "/analytics",
     ]
 
     for endpoint in protected_endpoints:

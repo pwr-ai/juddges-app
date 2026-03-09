@@ -125,7 +125,8 @@ npx supabase db reset                   # Reset local database
 # Data ingestion (from scripts directory)
 cd scripts
 pip install -r requirements.txt
-python ingest_judgments.py --polish 100 --uk 100    # Ingest sample data
+python ingest_judgments.py --polish 3000 --uk 3000  # Ingest full target dataset (6K+)
+python ingest_judgments.py --polish 100 --uk 100    # Ingest dev sample
 python ingest_judgments.py --polish 10 --uk 10      # Quick test with 20 cases
 ```
 

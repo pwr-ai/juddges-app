@@ -349,17 +349,22 @@ logger.info(
 # In development: Allow localhost and common dev ports
 # In production: Restrict to specific frontend domains
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
-ALLOWED_ORIGINS = (
-    [o.strip() for o in _raw_origins.split(",") if o.strip()]
-    if _raw_origins
-    else [
-        "http://localhost:3000",  # Next.js development
-        "http://localhost:3006",  # Frontend container
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3006",
-        "http://localhost:8004",  # Backend API docs
-    ]
+_parsed_origins = (
+    [o.strip() for o in _raw_origins.split(",") if o.strip()] if _raw_origins else []
 )
+_default_origins = [
+    "http://localhost:3000",  # Next.js development
+    "http://localhost:3006",  # Frontend container
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3006",
+    "http://localhost:8004",  # Backend API docs
+]
+ALLOWED_ORIGINS = _parsed_origins if _parsed_origins else _default_origins
+if _raw_origins and not _parsed_origins:
+    logger.warning(
+        f"ALLOWED_ORIGINS env var is set but contains no valid origins (value: '{_raw_origins}'). "
+        "Falling back to default development origins."
+    )
 
 # Add production origins if set (HTTPS only for security)
 if os.getenv("VIRTUAL_HOST_FRONTEND"):

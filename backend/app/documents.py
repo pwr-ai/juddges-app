@@ -1264,7 +1264,7 @@ async def search_documents(request: SearchChunksRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Search error: {e!s}", exc_info=True)
+        logger.opt(exception=True).error("Search error: {}", e)
         raise HTTPException(status_code=500, detail=f"Search failed: {e!s}")
 
 

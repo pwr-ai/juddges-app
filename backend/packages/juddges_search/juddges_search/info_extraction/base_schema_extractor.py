@@ -179,10 +179,15 @@ Extract all information according to the schema. Return a valid JSON object."""
             Clean schema suitable for OpenAI structured output
         """
         clean = json.loads(json.dumps(schema))  # Deep copy
+        unsupported_keys = {"uniqueItems"}
 
         def remove_extensions(obj: dict | list | Any) -> Any:
             if isinstance(obj, dict):
-                return {k: remove_extensions(v) for k, v in obj.items() if not k.startswith("x-")}
+                return {
+                    k: remove_extensions(v)
+                    for k, v in obj.items()
+                    if not k.startswith("x-") and k not in unsupported_keys
+                }
             elif isinstance(obj, list):
                 return [remove_extensions(item) for item in obj]
             return obj

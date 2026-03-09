@@ -1077,7 +1077,7 @@ class SearchChunksResponse(BaseModel):
         default=None,
         description="Query execution time in milliseconds",
     )
-    timing_breakdown: dict[str, float] | None = Field(
+    timing_breakdown: dict[str, float | bool | str] | None = Field(
         default=None,
         description="Detailed timing measurements (ms) for each phase of the chunk search pipeline",
     )
