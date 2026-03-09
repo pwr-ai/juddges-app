@@ -4,12 +4,14 @@ Data Ingestion Script for Juddges App
 This script downloads judgment datasets from HuggingFace and ingests them into Supabase.
 Supports:
 - Polish judgments from HFforLegal/case-law
-- UK judgments from JuDDGES/en-appealcourt
+- UK judgments from JuDDGES/en-court-raw (6,050 judgments)
+- UK fallback from JuDDGES/en-appealcourt (573 annotated judgments)
 
 Usage:
-    python ingest_judgments.py --polish 100 --uk 100
+    python ingest_judgments.py --polish 3000 --uk 3000  # Full target (6K+)
+    python ingest_judgments.py --polish 100 --uk 100     # Dev sample
     python ingest_judgments.py --polish 50 --skip-uk
-    python ingest_judgments.py --uk 100 --skip-polish
+    python ingest_judgments.py --uk 3000 --skip-polish
 """
 
 import argparse
@@ -84,7 +86,10 @@ class JudgmentIngestionPipeline:
 
     def ingest_polish_judgments(self, sample_size: int = 100) -> int:
         """
-        Ingest Polish judgments from HFforLegal/case-law dataset.
+        Ingest Polish criminal appellate judgments from JuDDGES/pl-court-raw.
+
+        Filters for Sąd Apelacyjny (Court of Appeal) + Wydział Karny (Criminal Dept)
+        to match the UK dataset profile. Uses streaming to handle 437K+ rows.
 
         Args:
             sample_size: Number of judgments to ingest
@@ -92,140 +97,197 @@ class JudgmentIngestionPipeline:
         Returns:
             Number of judgments successfully ingested
         """
-        print(f"\n🇵🇱 Loading Polish judgments from HFforLegal/case-law (sample: {sample_size})...")
+        import random
+        random.seed(42)
+
+        print(f"\n🇵🇱 Loading Polish criminal appellate judgments from JuDDGES/pl-court-raw...")
+        print(f"   Target: {sample_size} (filtering for Sąd Apelacyjny + Wydział Karny)")
 
         try:
-            # Load dataset - use 'us' split (only available split)
-            # Note: This dataset contains US cases, not Polish
-            # We'll need to find an alternative Polish dataset
             dataset = load_dataset(
-                "HFforLegal/case-law",
-                split="us",
-                streaming=True  # Use streaming to handle large datasets
+                "JuDDGES/pl-court-raw",
+                split="train",
+                streaming=True,
             )
 
-            # Filter for Polish cases and take sample
-            polish_cases = []
+            # First pass: collect all matching cases
+            matched_cases = []
+            scanned = 0
             for item in dataset:
-                # Check if this is a Polish case
-                # Note: Adjust field names based on actual dataset structure
-                jurisdiction = item.get('jurisdiction', '').upper()
-                country = item.get('country', '').upper()
+                scanned += 1
+                if scanned % 100000 == 0:
+                    print(f"   Scanned {scanned:,}... matched {len(matched_cases):,}")
 
-                if 'PL' in jurisdiction or 'POLAND' in country or 'POLSKA' in country.upper():
-                    polish_cases.append(item)
+                court = item.get("court_name", "") or ""
+                dept = item.get("department_name", "") or ""
 
-                if len(polish_cases) >= sample_size:
-                    break
+                if "Apelacyjn" not in court:
+                    continue
+                if "karn" not in dept.lower():
+                    continue
 
-            print(f"Found {len(polish_cases)} Polish cases")
+                # Filter to 2003-2024 year range (matching UK dataset)
+                date = item.get("judgment_date")
+                year_str = str(date)[:4] if date else ""
+                try:
+                    year = int(year_str)
+                except ValueError:
+                    continue
+                if year < 2003 or year > 2024:
+                    continue
+
+                matched_cases.append(item)
+
+            print(f"   Found {len(matched_cases):,} criminal appellate cases (2003-2024)")
+
+            # Sample if we have more than needed
+            if len(matched_cases) > sample_size:
+                matched_cases = random.sample(matched_cases, sample_size)
+                print(f"   Sampled {sample_size} cases")
 
             # Transform and insert
             ingested = 0
-            for case in tqdm(polish_cases, desc="Ingesting Polish judgments"):
+            for case in tqdm(matched_cases, desc="Ingesting Polish judgments"):
                 judgment_data = self._transform_polish_judgment(case)
                 if judgment_data:
                     self._insert_judgment(judgment_data)
                     ingested += 1
 
-            print(f"✅ Successfully ingested {ingested} Polish judgments")
+            print(f"✅ Successfully ingested {ingested} Polish criminal appellate judgments")
             return ingested
 
         except Exception as e:
             print(f"❌ Error ingesting Polish judgments: {e}")
+            import traceback
+            traceback.print_exc()
             return 0
 
     def ingest_uk_judgments(self, sample_size: int = 100) -> int:
         """
-        Ingest UK judgments from JuDDGES datasets.
-        Loads from both en-appealcourt and en-court-raw-sample.
+        Ingest UK judgments from JuDDGES/en-court-raw (6,050 judgments).
+
+        Falls back to JuDDGES/en-appealcourt (573) if en-court-raw fails.
 
         Args:
-            sample_size: Number of judgments to ingest (split between datasets)
+            sample_size: Number of judgments to ingest
 
         Returns:
             Number of judgments successfully ingested
         """
         total_ingested = 0
-        half_size = sample_size // 2
 
-        # Dataset 1: JuDDGES/en-appealcourt
-        print(f"\n🇬🇧 Loading UK Appeal Court judgments (sample: {half_size})...")
+        # Primary source: JuDDGES/en-court-raw (6,050 judgments)
+        print(f"\n🇬🇧 Loading UK judgments from JuDDGES/en-court-raw (sample: {sample_size})...")
         try:
-            dataset1 = load_dataset("JuDDGES/en-appealcourt", split="test")
-            sample_data1 = dataset1.select(range(min(half_size, len(dataset1))))
+            dataset = load_dataset("JuDDGES/en-court-raw", split="train")
+            available = len(dataset)
+            take = min(sample_size, available)
+            print(f"   Dataset has {available} judgments, taking {take}")
+            sample_data = dataset.select(range(take))
 
-            for case in tqdm(sample_data1, desc="Ingesting Appeal Court judgments"):
-                judgment_data = self._transform_uk_judgment(case, source="JuDDGES/en-appealcourt")
+            for case in tqdm(sample_data, desc="Ingesting en-court-raw judgments"):
+                judgment_data = self._transform_uk_judgment(case, source="JuDDGES/en-court-raw")
                 if judgment_data:
                     self._insert_judgment(judgment_data)
                     total_ingested += 1
 
-            print(f"✅ Ingested {total_ingested} from en-appealcourt")
+            print(f"✅ Ingested {total_ingested} from en-court-raw")
         except Exception as e:
-            print(f"❌ Error with en-appealcourt: {e}")
+            print(f"❌ Error with en-court-raw: {e}")
 
-        # Dataset 2: JuDDGES/en-court-raw-sample
-        print(f"\n🇬🇧 Loading UK Court raw sample judgments (sample: {sample_size - half_size})...")
-        try:
-            dataset2 = load_dataset("JuDDGES/en-court-raw-sample", split="train")
-            remaining = sample_size - total_ingested
-            sample_data2 = dataset2.select(range(min(remaining, len(dataset2))))
+        # Fallback: fill remaining from JuDDGES/en-appealcourt if needed
+        remaining = sample_size - total_ingested
+        if remaining > 0:
+            print(f"\n🇬🇧 Loading {remaining} more from JuDDGES/en-appealcourt (fallback)...")
+            try:
+                dataset2 = load_dataset("JuDDGES/en-appealcourt", split="test")
+                take2 = min(remaining, len(dataset2))
+                sample_data2 = dataset2.select(range(take2))
 
-            count_before = total_ingested
-            for case in tqdm(sample_data2, desc="Ingesting Court raw judgments"):
-                judgment_data = self._transform_uk_judgment(case, source="JuDDGES/en-court-raw-sample")
-                if judgment_data:
-                    self._insert_judgment(judgment_data)
-                    total_ingested += 1
+                count_before = total_ingested
+                for case in tqdm(sample_data2, desc="Ingesting Appeal Court judgments"):
+                    judgment_data = self._transform_uk_judgment(case, source="JuDDGES/en-appealcourt")
+                    if judgment_data:
+                        self._insert_judgment(judgment_data)
+                        total_ingested += 1
 
-            print(f"✅ Ingested {total_ingested - count_before} from en-court-raw-sample")
-        except Exception as e:
-            print(f"❌ Error with en-court-raw-sample: {e}")
+                print(f"✅ Ingested {total_ingested - count_before} from en-appealcourt")
+            except Exception as e:
+                print(f"❌ Error with en-appealcourt: {e}")
 
         print(f"✅ Total UK judgments ingested: {total_ingested}")
         return total_ingested
 
     def _transform_polish_judgment(self, raw_data: Dict) -> Optional[Dict]:
         """
-        Transform Polish judgment from HFforLegal format to our schema.
+        Transform Polish judgment from JuDDGES/pl-court-raw format to our schema.
 
         Args:
-            raw_data: Raw data from HFforLegal/case-law
+            raw_data: Raw data from JuDDGES/pl-court-raw
 
         Returns:
             Transformed judgment data or None if invalid
         """
         try:
-            # Extract text content
-            full_text = raw_data.get('text', '')
+            full_text = raw_data.get('full_text', '')
             if not full_text:
                 return None
 
-            # Generate embedding if OpenAI is configured
+            court_name = raw_data.get('court_name', '') or ''
+            dept = raw_data.get('department_name', '') or ''
+
+            # Parse judges
+            judges_raw = raw_data.get('judges', []) or []
+            if isinstance(judges_raw, str):
+                judges = [j.strip() for j in judges_raw.split(',')]
+            elif isinstance(judges_raw, list):
+                judges = judges_raw
+            else:
+                judges = []
+
+            presiding = raw_data.get('presiding_judge', '') or ''
+            if presiding and presiding not in judges:
+                judges.insert(0, presiding)
+
+            keywords = raw_data.get('keywords', []) or []
+            legal_bases = raw_data.get('legal_bases', []) or []
+
+            docket = raw_data.get('docket_number', '') or ''
+            case_number = docket if docket else f"PL-APPEAL-{raw_data.get('judgment_id', 'unknown')[:12]}"
+
+            excerpt = raw_data.get('excerpt', '') or ''
+            title = excerpt[:500] if excerpt else full_text[:200]
+            summary = excerpt[:2000] if excerpt else ''
+
             embedding = self.generate_embedding(full_text)
 
             return {
-                'case_number': raw_data.get('case_id', f"PL-{raw_data.get('id', 'unknown')}"),
+                'case_number': case_number,
                 'jurisdiction': 'PL',
-                'court_name': raw_data.get('court', 'Unknown Court'),
-                'court_level': raw_data.get('court_level'),
-                'decision_date': self._parse_date(raw_data.get('date')),
-                'title': raw_data.get('title', '')[:500],  # Limit title length
-                'summary': raw_data.get('summary', ''),
+                'court_name': court_name,
+                'court_level': 'Court of Appeal',
+                'decision_date': self._parse_date(raw_data.get('judgment_date')),
+                'title': title,
+                'summary': summary,
                 'full_text': full_text,
-                'judges': raw_data.get('judges', []),
-                'case_type': raw_data.get('case_type'),
-                'keywords': raw_data.get('keywords', []),
-                'legal_topics': raw_data.get('topics', []),
+                'judges': judges,
+                'case_type': 'Criminal',
+                'decision_type': raw_data.get('judgment_type', ''),
+                'outcome': None,
+                'keywords': keywords[:20],
+                'legal_topics': [lb if isinstance(lb, str) else str(lb) for lb in legal_bases[:20]],
                 'embedding': embedding,
                 'metadata': {
                     'language': 'pl',
-                    'original_fields': raw_data.keys()
+                    'department': dept,
+                    'court_type': 'appellate',
+                    'source_judgment_id': raw_data.get('judgment_id', ''),
+                    'num_pages': raw_data.get('num_pages'),
+                    'country': 'PL',
                 },
-                'source_dataset': 'HFforLegal/case-law',
-                'source_id': str(raw_data.get('id', '')),
-                'source_url': raw_data.get('url'),
+                'source_dataset': 'JuDDGES/pl-court-raw',
+                'source_id': raw_data.get('judgment_id', '')[:40],
+                'source_url': raw_data.get('source', ''),
             }
         except Exception as e:
             print(f"Warning: Failed to transform Polish judgment: {e}")
@@ -278,7 +340,7 @@ class JudgmentIngestionPipeline:
                     'source_url': None,
                 }
 
-            else:  # JuDDGES/en-court-raw-sample
+            else:  # JuDDGES/en-court-raw (and legacy en-court-raw-sample)
                 full_text = raw_data.get('full_text', '')
                 if not full_text:
                     return None
