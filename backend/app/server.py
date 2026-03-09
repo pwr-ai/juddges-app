@@ -348,9 +348,10 @@ logger.info(
 # Configure CORS with environment-based origins
 # In development: Allow localhost and common dev ports
 # In production: Restrict to specific frontend domains
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
 ALLOWED_ORIGINS = (
-    os.getenv("ALLOWED_ORIGINS", "").split(",")
-    if os.getenv("ALLOWED_ORIGINS")
+    [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    if _raw_origins
     else [
         "http://localhost:3000",  # Next.js development
         "http://localhost:3006",  # Frontend container

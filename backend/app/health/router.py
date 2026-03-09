@@ -20,6 +20,8 @@ from app.health.models import (
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
+_APP_VERSION = os.getenv("APP_VERSION", "unknown")
+
 # Cache for status responses (30 second TTL)
 _status_cache: DetailedStatusResponse | None = None
 _cache_timestamp: datetime | None = None
@@ -123,7 +125,7 @@ async def health_check():
     return BasicHealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC),
-        version="0.2.0",
+        version=_APP_VERSION,
     )
 
 
@@ -149,7 +151,7 @@ async def healthz():
     return BasicHealthResponse(
         status="healthy",
         timestamp=datetime.now(UTC),
-        version="0.2.0",
+        version=_APP_VERSION,
     )
 
 
@@ -206,7 +208,7 @@ async def detailed_status():
     response = DetailedStatusResponse(
         status=system_status,
         timestamp=datetime.now(UTC),
-        version="0.2.0",
+        version=_APP_VERSION,
         environment=os.getenv("PYTHON_ENV", "production"),
         services=services,
         response_time_ms=round(total_time, 2),

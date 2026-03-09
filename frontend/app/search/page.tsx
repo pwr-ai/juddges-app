@@ -19,6 +19,7 @@ import {
   SearchResultsSection,
 } from '@/lib/styles/components';
 import { SearchLoadingModal } from '@/components/search';
+import { SearchErrorBoundary } from '@/components/errors/SearchErrorBoundary';
 import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
@@ -682,32 +683,34 @@ function SearchPageContent(): React.JSX.Element | null {
                     }}
                   />
                 ) : (
-                  <SearchResultsSection
-                    filteredMetadata={filteredMetadata}
-                    filteredCount={filteredCount}
-                    activeFilterCount={activeFilterCount}
-                    searchMetadata={searchMetadata}
-                    chunksCache={chunksCache}
-                    loadingChunks={loadingChunks}
-                    selectedDocumentIds={
-                      useSearchStore.getState().selectedDocumentIds instanceof Set
-                        ? useSearchStore.getState().selectedDocumentIds
-                        : new Set(Array.from(useSearchStore.getState().selectedDocumentIds || []))
-                    }
-                    selectedCount={selectedCount}
-                    showSaveAllPopover={showSaveAllPopover}
-                    convertMetadataToSearchDocument={convertMetadataToSearchDocument}
-                    toggleDocumentSelection={toggleDocumentSelection}
-                    selectAllDocuments={selectAllDocuments}
-                    clearSelection={clearSelection}
-                    setShowSaveAllPopover={setShowSaveAllPopover}
-                    filterVersion={filterVersion}
-                    onLoadMore={loadMore}
-                    isLoadingMore={isLoadingMore}
-                    paginationMetadata={paginationMetadata}
-                    cachedEstimatedTotal={cachedEstimatedTotal}
-                    searchContextParams={searchContextParams}
-                  />
+                  <SearchErrorBoundary>
+                    <SearchResultsSection
+                      filteredMetadata={filteredMetadata}
+                      filteredCount={filteredCount}
+                      activeFilterCount={activeFilterCount}
+                      searchMetadata={searchMetadata}
+                      chunksCache={chunksCache}
+                      loadingChunks={loadingChunks}
+                      selectedDocumentIds={
+                        useSearchStore.getState().selectedDocumentIds instanceof Set
+                          ? useSearchStore.getState().selectedDocumentIds
+                          : new Set(Array.from(useSearchStore.getState().selectedDocumentIds || []))
+                      }
+                      selectedCount={selectedCount}
+                      showSaveAllPopover={showSaveAllPopover}
+                      convertMetadataToSearchDocument={convertMetadataToSearchDocument}
+                      toggleDocumentSelection={toggleDocumentSelection}
+                      selectAllDocuments={selectAllDocuments}
+                      clearSelection={clearSelection}
+                      setShowSaveAllPopover={setShowSaveAllPopover}
+                      filterVersion={filterVersion}
+                      onLoadMore={loadMore}
+                      isLoadingMore={isLoadingMore}
+                      paginationMetadata={paginationMetadata}
+                      cachedEstimatedTotal={cachedEstimatedTotal}
+                      searchContextParams={searchContextParams}
+                    />
+                  </SearchErrorBoundary>
                 )}
               </div>
 

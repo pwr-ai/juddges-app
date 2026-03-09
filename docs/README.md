@@ -17,6 +17,8 @@ Task-oriented how-to guides for common operations:
 ### 🏗️ [Architecture](architecture/)
 System design and technical decisions:
 - [Overview](architecture/overview.md) - High-level project architecture and structure
+- [System Architecture](architecture/ARCHITECTURE.md) - Detailed system architecture with diagrams
+- [Search Architecture](architecture/SEARCH_ARCHITECTURE.md) - Deep dive into hybrid search pipeline (BM25 + vector + reranking)
 
 ### 🎨 [Features](features/)
 Feature-specific documentation:
@@ -43,6 +45,11 @@ AI-Tax → Juddges transition documentation:
 API documentation:
 - REST API endpoints, authentication, and rate limiting
 
+### 🚀 [Deployment](DEPLOYMENT.md)
+Production deployment and operations:
+- Docker image strategy, build scripts, deploy scripts
+- Health checks, rollback, monitoring, CI/CD pipeline
+
 ### 🤝 [Contributing](contributing/)
 Contribution guidelines:
 - Code style, commit conventions, and testing guidelines
@@ -53,6 +60,8 @@ Contribution guidelines:
 - **Claude Code Instructions**: [CLAUDE.md](../CLAUDE.md)
 - **Setup Guide**: [getting-started/setup-guide.md](getting-started/setup-guide.md)
 - **Architecture Overview**: [architecture/overview.md](architecture/overview.md)
+- **Search Architecture**: [architecture/SEARCH_ARCHITECTURE.md](architecture/SEARCH_ARCHITECTURE.md)
+- **Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## 💡 Documentation Philosophy
 

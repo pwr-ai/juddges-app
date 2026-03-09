@@ -18,3 +18,12 @@ repos:
         args: ['--maxkb=500']
       - id: check-merge-conflict
       - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: Frontend ESLint
+        entry: bash -c 'cd frontend && npx --no-install eslint --max-warnings 0 --no-error-on-unmatched-pattern "$@"' --
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: true

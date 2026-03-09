@@ -73,11 +73,16 @@ class BaseReranker(ABC):
 
 
 class CohereReranker(BaseReranker):
-    """Reranker backed by the Cohere Rerank v2 API."""
+    """Reranker backed by the Cohere Rerank v2 API.
+
+    Uses a persistent ``httpx.AsyncClient`` for connection pooling across
+    requests, avoiding TCP/TLS handshake overhead on each reranking call.
+    """
 
     def __init__(self, api_key: str, model: str = _COHERE_MODEL) -> None:
         self._api_key = api_key
         self._model = model
+        self._client = httpx.AsyncClient(timeout=_API_TIMEOUT_SECONDS)
 
     async def rerank(
         self,
@@ -99,14 +104,13 @@ class CohereReranker(BaseReranker):
             "Content-Type": "application/json",
         }
 
-        async with httpx.AsyncClient(timeout=_API_TIMEOUT_SECONDS) as client:
-            response = await client.post(
-                _COHERE_RERANK_URL,
-                json=payload,
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
+        response = await self._client.post(
+            _COHERE_RERANK_URL,
+            json=payload,
+            headers=headers,
+        )
+        response.raise_for_status()
+        data = response.json()
 
         # Cohere v2 returns {"results": [{"index": int, "relevance_score": float}, ...]}
         ranked_items: list[dict[str, Any]] = data.get("results", [])
@@ -138,6 +142,21 @@ def _build_reranker() -> BaseReranker | None:
         return CohereReranker(api_key=cohere_api_key)
 
     return None
+
+
+# Cached singleton — avoids rebuilding the reranker (and its httpx client)
+# on every search request.
+_cached_reranker: BaseReranker | None = None
+_reranker_checked = False
+
+
+def _get_reranker() -> BaseReranker | None:
+    """Return the cached reranker instance, building it on first call."""
+    global _cached_reranker, _reranker_checked
+    if not _reranker_checked:
+        _cached_reranker = _build_reranker()
+        _reranker_checked = True
+    return _cached_reranker
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +191,7 @@ async def rerank_results(
     if not results:
         return results
 
-    reranker = _build_reranker()
+    reranker = _get_reranker()
 
     if reranker is None:
         logger.debug(
