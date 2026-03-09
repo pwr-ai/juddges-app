@@ -9,6 +9,9 @@
 #   ./scripts/build_and_push_prod.sh minor         # Increment minor (0.1.1 -> 0.2.0)
 #   ./scripts/build_and_push_prod.sh major         # Increment major (0.2.0 -> 1.0.0)
 #   ./scripts/build_and_push_prod.sh 2.1.0         # Use explicit version
+#
+# Tags are created with 'prod-v' prefix (e.g., prod-v1.2.0) following
+# the Gitflow Docker Workflow convention.
 # ==============================================================================
 
 set -euo pipefail
@@ -67,7 +70,11 @@ ensure_docker_login() {
 # ------------------------------------------------------------------------------
 get_latest_version() {
     local latest
-    latest=$(git -C "${REPO_ROOT}" tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
+    latest=$(git -C "${REPO_ROOT}" tag --list 'prod-v*' --sort=-v:refname | head -1 | sed 's/^prod-v//')
+    if [[ -z "${latest}" ]]; then
+        # Fallback: check legacy v* tags for migration
+        latest=$(git -C "${REPO_ROOT}" tag --list 'v*' --sort=-v:refname | head -1 | sed 's/^v//')
+    fi
     if [[ -z "${latest}" ]]; then
         echo "0.0.0"
     else
@@ -247,12 +254,12 @@ main() {
     local new_version
     new_version=$(resolve_version "${bump_arg}")
 
-    info "Current version: v${current_version}"
-    info "New version:     v${new_version}"
+    info "Current version: prod-v${current_version}"
+    info "New version:     prod-v${new_version}"
     echo ""
 
     # Confirm
-    read -rp "Proceed with build and push v${new_version}? [y/N] " confirm
+    read -rp "Proceed with build and push prod-v${new_version}? [y/N] " confirm
     if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
         info "Aborted."
         exit 0
@@ -282,19 +289,19 @@ main() {
         "${REPO_ROOT}/backend/pyproject.toml" \
         "${REPO_ROOT}/frontend/package.json" \
         "${REPO_ROOT}/.env.example"
-    git commit -m "release: v${new_version}" || warn "Nothing to commit (files already up to date)"
+    git commit -m "release: prod-v${new_version}" || warn "Nothing to commit (files already up to date)"
 
     # Create git tag
-    info "Creating git tag v${new_version} ..."
-    git tag -a "v${new_version}" -m "Release v${new_version}"
-    ok "Created tag v${new_version}"
+    info "Creating git tag prod-v${new_version} ..."
+    git tag -a "prod-v${new_version}" -m "Release ${new_version}"
+    ok "Created tag prod-v${new_version}"
 
     # Push commit and tag to remote
-    read -rp "Push commit and tag v${new_version} to origin? [y/N] " push_tag
+    read -rp "Push commit and tag prod-v${new_version} to origin? [y/N] " push_tag
     if [[ "${push_tag}" == "y" || "${push_tag}" == "Y" ]]; then
         git push origin HEAD
-        git push origin "v${new_version}"
-        ok "Pushed commit and tag v${new_version} to origin"
+        git push origin "prod-v${new_version}"
+        ok "Pushed commit and tag prod-v${new_version} to origin"
     fi
 
     echo ""

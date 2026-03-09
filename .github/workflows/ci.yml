@@ -1,0 +1,256 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+    tags: ['prod-v*', 'dev-v*']
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Lint & Test (runs on all PRs and pushes)
+  # ============================================================================
+
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        working-directory: backend
+        run: poetry install --with dev
+
+      - name: Ruff format check
+        working-directory: backend
+        run: poetry run ruff format --check .
+
+      - name: Ruff lint
+        working-directory: backend
+        run: poetry run ruff check .
+
+  backend-test:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        working-directory: backend
+        run: poetry install --with dev
+
+      - name: Run unit tests
+        working-directory: backend
+        run: poetry run pytest -v -m unit
+
+  frontend-lint:
+    name: Frontend Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+  frontend-test:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm run test
+
+  # ============================================================================
+  # Docker Build Validation (PRs and pushes to develop/main, not tags)
+  # ============================================================================
+
+  docker-build:
+    name: Docker Build (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
+    strategy:
+      matrix:
+        service: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        working-directory: ${{ matrix.service }}
+        run: docker build --target production -f Dockerfile .
+
+  # ============================================================================
+  # Deploy to Dev/Staging (push to develop)
+  # ============================================================================
+
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "tag=dev-${VERSION}-${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend (dev)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/juddges-backend:${{ steps.version.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/juddges-backend:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend (dev)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/juddges-frontend:${{ steps.version.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/juddges-frontend:dev-latest
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================================
+  # Deploy to Production (prod-v* tag push)
+  # ============================================================================
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test]
+    if: startsWith(github.ref, 'refs/tags/prod-v')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          TAG="${REF#refs/tags/prod-v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend (prod)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/juddges-backend:${{ steps.version.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/juddges-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend (prod)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/juddges-frontend:${{ steps.version.outputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/juddges-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
