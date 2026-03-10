@@ -45,7 +45,7 @@ COMMENT ON TEXT SEARCH CONFIGURATION public.polish IS
     'Handles diacritic normalization (ą→a, ć→c). No morphological stemming.';
 
 -- 3) Add a GIN index specifically for Polish documents using the new config
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_judgments_fts_polish
+CREATE INDEX IF NOT EXISTS idx_judgments_fts_polish
     ON public.judgments
     USING gin(
         to_tsvector('public.polish',

@@ -1,12 +1,16 @@
 """
-Embedding generation script for legal documents.
+Embedding generation script for judgments.
 
-This script generates embeddings for documents stored in the legal_documents table
-using OpenAI's text-embedding-3-small model (1536 dimensions).
+Generates document-level embeddings for the judgments table using
+OpenAI's text-embedding-3-small model at 768 dimensions.
+
+The embedding is generated from the first ~8000 characters of full_text
+(approximately 2000 tokens), which captures the most important content
+(header, parties, key holdings) for document-level retrieval.
 
 Usage:
-    python -m backend.app.ingestion.embed_documents --batch-size 100 --limit 1000
-    python -m backend.app.ingestion.embed_documents --dry-run  # Preview without changes
+    python -m app.ingestion.embed_documents --batch-size 100 --limit 1000
+    python -m app.ingestion.embed_documents --dry-run  # Preview without changes
 """
 
 import argparse
@@ -14,10 +18,11 @@ import asyncio
 import os
 import time
 
-from backend.app.core.supabase import get_supabase_client
 from loguru import logger
 from openai import AsyncOpenAI
 from supabase import Client
+
+from app.core.supabase import get_supabase_client
 
 # Configuration — dimensions must match DB schema (vector(768))
 EMBEDDING_MODEL = "text-embedding-3-small"
@@ -26,9 +31,18 @@ DEFAULT_BATCH_SIZE = 100
 MAX_RETRIES = 3
 RETRY_DELAY = 2.0  # seconds
 
+# Truncate full_text to this many characters for document-level embedding.
+# ~8000 chars ≈ 2000 tokens for English, ~1250 tokens for Polish.
+# This captures the judgment header, parties, and key holdings.
+DOC_EMBEDDING_MAX_CHARS = 8000
+
+# OpenAI allows max 300,000 tokens per embedding request.
+# With ~2000 tokens per doc (8000 chars), 100 docs ≈ 200K tokens (safe).
+API_SUB_BATCH_SIZE = 100
+
 
 class EmbeddingGenerator:
-    """Generates embeddings for legal documents."""
+    """Generates embeddings for judgments stored in the judgments table."""
 
     def __init__(
         self,
@@ -49,37 +63,14 @@ class EmbeddingGenerator:
             "tokens_used": 0,
         }
 
-    async def generate_embedding(self, text: str) -> list[float] | None:
-        """Generate embedding for a single text using OpenAI API."""
-        if not text or len(text.strip()) == 0:
-            return None
-
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = await self.openai.embeddings.create(
-                    input=text,
-                    model=EMBEDDING_MODEL,
-                    dimensions=EMBEDDING_DIMENSIONS,
-                )
-                self.stats["tokens_used"] += response.usage.total_tokens
-                return response.data[0].embedding
-            except Exception as e:
-                if attempt < MAX_RETRIES - 1:
-                    logger.warning(
-                        f"Embedding generation failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}"
-                    )
-                    await asyncio.sleep(RETRY_DELAY * (attempt + 1))
-                else:
-                    logger.error(
-                        f"Embedding generation failed after {MAX_RETRIES} attempts: {e}"
-                    )
-                    return None
-        return None
-
     async def generate_batch_embeddings(
         self, texts: list[str]
     ) -> list[list[float] | None]:
-        """Generate embeddings for a batch of texts."""
+        """Generate embeddings for a batch of texts.
+
+        Automatically splits into sub-batches of API_SUB_BATCH_SIZE to stay
+        under the OpenAI 300K token-per-request limit.
+        """
         # Filter out empty texts but keep track of positions
         valid_indices = []
         valid_texts = []
@@ -91,114 +82,109 @@ class EmbeddingGenerator:
         if not valid_texts:
             return [None] * len(texts)
 
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = await self.openai.embeddings.create(
-                    input=valid_texts,
-                    model=EMBEDDING_MODEL,
-                    dimensions=EMBEDDING_DIMENSIONS,
-                )
-                self.stats["tokens_used"] += response.usage.total_tokens
+        results: list[list[float] | None] = [None] * len(texts)
 
-                # Map embeddings back to original positions
-                results = [None] * len(texts)
-                for i, embedding_obj in enumerate(response.data):
-                    original_idx = valid_indices[i]
-                    results[original_idx] = embedding_obj.embedding
+        # Process in sub-batches to stay under API token limits
+        for start in range(0, len(valid_texts), API_SUB_BATCH_SIZE):
+            sub_texts = valid_texts[start : start + API_SUB_BATCH_SIZE]
+            sub_indices = valid_indices[start : start + API_SUB_BATCH_SIZE]
 
-                return results
-            except Exception as e:
-                if attempt < MAX_RETRIES - 1:
-                    logger.warning(
-                        f"Batch embedding failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}"
+            for attempt in range(MAX_RETRIES):
+                try:
+                    response = await self.openai.embeddings.create(
+                        input=sub_texts,
+                        model=EMBEDDING_MODEL,
+                        dimensions=EMBEDDING_DIMENSIONS,
                     )
-                    await asyncio.sleep(RETRY_DELAY * (attempt + 1))
-                else:
-                    logger.error(
-                        f"Batch embedding failed after {MAX_RETRIES} attempts: {e}"
-                    )
-                    return [None] * len(texts)
-        return None
+                    self.stats["tokens_used"] += response.usage.total_tokens
 
-    def get_documents_without_embeddings(
+                    for j, embedding_obj in enumerate(response.data):
+                        results[sub_indices[j]] = embedding_obj.embedding
+                    break
+                except Exception as e:
+                    if attempt < MAX_RETRIES - 1:
+                        logger.warning(
+                            f"Batch embedding failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}"
+                        )
+                        await asyncio.sleep(RETRY_DELAY * (attempt + 1))
+                    else:
+                        logger.error(
+                            f"Batch embedding failed after {MAX_RETRIES} attempts: {e}"
+                        )
+
+        return results
+
+    def get_judgments_without_embeddings(
         self, limit: int | None = None, offset: int = 0
     ) -> list[dict]:
-        """Fetch documents that don't have embeddings yet."""
+        """Fetch judgments that don't have embeddings yet."""
         query = (
-            self.supabase.table("legal_documents")
-            .select("supabase_document_id, document_id, full_text, summary")
+            self.supabase.table("judgments")
+            .select("id, case_number, jurisdiction, full_text")
             .is_("embedding", "null")
-            .order("supabase_document_id")
+            .order("created_at")
             .range(offset, offset + (limit or 10000) - 1)
         )
 
         response = query.execute()
         return response.data if response.data else []
 
-    def get_total_documents_without_embeddings(self) -> int:
-        """Get count of documents without embeddings."""
+    def get_total_judgments_without_embeddings(self) -> int:
+        """Get count of judgments without embeddings."""
         response = (
-            self.supabase.table("legal_documents")
-            .select("supabase_document_id", count="exact")
+            self.supabase.table("judgments")
+            .select("id", count="exact")
             .is_("embedding", "null")
             .execute()
         )
         return response.count or 0
 
-    def update_document_embedding(
+    def update_judgment_embedding(
         self,
-        supabase_document_id: int,
+        judgment_id: str,
         embedding: list[float],
-        summary_embedding: list[float] | None = None,
     ) -> bool:
-        """Update a document with its embedding."""
+        """Update a judgment with its embedding."""
         if self.dry_run:
             return True
 
         try:
-            update_data = {"embedding": embedding}
-            if summary_embedding:
-                update_data["summary_embedding"] = summary_embedding
-
-            self.supabase.table("legal_documents").update(update_data).eq(
-                "supabase_document_id", supabase_document_id
+            self.supabase.table("judgments").update({"embedding": embedding}).eq(
+                "id", judgment_id
             ).execute()
             return True
         except Exception as e:
-            logger.error(f"Failed to update document {supabase_document_id}: {e}")
+            logger.error(f"Failed to update judgment {judgment_id}: {e}")
             return False
 
-    async def process_batch(self, documents: list[dict]) -> int:
-        """Process a batch of documents and return number of successful updates."""
-        if not documents:
+    async def process_batch(self, judgments: list[dict]) -> int:
+        """Process a batch of judgments and return number of successful updates."""
+        if not judgments:
             return 0
 
-        # Extract texts for embedding
-        full_texts = [doc.get("full_text", "") or "" for doc in documents]
-        summaries = [doc.get("summary", "") or "" for doc in documents]
+        # Truncate full_text to DOC_EMBEDDING_MAX_CHARS for document-level embedding
+        texts = [
+            (doc.get("full_text", "") or "")[:DOC_EMBEDDING_MAX_CHARS]
+            for doc in judgments
+        ]
 
         # Generate embeddings
-        full_text_embeddings = await self.generate_batch_embeddings(full_texts)
-        summary_embeddings = await self.generate_batch_embeddings(summaries)
+        embeddings = await self.generate_batch_embeddings(texts)
 
-        # Update documents
+        # Update judgments
         successful = 0
-        for i, doc in enumerate(documents):
-            embedding = full_text_embeddings[i]
-            summary_embedding = summary_embeddings[i]
+        for i, doc in enumerate(judgments):
+            embedding = embeddings[i]
 
             if embedding is None:
                 self.stats["failed"] += 1
                 logger.warning(
-                    f"No embedding generated for document {doc['supabase_document_id']}"
+                    f"No embedding generated for judgment {doc['id']} "
+                    f"({doc.get('case_number', 'unknown')})"
                 )
                 continue
 
-            if self.update_document_embedding(
-                doc["supabase_document_id"],
-                embedding,
-                summary_embedding,
-            ):
+            if self.update_judgment_embedding(doc["id"], embedding):
                 successful += 1
                 self.stats["successful"] += 1
             else:
@@ -208,38 +194,42 @@ class EmbeddingGenerator:
 
     async def run(self, limit: int | None = None) -> dict:
         """Run the embedding generation process."""
-        total_without_embeddings = self.get_total_documents_without_embeddings()
-        logger.info(f"Total documents without embeddings: {total_without_embeddings}")
+        total_without_embeddings = self.get_total_judgments_without_embeddings()
+        logger.info(f"Total judgments without embeddings: {total_without_embeddings}")
 
         if limit:
-            logger.info(f"Processing limit: {limit} documents")
+            logger.info(f"Processing limit: {limit} judgments")
             total_to_process = min(limit, total_without_embeddings)
         else:
             total_to_process = total_without_embeddings
 
         if total_to_process == 0:
-            logger.info("No documents to process")
+            logger.info("No judgments to process")
             return self.stats
 
-        logger.info(f"Starting embedding generation for {total_to_process} documents")
+        logger.info(f"Starting embedding generation for {total_to_process} judgments")
         logger.info(f"Batch size: {self.batch_size}")
+        logger.info(f"Model: {EMBEDDING_MODEL} ({EMBEDDING_DIMENSIONS}d)")
+        logger.info(f"Max chars per doc: {DOC_EMBEDDING_MAX_CHARS}")
         logger.info(f"Dry run: {self.dry_run}")
 
         start_time = time.time()
-        offset = 0
 
-        while offset < total_to_process:
-            batch_limit = min(self.batch_size, total_to_process - offset)
-            documents = self.get_documents_without_embeddings(
+        while self.stats["total_processed"] < total_to_process:
+            batch_limit = min(
+                self.batch_size, total_to_process - self.stats["total_processed"]
+            )
+            # Always offset=0 because processed docs no longer have null embedding
+            judgments = self.get_judgments_without_embeddings(
                 limit=batch_limit, offset=0
             )
 
-            if not documents:
-                logger.info("No more documents to process")
+            if not judgments:
+                logger.info("No more judgments to process")
                 break
 
-            await self.process_batch(documents)
-            self.stats["total_processed"] += len(documents)
+            await self.process_batch(judgments)
+            self.stats["total_processed"] += len(judgments)
 
             elapsed = time.time() - start_time
             rate = self.stats["total_processed"] / elapsed if elapsed > 0 else 0
@@ -250,10 +240,6 @@ class EmbeddingGenerator:
                 f"Tokens: {self.stats['tokens_used']:,}"
             )
 
-            # For dry run, use offset increment; for real run, newly embedded docs are filtered out
-            if self.dry_run:
-                offset += batch_limit
-
         elapsed = time.time() - start_time
         logger.info(f"Embedding generation completed in {elapsed:.1f} seconds")
         logger.info(f"Final stats: {self.stats}")
@@ -263,20 +249,18 @@ class EmbeddingGenerator:
 
 async def main():
     """Main entry point for the script."""
-    parser = argparse.ArgumentParser(
-        description="Generate embeddings for legal documents"
-    )
+    parser = argparse.ArgumentParser(description="Generate embeddings for judgments")
     parser.add_argument(
         "--batch-size",
         type=int,
         default=DEFAULT_BATCH_SIZE,
-        help=f"Number of documents to process per batch (default: {DEFAULT_BATCH_SIZE})",
+        help=f"Number of judgments to process per batch (default: {DEFAULT_BATCH_SIZE})",
     )
     parser.add_argument(
         "--limit",
         type=int,
         default=None,
-        help="Maximum number of documents to process (default: all)",
+        help="Maximum number of judgments to process (default: all)",
     )
     parser.add_argument(
         "--dry-run",

@@ -18,10 +18,10 @@
 -- ---------------------------------------------------------------------------
 -- pg_trgm is already enabled (migration 20260209000001) but only indexes case_number.
 -- These indexes enable similarity() and % operator on title and summary.
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_judgments_title_trgm
+CREATE INDEX IF NOT EXISTS idx_judgments_title_trgm
     ON public.judgments USING gin(title gin_trgm_ops);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_judgments_summary_trgm
+CREATE INDEX IF NOT EXISTS idx_judgments_summary_trgm
     ON public.judgments USING gin(summary gin_trgm_ops);
 
 -- ---------------------------------------------------------------------------

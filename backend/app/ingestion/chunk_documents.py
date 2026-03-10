@@ -1,17 +1,18 @@
 """
-Document chunking script for legal documents.
+Document chunking script for judgments.
 
-This script chunks legal documents and generates embeddings for each chunk.
+Splits judgments into overlapping text chunks and generates embeddings for each.
 Chunks are stored in the document_chunks table for fine-grained semantic search.
 
 Chunking strategy:
 - Target chunk size: 400 tokens (~300-500 words)
 - Overlap: 100 tokens to maintain context continuity
-- Key sections (Uzasadnienie, Sentencja, etc.) are marked for prioritized retrieval
+- Key sections (Uzasadnienie, Sentencja, Judgment, etc.) are marked for prioritized retrieval
+- Language is derived from jurisdiction: PL → "pl", UK → "en"
 
 Usage:
-    python -m backend.app.ingestion.chunk_documents --batch-size 50 --limit 1000
-    python -m backend.app.ingestion.chunk_documents --dry-run
+    python -m app.ingestion.chunk_documents --batch-size 50 --limit 1000
+    python -m app.ingestion.chunk_documents --dry-run
 """
 
 import argparse
@@ -21,10 +22,11 @@ import re
 import time
 
 import tiktoken
-from backend.app.core.supabase import get_supabase_client
 from loguru import logger
 from openai import AsyncOpenAI
 from supabase import Client
+
+from app.core.supabase import get_supabase_client
 
 # Configuration — dimensions must match DB schema (vector(768))
 EMBEDDING_MODEL = "text-embedding-3-small"
@@ -37,6 +39,10 @@ RETRY_DELAY = 2.0
 TARGET_CHUNK_SIZE = 400  # tokens
 CHUNK_OVERLAP = 100  # tokens
 MIN_CHUNK_SIZE = 50  # minimum tokens to create a chunk
+
+# Maximum chunks to embed in a single OpenAI API call
+# text-embedding-3-small supports up to 2048 inputs per request
+EMBEDDING_BATCH_SIZE = 200
 
 # Polish legal document section patterns
 POLISH_SECTION_PATTERNS = [
@@ -62,9 +68,15 @@ UK_SECTION_PATTERNS = [
     (r"(?i)^(RATIO DECIDENDI|Ratio decidendi)[\s:]*$", "Ratio Decidendi", True),
 ]
 
+# Map jurisdiction codes to language codes
+JURISDICTION_TO_LANGUAGE = {
+    "PL": "pl",
+    "UK": "en",
+}
+
 
 class DocumentChunker:
-    """Chunks documents and generates embeddings for each chunk."""
+    """Chunks judgments and generates embeddings for each chunk."""
 
     def __init__(
         self,
@@ -118,9 +130,9 @@ class DocumentChunker:
         chunks = []
         lines = text.split("\n")
 
-        current_chunk = []
+        current_chunk: list[str] = []
         current_tokens = 0
-        current_section = None
+        current_section: str | None = None
         is_current_key = False
         chunk_index = 0
 
@@ -139,13 +151,15 @@ class DocumentChunker:
                         {
                             "document_id": document_id,
                             "chunk_index": chunk_index,
+                            "chunk_text": chunk_text,
                             "chunk_type": "section"
                             if current_section
                             else "paragraph_block",
-                            "content": chunk_text,
                             "section_title": current_section,
                             "is_key_section": is_current_key,
                             "token_count": current_tokens,
+                            "relevance_weight": 1.5 if is_current_key else 1.0,
+                            "language": language,
                         }
                     )
                     chunk_index += 1
@@ -167,20 +181,22 @@ class DocumentChunker:
                     {
                         "document_id": document_id,
                         "chunk_index": chunk_index,
+                        "chunk_text": chunk_text,
                         "chunk_type": "section"
                         if current_section
                         else "paragraph_block",
-                        "content": chunk_text,
                         "section_title": current_section,
                         "is_key_section": is_current_key,
                         "token_count": current_tokens,
+                        "relevance_weight": 1.5 if is_current_key else 1.0,
+                        "language": language,
                     }
                 )
                 chunk_index += 1
 
                 # Start new chunk with overlap
                 # Take last few lines that fit within overlap window
-                overlap_lines = []
+                overlap_lines: list[str] = []
                 overlap_tokens = 0
                 for prev_line in reversed(current_chunk):
                     prev_tokens = self.count_tokens(prev_line)
@@ -203,11 +219,13 @@ class DocumentChunker:
                 {
                     "document_id": document_id,
                     "chunk_index": chunk_index,
+                    "chunk_text": chunk_text,
                     "chunk_type": "section" if current_section else "paragraph_block",
-                    "content": chunk_text,
                     "section_title": current_section,
                     "is_key_section": is_current_key,
                     "token_count": current_tokens,
+                    "relevance_weight": 1.5 if is_current_key else 1.0,
+                    "language": language,
                 }
             )
 
@@ -220,51 +238,111 @@ class DocumentChunker:
         if not chunks:
             return []
 
-        texts = [chunk["content"] for chunk in chunks]
+        texts = [chunk["chunk_text"] for chunk in chunks]
 
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = await self.openai.embeddings.create(
-                    input=texts,
-                    model=EMBEDDING_MODEL,
-                    dimensions=EMBEDDING_DIMENSIONS,
-                )
-                self.stats["tokens_used"] += response.usage.total_tokens
-                return [obj.embedding for obj in response.data]
-            except Exception as e:
-                if attempt < MAX_RETRIES - 1:
-                    logger.warning(
-                        f"Chunk embedding failed (attempt {attempt + 1}): {e}"
+        # Split into sub-batches if needed (API limit)
+        all_embeddings: list[list[float] | None] = [None] * len(texts)
+        for start in range(0, len(texts), EMBEDDING_BATCH_SIZE):
+            batch_texts = texts[start : start + EMBEDDING_BATCH_SIZE]
+
+            for attempt in range(MAX_RETRIES):
+                try:
+                    response = await self.openai.embeddings.create(
+                        input=batch_texts,
+                        model=EMBEDDING_MODEL,
+                        dimensions=EMBEDDING_DIMENSIONS,
                     )
-                    await asyncio.sleep(RETRY_DELAY * (attempt + 1))
-                else:
-                    logger.error(f"Chunk embedding failed: {e}")
-                    return [None] * len(chunks)
-        return None
+                    self.stats["tokens_used"] += response.usage.total_tokens
+                    for j, obj in enumerate(response.data):
+                        all_embeddings[start + j] = obj.embedding
+                    break
+                except Exception as e:
+                    if attempt < MAX_RETRIES - 1:
+                        logger.warning(
+                            f"Chunk embedding failed (attempt {attempt + 1}): {e}"
+                        )
+                        await asyncio.sleep(RETRY_DELAY * (attempt + 1))
+                    else:
+                        logger.error(f"Chunk embedding failed: {e}")
 
-    def get_documents_without_chunks(
-        self, limit: int | None = None, offset: int = 0
+        return all_embeddings
+
+    def _get_existing_chunk_doc_ids(self) -> set[str]:
+        """Get set of document IDs that already have chunks."""
+        try:
+            # Supabase PostgREST returns max 1000 rows by default.
+            # Paginate to get ALL existing chunk document_ids.
+            all_ids: set[str] = set()
+            page_size = 1000
+            offset = 0
+            while True:
+                resp = (
+                    self.supabase.table("document_chunks")
+                    .select("document_id")
+                    .range(offset, offset + page_size - 1)
+                    .execute()
+                )
+                rows = resp.data or []
+                for row in rows:
+                    all_ids.add(row["document_id"])
+                if len(rows) < page_size:
+                    break
+                offset += page_size
+            return all_ids
+        except Exception:
+            return set()
+
+    def get_judgments_without_chunks(
+        self, limit: int = 50, existing_doc_ids: set[str] | None = None
     ) -> list[dict]:
-        """Fetch documents that don't have chunks yet."""
-        # Get document IDs that already have chunks
-        existing_chunks = (
-            self.supabase.table("document_chunks").select("document_id").execute()
-        )
-        existing_doc_ids = {c["document_id"] for c in (existing_chunks.data or [])}
+        """Fetch judgments that don't have chunks yet.
 
-        # Fetch documents
-        query = (
-            self.supabase.table("legal_documents")
-            .select("document_id, full_text, language")
-            .order("supabase_document_id")
-            .range(offset, offset + (limit or 10000) - 1)
-        )
+        Scans through the judgments table in pages, skipping those that
+        already have chunks, until `limit` unchunked judgments are found.
+        """
+        if existing_doc_ids is None:
+            existing_doc_ids = self._get_existing_chunk_doc_ids()
 
-        response = query.execute()
-        documents = response.data or []
+        needed: list[dict] = []
+        scan_offset = 0
+        # Fetch larger pages (IDs only) to efficiently skip chunked docs
+        scan_page = max(limit * 3, 500)
 
-        # Filter out documents that already have chunks
-        return [doc for doc in documents if doc["document_id"] not in existing_doc_ids]
+        while len(needed) < limit:
+            # First fetch just IDs to avoid transferring full_text unnecessarily
+            id_resp = (
+                self.supabase.table("judgments")
+                .select("id")
+                .order("created_at")
+                .range(scan_offset, scan_offset + scan_page - 1)
+                .execute()
+            )
+            id_rows = id_resp.data or []
+            if not id_rows:
+                break  # No more judgments in the table
+
+            # Filter to IDs that don't have chunks
+            unchunked_ids = [
+                r["id"] for r in id_rows if r["id"] not in existing_doc_ids
+            ]
+            scan_offset += scan_page
+
+            if not unchunked_ids:
+                continue  # This page was all chunked, scan further
+
+            # Fetch full data for only the unchunked IDs we need
+            batch_ids = unchunked_ids[: limit - len(needed)]
+            for i in range(0, len(batch_ids), 50):
+                sub_ids = batch_ids[i : i + 50]
+                data_resp = (
+                    self.supabase.table("judgments")
+                    .select("id, case_number, jurisdiction, full_text")
+                    .in_("id", sub_ids)
+                    .execute()
+                )
+                needed.extend(data_resp.data or [])
+
+        return needed[:limit]
 
     def save_chunks(self, chunks: list[dict]) -> int:
         """Save chunks to database. Returns number of successful inserts."""
@@ -272,44 +350,55 @@ class DocumentChunker:
             return len(chunks)
 
         try:
-            # Prepare chunks for insertion (convert embedding to list if needed)
+            # Prepare chunks for insertion
             insert_data = []
             for chunk in chunks:
                 data = {
                     "document_id": chunk["document_id"],
                     "chunk_index": chunk["chunk_index"],
+                    "chunk_text": chunk["chunk_text"],
                     "chunk_type": chunk["chunk_type"],
-                    "content": chunk["content"],
                     "section_title": chunk.get("section_title"),
                     "is_key_section": chunk.get("is_key_section", False),
                     "token_count": chunk.get("token_count"),
-                    "relevance_weight": 1.5 if chunk.get("is_key_section") else 1.0,
+                    "relevance_weight": chunk.get("relevance_weight", 1.0),
+                    "language": chunk.get("language"),
                 }
                 if chunk.get("embedding"):
                     data["embedding"] = chunk["embedding"]
                 insert_data.append(data)
 
-            self.supabase.table("document_chunks").insert(insert_data).execute()
+            # Insert in batches of 500 to stay within Supabase limits
+            for i in range(0, len(insert_data), 500):
+                batch = insert_data[i : i + 500]
+                self.supabase.table("document_chunks").insert(batch).execute()
+
             return len(chunks)
         except Exception as e:
             logger.error(f"Failed to save chunks: {e}")
             return 0
 
-    async def process_document(self, document: dict) -> int:
-        """Process a single document: chunk and embed. Returns chunk count."""
-        document_id = document["document_id"]
-        full_text = document.get("full_text", "")
-        language = document.get("language", "pl")
+    async def process_document(self, judgment: dict) -> int:
+        """Process a single judgment: chunk and embed. Returns chunk count."""
+        judgment_id = judgment["id"]
+        full_text = judgment.get("full_text", "")
+        jurisdiction = judgment.get("jurisdiction", "PL")
+        language = JURISDICTION_TO_LANGUAGE.get(jurisdiction, "pl")
 
         if not full_text:
-            logger.warning(f"Document {document_id} has no text")
+            logger.warning(
+                f"Judgment {judgment_id} ({judgment.get('case_number', 'unknown')}) has no text"
+            )
             return 0
 
         # Chunk the document
-        chunks = self.chunk_document(full_text, document_id, language)
+        chunks = self.chunk_document(full_text, judgment_id, language)
 
         if not chunks:
-            logger.warning(f"No chunks generated for document {document_id}")
+            logger.warning(
+                f"No chunks generated for judgment {judgment_id} "
+                f"({judgment.get('case_number', 'unknown')})"
+            )
             return 0
 
         # Generate embeddings for chunks
@@ -325,40 +414,54 @@ class DocumentChunker:
 
         return saved
 
-    async def process_batch(self, documents: list[dict]) -> int:
-        """Process a batch of documents."""
+    async def process_batch(self, judgments: list[dict]) -> int:
+        """Process a batch of judgments."""
         total_chunks = 0
-        for doc in documents:
+        for judgment in judgments:
             try:
-                chunks = await self.process_document(doc)
+                chunks = await self.process_document(judgment)
                 total_chunks += chunks
                 self.stats["documents_processed"] += 1
             except Exception as e:
-                logger.error(f"Failed to process document {doc['document_id']}: {e}")
+                logger.error(
+                    f"Failed to process judgment {judgment['id']} "
+                    f"({judgment.get('case_number', 'unknown')}): {e}"
+                )
                 self.stats["failed"] += 1
         return total_chunks
 
     async def run(self, limit: int | None = None) -> dict:
         """Run the chunking process."""
-        logger.info("Fetching documents without chunks...")
+        logger.info("Fetching judgments without chunks...")
 
         start_time = time.time()
-        total_to_process = limit or float("inf")
+        # Fetch existing chunk doc IDs once, then track incrementally
+        existing_ids = self._get_existing_chunk_doc_ids()
+        logger.info(
+            f"Found {len(existing_ids)} judgments already chunked, skipping them"
+        )
 
-        while self.stats["documents_processed"] < total_to_process:
-            documents = self.get_documents_without_chunks(
-                limit=min(
-                    self.batch_size,
-                    int(total_to_process - self.stats["documents_processed"]),
-                ),
-                offset=0,  # Always 0 since we filter by existing chunks
+        while True:
+            remaining = (
+                limit - self.stats["documents_processed"] if limit else self.batch_size
+            )
+            if limit and remaining <= 0:
+                break
+            batch_limit = min(self.batch_size, remaining)
+            judgments = self.get_judgments_without_chunks(
+                limit=batch_limit,
+                existing_doc_ids=existing_ids,
             )
 
-            if not documents:
-                logger.info("No more documents to process")
+            if not judgments:
+                logger.info("No more judgments to process")
                 break
 
-            await self.process_batch(documents)
+            await self.process_batch(judgments)
+
+            # Track newly processed IDs so we don't re-fetch them
+            for j in judgments:
+                existing_ids.add(j["id"])
 
             elapsed = time.time() - start_time
             rate = self.stats["documents_processed"] / elapsed if elapsed > 0 else 0
@@ -380,19 +483,19 @@ class DocumentChunker:
 async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Chunk legal documents and generate embeddings"
+        description="Chunk judgments and generate chunk embeddings"
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=DEFAULT_BATCH_SIZE,
-        help=f"Documents per batch (default: {DEFAULT_BATCH_SIZE})",
+        help=f"Judgments per batch (default: {DEFAULT_BATCH_SIZE})",
     )
     parser.add_argument(
         "--limit",
         type=int,
         default=None,
-        help="Maximum documents to process (default: all)",
+        help="Maximum judgments to process (default: all)",
     )
     parser.add_argument(
         "--dry-run",
@@ -428,7 +531,7 @@ async def main():
     print("\n" + "=" * 50)
     print("DOCUMENT CHUNKING SUMMARY")
     print("=" * 50)
-    print(f"Documents processed: {stats['documents_processed']}")
+    print(f"Judgments processed: {stats['documents_processed']}")
     print(f"Chunks created:      {stats['chunks_created']}")
     print(f"Failed:              {stats['failed']}")
     print(f"Tokens used:         {stats['tokens_used']:,}")
