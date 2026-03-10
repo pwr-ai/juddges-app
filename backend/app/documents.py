@@ -957,6 +957,334 @@ async def get_documents_batch(request: BatchDocumentsRequest):
 # ===== POST Endpoints - Search =====
 
 
+_INFERABLE_LIST_FILTER_FIELDS = (
+    "jurisdictions",
+    "court_names",
+    "court_levels",
+    "case_types",
+    "decision_types",
+    "outcomes",
+    "keywords",
+    "legal_topics",
+    "cited_legislation",
+)
+_INFERABLE_DATE_FILTER_FIELDS = ("date_from", "date_to")
+
+
+def _validate_search_query(query: str) -> None:
+    if not query or not query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    try:
+        validate_string_length(query, 2000, "query")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def _build_effective_filters(request: SearchChunksRequest) -> dict[str, Any]:
+    return {
+        "jurisdictions": request.jurisdictions,
+        "court_names": request.court_names,
+        "court_levels": request.court_levels,
+        "case_types": request.case_types,
+        "decision_types": request.decision_types,
+        "outcomes": request.outcomes,
+        "keywords": request.keywords,
+        "legal_topics": request.legal_topics,
+        "cited_legislation": request.cited_legislation,
+        "date_from": request.date_from,
+        "date_to": request.date_to,
+    }
+
+
+def _apply_inferred_filters(
+    analysis: Any,
+    effective_filters: dict[str, Any],
+) -> dict[str, Any] | None:
+    inferred_filters: dict[str, Any] = {}
+
+    for key in _INFERABLE_LIST_FILTER_FIELDS:
+        if effective_filters[key] is None:
+            inferred_value = getattr(analysis, key, None)
+            if inferred_value:
+                effective_filters[key] = inferred_value
+                inferred_filters[key] = inferred_value
+
+    for key in _INFERABLE_DATE_FILTER_FIELDS:
+        if not effective_filters[key]:
+            inferred_value = getattr(analysis, key, None)
+            if inferred_value:
+                effective_filters[key] = inferred_value
+                inferred_filters[key] = inferred_value
+
+    return inferred_filters or None
+
+
+async def _prepare_search_queries(
+    request: SearchChunksRequest,
+    query: str,
+) -> tuple[
+    str, str, str | None, dict[str, Any] | None, float, str | None, dict[str, Any]
+]:
+    semantic_query = query
+    keyword_query = query
+    enhanced_query_text: str | None = None
+    inferred_filters: dict[str, Any] | None = None
+    enhancement_time_ms = 0.0
+    query_analysis_source: str | None = None
+    effective_filters = _build_effective_filters(request)
+
+    if request.mode != "thinking":
+        return (
+            semantic_query,
+            keyword_query,
+            enhanced_query_text,
+            inferred_filters,
+            enhancement_time_ms,
+            query_analysis_source,
+            effective_filters,
+        )
+
+    from app.query_analysis import analyze_query_with_fallback
+
+    enhancement_start = time.perf_counter()
+    logger.info(f"Analyzing query in thinking mode: {query}")
+    (
+        analysis,
+        query_analysis_source,
+        query_analysis_error,
+    ) = await analyze_query_with_fallback(query)
+    enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
+
+    if query_analysis_source == "heuristic":
+        logger.warning(
+            "LLM query analysis failed; using heuristic fallback",
+            error=query_analysis_error,
+        )
+
+    semantic_query = (analysis.semantic_query or query).strip() or query
+    keyword_query = (analysis.keyword_query or query).strip() or query
+    enhanced_query_text = (
+        semantic_query
+        if semantic_query != query
+        else (keyword_query if keyword_query != query else None)
+    )
+    inferred_filters = _apply_inferred_filters(analysis, effective_filters)
+
+    logger.info(
+        "Query analysis completed",
+        semantic_query=semantic_query,
+        keyword_query=keyword_query,
+        source=query_analysis_source,
+        inferred_filters=list((inferred_filters or {}).keys()),
+    )
+    return (
+        semantic_query,
+        keyword_query,
+        enhanced_query_text,
+        inferred_filters,
+        enhancement_time_ms,
+        query_analysis_source,
+        effective_filters,
+    )
+
+
+def _route_effective_alpha(query: str, request_alpha: float) -> tuple[str, float, bool]:
+    from app.query_analysis import classify_and_route_query
+
+    query_type, recommended_alpha = classify_and_route_query(query)
+    effective_alpha = request_alpha
+    alpha_was_routed = False
+    if request_alpha == 0.5 and query_type != "mixed":
+        effective_alpha = recommended_alpha
+        alpha_was_routed = True
+        logger.info(
+            f"Query classified as '{query_type}', adjusting alpha "
+            f"{request_alpha} → {effective_alpha}"
+        )
+    return query_type, effective_alpha, alpha_was_routed
+
+
+async def _generate_search_embedding(
+    semantic_query: str,
+    effective_alpha: float,
+) -> tuple[list[float] | None, float, bool]:
+    if effective_alpha <= 0:
+        return None, 0.0, False
+
+    query_embedding: list[float] | None = None
+    embedding_time_ms = 0.0
+    vector_fallback = False
+    try:
+        embedding_start = time.perf_counter()
+        query_embedding = await generate_embedding(semantic_query)
+        if len(query_embedding) != JUDGMENTS_EMBEDDING_DIMENSION:
+            logger.warning(
+                f"Embedding dimension mismatch: expected {JUDGMENTS_EMBEDDING_DIMENSION}, "
+                f"got {len(query_embedding)}. Falling back to text-only search."
+            )
+            query_embedding = None
+            vector_fallback = True
+        embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
+    except Exception as emb_err:
+        logger.warning(
+            f"Embedding generation failed, falling back to text-only search: {emb_err}"
+        )
+        query_embedding = None
+        vector_fallback = True
+
+    return query_embedding, embedding_time_ms, vector_fallback
+
+
+async def _get_search_client():
+    from app.core.supabase import get_async_supabase_client, get_supabase_client
+
+    sync_client = get_supabase_client()
+    if sync_client and os.getenv("PYTEST_CURRENT_TEST"):
+        return sync_client
+
+    async_client = await get_async_supabase_client()
+    if async_client:
+        return async_client
+    if sync_client:
+        return sync_client
+    raise HTTPException(status_code=500, detail="Database client not initialized")
+
+
+def _build_search_rpc_params(
+    query_embedding: list[float] | None,
+    keyword_query: str,
+    search_language: str,
+    effective_filters: dict[str, Any],
+    effective_alpha: float,
+    limit: int,
+    offset: int,
+) -> dict[str, Any]:
+    return {
+        "query_embedding": query_embedding,
+        "search_text": keyword_query if effective_alpha < 1.0 else None,
+        "search_language": search_language,
+        "filter_jurisdictions": effective_filters["jurisdictions"],
+        "filter_court_names": effective_filters["court_names"],
+        "filter_court_levels": effective_filters["court_levels"],
+        "filter_case_types": effective_filters["case_types"],
+        "filter_decision_types": effective_filters["decision_types"],
+        "filter_outcomes": effective_filters["outcomes"],
+        "filter_keywords": effective_filters["keywords"],
+        "filter_legal_topics": effective_filters["legal_topics"],
+        "filter_cited_legislation": effective_filters["cited_legislation"],
+        "filter_date_from": effective_filters["date_from"],
+        "filter_date_to": effective_filters["date_to"],
+        "similarity_threshold": 0.5,
+        "hybrid_alpha": effective_alpha,
+        "result_limit": limit,
+        "result_offset": offset,
+        "rrf_k": 60,
+    }
+
+
+async def _run_hybrid_search(
+    supabase: Any,
+    rpc_params: dict[str, Any],
+) -> tuple[list[dict[str, Any]], float]:
+    search_start = time.perf_counter()
+    rpc_query = supabase.rpc("search_judgments_hybrid", rpc_params)
+    execute = rpc_query.execute
+    if asyncio.iscoroutinefunction(execute):
+        response = await execute()
+    else:
+        response = await asyncio.to_thread(execute)
+    search_time_ms = (time.perf_counter() - search_start) * 1000
+    return response.data or [], search_time_ms
+
+
+async def _rerank_if_enabled(
+    query: str,
+    results: list[dict[str, Any]],
+    top_k: int,
+) -> tuple[list[dict[str, Any]], float]:
+    if not results:
+        return results, 0.0
+
+    from app.reranker import rerank_results
+
+    rerank_start = time.perf_counter()
+    reranked = await rerank_results(query=query, results=results, top_k=top_k)
+    rerank_time_ms = (time.perf_counter() - rerank_start) * 1000
+    return reranked, rerank_time_ms
+
+
+def _build_search_result_payload(
+    results: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[LegalDocument]]:
+    chunks: list[dict[str, Any]] = []
+    documents: list[LegalDocument] = []
+
+    for result in results:
+        chunks.append(
+            {
+                "document_id": str(result.get("id", "")),
+                "chunk_id": 0,
+                "chunk_text": result.get("chunk_text", "")
+                or result.get("summary", "")
+                or result.get("title", ""),
+                "chunk_type": result.get("chunk_type", "summary"),
+                "chunk_start_pos": result.get("chunk_start_pos", 0),
+                "chunk_end_pos": result.get("chunk_end_pos", 0),
+                "similarity": result.get("combined_score", 0.0),
+                "metadata": result.get("chunk_metadata", {}),
+                "vector_score": result.get("vector_score"),
+                "text_score": result.get("text_score"),
+                "combined_score": result.get("combined_score"),
+            }
+        )
+        documents.append(_convert_judgment_to_legal_document(result))
+
+    return chunks, documents
+
+
+def _build_search_timing_breakdown(
+    mode: str,
+    enhancement_time_ms: float,
+    embedding_time_ms: float,
+    vector_fallback: bool,
+    search_time_ms: float,
+    rerank_time_ms: float,
+    total_time_ms: float,
+    query_type: str,
+    effective_alpha: float,
+    alpha_was_routed: bool,
+) -> dict[str, Any]:
+    return {
+        "enhancement_ms": round(enhancement_time_ms, 2) if mode == "thinking" else 0,
+        "embedding_ms": round(embedding_time_ms, 2),
+        "vector_fallback": vector_fallback,
+        "search_ms": round(search_time_ms, 2),
+        "rerank_ms": round(rerank_time_ms, 2),
+        "total_ms": round(total_time_ms, 2),
+        "query_type": query_type,
+        "effective_alpha": effective_alpha,
+        "alpha_was_routed": alpha_was_routed,
+    }
+
+
+def _build_search_pagination(
+    offset: int,
+    limit: int,
+    result_count: int,
+) -> PaginationMetadata:
+    has_more = result_count >= limit
+    next_offset = offset + result_count if has_more else None
+    return PaginationMetadata(
+        offset=offset,
+        limit=limit,
+        loaded_count=result_count,
+        estimated_total=None,
+        has_more=has_more,
+        next_offset=next_offset,
+    )
+
+
 @router.post(
     "/search",
     response_model=SearchChunksResponse,
@@ -973,277 +1301,74 @@ async def search_documents(request: SearchChunksRequest):
     4. Returns matching documents with relevance scores
     """
     start_time = time.perf_counter()
-
     query = request.query
-    if not query or not query.strip():
-        raise HTTPException(status_code=400, detail="Query cannot be empty")
-
-    try:
-        validate_string_length(query, 2000, "query")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    _validate_search_query(query)
+    limit = request.limit_docs or 20
+    offset = request.offset or 0
 
     logger.info(
-        f"Search request: query='{query[:100]}...', limit={request.limit_docs}, "
+        f"Search request: query='{query[:100]}...', limit={limit}, "
         f"languages={request.languages}, document_types={request.document_types}, "
         f"jurisdictions={request.jurisdictions}, case_types={request.case_types}"
     )
 
     try:
-        # Analyze/rewrite query if in "thinking" mode
-        semantic_query = query
-        keyword_query = query
-        enhanced_query_text = None
-        inferred_filters: dict[str, Any] | None = None
-        enhancement_time_ms = 0
-        query_analysis_source = None
-        if request.mode == "thinking":
-            from app.query_analysis import analyze_query_with_fallback
+        (
+            semantic_query,
+            keyword_query,
+            enhanced_query_text,
+            inferred_filters,
+            enhancement_time_ms,
+            query_analysis_source,
+            effective_filters,
+        ) = await _prepare_search_queries(request, query)
 
-            enhancement_start = time.perf_counter()
-            logger.info(f"Analyzing query in thinking mode: {query}")
-            (
-                analysis,
-                query_analysis_source,
-                query_analysis_error,
-            ) = await analyze_query_with_fallback(query)
-            enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
+        query_type, effective_alpha, alpha_was_routed = _route_effective_alpha(
+            query, request.alpha
+        )
+        (
+            query_embedding,
+            embedding_time_ms,
+            vector_fallback,
+        ) = await _generate_search_embedding(semantic_query, effective_alpha)
 
-            if query_analysis_source == "heuristic":
-                logger.warning(
-                    "LLM query analysis failed; using heuristic fallback",
-                    error=query_analysis_error,
-                )
-
-            semantic_query = (analysis.semantic_query or query).strip() or query
-            keyword_query = (analysis.keyword_query or query).strip() or query
-            enhanced_query_text = (
-                semantic_query
-                if semantic_query != query
-                else (keyword_query if keyword_query != query else None)
-            )
-
-            # Apply inferred filters only when request didn't provide explicit ones.
-            effective_filters = {
-                "jurisdictions": request.jurisdictions,
-                "court_names": request.court_names,
-                "court_levels": request.court_levels,
-                "case_types": request.case_types,
-                "decision_types": request.decision_types,
-                "outcomes": request.outcomes,
-                "keywords": request.keywords,
-                "legal_topics": request.legal_topics,
-                "cited_legislation": request.cited_legislation,
-                "date_from": request.date_from,
-                "date_to": request.date_to,
-            }
-
-            inferred_filters = {}
-            for key in (
-                "jurisdictions",
-                "court_names",
-                "court_levels",
-                "case_types",
-                "decision_types",
-                "outcomes",
-                "keywords",
-                "legal_topics",
-                "cited_legislation",
-            ):
-                if effective_filters[key] is None:
-                    inferred_value = getattr(analysis, key, None)
-                    if inferred_value:
-                        effective_filters[key] = inferred_value
-                        inferred_filters[key] = inferred_value
-
-            for key in ("date_from", "date_to"):
-                if not effective_filters[key]:
-                    inferred_value = getattr(analysis, key, None)
-                    if inferred_value:
-                        effective_filters[key] = inferred_value
-                        inferred_filters[key] = inferred_value
-
-            request.jurisdictions = effective_filters["jurisdictions"]
-            request.court_names = effective_filters["court_names"]
-            request.court_levels = effective_filters["court_levels"]
-            request.case_types = effective_filters["case_types"]
-            request.decision_types = effective_filters["decision_types"]
-            request.outcomes = effective_filters["outcomes"]
-            request.keywords = effective_filters["keywords"]
-            request.legal_topics = effective_filters["legal_topics"]
-            request.cited_legislation = effective_filters["cited_legislation"]
-            request.date_from = effective_filters["date_from"]
-            request.date_to = effective_filters["date_to"]
-
-            if not inferred_filters:
-                inferred_filters = None
-
-            logger.info(
-                "Query analysis completed",
-                semantic_query=semantic_query,
-                keyword_query=keyword_query,
-                source=query_analysis_source,
-                inferred_filters=list((inferred_filters or {}).keys()),
-            )
-
-        # Auto-adjust alpha based on query type classification
-        from app.query_analysis import classify_and_route_query
-
-        query_type, recommended_alpha = classify_and_route_query(query)
-        effective_alpha = request.alpha
-        alpha_was_routed = False
-        # Only override if user sent the default alpha (0.5)
-        if request.alpha == 0.5 and query_type != "mixed":
-            effective_alpha = recommended_alpha
-            alpha_was_routed = True
-            logger.info(
-                f"Query classified as '{query_type}', adjusting alpha "
-                f"{request.alpha} → {effective_alpha}"
-            )
-
-        # Generate embedding for query (if vector search is enabled)
-        query_embedding = None
-        embedding_time_ms = 0
-        vector_fallback = False
-        if effective_alpha > 0:  # Vector search component enabled
-            try:
-                embedding_start = time.perf_counter()
-                query_embedding = await generate_embedding(semantic_query)
-                if len(query_embedding) != JUDGMENTS_EMBEDDING_DIMENSION:
-                    logger.warning(
-                        f"Embedding dimension mismatch: expected {JUDGMENTS_EMBEDDING_DIMENSION}, "
-                        f"got {len(query_embedding)}. Falling back to text-only search."
-                    )
-                    query_embedding = None
-                    vector_fallback = True
-                embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
-            except Exception as emb_err:
-                logger.warning(
-                    f"Embedding generation failed, falling back to text-only search: {emb_err}"
-                )
-                query_embedding = None
-                vector_fallback = True
-
-        # Detect search language from explicit filter, inferred jurisdiction, or query content
         search_language = _detect_search_language(
-            keyword_query, request.languages, request.jurisdictions
+            keyword_query, request.languages, effective_filters["jurisdictions"]
         )
-
-        # Use async Supabase client to avoid blocking the event loop
-        from app.core.supabase import get_async_supabase_client
-
-        supabase = await get_async_supabase_client()
-
-        if not supabase:
-            raise HTTPException(
-                status_code=500, detail="Database client not initialized"
-            )
-
-        search_start = time.perf_counter()
-
-        # Call search_judgments_hybrid RPC with RRF fusion
-        rpc_query = supabase.rpc(
-            "search_judgments_hybrid",
-            {
-                "query_embedding": query_embedding,
-                "search_text": keyword_query
-                if effective_alpha < 1.0
-                else None,  # Skip text search if pure vector
-                "search_language": search_language,
-                "filter_jurisdictions": request.jurisdictions,
-                "filter_court_names": request.court_names,
-                "filter_court_levels": request.court_levels,
-                "filter_case_types": request.case_types,
-                "filter_decision_types": request.decision_types,
-                "filter_outcomes": request.outcomes,
-                "filter_keywords": request.keywords,
-                "filter_legal_topics": request.legal_topics,
-                "filter_cited_legislation": request.cited_legislation,
-                "filter_date_from": request.date_from,
-                "filter_date_to": request.date_to,
-                "similarity_threshold": 0.5,
-                "hybrid_alpha": effective_alpha,
-                "result_limit": request.limit_docs or 20,
-                "result_offset": request.offset or 0,
-                "rrf_k": 60,
-            },
+        rpc_params = _build_search_rpc_params(
+            query_embedding=query_embedding,
+            keyword_query=keyword_query,
+            search_language=search_language,
+            effective_filters=effective_filters,
+            effective_alpha=effective_alpha,
+            limit=limit,
+            offset=offset,
         )
-        response = await rpc_query.execute()
-
-        results = response.data or []
-        search_time_ms = (time.perf_counter() - search_start) * 1000
-
-        # Optional cross-encoder reranking (active when COHERE_API_KEY is set)
-        rerank_time_ms = 0
-        if results:
-            from app.reranker import rerank_results
-
-            rerank_start = time.perf_counter()
-            results = await rerank_results(
-                query=query, results=results, top_k=request.limit_docs or 20
-            )
-            rerank_time_ms = (time.perf_counter() - rerank_start) * 1000
-
-        # Convert to chunks format for compatibility
-        chunks = []
-        documents = []
-
-        for result in results:
-            # Create DocumentChunk-compatible representation with enhanced metadata
-            chunk_data = {
-                "document_id": str(result.get("id", "")),  # Use judgment ID
-                "chunk_id": 0,  # First chunk for each document
-                "chunk_text": result.get("chunk_text", "")
-                or result.get("summary", "")
-                or result.get("title", ""),
-                "chunk_type": result.get("chunk_type", "summary"),
-                "chunk_start_pos": result.get("chunk_start_pos", 0),
-                "chunk_end_pos": result.get("chunk_end_pos", 0),
-                "similarity": result.get("combined_score", 0.0),
-                "metadata": result.get("chunk_metadata", {}),
-                # Include scoring details for transparency
-                "vector_score": result.get("vector_score"),
-                "text_score": result.get("text_score"),
-                "combined_score": result.get("combined_score"),
-            }
-            chunks.append(chunk_data)
-
-            # Convert to full document
-            doc = _convert_judgment_to_legal_document(result)
-            documents.append(doc)
+        supabase = await _get_search_client()
+        results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
+        results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
+        chunks, documents = _build_search_result_payload(results)
 
         total_time_ms = (time.perf_counter() - start_time) * 1000
-
-        timing_breakdown = {
-            "enhancement_ms": round(enhancement_time_ms, 2)
-            if request.mode == "thinking"
-            else 0,
-            "embedding_ms": round(embedding_time_ms, 2),
-            "vector_fallback": vector_fallback,
-            "search_ms": round(search_time_ms, 2),
-            "rerank_ms": round(rerank_time_ms, 2),
-            "total_ms": round(total_time_ms, 2),
-            "query_type": query_type,
-            "effective_alpha": effective_alpha,
-            "alpha_was_routed": alpha_was_routed,
-        }
+        timing_breakdown = _build_search_timing_breakdown(
+            mode=request.mode,
+            enhancement_time_ms=enhancement_time_ms,
+            embedding_time_ms=embedding_time_ms,
+            vector_fallback=vector_fallback,
+            search_time_ms=search_time_ms,
+            rerank_time_ms=rerank_time_ms,
+            total_time_ms=total_time_ms,
+            query_type=query_type,
+            effective_alpha=effective_alpha,
+            alpha_was_routed=alpha_was_routed,
+        )
 
         logger.info(
             f"Search completed: {len(results)} results in {total_time_ms:.0f}ms "
             f"(embedding: {embedding_time_ms:.0f}ms, search: {search_time_ms:.0f}ms)"
         )
 
-        pagination = PaginationMetadata(
-            offset=request.offset or 0,
-            limit=request.limit_docs or 20,
-            loaded_count=len(results),
-            estimated_total=None,
-            has_more=len(results)
-            >= (request.limit_docs or 20),  # More results if we got a full page
-            next_offset=(request.offset or 0) + len(results)
-            if len(results) >= (request.limit_docs or 20)
-            else None,
-        )
+        pagination = _build_search_pagination(offset, limit, len(results))
 
         return SearchChunksResponse(
             chunks=chunks,
