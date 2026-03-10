@@ -10,7 +10,7 @@
     "start": "next start -p 3006",
     "lint": "eslint app components contexts hooks lib types --ext .js,.jsx,.ts,.tsx",
     "test:document-types": "node scripts/validate-document-types.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit --incremental false",
     "validate": "npm run test:document-types && npm run lint && npm run typecheck",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -78,6 +78,7 @@
     "exceljs": "^4.4.0",
     "framer-motion": "^12.9.4",
     "highlight.js": "^11.10.0",
+    "jsdom": "^28.1.0",
     "jspdf": "^4.2.0",
     "lowlight": "^3.1.0",
     "lucide-react": "^0.544.0",
@@ -103,6 +104,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.41.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.0",
@@ -115,10 +117,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "^1.0.0",
+    "chrome-launcher": "^1.2.1",
     "eslint": "^9.36.0",
     "eslint-config-next": "15.5.7",
     "jest": "^30.1.3",
     "jest-environment-jsdom": "^30.1.2",
+    "lighthouse": "^13.0.3",
     "playwright": "^1.41.0",
     "tailwindcss": "^4",
     "typescript": "^5"
@@ -173,5 +177,14 @@
   "optionalDependencies": {
     "lightningcss-linux-arm64-musl": "^1.30.1",
     "lightningcss-linux-x64-gnu": "^1.30.1"
+  },
+  "depcheck": {
+    "ignores": [
+      "tailwindcss-animate",
+      "@tailwindcss/postcss",
+      "@types/jest",
+      "jest-environment-jsdom",
+      "tailwindcss"
+    ]
   }
 }

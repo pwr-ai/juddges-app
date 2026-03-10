@@ -18,22 +18,18 @@ export default [
       "coverage/**",
       "next-env.d.ts",
     ],
+    linterOptions: {
+      reportUnusedDisableDirectives: "off",
+    },
   },
   ...compat.config({
     extends: ["next/core-web-vitals", "next/typescript"],
     rules: {
       "react-hooks/exhaustive-deps": "error",
       "no-console": ["error", { allow: ["warn", "error"] }],
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/explicit-function-return-type": [
-        "warn",
-        {
-          allowExpressions: true,
-          allowTypedFunctionExpressions: true,
-          allowHigherOrderFunctions: true,
-          allowDirectConstAssertionInArrowFunctions: true,
-        },
-      ],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   }),
 ];

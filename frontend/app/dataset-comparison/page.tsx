@@ -4,7 +4,14 @@ import dynamic from 'next/dynamic';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import stats from '@/lib/stats/dataset-comparison-stats.json';
 
-const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
+const Plot = dynamic(
+  async () => {
+    const plotly = await import('plotly.js-dist');
+    const createPlotlyComponent = (await import('react-plotly.js/factory')).default;
+    return createPlotlyComponent(plotly);
+  },
+  { ssr: false }
+);
 
 // Colors
 const UK_COLOR = '#3b82f6';
