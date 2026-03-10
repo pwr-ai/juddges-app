@@ -322,6 +322,11 @@ def _heuristic_query_analysis(query: str) -> QueryAnalysisResult:
     )
 
 
+def analyze_query_heuristic(query: str) -> QueryAnalysisResult:
+    """Public helper for deterministic query analysis without LLM calls."""
+    return _heuristic_query_analysis(query)
+
+
 async def analyze_query_with_fallback(
     query: str,
     llm: ChatOpenAI | None = None,

@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
-from app.services.search import MeiliSearchService, SearchServiceError
+from app.services.search import (
+    MeiliSearchService,
+    SearchServiceError,
+    _normalize_meilisearch_url_for_runtime,
+)
 
 
 def _mock_response(status_code: int, json_data: dict) -> httpx.Response:
@@ -53,6 +57,30 @@ class TestConfiguredProperties:
     def test_admin_configured_false(self, search_only_service):
         assert search_only_service.admin_configured is False
 
+    def test_from_env_uses_master_key_fallback(self, monkeypatch):
+        monkeypatch.setenv("MEILISEARCH_URL", "http://meili:7700")
+        monkeypatch.setenv("MEILI_MASTER_KEY", "master-key")
+        monkeypatch.delenv("MEILISEARCH_SEARCH_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_API_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_ADMIN_KEY", raising=False)
+        monkeypatch.setenv("MEILISEARCH_INDEX_NAME", "judgments")
+
+        svc = MeiliSearchService.from_env()
+        assert svc.configured is True
+        assert svc.admin_configured is True
+
+    def test_normalize_url_rewrites_localhost_in_docker(self, monkeypatch):
+        monkeypatch.setattr("app.services.search.os.path.exists", lambda p: True)
+        normalized = _normalize_meilisearch_url_for_runtime("http://localhost:7700")
+        assert normalized == "http://meilisearch-dev:7700"
+
+    def test_normalize_url_keeps_remote_host_in_docker(self, monkeypatch):
+        monkeypatch.setattr("app.services.search.os.path.exists", lambda p: True)
+        normalized = _normalize_meilisearch_url_for_runtime(
+            "https://search.example.com"
+        )
+        assert normalized == "https://search.example.com"
+
 
 class TestAutocomplete:
     @pytest.mark.asyncio
@@ -72,6 +100,9 @@ class TestAutocomplete:
         assert payload["limit"] == 5
         assert "case_number" in payload["attributesToHighlight"]
         assert "attributesToRetrieve" in payload
+        assert payload["matchingStrategy"] == "last"
+        assert payload["attributesToSearchOn"][0] == "title"
+        assert payload["attributesToCrop"] == ["summary"]
 
     @pytest.mark.asyncio
     async def test_autocomplete_raises_when_not_configured(self):

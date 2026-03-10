@@ -122,6 +122,35 @@ _POLISH_STOPWORDS = frozenset(
         "odpowiedzialność",
     }
 )
+_ENGLISH_STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "of",
+        "to",
+        "for",
+        "in",
+        "on",
+        "at",
+        "by",
+        "with",
+        "from",
+        "what",
+        "when",
+        "how",
+        "can",
+        "does",
+        "do",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+    }
+)
 
 
 def _detect_search_language(
@@ -1045,15 +1074,42 @@ async def _prepare_search_queries(
             effective_filters,
         )
 
-    from app.query_analysis import analyze_query_with_fallback
+    from app.query_analysis import analyze_query_heuristic, analyze_query_with_fallback
 
     enhancement_start = time.perf_counter()
     logger.info(f"Analyzing query in thinking mode: {query}")
-    (
-        analysis,
-        query_analysis_source,
-        query_analysis_error,
-    ) = await analyze_query_with_fallback(query)
+    query_analysis_error: str | None = None
+    # Fast path: when caller requests text-only search, avoid slow LLM analysis.
+    if request.alpha <= 0.05:
+        analysis = analyze_query_heuristic(query)
+        query_analysis_source = "heuristic"
+        query_analysis_error = "fast_path_text_only"
+    else:
+        timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "1200"))
+        try:
+            if timeout_ms > 0:
+                (
+                    analysis,
+                    query_analysis_source,
+                    query_analysis_error,
+                ) = await asyncio.wait_for(
+                    analyze_query_with_fallback(query),
+                    timeout=timeout_ms / 1000.0,
+                )
+            else:
+                (
+                    analysis,
+                    query_analysis_source,
+                    query_analysis_error,
+                ) = await analyze_query_with_fallback(query)
+        except TimeoutError:
+            analysis = analyze_query_heuristic(query)
+            query_analysis_source = "heuristic"
+            query_analysis_error = (
+                f"query_analysis_timeout_{timeout_ms}ms"
+                if timeout_ms > 0
+                else "query_analysis_timeout"
+            )
     enhancement_time_ms = (time.perf_counter() - enhancement_start) * 1000
 
     if query_analysis_source == "heuristic":
@@ -1183,6 +1239,179 @@ def _build_search_rpc_params(
     }
 
 
+def _has_any_filters(filters: dict[str, Any]) -> bool:
+    for value in filters.values():
+        if value is None:
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        return True
+    return False
+
+
+def _empty_filters() -> dict[str, Any]:
+    return {
+        "jurisdictions": None,
+        "court_names": None,
+        "court_levels": None,
+        "case_types": None,
+        "decision_types": None,
+        "outcomes": None,
+        "keywords": None,
+        "legal_topics": None,
+        "cited_legislation": None,
+        "date_from": None,
+        "date_to": None,
+    }
+
+
+def _build_relaxed_keyword_query(query: str, language: str) -> str | None:
+    tokens = re.findall(r"\w+", query.lower())
+    if not tokens:
+        return None
+
+    stopwords = _POLISH_STOPWORDS if language == "polish" else _ENGLISH_STOPWORDS
+    kept = [t for t in tokens if len(t) >= 3 and t not in stopwords]
+    if not kept:
+        kept = [t for t in tokens if len(t) >= 3]
+
+    if not kept:
+        return None
+    return " ".join(kept[:8])
+
+
+def _build_generic_legal_query(language: str) -> str:
+    if language == "polish":
+        return "prawo wyrok sąd orzeczenie"
+    return "law judgment court appeal"
+
+
+async def _run_zero_result_fallbacks(
+    *,
+    request: SearchChunksRequest,
+    query: str,
+    semantic_query: str,
+    keyword_query: str,
+    search_language: str,
+    effective_alpha: float,
+    initial_query_embedding: list[float] | None,
+    supabase: Any,
+    limit: int,
+    offset: int,
+    vector_fallback: bool,
+) -> tuple[list[dict[str, Any]], float, bool, str | None, str | None, bool]:
+    """Retry zero-result thinking queries with progressively broader rewrites."""
+    explicit_filters = _build_effective_filters(request)
+    attempts: list[tuple[str, str, str, float, dict[str, Any]]] = []
+    seen: set[tuple[str, float, bool]] = set()
+
+    def add_attempt(
+        stage: str,
+        semantic_text: str,
+        keyword_text: str,
+        alpha: float,
+        filters: dict[str, Any],
+    ) -> None:
+        key = (keyword_text.strip().lower(), round(alpha, 2), _has_any_filters(filters))
+        if not keyword_text.strip() or key in seen:
+            return
+        seen.add(key)
+        attempts.append((stage, semantic_text, keyword_text, alpha, filters))
+
+    add_attempt(
+        "semantic_retry",
+        semantic_query,
+        semantic_query,
+        effective_alpha,
+        explicit_filters,
+    )
+
+    relaxed_query = _build_relaxed_keyword_query(keyword_query, search_language)
+    if relaxed_query:
+        add_attempt(
+            "relaxed_terms",
+            semantic_query,
+            relaxed_query,
+            effective_alpha,
+            explicit_filters,
+        )
+
+    generic_query = _build_generic_legal_query(search_language)
+    add_attempt(
+        "generic_legal",
+        semantic_query,
+        generic_query,
+        0.0,
+        explicit_filters,
+    )
+
+    if _has_any_filters(explicit_filters):
+        add_attempt(
+            "generic_unfiltered",
+            semantic_query,
+            generic_query,
+            0.0,
+            _empty_filters(),
+        )
+
+    total_fallback_ms = 0.0
+    for stage, semantic_text, keyword_text, alpha, filters in attempts:
+        emb_ms = 0.0
+        emb_fallback = False
+        if alpha <= 0:
+            fallback_embedding = None
+        elif alpha == effective_alpha and semantic_text == semantic_query:
+            fallback_embedding = initial_query_embedding
+        else:
+            fallback_embedding, emb_ms, emb_fallback = await _generate_search_embedding(
+                semantic_text,
+                alpha,
+            )
+        vector_fallback = vector_fallback or emb_fallback
+
+        fallback_language = _detect_search_language(
+            keyword_text,
+            request.languages,
+            filters["jurisdictions"],
+        )
+        fallback_params = _build_search_rpc_params(
+            query_embedding=fallback_embedding,
+            keyword_query=keyword_text,
+            search_language=fallback_language,
+            effective_filters=filters,
+            effective_alpha=alpha,
+            limit=limit,
+            offset=offset,
+        )
+        fallback_results, fallback_search_ms = await _run_hybrid_search(
+            supabase, fallback_params
+        )
+        total_fallback_ms += emb_ms + fallback_search_ms
+
+        logger.info(
+            "Zero-result fallback attempt",
+            stage=stage,
+            alpha=alpha,
+            query=keyword_text,
+            result_count=len(fallback_results),
+            filters_applied=_has_any_filters(filters),
+        )
+
+        if fallback_results:
+            return (
+                fallback_results,
+                total_fallback_ms,
+                True,
+                stage,
+                keyword_text,
+                vector_fallback,
+            )
+
+    return [], total_fallback_ms, False, None, None, vector_fallback
+
+
 async def _run_hybrid_search(
     supabase: Any,
     rpc_params: dict[str, Any],
@@ -1250,6 +1479,9 @@ def _build_search_timing_breakdown(
     vector_fallback: bool,
     search_time_ms: float,
     rerank_time_ms: float,
+    fallback_time_ms: float,
+    fallback_used: bool,
+    fallback_stage: str | None,
     total_time_ms: float,
     query_type: str,
     effective_alpha: float,
@@ -1261,6 +1493,9 @@ def _build_search_timing_breakdown(
         "vector_fallback": vector_fallback,
         "search_ms": round(search_time_ms, 2),
         "rerank_ms": round(rerank_time_ms, 2),
+        "fallback_ms": round(fallback_time_ms, 2),
+        "fallback_used": fallback_used,
+        "fallback_stage": fallback_stage or "",
         "total_ms": round(total_time_ms, 2),
         "query_type": query_type,
         "effective_alpha": effective_alpha,
@@ -1346,6 +1581,35 @@ async def search_documents(request: SearchChunksRequest):
         )
         supabase = await _get_search_client()
         results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
+        fallback_time_ms = 0.0
+        fallback_used = False
+        fallback_stage: str | None = None
+
+        if request.mode == "thinking" and not results:
+            (
+                results,
+                fallback_time_ms,
+                fallback_used,
+                fallback_stage,
+                fallback_query,
+                vector_fallback,
+            ) = await _run_zero_result_fallbacks(
+                request=request,
+                query=query,
+                semantic_query=semantic_query,
+                keyword_query=keyword_query,
+                search_language=search_language,
+                effective_alpha=effective_alpha,
+                initial_query_embedding=query_embedding,
+                supabase=supabase,
+                limit=limit,
+                offset=offset,
+                vector_fallback=vector_fallback,
+            )
+            search_time_ms += fallback_time_ms
+            if fallback_query:
+                enhanced_query_text = fallback_query
+
         results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
         chunks, documents = _build_search_result_payload(results)
 
@@ -1357,6 +1621,9 @@ async def search_documents(request: SearchChunksRequest):
             vector_fallback=vector_fallback,
             search_time_ms=search_time_ms,
             rerank_time_ms=rerank_time_ms,
+            fallback_time_ms=fallback_time_ms,
+            fallback_used=fallback_used,
+            fallback_stage=fallback_stage,
             total_time_ms=total_time_ms,
             query_type=query_type,
             effective_alpha=effective_alpha,

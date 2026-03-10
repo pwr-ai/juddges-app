@@ -134,3 +134,7 @@ class TestIndexSettings:
         filterable = MEILISEARCH_INDEX_SETTINGS["filterableAttributes"]
         assert "jurisdiction" in filterable
         assert "decision_date" in filterable
+
+    def test_typo_tolerance_disables_roman_numerals(self):
+        typo_cfg = MEILISEARCH_INDEX_SETTINGS["typoTolerance"]
+        assert "ii" in typo_cfg["disableOnWords"]

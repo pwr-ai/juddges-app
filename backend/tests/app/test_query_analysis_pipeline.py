@@ -55,6 +55,20 @@ class _FakeSupabase:
         return SimpleNamespace(execute=lambda: SimpleNamespace(data=[row]))
 
 
+class _FakeSupabaseSequenced:
+    def __init__(self, capture: dict[str, Any], responses: list[list[dict[str, Any]]]):
+        self.capture = capture
+        self.responses = list(responses)
+        self.calls: list[dict[str, Any]] = []
+
+    def rpc(self, fn_name: str, params: dict[str, Any]):
+        self.capture["rpc_name"] = fn_name
+        self.capture["rpc_params"] = params
+        self.calls.append({"fn_name": fn_name, "params": params})
+        payload = self.responses.pop(0) if self.responses else []
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=payload))
+
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_thinking_mode_uses_separate_semantic_and_keyword_queries(monkeypatch):
@@ -202,3 +216,90 @@ async def test_thinking_mode_heuristic_fallback_source(monkeypatch):
 
     assert response.query_analysis_source == "heuristic"
     assert response.keyword_query == "contract dispute"
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_thinking_mode_zero_results_triggers_relaxed_fallback(monkeypatch):
+    capture: dict[str, Any] = {}
+
+    async def fake_generate_embedding(text: str):
+        # Keep deterministic vectors for both initial and fallback attempts.
+        capture.setdefault("embedded", []).append(text)
+        return [0.123, 0.456, 0.789]
+
+    def fake_analyze_query_heuristic(_query: str):
+        return QueryAnalysisResult(
+            semantic_query="criminal sentencing punishment conviction",
+            keyword_query="criminal sentencing guidelines",
+            jurisdictions=["UK"],  # inferred filter that may be too strict
+        )
+
+    row = {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "case_number": "UK-CA-2024-001",
+        "title": "Sentencing judgment",
+        "summary": "Court discusses criminal sentencing standards.",
+        "full_text": "Full text",
+        "jurisdiction": "UK",
+        "court_name": "Court of Appeal",
+        "court_level": "Appeal Court",
+        "case_type": "Criminal",
+        "decision_type": "Judgment",
+        "outcome": "Dismissed",
+        "decision_date": "2024-01-15",
+        "publication_date": "2024-01-20",
+        "keywords": ["sentencing", "criminal"],
+        "legal_topics": ["criminal law"],
+        "cited_legislation": [],
+        "judges": [],
+        "metadata": {"language": "en"},
+        "source_dataset": "demo",
+        "source_id": "1",
+        "source_url": "https://example.test/1",
+        "vector_score": 0.81,
+        "text_score": 0.62,
+        "combined_score": 0.73,
+        "chunk_text": "Court discusses criminal sentencing standards.",
+        "chunk_type": "summary",
+        "chunk_start_pos": 0,
+        "chunk_end_pos": 44,
+        "chunk_metadata": {"court_name": "Court of Appeal"},
+    }
+
+    # First call returns no results, second call returns data.
+    fake_supabase = _FakeSupabaseSequenced(capture, responses=[[], [row]])
+
+    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr(
+        "app.query_analysis.analyze_query_heuristic",
+        fake_analyze_query_heuristic,
+    )
+    monkeypatch.setattr(
+        "app.core.supabase.get_supabase_client",
+        lambda: fake_supabase,
+    )
+
+    response = await search_documents(
+        SearchChunksRequest(
+            query="criminal sentencing guidelines",
+            mode="thinking",
+            alpha=0.0,
+            limit_docs=5,
+        )
+    )
+
+    assert len(fake_supabase.calls) >= 2
+    first_call = fake_supabase.calls[0]["params"]
+    second_call = fake_supabase.calls[1]["params"]
+    assert first_call["search_text"] == "criminal sentencing guidelines"
+    assert second_call["search_text"] in (
+        "criminal sentencing punishment conviction",
+        "criminal sentencing guidelines",
+    )
+    assert second_call["hybrid_alpha"] == 0.0
+
+    assert response.unique_documents >= 1
+    assert response.timing_breakdown is not None
+    assert response.timing_breakdown["fallback_used"] is True
+    assert response.timing_breakdown["fallback_ms"] >= 0

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import os
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 from loguru import logger
@@ -44,14 +46,18 @@ class MeiliSearchService:
 
     @classmethod
     def from_env(cls) -> MeiliSearchService:
+        base_url = os.getenv("MEILISEARCH_INTERNAL_URL") or os.getenv("MEILISEARCH_URL")
+        base_url = _normalize_meilisearch_url_for_runtime(base_url)
         return cls(
-            base_url=os.getenv("MEILISEARCH_URL"),
+            base_url=base_url,
             api_key=(
                 os.getenv("MEILISEARCH_SEARCH_KEY")
                 or os.getenv("MEILISEARCH_API_KEY")
                 or os.getenv("MEILISEARCH_ADMIN_KEY")
+                or os.getenv("MEILI_MASTER_KEY")
             ),
-            admin_key=os.getenv("MEILISEARCH_ADMIN_KEY"),
+            admin_key=os.getenv("MEILISEARCH_ADMIN_KEY")
+            or os.getenv("MEILI_MASTER_KEY"),
             index_name=os.getenv("MEILISEARCH_INDEX_NAME", "judgments"),
             timeout_seconds=float(os.getenv("MEILISEARCH_TIMEOUT_SECONDS", "5")),
         )
@@ -81,12 +87,23 @@ class MeiliSearchService:
         payload: dict[str, Any] = {
             "q": query,
             "limit": limit,
+            # Keep autocomplete focused on short, high-signal fields.
+            "attributesToSearchOn": [
+                "title",
+                "case_number",
+                "keywords",
+                "legal_topics",
+                "court_name",
+                "summary",
+            ],
             "attributesToHighlight": [
                 "title",
                 "summary",
                 "case_number",
                 "court_name",
             ],
+            "attributesToCrop": ["summary"],
+            "cropLength": 24,
             "attributesToRetrieve": [
                 "id",
                 "title",
@@ -100,6 +117,7 @@ class MeiliSearchService:
             ],
             "highlightPreTag": "<mark>",
             "highlightPostTag": "</mark>",
+            "matchingStrategy": "last",
         }
         if filters:
             payload["filter"] = filters
@@ -235,3 +253,25 @@ class MeiliSearchService:
             response = await client.get(url, headers=self._admin_headers())
             response.raise_for_status()
             return response.json()
+
+
+def _normalize_meilisearch_url_for_runtime(base_url: str | None) -> str | None:
+    """Normalize Meilisearch URL for common Docker-compose dev topology.
+
+    When backend runs in Docker, ``localhost`` points to the backend container.
+    In this repository, Meilisearch is reachable as ``meilisearch-dev`` on the
+    compose network, so we rewrite localhost URLs automatically.
+    """
+    if not base_url:
+        return base_url
+
+    if not Path("/.dockerenv").exists():
+        return base_url
+
+    parsed = urlparse(base_url)
+    if parsed.hostname not in {"localhost", "127.0.0.1"}:
+        return base_url
+
+    port = parsed.port or 7700
+    rewritten = parsed._replace(netloc=f"meilisearch-dev:{port}")
+    return urlunparse(rewritten)

@@ -16,7 +16,14 @@ def _clear_overrides():
 
 async def test_autocomplete_returns_503_when_meilisearch_not_configured(
     authenticated_client,
+    monkeypatch,
 ):
+    monkeypatch.delenv("MEILISEARCH_URL", raising=False)
+    monkeypatch.delenv("MEILISEARCH_SEARCH_KEY", raising=False)
+    monkeypatch.delenv("MEILISEARCH_API_KEY", raising=False)
+    monkeypatch.delenv("MEILISEARCH_ADMIN_KEY", raising=False)
+    monkeypatch.delenv("MEILI_MASTER_KEY", raising=False)
+
     response = await authenticated_client.get(
         "/api/search/autocomplete", params={"q": "vat"}
     )
