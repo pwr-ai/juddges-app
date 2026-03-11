@@ -52,7 +52,7 @@ if [ ! -f .env ]; then
 fi
 
 # Check required vars
-REQUIRED_VARS=("SUPABASE_URL" "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_ANON_KEY" "OPENAI_API_KEY" "LANGGRAPH_POSTGRES_URL")
+REQUIRED_VARS=("SUPABASE_URL" "SUPABASE_SERVICE_ROLE_KEY" "SUPABASE_ANON_KEY" "OPENAI_API_KEY" "DATABASE_URL")
 for var in "${REQUIRED_VARS[@]}"; do
     if grep -q "^${var}=" .env; then
         echo -e "${GREEN}✓${NC} $var is set"

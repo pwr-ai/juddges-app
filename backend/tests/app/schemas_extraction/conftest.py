@@ -19,7 +19,7 @@ os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 os.environ.setdefault(
-    "LANGGRAPH_POSTGRES_URL", "postgresql://test:test@localhost:5432/test"
+    "DATABASE_URL", "postgresql://test:test@localhost:5432/test"
 )
 os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")

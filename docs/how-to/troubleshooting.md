@@ -112,7 +112,7 @@ echo $SUPABASE_URL
 echo $SUPABASE_SERVICE_ROLE_KEY
 echo $OPENAI_API_KEY
 echo $BACKEND_API_KEY
-echo $LANGGRAPH_POSTGRES_URL
+echo $DATABASE_URL
 
 # Add missing vars to .env.secrets
 ```

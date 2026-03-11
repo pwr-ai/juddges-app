@@ -55,7 +55,7 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 
 # Backend Configuration
 BACKEND_API_KEY=your-backend-secret-key
-LANGGRAPH_POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/juddges
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/juddges
 
 # Redis (for guest sessions and caching)
 REDIS_HOST=localhost

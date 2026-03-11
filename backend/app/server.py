@@ -92,7 +92,7 @@ def validate_environment_variables():
     }
 
     optional_vars = {
-        "LANGGRAPH_POSTGRES_URL": "PostgreSQL URL for LangGraph checkpointer (falls back to in-memory)",
+        "DATABASE_URL": "PostgreSQL URL for persistent checkpointer state (falls back to in-memory)",
         "REDIS_HOST": "Redis host for guest sessions (default: localhost)",
         "REDIS_PORT": "Redis port for guest sessions (default: 6379)",
         "REDIS_AUTH": "Redis password for guest sessions",
@@ -185,7 +185,7 @@ async def lifespan(app: FastAPI):
     app.state.initial_state = None
 
     # Step 4: Setup LangGraph checkpointer (PostgreSQL or in-memory fallback)
-    pg_url = os.environ.get("LANGGRAPH_POSTGRES_URL")
+    pg_url = os.environ.get("DATABASE_URL")
     pool = None
     if pg_url:
         try:
@@ -229,7 +229,7 @@ async def lifespan(app: FastAPI):
             app.state.checkpointer = MemorySaver()
     else:
         logger.warning(
-            "LANGGRAPH_POSTGRES_URL not set — using in-memory checkpointer (non-persistent)"
+            "DATABASE_URL not set — using in-memory checkpointer (non-persistent)"
         )
         app.state.checkpointer = MemorySaver()
 

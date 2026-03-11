@@ -283,7 +283,7 @@ Next.js 15 with App Router:
 - `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key (backend only, never expose to frontend)
 - `OPENAI_API_KEY`: OpenAI API key for embeddings and chat
 - `BACKEND_API_KEY`: API key for backend authentication
-- `LANGGRAPH_POSTGRES_URL`: PostgreSQL connection for LangGraph checkpointer
+- `DATABASE_URL`: PostgreSQL connection for the persistent checkpointer
 
 ### Optional
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`: LLM observability

@@ -103,13 +103,13 @@ async def check_postgresql(timeout: float = 3.0) -> ServiceHealth:
     service_name = "postgresql"
 
     try:
-        db_url = os.getenv("LANGGRAPH_POSTGRES_URL")
+        db_url = os.getenv("DATABASE_URL")
         if not db_url:
             return ServiceHealth(
                 name=service_name,
                 status=ServiceStatus.UNKNOWN,
                 message="PostgreSQL URL not configured",
-                error="LANGGRAPH_POSTGRES_URL environment variable not set",
+                error="DATABASE_URL environment variable not set",
                 last_checked=datetime.now(UTC),
             )
 
