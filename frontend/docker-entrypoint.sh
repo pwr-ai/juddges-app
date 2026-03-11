@@ -43,6 +43,27 @@ console.log('[Runtime Config] Environment variables loaded from docker-entrypoin
 EOF
 
 echo "Runtime configuration file created successfully ✓"
+
+# ==========================================================================
+# Runtime Environment Injection into Built JS
+# ==========================================================================
+# Next.js inlines NEXT_PUBLIC_* at build time. In standalone Docker builds,
+# process.env.NEXT_PUBLIC_* references become literal strings in the bundle.
+# We patch these build-time placeholders with actual runtime values.
+echo "Injecting runtime environment into built JS files..."
+
+# Build-time placeholder for API_BASE_URL (the value baked into the image)
+# The image was built with this value; we replace it with the runtime value.
+BUILD_TIME_API_URL="${BUILD_TIME_API_BASE_URL:-}"
+
+if [ -n "$API_BASE_URL" ]; then
+  # Patch built Next.js files to replace empty build-time env values
+  # with actual runtime values. Uses a separate Node.js script to avoid
+  # shell escaping issues with complex patterns.
+  node patch-env.js
+  echo "  API_BASE_URL injected: ${API_BASE_URL} ✓"
+fi
+
 echo "======================================"
 
 # Set server-side environment variables (for API routes)

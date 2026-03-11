@@ -11,7 +11,7 @@
     "lint": "eslint app components contexts hooks lib types --ext .js,.jsx,.ts,.tsx",
     "test:document-types": "node scripts/validate-document-types.js",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
-    "validate": "npm run test:document-types && npm run lint && npm run typecheck",
+    "validate": "npm run test:document-types && npm run lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

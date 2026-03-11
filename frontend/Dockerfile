@@ -116,10 +116,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public files
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy runtime configuration script
-# This script generates public/env-config.js with runtime environment variables
-# allowing configuration changes without rebuilding the Docker image
-COPY --chown=nextjs:nodejs docker-entrypoint.sh .
+# Copy runtime configuration scripts
+# docker-entrypoint.sh generates public/env-config.js with runtime environment variables
+# patch-env.js replaces empty build-time NEXT_PUBLIC_* values in the JS bundle
+COPY --chown=nextjs:nodejs docker-entrypoint.sh patch-env.js ./
 RUN chmod +x docker-entrypoint.sh
 
 # Switch to non-root user for security

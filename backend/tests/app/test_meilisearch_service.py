@@ -70,12 +70,12 @@ class TestConfiguredProperties:
         assert svc.admin_configured is True
 
     def test_normalize_url_rewrites_localhost_in_docker(self, monkeypatch):
-        monkeypatch.setattr("app.services.search.os.path.exists", lambda p: True)
+        monkeypatch.setattr("app.services.search.Path.exists", lambda _: True)
         normalized = _normalize_meilisearch_url_for_runtime("http://localhost:7700")
         assert normalized == "http://meilisearch-dev:7700"
 
     def test_normalize_url_keeps_remote_host_in_docker(self, monkeypatch):
-        monkeypatch.setattr("app.services.search.os.path.exists", lambda p: True)
+        monkeypatch.setattr("app.services.search.Path.exists", lambda _: True)
         normalized = _normalize_meilisearch_url_for_runtime(
             "https://search.example.com"
         )

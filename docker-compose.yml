@@ -40,11 +40,6 @@ services:
       # Runtime configuration
       - PORT=3006
       - HOSTNAME=0.0.0.0
-      # nginx-proxy reverse proxy configuration
-      - "VIRTUAL_HOST=${VIRTUAL_HOST_FRONTEND}"
-      - "VIRTUAL_PORT=${VIRTUAL_PORT_FRONTEND}"
-      - "LETSENCRYPT_HOST=${VIRTUAL_HOST_FRONTEND}"
-      - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
     # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -55,7 +50,7 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - app-network
-      - nginx-router_proxy-tier  # Optional: for nginx-proxy reverse proxy integration
+      - data_stack_network  # Caddy reverse proxy network
     # Health check for Next.js frontend
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3006/', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
@@ -90,25 +85,16 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      # nginx-proxy reverse proxy configuration
-      - "VIRTUAL_HOST=${VIRTUAL_HOST_BACKEND}"
-      - "VIRTUAL_PORT=${VIRTUAL_PORT_BACKEND}"
-      - "LETSENCRYPT_HOST=${VIRTUAL_HOST_BACKEND}"
-      - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
-    # All other environment variables loaded from env_file
+    # All environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "com.juddges.service=application"
       - "com.juddges.service.type=backend-api"
-    # Backend API does not need to depend on backend-worker
-    # Workers are independent task processors and API can start without them
-    # Remove depends_on to allow independent scaling and deployment
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - app-network
-      - nginx-router_proxy-tier  # Optional: for nginx-proxy reverse proxy integration
+      - data_stack_network  # Caddy reverse proxy network
     # Health check for FastAPI backend using dedicated health endpoint
     # Uses /health/healthz - lightweight check without authentication
     healthcheck:
@@ -281,8 +267,6 @@ networks:
     name: juddges-app-network
     driver: bridge
 
-  # Optional: External nginx-proxy reverse proxy network
-  # Only needed if using jwilder/nginx-proxy for automatic SSL/reverse proxy
-  # Comment out if not using nginx-proxy
-  nginx-router_proxy-tier:
+  # External Caddy reverse proxy network (shared with caddy-local gateway)
+  data_stack_network:
     external: true

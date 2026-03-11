@@ -1238,7 +1238,7 @@ async def get_generation_session(session_id: str) -> dict[str, Any]:
             )
 
         logger.info(f"Retrieving generation session: {session_id}")
-        agent, created_at = _generation_sessions[session_id]
+        _agent, created_at = _generation_sessions[session_id]
 
         # Return basic session metadata
         # Note: Full state would require querying the agent's checkpoint

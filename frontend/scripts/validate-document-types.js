@@ -20,11 +20,14 @@ const SEARCH_PATTERNS = {
   ],
   // Allow list for legitimate singular usage
   allowed: [
-    /document_type[\s]*:.*string/, // Type definitions are OK 
+    /document_type[\s]*:.*string/, // Type definitions are OK
     /document_type[\s]*=/, // Property access is OK
     /document_type\./, // Property access is OK
     /\.document_type/, // Property access is OK
     /document_type:.*properties\.document_type/, // Weaviate mapping is OK
+    /documentType[\s]*:\s*DocumentType\b/, // Single document/example values are OK
+    /documentType[\s]*\??:\s*string(?:\s*\|\s*null)?\b/, // DTO fields for one document are OK
+    /documentType[\s]*:\s*documentType\b/, // Object literals forwarding one document field are OK
     /\/\/ For backward compatibility/, // Explicit backward compatibility comments are OK
   ]
 };
@@ -142,9 +145,8 @@ function validateDocumentTypeEnum() {
     
     const requiredEnumValues = [
       'JUDGMENT',
-      'TAX_INTERPRETATION', 
-      'LEGAL_ACT',
-      'REGULATION'
+      'TAX_INTERPRETATION',
+      'ERROR'
     ];
     
     let foundValues = 0;

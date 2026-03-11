@@ -378,7 +378,7 @@ async def extract_with_base_schema(
             )
 
             # Validate extraction
-            is_valid, validation_errors = extractor.validate_extraction(extracted_data)
+            _is_valid, validation_errors = extractor.validate_extraction(extracted_data)
 
             # Store in Supabase
             if supabase:
