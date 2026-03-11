@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 from juddges_search.chains.chat import chat_chain
 from juddges_search.chains.enhance_query import enhance_query_chain
 from juddges_search.chains.qa import chain
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langserve import add_routes
 from loguru import logger
@@ -85,13 +86,13 @@ def validate_environment_variables():
     """
     required_vars = {
         "BACKEND_API_KEY": "API key for backend authentication",
-        "LANGGRAPH_POSTGRES_URL": "PostgreSQL URL for LangGraph checkpointer (local db:5432/juddges)",
         "OPENAI_API_KEY": "OpenAI API key for LLM operations",
         "SUPABASE_URL": "Supabase project URL (for database and vector search)",
         "SUPABASE_SERVICE_ROLE_KEY": "Supabase service role key (for database operations)",
     }
 
     optional_vars = {
+        "LANGGRAPH_POSTGRES_URL": "PostgreSQL URL for LangGraph checkpointer (falls back to in-memory)",
         "REDIS_HOST": "Redis host for guest sessions (default: localhost)",
         "REDIS_PORT": "Redis port for guest sessions (default: 6379)",
         "REDIS_AUTH": "Redis password for guest sessions",
@@ -183,71 +184,99 @@ async def lifespan(app: FastAPI):
     app.state.agent = None
     app.state.initial_state = None
 
-    # Step 4: Setup database connection pool
-    logger.info("Setting up PostgreSQL connection pool...")
-    async with AsyncConnectionPool(
-        f"{os.environ['LANGGRAPH_POSTGRES_URL']}",
-        min_size=5,
-        max_size=20,
-        max_idle=300,  # 5 minutes
-        max_lifetime=3600,  # 1 hour
-        kwargs={
-            "autocommit": True,  # required by saver setup
-            "row_factory": dict_row,  # saver accesses rows by name
-            "prepare_threshold": None,  # avoid _pg3_* prepared stmt collisions
-        },
-    ) as pool:
-        app.state.checkpointer = AsyncPostgresSaver(pool)
-        logger.info("PostgreSQL connection pool initialized successfully")
-
-        # Step 5: Supabase client (uses shared singleton from app.core.supabase)
-        logger.info(
-            "Using shared Supabase client for database and vector search operations"
-        )
-
-        # Step 6: Initialize Meilisearch index (optional — non-blocking)
+    # Step 4: Setup LangGraph checkpointer (PostgreSQL or in-memory fallback)
+    pg_url = os.environ.get("LANGGRAPH_POSTGRES_URL")
+    pool = None
+    if pg_url:
         try:
-            from app.services.meilisearch_config import setup_meilisearch_index
-            from app.services.search import MeiliSearchService
+            logger.info("Setting up PostgreSQL connection pool for LangGraph...")
+            # Use a single test connection first to fail fast
+            import psycopg
 
-            meili_service = MeiliSearchService.from_env()
-            if meili_service.admin_configured:
-                logger.info("Setting up Meilisearch index...")
-                await setup_meilisearch_index(meili_service)
-            else:
-                logger.info(
-                    "Meilisearch admin key not configured — skipping index setup"
-                )
+            test_conn = await asyncio.wait_for(
+                psycopg.AsyncConnection.connect(
+                    pg_url,
+                    autocommit=True,
+                    connect_timeout=10,
+                ),
+                timeout=15,
+            )
+            await test_conn.execute("SELECT 1")
+            await test_conn.close()
+            logger.info("PostgreSQL test connection succeeded")
+
+            pool = AsyncConnectionPool(
+                pg_url,
+                min_size=5,
+                max_size=20,
+                max_idle=300,  # 5 minutes
+                max_lifetime=3600,  # 1 hour
+                kwargs={
+                    "autocommit": True,  # required by saver setup
+                    "row_factory": dict_row,  # saver accesses rows by name
+                    "prepare_threshold": None,  # avoid _pg3_* prepared stmt collisions
+                },
+            )
+            await pool.open()
+            app.state.checkpointer = AsyncPostgresSaver(pool)
+            logger.info("LangGraph PostgreSQL checkpointer initialized (persistent)")
         except Exception as e:
-            logger.warning(f"Meilisearch index setup failed (non-fatal): {e}")
+            logger.warning(f"PostgreSQL connection failed: {e}")
+            logger.warning("Falling back to in-memory checkpointer (non-persistent)")
+            if pool:
+                await pool.close()
+                pool = None
+            app.state.checkpointer = MemorySaver()
+    else:
+        logger.warning(
+            "LANGGRAPH_POSTGRES_URL not set — using in-memory checkpointer (non-persistent)"
+        )
+        app.state.checkpointer = MemorySaver()
 
-        # Step 7: Preload datasets (DISABLED - datasets are loaded on-demand)
-        # Dataset preloading has been disabled to speed up application startup.
-        # Datasets will be loaded automatically when first requested.
-        logger.info("Dataset preloading disabled - datasets will load on first request")
+    # Step 5: Supabase client (uses shared singleton from app.core.supabase)
+    logger.info(
+        "Using shared Supabase client for database and vector search operations"
+    )
 
-        # Step 7: Start background task for session cleanup
-        logger.info("Starting session cleanup background task...")
-        cleanup_task = asyncio.create_task(cleanup_expired_sessions())
-        logger.info("Session cleanup background task started successfully")
+    # Step 6: Initialize Meilisearch index (optional — non-blocking)
+    try:
+        from app.services.meilisearch_config import setup_meilisearch_index
+        from app.services.search import MeiliSearchService
 
-        logger.info("Application startup completed successfully")
+        meili_service = MeiliSearchService.from_env()
+        if meili_service.admin_configured:
+            logger.info("Setting up Meilisearch index...")
+            await setup_meilisearch_index(meili_service)
+        else:
+            logger.info("Meilisearch admin key not configured — skipping index setup")
+    except Exception as e:
+        logger.warning(f"Meilisearch index setup failed (non-fatal): {e}")
 
-        # Yield control to the application
-        yield
+    # Step 7: Preload datasets (DISABLED - datasets are loaded on-demand)
+    logger.info("Dataset preloading disabled - datasets will load on first request")
 
-        # Cleanup: Cancel the cleanup task on shutdown
-        logger.info("Stopping session cleanup background task...")
-        cleanup_task.cancel()
-        try:
-            await cleanup_task
-        except asyncio.CancelledError:
-            logger.info("Session cleanup background task cancelled successfully")
+    # Step 8: Start background task for session cleanup
+    logger.info("Starting session cleanup background task...")
+    cleanup_task = asyncio.create_task(cleanup_expired_sessions())
+    logger.info("Session cleanup background task started successfully")
 
-        # Cleanup on shutdown
-        logger.info("Starting application shutdown sequence...")
+    logger.info("Application startup completed successfully")
 
-    # Cleanup resources
+    # Yield control to the application
+    yield
+
+    # Cleanup: Cancel the cleanup task on shutdown
+    logger.info("Stopping session cleanup background task...")
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        logger.info("Session cleanup background task cancelled successfully")
+
+    # Cleanup on shutdown
+    logger.info("Starting application shutdown sequence...")
+    if pool:
+        await pool.close()
     del app.state.checkpointer
     del app.state.agent
     logger.info("Application shutdown completed successfully")
