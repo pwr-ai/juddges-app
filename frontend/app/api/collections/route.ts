@@ -10,7 +10,7 @@ export async function GET() {
     // Get the authenticated user
     const supabase = await createClient();
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !userData?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -38,7 +38,7 @@ export async function GET() {
     const collections = await response.json();
     return NextResponse.json(collections);
   } catch (error) {
-    console.error("Error in GET collections:", error);
+    console.error("Error in GET collections: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     const collection = await response.json();
     return NextResponse.json(collection);
   } catch (error) {
-    console.error("Error in POST collection:", error);
+    console.error("Error in POST collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

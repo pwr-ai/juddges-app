@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-**Juddges App** is a fork of the AI-Tax platform, specialized for searching and analyzing judicial decisions from Poland and the United Kingdom. The app provides semantic search capabilities across 6,000+ sampled court judgments using modern AI and vector database technology.
+**Juddges App** is a fork of the JuDDGES platform, specialized for searching and analyzing judicial decisions from Poland and the United Kingdom. The app provides semantic search capabilities across 6,000+ sampled court judgments using modern AI and vector database technology.
 
 ## 📊 Key Features
 
@@ -241,9 +241,9 @@ python ingest_judgments.py --uk 3000
 - [x] Build ingestion script
 
 ### Phase 2: Copy Boilerplate ✅
-- [x] Copy frontend from AI-Tax
-- [x] Copy backend from AI-Tax
-- [x] Update branding (AI-Tax → Juddges)
+- [x] Copy frontend from JuDDGES
+- [x] Copy backend from JuDDGES
+- [x] Update branding (JuDDGES → Juddges)
 - [x] Configure environment variables
 - [x] Test local development setup
 

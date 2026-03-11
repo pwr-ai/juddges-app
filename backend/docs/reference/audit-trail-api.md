@@ -112,7 +112,7 @@ Retrieve your own audit trail.
 
 **Example:**
 ```bash
-curl -X GET "https://api.ai-tax.com/api/audit/my-activity?limit=50" \
+curl -X GET "https://api.juddges.app/api/audit/my-activity?limit=50" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
@@ -160,12 +160,12 @@ Export your audit trail as JSON or CSV.
 **Example:**
 ```bash
 # Export as JSON
-curl -X GET "https://api.ai-tax.com/api/audit/my-activity/export?format=json" \
+curl -X GET "https://api.juddges.app/api/audit/my-activity/export?format=json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -o audit_trail.json
 
 # Export as CSV
-curl -X GET "https://api.ai-tax.com/api/audit/my-activity/export?format=csv" \
+curl -X GET "https://api.juddges.app/api/audit/my-activity/export?format=csv" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -o audit_trail.csv
 ```
@@ -187,7 +187,7 @@ Update user consent.
 ```
 
 **Consent Types:**
-- `professional_acknowledgment`: AI-Tax is not a replacement for professional advice
+- `professional_acknowledgment`: JuDDGES is not a replacement for professional advice
 - `terms`: Terms of Service
 - `privacy_policy`: Privacy Policy
 - `data_processing`: Data processing consent (GDPR)
@@ -263,7 +263,7 @@ Get Data Processing Agreement (DPA) information.
   "version": "1.0",
   "effective_date": "2025-01-01",
   "data_processor": {
-    "name": "AI-Tax",
+    "name": "JuDDGES",
     "contact": "legal@legal-ai.augustyniak.ai",
     "dpo_email": "dpo@legal-ai.augustyniak.ai"
   },

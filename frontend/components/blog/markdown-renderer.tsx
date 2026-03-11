@@ -39,7 +39,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
       try {
         hljs.highlightElement(codeRef.current);
       } catch (error) {
-        console.error("Error highlighting code:", error);
+        console.error("Error highlighting code: ", error);
       }
     }
   }, [language, children]);

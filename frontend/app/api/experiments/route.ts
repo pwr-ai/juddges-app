@@ -41,7 +41,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (status) params.set("status", status);
     if (featureArea) params.set("feature_area", featureArea);
 
-    const url = `${BACKEND_URL}${backendPath}${params.toString() ? "?" + params.toString() : ""}`;
+    const url = `${BACKEND_URL}${backendPath}${params.toString() ? "? " + params.toString() : ""}`;
 
     const backendResponse = await fetch(url, {
       headers: {

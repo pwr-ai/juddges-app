@@ -1,15 +1,13 @@
 "use client";
 
 import React from "react";
-import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
 import { SidebarTrigger } from "./ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PrimaryButton, SecondaryButton, UserAvatar, UserCard, PlanBadge, IconButton, Badge } from "@/lib/styles/components";
 import { AIBadge } from "@/lib/styles/components/ai-badge";
-import { Button } from "@/components/ui/button";
+
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -20,13 +18,11 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/lib/
 import { SaveToCollectionPopover } from "@/lib/styles/components/save-to-collection-popover";
 
 export function Navbar(): React.ReactElement {
-  const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const searchParams = useSearchParams();
-  const [mounted, setMounted] = React.useState(false);
   const [isUserCardOpen, setIsUserCardOpen] = React.useState(false);
   const [documentMetadata, setDocumentMetadata] = React.useState<{ document_number?: string | null; document_id?: string } | null>(null);
   const [collectionName, setCollectionName] = React.useState<string | null>(null);
@@ -37,7 +33,7 @@ export function Navbar(): React.ReactElement {
   const [htmlUrl, setHtmlUrl] = React.useState<string>('');
   const [fullMetadata, setFullMetadata] = React.useState<any>(null);
   const [isCollectionPopoverOpen, setIsCollectionPopoverOpen] = React.useState(false);
-  
+
   // Check if we're on the dashboard page, chat page, search page, collections page, extractions page, schemas page, or document-vis page
   const isDashboard = pathname === "/";
   const isChat = pathname === "/chat" || pathname.startsWith("/chat/");
@@ -52,7 +48,7 @@ export function Navbar(): React.ReactElement {
   const isExtract = pathname === "/extract";
   const isExtractions = pathname === "/extractions";
   const isExtractionResults = pathname?.startsWith("/extractions/") && params?.id;
-  
+
   // Get search type from store to show AI badge when thinking mode is active
   const searchType = useSearchStore((state) => state.searchType);
 
@@ -182,11 +178,11 @@ export function Navbar(): React.ReactElement {
   // Document action handlers
   const handlePrint = async (): Promise<void> => {
     if (!htmlUrl) return;
-    
+
     try {
       const res = await fetch(htmlUrl, { cache: 'no-store' });
       const htmlString = await res.text();
-      
+
       const printWindow = window.open('', '_blank');
       if (printWindow && htmlString) {
         printWindow.document.write(htmlString);
@@ -216,24 +212,6 @@ export function Navbar(): React.ReactElement {
     router.push('/document-vis');
   };
 
-  // After mounting, we have access to the theme
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Prevent hydration mismatch by not rendering theme-dependent elements until mounted
-  if (!mounted) {
-    return (
-      <header className="flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem] bg-background sticky top-0 z-30 transition-all">
-        <div className="flex items-center gap-3 md:gap-5">
-        </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="w-20 h-10"></div> {/* Placeholder for auth buttons */}
-        </div>
-      </header>
-    );
-  }
-
   return (
     <header className={cn(
       "flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem]",
@@ -243,7 +221,7 @@ export function Navbar(): React.ReactElement {
       // Enhanced border with gradient
       "border-b border-border/50",
       // Subtle shadow for depth
-      "shadow-[0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.1)]",
+      "shadow-[0_1px_2px_rgba(0,0,0,0.02)]",
       "sticky top-0 z-30",
       "transition-all duration-300",
       isCollectionDetail && collectionData && user ? "relative" : ""
@@ -266,7 +244,7 @@ export function Navbar(): React.ReactElement {
           const from = searchParams.get('from');
           const chatId = searchParams.get('chatId');
           const collectionId = searchParams.get('collectionId');
-          
+
           const getBackUrl = (): string | null => {
             if (from === 'chat' && chatId) {
               return `/chat/${chatId}`;
@@ -279,10 +257,10 @@ export function Navbar(): React.ReactElement {
             }
             return null;
           };
-          
+
           const backUrl = getBackUrl();
           const shouldShowBackButton = backUrl ? backUrl !== pathname : true;
-          
+
           const getBackButtonInfo = (): { label: string; icon: React.ComponentType<{ className?: string }> } => {
             if (from === 'chat' && chatId) {
               return { label: 'Back to Chat', icon: MessageSquare };
@@ -296,10 +274,10 @@ export function Navbar(): React.ReactElement {
               return { label: 'Back', icon: ArrowLeft };
             }
           };
-          
+
           const backButtonInfo = getBackButtonInfo();
           const BackIcon = backButtonInfo.icon;
-          
+
           const handleBack = (): void => {
             if (backUrl) {
               router.push(backUrl);
@@ -308,7 +286,7 @@ export function Navbar(): React.ReactElement {
                 (window.history.length > 1 ||
                   (document.referrer &&
                     document.referrer.startsWith(window.location.origin)));
-              
+
               if (hasHistory) {
                 router.back();
               } else {
@@ -316,9 +294,9 @@ export function Navbar(): React.ReactElement {
               }
             }
           };
-          
+
           if (!shouldShowBackButton) return null;
-          
+
           return (
             <IconButton
               icon={BackIcon}
@@ -394,7 +372,7 @@ export function Navbar(): React.ReactElement {
                 }}
                 onBlur={handleTitleSave}
                 autoFocus
-                style={{ 
+                style={{
                   width: `${Math.max(300, Math.min(editingTitle.length * 12 + 40, 600))}px`,
                   minWidth: '300px',
                   maxWidth: '600px'
@@ -518,7 +496,7 @@ export function Navbar(): React.ReactElement {
                     </TooltipTrigger>
                     <TooltipContent>Print Document</TooltipContent>
                   </Tooltip>
-                  
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <IconButton
@@ -531,7 +509,7 @@ export function Navbar(): React.ReactElement {
                     </TooltipTrigger>
                     <TooltipContent>Open in New Tab</TooltipContent>
                   </Tooltip>
-                  
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <IconButton
@@ -544,7 +522,7 @@ export function Navbar(): React.ReactElement {
                     </TooltipTrigger>
                     <TooltipContent>View in Network</TooltipContent>
                   </Tooltip>
-                  
+
                   <Popover open={isCollectionPopoverOpen} onOpenChange={setIsCollectionPopoverOpen}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -679,41 +657,6 @@ export function Navbar(): React.ReactElement {
             >
               Sign Up
             </PrimaryButton>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className={cn(
-                "h-9 w-9 rounded-lg group relative overflow-hidden",
-                // Neutral background - no color tint
-                "bg-muted/50",
-                // White hover background for light mode (Moon icon) - inverse colors
-                theme === "light" && "hover:bg-white",
-                // Regular hover for dark mode (Sun icon)
-                theme === "dark" && "hover:bg-muted",
-                // Border with semantic tokens
-                "border border-border/50",
-                // Shadow effects
-                "shadow-sm hover:shadow-md",
-                // Smooth transitions with easing
-                "transition-all duration-300 ease-in-out",
-                "hover:scale-[1.02] active:scale-[0.98]",
-                // Text color - neutral
-                "text-muted-foreground",
-                // Dark text on white hover (for Moon in light mode)
-                theme === "light" && "hover:text-black",
-                // Regular hover text for dark mode (Sun)
-                theme === "dark" && "hover:text-foreground"
-              )}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4 fill-transparent text-muted-foreground transition-all duration-300 ease-in-out group-hover:fill-yellow-500 group-hover:text-yellow-500 group-hover:rotate-12 group-hover:scale-125" />
-              ) : (
-                <Moon className="h-4 w-4 fill-transparent text-muted-foreground transition-all duration-300 ease-in-out group-hover:fill-black group-hover:text-black group-hover:-rotate-6 group-hover:scale-125" />
-              )}
-            </Button>
           </>
         )}
       </div>

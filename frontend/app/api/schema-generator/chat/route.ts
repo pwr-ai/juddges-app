@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
-      console.error("Backend error:", errorText);
+      console.error("Backend error: ", errorText);
       throw new Error(`Failed to generate schema: ${backendResponse.status}`);
     }
 
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Schema chat error:", error);
+    console.error("Schema chat error: ", error);
     return NextResponse.json(
       { error: "Failed to process schema generation request" },
       { status: 500 }
@@ -138,7 +138,7 @@ function generateResponseMessage(
   // Check if this is an initial request or a refinement
   if (isFirstMessage || !previousSchema) {
     if (fieldCount === 0) {
-      return "I&apos;m working on understanding your requirements. Could you provide more details about what information you'd like to extract?";
+      return "I&apos;m working on understanding your requirements. Could you provide more details about what information you'd like to extract? ";
     }
 
     return `I've created an extraction schema with ${fieldCount} field${fieldCount !== 1 ? 's' : ''} based on your requirements. The schema includes:\n\n${

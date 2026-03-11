@@ -38,7 +38,7 @@ export default function NewPostPage(): React.JSX.Element {
         description: "Your draft has been saved.",
       });
     } catch (error) {
-      console.error("Error saving draft:", error);
+      console.error("Error saving draft: ", error);
       toast.error("Failed to save draft", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });
@@ -67,14 +67,14 @@ export default function NewPostPage(): React.JSX.Element {
         const createdPost = await createAdminPost(payload);
         setPostId(createdPost.id);
       }
-      
+
       toast.success("Post published successfully", {
         description: "Your post is now live.",
       });
-      
+
       router.push("/blog/admin");
     } catch (error) {
-      console.error("Error publishing post:", error);
+      console.error("Error publishing post: ", error);
       toast.error("Failed to publish post", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });

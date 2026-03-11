@@ -1,19 +1,19 @@
 # Branding Updates Checklist
 
-This document tracks what has been updated and what still needs to be changed from "AI-Tax" to "Juddges" branding.
+This document tracks what has been updated and what still needs to be changed from "JuDDGES" to "Juddges" branding.
 
 ## ✅ Completed Updates
 
 ### Repository Structure
-- [x] Frontend and backend directories copied from AI-Tax
+- [x] Frontend and backend directories copied from JuDDGES
 - [x] Docker compose files copied
 - [x] Frontend `package.json` - name changed to "juddges-frontend"
 - [x] Backend `pyproject.toml` - name changed to "juddges"
-- [x] Package renamed: `ai_tax_search` → `juddges_search`
+- [x] Package renamed to `juddges_search`
 
 ### Documentation
 - [x] README.md - Updated branding references
-- [x] CLAUDE.md - Updated all AI-Tax references
+- [x] CLAUDE.md - Updated all JuDDGES references
 - [x] docs/README.md - Updated migration documentation
 - [x] docs/migration/README.md - Updated fork references
 - [x] docs/migration/branding-checklist.md - This file
@@ -29,7 +29,7 @@ This document tracks what has been updated and what still needs to be changed fr
 1. **App Layout & Metadata**
    - [ ] `frontend/app/layout.tsx` - Update site title and metadata
    - [ ] `frontend/app/page.tsx` - Update homepage content
-   - [ ] Update any "AI-Tax" references in component text
+   - [ ] Update any "JuDDGES" references in component text
 
 2. **Branding Assets**
    - [ ] `frontend/public/logo.png` - Replace with Juddges logo (if you have one)
@@ -42,7 +42,7 @@ This document tracks what has been updated and what still needs to be changed fr
    - [ ] Update any API URLs if needed
 
 4. **Navigation & UI Components**
-   - [ ] Search for "AI-Tax" in all frontend files
+   - [ ] Search for "JuDDGES" in all frontend files
    - [ ] Replace with "Juddges" or appropriate text
 
 ### Backend Configuration
@@ -58,22 +58,22 @@ This document tracks what has been updated and what still needs to be changed fr
 ### Docker Configuration
 
 1. **docker-compose files**
-   - [ ] Update service names from `ai-tax-*` to `juddges-*`
+   - [ ] Update service names to `juddges-*`
    - [ ] Update container names
    - [ ] Update network names
    - [ ] Update volume names
 
 ## 🔍 Quick Search Commands
 
-Find remaining AI-Tax references:
+Find remaining JuDDGES references:
 ```bash
 cd /home/laugustyniak/github/legal-ai/juddges-app
 
 # Search in code
-grep -r "AI-Tax\|ai-tax\|ai_tax" frontend/ backend/ --include="*.ts" --include="*.tsx" --include="*.py"
+grep -r "JuDDGES" frontend/ backend/ --include="*.ts" --include="*.tsx" --include="*.py"
 
 # Search in documentation
-grep -r "AI-Tax\|ai-tax\|ai_tax" docs/ --include="*.md"
+grep -r "JuDDGES" docs/ --include="*.md"
 ```
 
 ## 🎯 Minimal Working Setup

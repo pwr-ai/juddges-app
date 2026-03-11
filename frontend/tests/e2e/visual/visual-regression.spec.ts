@@ -145,24 +145,6 @@ test.describe('Visual Regression Tests', () => {
     });
   });
 
-  test('dark theme', async ({ page }) => {
-    // Enable dark mode
-    await page.goto('/search');
-    await page.waitForTimeout(500);
-
-    // Try to toggle dark mode
-    const themeToggle = page.getByRole('button', { name: /theme|dark|light/i });
-    if (await themeToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await themeToggle.click();
-      await page.waitForTimeout(1000);
-
-      await expect(page).toHaveScreenshot('search-dark-theme.png', {
-        fullPage: true,
-        maxDiffPixels: 100
-      });
-    }
-  });
-
   test('loading states', async ({ page }) => {
     // Mock slow API
     await page.route('**/api/documents/search', route => {

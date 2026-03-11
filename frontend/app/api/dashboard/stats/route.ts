@@ -4,7 +4,7 @@ import { getBackendUrl } from "../../utils/backend-url";
 export async function GET() {
   try {
     const backendUrl = getBackendUrl();
-    
+
     const response = await fetch(
       `${backendUrl}/dashboard/stats`,
       {
@@ -18,7 +18,7 @@ export async function GET() {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Dashboard Stats] Error response:", errorText);
+      console.error("[Dashboard Stats] Error response: ", errorText);
       throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
 
@@ -31,7 +31,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[Dashboard Stats] Error fetching dashboard stats:", error);
+    console.error("[Dashboard Stats] Error fetching dashboard stats: ", error);
     // Return default values on error
     const defaultData = {
       total_documents: 0,

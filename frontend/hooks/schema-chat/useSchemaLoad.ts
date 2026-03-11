@@ -67,7 +67,7 @@ export function useSchemaLoad({
         });
       }
     } catch (error) {
-      console.error("Error fetching schemas:", error);
+      console.error("Error fetching schemas: ", error);
       toast.error("Failed to load schemas");
     } finally {
       setIsLoadingSchemas(false);
@@ -164,7 +164,7 @@ export function useSchemaLoad({
         setShowLoadSchemaDialog(false);
         setPendingLoadSchemaId(null);
       } catch (error) {
-        console.error("Error loading schema:", error);
+        console.error("Error loading schema: ", error);
         toast.error("Failed to load schema", {
           id: "load-schema",
           description:

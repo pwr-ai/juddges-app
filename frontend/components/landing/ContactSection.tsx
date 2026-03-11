@@ -51,7 +51,7 @@ export function ContactSection({
       // Reset form
       setFormData({ name: "", email: "", company: "", message: "", website: "" });
     } catch (error) {
-      console.error("Contact form submission error:", error);
+      console.error("Contact form submission error: ", error);
       toast.error(
         error instanceof Error
           ? error.message

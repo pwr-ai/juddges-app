@@ -251,8 +251,8 @@ const relatedPosts: BlogPost[] = [
     slug: "understanding-tax-interpretations",
     title: "Understanding Polish Tax Interpretations",
     excerpt: "A comprehensive guide to navigating tax interpretations.",
-    author: { 
-      name: "Anna Kowalska", 
+    author: {
+      name: "Anna Kowalska",
       title: "Tax Law Expert",
       avatar: "/api/placeholder/100/100"
     },
@@ -272,8 +272,8 @@ const relatedPosts: BlogPost[] = [
     title: "Introducing Advanced Document Analysis Features",
     excerpt: "New AI-powered document analysis features.",
     featured_image: "/api/placeholder/800/600",
-    author: { 
-      name: "System Admin", 
+    author: {
+      name: "System Admin",
       title: "Product Team",
       avatar: "/api/placeholder/100/100"
     },
@@ -322,7 +322,7 @@ export default function BlogPostPage() {
         await new Promise((resolve) => setTimeout(resolve, 500));
         setPost(mockPost);
       } catch (error) {
-        console.error("Error fetching post:", error);
+        console.error("Error fetching post: ", error);
         toast.error("Failed to load post", {
           description: error instanceof Error ? error.message : "An unexpected error occurred.",
         });
@@ -390,7 +390,7 @@ export default function BlogPostPage() {
           break;
       }
     } catch (error) {
-      console.error("Error sharing:", error);
+      console.error("Error sharing: ", error);
       toast.error("Failed to share", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
@@ -702,16 +702,16 @@ function DropdownShare({
   copySuccess: boolean;
 }) {
   return (
-    <SecondaryButton 
+    <SecondaryButton
       onClick={() => {
         const result = onShare("copy");
         // Handle promise if async
         if (result instanceof Promise) {
           result.catch((error) => {
-            console.error("Error in share handler:", error);
+            console.error("Error in share handler: ", error);
           });
         }
-      }} 
+      }}
       icon={Share2}
     >
       {copySuccess ? "Copied!" : "Share"}

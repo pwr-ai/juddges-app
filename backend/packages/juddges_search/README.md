@@ -32,4 +32,4 @@ results = search_judgments(query="criminal appeal", jurisdiction="UK")
 
 ## Migration Note
 
-This package was originally named `ai_tax_search` in the AI-Tax platform. It has been rebranded to `juddges_search` for the Juddges App.
+This package is published as `juddges_search` for the Juddges App.

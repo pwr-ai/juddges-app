@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Schema test error:", error);
+    console.error("Schema test error: ", error);
     return NextResponse.json(
       { error: "Failed to test schema" },
       { status: 500 }

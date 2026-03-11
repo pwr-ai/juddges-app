@@ -23,7 +23,7 @@ function buildDocumentHref(documentId: string, from?: string, chatId?: string): 
   const cleanId = cleanDocumentIdForUrl(documentId);
   const params = new URLSearchParams();
   if (from) {
-    params.set("from", from);
+    params.set("from ", from);
   }
   if (chatId) {
     params.set("chatId", chatId);

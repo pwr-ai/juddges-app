@@ -189,7 +189,7 @@ Based on the UX/UI review, here are the **immediate priorities**:
 **Legal Glass 2.0**:
 - Sophisticated glassmorphism with backdrop blur
 - OKLCH color space for perceptual uniformity
-- Multi-brand support (Juddges, AI-Tax, Legal-AI)
+- Multi-brand support (Juddges, JuDDGES, Legal-AI)
 - Comprehensive dark mode
 - RTL language support
 

@@ -158,7 +158,7 @@ export function SchemaStudioLayout({
           setPanelSizes([canvasSize, chatSize]);
         }
       } catch (error) {
-        console.error("Failed to parse saved layout sizes:", error);
+        console.error("Failed to parse saved layout sizes: ", error);
       }
     }
   }, []);

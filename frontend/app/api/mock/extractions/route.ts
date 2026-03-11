@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const requestedJobId = searchParams.get('job_id');
-    
+
   const mockedJobIds = {
     'a1b2c3d4-e5f6-7890-abcd-ef1234567890': 'completed',
     'b2c3d4e5-f6a7-8901-bcde-f12345678901': 'processing',
@@ -28,15 +28,15 @@ export async function GET(request: NextRequest) {
     const fakeJobPath = join(process.cwd(), "public", "fake-extraction-job.json");
     const fileContent = readFileSync(fakeJobPath, "utf-8");
     const fakeJobData = JSON.parse(fileContent);
-    
+
     const jobStatus = mockedJobIds[requestedJobId as keyof typeof mockedJobIds];
-    
+
     if (jobStatus === 'processing') {
       // Partially completed - return all documents with their statuses
       const completedResults = fakeJobData.results?.slice(0, 6) || [];
       const totalDocuments = 10;
       const completedCount = 6;
-      
+
       // Generate remaining documents with "processing" status
       const processingResults = Array.from({ length: totalDocuments - completedCount }, (_, i) => ({
         document_id: `doc-1235${i}-sample`,
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         started_at: new Date().toISOString(),
         completed_at: null
       }));
-      
+
       return NextResponse.json({
         ...fakeJobData,
         job_id: requestedJobId,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       const totalDocuments = 8;
       const failedCount = 2;
       const completedCount = 2; // Some documents completed before failure (matching mock jobs route)
-      
+
       // Failed documents
       const failedResults = [
         {
@@ -76,13 +76,13 @@ export async function GET(request: NextRequest) {
           completed_at: null
         }
       ];
-      
+
       // Completed documents (before failure)
       const completedResults = (fakeJobData.results?.slice(0, completedCount) || []).map((doc: any) => ({
         ...doc,
         completed_at: doc.completed_at || new Date(Date.now() - 1800000).toISOString()
       }));
-      
+
       // Processing documents (interrupted by failure)
       const processingResults = Array.from({ length: totalDocuments - failedCount - completedCount }, (_, i) => ({
         document_id: `doc-processing-${i + 1}`,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         started_at: new Date(Date.now() - 3000000 + i * 60000).toISOString(),
         completed_at: null
       }));
-      
+
       return NextResponse.json({
         ...fakeJobData,
         job_id: requestedJobId,
@@ -107,14 +107,13 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Error reading fake extraction job file:", error);
+    console.error("Error reading fake extraction job file: ", error);
     return NextResponse.json(
-      { 
-        error: "Failed to load mocked extraction job", 
-        details: error instanceof Error ? error.message : String(error) 
+      {
+        error: "Failed to load mocked extraction job",
+        details: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     );
   }
 }
-

@@ -168,12 +168,12 @@ export default function BlogPage(): React.JSX.Element {
         setLoading(true);
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        
+
         const publishedPosts = mockPosts.filter((p) => p.status === "published");
         setPosts(publishedPosts);
         setFilteredPosts(publishedPosts);
       } catch (error) {
-        console.error("Error fetching posts:", error);
+        console.error("Error fetching posts: ", error);
         toast.error("Failed to load blog posts", {
           description: error instanceof Error ? error.message : "An unexpected error occurred.",
         });

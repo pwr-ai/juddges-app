@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+
 
 export function LandingNav() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -61,7 +61,6 @@ export function LandingNav() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <ThemeToggle />
             <Link href="/">
               <Button variant="ghost" size="sm">
                 Sign In
@@ -74,7 +73,6 @@ export function LandingNav() {
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
-            <ThemeToggle />
             <Button
               variant="ghost"
               size="sm"

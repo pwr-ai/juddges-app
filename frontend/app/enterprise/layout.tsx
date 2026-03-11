@@ -107,7 +107,7 @@ export default function EnterpriseLayout({
             mainEntity: [
               {
                 "@type": "Question",
-                name: "What languages does JuDDGES support?",
+                name: "What languages does JuDDGES support? ",
                 acceptedAnswer: {
                   "@type": "Answer",
                   text: "JuDDGES currently supports Polish, English, German, and French for document processing and search. We can add support for additional languages based on your requirements.",
@@ -115,7 +115,7 @@ export default function EnterpriseLayout({
               },
               {
                 "@type": "Question",
-                name: "Can we deploy JuDDGES on our own infrastructure?",
+                name: "Can we deploy JuDDGES on our own infrastructure? ",
                 acceptedAnswer: {
                   "@type": "Answer",
                   text: "Yes, we offer on-premise deployment where the entire platform runs in your data center or private cloud. We provide Docker containers and comprehensive deployment documentation.",
@@ -123,7 +123,7 @@ export default function EnterpriseLayout({
               },
               {
                 "@type": "Question",
-                name: "How is data security and privacy handled?",
+                name: "How is data security and privacy handled? ",
                 acceptedAnswer: {
                   "@type": "Answer",
                   text: "We implement enterprise-grade security including end-to-end encryption, role-based access control, audit logging, and GDPR compliance tools. For on-premise deployments, all data remains within your infrastructure.",

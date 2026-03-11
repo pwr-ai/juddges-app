@@ -59,7 +59,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (cachedData) {
       const etag = generateETag(cachedData);
       const ifNoneMatch = request.headers.get("if-none-match");
-      
+
       // Return 304 Not Modified if ETag matches
       if (ifNoneMatch === etag) {
         return new NextResponse(null, { status: 304 });
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
   } catch (error) {
-    console.error("Error fetching example questions:", error);
+    console.error("Error fetching example questions: ", error);
     return NextResponse.json(
       { error: "Failed to fetch example questions" },
       { status: 500 }

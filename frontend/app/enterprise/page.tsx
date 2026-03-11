@@ -87,7 +87,7 @@ export default function EnterprisePage() {
         {/* Value Propositions */}
         <ValuePropsGrid
           valueProps={enterpriseContent.valueProps}
-          title="Why Choose JuDDGES Enterprise?"
+          title="Why Choose JuDDGES Enterprise? "
           subtitle="Built for legal professionals who need reliability, security, and performance"
         />
 
@@ -154,7 +154,7 @@ export default function EnterprisePage() {
 
         {/* Contact / CTA */}
         <ContactSection
-          title="Ready to Transform Your Legal Practice?"
+          title="Ready to Transform Your Legal Practice? "
           subtitle="Schedule a demo or speak with our team to learn how JuDDGES can work for you"
         />
 

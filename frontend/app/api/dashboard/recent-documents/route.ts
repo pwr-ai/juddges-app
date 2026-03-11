@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Recent Documents] Error response:", errorText);
+      console.error("[Recent Documents] Error response: ", errorText);
       throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[Recent Documents] Error fetching recent documents:", error);
+    console.error("[Recent Documents] Error fetching recent documents: ", error);
     return NextResponse.json([]);
   }
 }

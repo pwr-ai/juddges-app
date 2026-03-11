@@ -41,7 +41,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Extraction job unlinked successfully" });
   } catch (error) {
-    console.error("Error unlinking extraction job:", error);
+    console.error("Error unlinking extraction job: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

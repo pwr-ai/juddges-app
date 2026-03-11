@@ -37,7 +37,7 @@ export async function GET(
     const publication = await response.json();
     return NextResponse.json(publication);
   } catch (error) {
-    console.error("Error in GET publication:", error);
+    console.error("Error in GET publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -93,7 +93,7 @@ export async function PUT(
     const publication = await response.json();
     return NextResponse.json(publication);
   } catch (error) {
-    console.error("Error in PUT publication:", error);
+    console.error("Error in PUT publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -145,7 +145,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Publication deleted successfully" });
   } catch (error) {
-    console.error("Error in DELETE publication:", error);
+    console.error("Error in DELETE publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

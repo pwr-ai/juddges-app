@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Juddges App is an AI-powered judicial decision search and analysis platform for Polish and UK court judgments. It's a specialized fork of AI-Tax, adapted for legal case law research with semantic search capabilities.
+Juddges App is an AI-powered judicial decision search and analysis platform for Polish and UK court judgments. It's a specialized fork of JuDDGES, adapted for legal case law research with semantic search capabilities.
 
 **Key Technologies:**
 - **Frontend**: Next.js 15 (App Router), React 19, Tailwind CSS 4, Zustand, React Query
 - **Backend**: FastAPI (Python 3.12+), PostgreSQL, pgvector for embeddings
-- **Vector Search**: Supabase pgvector (migrated from Weaviate used in AI-Tax)
+- **Vector Search**: Supabase pgvector (migrated from Weaviate used in JuDDGES)
 - **AI/ML**: LangChain, OpenAI API, Langfuse (monitoring)
 - **Task Queue**: Celery with Redis
 - **Auth**: Supabase Auth
@@ -147,7 +147,7 @@ The backend uses a package-based architecture with two main reusable packages:
    - Vector database operations using Supabase pgvector
    - Chat and QA chains
    - Used as: `from juddges_search.chains.chat import chat_chain`
-   - Note: Package was originally named `ai_tax_search` in AI-Tax fork
+   - Note: Package was originally named `juddges_search` in the JuDDGES fork lineage
 
 2. **`schema_generator_agent`** (`backend/packages/schema_generator_agent/`):
    - AI-powered legal schema generation
@@ -169,11 +169,11 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
   - Full-text search using PostgreSQL GIN indexes
 
 - **Vector Search**: Uses Supabase pgvector
-  - AI-Tax originally used Weaviate (some legacy code may still reference it)
+  - JuDDGES originally used Weaviate (some legacy code may still reference it)
   - Juddges App uses Supabase pgvector extension
   - Vector similarity search using HNSW index
 
-**Important**: When working with vector search, check whether code references Weaviate (legacy from AI-Tax) or pgvector (current). Juddges uses Supabase pgvector.
+**Important**: When working with vector search, check whether code references Weaviate (legacy from JuDDGES) or pgvector (current). Juddges uses Supabase pgvector.
 
 ### FastAPI Server Structure
 The main FastAPI app (`backend/app/server.py`) is organized with:
@@ -319,16 +319,16 @@ Next.js 15 with App Router:
 - **Commits**: Follow conventional commits (no Claude/Happy mentions, no Co-Authored-By)
 - **Type Safety**: TypeScript strict mode for frontend, type hints for backend
 
-## Migration Notes (AI-Tax → Juddges)
-This codebase was forked from AI-Tax and adapted for judicial decisions:
-- **Branding**: References to "AI-Tax" updated to "Juddges"
+## Migration Notes (JuDDGES → Juddges)
+This codebase was forked from JuDDGES and adapted for judicial decisions:
+- **Branding**: References to "JuDDGES" updated to "Juddges"
 - **Data Model**: Transformed from tax documents to court judgments
 - **Vector DB**: Migrated from Weaviate to Supabase pgvector
 - **Schema**: Custom `judgments` table replaced generic documents
 - **Jurisdictions**: Supports Polish ("PL") and UK courts
-- **Package Names**: `ai_tax_search` → `juddges_search`
+- **Package Names**: standardized on `juddges_search`
 
-When working with this codebase, be aware that some AI-Tax code/patterns may still exist in legacy areas.
+When working with this codebase, be aware that some JuDDGES code/patterns may still exist in legacy areas.
 
 ## Documentation
 - **README.md**: Project overview and quick start
@@ -336,4 +336,4 @@ When working with this codebase, be aware that some AI-Tax code/patterns may sti
 - **DATA_INGESTION_GUIDE.md**: Data pipeline documentation
 - **SUPABASE_MCP_GUIDE.md**: Supabase MCP tools reference
 - **PROJECT_SUMMARY.md**: High-level project summary and roadmap
-- **docs/migration/branding-checklist.md**: Branding change checklist (AI-Tax → Juddges)
+- **docs/migration/branding-checklist.md**: Branding change checklist (JuDDGES → Juddges)

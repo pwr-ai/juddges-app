@@ -27,7 +27,7 @@ cd juddges-app
 # Initialize git repository
 git init
 git add .
-git commit -m "Initial commit: Juddges app from AI-Tax boilerplate"
+git commit -m "Initial commit: Juddges app from JuDDGES boilerplate"
 
 # Create GitHub repository (optional)
 gh repo create juddges-app --public --source=. --remote=origin --push
@@ -108,7 +108,7 @@ python ingest_judgments.py --polish 3000 --uk 3000
 
 ### Step 6: Verify Installation
 
-The frontend and backend are already included in this repository (forked from AI-Tax).
+The frontend and backend are already included in this repository (forked from JuDDGES).
 
 ```bash
 # Verify directory structure

@@ -33,7 +33,7 @@ export function useServiceWorker() {
         });
       })
       .catch((error) => {
-        console.warn("Service worker registration failed:", error);
+        console.warn("Service worker registration failed: ", error);
       });
   }, []);
 

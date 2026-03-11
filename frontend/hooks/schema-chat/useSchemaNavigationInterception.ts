@@ -63,7 +63,7 @@ export function useSchemaNavigationInterception({
       if (
         href === pathname ||
         href.startsWith("http") ||
-        href.startsWith("mailto:") ||
+        href.startsWith("mailto: ") ||
         href.startsWith("#")
       ) {
         return;

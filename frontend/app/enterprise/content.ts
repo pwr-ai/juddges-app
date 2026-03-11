@@ -470,62 +470,62 @@ export const enterpriseContent = {
 
   faqs: [
     {
-      question: "What languages does JuDDGES support?",
+      question: "What languages does JuDDGES support? ",
       answer:
         "JuDDGES currently supports Polish, English, German, and French for document processing and search. We can add support for additional languages based on your requirements.",
       category: "Features",
     },
     {
-      question: "How is data security and privacy handled?",
+      question: "How is data security and privacy handled? ",
       answer:
         "We implement enterprise-grade security including end-to-end encryption, role-based access control, audit logging, and GDPR compliance tools. For on-premise deployments, all data remains within your infrastructure. We can also sign custom DPAs and NDAs as needed.",
       category: "Security",
     },
     {
-      question: "Can we deploy JuDDGES on our own infrastructure?",
+      question: "Can we deploy JuDDGES on our own infrastructure? ",
       answer:
         "Yes, we offer on-premise deployment where the entire platform runs in your data center or private cloud. We provide Docker containers and comprehensive deployment documentation. Our team can assist with setup and configuration.",
       category: "Deployment",
     },
     {
-      question: "What is the typical implementation timeline?",
+      question: "What is the typical implementation timeline? ",
       answer:
         "For cloud deployments, pilot programs can be launched within 2-4 weeks. Full enterprise deployments typically take 6-12 weeks depending on customization requirements and integration complexity. On-premise deployments may take 8-16 weeks.",
       category: "Implementation",
     },
     {
-      question: "Do you provide training and ongoing support?",
+      question: "Do you provide training and ongoing support? ",
       answer:
         "Yes, we provide comprehensive training for both administrators and end-users, including workshops, documentation, and video tutorials. Ongoing support is included in all plans, with 24/7 priority support for Enterprise customers.",
       category: "Support",
     },
     {
-      question: "Can we customize the platform for our specific needs?",
+      question: "Can we customize the platform for our specific needs? ",
       answer:
         "Absolutely. We offer custom schema development, UI customization, workflow automation, and integration with your existing systems. Our team works closely with you to understand your requirements and deliver tailored solutions.",
       category: "Customization",
     },
     {
-      question: "How does pricing work?",
+      question: "How does pricing work? ",
       answer:
         "Pricing depends on deployment type, number of users, document volume, and customization requirements. We offer flexible subscription models and can work within your budget. Contact us for a detailed quote based on your specific needs.",
       category: "Pricing",
     },
     {
       question:
-        "What makes JuDDGES different from other legal AI tools?",
+        "What makes JuDDGES different from other legal AI tools? ",
       answer:
         "JuDDGES is built on proven academic research and has processed over 3 million legal documents in production. Unlike consumer tools, we offer on-premise deployment, custom development, domain-specific AI models, and enterprise-grade security. Our platform is designed for legal professionals who need reliability, accuracy, and control.",
       category: "Product",
     },
     {
-      question: "Can we integrate JuDDGES with our existing document management system?",
+      question: "Can we integrate JuDDGES with our existing document management system? ",
       answer:
         "Yes, JuDDGES provides a REST API and supports integration with major document management systems like iManage, NetDocuments, and SharePoint. We can also develop custom integrations for proprietary systems.",
       category: "Integration",
     },
     {
-      question: "What kind of documents can JuDDGES process?",
+      question: "What kind of documents can JuDDGES process? ",
       answer:
         "JuDDGES can process various legal document types including court judgments, legal opinions, contracts, regulations, tax interpretations, and more. We support PDF, DOCX, HTML, and plain text formats. Custom document type support can be added as needed.",
       category: "Features",

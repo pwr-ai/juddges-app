@@ -213,7 +213,7 @@ juddges-app/
 
 #### Infrastructure
 - **Database**: Supabase (managed PostgreSQL + Auth + Storage)
-- **Vector Database**: pgvector extension (replaces Weaviate from AI-Tax)
+- **Vector Database**: pgvector extension (replaces Weaviate from JuDDGES)
 - **Caching**: Redis for sessions and task queue
 - **Deployment**: Docker Compose (dev and prod configurations)
 
@@ -265,12 +265,12 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
    - RLS (Row Level Security) for access control
 
 2. **Vector Search**: Uses Supabase pgvector extension
-   - AI-Tax originally used Weaviate (migration complete)
+   - JuDDGES originally used Weaviate (migration complete)
    - Juddges uses native PostgreSQL pgvector
    - Vector similarity search using HNSW index
    - Supports hybrid search (vector + full-text + filters)
 
-**Important**: When working with vector search, older code may reference Weaviate (legacy from AI-Tax fork). All vector operations now use Supabase pgvector.
+**Important**: When working with vector search, older code may reference Weaviate (legacy from JuDDGES fork). All vector operations now use Supabase pgvector.
 
 ### FastAPI Server Structure
 

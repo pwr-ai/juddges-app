@@ -49,7 +49,7 @@ export default function UKJudgmentsAnalysisPage() {
         ];
         setData(mockData);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data: ", error);
       }
     };
 

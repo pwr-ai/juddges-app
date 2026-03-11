@@ -34,7 +34,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
 
     if (isChunkError) {
       console.error("ChunkLoadError detected, reloading page...", error);
-      
+
       // Clear service worker cache if present
       if ('caches' in window) {
         caches.keys().then(names => {
@@ -45,7 +45,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
       // Reload the page to get fresh chunks
       window.location.reload();
     } else {
-      console.error("Runtime error:", error);
+      console.error("Runtime error: ", error);
     }
   }
 
@@ -91,4 +91,3 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
-

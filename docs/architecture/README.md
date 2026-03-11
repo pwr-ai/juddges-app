@@ -24,14 +24,14 @@ High-level project architecture including:
 
 ### Backend Package Architecture
 The backend uses reusable packages:
-- **`juddges_search`** - RAG search implementation with LangChain (formerly `ai_tax_search`)
+- **`juddges_search`** - RAG search implementation with LangChain
 - **`schema_generator_agent`** - AI-powered legal schema generation
 
 ### Database Architecture
 **Unified approach**:
 - **PostgreSQL (Supabase)** - Structured data storage
 - **pgvector** - Vector similarity search for semantic search
-- Migrated from Weaviate (used in AI-Tax) to pgvector
+- Migrated from Weaviate (used in JuDDGES) to pgvector
 
 ### FastAPI Server
 - Router-based architecture (documents, collections, analytics, feedback)
@@ -75,11 +75,11 @@ The backend uses reusable packages:
 
 ## 🔄 Migration Notes
 
-This codebase was forked from AI-Tax:
-- **Branding**: AI-Tax → Juddges (documentation complete, code in progress)
+This codebase was forked from JuDDGES:
+- **Branding**: JuDDGES → Juddges (documentation complete, code in progress)
 - **Data Model**: Tax documents → Court judgments (complete)
 - **Vector DB**: Weaviate → pgvector (complete)
-- **Package Names**: `ai_tax_search` → `juddges_search` (complete)
+- **Package Names**: standardized on `juddges_search` (complete)
 - **Schema**: Custom judgments table with rich metadata (complete)
 
 See [Migration](../migration/) for transition documentation.

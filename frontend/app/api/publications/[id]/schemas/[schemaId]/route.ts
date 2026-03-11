@@ -41,7 +41,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Schema unlinked successfully" });
   } catch (error) {
-    console.error("Error unlinking schema:", error);
+    console.error("Error unlinking schema: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

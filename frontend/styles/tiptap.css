@@ -207,14 +207,3 @@
 .ProseMirror [data-text-align="justify"] {
   text-align: justify;
 }
-
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .ProseMirror code {
-    background-color: hsl(var(--muted));
-  }
-
-  .ProseMirror pre {
-    background-color: hsl(var(--muted));
-  }
-}

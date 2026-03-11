@@ -85,7 +85,7 @@ test.describe('Chat Flow', () => {
     await submitButton.click();
 
     // Wait for response
-    const responseText = 'AI Response to: "What is a judgment?"';
+    const responseText = 'AI Response to: "What is a judgment? "';
     await expect(page.locator(`text=${responseText}`)).toBeVisible({ timeout: 10000 });
 
     // Verify message appears in chat

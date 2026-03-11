@@ -13,7 +13,7 @@
 - [Security Architecture](#security-architecture)
 - [Deployment Architecture](#deployment-architecture)
 - [Performance Considerations](#performance-considerations)
-- [Migration from AI-Tax](#migration-from-ai-tax)
+- [Migration from JuDDGES](#migration-from-juddges)
 
 ## Overview
 
@@ -807,21 +807,21 @@ services:
 - Redis cluster for distributed caching
 - CDN for static assets
 
-## Migration from AI-Tax
+## Migration from JuDDGES
 
-Juddges is forked from AI-Tax with the following changes:
+Juddges is forked from JuDDGES with the following changes:
 
 ### Completed Migrations
 
-1. **Branding**: AI-Tax → Juddges throughout codebase
+1. **Branding**: JuDDGES → Juddges throughout codebase
 2. **Vector DB**: Weaviate → Supabase pgvector
 3. **Data Model**: Tax documents → Court judgments
 4. **Schema**: Custom `judgments` table
-5. **Package Names**: `ai_tax_search` → `juddges_search`
+5. **Package Names**: standardized on `juddges_search`
 
 ### Legacy References
 
-Some code may still reference AI-Tax patterns:
+Some code may still reference JuDDGES patterns:
 - Check for Weaviate imports (should use Supabase)
 - Look for tax-specific terminology
 - Review data transformation logic

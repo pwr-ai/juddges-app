@@ -58,7 +58,7 @@ function buildPlaceholder(
     }
 
     if (fieldNameLower.includes("question") || fieldNameLower.includes("pytanie")) {
-      return "What is the tax rate for this transaction?";
+      return "What is the tax rate for this transaction? ";
     }
 
     if (fieldNameLower.includes("answer") || fieldNameLower.includes("odpowiedz")) {

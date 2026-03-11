@@ -111,7 +111,7 @@ For detailed documentation, see the **[docs/](docs/)** directory:
 - **[Architecture](docs/architecture/)** - System design and technical decisions
 - **[Features](docs/features/)** - Feature-specific documentation
 - **[Frontend](docs/frontend/)** - Frontend development guide
-- **[Migration](docs/migration/)** - AI-Tax → Juddges transition docs
+- **[Migration](docs/migration/)** - JuDDGES → Juddges transition docs
 
 ## Project Structure
 
@@ -255,7 +255,7 @@ MIT License - See LICENSE file for details
 ## Acknowledgments
 
 - Data sourced from HuggingFace legal datasets
-- Built on the foundation of the AI-Tax platform
+- Built on the foundation of the JuDDGES platform
 - Powered by Supabase and Next.js
 
 ## Contact

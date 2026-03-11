@@ -36,7 +36,7 @@ Backend-specific documentation:
 - API reference, packages, testing, and workers
 
 ### 🔄 [Migration](migration/)
-AI-Tax → Juddges transition documentation:
+JuDDGES → Juddges transition documentation:
 - [Branding Checklist](migration/branding-checklist.md) - Track branding updates
 - [Database Migration](migration/database-migration.md) - Apply database migrations
 - [Apply Migration](migration/apply-migration.md) - Migration instructions

@@ -15,7 +15,6 @@ router = APIRouter(prefix="/publications", tags=["publications"])
 # Enums matching database types
 class PublicationProject(str, Enum):
     JUDDGES = "JuDDGES"
-    AI_TAX = "AI-TAX"
 
 
 class PublicationType(str, Enum):

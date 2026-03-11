@@ -1,13 +1,13 @@
 # Migration Documentation
 
-Documentation for the AI-Tax → Juddges App transition and database migrations.
+Documentation for the JuDDGES → Juddges App transition and database migrations.
 
-## 🔄 AI-Tax → Juddges Migration
+## 🔄 JuDDGES → Juddges Migration
 
-This project is a fork of AI-Tax, specialized for judicial decisions. These documents track the transition progress.
+This project is a fork of JuDDGES, specialized for judicial decisions. These documents track the transition progress.
 
 ### [Branding Checklist](branding-checklist.md)
-Track branding updates from AI-Tax to Juddges:
+Track branding updates from JuDDGES to Juddges:
 - Completed updates (repository structure, documentation, etc.)
 - Remaining updates needed (frontend components, logos, etc.)
 - Configuration changes
@@ -93,7 +93,7 @@ mcp__supabase__apply_migration({
 ## 🎯 Migration Status
 
 ### Completed ✅
-- [x] Repository structure forked from AI-Tax
+- [x] Repository structure forked from JuDDGES
 - [x] Core documentation
 - [x] Basic judgment schema
 - [x] Vector search migration (Weaviate → pgvector)
@@ -109,18 +109,18 @@ mcp__supabase__apply_migration({
 - [ ] Performance optimization
 - [ ] Additional jurisdictions
 - [ ] Advanced analytics features
-- [ ] Complete AI-Tax legacy code cleanup (remove unused Weaviate code, etc.)
+- [ ] Complete JuDDGES legacy code cleanup (remove unused Weaviate code, etc.)
 
-## 🔧 Key Differences: AI-Tax vs Juddges
+## 🔧 Key Differences: JuDDGES vs Juddges
 
-| Aspect | AI-Tax | Juddges |
+| Aspect | JuDDGES | Juddges |
 |--------|---------|---------|
 | **Domain** | Tax law | Judicial decisions |
 | **Data** | Tax documents | Court judgments |
 | **Jurisdictions** | Generic | Poland + UK |
 | **Vector DB** | Weaviate | Supabase pgvector |
 | **Schema** | Generic documents | Specialized judgments table |
-| **Package Name** | `ai_tax_search` | `juddges_search` |
+| **Package Name** | legacy package | `juddges_search` |
 | **Language** | English | Polish + English |
 
 ## 🆘 Troubleshooting Migrations

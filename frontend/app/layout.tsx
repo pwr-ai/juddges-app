@@ -3,7 +3,7 @@ import "@/app/globals.css";
 import localFont from "next/font/local";
 import { Instrument_Serif } from "next/font/google";
 import type { Metadata, Viewport } from "next";
-import { ThemeProvider } from "@/components/theme-provider";
+
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BrandProvider } from "@/contexts/BrandContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -66,10 +66,7 @@ const serializeForInlineScript = (value: Record<string, string>) =>
     .replace(/'/g, "\\u0027");
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1a2e" },
-  ],
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -108,19 +105,18 @@ export default function RootLayout({
     })();
   `;
 
-  // Use suppressHydrationWarning to prevent hydration errors
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth" data-brand={currentBrand}>
+    <html lang="en" data-scroll-behavior="smooth" data-brand={currentBrand}>
       <head>
         {/*
           Global Chunk Error Handler
-          
+
           Runs before React to catch chunk loading errors at the global level.
           Provides automatic recovery by reloading the page when chunk errors occur.
           Note: No 'async' attribute - must load synchronously to catch early errors.
         */}
         <script src="/chunk-error-handler.js" async />
-        
+
         {/*
           Runtime Environment Configuration
 
@@ -134,23 +130,16 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: runtimeConfig }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`}>
         <ChunkErrorBoundary>
           <QueryProvider>
             <AuthProvider>
               <BrandProvider>
                 <LanguageProvider>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange
-                  >
                     <AppLayoutWrapper>
                       {children}
                     </AppLayoutWrapper>
                     <SonnerToaster />
-                  </ThemeProvider>
                 </LanguageProvider>
               </BrandProvider>
             </AuthProvider>

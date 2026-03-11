@@ -9,7 +9,7 @@ const API_KEY = process.env.BACKEND_API_KEY as string;
 
 // Helper to refresh job status from backend
 async function refreshJobStatusFromBackend(
-  jobId: string, 
+  jobId: string,
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<void> {
   try {
@@ -68,9 +68,9 @@ async function refreshJobStatusFromBackend(
     if (jobData.results && jobData.results.length > 0) {
       // Count all processed documents (both completed and failed) as completed_documents
       const processedCount = jobData.results.filter(
-        (r: { status: string }) => 
-          r.status === 'completed' || 
-          r.status === 'failed' || 
+        (r: { status: string }) =>
+          r.status === 'completed' ||
+          r.status === 'failed' ||
           r.status === 'partially_completed'
       ).length;
       updateData.completed_documents = processedCount;
@@ -78,9 +78,9 @@ async function refreshJobStatusFromBackend(
     }
 
     // Update completed_at for terminal states
-    if (jobData.status === 'SUCCESS' || 
-        jobData.status === 'FAILURE' || 
-        jobData.status === 'COMPLETED' || 
+    if (jobData.status === 'SUCCESS' ||
+        jobData.status === 'FAILURE' ||
+        jobData.status === 'COMPLETED' ||
         jobData.status === 'PARTIALLY_COMPLETED') {
       updateData.completed_at = new Date().toISOString();
     }
@@ -92,19 +92,19 @@ async function refreshJobStatusFromBackend(
       .select();
 
     if (updateError) {
-      apiLogger.error('Failed to update job status in Supabase after refresh', updateError, { 
+      apiLogger.error('Failed to update job status in Supabase after refresh', updateError, {
         jobId,
-        updateData 
+        updateData
       });
     } else if (!updateResult || updateResult.length === 0) {
-      apiLogger.warn('No rows updated in Supabase - job might not exist or job_id mismatch', { 
+      apiLogger.warn('No rows updated in Supabase - job might not exist or job_id mismatch', {
         jobId,
         updateData,
         backendStatus: jobData.status
       });
     } else {
-      apiLogger.info('Successfully refreshed and updated job status', { 
-        jobId, 
+      apiLogger.info('Successfully refreshed and updated job status', {
+        jobId,
         status: jobData.status,
         updatedRows: updateResult.length,
         oldStatus: updateResult[0]?.status,
@@ -140,7 +140,7 @@ export async function GET() {
     const jobsError = jobsQueryResult.error;
 
     if (jobsError) {
-      console.error("Error fetching jobs:", jobsError);
+      console.error("Error fetching jobs: ", jobsError);
       return NextResponse.json(
         { error: "Failed to fetch jobs" },
         { status: 500 }
@@ -153,23 +153,23 @@ export async function GET() {
     const inProgressStatuses = ['PENDING', 'STARTED', 'PROCESSING', 'IN_PROGRESS', 'QUEUED'];
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-    
+
     const jobsToRefresh = (jobs || []).filter((job: any) => {
       if (!job.job_id) return false;
-      
+
       const status = job.status?.toUpperCase();
       const isInProgress = inProgressStatuses.includes(status);
-      
+
       // Also refresh jobs that were recently updated (might have just completed/failed)
       const updatedAt = job.updated_at ? new Date(job.updated_at) : null;
       const isRecentlyUpdated = updatedAt && updatedAt > fiveMinutesAgo;
-      
+
       return isInProgress || isRecentlyUpdated;
     });
 
     // Refresh all relevant jobs in parallel (but don't fail if refresh fails)
     if (jobsToRefresh.length > 0) {
-      apiLogger.info('Refreshing status for jobs', { 
+      apiLogger.info('Refreshing status for jobs', {
         count: jobsToRefresh.length,
         inProgress: jobsToRefresh.filter((j: any) => inProgressStatuses.includes(j.status?.toUpperCase())).length,
         recentlyUpdated: jobsToRefresh.filter((j: any) => {
@@ -177,7 +177,7 @@ export async function GET() {
           return updatedAt && updatedAt > fiveMinutesAgo;
         }).length
       });
-      
+
       try {
         // Refresh in parallel - use Promise.allSettled to not fail if individual refreshes fail
         await Promise.allSettled(
@@ -271,22 +271,22 @@ export async function GET() {
       const createdAt = new Date(job.created_at);
       const startedAt = job.started_at ? new Date(job.started_at) : null;
       const completedAt = job.completed_at ? new Date(job.completed_at) : null;
-      
+
       // Calculate elapsed time
       let elapsedTimeSeconds: number | null = null;
       if (startedAt) {
         const endTime = completedAt || now;
         elapsedTimeSeconds = Math.floor((endTime.getTime() - startedAt.getTime()) / 1000);
       }
-      
+
       // Calculate estimated time remaining for in-progress jobs
       let estimatedTimeRemainingSeconds: number | null = null;
       let avgTimePerDocumentSeconds: number | null = null;
-      
+
       if (job.status === 'PROCESSING' || job.status === 'STARTED') {
         const completedDocs = job.completed_documents || 0;
         const totalDocs = job.total_documents || 0;
-        
+
         if (completedDocs > 0 && totalDocs > 0 && startedAt) {
           const elapsed = (now.getTime() - startedAt.getTime()) / 1000;
           avgTimePerDocumentSeconds = elapsed / completedDocs;
@@ -294,7 +294,7 @@ export async function GET() {
           estimatedTimeRemainingSeconds = Math.floor(avgTimePerDocumentSeconds * remainingDocs);
         }
       }
-      
+
       return {
         ...job,
         collection_name: job.collection_id ? collectionMap.get(job.collection_id) || null : null,
@@ -313,7 +313,7 @@ export async function GET() {
       total: jobsWithCollectionNames.length
     });
   } catch (error) {
-    console.error("Error in jobs route:", error);
+    console.error("Error in jobs route: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

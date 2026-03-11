@@ -64,43 +64,43 @@ export function ExtractionProgress({
     const pollResults = async () => {
       try {
         const response = await fetch(`/api/extractions?job_id=${jobId}`);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
-          
+
           // Parse error response (safe - returns null if not JSON)
           let errorMessage = `Error (${response.status})`;
           let errorCode: string | undefined;
-          
+
           let errorData: any = null;
           try {
             errorData = JSON.parse(errorText);
           } catch {
             // Not JSON, use text as error message
           }
-          
+
           if (errorData) {
             errorMessage = errorData.message || errorData.error || errorMessage;
             errorCode = errorData.code || errorData.detail?.code;
           } else if (errorText) {
             errorMessage = errorText;
           }
-          
+
           // Check if this is a permanent error that requires stopping
           const permanentErrors = ['DATABASE_UNAVAILABLE', 'TASK_SUBMISSION_FAILED'];
-          const isPermanentError = response.status === 401 || 
+          const isPermanentError = response.status === 401 ||
             permanentErrors.includes(errorCode || '') ||
             errorMessage.toLowerCase().includes('database') ||
             errorMessage.toLowerCase().includes('vector database');
-          
+
           if (isPermanentError) {
-            setError(response.status === 401 
+            setError(response.status === 401
               ? "Authentication required. Please log in again."
               : `Service unavailable: ${errorMessage}. The job cannot complete until the service is restored.`);
             setIsPolling(false);
             return;
           }
-          
+
           // Handle transient errors
           retryCountRef.current += 1;
           if (retryCountRef.current > 20) {
@@ -138,8 +138,8 @@ export function ExtractionProgress({
       } catch (error) {
         retryCountRef.current += 1;
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error("Failed to poll extraction results:", errorMessage);
-        
+        console.error("Failed to poll extraction results: ", errorMessage);
+
         if (retryCountRef.current > 30) {
           setError("Too many connection errors. Please refresh the page.");
           setIsPolling(false);

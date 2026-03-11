@@ -24,7 +24,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .limit(limit);
 
     if (documentsError) {
-      console.error("Error fetching documents:", documentsError);
+      console.error("Error fetching documents: ", documentsError);
       return NextResponse.json(
         { error: "Failed to fetch documents" },
         { status: 500 }
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       total: documents?.length || 0
     });
   } catch (error) {
-    console.error("Error in documents route:", error);
+    console.error("Error in documents route: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Backend search error:", response.status, errorText);
+      console.error("Backend search error: ", response.status, errorText);
       return NextResponse.json(
         { error: `Backend search failed: ${response.status}` },
         { status: response.status }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Error in search route:", error);
+    console.error("Error in search route: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

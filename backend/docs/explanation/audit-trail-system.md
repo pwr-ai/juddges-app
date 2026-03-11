@@ -2,11 +2,11 @@
 
 ## Overview
 
-The Audit Trail and Legal Compliance System is a comprehensive solution for tracking, managing, and providing transparency around user interactions with the AI-Tax platform. It was designed to meet legal requirements for professional legal AI systems and GDPR compliance.
+The Audit Trail and Legal Compliance System is a comprehensive solution for tracking, managing, and providing transparency around user interactions with the JuDDGES platform. It was designed to meet legal requirements for professional legal AI systems and GDPR compliance.
 
 ## Why Audit Trails Matter for Legal AI
 
-Legal AI systems like AI-Tax have unique compliance requirements:
+Legal AI systems like JuDDGES have unique compliance requirements:
 
 1. **Professional Liability**: When legal professionals use AI tools, they need to demonstrate that they exercised due diligence. An audit trail provides evidence of what questions were asked, what guidance was provided, and when.
 

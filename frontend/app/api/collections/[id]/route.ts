@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const id = match?.[1];
 
     if (!id) {
-      console.error("Invalid collection ID:", id);
+      console.error("Invalid collection ID: ", id);
       return NextResponse.json(
         { error: "Invalid collection ID" },
         { status: 400 }
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     const collection = await response.json();
     return NextResponse.json(collection);
   } catch (error) {
-    console.error("Error in GET collection:", error);
+    console.error("Error in GET collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const match = pathname.match(/\/collections\/([^/]+)/);
     const id = match?.[1];
-    
+
     if (!id) {
       console.error("Missing collection ID in PUT request");
       return NextResponse.json(
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest) {
     // Get the authenticated user
     const supabase = await createClient();
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !userData?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest) {
     const { name } = body;
 
     if (!name) {
-      console.error("Missing name in PUT request for collection:", id);
+      console.error("Missing name in PUT request for collection: ", id);
       return NextResponse.json(
         { error: "Name is required" },
         { status: 400 }
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
     const collection = await response.json();
     return NextResponse.json(collection);
   } catch (error) {
-    console.error("Error in PUT collection:", error);
+    console.error("Error in PUT collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -158,7 +158,7 @@ export async function DELETE(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const match = pathname.match(/\/collections\/([^/]+)/);
     const id = match?.[1];
-    
+
     if (!id) {
       console.error("Missing collection ID in DELETE request");
       return NextResponse.json(
@@ -170,7 +170,7 @@ export async function DELETE(request: NextRequest) {
     // Get the authenticated user
     const supabase = await createClient();
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !userData?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -207,7 +207,7 @@ export async function DELETE(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error in DELETE collection:", error);
+    console.error("Error in DELETE collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

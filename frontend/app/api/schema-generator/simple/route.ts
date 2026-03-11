@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     if (!backendResponse.ok) {
       const errorData = await backendResponse.json().catch(() => ({}));
-      console.error("Backend error:", errorData);
+      console.error("Backend error: ", errorData);
       return NextResponse.json(
         {
           error: errorData.detail || "Failed to generate schema",
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("Schema generation error:", error);
+    console.error("Schema generation error: ", error);
     return NextResponse.json(
       {
         error: "Failed to process schema generation request",

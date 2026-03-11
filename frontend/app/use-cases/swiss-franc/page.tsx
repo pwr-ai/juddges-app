@@ -42,7 +42,7 @@ export default function SwissFrancAnalysisPage() {
         const jsonData = await response.json();
         setData(jsonData);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data: ", error);
         setData([]); // Reset data on error
       }
     };

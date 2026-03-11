@@ -6,7 +6,7 @@ Collection of utility scripts for the Juddges backend.
 
 ### fix_weaviate_schema.py
 
-**Legacy script from AI-Tax** - Utility for Weaviate schema configurations.
+**Legacy script from JuDDGES** - Utility for Weaviate schema configurations.
 
 **Note**: Juddges uses Supabase pgvector, so this script is not used in the current implementation.
 

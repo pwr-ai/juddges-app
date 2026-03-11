@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     const publications = await response.json();
     return NextResponse.json(publications);
   } catch (error) {
-    console.error("Error in GET publications:", error);
+    console.error("Error in GET publications: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     const publication = await response.json();
     return NextResponse.json(publication);
   } catch (error) {
-    console.error("Error in POST publication:", error);
+    console.error("Error in POST publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

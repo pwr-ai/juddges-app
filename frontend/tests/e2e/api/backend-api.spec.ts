@@ -18,7 +18,7 @@ test.describe('Backend API Integration', () => {
         },
         data: {
           input: {
-            question: "What are Swiss franc loan regulations in Poland?",
+            question: "What are Swiss franc loan regulations in Poland? ",
             max_documents: 5,
             score_threshold: 0.5,
             chat_history: []
@@ -50,13 +50,13 @@ test.describe('Backend API Integration', () => {
         },
         data: {
           input: {
-            question: "Can you elaborate on the previous ruling?",
+            question: "Can you elaborate on the previous ruling? ",
             max_documents: 3,
             score_threshold: 0.6,
             chat_history: [
               {
                 role: "user",
-                content: "What are Swiss franc loan regulations?"
+                content: "What are Swiss franc loan regulations? "
               },
               {
                 role: "assistant",

@@ -70,7 +70,7 @@ export default function PlaygroundPage() {
           setCollections(collectionsData);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data: ", error);
         toast.error("Failed to load schemas and collections");
       } finally {
         setIsFetching(false);
@@ -109,7 +109,7 @@ export default function PlaygroundPage() {
           setDocuments([]);
         }
       } catch (error) {
-        console.error("Error fetching documents:", error);
+        console.error("Error fetching documents: ", error);
         toast.error("Failed to load documents");
         setDocuments([]);
       } finally {
@@ -164,7 +164,7 @@ export default function PlaygroundPage() {
 
       await pollForResults(job_id);
     } catch (error) {
-      console.error("Extraction failed:", error);
+      console.error("Extraction failed: ", error);
       toast.error("Failed to extract information");
     } finally {
       setIsLoading(false);
@@ -203,7 +203,7 @@ export default function PlaygroundPage() {
           toast.warning("Polling timeout. Job may still be processing.");
         }
       } catch (error) {
-        console.error("Polling error:", error);
+        console.error("Polling error: ", error);
         attempts++;
         if (attempts < maxAttempts) {
           setTimeout(poll, 2000);

@@ -48,7 +48,7 @@ export async function POST(
     const result = await response.json();
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error linking collection:", error);
+    console.error("Error linking collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

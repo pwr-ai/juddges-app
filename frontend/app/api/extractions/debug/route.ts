@@ -19,10 +19,10 @@ export async function GET(request: NextRequest) {
     const samplePath = join(process.cwd(), 'frontend', 'samples', 'extraction-results-sample.json');
     const sampleData = await readFile(samplePath, 'utf-8');
     const parsed = JSON.parse(sampleData);
-    
+
     // Apply limit if specified
     const results = limit > 0 ? parsed.slice(0, limit) : parsed;
-    
+
     return NextResponse.json({
       count: results.length,
       results: results,
@@ -34,10 +34,10 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error("Error reading sample file:", error);
+    console.error("Error reading sample file: ", error);
     return NextResponse.json(
-      { 
-        error: "Failed to read sample file", 
+      {
+        error: "Failed to read sample file",
         details: error instanceof Error ? error.message : String(error),
         path: join(process.cwd(), 'frontend', 'samples', 'extraction-results-sample.json')
       },
@@ -45,4 +45,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

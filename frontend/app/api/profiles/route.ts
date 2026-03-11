@@ -12,13 +12,13 @@ export async function GET() {
       .order("createdAt", { ascending: false });
 
     if (error) {
-      console.error("GET profiles error:", error);
+      console.error("GET profiles error: ", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("GET profiles error:", error);
+    console.error("GET profiles error: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -47,13 +47,13 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error("POST profiles error:", error);
+      console.error("POST profiles error: ", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("POST profiles error:", error);
+    console.error("POST profiles error: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -87,13 +87,13 @@ export async function PUT(request: Request) {
       .single();
 
     if (error) {
-      console.error("PUT profiles error:", error);
+      console.error("PUT profiles error: ", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("PUT profiles error:", error);
+    console.error("PUT profiles error: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -117,13 +117,13 @@ export async function DELETE(request: Request) {
       .eq("id", id);
 
     if (error) {
-      console.error("DELETE profiles error:", error);
+      console.error("DELETE profiles error: ", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE profiles error:", error);
+    console.error("DELETE profiles error: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

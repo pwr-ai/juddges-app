@@ -178,7 +178,7 @@ export default function ContactPage() {
                   <Label htmlFor="message">Message</Label>
                   <Textarea
                     id="message"
-                    placeholder="How can we help you?"
+                    placeholder="How can we help you? "
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     maxLength={5000}

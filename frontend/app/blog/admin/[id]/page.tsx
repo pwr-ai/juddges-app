@@ -36,7 +36,7 @@ export default function EditPostPage(): React.JSX.Element {
         const loadedPost = await fetchAdminPostById(postId);
         setPost(loadedPost);
       } catch (error) {
-        console.error("Error fetching post:", error);
+        console.error("Error fetching post: ", error);
         toast.error("Failed to load post", {
           description: error instanceof Error ? error.message : "An unexpected error occurred",
         });
@@ -64,7 +64,7 @@ export default function EditPostPage(): React.JSX.Element {
         description: "Your changes have been saved.",
       });
     } catch (error) {
-      console.error("Error saving post:", error);
+      console.error("Error saving post: ", error);
       toast.error("Failed to save post", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });
@@ -83,14 +83,14 @@ export default function EditPostPage(): React.JSX.Element {
         published_at: new Date().toISOString(),
       });
       setPost(updatedPost);
-      
+
       toast.success("Post published successfully", {
         description: "Your post is now live.",
       });
-      
+
       router.push("/blog/admin");
     } catch (error) {
-      console.error("Error publishing post:", error);
+      console.error("Error publishing post: ", error);
       toast.error("Failed to publish post", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });
@@ -103,7 +103,7 @@ export default function EditPostPage(): React.JSX.Element {
       try {
         window.open(`/blog/${post.slug}`, "_blank");
       } catch (error) {
-        console.error("Error opening preview:", error);
+        console.error("Error opening preview: ", error);
         toast.error("Failed to open preview", {
           description: "Please check your browser's popup settings.",
         });
