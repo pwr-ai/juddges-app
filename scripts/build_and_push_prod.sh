@@ -193,6 +193,26 @@ load_env() {
 }
 
 # ------------------------------------------------------------------------------
+# Generate release notes with OpenAI
+# ------------------------------------------------------------------------------
+generate_release_notes() {
+    local version="$1"
+    local output_file="$2"
+
+    if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+        err "OPENAI_API_KEY not set in .env"
+        err "It is required for automatic release note generation."
+        exit 1
+    fi
+
+    info "Generating release notes for prod-v${version} ..."
+    python3 "${REPO_ROOT}/scripts/generate_release_notes.py" \
+        --version "${version}" \
+        --output "${output_file}"
+    ok "Release notes saved to ${output_file}"
+}
+
+# ------------------------------------------------------------------------------
 # Build and push a single image
 # ------------------------------------------------------------------------------
 build_and_push() {
@@ -235,6 +255,7 @@ build_and_push() {
 # ------------------------------------------------------------------------------
 main() {
     local bump_arg="${1:-patch}"
+    local notes_file=""
 
     info "=== Juddges Production Build & Push ==="
     echo ""
@@ -266,11 +287,11 @@ main() {
     fi
     echo ""
 
+    # Load .env for build args, Docker credentials, and OpenAI release notes
+    load_env
+
     # Sync version across project files
     sync_version "${new_version}"
-
-    # Load .env for build args and Docker credentials
-    load_env
 
     # Login to Docker Hub
     ensure_docker_login
@@ -282,18 +303,23 @@ main() {
         echo ""
     done
 
+    notes_file="${REPO_ROOT}/release-notes/prod-v${new_version}.md"
+    generate_release_notes "${new_version}" "${notes_file}"
+    echo ""
+
     # Commit version-synced files
     info "Committing version files ..."
     git add \
         "${REPO_ROOT}/VERSION" \
         "${REPO_ROOT}/backend/pyproject.toml" \
         "${REPO_ROOT}/frontend/package.json" \
-        "${REPO_ROOT}/.env.example"
+        "${REPO_ROOT}/.env.example" \
+        "${notes_file}"
     git commit -m "release: prod-v${new_version}" || warn "Nothing to commit (files already up to date)"
 
     # Create git tag
     info "Creating git tag prod-v${new_version} ..."
-    git tag -a "prod-v${new_version}" -m "Release ${new_version}"
+    git tag -a "prod-v${new_version}" -F "${notes_file}"
     ok "Created tag prod-v${new_version}"
 
     # Push commit and tag to remote
@@ -313,6 +339,9 @@ main() {
         echo "  ${DOCKER_HUB_USER}/${PROJECT}-${image_suffix}:${new_version}"
         echo "  ${DOCKER_HUB_USER}/${PROJECT}-${image_suffix}:latest"
     done
+    echo ""
+    info "Release notes:"
+    echo "  ${notes_file}"
     echo ""
     info "Deploy on production host with:"
     echo "  ./scripts/deploy_prod.sh ${new_version}"
