@@ -32,6 +32,13 @@ function buildDocumentHref(documentId: string, from?: string, chatId?: string): 
   return suffix ? `/documents/${cleanId}?${suffix}` : `/documents/${cleanId}`;
 }
 
+function formatDocumentType(type?: string | null): string {
+  if (!type) return "Document";
+  if (type === "judgment" || type === "judgement") return "Judgment";
+  if (type === "tax_interpretation") return "Document";
+  return type.replace(/_/g, " ");
+}
+
 export function DocumentCard({
   document,
   onSaveToCollection,
@@ -51,7 +58,7 @@ export function DocumentCard({
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm leading-5">{title}</CardTitle>
           <Badge variant="outline" className="shrink-0 text-[10px]">
-            {document.document_type}
+            {formatDocumentType(document.document_type)}
           </Badge>
         </div>
       </CardHeader>

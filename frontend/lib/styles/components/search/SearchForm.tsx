@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import type { AutocompleteSuggestion } from "@/hooks/useSearchAutocomplete";
 import { DocumentType } from "@/types/search";
 
-type SearchMode = "rabbit" | "thinking";
+type SearchMode = string;
 
 /**
  * Sanitize HTML from Meilisearch highlights: allow only {@code <mark>} tags via DOMPurify.
@@ -183,7 +183,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleInputKeyDown}
-          placeholder="VAT refund for digital services in Poland"
+          placeholder="Liability for defective construction works in Poland"
           disabled={isSearching}
           className="h-11"
         />

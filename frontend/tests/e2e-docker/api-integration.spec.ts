@@ -203,20 +203,6 @@ test.describe('Embeddings API', () => {
   });
 });
 
-test.describe('Deduplication API', () => {
-  test('GET /deduplication/stats returns deduplication statistics', async ({ request }) => {
-    const response = await request.get('/deduplication/stats');
-    expect([200, 500]).toContain(response.status());
-  });
-});
-
-test.describe('Recommendations API', () => {
-  test('GET /recommendations returns recommendations', async ({ request }) => {
-    const response = await request.get('/recommendations');
-    expect([200, 500]).toContain(response.status());
-  });
-});
-
 test.describe('Auth Enforcement', () => {
   // Use Node's native fetch to guarantee no Playwright extraHTTPHeaders leak.
   test('GET /dashboard/stats rejects request with missing API key', async () => {

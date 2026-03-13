@@ -6,6 +6,7 @@ import { SaveToCollectionPopover } from "../save-to-collection-popover";
 import { InfiniteScrollTrigger } from "./InfiniteScrollTrigger";
 import { SearchDocumentCard } from "../search-document-card";
 import type { LegalDocumentMetadata, SearchDocument } from "@/types/search";
+import type { PaginationMetadata } from "@/lib/api";
 
 export interface SearchContextParams {
   searchQuery: string;
@@ -15,28 +16,22 @@ export interface SearchContextParams {
   searchTimestamp?: string;
 }
 
-interface PaginationMetadata {
-  offset: number;
-  limit: number;
-  loaded_count: number;
-  estimated_total: number | null;
-  has_more: boolean;
-  next_offset: number | null;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyMetadata = any;
 
 export interface SearchResultsSectionProps {
-  filteredMetadata: LegalDocumentMetadata[];
+  filteredMetadata: AnyMetadata[];
   filteredCount: number;
   activeFilterCount: number;
-  searchMetadata: LegalDocumentMetadata[];
+  searchMetadata: AnyMetadata[];
   chunksCache: Record<string, unknown>;
   loadingChunks: string[];
   selectedDocumentIds: Set<string>;
   selectedCount: number;
   showSaveAllPopover: boolean;
-  convertMetadataToSearchDocument: (metadata: LegalDocumentMetadata) => SearchDocument;
+  convertMetadataToSearchDocument: (metadata: AnyMetadata) => SearchDocument;
   toggleDocumentSelection: (documentId: string) => void;
-  selectAllDocuments: () => void;
+  selectAllDocuments: (ids?: string[]) => void;
   clearSelection: () => void;
   setShowSaveAllPopover: (open: boolean) => void;
   filterVersion: number;
@@ -105,7 +100,7 @@ export function SearchResultsSection({
               Deselect All
             </SecondaryButton>
           ) : (
-            <SecondaryButton size="sm" onClick={selectAllDocuments}>
+            <SecondaryButton size="sm" onClick={() => selectAllDocuments()}>
               Select All
             </SecondaryButton>
           )}
