@@ -3,9 +3,8 @@
 const CACHE_VERSION = "v2";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
-const OFFLINE_DOC_CACHE = `offline-documents-${CACHE_VERSION}`;
 
-const STATIC_ASSETS = ["/offline", "/offline/documents"];
+const STATIC_ASSETS = [];
 
 const CACHEABLE_EXTENSIONS = [
   ".js",
@@ -22,7 +21,7 @@ const CACHEABLE_EXTENSIONS = [
   ".ico",
 ];
 
-// Install: pre-cache the offline fallback pages
+// Install: pre-cache static assets when defined
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -34,7 +33,7 @@ self.addEventListener("install", (event) => {
 
 // Activate: clean old caches and claim clients
 self.addEventListener("activate", (event) => {
-  const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, OFFLINE_DOC_CACHE];
+  const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE];
   event.waitUntil(
     caches
       .keys()
@@ -64,11 +63,6 @@ function isNextDataRequest(url) {
 // Helper: check if request is an API call
 function isApiRequest(url) {
   return url.pathname.startsWith("/api/");
-}
-
-// Helper: check if request is for a document API (higher priority caching)
-function isDocumentApiRequest(url) {
-  return /^\/api\/documents\/[^/]+\/(metadata|html|similar)/.test(url.pathname);
 }
 
 // Fetch handler with appropriate caching strategies
@@ -104,34 +98,6 @@ self.addEventListener("fetch", (event) => {
             return response;
           })
       )
-    );
-    return;
-  }
-
-  // Document API requests: Network-First with offline doc cache fallback
-  if (isDocumentApiRequest(url)) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(OFFLINE_DOC_CACHE).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() =>
-          caches
-            .match(event.request, { cacheName: OFFLINE_DOC_CACHE })
-            .then(
-              (cached) =>
-                cached ||
-                caches
-                  .match(event.request)
-                  .then((dynamicCached) => dynamicCached || createOfflineApiResponse())
-            )
-        )
     );
     return;
   }
@@ -174,7 +140,7 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches
             .match(event.request)
-            .then((cached) => cached || caches.match("/offline"))
+            .then((cached) => cached || createOfflinePageResponse())
         )
     );
     return;
@@ -195,62 +161,20 @@ function createOfflineApiResponse() {
   );
 }
 
+function createOfflinePageResponse() {
+  return new Response(
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline</title></head><body><main style="font-family:system-ui,sans-serif;max-width:40rem;margin:4rem auto;padding:0 1.5rem;"><h1>Offline</h1><p>You are currently offline and this page is not available.</p></main></body></html>`,
+    {
+      status: 503,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    }
+  );
+}
+
 // Listen for messages from the app
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
     return;
-  }
-
-  if (event.data?.type === "CACHE_DOCUMENT") {
-    const { url, data } = event.data;
-    caches.open(OFFLINE_DOC_CACHE).then((cache) => {
-      const response = new Response(JSON.stringify(data), {
-        headers: { "Content-Type": "application/json" },
-      });
-      cache.put(url, response);
-    });
-  }
-
-  if (event.data?.type === "CACHE_DOCUMENT_HTML") {
-    const { url, html } = event.data;
-    caches.open(OFFLINE_DOC_CACHE).then((cache) => {
-      const response = new Response(html, {
-        headers: { "Content-Type": "text/html" },
-      });
-      cache.put(url, response);
-    });
-  }
-
-  if (event.data?.type === "REMOVE_CACHED_DOCUMENT") {
-    const { url } = event.data;
-    caches.open(OFFLINE_DOC_CACHE).then((cache) => {
-      cache.delete(url);
-    });
-  }
-
-  if (event.data?.type === "GET_CACHED_DOCUMENTS") {
-    caches.open(OFFLINE_DOC_CACHE).then((cache) => {
-      cache.keys().then((keys) => {
-        const urls = keys.map((req) => req.url);
-        event.source?.postMessage({
-          type: "CACHED_DOCUMENTS_LIST",
-          urls,
-        });
-      });
-    });
-  }
-});
-
-// Background sync: process annotation queue when connectivity returns
-self.addEventListener("sync", (event) => {
-  if (event.tag === "sync-annotations") {
-    event.waitUntil(
-      self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({ type: "TRIGGER_SYNC" });
-        });
-      })
-    );
   }
 });
