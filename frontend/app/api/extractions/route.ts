@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     // Updated: POST /extractions/db (new endpoint using InformationExtractorDB with schemas from Supabase)
     // Send document_ids to the backend
     const backendPayload: {
-      collection_id: string;
+      collection_id?: string;
       schema_id: string;
       document_ids: string[];
       extraction_context: string;

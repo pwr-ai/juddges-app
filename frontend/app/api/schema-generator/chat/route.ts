@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       current_schema = null,
       agent_id = null,
       session_id = null, // New: support session_id
-      document_type = "tax_interpretation", // Default to tax interpretation
+      document_type = "judgment",
     } = body;
 
     // Get user from session

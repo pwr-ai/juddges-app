@@ -51,7 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Check cache first (unless bypassing)
     if (!bypassCache) {
-      const cachedData = getCachedChats(cacheKey);
+      const cachedData = getCachedChats<unknown[]>(cacheKey);
       if (cachedData) {
         const etag = generateETag(cachedData);
         const ifNoneMatch = request.headers.get("if-none-match");

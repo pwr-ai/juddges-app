@@ -7,48 +7,48 @@ export async function GET(): Promise<NextResponse> {
   const mockedSchemas = [
     {
       id: 'mock-schema-1',
-      name: 'IP Box Interpretation Schema',
-      description: 'Schema for extracting data from IP Box tax interpretation documents',
-      type: 'tax_interpretation',
-      category: 'tax',
+      name: 'Judgment Metadata Schema',
+      description: 'Schema for extracting structured metadata from appellate judgment documents',
+      type: 'judgment',
+      category: 'case-law',
       text: {
         type: 'object',
         properties: {
           document_type: { 
             type: 'string',
-            description: 'The type of tax document or interpretation being processed'
+            description: 'The type of judgment or court decision being processed'
           },
           document_status: { 
             type: 'string',
             description: 'Current status of the document'
           },
-          application_date: { 
+          decision_date: { 
             type: 'string', 
             format: 'date',
-            description: 'The date when the tax application was submitted'
+            description: 'The date when the judgment was issued'
           },
-          tax_type: { 
+          court_name: { 
             type: 'string',
-            description: 'Category of tax being addressed'
+            description: 'Court that issued the judgment'
           },
-          relief_type: { 
+          legal_issue: { 
             type: 'string',
-            description: 'Type of tax relief or benefit being applied for'
+            description: 'Core legal issue addressed by the judgment'
           },
-          legal_questions: {
+          holdings: {
             type: 'array',
-            description: 'List of legal questions addressed in the tax interpretation',
+            description: 'List of key holdings extracted from the judgment',
             items: {
               type: 'object',
               properties: {
-                question_number: { type: 'number' },
-                question: { type: 'string' },
-                answer: { type: 'string' }
+                point_number: { type: 'number' },
+                issue: { type: 'string' },
+                holding: { type: 'string' }
               }
             }
           }
         },
-        required: ['document_type', 'document_status', 'application_date', 'tax_type']
+        required: ['document_type', 'document_status', 'decision_date', 'court_name']
       },
       dates: {},
       created_at: '2024-01-15T10:00:00Z',

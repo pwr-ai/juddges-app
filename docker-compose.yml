@@ -40,6 +40,8 @@ services:
       # Runtime configuration
       - PORT=3006
       - HOSTNAME=0.0.0.0
+      # Server-side routes inside the frontend container must use Docker service names
+      - API_BASE_URL=http://backend:8002
     # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
@@ -85,11 +87,17 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    # All environment variables loaded from env_file
+    environment:
+      # Internal service discovery for container-to-container communication
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
+    # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
       - "com.juddges.service=application"
       - "com.juddges.service.type=backend-api"
+    depends_on:
+      - meilisearch
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -185,10 +193,16 @@ services:
     #   - ./backend:/app
     env_file:
       - .env
+    environment:
+      # Internal service discovery for container-to-container communication
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
     # All environment variables loaded from env_file
     labels:
       - "com.juddges.service=application"
       - "com.juddges.service.type=worker"
+    depends_on:
+      - meilisearch
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -227,9 +241,15 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Internal service discovery for container-to-container communication
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
     labels:
       - "com.juddges.service=application"
       - "com.juddges.service.type=beat-scheduler"
+    depends_on:
+      - meilisearch
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

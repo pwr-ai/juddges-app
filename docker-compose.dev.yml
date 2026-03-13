@@ -20,158 +20,201 @@
 #   3. Run: docker compose -f docker-compose.dev.yml up -d
 
 services:
-  # ============================================================================
-  # Application Services (Development)
-  # ============================================================================
+    # ============================================================================
+    # Application Services (Development)
+    # ============================================================================
 
-  frontend-dev:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: juddges-frontend-dev
-    ports:
-      - "3007:3000"
-    restart: unless-stopped
-    command: ["npx", "next", "dev"]
-    env_file:
-      - .env
-    environment:
-      # Development environment override
-      - NODE_ENV=development
-      # API URLs for container-to-container communication
-      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8004}
-      - API_BASE_URL=http://backend-dev:8080
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next  # Keep .next in container to avoid permission issues
-    labels:
-      - "com.juddges.service=application"
-      - "com.juddges.service.type=frontend"
-      - "com.juddges.environment=development"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - app-dev-network
+    frontend-dev:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+            target: development
+        container_name: juddges-frontend-dev
+        ports:
+            - "3007:3000"
+        restart: unless-stopped
+        command: ["npx", "next", "dev"]
+        env_file:
+            - .env
+        environment:
+            # Development environment override
+            - NODE_ENV=development
+            # Browser-facing URL exposed on the host machine
+            - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8004}
+            # Container-to-container communication must use Docker service names
+            - API_BASE_URL=http://backend-dev:8080
+        volumes:
+            - ./frontend:/app
+            - /app/node_modules
+            - /app/.next # Keep .next in container to avoid permission issues
+        labels:
+            - "com.juddges.service=application"
+            - "com.juddges.service.type=frontend"
+            - "com.juddges.environment=development"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        networks:
+            - app-dev-network
 
-  backend-dev:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: juddges-backend-dev
-    ports:
-      - "8004:8080"
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      # Development environment override
-      - PYTHON_ENV=development
-      # HuggingFace cache configuration (container-specific paths)
-      - HF_HOME=/tmp/hf
-      - HF_HUB_CACHE=/tmp/hf/hub
-      - TRANSFORMERS_CACHE=/tmp/hf/transformers
-    # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
-    tty: true
-    volumes:
-      - ./backend:/app
-      - hf-cache-dev:/tmp/hf
-    labels:
-      - "com.juddges.service=application"
-      - "com.juddges.service.type=backend-api"
-      - "com.juddges.environment=development"
-    depends_on:
-      - backend-worker-dev
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - app-dev-network
+    backend-dev:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+            target: development
+        container_name: juddges-backend-dev
+        ports:
+            - "8004:8080"
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            # Development environment override
+            - PYTHON_ENV=development
+            # Internal service discovery for container-to-container communication
+            - REDIS_HOST=redis-dev
+            - REDIS_PORT=6379
+            - REDIS_URL=redis://redis-dev:6379/0
+            - CELERY_BROKER_URL=redis://redis-dev:6379/0
+            - CELERY_BACKEND_URL=redis://redis-dev:6379/0
+            - CELERY_PROJECT_NAME=${CELERY_PROJECT_NAME:-juddges}
+            - MEILISEARCH_URL=http://meilisearch-dev:7700
+            - MEILISEARCH_INTERNAL_URL=http://meilisearch-dev:7700
+            # HuggingFace cache configuration (container-specific paths)
+            - HF_HOME=/tmp/hf
+            - HF_HUB_CACHE=/tmp/hf/hub
+            - TRANSFORMERS_CACHE=/tmp/hf/transformers
+        # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
+        tty: true
+        volumes:
+            - ./backend:/app
+            - hf-cache-dev:/tmp/hf
+        labels:
+            - "com.juddges.service=application"
+            - "com.juddges.service.type=backend-api"
+            - "com.juddges.environment=development"
+        depends_on:
+            - backend-worker-dev
+            - meilisearch-dev
+            - redis-dev
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        networks:
+            - app-dev-network
 
-  # ============================================================================
-  # Search Infrastructure (Optional, Development)
-  # ============================================================================
+    # ============================================================================
+    # Search Infrastructure (Optional, Development)
+    # ============================================================================
 
-  meilisearch-dev:
-    image: getmeili/meilisearch:v1.13
-    container_name: juddges-meilisearch-dev
-    restart: unless-stopped
-    ports:
-      - "7700:7700"
-    environment:
-      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-dev-master-key}
-      - MEILI_ENV=development
-      - MEILI_LOG_LEVEL=INFO
-    volumes:
-      - meilisearch-data-dev:/meili_data
-    labels:
-      - "com.juddges.service=infrastructure"
-      - "com.juddges.service.type=search"
-      - "com.juddges.environment=development"
-    networks:
-      - app-dev-network
+    meilisearch-dev:
+        image: getmeili/meilisearch:v1.13
+        container_name: juddges-meilisearch-dev
+        restart: unless-stopped
+        ports:
+            - "7700:7700"
+        environment:
+            - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-dev-master-key}
+            - MEILI_ENV=development
+            - MEILI_LOG_LEVEL=INFO
+        volumes:
+            - meilisearch-data-dev:/meili_data
+        labels:
+            - "com.juddges.service=infrastructure"
+            - "com.juddges.service.type=search"
+            - "com.juddges.environment=development"
+        networks:
+            - app-dev-network
 
-  # ============================================================================
-  # Background Workers (Development)
-  # ============================================================================
+    redis-dev:
+        image: redis:7-alpine
+        container_name: juddges-redis-dev
+        restart: unless-stopped
+        expose:
+            - "6379"
+        command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+        volumes:
+            - redis-data-dev:/data
+        labels:
+            - "com.juddges.service=infrastructure"
+            - "com.juddges.service.type=redis"
+            - "com.juddges.environment=development"
+        networks:
+            - app-dev-network
 
-  backend-worker-dev:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: juddges-backend-worker-dev
-    command: celery -A app.workers worker --beat --loglevel=info
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      # Development environment override
-      - PYTHON_ENV=development
-      # HuggingFace cache configuration (container-specific paths)
-      - HF_HOME=/tmp/hf
-      - HF_HUB_CACHE=/tmp/hf/hub
-      - TRANSFORMERS_CACHE=/tmp/hf/transformers
-    # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
-    volumes:
-      - ./backend:/app
-      - hf-cache-dev:/tmp/hf
-    labels:
-      - "com.juddges.service=application"
-      - "com.juddges.service.type=worker"
-      - "com.juddges.environment=development"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - app-dev-network
+    # ============================================================================
+    # Background Workers (Development)
+    # ============================================================================
+
+    backend-worker-dev:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+            target: development
+        container_name: juddges-backend-worker-dev
+        command: celery -A app.workers worker --beat --loglevel=info
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            # Development environment override
+            - PYTHON_ENV=development
+            # Internal service discovery for container-to-container communication
+            - REDIS_HOST=redis-dev
+            - REDIS_PORT=6379
+            - REDIS_URL=redis://redis-dev:6379/0
+            - CELERY_BROKER_URL=redis://redis-dev:6379/0
+            - CELERY_BACKEND_URL=redis://redis-dev:6379/0
+            - CELERY_PROJECT_NAME=${CELERY_PROJECT_NAME:-juddges}
+            - MEILISEARCH_URL=http://meilisearch-dev:7700
+            - MEILISEARCH_INTERNAL_URL=http://meilisearch-dev:7700
+            # HuggingFace cache configuration (container-specific paths)
+            - HF_HOME=/tmp/hf
+            - HF_HUB_CACHE=/tmp/hf/hub
+            - TRANSFORMERS_CACHE=/tmp/hf/transformers
+        # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
+        volumes:
+            - ./backend:/app
+            - hf-cache-dev:/tmp/hf
+        labels:
+            - "com.juddges.service=application"
+            - "com.juddges.service.type=worker"
+            - "com.juddges.environment=development"
+        depends_on:
+            - meilisearch-dev
+            - redis-dev
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        networks:
+            - app-dev-network
 
 # ==============================================================================
 # Volumes (Development-Specific)
 # ==============================================================================
 
 volumes:
-  # Development cache volumes
-  next-cache-dev:
-    name: juddges-next-cache-dev
-    driver: local
-  hf-cache-dev:
-    name: juddges-hf-cache-dev
-    driver: local
-  meilisearch-data-dev:
-    name: juddges-meilisearch-data-dev
-    driver: local
+    # Development cache volumes
+    next-cache-dev:
+        name: juddges-next-cache-dev
+        driver: local
+    hf-cache-dev:
+        name: juddges-hf-cache-dev
+        driver: local
+    meilisearch-data-dev:
+        name: juddges-meilisearch-data-dev
+        driver: local
+    redis-data-dev:
+        name: juddges-redis-data-dev
+        driver: local
 
 # ==============================================================================
 # Networks
 # ==============================================================================
 
 networks:
-  # Single development network for all application services
-  # External services (Supabase, Redis) are accessed via host.docker.internal or external URLs
-  app-dev-network:
-    name: juddges-app-dev-network
-    driver: bridge
+    # Single development network for all application services
+    # Internal infrastructure uses Docker service names; external services use URLs or host.docker.internal
+    app-dev-network:
+        name: juddges-app-dev-network
+        driver: bridge
 
 # ==============================================================================
 # Notes
@@ -195,9 +238,10 @@ networks:
 #
 # NETWORK ARCHITECTURE:
 # - All development services use a single network: app-dev-network
-# - External infrastructure (Supabase, Redis, PostgreSQL) accessed via:
+# - Internal infrastructure (Redis, Meilisearch) uses Docker service names
+# - External infrastructure (Supabase, PostgreSQL) is accessed via:
 #   * External URLs (Supabase: SUPABASE_URL in .env)
-#   * host.docker.internal (for local services if needed)
+#   * host.docker.internal (for host-local services if needed)
 # - No external network dependencies
 # - Simplified single-network architecture for development
 # ==============================================================================

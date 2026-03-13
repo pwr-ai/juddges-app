@@ -15,9 +15,9 @@ export async function GET(): Promise<NextResponse> {
     {
       job_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       collection_id: 'collection-1',
-      collection_name: 'Tax Interpretations Collection',
+      collection_name: 'Appellate Judgments Collection',
       schema_id: 'schema-1',
-      schema_name: 'IP Box Interpretation Schema',
+      schema_name: 'Judgment Metadata Schema',
       status: 'SUCCESS',
       created_at: threeHoursAgo.toISOString(),
       updated_at: twoHoursAgo.toISOString(),
@@ -72,6 +72,5 @@ export async function GET(): Promise<NextResponse> {
     total: mockedJobs.length
   });
 }
-
 
 
