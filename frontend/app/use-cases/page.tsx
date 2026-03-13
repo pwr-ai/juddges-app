@@ -11,18 +11,6 @@ export default function UseCasesPage() {
       <Header icon={BookOpen} title="Use Cases" size="4xl" className="mb-6" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        <Link href="/use-cases/swiss-franc">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle>Swiss Franc Loan Analysis</CardTitle>
-              <CardDescription>Real estate loan analysis based on Polish court judgments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Analyze trends and patterns in Swiss Franc loan cases from Polish courts. View structured information about court decisions, loan terms, and outcomes.</p>
-            </CardContent>
-          </Card>
-        </Link>
-
         <Link href="/use-cases/uk-judgments">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>

@@ -1,3 +1,5 @@
+"use client";
+
 import { LightCard } from "@/lib/styles/components/light-card";
 import { Header } from "@/lib/styles/components/HeaderWithIcon";
 import { SecondaryHeader } from "@/lib/styles/components/secondary-header";
@@ -5,11 +7,6 @@ import { SectionHeader } from "@/lib/styles/components/section-header";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertTriangle, Users, Scale } from "lucide-react";
 import React from "react";
-
-export const metadata = {
- title: "Terms of Service | JuDDGES",
- description: "Terms of service for JuDDGES judgments analysis platform",
-};
 
 export default function TermsPage(): React.ReactElement {
  return (

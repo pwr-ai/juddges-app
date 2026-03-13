@@ -248,19 +248,19 @@ The question is no longer **whether** to adopt AI in legal research, but *how* t
 const relatedPosts: BlogPost[] = [
   {
     id: "2",
-    slug: "understanding-tax-interpretations",
-    title: "Understanding Polish Tax Interpretations",
-    excerpt: "A comprehensive guide to navigating tax interpretations.",
+    slug: "reading-appellate-judgments",
+    title: "Reading Appellate Judgments",
+    excerpt: "A practical guide to reading appellate judgments and identifying key holdings.",
     author: {
       name: "Anna Kowalska",
-      title: "Tax Law Expert",
+      title: "Case Law Researcher",
       avatar: "/api/placeholder/100/100"
     },
     status: "published",
     published_at: "2025-01-05T14:30:00Z",
     created_at: "2025-01-03T10:00:00Z",
     updated_at: "2025-01-05T14:30:00Z",
-    tags: ["Tax", "Legal"],
+    tags: ["Judgments", "Legal Research"],
     category: "Tutorials",
     read_time: 12,
     views: 2341,

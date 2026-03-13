@@ -80,10 +80,10 @@ export default function TermsPage() {
           <div className="space-y-4 text-muted-foreground">
             <div>
               <h3 className="font-medium text-foreground mb-2">2.1 Research Platform</h3>
-              <p>
-                JuDDGES is an academic research platform designed to support legal research and education through
-                AI-powered analysis of court judgments and tax law documents.
-              </p>
+	              <p>
+	                JuDDGES is an academic research platform designed to support legal research and education through
+	                AI-powered analysis of court judgments and related legal documents.
+	              </p>
             </div>
 
             <div>

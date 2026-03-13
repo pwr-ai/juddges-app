@@ -87,7 +87,7 @@ function SavedSearchCard({
             )}
             {search.document_types.length > 0 && (
               <Badge variant="outline" className="text-xs">
-                {search.document_types.map(t => t === 'judgment' ? 'Judgments' : 'Interpretations').join(', ')}
+                {search.document_types.map(t => t === 'judgment' ? 'Judgments' : 'Documents').join(', ')}
               </Badge>
             )}
             {search.languages.length > 0 && (
@@ -232,7 +232,7 @@ export default function SavedSearchesPage() {
       searchStore.setSearchType(search.search_mode);
     }
     if (search.languages.length > 0) {
-      searchStore.setSelectedLanguages(new Set(search.languages));
+      searchStore.setSelectedLanguages([...search.languages]);
     }
     if (search.document_types.length > 0) {
       const types = search.document_types
@@ -242,25 +242,8 @@ export default function SavedSearchesPage() {
       }
     }
 
-    // Restore filters
-    if (config.filters) {
-      const f = config.filters;
-      searchStore.setFilters({
-        keywords: new Set(f.keywords || []),
-        legalConcepts: new Set(f.legalConcepts || []),
-        documentTypes: new Set(f.documentTypes || []),
-        issuingBodies: new Set(f.issuingBodies || []),
-        languages: new Set(f.languages || []),
-        dateFrom: f.dateFrom ? new Date(f.dateFrom) : undefined,
-        dateTo: f.dateTo ? new Date(f.dateTo) : undefined,
-        jurisdictions: new Set(f.jurisdictions || []),
-        courtLevels: new Set(f.courtLevels || []),
-        legalDomains: new Set(f.legalDomains || []),
-        customMetadata: f.customMetadata || {},
-      });
-    }
-
     // Navigate to search page - the URL params hook will trigger the search
+    // Filters are passed via URL params below so the search page can restore them
     const params = new URLSearchParams();
     if (search.query) params.set('q', encodeURIComponent(search.query));
     if (search.search_mode) params.set('mode', search.search_mode);
@@ -300,8 +283,8 @@ export default function SavedSearchesPage() {
 
   const handleSaveEdit = async () => {
     if (editTarget) {
-      const { updateSearch } = useSavedSearchStore.getState();
-      await updateSearch(editTarget.id, {
+      const { updateSavedSearch } = useSavedSearchStore.getState();
+      await updateSavedSearch(editTarget.id, {
         name: editName,
         description: editDescription || null,
         folder: editFolder || null,
@@ -354,14 +337,14 @@ export default function SavedSearchesPage() {
               </Button>
               {folders.map(folder => (
                 <Button
-                  key={folder}
-                  variant={filterFolder === folder ? "secondary" : "ghost"}
+                  key={folder.id}
+                  variant={filterFolder === folder.name ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setFilterFolder(folder)}
+                  onClick={() => setFilterFolder(folder.name)}
                   className="h-8 text-xs"
                 >
                   <FolderOpen className="h-3 w-3 mr-1" />
-                  {folder}
+                  {folder.name}
                 </Button>
               ))}
             </div>

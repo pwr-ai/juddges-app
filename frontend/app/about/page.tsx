@@ -167,10 +167,10 @@ export default function AboutPage(): React.JSX.Element {
  <span className="text-primary mt-1 text-lg">•</span>
  <span className="text-base">Extract relevant information from court judgments</span>
  </li>
- <li className="flex items-start gap-3">
- <span className="text-primary mt-1 text-lg">•</span>
- <span className="text-base">Provide insights into tax law interpretations</span>
- </li>
+	 <li className="flex items-start gap-3">
+	 <span className="text-primary mt-1 text-lg">•</span>
+	 <span className="text-base">Provide insights into judicial reasoning and case law trends</span>
+	 </li>
  <li className="flex items-start gap-3">
  <span className="text-primary mt-1 text-lg">•</span>
  <span className="text-base">Support legal professionals in their research and analysis</span>

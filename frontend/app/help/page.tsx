@@ -53,10 +53,10 @@ export default function HelpPage() {
  q: "Is JuDDGES free to use? ",
  a: "Yes, JuDDGES is free for academic and research purposes. The platform is funded by Wroclaw University of Science and Technology as part of the JuDDGES research project.",
  },
- {
- q: "What kind of legal documents can I find on JuDDGES? ",
- a: "The platform contains Polish court judgments, tax law interpretations, and related legal documents. The database is continuously updated with new documents from official sources.",
- },
+	 {
+	 q: "What kind of legal documents can I find on JuDDGES? ",
+	 a: "The platform contains court judgments and related legal materials for research and analysis. The database is continuously updated with new documents from official sources.",
+	 },
  ],
  },
  {
@@ -68,10 +68,10 @@ export default function HelpPage() {
  q: "What's the difference between Rabbit and Thinking search modes? ",
  a: "Rabbit mode provides fast, simple keyword-based searches ideal for quick lookups. Thinking mode uses advanced AI reasoning to understand complex queries, analyze context, and provide more nuanced results. Use Rabbit for straightforward searches and Thinking for complex legal research questions.",
  },
- {
- q: "How do I search for specific document types? ",
- a: "Use the filters in the search interface to narrow down by document type (judgments, interpretations), jurisdiction, date range, and language. You can also use advanced search operators in your query.",
- },
+	 {
+	 q: "How do I search for specific document types? ",
+	 a: "Use the filters in the search interface to narrow down by document type, jurisdiction, date range, and language. You can also use advanced search operators in your query.",
+	 },
  {
  q: "Can I save my search results? ",
  a: "Yes, you can save individual documents to collections for later reference. Collections allow you to organize documents by topic, case, or research project.",
@@ -95,10 +95,10 @@ export default function HelpPage() {
  q: "Can I trust the AI's legal advice? ",
  a: "No. The AI assistant provides information and analysis for research and educational purposes only. It does NOT provide legal advice and should never be used as a substitute for consultation with a qualified attorney. Always verify information with legal professionals.",
  },
- {
- q: "What can I ask the AI assistant? ",
- a: "You can ask about legal concepts, request document summaries, compare cases, analyze legal arguments, or research specific tax law topics. The AI works best with specific, well-formulated questions related to Polish tax law and court judgments.",
- },
+	 {
+	 q: "What can I ask the AI assistant? ",
+	 a: "You can ask about legal concepts, request document summaries, compare cases, analyze legal arguments, or research specific issues in case law. The AI works best with specific, well-formulated questions related to judgments and legal reasoning.",
+	 },
  {
  q: "How many documents does the AI consider in its responses? ",
  a: "By default, the AI assistant retrieves and considers up to 20 relevant documents when generating responses. This ensures comprehensive coverage while maintaining response quality.",

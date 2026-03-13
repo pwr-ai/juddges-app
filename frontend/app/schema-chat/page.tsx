@@ -451,7 +451,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  .filter((schema) => {
  if (!schemaLoad.schemaSearchQuery.trim()) return true;
  const query = schemaLoad.schemaSearchQuery.toLowerCase();
- return schema.name.toLowerCase().includes(query) || schema.category.toLowerCase().includes(query);
+ return schema.name.toLowerCase().includes(query) || (schema.category ?? "").toLowerCase().includes(query);
  })
  .sort((a, b) => {
  if (a.is_verified && !b.is_verified) return -1;
@@ -475,7 +475,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  <div className="font-medium text-foreground truncate">{schema.name}</div>
  {schema.is_verified && <VerifiedBadge size="sm"/>}
  </div>
- <div className="text-xs text-muted-foreground">{schema.category} • Updated {new Date(schema.updatedAt).toLocaleDateString()}</div>
+ <div className="text-xs text-muted-foreground">{schema.category} • Updated {new Date(schema.updated_at).toLocaleDateString()}</div>
  </div>
  </div>
  </button>

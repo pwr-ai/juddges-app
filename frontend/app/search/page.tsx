@@ -95,7 +95,7 @@ function SearchPageContent(): React.JSX.Element | null {
  const [mounted, setMounted] = useState(false);
  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
  const searchInputRef = useRef<HTMLInputElement>(null);
- const [lastSearchMode, setLastSearchMode] = useState<'rabbit' | 'thinking' | null>(null);
+ const [lastSearchMode, setLastSearchMode] = useState<string | null>(null);
  const [hasPerformedSearch, setHasPerformedSearch] = useState(false);
  const [searchTimestamp, setSearchTimestamp] = useState<string>('');
 
@@ -309,9 +309,12 @@ function SearchPageContent(): React.JSX.Element | null {
  setSelectedLanguages(newSet);
  };
 
- const toggleDocumentType = (docType: DocumentType): void => {
- const newTypes = [...documentTypes];
- const index = newTypes.indexOf(docType);
+  const toggleDocumentType = (docType: DocumentType): void => {
+  if (docType !== DocumentType.JUDGMENT) {
+  return;
+  }
+  const newTypes = [...documentTypes];
+  const index = newTypes.indexOf(docType);
  if (index > -1) {
  if (newTypes.length > 1) {
  newTypes.splice(index, 1);
@@ -321,27 +324,6 @@ function SearchPageContent(): React.JSX.Element | null {
  }
  setDocumentTypes(newTypes);
  };
-
- // Auto-deselect English when switching to Tax Interpretation
- useEffect(() => {
- const hasTaxInterpretation = documentTypes.includes(DocumentType.TAX_INTERPRETATION);
- const hasOnlyTaxInterpretation = documentTypes.length === 1 && hasTaxInterpretation;
-
- if (hasOnlyTaxInterpretation) {
- const newLanguages = new Set(selectedLanguages);
- const hadEnglish = newLanguages.has('uk') || newLanguages.has('en');
- if (hadEnglish) {
- newLanguages.delete('en');
- newLanguages.delete('uk');
- if (newLanguages.size === 0) {
- newLanguages.add('pl');
- }
- if (hadEnglish && (selectedLanguages.has('uk') || selectedLanguages.has('en'))) {
- setSelectedLanguages(newLanguages);
- }
- }
- }
- }, [documentTypes, selectedLanguages, setSelectedLanguages]);
 
  // Reset hasPerformedSearch when query is cleared
  useEffect(() => {
@@ -373,7 +355,7 @@ function SearchPageContent(): React.JSX.Element | null {
  }, [query, setQuery]);
 
  const handleSearch = async (
- overrideMode?: 'rabbit' | 'thinking',
+ overrideMode?: string,
  overrideQuery?: string,
  overrideDocumentTypes?: DocumentType[],
  overrideLanguages?: string[]
@@ -555,7 +537,7 @@ function SearchPageContent(): React.JSX.Element | null {
  className="text-3xl md:text-4xl font-bold leading-relaxed text-black text-center"
  />
  <p className="text-base md:text-lg text-muted-foreground text-center">
- Judgments, tax interpretations and rulings in seconds.
+ Judgments and legal decisions in seconds.
  </p>
  </div>
 

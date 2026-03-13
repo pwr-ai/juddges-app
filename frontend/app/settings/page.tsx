@@ -20,8 +20,6 @@ import {
  Bell,
  Shield,
  Database,
- History,
- Users,
  PieChart,
  ArrowRight,
  ExternalLink,
@@ -488,38 +486,6 @@ export default function SettingsPage() {
  <p className="font-medium">Database Statistics</p>
  <p className="text-sm text-muted-foreground">
  View metrics and analytics
- </p>
- </div>
- </div>
- <ArrowRight className="h-5 w-5 text-muted-foreground"/>
- </Link>
-
- <Link
- href="/search-queries"
- className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
- >
- <div className="flex items-center gap-3">
- <History className="h-5 w-5 text-muted-foreground"/>
- <div>
- <p className="font-medium">Search History</p>
- <p className="text-sm text-muted-foreground">
- Review past queries and results
- </p>
- </div>
- </div>
- <ArrowRight className="h-5 w-5 text-muted-foreground"/>
- </Link>
-
- <Link
- href="/profiles"
- className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
- >
- <div className="flex items-center gap-3">
- <Users className="h-5 w-5 text-muted-foreground"/>
- <div>
- <p className="font-medium">User Profiles</p>
- <p className="text-sm text-muted-foreground">
- Manage user accounts
  </p>
  </div>
  </div>

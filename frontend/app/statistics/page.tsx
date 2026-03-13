@@ -591,7 +591,7 @@ export default function StatisticsPage() {
                     <div>
                       <h4 className="font-semibold text-sm text-gray-600">Keywords ({statistics.sampleDocument.keywords.length})</h4>
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.keywords.map((keyword, index) => (
+                        {statistics.sampleDocument.keywords.map((keyword: string, index: number) => (
                           <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
                             {keyword}
                           </span>

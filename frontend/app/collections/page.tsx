@@ -463,12 +463,12 @@ export default function CollectionsPage() {
  <Lightbulb className="h-3.5 w-3.5 text-amber-500"/>
  Example Use Cases:
  </p>
- <ul className="text-xs text-muted-foreground space-y-1 ml-5 list-disc">
- <li>Tax law precedents for ongoing litigation</li>
- <li>Regulatory interpretations on specific topics</li>
- <li>Comparative case law analysis</li>
- <li>Client matter document repository</li>
- </ul>
+	 <ul className="text-xs text-muted-foreground space-y-1 ml-5 list-disc">
+	 <li>Appellate judgments relevant to an ongoing dispute</li>
+	 <li>Case law grouped by doctrine or procedural issue</li>
+	 <li>Comparative case law analysis</li>
+	 <li>Client matter document repository</li>
+	 </ul>
  </div>
 
  <PrimaryButton

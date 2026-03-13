@@ -245,7 +245,6 @@ interface ExtractionJob {
 
 const documentTypeBadgeStyles: Record<string, string> = {
  judgment: "bg-blue-400/8 text-blue-800 border border-blue-400/15 shadow-sm shadow-blue-400/5",
- tax_interpretation: "bg-purple-400/8 text-purple-800 border border-purple-400/15 shadow-sm shadow-purple-400/5",
  default: "bg-slate-200/40 text-slate-700 border border-slate-200/30",
 };
 
@@ -290,11 +289,11 @@ const getDocumentTypeBadge = (type?: string | null) => {
  };
  }
 
- // Check for tax interpretation variations
+ // Collapse legacy tax interpretation documents into a generic label in the UI.
  if (normalized === "tax_interpretation"|| normalized === "tax interpretation"|| normalized.includes("tax_interpretation") || normalized.includes("tax interpretation")) {
  return {
- label: "Tax Interpretation",
- className: documentTypeBadgeStyles.tax_interpretation,
+ label: "Legal Document",
+ className: documentTypeBadgeStyles.default,
  };
  }
 

@@ -1,3 +1,5 @@
+"use client";
+
 import { LightCard } from "@/lib/styles/components/light-card";
 import { Header } from "@/lib/styles/components/HeaderWithIcon";
 import { SecondaryHeader } from "@/lib/styles/components/secondary-header";
@@ -5,11 +7,6 @@ import { SectionHeader } from "@/lib/styles/components/section-header";
 import { Separator } from "@/components/ui/separator";
 import { Shield, Lock, Eye, Database, Mail } from "lucide-react";
 import React from "react";
-
-export const metadata = {
-  title: "Privacy Policy | JuDDGES",
-  description: "Privacy policy for JuDDGES judgments analysis platform",
-};
 
 export default function PrivacyPage(): React.ReactElement {
   return (

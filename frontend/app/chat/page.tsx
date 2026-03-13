@@ -95,10 +95,10 @@ export default function ChatPage(): React.JSX.Element {
 
  // Fallback questions if API fails
  const fallbackQuestions = useMemo(() => [
-"Jakie są konsekwencje prawne nieterminowego złożenia zeznania podatkowego? ",
+"Jakie są przesłanki odpowiedzialności kontraktowej za nienależyte wykonanie umowy? ",
 "Czy umowa o dzieło podlega obowiązkowi ubezpieczenia społecznego? ",
-"Kiedy przysługuje prawo do odliczenia VAT? ",
-"Jakie są wymagania dla IP Box w Polsce? "
+"Kiedy sąd może zasądzić zadośćuczynienie za naruszenie dóbr osobistych? ",
+"Jakie znaczenie ma utrwalona linia orzecznicza w sprawach cywilnych? "
  ], []);
 
  // Log mount only once
@@ -387,7 +387,7 @@ export default function ChatPage(): React.JSX.Element {
  value={inputValue}
  onChange={(value) => setInputValue(value)}
  onSubmit={(e) => {
- e.preventDefault();
+ e?.preventDefault();
  if (inputValue.trim()) {
  // Set flag to indicate we're sending a message
  // This allows the redirect logic to work properly

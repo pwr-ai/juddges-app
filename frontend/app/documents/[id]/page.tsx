@@ -11,9 +11,6 @@ import DOMPurify from 'dompurify';
 import { summarizeDocuments, type SummarizeDocumentsResponse, extractKeyPoints, type ExtractKeyPointsResponse } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import { VersionHistory } from '@/components/VersionHistory';
-import { SaveOfflineButton } from '@/components/SaveOfflineButton';
-import { getOfflineDocument } from '@/lib/offline-documents';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 
 interface DocumentMetadata {
  document_id: string;
@@ -257,7 +254,6 @@ export default function DocumentPage(): React.JSX.Element {
  const searchParams = useSearchParams();
  const pathname = usePathname();
  const documentId = params.id as string;
- const isOnline = useOnlineStatus();
 
  const [metadata, setMetadata] = useState<DocumentMetadata | null>(null);
  const [similarDocs, setSimilarDocs] = useState<SimilarDocument[]>([]);
@@ -270,7 +266,6 @@ export default function DocumentPage(): React.JSX.Element {
  const [isDocumentExpanded, setIsDocumentExpanded] = useState(true);
  const [isThesisExpanded, setIsThesisExpanded] = useState(false);
  const [areReferencesExpanded, setAreReferencesExpanded] = useState(false);
- const [isOfflineMode, setIsOfflineMode] = useState(false);
 
  // Summarization state
  const [summaryResult, setSummaryResult] = useState<SummarizeDocumentsResponse | null>(null);
@@ -286,39 +281,10 @@ export default function DocumentPage(): React.JSX.Element {
  const [keyPointsError, setKeyPointsError] = useState<string | null>(null);
  const [isKeyPointsPanelOpen, setIsKeyPointsPanelOpen] = useState(false);
 
- const loadFromOfflineStorage = useCallback(async (): Promise<boolean> => {
- try {
- const offlineDoc = await getOfflineDocument(documentId);
- if (!offlineDoc) return false;
-
- setMetadata({
- document_id: offlineDoc.id,
- title: offlineDoc.title,
- document_type: offlineDoc.documentType || 'unknown',
- summary: offlineDoc.summary,
- language: 'unknown',
- ...(offlineDoc.metadata as Record<string, unknown>),
- } as DocumentMetadata);
-
- if (offlineDoc.htmlContent) {
- setHtmlString(offlineDoc.htmlContent);
- } else if (offlineDoc.fullText) {
- setHtmlString(`<div class="doc-container"><pre style="white-space:pre-wrap">${offlineDoc.fullText}</pre></div>`);
- }
-
- setSimilarDocs([]);
- setIsOfflineMode(true);
- return true;
- } catch {
- return false;
- }
- }, [documentId]);
-
  const fetchDocumentData = useCallback(async (): Promise<void> => {
  try {
  setLoading(true);
  setError(null);
- setIsOfflineMode(false);
 
  const metadataRes = await fetch(`/api/documents/${documentId}/metadata`, { cache: 'no-store' });
  if (!metadataRes.ok) throw new Error('Failed to fetch document metadata');
@@ -351,15 +317,11 @@ export default function DocumentPage(): React.JSX.Element {
 
  } catch (err) {
  console.error('Error fetching document:', err);
- // Attempt to load from offline storage as fallback
- const loaded = await loadFromOfflineStorage();
- if (!loaded) {
  setError(err instanceof Error ? err.message : 'Failed to load document');
- }
  } finally {
  setLoading(false);
  }
- }, [documentId, loadFromOfflineStorage]);
+ }, [documentId]);
 
  useEffect(() => {
  if (documentId) fetchDocumentData();
@@ -702,34 +664,18 @@ export default function DocumentPage(): React.JSX.Element {
  <div className="flex flex-col lg:flex-row gap-6">
  {/* Main Content Area */}
  <div className="flex-1 min-w-0">
- {/* Offline mode banner */}
- {isOfflineMode && (
- <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
- <svg className="h-4 w-4 flex-shrink-0"fill="none"viewBox="0 0 24 24"strokeWidth={2} stroke="currentColor"><path strokeLinecap="round"strokeLinejoin="round"d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
- <span>Viewing offline copy &mdash; some features may be limited.</span>
- </div>
- )}
-
  {/* Document Title */}
  <div className="mb-4">
  <div className="w-full">
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
- {metadata.title && (
+              {metadata.title && (
  <p className="text-xl text-muted-foreground flex-1">
  {metadata.title}
  </p>
  )}
- <SaveOfflineButton
- documentId={metadata.document_id}
- title={metadata.title}
- documentType={metadata.document_type}
- htmlContent={htmlString}
- summary={metadata.summary}
- metadata={metadata as unknown as Record<string, unknown>}
- />
- </div>
- </div>
- </div>
+            </div>
+          </div>
+        </div>
 
  {/* Similar Documents Section */}
  {similarDocs.length > 0 && (

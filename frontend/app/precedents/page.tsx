@@ -254,7 +254,7 @@ export default function PrecedentsPage() {
  value={query}
  onChange={(e) => setQuery(e.target.value)}
  onKeyDown={handleKeyDown}
- placeholder="Describe the fact pattern, legal issue, or question you want to find precedents for...&#10;&#10;Example: taxpayer claimed VAT deduction for company car expenses used partially for private purposes"
+	 placeholder="Describe the fact pattern, legal issue, or question you want to find precedents for...&#10;&#10;Example: contractor failed to complete construction works on time and the investor seeks damages"
  className="w-full min-h-[120px] p-4 pr-12 rounded-[16px] bg-[rgba(255,255,255,0.9)] border border-border/50 text-foreground placeholder:text-muted-foreground text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
  />
  <button
@@ -297,7 +297,7 @@ export default function PrecedentsPage() {
  Document Type
  </label>
  <div className="flex flex-wrap gap-2 mt-2">
- {['judgment', 'tax_interpretation'].map((type) => (
+	 {['judgment'].map((type) => (
  <button
  key={type}
  onClick={() => toggleDocType(type)}
@@ -426,11 +426,11 @@ export default function PrecedentsPage() {
  {/* Empty state before search */}
  {!results && !isLoading && !error && (
  <div className="space-y-6">
- <EmptyState
- title="Find relevant precedents"
- description="Describe a fact pattern, legal issue, or question to discover matching case law and interpretations."
- icon={Scale}
- />
+	 <EmptyState
+	 title="Find relevant precedents"
+	 description="Describe a fact pattern, legal issue, or question to discover matching case law."
+	 icon={Scale}
+	 />
 
  {/* Example queries */}
  <div className="space-y-3">
