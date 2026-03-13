@@ -9,8 +9,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView, useSpring, useTransform } from "framer-motion";
-import { Scale, FileText, Clock, Database } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Scale, Globe, Clock, Database } from "lucide-react";
 
 function AnimatedNumber({ value }: { value: number | undefined | null }) {
  const ref = useRef<HTMLSpanElement>(null);
@@ -36,20 +35,18 @@ function AnimatedNumber({ value }: { value: number | undefined | null }) {
 
 interface StatsCardV1Props {
  stats: {
- total_documents: number;
- judgments: number;
- judgments_pl: number;
- judgments_uk: number;
- tax_interpretations: number;
- tax_interpretations_pl: number;
- tax_interpretations_uk: number;
- last_updated: string | null;
+  total_documents: number;
+  judgments?: number;
+  judgments_pl?: number;
+  judgments_uk?: number;
+  last_updated?: string | null;
  };
  formatLastUpdated: (date: string | null) => { value: string; label: string };
 }
 
 export function StatsCardV1({ stats, formatLastUpdated }: StatsCardV1Props) {
- const lastUpdated = formatLastUpdated(stats.last_updated);
+ const lastUpdated = formatLastUpdated(stats.last_updated ?? null);
+ const totalJudgments = stats.judgments ?? stats.total_documents;
  const formatK = (n: number | undefined | null) => {
  if (n === undefined || n === null) return"0";
  return n >= 1000 ? `${(n/1000).toFixed(0)}K` : n.toString();
@@ -73,13 +70,13 @@ export function StatsCardV1({ stats, formatLastUpdated }: StatsCardV1Props) {
  <div>
  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Collection</p>
  <p className="text-3xl font-bold text-foreground">
- <AnimatedNumber value={stats.total_documents} />
+ <AnimatedNumber value={totalJudgments} />
  </p>
  </div>
  </div>
  <div className="text-right">
- <p className="text-xs text-muted-foreground">Legal Documents</p>
- <p className="text-sm font-medium text-violet-600">Judgments + Interpretations</p>
+ <p className="text-xs text-muted-foreground">Judgments</p>
+ <p className="text-sm font-medium text-violet-600">Poland + United Kingdom</p>
  </div>
  </div>
  </motion.div>
@@ -127,45 +124,28 @@ export function StatsCardV1({ stats, formatLastUpdated }: StatsCardV1Props) {
  </div>
  </motion.div>
 
- {/* Tax Interpretations */}
+ {/* Coverage */}
  <motion.div
  initial={{ opacity: 0, y: 10 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ delay: 0.2 }}
- className="p-4 rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20"
+ className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20"
  >
  <div className="flex items-center gap-2 mb-3">
- <FileText className="w-4 h-4 text-orange-500"/>
- <span className="text-xs font-medium text-muted-foreground uppercase">Tax Interp.</span>
+ <Globe className="w-4 h-4 text-emerald-500"/>
+ <span className="text-xs font-medium text-muted-foreground uppercase">Jurisdictions</span>
  </div>
  <p className="text-2xl font-bold text-foreground mb-3">
- <AnimatedNumber value={stats.tax_interpretations} />
+ <AnimatedNumber value={2} />
  </p>
- {/* Country bars */}
  <div className="space-y-2">
- <div className="flex items-center gap-2">
- <span className="text-sm">🇵🇱</span>
- <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
- <motion.div
- className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
- initial={{ width: 0 }}
- animate={{ width: `${stats.tax_interpretations ? ((stats.tax_interpretations_pl ?? 0) / stats.tax_interpretations) * 100 : 0}%` }}
- transition={{ duration: 1, delay: 0.7 }}
- />
+ <div className="flex items-center justify-between rounded-xl bg-white/50 px-3 py-2">
+ <span className="text-sm font-medium text-foreground/80">🇵🇱 Poland</span>
+ <span className="text-xs font-medium text-foreground">{formatK(stats.judgments_pl)}</span>
  </div>
- <span className="text-xs font-medium w-12 text-right">{formatK(stats.tax_interpretations_pl)}</span>
- </div>
- <div className="flex items-center gap-2">
- <span className="text-sm">🇬🇧</span>
- <div className="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
- <motion.div
- className="h-full bg-gradient-to-r from-red-500 to-red-400 rounded-full"
- initial={{ width: 0 }}
- animate={{ width: `${stats.tax_interpretations ? Math.max(((stats.tax_interpretations_uk ?? 0) / stats.tax_interpretations) * 100, (stats.tax_interpretations_uk ?? 0) > 0 ? 5 : 0) : 0}%` }}
- transition={{ duration: 1, delay: 0.8 }}
- />
- </div>
- <span className="text-xs font-medium w-12 text-right">{formatK(stats.tax_interpretations_uk)}</span>
+ <div className="flex items-center justify-between rounded-xl bg-white/50 px-3 py-2">
+ <span className="text-sm font-medium text-foreground/80">🇬🇧 United Kingdom</span>
+ <span className="text-xs font-medium text-foreground">{formatK(stats.judgments_uk)}</span>
  </div>
  </div>
  </motion.div>

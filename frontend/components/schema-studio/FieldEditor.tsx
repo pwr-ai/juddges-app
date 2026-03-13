@@ -140,8 +140,8 @@ export function FieldEditor({
  /**
  * Handle form submission
  */
- const handleSubmit = (e: React.FormEvent) => {
- e.preventDefault();
+ const handleSubmit = (e?: React.FormEvent) => {
+ e?.preventDefault();
 
  // Validate field name before submitting
  const isValid = validateFieldName(fieldName);

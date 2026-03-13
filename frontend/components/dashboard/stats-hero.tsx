@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView, useSpring, useTransform, useScroll } from "framer-motion";
-import { Scale, FileText, Clock, Database, TrendingUp, ChevronDown } from "lucide-react";
+import { Scale, Globe, Clock, Database, TrendingUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Animated counter component
@@ -271,20 +271,18 @@ function LastUpdatedCard({ value, label, delay = 0 }: { value: string; label: st
 
 interface StatsHeroProps {
  stats: {
- total_documents: number;
- judgments: number;
- judgments_pl: number;
- judgments_uk: number;
- tax_interpretations: number;
- tax_interpretations_pl: number;
- tax_interpretations_uk: number;
- last_updated: string | null;
+  total_documents: number;
+  judgments: number;
+  judgments_pl: number;
+  judgments_uk: number;
+  last_updated: string | null;
  };
  formatLastUpdated: (date: string | null) => { value: string; label: string };
 }
 
 export function StatsHero({ stats, formatLastUpdated }: StatsHeroProps) {
  const lastUpdated = formatLastUpdated(stats.last_updated);
+ const totalJudgments = stats.judgments ?? stats.total_documents;
  const { scrollYProgress } = useScroll();
  const opacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
 
@@ -324,7 +322,7 @@ export function StatsHero({ stats, formatLastUpdated }: StatsHeroProps) {
  </span>
  </h1>
  <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
- Access millions of court judgments and tax interpretations from Poland and the United Kingdom
+ Access court judgments from Poland and the United Kingdom in one research workspace
  </p>
  </motion.div>
 
@@ -332,9 +330,9 @@ export function StatsHero({ stats, formatLastUpdated }: StatsHeroProps) {
  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
  {/* Total Documents */}
  <MainStatCard
- title="Legal Documents"
+ title="Indexed Judgments"
  subtitle="Total Collection"
- value={stats.total_documents}
+ value={totalJudgments}
  icon={Database}
  gradient="bg-gradient-to-r from-violet-500 to-purple-500"
  iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
@@ -371,30 +369,30 @@ export function StatsHero({ stats, formatLastUpdated }: StatsHeroProps) {
  </div>
  </MainStatCard>
 
- {/* Tax Interpretations */}
+ {/* Jurisdictions */}
  <MainStatCard
- title="Tax Interpretations"
- subtitle="Eureka & HMRC"
- value={stats.tax_interpretations}
- icon={FileText}
- gradient="bg-gradient-to-r from-orange-500 to-amber-500"
- iconGradient="bg-gradient-to-br from-orange-500 to-amber-600"
+ title="Research Coverage"
+ subtitle="Poland & UK"
+ value={2}
+ icon={Globe}
+ gradient="bg-gradient-to-r from-emerald-500 to-teal-500"
+ iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
  delay={0.2}
  >
  <div className="space-y-3">
  <CountryStat
  flag="🇵🇱"
  country="Poland"
- count={stats.tax_interpretations_pl ?? 0}
- total={stats.tax_interpretations}
+ count={stats.judgments_pl ?? 0}
+ total={totalJudgments}
  color="bg-gradient-to-r from-blue-500 to-blue-600"
  delay={0.5}
  />
  <CountryStat
  flag="🇬🇧"
  country="United Kingdom"
- count={stats.tax_interpretations_uk ?? 0}
- total={stats.tax_interpretations}
+ count={stats.judgments_uk ?? 0}
+ total={totalJudgments}
  color="bg-gradient-to-r from-red-500 to-red-600"
  delay={0.6}
  />

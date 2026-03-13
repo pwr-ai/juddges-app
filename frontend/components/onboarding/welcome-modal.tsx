@@ -43,7 +43,7 @@ const onboardingSteps: OnboardingStep[] = [
  icon: Brain,
  features: [
 "AI-powered legal document analysis",
-"Smart search across court judgments and tax laws",
+"Smart search across court judgments and case law",
 "Professional-grade research tools",
 "Secure and compliant platform",
  ],
@@ -65,7 +65,7 @@ const onboardingSteps: OnboardingStep[] = [
  {
  title: "AI Chat Assistant",
  description:
-"Ask questions and get AI-powered insights about legal documents and tax regulations.",
+"Ask questions and get AI-powered insights about legal documents and court decisions.",
  icon: MessageSquare,
  features: [
 "Ask questions in plain language",

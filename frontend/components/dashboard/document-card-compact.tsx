@@ -14,7 +14,7 @@ import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 function formatDocumentType(type: string): string {
  const typeMap: Record<string, string> = {
  judgment: "Judgment",
- tax_interpretation: "Tax Interpretation",
+ tax_interpretation: "Legal Document",
  legal_act: "Legal Act",
  regulation: "Regulation",
  };
@@ -176,7 +176,7 @@ export function DocumentCardCompact({
  {/* Document Type - Subtle header text */}
  {type && (
  <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
- {type.replace('_', ' ')}
+ {formatDocumentType(type)}
  </div>
  )}
 

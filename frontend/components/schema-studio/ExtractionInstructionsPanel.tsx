@@ -49,7 +49,7 @@ export function ExtractionInstructionsPanel({
  value,
  onChange,
  disabled = false,
- placeholder ="Enter context about your documents (e.g., 'These are Polish tax interpretations from 2020-2024 containing rulings about VAT deductions')...",
+ placeholder ="Enter context about your documents (e.g., 'These are Polish appellate judgments from 2020-2024 concerning contractual liability and damages')...",
  maxLength = 5000,
  debounceMs = 500,
 }: ExtractionInstructionsPanelProps) {

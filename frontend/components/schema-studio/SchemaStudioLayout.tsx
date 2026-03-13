@@ -10,12 +10,11 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ChatPane } from "./ChatPane";
 import { CanvasPane } from "./CanvasPane";
-import { PlaygroundTab } from "./playground/PlaygroundTab";
 import { VersionsTab } from "./versions/VersionsTab";
 import { useSchemaEditorStore } from "@/hooks/schema-editor/useSchemaEditorStore";
 import { schemaService } from "@/lib/schema-editor/service";
 import { toast } from "sonner";
-import { Layers, Play, History } from "lucide-react";
+import { Layers, History } from "lucide-react";
 import type { SchemaField } from "@/hooks/schema-editor/types";
 
 /**
@@ -179,7 +178,7 @@ export function SchemaStudioLayout({
   const { schemaId } = useSchemaEditorStore();
 
   // Active tab state
-  const [activeTab, setActiveTab] = useState<'fields' | 'playground' | 'versions'>('fields');
+  const [activeTab, setActiveTab] = useState<'fields' | 'versions'>('fields');
 
   return (
     <div className="h-full w-full overflow-hidden" style={{ height: '100%' }}>
@@ -206,7 +205,7 @@ export function SchemaStudioLayout({
           <div className="h-full w-full overflow-hidden relative flex flex-col" style={{ maxWidth: '100%', width: '100%', height: '100%' }}>
             <Tabs
               value={activeTab}
-              onValueChange={(value) => setActiveTab(value as 'fields' | 'playground' | 'versions')}
+              onValueChange={(value) => setActiveTab(value as 'fields' | 'versions')}
               className="h-full flex flex-col"
             >
               {/* Tab Navigation */}
@@ -215,10 +214,6 @@ export function SchemaStudioLayout({
                   <TabsTrigger value="fields" className="gap-1.5">
                     <Layers className="h-4 w-4" />
                     <span>Fields</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="playground" className="gap-1.5">
-                    <Play className="h-4 w-4" />
-                    <span>Playground</span>
                   </TabsTrigger>
                   <TabsTrigger value="versions" className="gap-1.5">
                     <History className="h-4 w-4" />
@@ -233,14 +228,6 @@ export function SchemaStudioLayout({
                   sessionId={sessionId}
                   collectionId={collectionId}
                   onPreviewClick={onPreviewClick}
-                />
-              </TabsContent>
-
-              <TabsContent value="playground" className="flex-1 overflow-hidden m-0">
-                <PlaygroundTab
-                  sessionId={sessionId}
-                  schemaId={schemaId}
-                  collectionId={collectionId}
                 />
               </TabsContent>
 

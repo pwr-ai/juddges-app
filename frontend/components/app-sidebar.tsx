@@ -200,6 +200,7 @@ export function AppSidebar(): React.JSX.Element {
  </Link>
  </SidebarMenuButton>
  </SidebarMenuItem>
+
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>
@@ -343,6 +344,7 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
+
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>

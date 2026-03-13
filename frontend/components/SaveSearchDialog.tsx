@@ -151,7 +151,7 @@ export function SaveSearchDialog({ trigger }: SaveSearchDialogProps) {
  {folders.length > 0 && (
  <datalist id="saved-search-folders">
  {folders.map(f => (
- <option key={f} value={f} />
+ <option key={f.id} value={f.name} />
  ))}
  </datalist>
  )}

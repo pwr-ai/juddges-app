@@ -257,8 +257,8 @@ export function BlogPostCard({
  icon={ArrowRight}
  className="shadow-lg hover:shadow-xl"
  onClick={(e) => {
- e.preventDefault();
- e.stopPropagation();
+ e?.preventDefault();
+ e?.stopPropagation();
  router.push(postUrl);
  }}
  >

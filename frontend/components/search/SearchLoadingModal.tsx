@@ -16,7 +16,7 @@ interface SearchLoadingModalProps {
  isOpen: boolean;
  onCancel?: () => void;
  searchQuery?: string;
- mode?: "rabbit"|"thinking";
+ mode?: string;
 }
 
 export function SearchLoadingModal({

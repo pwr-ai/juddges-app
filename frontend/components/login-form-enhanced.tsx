@@ -222,9 +222,9 @@ export function LoginFormEnhanced({
           <div className="space-y-6 animate-fade-in-up">
             <Logo size="xl" />
             <div className="space-y-3">
-              <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                AI-Powered Legal and Tax Analysis
-              </h1>
+	              <h1 className="text-4xl font-bold tracking-tight text-foreground">
+	                AI-Powered Judgment Analysis
+	              </h1>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Transform how you work with legal documents using advanced AI technology.
                 Access instant insights, automated analysis, and intelligent search.

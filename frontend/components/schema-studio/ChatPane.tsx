@@ -188,8 +188,8 @@ export function ChatPane({
  }
  };
 
- const handleSubmit = (e: React.FormEvent) => {
- e.preventDefault();
+ const handleSubmit = (e?: React.FormEvent) => {
+ e?.preventDefault();
  if (!input.trim() || isGenerating) return;
  handleSendMessage(input.trim());
  setInput("");

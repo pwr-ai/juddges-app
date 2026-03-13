@@ -6,44 +6,22 @@ interface EmptyStateAction {
   label: string;
   onClick: () => void;
   variant?: 'default' | 'outline' | 'secondary';
+  icon?: LucideIcon;
+  size?: 'sm' | 'default' | 'lg';
 }
 
-interface EmptyStateProps {
-  /**
-   * Icon component from lucide-react
-   */
-  icon: LucideIcon;
-
-  /**
-   * Main heading text
-   */
+export interface EmptyStateProps {
+  icon?: LucideIcon;
   title: string;
-
-  /**
-   * Descriptive text explaining the empty state
-   */
   description: string;
-
-  /**
-   * Primary action button
-   */
   action?: EmptyStateAction;
-
-  /**
-   * Secondary action button (optional)
-   */
+  primaryAction?: EmptyStateAction;
   secondaryAction?: EmptyStateAction;
-
-  /**
-   * Additional CSS classes
-   */
   className?: string;
-
-  /**
-   * Size variant
-   * @default 'default'
-   */
+  variant?: 'default' | 'card' | 'inline';
   size?: 'sm' | 'default' | 'lg';
+  tip?: React.ReactNode;
+  tipPosition?: 'below' | 'above';
 }
 
 /**
@@ -73,10 +51,15 @@ export function EmptyState({
   title,
   description,
   action,
+  primaryAction,
   secondaryAction,
   className,
-  size = 'default'
+  variant: _variant,
+  size = 'default',
+  tip,
+  tipPosition: _tipPosition,
 }: EmptyStateProps) {
+  const resolvedAction = action || primaryAction;
   const sizeConfig = {
     sm: {
       container: 'py-8 px-4',
@@ -117,14 +100,16 @@ export function EmptyState({
       aria-label="Empty state"
     >
       {/* Icon container with subtle background */}
-      <div
-        className={cn(
-          "rounded-full bg-muted/50 flex items-center justify-center",
-          config.iconBox
-        )}
-      >
-        <Icon className={cn("text-muted-foreground", config.icon)} aria-hidden="true" />
-      </div>
+      {Icon && (
+        <div
+          className={cn(
+            "rounded-full bg-muted/50 flex items-center justify-center",
+            config.iconBox
+          )}
+        >
+          <Icon className={cn("text-muted-foreground", config.icon)} aria-hidden="true" />
+        </div>
+      )}
 
       {/* Title */}
       <h3 className={cn("font-semibold text-foreground mb-2", config.title)}>
@@ -137,15 +122,15 @@ export function EmptyState({
       </p>
 
       {/* Action buttons */}
-      {(action || secondaryAction) && (
+      {(resolvedAction || secondaryAction) && (
         <div className="flex gap-3 flex-wrap justify-center">
-          {action && (
+          {resolvedAction && (
             <Button
-              onClick={action.onClick}
-              variant={action.variant || 'default'}
+              onClick={resolvedAction.onClick}
+              variant={resolvedAction.variant || 'default'}
               size={config.buttonSize}
             >
-              {action.label}
+              {resolvedAction.label}
             </Button>
           )}
           {secondaryAction && (
@@ -159,6 +144,9 @@ export function EmptyState({
           )}
         </div>
       )}
+
+      {/* Tip content */}
+      {tip && <div className="mt-6 w-full">{tip}</div>}
     </div>
   );
 }

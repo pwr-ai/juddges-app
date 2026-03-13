@@ -108,19 +108,19 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
       if (!result.success) {
         // Save failed - show errors
         canvasPaneLogger.error('Save failed', { errors: result.errors });
-        setValidationErrors(result.errors);
-        setValidationWarnings(result.warnings);
+        setValidationErrors(result.errors ?? []);
+        setValidationWarnings(result.warnings ?? []);
 
         toast.error('Failed to save schema', {
-          description: result.errors[0] || 'An unknown error occurred',
+          description: result.errors?.[0] || 'An unknown error occurred',
         });
 
-        setError(result.errors.join('; '));
+        setError((result.errors ?? []).join('; '));
       } else {
         // Save successful
         canvasPaneLogger.info('Save successful', {
-          schemaId: result.schemaId,
-          warningCount: result.warnings.length,
+          schemaId: result.schema?.id,
+          warningCount: result.warnings?.length ?? 0,
         });
 
         // Update metadata with new schema ID and last saved timestamp
@@ -132,8 +132,8 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
         markClean();
 
         // Show warnings if any
-        if (result.warnings.length > 0) {
-          setValidationWarnings(result.warnings);
+        if ((result.warnings?.length ?? 0) > 0) {
+          setValidationWarnings(result.warnings ?? []);
         }
 
         // Show success message
@@ -190,8 +190,8 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
       // Convert to requested format
       const content =
         format === 'json'
-          ? exportSchemaAsJSON(prepResult.compiledSchema, true)
-          : exportSchemaAsYAML(prepResult.compiledSchema);
+          ? exportSchemaAsJSON(fields, { pretty: true })
+          : exportSchemaAsYAML(fields);
 
       // Create download
       const blob = new Blob([content], {

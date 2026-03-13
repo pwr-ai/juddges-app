@@ -58,8 +58,8 @@ export function SchemaChat({
  }
  }, [messages.length]);
 
- const handleSubmit = (e: React.FormEvent) => {
- e.preventDefault();
+ const handleSubmit = (e?: React.FormEvent) => {
+ e?.preventDefault();
  if (!input.trim() || isGenerating) return;
 
  onSendMessage(input.trim());
