@@ -99,11 +99,11 @@ export const DOCUMENT_TYPE_CONFIGS: Record<string, DocumentTypeConfig> = {
     emoji: '⚖️',
   },
   tax_interpretation: {
-    icon: 'Calculator',
-    label: 'Tax Interpretation',
-    color: 'text-interpretation',
-    bgColor: 'bg-interpretation/10',
-    emoji: '🧮',
+    icon: 'FileText',
+    label: 'Document',
+    color: 'text-document',
+    bgColor: 'bg-document/10',
+    emoji: '📄',
   },
   regulation: {
     icon: 'BookOpen',

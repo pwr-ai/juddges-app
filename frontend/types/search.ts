@@ -6,8 +6,8 @@ export enum DocumentType {
 
 export interface SearchChunk {
   document_id: string;
-  chunk_id: number;
-  chunk_text: string;
+  chunk_id: string | number;
+  chunk_text?: string;
   segment_type?: string;
   position?: number;
   source?: string;
@@ -15,10 +15,11 @@ export interface SearchChunk {
   cited_references?: string;
   tags?: string | string[];
   parent_segment_id?: string;
-  score: number;
+  score?: number;
   // Additional fields that may come from backend DocumentChunk
   document_type?: string;
   language?: string;
+  [key: string]: unknown;
 }
 
 export enum DocumentProcessingStatus {
@@ -70,8 +71,8 @@ export interface WeaviateDocument {
 // Frontend-friendly SearchDocument interface (for UI components)
 export interface SearchDocument {
   document_id: string;
-  document_type: string;
-  title: string | null;
+  document_type?: string;
+  title?: string | null;
   date_issued: string | null;
   issuing_body: {
     name: string;
@@ -122,6 +123,8 @@ export interface SearchDocument {
   };
   // Error flag for Weaviate database errors
   _isWeaviateError?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 export interface SearchResult {

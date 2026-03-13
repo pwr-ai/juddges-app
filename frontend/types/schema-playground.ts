@@ -304,7 +304,7 @@ export interface FieldRatingState {
 }
 
 export interface PlaygroundTabState {
-  activeTab: 'fields' | 'playground' | 'versions';
+  activeTab: 'fields' | 'versions';
 }
 
 export interface DocumentSelectorOption {
