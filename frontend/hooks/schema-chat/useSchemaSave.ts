@@ -82,9 +82,9 @@ export function useSchemaSave({
 
       if (!result.success) {
         toast.error("Failed to save schema", {
-          description: result.errors[0] || "An unknown error occurred",
+          description: result.errors?.[0] || "An unknown error occurred",
         });
-        setError(result.errors.join("; "));
+        setError((result.errors ?? []).join("; "));
       } else {
         updateMetadata({ last_saved: new Date().toISOString() });
         markClean();
@@ -146,19 +146,19 @@ export function useSchemaSave({
       const result = await schemaService.saveSchema(schemaId, fields, saveMetadata);
 
       if (!result.success) {
-        const errorMessage = result.errors[0] || "An unknown error occurred";
+        const errorMessage = result.errors?.[0] || "An unknown error occurred";
         setSaveDialogError(errorMessage);
-        setError(result.errors.join("; "));
+        setError((result.errors ?? []).join("; "));
         toast.error("Failed to save schema", { description: errorMessage });
       } else {
         if (user?.id) {
           onSchemaSaved({
             ownerId: user.id,
-            newSchemaId: !schemaId ? result.schemaId : undefined,
+            newSchemaId: !schemaId ? result.schema?.id : undefined,
             status: (result.schema?.status as SchemaStatus) || schemaStatus,
           });
-          if (!schemaId && result.schemaId) {
-            initializeSession(sessionId, result.schemaId);
+          if (!schemaId && result.schema?.id) {
+            initializeSession(sessionId, result.schema.id);
           }
         }
         if (result.schema?.status) {
@@ -223,8 +223,8 @@ export function useSchemaSave({
 
         const content =
           format === "json"
-            ? exportSchemaAsJSON(prepResult.compiledSchema, true)
-            : exportSchemaAsYAML(prepResult.compiledSchema);
+            ? exportSchemaAsJSON(fields, { pretty: true })
+            : exportSchemaAsYAML(fields);
 
         const blob = new Blob([content], {
           type: format === "json" ? "application/json" : "text/yaml",

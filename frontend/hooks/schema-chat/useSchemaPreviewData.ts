@@ -181,23 +181,21 @@ export function buildSchemaPreviewData(
     return {};
   }
 
-  const compilationResult = compileSchemaFieldsToJSONSchema(fields, {
+  const schema = compileSchemaFieldsToJSONSchema(fields, {
     name: schemaName,
     description: schemaDescription,
   });
 
-  if (!compilationResult.success || !compilationResult.schema) {
+  if (!schema) {
     return {};
   }
-
-  const schema = compilationResult.schema;
   const placeholderData: Record<string, unknown> = {};
 
   if (schema.properties) {
     Object.entries(schema.properties).forEach(([fieldName, fieldDef]) => {
       placeholderData[fieldName] = buildPlaceholder(
         fieldName,
-        (fieldDef as Record<string, unknown>) || {}
+        (fieldDef as unknown as Record<string, unknown>) || {}
       );
     });
   }

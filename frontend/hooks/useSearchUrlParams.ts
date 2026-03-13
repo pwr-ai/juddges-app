@@ -237,12 +237,13 @@ export function useSearchUrlParams({
       !courtLevelsParam &&
       !legalDomainsParam &&
       !customMetaParam
-    ) {
-      // Clear all search state
-      setQuery('');
-      setSearchMetadata([], 0, false);
-      clearChunksCache();
-      setError(null);
+      ) {
+        // Clear all search state
+        setQuery('');
+        setDocumentTypes([DocumentType.JUDGMENT]);
+        setSearchMetadata([], 0, false);
+        clearChunksCache();
+        setError(null);
       setUrlParamsProcessed(true);
       updatingUrlRef.current = false;
       return;
@@ -261,11 +262,15 @@ export function useSearchUrlParams({
     if (typeParam) {
       const types = typeParam
         .split(',')
-        .filter((t) => Object.values(DocumentType).includes(t.trim() as DocumentType))
+        .filter((t) => t.trim() === DocumentType.JUDGMENT)
         .map((t) => t.trim() as DocumentType);
       if (types.length > 0) {
         setDocumentTypes(types);
+      } else {
+        setDocumentTypes([DocumentType.JUDGMENT]);
       }
+    } else {
+      setDocumentTypes([DocumentType.JUDGMENT]);
     }
 
     // Set language from URL parameter
@@ -451,7 +456,6 @@ export function useSearchUrlParams({
     updatingUrlRef,
   };
 }
-
 
 
 

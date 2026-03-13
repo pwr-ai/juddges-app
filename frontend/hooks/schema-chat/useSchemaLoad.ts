@@ -58,14 +58,8 @@ export function useSchemaLoad({
   const fetchSavedSchemas = useCallback(async (): Promise<void> => {
     setIsLoadingSchemas(true);
     try {
-      const result = await schemaService.listSchemas();
-      if (result.success && result.schemas) {
-        setSavedSchemas(result.schemas);
-      } else {
-        toast.error("Failed to load schemas", {
-          description: result.error || "Unknown error",
-        });
-      }
+      const schemas = await schemaService.listSchemas();
+      setSavedSchemas(schemas as any);
     } catch (error) {
       console.error("Error fetching schemas: ", error);
       toast.error("Failed to load schemas");

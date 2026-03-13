@@ -151,7 +151,7 @@ export function useSearchResults() {
     async (
       searchQuery: string,
       options?: {
-        overrideMode?: 'rabbit' | 'thinking';
+        overrideMode?: string;
         overrideDocumentTypes?: DocumentType[];
         overrideLanguages?: string[];
         onComplete?: () => void;
@@ -176,7 +176,9 @@ export function useSearchResults() {
       }
 
       const modeToUse = options?.overrideMode || searchType;
-      const documentTypesToUse = options?.overrideDocumentTypes || documentTypes;
+      const requestedDocumentTypes = options?.overrideDocumentTypes || documentTypes;
+      const documentTypesToUse =
+        requestedDocumentTypes.length > 0 ? requestedDocumentTypes : [DocumentType.JUDGMENT];
       const languagesToUse =
         options?.overrideLanguages && options.overrideLanguages.length > 0
           ? options.overrideLanguages
@@ -283,17 +285,13 @@ export function useSearchResults() {
         // This ensures Zustand detects the change and triggers re-renders for all documents
         const store = useSearchStore.getState();
         const newCache = { ...store.chunksCache };
-        const newLoading = [...store.loadingChunks];
-        
+        const newLoading = new Set(store.loadingChunks);
+
         Object.entries(chunksByDoc).forEach(([docId, chunks]) => {
           newCache[docId] = chunks;
-          // Remove from loading if present
-          const loadingIndex = newLoading.indexOf(docId);
-          if (loadingIndex > -1) {
-            newLoading.splice(loadingIndex, 1);
-          }
+          newLoading.delete(docId);
         });
-        
+
         // Single state update for all chunks
         useSearchStore.setState({
           chunksCache: newCache,
@@ -408,7 +406,7 @@ export function useSearchResults() {
         // Store full documents in ref for use in convertMetadataToSearchDocument
         fullDocumentsMapRef.current.clear();
         docResponse.documents.forEach((doc) => {
-          fullDocumentsMapRef.current.set(doc.document_id, doc);
+          fullDocumentsMapRef.current.set(doc.document_id, doc as SearchDocument);
         });
 
         // Convert chunks to metadata format WITH full document data
@@ -758,7 +756,7 @@ export function useSearchResults() {
 
       // Store full documents in ref
       docResponse.documents.forEach((doc) => {
-        fullDocumentsMapRef.current.set(doc.document_id, doc);
+        fullDocumentsMapRef.current.set(doc.document_id, doc as SearchDocument);
       });
 
       // Create document map
