@@ -157,5 +157,10 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 .context/
+.codex/
 .playwright-mcp/
 frontend/app/test-supabase/
+
+# Celery
+celerybeat-schedule
+*celerybeat-schedule*
