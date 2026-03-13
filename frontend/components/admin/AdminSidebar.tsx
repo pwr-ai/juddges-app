@@ -7,7 +7,6 @@ import {
   Users,
   FileText,
   PenTool,
-  Search,
   Settings,
   ArrowLeft,
   Shield,
@@ -38,12 +37,6 @@ const navSections: NavSection[] = [
       { href: "/admin/users", label: "Users", icon: Users },
       { href: "/admin/documents", label: "Documents", icon: FileText },
       { href: "/admin/content", label: "Content", icon: PenTool },
-    ],
-  },
-  {
-    title: "Analytics",
-    items: [
-      { href: "/admin/search-queries", label: "Search Queries", icon: Search },
     ],
   },
   {

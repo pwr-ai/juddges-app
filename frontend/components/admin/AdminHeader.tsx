@@ -8,7 +8,6 @@ const pageTitles: Record<string, string> = {
   "/admin/users": "User Management",
   "/admin/documents": "Document Management",
   "/admin/content": "Content Management",
-  "/admin/search-queries": "Search Analytics",
   "/admin/system": "System Settings",
 };
 
