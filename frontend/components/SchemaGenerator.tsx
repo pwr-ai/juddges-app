@@ -39,6 +39,13 @@ interface DocumentSample {
  thesis?: string | null;
 }
 
+function formatSampleDocumentType(type: string | null | undefined): string {
+ if (!type) return "Legal document";
+ if (type === "judgment" || type === "judgement") return "Judgment";
+ if (type === "tax_interpretation") return "Legal document";
+ return type.replace(/_/g, " ");
+}
+
 export function SchemaGenerator({
  isOpen,
  onClose,
@@ -211,15 +218,15 @@ export function SchemaGenerator({
  headers: {
  'Content-Type': 'application/json',
  },
- body: JSON.stringify({
- message: userInput,
- collection_id: collectionId,
- conversation_history: [],
- current_schema: null,
- document_type: "tax_interpretation",
- // Include document samples if available
- document_samples: documentSamples.length > 0 ? documentSamples : undefined
- })
+	 body: JSON.stringify({
+	 message: userInput,
+	 collection_id: collectionId,
+	 conversation_history: [],
+	 current_schema: null,
+	 document_type: "judgment",
+	 // Include document samples if available
+	 document_samples: documentSamples.length > 0 ? documentSamples : undefined
+	 })
  });
 
  if (!response.ok) {
@@ -385,7 +392,7 @@ export function SchemaGenerator({
  <p className="font-medium text-muted-foreground truncate">
  {doc.title || `Document ${doc.document_id.substring(0, 8)}...`}
  </p>
- <p className="text-xs text-muted-foreground">{doc.document_type}</p>
+	 <p className="text-xs text-muted-foreground">{formatSampleDocumentType(doc.document_type)}</p>
  </div>
  </div>
  ))}
@@ -404,7 +411,7 @@ export function SchemaGenerator({
  <Textarea
  value={userInput}
  onChange={(e) => setUserInput(e.target.value)}
- placeholder="Example: I want to extract key legal concepts, dates, parties involved, and financial amounts from tax interpretation documents..."
+	 placeholder="Example: I want to extract key legal concepts, dates, parties involved, holdings, and cited provisions from appellate judgments..."
  className="min-h-32"
  disabled={isLoadingDocuments}
  />

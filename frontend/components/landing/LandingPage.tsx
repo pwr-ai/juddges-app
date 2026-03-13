@@ -29,17 +29,16 @@ import { Button } from "@/components/ui/button";
 // Types
 // ─────────────────────────────────────────────
 
+interface LandingStats {
+  total_documents: number;
+  judgments?: number;
+  judgments_pl?: number;
+  judgments_uk?: number;
+  last_updated?: string | null;
+}
+
 interface LandingPageProps {
-  stats?: {
-    total_documents: number;
-    judgments: number;
-    judgments_pl: number;
-    judgments_uk: number;
-    tax_interpretations: number;
-    tax_interpretations_pl: number;
-    tax_interpretations_uk: number;
-    last_updated: string | null;
-  } | null;
+  stats?: LandingStats | null;
   statsLoading?: boolean;
 }
 
@@ -119,7 +118,7 @@ function Section({
 // ─────────────────────────────────────────────
 
 function HeroSection({ stats, statsLoading }: LandingPageProps) {
-  const totalDocs = stats?.total_documents ?? 0;
+  const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
 
   return (
     <section className="relative min-h-[85vh] flex items-center overflow-hidden">
@@ -198,10 +197,10 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
                 {statsLoading ? (
                   <span className="inline-block w-16 h-7 bg-muted/40 rounded animate-pulse" />
                 ) : (
-                  <AnimatedStat value={totalDocs} suffix="+" />
+                  <AnimatedStat value={totalJudgments} suffix="+" />
                 )}
               </span>
-              <span>Legal documents</span>
+              <span>Judgments indexed</span>
             </div>
             <div>
               <span className="block text-2xl font-semibold text-foreground">2</span>
@@ -329,12 +328,13 @@ function CapabilitiesSection() {
 // ─────────────────────────────────────────────
 
 function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
+  const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
   const statItems = [
     {
       icon: Database,
-      value: stats?.total_documents ?? 0,
-      label: "Total documents",
-      detail: "Court judgments and tax interpretations",
+      value: totalJudgments,
+      label: "Total judgments",
+      detail: "Cross-jurisdiction judgment corpus",
     },
     {
       icon: Scale,
@@ -344,12 +344,18 @@ function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
     },
     {
       icon: FileText,
-      value: stats?.tax_interpretations ?? 0,
-      label: "Tax interpretations",
-      detail: `${formatStat(stats?.tax_interpretations_pl ?? 0)} Polish, ${formatStat(stats?.tax_interpretations_uk ?? 0)} UK`,
+      value: stats?.judgments_pl ?? 0,
+      label: "Polish judgments",
+      detail: "Appellate and court decision coverage",
     },
     {
       icon: BookOpen,
+      value: stats?.judgments_uk ?? 0,
+      label: "UK judgments",
+      detail: "England & Wales coverage",
+    },
+    {
+      icon: Globe,
       value: 2,
       label: "Jurisdictions",
       detail: "Poland and United Kingdom",
@@ -374,7 +380,7 @@ function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {statItems.map((item, i) => (
             <motion.div
               key={item.label}

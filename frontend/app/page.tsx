@@ -20,7 +20,6 @@ import {
  TrendingUp,
  TrendingDown,
  Minus,
- BarChart,
  Clock,
  ChevronRight,
  Database,
@@ -143,6 +142,7 @@ export default function HomePage(): React.JSX.Element {
  data: recentExtractions = [],
  isLoading: extractionsLoading,
  } = useRecentExtractions(3);
+ const recentJudgmentDocs = recentDocs.filter((doc) => doc.document_type === 'judgment').slice(0, 2);
 
  // Individual loading states - each card loads separately
 
@@ -150,7 +150,7 @@ export default function HomePage(): React.JSX.Element {
  if (!authLoading && !user) {
  return (
  <LandingPage
- stats={statsError ? null : stats}
+ stats={statsError ? null : stats as Parameters<typeof LandingPage>[0]['stats']}
  statsLoading={statsLoading}
  />
  );
@@ -189,7 +189,7 @@ export default function HomePage(): React.JSX.Element {
  </div>
  ) : stats ? (
  <StatsCardV1
- stats={stats}
+ stats={stats as Parameters<typeof StatsCardV1>[0]['stats']}
  formatLastUpdated={formatLastUpdated}
  />
  ) : null}
@@ -356,16 +356,14 @@ export default function HomePage(): React.JSX.Element {
  <SkeletonDocumentCard key={i} />
  ))}
  </div>
- ) : recentDocs.length > 0 ? (
+ ) : recentJudgmentDocs.length > 0 ? (
  <div className="space-y-1.5 sm:space-y-2">
- {recentDocs.slice(0, 2).map((doc) => {
+ {recentJudgmentDocs.map((doc) => {
  const getDocIcon = () => {
  if (doc.document_type === 'judgment') return <Scale className="size-3.5 text-primary"/>;
- if (doc.document_type === 'tax_interpretation') return <BarChart className="size-3.5 text-primary"/>;
  return <FileText className="size-3.5 text-primary"/>;
  };
  const docTypeLabel = doc.document_type === 'judgment' ? 'JUDGMENT' :
- doc.document_type === 'tax_interpretation' ? 'TAX INTERPRETATION' :
  doc.document_type?.toUpperCase() || 'DOCUMENT';
  const displayTitle = doc.title || doc.document_number || doc.document_id || 'Untitled Document';
  const displayDate = doc.publication_date ? new Date(doc.publication_date).toLocaleDateString('en-US', {

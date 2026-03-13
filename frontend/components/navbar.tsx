@@ -34,13 +34,12 @@ export function Navbar(): React.ReactElement {
   const [fullMetadata, setFullMetadata] = React.useState<any>(null);
   const [isCollectionPopoverOpen, setIsCollectionPopoverOpen] = React.useState(false);
 
-  // Check if we're on the dashboard page, chat page, search page, collections page, extractions page, schemas page, or document-vis page
+  // Check if we're on the dashboard page, chat page, search page, collections page, extractions page, or schemas page
   const isDashboard = pathname === "/";
   const isChat = pathname === "/chat" || pathname.startsWith("/chat/");
   const isSearch = pathname === "/search";
   const isCollections = pathname === "/collections" || pathname.startsWith("/collections/");
   const isCollectionDetail = pathname?.startsWith("/collections/") && pathname !== "/collections" && params?.id;
-  const isDocumentVis = pathname === "/document-vis";
   const isDocumentPage = pathname?.startsWith("/documents/") && params?.id;
   const isSchemaChat = pathname === "/schema-chat" || pathname.startsWith("/schema-chat");
   const isSchemas = pathname === "/schemas" || pathname.startsWith("/schemas/");
@@ -206,10 +205,6 @@ export function Navbar(): React.ReactElement {
     if (htmlUrl) {
       window.open(htmlUrl, '_blank');
     }
-  };
-
-  const handleViewInNetwork = (): void => {
-    router.push('/document-vis');
   };
 
   return (
@@ -429,11 +424,6 @@ export function Navbar(): React.ReactElement {
       )}
 
       <div className="flex items-center gap-2 md:gap-3">
-        {isDocumentVis && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Network Visualization
-          </h1>
-        )}
         {isSchemaChat && user && (
           <h1 className="text-xl font-bold text-foreground">
             Schema Studio
@@ -508,19 +498,6 @@ export function Navbar(): React.ReactElement {
                       />
                     </TooltipTrigger>
                     <TooltipContent>Open in New Tab</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <IconButton
-                        icon={FileText}
-                        onClick={handleViewInNetwork}
-                        aria-label="View in Network"
-                        variant="muted"
-                        size="md"
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>View in Network</TooltipContent>
                   </Tooltip>
 
                   <Popover open={isCollectionPopoverOpen} onOpenChange={setIsCollectionPopoverOpen}>
