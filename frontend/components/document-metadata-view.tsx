@@ -28,7 +28,7 @@ interface DocumentMetadata {
 }
 
 interface DocumentMetadataViewProps {
- metadata: DocumentMetadata;
+ metadata: DocumentMetadata | null | undefined;
 }
 
 const formatDate = (dateStr: string | null | undefined) => {
@@ -433,6 +433,7 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
 };
 
 export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
+ const safeMetadata = metadata ?? {};
 
  // Group fields into categories
  // Note: Fields moved to Key Information: country, judgment_date, legal_concepts, legal_references, keywords, department_name, issuing_body
@@ -468,7 +469,7 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
  'last_updated',
  ];
 
- const otherFields = Object.keys(metadata).filter(
+ const otherFields = Object.keys(safeMetadata).filter(
  key =>
  key !== 'ingestion_date' && // Explicitly exclude ingestion_date
  !statusFields.includes(key) &&
@@ -476,7 +477,7 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
  !dateFields.includes(key) &&
  !adminFields.includes(key) &&
  !endFields.includes(key) &&
- shouldDisplayField(key, metadata[key])
+ shouldDisplayField(key, safeMetadata[key])
  );
 
  // Helper function to extract string value from any type (object, array, string, etc.)
@@ -530,7 +531,7 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
  // Skip judgment_id if it's the same as document_id
  if (key.toLowerCase() === 'judgment_id' || key.toLowerCase() === 'judgmentid') {
  const judgmentIdValue = extractStringValue(value);
- const documentIdValue = extractStringValue(metadata.document_id);
+ const documentIdValue = extractStringValue(safeMetadata.document_id);
  // Check if they're the same (handle cases where judgment_id might have /doc/ prefix)
  const normalizedJudgmentId = judgmentIdValue.replace(/^\/doc\//, '').trim();
  const normalizedDocumentId = documentIdValue.replace(/^\/doc\//, '').trim();
@@ -543,7 +544,7 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
  // Prefer case_type over case_type_description when they're the same
  if (key.toLowerCase() === 'case_type_description' || key.toLowerCase() === 'case_type_desc') {
  const currentValue = extractStringValue(value);
- const caseTypeValue = metadata.case_type ? extractStringValue(metadata.case_type) : '';
+ const caseTypeValue = safeMetadata.case_type ? extractStringValue(safeMetadata.case_type) : '';
 
  // If case_type exists and is the same as case_type_description, hide case_type_description
  if (caseTypeValue !== '' && currentValue !== '' && currentValue === caseTypeValue) {
@@ -620,41 +621,41 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
  >
  <div className="space-y-4">
  {/* Document Status & Validation */}
- {statusFields.some(key => shouldDisplayField(key, metadata[key]) || (key === 'status' && shouldDisplayField('interpretation_status', metadata.interpretation_status))) && (
+ {statusFields.some(key => shouldDisplayField(key, safeMetadata[key]) || (key === 'status' && shouldDisplayField('interpretation_status', safeMetadata.interpretation_status))) && (
  <div className="space-y-3">
- {(metadata.interpretation_status || (metadata as any).status) && renderField('status', metadata.interpretation_status || (metadata as any).status)}
+ {(safeMetadata.interpretation_status || (safeMetadata as any).status) && renderField('status', safeMetadata.interpretation_status || (safeMetadata as any).status)}
  </div>
  )}
 
  {/* Source & References */}
- {sourceFields.some(key => shouldDisplayField(key, metadata[key])) && (
+ {sourceFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
  <>
  <Separator className="my-4"/>
  <div className="space-y-3">
- {metadata.source_url && renderField('source_url', metadata.source_url)}
- {metadata.references && renderField('references', metadata.references)}
+ {safeMetadata.source_url && renderField('source_url', safeMetadata.source_url)}
+ {safeMetadata.references && renderField('references', safeMetadata.references)}
  </div>
  </>
  )}
 
  {/* Historical Dates */}
- {dateFields.some(key => shouldDisplayField(key, metadata[key])) && (
+ {dateFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
  <>
  <Separator className="my-4"/>
  <div className="space-y-3">
- {(metadata as any).submission_date && renderField('submission_date', (metadata as any).submission_date)}
- {metadata.date_issued && renderField('date_issued', metadata.date_issued)}
- {metadata.publication_date && renderField('publication_date', metadata.publication_date)}
+ {(safeMetadata as any).submission_date && renderField('submission_date', (safeMetadata as any).submission_date)}
+ {safeMetadata.date_issued && renderField('date_issued', safeMetadata.date_issued)}
+ {safeMetadata.publication_date && renderField('publication_date', safeMetadata.publication_date)}
  </div>
  </>
  )}
 
  {/* Administrative Data (Internal Use) */}
- {adminFields.some(key => shouldDisplayField(key, metadata[key]) && (key !== 'processing_status' || String(metadata.processing_status).toLowerCase() !== 'completed')) && (
+ {adminFields.some(key => shouldDisplayField(key, safeMetadata[key]) && (key !== 'processing_status' || String(safeMetadata.processing_status).toLowerCase() !== 'completed')) && (
  <>
  <Separator className="my-4"/>
  <div className="space-y-3">
- {metadata.processing_status && String(metadata.processing_status).toLowerCase() !== 'completed' && renderField('processing_status', metadata.processing_status)}
+ {safeMetadata.processing_status && String(safeMetadata.processing_status).toLowerCase() !== 'completed' && renderField('processing_status', safeMetadata.processing_status)}
  </div>
  </>
  )}
@@ -664,17 +665,17 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
  <Separator className="my-4"/>
  {/* Other Fields */}
  <div className="space-y-3">
- {otherFields.map(key => renderField(key, metadata[key]))}
+ {otherFields.map(key => renderField(key, safeMetadata[key]))}
  </div>
  </>
  )}
 
  {/* End Fields - Last Updated */}
- {endFields.some(key => shouldDisplayField(key, metadata[key])) && (
+ {endFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
  <>
  <Separator className="my-4"/>
  <div className="space-y-3">
- {metadata.last_updated && renderField('last_updated', metadata.last_updated)}
+ {safeMetadata.last_updated && renderField('last_updated', safeMetadata.last_updated)}
  </div>
  </>
  )}

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { AlertTriangle, ExternalLink, BookmarkPlus, FileText, Scale, Bug, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import Link from 'next/link';
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
 import { cn } from '@/lib/utils';
@@ -65,10 +65,15 @@ export function SourceCard({ document, onSaveToCollection }: SourceCardProps) {
  const isDocumentFetched = typeInfo.label !== 'Error';
  const isJudgmentStyle = typeInfo.label === 'Judgment';
 
- // Format date if available
- const formattedDate = document.date_issued
- ? format(new Date(document.date_issued), 'MMM dd, yyyy')
- : null;
+ // Avoid crashing on malformed dates from partially normalized documents.
+ const formattedDate = (() => {
+ if (!document.date_issued) {
+ return null;
+ }
+
+ const parsedDate = new Date(document.date_issued);
+ return isValid(parsedDate) ? format(parsedDate, 'MMM dd, yyyy') : null;
+ })();
 
  // Get preview text (first 150 characters of summary)
  const previewText = document.summary
