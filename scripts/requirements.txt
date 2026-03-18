@@ -6,6 +6,7 @@ supabase>=2.0.0          # Supabase Python client
 openai>=1.0.0            # OpenAI API for embeddings
 python-dotenv>=1.0.0     # Environment variable management
 tqdm>=4.65.0             # Progress bars
+requests>=2.31.0        # Backend API calls and embedding requests
 
 # Optional: For data processing
 pandas>=2.0.0
