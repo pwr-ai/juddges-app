@@ -95,6 +95,49 @@ python scripts/generate_cross_queries.py --sample 5
 - Automatic retry logic with exponential backoff
 - Rich console output with confidence distribution statistics
 
+#### `curate_polish_dataset.py`
+Curates ~6K Polish court judgments with balanced topic coverage matching the UK corpus.
+
+**Usage:**
+```bash
+# Curate 6,000 Polish judgments (default)
+python scripts/curate_polish_dataset.py
+
+# Test with smaller sample (faster)
+python scripts/curate_polish_dataset.py --sample 100 --target 300
+
+# Custom target count
+python scripts/curate_polish_dataset.py --target 3000
+```
+
+**Environment Variables Required:**
+- `HF_TOKEN`: HuggingFace token for dataset access
+
+**Prerequisites:**
+- Run `analyze_uk_topics.py` first to generate `data/uk_topics_taxonomy.json`
+- Run `generate_cross_queries.py` first to generate `data/cross_jurisdictional_queries.json`
+
+**Outputs:**
+- `data/polish_judgments_6k.parquet`: Curated dataset with topic assignments
+- `data/polish_dataset_stats.json`: Coverage statistics and source breakdown
+
+**Features:**
+- Query-driven retrieval using Polish legal terminology
+- Balanced sampling to match UK topic distribution
+- Deduplication by case signatures
+- Multi-source loading from JuDDGES datasets (enriched and raw)
+- Streaming mode for memory efficiency
+- Quality filtering (minimum 500 characters)
+- Minimum 50 documents per topic
+- Rich progress reporting and summary statistics
+- Comprehensive coverage gap analysis
+
+**Data Sources (in priority order):**
+- `JuDDGES/pl-court-raw-enriched` (primary, has factual_state/legal_state)
+- `JuDDGES/pl-nsa-enriched` (administrative courts)
+- `JuDDGES/pl-court-raw` (fallback)
+- `JuDDGES/pl-nsa` (fallback)
+
 ## Dependencies
 
 Core dependencies are in `requirements.txt`:
@@ -303,6 +346,54 @@ Columns:
     "generator_model": "gpt-4o",
     "generator_version": "1.0.0"
   }
+}
+```
+
+### `polish_judgments_6k.parquet`
+Curated Polish judgment dataset with balanced topic coverage.
+
+Columns:
+- `id`: Unique document identifier
+- `text`: Full judgment text content
+- `court`: Court name/identifier
+- `date`: Judgment date
+- `topic_primary`: Primary topic label (e.g., "Criminal Sentencing")
+- `topic_secondary`: Legal category (e.g., "Criminal Law")
+- `topic_id`: Numeric topic ID matching UK taxonomy
+- `source_dataset`: Source HuggingFace dataset name
+- `query_used`: Polish queries used for retrieval
+- `relevance_score`: Document relevance score (0.0-1.0)
+- `signature`: Case signature/sygnatura for deduplication
+
+### `polish_dataset_stats.json`
+```json
+{
+  "summary": {
+    "total_documents": 5847,
+    "target_documents": 6000,
+    "coverage_topics": 5,
+    "total_topics": 5,
+    "created_at": "2026-03-18T...",
+    "min_per_topic": 50
+  },
+  "source_breakdown": {
+    "JuDDGES/pl-court-raw-enriched": 3245,
+    "JuDDGES/pl-nsa-enriched": 2602
+  },
+  "topic_statistics": [
+    {
+      "topic_id": 0,
+      "topic_label": "Criminal Sentencing",
+      "category": "Criminal Law",
+      "uk_count": 156,
+      "target_count": 153,
+      "actual_count": 153,
+      "candidates_found": 892,
+      "coverage_ratio": 0.98,
+      "selection_rate": 0.17
+    }
+  ],
+  "gaps": []
 }
 ```
 
