@@ -51,8 +51,13 @@ vulture = "^2.15"
 [tool.poe.tasks]
 # Test commands
 test = "pytest tests/ -v"
+test-local = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local" } }
 test-unit = "pytest tests/ -v -m unit"
 test-integration = "pytest tests/ -v -m integration"
+test-local-integration = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_INTEGRATION_TESTS = "1" } }
+test-local-ai = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_AI_TESTS = "1" } }
+test-local-legacy = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_LEGACY_SCHEMA_API_TESTS = "1" } }
+test-local-legacy-schema-api = { cmd = "pytest -q -rN tests/app/schemas_extraction", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_LEGACY_SCHEMA_API_TESTS = "1", RUN_REMOVED_LEGACY_SCHEMA_API_TESTS = "1" } }
 test-cov = "pytest tests/ --cov=juddges_search --cov-report=html --cov-report=term-missing"
 test-cov-html = "pytest tests/ --cov=juddges_search --cov-report=html"
 
@@ -73,12 +78,17 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+console_output_style = "count"
 addopts = "-ra -q --strict-markers"
 filterwarnings = [
     "ignore:'enablePackrat' deprecated - use 'enable_packrat':DeprecationWarning:pyiceberg\\.expressions\\.parser",
     "ignore:'escChar' argument is deprecated, use 'esc_char':DeprecationWarning:pyiceberg\\.expressions\\.parser",
     "ignore:'unquoteResults' argument is deprecated, use 'unquote_results':DeprecationWarning:pyiceberg\\.expressions\\.parser",
     "ignore:Using `@model_validator` with mode='after' on a classmethod is deprecated.*:DeprecationWarning:pyiceberg\\.table\\.metadata",
+    "ignore:The 'timeout' parameter is deprecated\\.:DeprecationWarning:supabase\\._sync\\.client",
+    "ignore:The 'verify' parameter is deprecated\\.:DeprecationWarning:supabase\\._sync\\.client",
+    "ignore:The 'warn' method is deprecated, use 'warning' instead:DeprecationWarning:slowapi\\.extension",
+    "ignore:validate_yaml_schema\\(\\) needs refactoring\\..*:PendingDeprecationWarning:juddges_search\\.info_extraction\\.extractor",
 ]
 markers = [
     "integration: marks tests as integration tests (require external services)",

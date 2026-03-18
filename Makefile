@@ -69,13 +69,45 @@ prod-status: ## Show production container status
 .PHONY: test
 test: test-backend test-frontend ## Run all tests
 
+.PHONY: test-local
+test-local: test-local-backend test-local-frontend ## Run the fast local monorepo test profile
+
+.PHONY: test-local-integration
+test-local-integration: test-local-backend-integration test-local-frontend ## Run local profile with backend integration suites enabled
+
+.PHONY: test-local-ai
+test-local-ai: test-local-backend-ai test-local-frontend ## Run local profile with backend AI suites enabled
+
+.PHONY: test-local-legacy
+test-local-legacy: test-local-backend-legacy test-local-frontend ## Run local profile with backend legacy schema suites enabled
+
 .PHONY: test-backend
 test-backend: ## Run backend unit tests
 	cd backend && poetry run pytest -v -m unit
 
+.PHONY: test-local-backend
+test-local-backend: ## Run backend local profile (no integration/AI/legacy suites)
+	cd backend && poetry run poe test-local
+
+.PHONY: test-local-backend-integration
+test-local-backend-integration: ## Run backend local profile with integration suites
+	cd backend && poetry run poe test-local-integration
+
+.PHONY: test-local-backend-ai
+test-local-backend-ai: ## Run backend local profile with AI suites
+	cd backend && poetry run poe test-local-ai
+
+.PHONY: test-local-backend-legacy
+test-local-backend-legacy: ## Run backend local profile with legacy schema suites
+	cd backend && poetry run poe test-local-legacy
+
 .PHONY: test-frontend
 test-frontend: ## Run frontend unit tests
 	cd frontend && npm run test
+
+.PHONY: test-local-frontend
+test-local-frontend: ## Run frontend local Jest profile
+	cd frontend && npm run test:local
 
 .PHONY: test-e2e
 test-e2e: ## Run E2E tests (Playwright)

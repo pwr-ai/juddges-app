@@ -68,14 +68,17 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 @pytest.fixture
 async def authenticated_client(
     valid_api_headers: dict[str, str],
+    mock_user: dict[str, Any],
 ) -> AsyncGenerator[AsyncClient, None]:
     """
-    Create an authenticated async HTTP client with valid API key.
+    Create an authenticated async HTTP client with valid API key and user header.
     """
+    headers = {**valid_api_headers, "X-User-ID": mock_user["id"]}
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        headers=valid_api_headers,
+        headers=headers,
     ) as ac:
         yield ac
 
@@ -156,6 +159,23 @@ def clear_dependency_overrides():
     """
     yield
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiter():
+    """
+    Disable SlowAPI rate limiting during tests to avoid cross-test interference.
+    """
+    limiter = getattr(app.state, "limiter", None)
+    previous_enabled = getattr(limiter, "enabled", None)
+
+    if limiter is not None and previous_enabled is not None:
+        limiter.enabled = False
+
+    yield
+
+    if limiter is not None and previous_enabled is not None:
+        limiter.enabled = previous_enabled
 
 
 @pytest.fixture
