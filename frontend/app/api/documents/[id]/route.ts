@@ -10,8 +10,6 @@ import {
 } from '@/lib/errors';
 
 const apiLogger = logger.child('documents-api');
-const API_BASE_URL = getBackendUrl();
-const API_KEY = process.env.BACKEND_API_KEY as string;
 
 /**
  * GET /api/documents/[id] - Fetch a specific document by ID
@@ -24,6 +22,8 @@ export async function GET(
 
   try {
     apiLogger.info('GET /api/documents/[id] started', { requestId });
+    const apiBaseUrl = getBackendUrl();
+    const apiKey = process.env.BACKEND_API_KEY as string;
 
     const { id: documentId } = await params;
 
@@ -40,9 +40,9 @@ export async function GET(
     }
 
     // Call backend API to get document
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+    const response = await fetch(`${apiBaseUrl}/documents/${documentId}`, {
       headers: {
-        'X-API-Key': API_KEY,
+        'X-API-Key': apiKey,
         'X-User-ID': userData.user.id,
         'Content-Type': 'application/json',
       } as HeadersInit,
