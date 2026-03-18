@@ -27,6 +27,7 @@ class ErrorCode(str, Enum):
     COLLECTION_NOT_FOUND = "COLLECTION_NOT_FOUND"
     DOCUMENT_NOT_FOUND = "DOCUMENT_NOT_FOUND"
     JOB_NOT_FOUND = "JOB_NOT_FOUND"
+    MISSING_USER_ID = "MISSING_USER_ID"
 
     # External service errors (503)
     DATABASE_UNAVAILABLE = "DATABASE_UNAVAILABLE"
@@ -47,6 +48,7 @@ class ErrorCode(str, Enum):
 
     # Generic errors (500)
     INTERNAL_ERROR = "INTERNAL_ERROR"
+    OPERATION_FAILED = "OPERATION_FAILED"
 
 
 class ErrorDetail(BaseModel):
@@ -115,6 +117,21 @@ class AppException(Exception):
         self.details = details
         super().__init__(message)
 
+    @property
+    def error_code(self) -> ErrorCode:
+        """Backward-compatible alias used by older tests and handlers."""
+        return self.code
+
+    @property
+    def detail(self) -> dict[str, Any]:
+        """Structured error payload matching FastAPI HTTPException.detail."""
+        return ErrorDetail(
+            error=self.__class__.__name__,
+            message=self.message,
+            code=self.code,
+            details=self.details,
+        ).model_dump()
+
     def to_http_exception(self) -> HTTPException:
         """
         Convert to FastAPI HTTPException.
@@ -124,12 +141,7 @@ class AppException(Exception):
         """
         return HTTPException(
             status_code=self.status_code,
-            detail=ErrorDetail(
-                error=self.__class__.__name__,
-                message=self.message,
-                code=self.code,
-                details=self.details,
-            ).model_dump(),
+            detail=self.detail,
         )
 
 
@@ -184,6 +196,18 @@ class CollectionNotFoundError(AppException):
         )
 
 
+class DocumentNotFoundError(AppException):
+    """Raised when a document cannot be found."""
+
+    def __init__(self, document_id: str) -> None:
+        super().__init__(
+            message=f"Document '{document_id}' not found",
+            code=ErrorCode.DOCUMENT_NOT_FOUND,
+            status_code=404,
+            details={"document_id": document_id},
+        )
+
+
 class DatabaseError(AppException):
     """Raised when database operations fail."""
 
@@ -229,6 +253,50 @@ class TaskSubmissionError(AppException):
             code=ErrorCode.TASK_SUBMISSION_FAILED,
             status_code=503,
             details=details,
+        )
+
+
+class UnauthorizedError(AppException):
+    """Raised when authentication is required or invalid."""
+
+    def __init__(self, message: str = "Unauthorized") -> None:
+        super().__init__(
+            message=message,
+            code=ErrorCode.UNAUTHORIZED,
+            status_code=401,
+        )
+
+
+class MissingUserIDError(AppException):
+    """Raised when X-User-ID header is required but missing."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            message="User ID header is required for this operation",
+            code=ErrorCode.MISSING_USER_ID,
+            status_code=401,
+        )
+
+
+class InvalidInputError(ValidationError):
+    """Raised when a specific input field contains invalid data."""
+
+    def __init__(self, field: str, reason: str) -> None:
+        super().__init__(
+            message=f"Invalid input for '{field}': {reason}",
+            details={"field": field, "reason": reason},
+        )
+
+
+class OperationFailedError(AppException):
+    """Raised when an operation fails unexpectedly."""
+
+    def __init__(self, operation: str, reason: str) -> None:
+        super().__init__(
+            message=f"Operation '{operation}' failed: {reason}",
+            code=ErrorCode.OPERATION_FAILED,
+            status_code=500,
+            details={"operation": operation, "reason": reason},
         )
 
 
