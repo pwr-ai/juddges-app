@@ -34,16 +34,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       document_id,
+      document_ids,
       document_text,
-      language,
-      court_name,
+      llm_name,
       jurisdiction_override,
       additional_instructions
     } = body;
 
-    if (!document_id && !document_text) {
+    const normalizedDocumentIds = Array.isArray(document_ids)
+      ? document_ids.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : typeof document_id === 'string' && document_id.trim().length > 0
+        ? [document_id]
+        : [];
+
+    if (document_text) {
       return NextResponse.json(
-        { error: "Either document_id or document_text is required" },
+        {
+          error: "Raw document_text extraction is no longer supported by this endpoint. Provide persisted document_id values instead.",
+          code: ErrorCode.VALIDATION_ERROR
+        },
+        { status: 400 }
+      );
+    }
+
+    if (normalizedDocumentIds.length === 0) {
+      return NextResponse.json(
+        { error: "At least one document_id is required", code: ErrorCode.VALIDATION_ERROR },
         { status: 400 }
       );
     }
@@ -57,10 +73,8 @@ export async function POST(request: NextRequest) {
         'X-User-ID': userData.user.id,
       },
       body: JSON.stringify({
-        document_id,
-        document_text,
-        language,
-        court_name,
+        document_ids: normalizedDocumentIds,
+        llm_name,
         jurisdiction_override,
         additional_instructions,
       }),
@@ -87,8 +101,9 @@ export async function POST(request: NextRequest) {
 
     apiLogger.info('POST /api/extractions/base-schema completed', {
       requestId,
-      document_id,
-      jurisdiction: result.jurisdiction,
+      document_ids: normalizedDocumentIds,
+      total_documents: result.total_documents,
+      successful_extractions: result.successful_extractions,
     });
 
     return NextResponse.json(result);
