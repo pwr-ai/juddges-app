@@ -194,8 +194,10 @@ def route_after_assessment(state: AgentState) -> str:
 
     Uses dynamic criteria based on confidence score and refinement needs.
     """
-    assessment = state.get("assessment_result", {})
+    assessment = state.get("assessment_result") or {}
     refinement_rounds = state.get("refinement_rounds", 0)
+    if not assessment:
+        return "llm_schema_data_assessment"
     confidence = assessment.get("confidence_score", 0.0)
 
     # Dynamic refinement criteria
@@ -220,7 +222,7 @@ def route_after_data_assessment_merger(state: AgentState) -> str:
 
     Uses dynamic criteria based on confidence score and refinement needs.
     """
-    assessment = state.get("merged_data_assessment", {})
+    assessment = state.get("merged_data_assessment") or {}
     data_refinement_rounds = state.get("data_refinement_rounds", 0)
     confidence = assessment.get("confidence_score", 0.0)
 
@@ -263,4 +265,10 @@ def load_prompts(document_type: DocumentType) -> dict[str, str]:
         with open(PROMPTS_PATH / system_type / f"{prompt_config_file}.yaml", "r") as f:
             prompt_config = yaml.safe_load(f)
         prompts.update(prompt_config)
+
+    # Keep backward compatibility with callers using either key style:
+    # `problem_definer_prompt` or `problem_definer`.
+    for key, value in list(prompts.items()):
+        if key.endswith("_prompt"):
+            prompts.setdefault(key.removesuffix("_prompt"), value)
     return prompts
