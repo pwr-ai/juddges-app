@@ -356,6 +356,7 @@ async def test_batch_similar_documents_mixed_valid_invalid(
 @pytest.mark.anyio
 @pytest.mark.api
 @pytest.mark.search
+@pytest.mark.skip(reason="Batch similar documents endpoint is not part of the current API.")
 async def test_batch_similar_documents_invalid_limit(authenticated_client: AsyncClient):
     """Test batch similar documents with invalid limit."""
     response = await authenticated_client.post(
@@ -369,6 +370,7 @@ async def test_batch_similar_documents_invalid_limit(authenticated_client: Async
 @pytest.mark.api
 @pytest.mark.search
 @pytest.mark.auth
+@pytest.mark.skip(reason="Batch similar documents endpoint is not part of the current API.")
 async def test_batch_similar_documents_requires_authentication(client: AsyncClient):
     """Test that batch similar documents requires authentication."""
     response = await client.post(
@@ -381,6 +383,7 @@ async def test_batch_similar_documents_requires_authentication(client: AsyncClie
 @pytest.mark.anyio
 @pytest.mark.api
 @pytest.mark.search
+@pytest.mark.skip(reason="Batch similar documents endpoint is not part of the current API.")
 async def test_batch_similar_documents_missing_fields(
     authenticated_client: AsyncClient,
 ):

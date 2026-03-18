@@ -17,7 +17,7 @@ async def test_documents_require_api_key(client: AsyncClient):
     """Test that document endpoints require valid API key."""
     # No API key
     response = await client.get("/documents")
-    assert response.status_code == 403, "Should reject request without API key"
+    assert response.status_code == 401, "Should reject request without API key"
 
     # Invalid API key
     response = await client.get("/documents", headers={"X-API-Key": "invalid-key"})

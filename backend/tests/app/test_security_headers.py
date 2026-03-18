@@ -157,7 +157,11 @@ class TestCORSConfiguration:
         """Test that CORS headers are present on OPTIONS requests."""
         # Preflight request
         response = await client.options(
-            "/documents", headers={"Origin": "http://localhost:3007"}
+            "/documents",
+            headers={
+                "Origin": "http://localhost:3006",
+                "Access-Control-Request-Method": "GET",
+            },
         )
 
         headers = response.headers

@@ -7,17 +7,24 @@ from juddges_search.chains.query_enhancement import (
 )
 from langchain_openai import ChatOpenAI
 
-# Skip integration tests if API keys are not configured (e.g., dummy keys)
+
+def has_real_openai_key() -> bool:
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    return bool(key) and not key.startswith("test-") and not key.startswith("sk-dummy")
+
+
+# Skip integration tests if API keys are not configured (e.g., dummy/test keys)
 skip_if_no_api_keys = pytest.mark.skipif(
-    os.environ.get("OPENAI_API_KEY", "").startswith("sk-dummy"),
-    reason="Requires valid OpenAI API key (not dummy key)",
+    not has_real_openai_key(),
+    reason="Requires a real OpenAI API key",
 )
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_create_query_enhancement_chain():
+async def test_create_query_enhancement_chain(monkeypatch: pytest.MonkeyPatch):
     """Test that chain creation returns a valid runnable."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     chain = create_query_enhancement_chain()
     assert chain is not None
     # Chain should have invoke method
@@ -25,9 +32,10 @@ async def test_create_query_enhancement_chain():
 
 
 @pytest.mark.unit
-def test_create_chain_structure():
+def test_create_chain_structure(monkeypatch: pytest.MonkeyPatch):
     """Test that chain is created with correct structure."""
     # Create chain with a real (but won't be called) LLM
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
 
     # Don't call the chain, just verify structure
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)

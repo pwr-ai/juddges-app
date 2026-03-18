@@ -26,7 +26,7 @@ class TestUserAuthentication:
         # Request without user ID should fail
         response = await client.get("/collections", headers=valid_api_headers)
         assert response.status_code == 422, (
-            "Missing X-User-ID should return 422 (validation error)"
+            "Missing X-User-ID should return 422 when the header is required"
         )
 
     async def test_valid_user_id_grants_access(
@@ -45,8 +45,8 @@ class TestUserAuthentication:
         headers = {**valid_api_headers, "X-User-ID": ""}
 
         response = await client.get("/collections", headers=headers)
-        assert response.status_code == 422, (
-            "Empty user ID should return validation error"
+        assert response.status_code == 401, (
+            "Empty user ID should be treated as missing authentication data"
         )
 
     async def test_user_id_format_validation(
@@ -327,7 +327,7 @@ class TestUserIdSecurity:
     async def test_unicode_in_user_id(
         self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
-        """Test that Unicode characters in user ID are handled correctly."""
+        """HTTP header values must be ASCII; client should reject Unicode values."""
         unicode_user_ids = [
             "user-测试",  # Chinese
             "user-テスト",  # Japanese
@@ -337,7 +337,5 @@ class TestUserIdSecurity:
 
         for user_id in unicode_user_ids:
             headers = {**valid_api_headers, "X-User-ID": user_id}
-
-            response = await client.get("/collections", headers=headers)
-            # Should handle Unicode gracefully
-            assert response.status_code < 500
+            with pytest.raises(UnicodeEncodeError):
+                await client.get("/collections", headers=headers)

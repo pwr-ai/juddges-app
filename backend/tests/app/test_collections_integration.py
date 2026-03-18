@@ -18,7 +18,7 @@ from httpx import AsyncClient
 async def test_collections_require_api_key(client: AsyncClient):
     """Test that collection endpoints require valid API key."""
     response = await client.get("/collections")
-    assert response.status_code == 403, "Should reject request without API key"
+    assert response.status_code == 401, "Should reject request without API key"
 
 
 @pytest.mark.anyio

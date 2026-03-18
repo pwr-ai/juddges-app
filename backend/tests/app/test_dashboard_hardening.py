@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from app import dashboard as dashboard_module
+from app.server import app
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -61,13 +62,20 @@ async def test_dashboard_trending_topics_enforces_route_rate_limit(
     authenticated_client: AsyncClient,
 ):
     """Dashboard trending-topics should return 200s under limit and 429 when exceeded."""
+    limiter = app.state.limiter
+    previous_enabled = getattr(limiter, "enabled", None)
+    limiter.enabled = True
 
-    statuses: list[int] = []
-    for _ in range(120):
-        response = await authenticated_client.get("/dashboard/trending-topics")
-        statuses.append(response.status_code)
-        if response.status_code == 429:
-            break
+    try:
+        statuses: list[int] = []
+        for _ in range(120):
+            response = await authenticated_client.get("/dashboard/trending-topics")
+            statuses.append(response.status_code)
+            if response.status_code == 429:
+                break
 
-    assert statuses[0] == 200
-    assert 429 in statuses
+        assert statuses[0] == 200
+        assert 429 in statuses
+    finally:
+        if previous_enabled is not None:
+            limiter.enabled = previous_enabled

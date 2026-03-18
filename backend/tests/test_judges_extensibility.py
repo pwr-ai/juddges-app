@@ -8,26 +8,19 @@ from juddges_search.models import DocumentType, LegalDocument
 
 
 def test_extensibility():
-    try:
-        doc = LegalDocument(
-            document_id="test-1",
-            document_type=DocumentType.JUDGMENT,
-            full_text="test text",
-            country="PL",
-            # Extra field
-            extra_field="This should be allowed",
-            victims_count=5,
-        )
-        print("Model instantiated successfully with extra fields.")
-        if "extra_field" in doc.model_dump():
-            print(f"Extra field in dump: {doc.model_dump()['extra_field']}")
-            print(f"Victims count: {doc.victims_count}")
-            return True
-        print("Extra field NOT found in model_dump()")
-        return False
-    except Exception as e:
-        print(f"Model validation failed: {e}")
-        return False
+    doc = LegalDocument(
+        document_id="test-1",
+        document_type=DocumentType.JUDGMENT,
+        full_text="test text",
+        country="PL",
+        # Extra field
+        extra_field="This should be allowed",
+        victims_count=5,
+    )
+
+    dumped = doc.model_dump()
+    assert dumped["extra_field"] == "This should be allowed"
+    assert doc.victims_count == 5
 
 
 if __name__ == "__main__":

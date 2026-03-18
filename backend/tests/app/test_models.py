@@ -69,7 +69,6 @@ class TestDocumentExtractionRequest:
     def test_valid_user_schema(self) -> None:
         DocumentExtractionRequest(
             collection_id="123",
-            schema_id="",
             user_schema=user_schema,
             prompt_id=prompt_ids[0],
             extraction_context="Test extraction from legal documents",

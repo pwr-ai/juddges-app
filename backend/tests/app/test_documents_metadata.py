@@ -427,6 +427,7 @@ async def test_metadata_and_document_consistency(authenticated_client: AsyncClie
 
 @pytest.mark.anyio
 @pytest.mark.api
+@pytest.mark.integration
 async def test_citation_network_with_filters(authenticated_client: AsyncClient):
     """Test citation network with additional filters."""
     response = await authenticated_client.get(

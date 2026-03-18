@@ -3,6 +3,7 @@
 import pytest
 from juddges_search.models import DocumentType
 from langchain_openai import ChatOpenAI
+from langgraph.graph import END
 
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.schema_generator import (
@@ -212,7 +213,7 @@ def test_route_after_data_assessment_merger_max_rounds():
     )
 
     route = route_after_data_assessment_merger(state)
-    assert route == "END", "Should end after max data refinement rounds"
+    assert route == END, "Should end after max data refinement rounds"
 
 
 def test_route_after_data_assessment_merger_complete():
@@ -238,7 +239,7 @@ def test_route_after_data_assessment_merger_complete():
     )
 
     route = route_after_data_assessment_merger(state)
-    assert route == "END", "Should end when data assessment is complete"
+    assert route == END, "Should end when data assessment is complete"
 
 
 def test_empty_user_input_handling():

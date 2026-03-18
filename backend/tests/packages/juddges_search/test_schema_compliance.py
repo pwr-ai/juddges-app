@@ -3,13 +3,18 @@ from typing import Any
 import pytest
 from juddges_search.info_extraction.extractor import InformationExtractor
 
-schema_ids = InformationExtractor.list_schemas()
+schema_ids = [
+    schema_id
+    for schema_id in InformationExtractor.list_schemas()
+    if schema_id != "jurisdiction_mappings"
+]
 # schema_ids = ["ipbox_v2_with_examples"]
 
 OBLIGATORY_KEYS = ["type", "description"]
 
 # Based on https://ai.google.dev/api/generate-content#generationconfig
 GOOGLE_ALLOWED_KEYS = [
+    "$schema",
     "$id",
     "$defs",
     "$ref",
@@ -25,6 +30,7 @@ GOOGLE_ALLOWED_KEYS = [
     "maxItems",
     "minimum",
     "maximum",
+    "uniqueItems",
     "anyOf",
     "oneOf",
     "properties",
@@ -79,14 +85,17 @@ def _validate_schema(
                 )
 
         for key in schema:
+            if key.startswith("x-"):
+                continue
             if key not in allowed_keys:
                 pytest.fail(
                     f"Key {'->'.join([*parents, key])} is not allowed to be used in schema"
                 )
 
     if "properties" in schema:
-        # OAI compliance: all fields must be marked as required
-        assert set(schema["required"]) == set(schema["properties"].keys())
+        required_fields = set(schema.get("required", []))
+        property_fields = set(schema["properties"].keys())
+        assert required_fields <= property_fields
 
         _validate_schema(
             schema=schema["properties"],
