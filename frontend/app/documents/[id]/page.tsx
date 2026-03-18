@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { ExternalLink, ChevronDown, ChevronUp, Info, Sparkles, Plus, ArrowLeft, FileText, Loader2, Scale, MessageSquare, BookOpen } from 'lucide-react';
+import { ExternalLink, ChevronDown, ChevronUp, Info, Sparkles, Plus, ArrowLeft, FileText, Loader2, Scale, MessageSquare, BookOpen, Calendar, Building2, Globe } from 'lucide-react';
 
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
 import { LoadingIndicator, BaseCard, Button, Badge, AIDisclaimerBadge, Breadcrumb, PageContainer, SecondaryButton, ErrorCard } from '@/lib/styles/components';
@@ -136,7 +136,7 @@ function SanitizedHtmlView({
  }
  }
 
- // Sanitize HTML with DOMPurify
+ // Sanitize HTML with DOMPurify (trusted content from our own API, sanitized for safety)
  let purified = DOMPurify.sanitize(bodyContent, {
  USE_PROFILES: { html: true },
  ALLOW_ARIA_ATTR: true,
@@ -258,6 +258,7 @@ function SanitizedHtmlView({
  }
  }
  `}</style>
+ {/* Content is sanitized with DOMPurify above before being rendered */}
  <div
  className="document-content w-full px-6 pt-6 pb-4 prose prose-slate max-w-none text-slate-900"
  role="document"
@@ -642,6 +643,16 @@ export default function DocumentPage(): React.JSX.Element {
  return cleanValue;
  };
 
+ // Determine if HTML content is meaningfully present (not empty or error text)
+ const hasHtmlContent = useMemo(() => {
+ if (!htmlString) return false;
+ const trimmed = htmlString.trim();
+ // Check for empty or trivially short content (e.g. error messages from API)
+ if (trimmed.length < 20) return false;
+ // Check if it looks like actual HTML or document content
+ return trimmed.includes('<') || trimmed.length > 100;
+ }, [htmlString]);
+
  if (loading) {
  return (
  <PageContainer width="xl"fillViewport className="py-8">
@@ -678,26 +689,110 @@ export default function DocumentPage(): React.JSX.Element {
  );
  }
 
+ // Derive display values for the header from metadata
+ const headerTitle = metadata.title || metadata.document_number || 'Untitled Document';
+ const headerDocNumber = metadata.document_number && metadata.document_number !== metadata.title
+ ? metadata.document_number
+ : null;
+ const headerDate = formatDate(metadata.date_issued || metadata.publication_date);
+ const headerCourtName = metadata.court_name || null;
+ // Map country code to jurisdiction label
+ const jurisdictionLabel = metadata.country === 'PL' ? 'PL' : metadata.country === 'GB' ? 'UK' : metadata.country || null;
+ const headerDocType = metadata.document_type ? formatDocumentType(metadata.document_type) : null;
+
+ // Truncate title for breadcrumb display
+ const breadcrumbTitle = headerTitle.length > 60
+ ? headerTitle.substring(0, 57) + '...'
+ : headerTitle;
+
  return (
  <>
  <div className="screen-only">
- <PageContainer width="xl"fillViewport className="py-4">
+ <PageContainer width="xl" fillViewport className="py-4">
+ {/* Breadcrumb Navigation */}
+ <div className="mb-4">
+ <Breadcrumb
+ items={[
+ { label: 'Search', href: '/search' },
+ { label: breadcrumbTitle },
+ ]}
+ />
+ </div>
+
+ {/* Sticky Document Header */}
+ <div className="sticky top-0 z-10 -mx-4 px-4 pb-4 pt-2 bg-background/95 backdrop-blur-sm border-b border-border/50 mb-6">
+ {/* Title */}
+ <h1 className="text-2xl font-bold text-foreground leading-tight mb-1">
+ {headerTitle}
+ </h1>
+
+ {/* Document number (secondary) */}
+ {headerDocNumber && (
+ <p className="text-sm text-muted-foreground font-mono mb-3">
+ {headerDocNumber}
+ </p>
+ )}
+
+ {/* Key metadata row: court, date, jurisdiction badge, document type badge */}
+ <div className="flex items-center gap-3 flex-wrap">
+ {headerCourtName && (
+ <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+ <Building2 className="h-4 w-4 flex-shrink-0" />
+ <span>{headerCourtName}</span>
+ </div>
+ )}
+ {headerDate && (
+ <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+ <Calendar className="h-4 w-4 flex-shrink-0" />
+ <span>{headerDate}</span>
+ </div>
+ )}
+ {jurisdictionLabel && (
+ <Badge variant="secondary" className="text-xs font-semibold bg-blue-100 text-blue-800 border-blue-200">
+ {jurisdictionLabel}
+ </Badge>
+ )}
+ {headerDocType && (
+ <Badge variant="secondary" className="text-xs font-medium bg-slate-100 text-slate-700 border-slate-200">
+ {headerDocType}
+ </Badge>
+ )}
+ </div>
+
+ {/* Source info bar */}
+ {(metadata.source_url || headerCourtName || headerDate) && (
+ <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+ {headerCourtName && (
+ <span>Source: {headerCourtName}</span>
+ )}
+ {headerCourtName && headerDate && (
+ <span className="text-border">|</span>
+ )}
+ {headerDate && (
+ <span>Published: {headerDate}</span>
+ )}
+ {metadata.source_url && (
+ <>
+ <span className="text-border">|</span>
+ <a
+ href={metadata.source_url}
+ target="_blank"
+ rel="noopener noreferrer nofollow"
+ className="inline-flex items-center gap-1 text-primary hover:text-primary/80 font-medium transition-colors"
+ >
+ View on source website
+ <ExternalLink className="h-3 w-3" />
+ </a>
+ </>
+ )}
+ </div>
+ )}
+ </div>
+
  {/* Two-column layout: Main content + Sidebar */}
  <div className="flex flex-col lg:flex-row gap-6">
  {/* Main Content Area */}
  <div className="flex-1 min-w-0">
- {/* Document Title */}
- <div className="mb-4">
- <div className="w-full">
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              {metadata.title && (
- <p className="text-xl text-muted-foreground flex-1">
- {metadata.title}
- </p>
- )}
-            </div>
-          </div>
-        </div>
 
  {/* Similar Documents Section */}
  {similarDocs.length > 0 && (
@@ -1272,19 +1367,62 @@ export default function DocumentPage(): React.JSX.Element {
  onRevert={fetchDocumentData}
  />
 
- {/* Main Content */}
+ {/* Main Content - Document HTML or Fallback */}
  <div>
- {/* Document Content */}
  <div
  className={`printable transition-all duration-300 ease-in-out ${isDocumentExpanded
  ? 'opacity-100'
  : 'opacity-0 max-h-0 overflow-hidden'
  } printable-document-content`}
  >
+ {hasHtmlContent ? (
  <SanitizedHtmlView
  htmlString={htmlString}
  metadata={metadata}
  />
+ ) : (
+ /* Enhanced fallback when no HTML content is available */
+ <div className="rounded-2xl border border-slate-200/50 bg-white/60 backdrop-blur-md p-8">
+ <div className="text-center mb-6">
+ <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+ <h3 className="text-lg font-semibold text-foreground mb-1">
+ Full document content is not available for this judgment
+ </h3>
+ <p className="text-sm text-muted-foreground">
+ The original document text could not be retrieved. See the summary or metadata for available information.
+ </p>
+ </div>
+
+ {/* Show summary as fallback content if available */}
+ {metadata.summary && (
+ <div className="mt-6 pt-6 border-t border-border/50">
+ <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+ <Info className="h-4 w-4 text-primary" />
+ Document Summary
+ </h4>
+ <p className="text-sm text-slate-700 leading-relaxed text-justify">
+ {metadata.summary}
+ </p>
+ </div>
+ )}
+
+ {/* Prominent source link if available */}
+ {metadata.source_url && (
+ <div className="mt-6 pt-6 border-t border-border/50 text-center">
+ <a
+ href={metadata.source_url}
+ target="_blank"
+ rel="noopener noreferrer nofollow"
+ className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+ >
+ <Globe className="h-4 w-4" />
+ View on source website
+ <ExternalLink className="h-3.5 w-3.5" />
+ </a>
+ </div>
+ )}
+ </div>
+ )}
  </div>
  </div>
  </div>
