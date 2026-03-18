@@ -5,9 +5,22 @@ datasets>=2.14.0          # HuggingFace datasets library
 supabase>=2.0.0          # Supabase Python client
 openai>=1.0.0            # OpenAI API for embeddings
 python-dotenv>=1.0.0     # Environment variable management
-tqdm>=4.65.0             # Progress bars
 requests>=2.31.0        # Backend API calls and embedding requests
+tenacity>=8.0.0          # Retry logic with exponential backoff
+
+# Batch processing dependencies
+anthropic>=0.40.0        # Anthropic API for Claude batches
+rich>=13.0.0             # Console output and progress
+loguru>=0.7.0            # Modern logging
+jinja2>=3.1.0            # Template rendering for extraction prompts
+pyyaml>=6.0              # YAML config file parsing
 
 # Optional: For data processing
 pandas>=2.0.0
 numpy>=1.24.0
+
+# Topic Analysis Dependencies
+bertopic>=0.16.0           # BERTopic for topic modeling
+sentence-transformers>=2.2.0  # For embeddings (all-MiniLM-L6-v2)
+umap-learn>=0.5.0          # Dimensionality reduction for BERTopic
+hdbscan>=0.8.0             # Density-based clustering for BERTopic
