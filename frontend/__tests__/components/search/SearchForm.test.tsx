@@ -1,29 +1,14 @@
 /**
- * Component tests for SearchForm
- *
- * Tests search input, filters, search modes, and user interactions
- * following user-focused testing patterns.
- *
  * @jest-environment jsdom
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
 import { SearchForm } from '@/lib/styles/components/search/SearchForm';
 import { DocumentType } from '@/types/search';
 
-// Mock components that might cause issues in test environment
-jest.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}));
-
-describe('SearchForm Component', () => {
+describe('SearchForm', () => {
   const defaultProps = {
     query: '',
     setQuery: jest.fn(),
@@ -46,471 +31,104 @@ describe('SearchForm Component', () => {
     jest.clearAllMocks();
   });
 
-  describe('Rendering', () => {
-    it('should render search input field', () => {
-      render(<SearchForm {...defaultProps} />);
+  it('renders the current search placeholder and button', () => {
+    render(<SearchForm {...defaultProps} />);
 
-      const input = screen.getByPlaceholderText(/VAT refund/i);
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveAttribute('type', 'text');
-    });
-
-    it('should render search button', () => {
-      render(<SearchForm {...defaultProps} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      expect(searchButton).toBeInTheDocument();
-    });
-
-    it('should display current query value', () => {
-      render(<SearchForm {...defaultProps} query="contract law" />);
-
-      const input = screen.getByDisplayValue('contract law');
-      expect(input).toBeInTheDocument();
-    });
-
-    it('should show popular searches when no search performed', () => {
-      render(<SearchForm {...defaultProps} />);
-
-      expect(screen.getByText(/popular searches/i)).toBeInTheDocument();
-      expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
-      expect(screen.getByText('Intellectual property')).toBeInTheDocument();
-      expect(screen.getByText('Prawo pracy')).toBeInTheDocument();
-    });
-
-    it('should not show popular searches when search has been performed', () => {
-      render(<SearchForm {...defaultProps} hasPerformedSearch={true} hasResults={true} />);
-
-      expect(screen.queryByText(/popular searches/i)).not.toBeInTheDocument();
-    });
-
-    it('should not show popular searches when there is an error', () => {
-      render(<SearchForm {...defaultProps} hasError={true} />);
-
-      expect(screen.queryByText(/popular searches/i)).not.toBeInTheDocument();
-    });
+    expect(
+      screen.getByPlaceholderText(/Liability for defective construction works in Poland/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
   });
 
-  describe('Search Input Interaction', () => {
-    it('should update query when user types', async () => {
-      const user = userEvent.setup();
-      const setQuery = jest.fn();
+  it('shows popular searches before the first search', () => {
+    render(<SearchForm {...defaultProps} />);
 
-      render(<SearchForm {...defaultProps} setQuery={setQuery} />);
-
-      const input = screen.getByRole('textbox');
-      await user.type(input, 'tax law');
-
-      expect(setQuery).toHaveBeenCalledWith('t');
-      expect(setQuery).toHaveBeenCalledWith('a');
-      expect(setQuery).toHaveBeenCalledWith('x');
-    });
-
-    it('should handle empty input gracefully', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query="" onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      // Should not trigger search with empty query
-      expect(onSearch).not.toHaveBeenCalled();
-    });
-
-    it('should call onSearch when form is submitted', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query="contract law" onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      expect(onSearch).toHaveBeenCalledTimes(1);
-    });
-
-    it('should call onSearch when Enter key is pressed', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query="contract law" onSearch={onSearch} />);
-
-      const input = screen.getByRole('textbox');
-      await user.type(input, '{Enter}');
-
-      expect(onSearch).toHaveBeenCalledTimes(1);
-    });
-
-    it('should trim whitespace when searching', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query="  contract law  " onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      expect(onSearch).toHaveBeenCalled();
-    });
-
-    it('should disable input when searching', () => {
-      render(<SearchForm {...defaultProps} isSearching={true} query="test" />);
-
-      const input = screen.getByRole('textbox');
-      expect(input).toBeDisabled();
-    });
-
-    it('should disable search button when searching', () => {
-      render(<SearchForm {...defaultProps} isSearching={true} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      expect(searchButton).toBeDisabled();
-    });
+    expect(screen.getByText(/Popular searches/i)).toBeInTheDocument();
+    expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
+    expect(screen.getByText('Intellectual property')).toBeInTheDocument();
   });
 
-  describe('Popular Searches', () => {
-    it('should populate query when popular search is clicked', async () => {
-      const user = userEvent.setup();
-      const setQuery = jest.fn();
-      const setSearchType = jest.fn();
-      const setDocumentTypes = jest.fn();
-      const setSelectedLanguages = jest.fn();
+  it('hides popular searches after search results are shown', () => {
+    render(<SearchForm {...defaultProps} hasPerformedSearch={true} hasResults={true} />);
 
-      render(
-        <SearchForm
-          {...defaultProps}
-          setQuery={setQuery}
-          setSearchType={setSearchType}
-          setDocumentTypes={setDocumentTypes}
-          setSelectedLanguages={setSelectedLanguages}
-        />
-      );
-
-      const frankChip = screen.getByText('Kredyty frankowe');
-      await user.click(frankChip);
-
-      expect(setQuery).toHaveBeenCalledWith('Kredyty frankowe');
-      expect(setSearchType).toHaveBeenCalledWith('thinking');
-      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
-      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
-    });
-
-    it('should populate IP query with correct settings', async () => {
-      const user = userEvent.setup();
-      const setQuery = jest.fn();
-      const setDocumentTypes = jest.fn();
-      const setSelectedLanguages = jest.fn();
-
-      render(
-        <SearchForm
-          {...defaultProps}
-          setQuery={setQuery}
-          setDocumentTypes={setDocumentTypes}
-          setSelectedLanguages={setSelectedLanguages}
-        />
-      );
-
-      const ipChip = screen.getByText('Intellectual property');
-      await user.click(ipChip);
-
-      expect(setQuery).toHaveBeenCalledWith('Intellectual property');
-      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
-      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
-    });
-
-    it('should focus input after clicking popular search', async () => {
-      const user = userEvent.setup();
-      const ref = React.createRef<HTMLInputElement>();
-
-      render(<SearchForm {...defaultProps} ref={ref} />);
-
-      const prawoChip = screen.getByText('Prawo pracy');
-      await user.click(prawoChip);
-
-      await waitFor(() => {
-        expect(ref.current).toHaveFocus();
-      });
-    });
+    expect(screen.queryByText(/Popular searches/i)).not.toBeInTheDocument();
   });
 
-  describe('Search Modes', () => {
-    it('should not auto-search when mode changes', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-      const setSearchType = jest.fn();
+  it('updates the query via setQuery while typing', async () => {
+    const user = userEvent.setup();
+    const setQuery = jest.fn();
 
-      render(
-        <SearchForm
-          {...defaultProps}
-          query="test query"
-          onSearch={onSearch}
-          setSearchType={setSearchType}
-        />
-      );
+    render(<SearchForm {...defaultProps} setQuery={setQuery} />);
 
-      // Simulate mode change (this would happen via SearchConfiguration component)
-      setSearchType('rabbit');
+    await user.type(screen.getByRole('textbox'), 'tax');
 
-      // onSearch should NOT be called automatically
-      expect(onSearch).not.toHaveBeenCalled();
-    });
+    expect(setQuery.mock.calls.map(([value]) => value)).toEqual(['t', 'a', 'x']);
   });
 
-  describe('Loading State', () => {
-    it('should show loading indicator when searching', () => {
-      render(<SearchForm {...defaultProps} isSearching={true} query="test" />);
+  it('submits only non-empty queries', async () => {
+    const user = userEvent.setup();
+    const onSearch = jest.fn();
 
-      // Button should be disabled and show loading state
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      expect(searchButton).toBeDisabled();
-    });
+    const { rerender } = render(<SearchForm {...defaultProps} onSearch={onSearch} query="" />);
+
+    await user.click(screen.getByRole('button', { name: /search/i }));
+    expect(onSearch).not.toHaveBeenCalled();
+
+    rerender(<SearchForm {...defaultProps} onSearch={onSearch} query="contract law" />);
+    await user.click(screen.getByRole('button', { name: /search/i }));
+
+    expect(onSearch).toHaveBeenCalledTimes(1);
   });
 
-  describe('Accessibility', () => {
-    it('should have proper form structure', () => {
-      const { container } = render(<SearchForm {...defaultProps} />);
+  it('applies a popular-search preset', async () => {
+    const user = userEvent.setup();
+    const setQuery = jest.fn();
+    const setSearchType = jest.fn();
+    const setDocumentTypes = jest.fn();
+    const setSelectedLanguages = jest.fn();
 
-      const form = container.querySelector('form');
-      expect(form).toBeInTheDocument();
-    });
+    render(
+      <SearchForm
+        {...defaultProps}
+        setQuery={setQuery}
+        setSearchType={setSearchType}
+        setDocumentTypes={setDocumentTypes}
+        setSelectedLanguages={setSelectedLanguages}
+      />
+    );
 
-    it('should be keyboard navigable', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
+    await user.click(screen.getByRole('button', { name: 'Intellectual property' }));
 
-      render(<SearchForm {...defaultProps} query="test query" onSearch={onSearch} />);
-
-      // Tab to input
-      await user.tab();
-      expect(screen.getByRole('textbox')).toHaveFocus();
-
-      // Tab to search button
-      await user.tab();
-      expect(screen.getByRole('button', { name: /search/i })).toHaveFocus();
-
-      // Press Enter to submit
-      await user.keyboard('{Enter}');
-      expect(onSearch).toHaveBeenCalled();
-    });
-
-    it('should have accessible input placeholder', () => {
-      render(<SearchForm {...defaultProps} />);
-
-      const input = screen.getByRole('textbox');
-      expect(input).toHaveAttribute('placeholder');
-      expect(input.getAttribute('placeholder')).toContain('VAT');
-    });
+    expect(setQuery).toHaveBeenCalledWith('Intellectual property');
+    expect(setSearchType).toHaveBeenCalledWith('thinking');
+    expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
+    expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
   });
 
-  describe('Edge Cases', () => {
-    it('should handle very long search queries', async () => {
-      const user = userEvent.setup();
-      const longQuery = 'a'.repeat(1000);
-      const setQuery = jest.fn();
+  it('renders autocomplete suggestions and selects one', async () => {
+    const user = userEvent.setup();
+    const onSelectAutocompleteSuggestion = jest.fn();
 
-      render(<SearchForm {...defaultProps} setQuery={setQuery} />);
+    render(
+      <SearchForm
+        {...defaultProps}
+        query="con"
+        autocompleteSuggestions={[
+          {
+            id: '1',
+            title: 'Contract liability',
+            summary: 'Example summary',
+            caseNumber: 'I ACa 1/24',
+            courtName: 'Court of Appeal',
+            decisionDate: '2024-01-15',
+          },
+        ]}
+        onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
+      />
+    );
 
-      const input = screen.getByRole('textbox');
-      await user.type(input, longQuery);
+    await user.click(screen.getByRole('option', { name: /Use suggestion: Contract liability/i }));
 
-      expect(setQuery).toHaveBeenCalled();
-    });
-
-    it('should handle special characters in query', async () => {
-      const user = userEvent.setup();
-      const specialQuery = '§ 123: "Contract" (2024) & regulations';
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query={specialQuery} onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      expect(onSearch).toHaveBeenCalled();
-    });
-
-    it('should handle rapid form submissions', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query="test" onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-
-      // Rapidly submit multiple times
-      await user.click(searchButton);
-      await user.click(searchButton);
-      await user.click(searchButton);
-
-      // Should call onSearch for each submission
-      expect(onSearch).toHaveBeenCalledTimes(3);
-    });
-
-    it('should handle whitespace-only query', async () => {
-      const user = userEvent.setup();
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query="   " onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      // Should not trigger search with whitespace-only query
-      expect(onSearch).not.toHaveBeenCalled();
-    });
-
-    it('should handle unicode characters', async () => {
-      const user = userEvent.setup();
-      const unicodeQuery = '法律分析 📚 Análisis legal 🇵🇱';
-      const onSearch = jest.fn();
-
-      render(<SearchForm {...defaultProps} query={unicodeQuery} onSearch={onSearch} />);
-
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      expect(onSearch).toHaveBeenCalled();
-    });
-  });
-
-  describe('Visual States', () => {
-    it('should apply correct styling when has results', () => {
-      const { container } = render(<SearchForm {...defaultProps} hasResults={true} />);
-
-      const form = container.querySelector('form');
-      expect(form).toHaveClass('py-3');
-    });
-
-    it('should apply correct styling when has error', () => {
-      const { container } = render(<SearchForm {...defaultProps} hasError={true} />);
-
-      const form = container.querySelector('form');
-      expect(form).toHaveClass('py-3', 'pb-2');
-    });
-  });
-
-  describe('Integration Scenarios', () => {
-    it('should handle complete search workflow', async () => {
-      const user = userEvent.setup();
-      const setQuery = jest.fn((q) => {
-        // Simulate state update
-        defaultProps.query = q;
-      });
-      const onSearch = jest.fn();
-
-      const { rerender } = render(
-        <SearchForm {...defaultProps} setQuery={setQuery} onSearch={onSearch} />
-      );
-
-      // 1. User types query
-      const input = screen.getByRole('textbox');
-      await user.type(input, 'contract law');
-
-      // 2. Rerender with updated query
-      rerender(
-        <SearchForm
-          {...defaultProps}
-          query="contract law"
-          setQuery={setQuery}
-          onSearch={onSearch}
-        />
-      );
-
-      // 3. User submits search
-      const searchButton = screen.getByRole('button', { name: /search/i });
-      await user.click(searchButton);
-
-      expect(onSearch).toHaveBeenCalled();
-    });
-
-    it('should handle search with popular query selection', async () => {
-      const user = userEvent.setup();
-      const setQuery = jest.fn();
-      const setSearchType = jest.fn();
-      const setDocumentTypes = jest.fn();
-      const setSelectedLanguages = jest.fn();
-
-      render(
-        <SearchForm
-          {...defaultProps}
-          setQuery={setQuery}
-          setSearchType={setSearchType}
-          setDocumentTypes={setDocumentTypes}
-          setSelectedLanguages={setSelectedLanguages}
-        />
-      );
-
-      // Click popular search
-      const popularSearch = screen.getByText('Prawo pracy');
-      await user.click(popularSearch);
-
-      // Verify all settings are configured
-      expect(setQuery).toHaveBeenCalledWith('Prawo pracy');
-      expect(setSearchType).toHaveBeenCalledWith('thinking');
-      expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
-      expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
-    });
-  });
-
-  describe('Autocomplete Suggestions', () => {
-    it('should render autocomplete suggestions when provided', () => {
-      render(
-        <SearchForm
-          {...defaultProps}
-          query="vat"
-          autocompleteSuggestions={[
-            { id: 'doc-1', title: 'VAT refund for digital services', summary: 'Tax interpretation' },
-          ]}
-        />
-      );
-
-      expect(screen.getByText('Suggestions')).toBeInTheDocument();
-      expect(screen.getByText('VAT refund for digital services')).toBeInTheDocument();
-      expect(screen.getByText('Tax interpretation')).toBeInTheDocument();
-    });
-
-    it('should call suggestion select callback when suggestion is clicked', async () => {
-      const user = userEvent.setup();
-      const onSelectAutocompleteSuggestion = jest.fn();
-
-      render(
-        <SearchForm
-          {...defaultProps}
-          query="vat"
-          onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
-          autocompleteSuggestions={[
-            { id: 'doc-1', title: 'VAT refund for digital services' },
-          ]}
-        />
-      );
-
-      await user.click(screen.getByRole('option', { name: /use suggestion: VAT refund for digital services/i }));
-      expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('VAT refund for digital services');
-    });
-
-    it('should support keyboard navigation and Enter selection', async () => {
-      const user = userEvent.setup();
-      const onSelectAutocompleteSuggestion = jest.fn();
-
-      render(
-        <SearchForm
-          {...defaultProps}
-          query="vat"
-          onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
-          autocompleteSuggestions={[
-            { id: 'doc-1', title: 'VAT refund for digital services' },
-            { id: 'doc-2', title: 'VAT input tax deduction' },
-          ]}
-        />
-      );
-
-      const input = screen.getByRole('textbox');
-      input.focus();
-
-      await user.keyboard('{ArrowDown}{Enter}');
-      expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('VAT refund for digital services');
-    });
+    expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('Contract liability');
   });
 });

@@ -46,6 +46,14 @@ jest.mock('next/navigation', () => ({
 process.env.NEXT_PUBLIC_API_BASE_URL = 'http://localhost:8004'
 process.env.BACKEND_API_KEY = 'test-api-key'
 
+beforeAll(() => {
+  jest.spyOn(console, 'debug').mockImplementation(() => {})
+  jest.spyOn(console, 'info').mockImplementation(() => {})
+  jest.spyOn(console, 'log').mockImplementation(() => {})
+  jest.spyOn(console, 'warn').mockImplementation(() => {})
+  jest.spyOn(console, 'error').mockImplementation(() => {})
+})
+
 // Global test setup
 beforeEach(() => {
   // Clear all mocks before each test

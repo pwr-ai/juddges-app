@@ -40,6 +40,9 @@ const customJestConfig = {
     '/out/',
     '/coverage/',
   ],
+  modulePathIgnorePatterns: [
+    '<rootDir>/.next/',
+  ],
   // Coverage configuration
   coveragePathIgnorePatterns: [
     '/node_modules/',

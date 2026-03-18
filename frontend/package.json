@@ -13,6 +13,7 @@
     "typecheck": "next typegen && tsc --noEmit --incremental false",
     "validate": "npm run test:document-types && npm run lint",
     "test": "jest",
+    "test:local": "jest --runInBand --no-cache",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
