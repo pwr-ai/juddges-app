@@ -64,6 +64,37 @@ python scripts/analyze_uk_topics.py --sample 500
 - Filters short documents (< 500 characters)
 - Minimum topic size: 20 documents
 
+#### `generate_cross_queries.py`
+Generates Polish-language search queries from UK legal topics for cross-jurisdictional legal research.
+
+**Usage:**
+```bash
+# Generate queries for all UK topics (requires analyze_uk_topics.py output)
+python scripts/generate_cross_queries.py
+
+# Test with a smaller sample
+python scripts/generate_cross_queries.py --sample 5
+```
+
+**Environment Variables Required:**
+- `OPENAI_API_KEY`: OpenAI API key for query generation with GPT-4o
+
+**Prerequisites:**
+- Run `analyze_uk_topics.py` first to generate `data/uk_topics_taxonomy.json`
+
+**Outputs:**
+- `data/cross_jurisdictional_queries.json`: Polish and English search queries with jurisdictional mapping
+
+**Features:**
+- Maps UK legal concepts to Polish legal framework
+- Generates 4-5 Polish search queries per topic using proper legal terminology
+- Includes 2-3 bilingual English queries for cross-reference
+- Provides jurisdictional mapping notes and confidence levels
+- Lists expected Polish legal sources (codes, statutes)
+- AI-powered with GPT-4o for high-quality legal translations
+- Automatic retry logic with exponential backoff
+- Rich console output with confidence distribution statistics
+
 ## Dependencies
 
 Core dependencies are in `requirements.txt`:
@@ -87,6 +118,38 @@ Core dependencies are in `requirements.txt`:
 - `python-dotenv>=1.0.0`: Environment variables
 - `pandas>=2.0.0`: Data processing
 - `numpy>=1.24.0`: Numerical computing
+
+### Performance Testing
+
+#### `benchmark_search.py`
+Benchmarks search performance at 6K document scale for latency and relevance testing.
+
+**Usage:**
+```bash
+# Direct execution
+python scripts/benchmark_search.py
+
+# Docker execution (recommended)
+scripts/run_benchmark.sh
+
+# Custom configuration
+scripts/run_benchmark.sh --backend-url http://localhost:8002 \
+  --iterations 5 --output data/benchmark_results.json
+```
+
+**Environment Variables Required:**
+- `BACKEND_URL`: Backend API URL (default: http://localhost:8004)
+- `BACKEND_API_KEY`: API authentication key
+
+**Features:**
+- Tests hybrid, keyword, and vector search modes
+- 16 representative Polish and English legal queries
+- Measures P50/P95/P99 latency percentiles
+- Performance targets: keyword<150ms, vector<200ms, hybrid<300ms
+- Rich console output with pass/fail assessment
+- JSON export for detailed analysis and trending
+- Docker containerization for reproducible results
+- Custom query file support
 
 ## Docker Usage
 
@@ -201,6 +264,47 @@ Columns:
 - `confidence`: Assignment confidence score
 - `text_length`: Original document character count
 - `processed_text_length`: Cleaned text character count
+
+### `cross_jurisdictional_queries.json`
+```json
+{
+  "queries": [
+    {
+      "topic_id": 0,
+      "uk_topic_label": "Criminal Sentencing",
+      "uk_description": "Cases involving the determination of criminal penalties...",
+      "uk_category": "Criminal Law",
+      "uk_keywords": ["sentence", "sentencing", "penalty", ...],
+      "queries_pl": [
+        "wymiar kary w prawie karnym",
+        "dyrektywy wymiaru kary art. 53 KK",
+        "indywidualizacja kary",
+        "kara pozbawienia wolności"
+      ],
+      "queries_en": [
+        "criminal sentencing Polish law",
+        "penalty guidelines Poland"
+      ],
+      "jurisdictional_notes": "UK sentencing guidelines map to Polish Art. 53...",
+      "coverage_confidence": "high",
+      "expected_polish_sources": [
+        "Kodeks karny art. 53-63",
+        "Kodeks karny wykonawczy"
+      ]
+    }
+  ],
+  "metadata": {
+    "source_taxonomy": "data/uk_topics_taxonomy.json",
+    "total_topics": 25,
+    "high_confidence": 20,
+    "medium_confidence": 4,
+    "low_confidence": 1,
+    "created_at": "2026-03-18T...",
+    "generator_model": "gpt-4o",
+    "generator_version": "1.0.0"
+  }
+}
+```
 
 ## Contributing
 
