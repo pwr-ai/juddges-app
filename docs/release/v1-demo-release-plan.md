@@ -1,44 +1,104 @@
-# v1 Demo Release Plan
+# V1 Demo Release Plan
 
-## Scope
+## Goal
 
-The v1 demo release targets a representative subset of Polish and UK court judgments with:
+Ship a first public version this week that reliably supports the core journey:
 
-- **Corpus**: ~3,000 PL + ~3,000 UK judgments (6K+ total)
-- **Search**: Hybrid search (text + semantic) via Supabase pgvector
-- **Enrichment**: Base-schema extraction on the full demo corpus
-- **UI**: Search, document viewer, and extraction results browsing
+`Landing -> Search -> Judgment detail`
 
-## Milestones
+The release should optimize for a credible demo, not for exposing every product area already present in the repository.
 
-### 1. Data Ingestion
-- Ingest PL and UK judgments via `scripts/ingest_judgments.py`
-- Generate embeddings for all documents
-- Verify full-text search indexes
+## Current Priorities
 
-### 2. Base-Schema Extraction
-- Run `scripts/run_base_extraction.py` on full demo corpus
-- Checkpoint progress and retry failures
-- Target: >95% coverage (completed extractions / total corpus)
-- Report: `data/extraction_report_*.json`
+### P0. Public demo search flow
 
-### 3. Search & UI Validation
-- Verify hybrid search returns relevant results for PL and UK queries
-- Test extraction facets and filters
-- Validate document detail view with extraction data
+- Make `/search` accessible without forcing sign-in.
+- Keep public navigation focused on the demo-safe path.
+- Ensure result cards expose title, court, date, jurisdiction, and document type.
+- Verify at least one Polish and one English query work end-to-end.
 
-### 4. Smoke Testing
-- Run through `docs/release/v1-smoke-checklist.md`
-- All critical paths pass
+Related issue:
+- `#34 feat(v1): stabilize the public judgment search flow for demo usage`
+- Partial scope from `#33 feat(v1): focus homepage and navigation on the public demo journey`
 
-## Known Limitations
+### P0. Demo dataset ingestion reliability
 
-- Extraction schema is English-centric; PL schema mirrors EN fields
-- No user accounts in demo (public access)
-- UMAP visualization coordinates not yet computed
-- Extraction covers base schema only (no custom schemas)
+- Harden large ingestion runs with checkpoint/resume, batching, and safe re-runs.
+- Use this before attempting bigger PL/UK demo loads.
 
-## Deployment
+Related issue:
+- `#29 perf: add ingestion script checkpoint/resume and batch optimization for 6K+ documents`
 
-Production deployment via `scripts/build_and_push_prod.sh` and `scripts/deploy_prod.sh`.
-See CLAUDE.md for full deployment workflow.
+### P0. Base-schema extraction on the demo corpus
+
+This work is not tracked strongly enough yet and should be treated as a release blocker for the demo dataset story.
+
+Required outcome:
+- Run base-schema extraction on a large, curated PL/UK demo subset.
+- Record completion rate, failed IDs, and rerun path.
+- Expose enough extracted fields to support demo explanations and future filtering.
+
+Recommended new GitHub issue:
+- `ops(v1): batch-run base schema extraction for the PL/UK demo corpus`
+
+Suggested acceptance criteria:
+- A script can select judgments by jurisdiction and extraction status.
+- Extraction runs in batches and writes a checkpoint file.
+- Failed batches can be retried without restarting from zero.
+- A final report shows completed, failed, and skipped documents.
+
+### P1. Judgment detail polish
+
+- Ensure a result opens into a stable, demo-usable detail page.
+- Show metadata, readable content, and source context where available.
+
+Related issue:
+- `#35 feat(v1): ship a polished judgment detail experience from search results`
+
+### P1. Release smoke checklist
+
+- Write and use a short verification checklist before merging to `main`.
+
+Related issue:
+- `#36 chore(v1): add demo smoke verification and release checklist for main`
+
+## Work Sequence For This Week
+
+1. Finish public search flow.
+2. Freeze a demo corpus manifest and known-good sample queries.
+3. Harden ingestion for repeatable large runs.
+4. Run base-schema extraction on the chosen PL/UK subset.
+5. Polish judgment detail only where it directly improves the demo.
+6. Run the smoke checklist before release.
+
+## Recommended Demo Scope
+
+### Demo-safe surfaces
+
+- `/`
+- `/search`
+- `/documents/[id]`
+
+### Not promoted publicly in v1
+
+- General extraction UI flows
+- Collections
+- Schema studio
+- Dataset comparison
+- Chat and other advanced surfaces unless explicitly verified for the demo branch
+
+## Known-good sample queries
+
+- `frankowicze i abuzywne klauzule`
+- `skarga do sądu administracyjnego`
+- `murder conviction appeal`
+- `consumer protection in financial services`
+
+## Definition Of Ready For Release
+
+- Public users can reach `/search` from the landing page.
+- Search returns usable PL and UK results from the chosen demo corpus.
+- Opening a result reaches a stable judgment detail page.
+- Demo corpus ingestion is repeatable.
+- Base-schema extraction has been applied to the demo subset with a recorded completion report.
+- Smoke checklist has been executed once against the release candidate.

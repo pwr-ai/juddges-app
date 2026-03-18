@@ -211,6 +211,13 @@ For each endpoint/component, test:
 ```bash
 cd backend
 
+# Fast local profile (no integration / AI / legacy suites)
+poetry run poe test-local
+poetry run poe test-local-integration
+poetry run poe test-local-ai
+poetry run poe test-local-legacy
+poetry run poe test-local-legacy-schema-api
+
 # All tests
 poetry run pytest
 
@@ -230,6 +237,9 @@ poetry run pytest --cov=app --cov-report=html
 ### Frontend Tests
 ```bash
 cd frontend
+
+# Fast local profile
+npm run test:local
 
 # Unit tests
 npm run test

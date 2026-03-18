@@ -184,13 +184,21 @@ CREATE TABLE judgments (
 ### Run Tests
 
 ```bash
+# Fast local monorepo profile
+make test-local
+make test-local-integration
+make test-local-ai
+make test-local-legacy
+
 # Frontend tests
 cd frontend
 npm run test
+npm run test:local
 
 # Backend tests
 cd backend
 poetry run pytest
+poetry run poe test-local
 ```
 
 ### Code Quality

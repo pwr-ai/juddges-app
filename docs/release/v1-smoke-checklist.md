@@ -1,52 +1,69 @@
-# v1 Demo Smoke Checklist
+# V1 Smoke Checklist
 
-## Pre-release Checks
+## Goal
 
-### Infrastructure
-- [ ] PostgreSQL/Supabase accessible
-- [ ] Backend API responds on `/health`
-- [ ] Frontend loads without errors
-- [ ] Redis available for Celery worker
+Run this checklist before merging the v1 demo branch into `main`.
 
-### Data Integrity
-- [ ] `judgments` table has expected row count (~6K)
-- [ ] PL judgments present: `SELECT count(*) FROM judgments WHERE jurisdiction = 'PL'`
-- [ ] UK judgments present: `SELECT count(*) FROM judgments WHERE jurisdiction = 'UK'`
-- [ ] Embeddings populated: `SELECT count(*) FROM judgments WHERE embedding IS NOT NULL`
+## Automated Checks
 
-### Base-Schema Extraction Coverage
-- [ ] Run extraction report: `python scripts/run_base_extraction.py --dry-run`
-- [ ] Review completion report: `data/extraction_report_*.json`
-- [ ] Coverage target met (>95% completed):
-  ```sql
-  SELECT base_extraction_status, count(*)
-  FROM judgments
-  GROUP BY base_extraction_status;
-  ```
-- [ ] At least one PL batch completed successfully
-- [ ] At least one UK batch completed successfully
-- [ ] Failed extractions reviewed and retried: `python scripts/run_base_extraction.py --failed-only`
+### Frontend
+
+```bash
+cd frontend
+npm run validate
+npm run build
+```
+
+### Backend
+
+```bash
+cd backend
+poetry run pytest \
+  tests/app/test_documents_search.py \
+  tests/app/test_search_autocomplete_integration.py \
+  tests/app/test_documents_integration.py \
+  tests/app/test_documents_metadata.py
+```
+
+## Manual Demo Path
+
+### Landing
+
+- Open `/` as an unauthenticated user.
+- Confirm the primary CTA goes to `/search`.
+- Confirm sample demo queries are visible.
+- Confirm public navigation does not promote unfinished areas.
 
 ### Search
-- [ ] Text search returns results for Polish query
-- [ ] Text search returns results for English query
-- [ ] Semantic search returns results
-- [ ] Hybrid search combines both modalities
-- [ ] Search pagination works
 
-### Extraction Browsing
-- [ ] `/extractions/base-schema/definition` returns schema
-- [ ] `/extractions/base-schema/filter` returns filtered results
-- [ ] Faceted filters work for enum fields
-- [ ] Export to CSV/XLSX works
+- Open `/search` without signing in.
+- Run one Polish query: `frankowicze i abuzywne klauzule`.
+- Run one English query: `murder conviction appeal`.
+- Confirm loading, empty, and error states are readable.
+- Confirm result cards show title, court, date, jurisdiction/language, and document type where available.
 
-### UI
-- [ ] Homepage loads
-- [ ] Search page renders results
-- [ ] Document detail page shows judgment text
-- [ ] Extraction data visible on document page
+### Judgment detail
 
-## Post-release
-- [ ] Monitor error rates in Langfuse
-- [ ] Check backend logs for exceptions: `docker compose logs backend`
-- [ ] Verify no rate-limit errors in worker: `docker compose logs backend-worker`
+- Open one Polish result from search.
+- Open one UK result from search.
+- Confirm the detail page shows metadata and readable content.
+- Confirm missing HTML/content falls back gracefully.
+- Confirm source URL or source context is visible when available.
+
+## Demo Dataset Readiness
+
+- Confirm the chosen PL/UK demo corpus has been ingested.
+- Confirm base-schema extraction has run on the demo subset.
+- Confirm `docs/release/v1-demo-manifest.md` matches the release candidate dataset.
+- Record:
+  - total demo documents
+  - completed base extractions
+  - failed base extractions
+  - skipped/already completed
+
+## Sign-off
+
+- Frontend checks passed.
+- Backend checks passed.
+- Manual landing -> search -> detail path passed.
+- Demo corpus and extraction status recorded.

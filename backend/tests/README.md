@@ -47,6 +47,9 @@ tests/
 
 #### Basic Test Commands
 ```bash
+# Fast local profile (default coding loop)
+poetry run poe test-local
+
 # Run all tests
 poetry run poe test
 
@@ -92,6 +95,27 @@ poetry run poe check-all
 ```bash
 # Run the same checks as CI/CD pipeline
 poetry run poe ci
+```
+
+#### Optional Extended Local Profiles
+```bash
+# Include integration suites
+poetry run poe test-local-integration
+
+# Include AI-backed suites (requires a real OPENAI_API_KEY)
+poetry run poe test-local-ai
+
+# Include deprecated legacy schema API suites
+poetry run poe test-local-legacy
+
+# Include removed /api/schemas and /api/extractions compatibility suites
+# These tests target a backend API surface that is no longer mounted by default.
+poetry run poe test-local-legacy-schema-api
+
+# Root wrappers
+make test-local-integration
+make test-local-ai
+make test-local-legacy
 ```
 
 ## Test Environment
