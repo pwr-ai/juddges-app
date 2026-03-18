@@ -10,10 +10,8 @@ import {
  PageContainer,
  DocumentDialog,
  SearchFilters,
- SearchConfiguration,
  TextButton,
  SearchForm,
- ExampleQueries,
  SearchEmptyState,
  SearchResultsSection,
 } from '@/lib/styles/components';
@@ -371,25 +369,6 @@ function SearchPageContent(): React.JSX.Element | null {
  });
  };
 
- const setExampleQuery = (
- exampleQuery: string,
- mode: 'rabbit' | 'thinking',
- documentType: DocumentType,
- language: string
- ): void => {
- setQuery(exampleQuery);
- setSearchType(mode);
- setDocumentTypes([documentType]);
- setSelectedLanguages(new Set([language]));
- handleSearch(mode, exampleQuery, [documentType], [language]).then(() => {
- setTimeout(() => {
- const resultsSection = document.querySelector('[data-search-results]');
- if (resultsSection) {
- resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
- }
- }, 100);
- });
- };
 
  const handleBack = (): void => {
  setQuery('');
@@ -551,25 +530,7 @@ function SearchPageContent(): React.JSX.Element | null {
  onSelectAutocompleteSuggestion={handleAutocompleteSelection}
  />
 
- {/* SECONDARY ELEMENT: Compact Configuration - Moved below search */}
- <div className="w-full">
- <SearchConfiguration
- documentTypes={documentTypes}
- onDocumentTypeToggle={toggleDocumentType}
- searchType={searchType}
- onSearchTypeChange={setSearchType}
- selectedLanguages={selectedLanguages}
- onLanguageToggle={toggleLanguage}
- isSearching={isSearching}
- />
- </div>
 
- {/* TERTIARY ELEMENT: Example Queries - Improved grid layout for 6-8 examples */}
- <ExampleQueries
- show={!isSearching}
- documentTypes={documentTypes}
- onExampleClick={setExampleQuery}
- />
  </div>
  </div>
  ) : (
@@ -599,16 +560,7 @@ function SearchPageContent(): React.JSX.Element | null {
  isAutocompleteLoading={isAutocompleteLoading}
  onSelectAutocompleteSuggestion={handleAutocompleteSelection}
  />
- {/* Configuration - SECONDARY, below search */}
- <SearchConfiguration
- documentTypes={documentTypes}
- onDocumentTypeToggle={toggleDocumentType}
- searchType={searchType}
- onSearchTypeChange={setSearchType}
- selectedLanguages={selectedLanguages}
- onLanguageToggle={toggleLanguage}
- isSearching={isSearching}
- />
+
  </div>
 
  <div className="flex flex-col lg:flex-row gap-8 overflow-x-hidden w-full">
@@ -632,6 +584,7 @@ function SearchPageContent(): React.JSX.Element | null {
  {error && !isSearching && hasPerformedSearch ? (
  <SearchEmptyState
  error={true}
+ errorMessage={error}
  query={query}
  lastSearchMode={lastSearchMode}
  onBack={handleBack}

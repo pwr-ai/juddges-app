@@ -192,7 +192,7 @@ describe('SearchResultsSection', () => {
       />
     );
 
-    expect(screen.getByText('0 documents')).toBeInTheDocument();
-    expect(screen.getByText(/No results match your filters/i)).toBeInTheDocument();
+    expect(screen.getByText('No matching documents')).toBeInTheDocument();
+    expect(screen.getByText(/filtered out all results/i)).toBeInTheDocument();
   });
 });

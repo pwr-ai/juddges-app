@@ -1,5 +1,6 @@
 "use client";
 
+import { Filter } from "lucide-react";
 import { PrimaryButton } from "../primary-button";
 import { SecondaryButton } from "../secondary-button";
 import { SaveToCollectionPopover } from "../save-to-collection-popover";
@@ -70,18 +71,26 @@ export function SearchResultsSection({
     : filteredMetadata
   ).map(convertMetadataToSearchDocument);
 
+  // Empty state when filters narrow results to zero
   if (filteredCount === 0) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center">
-        <p className="text-sm font-medium">0 documents</p>
+        <Filter className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" />
+        <p className="text-sm font-medium">No matching documents</p>
         {activeFilterCount > 0 ? (
           <>
-            <p className="mt-2 text-sm">No results match your filters</p>
-            <p className="text-xs text-muted-foreground">
-              Try adjusting or clearing your filters.
+            <p className="mt-2 text-sm text-muted-foreground">
+              Your {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"} filtered out all results.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Try adjusting or clearing your filters to see more documents.
             </p>
           </>
-        ) : null}
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Try broadening your search terms.
+          </p>
+        )}
       </div>
     );
   }

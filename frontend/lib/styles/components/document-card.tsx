@@ -39,6 +39,29 @@ function formatDocumentType(type?: string | null): string {
   return type.replace(/_/g, " ");
 }
 
+/** Returns a short jurisdiction label from a country code or jurisdiction string */
+function formatJurisdiction(doc: SearchDocument): string | null {
+  // Check the issuing_body.jurisdiction, country, or infer from court_name
+  const jurisdiction = doc.issuing_body?.jurisdiction || doc.country;
+  if (!jurisdiction) return null;
+
+  const code = jurisdiction.toUpperCase();
+  if (code === "PL" || code === "POLAND") return "PL";
+  if (code === "UK" || code === "GB" || code === "UNITED KINGDOM" || code === "GREAT BRITAIN") return "UK";
+  return code.length <= 3 ? code : code.slice(0, 2);
+}
+
+/** Returns a human-readable language label */
+function formatLanguage(lang?: string | null): string | null {
+  if (!lang) return null;
+  const code = lang.toLowerCase();
+  if (code === "pl" || code === "polish") return "PL";
+  if (code === "en" || code === "english") return "EN";
+  if (code === "de" || code === "german") return "DE";
+  if (code === "fr" || code === "french") return "FR";
+  return lang.toUpperCase().slice(0, 2);
+}
+
 export function DocumentCard({
   document,
   onSaveToCollection,
@@ -51,15 +74,29 @@ export function DocumentCard({
   const title = document.title || document.document_number || document.document_id;
   const summary = document.summary || document.thesis || "No summary available.";
   const href = buildDocumentHref(document.document_id, from, chatId);
+  const jurisdictionLabel = formatJurisdiction(document);
+  const languageLabel = formatLanguage(document.language);
 
   return (
     <Card className="h-full overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm leading-5">{title}</CardTitle>
-          <Badge variant="outline" className="shrink-0 text-[10px]">
-            {formatDocumentType(document.document_type)}
-          </Badge>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {jurisdictionLabel && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                {jurisdictionLabel}
+              </Badge>
+            )}
+            {languageLabel && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                {languageLabel}
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-[10px]">
+              {formatDocumentType(document.document_type)}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
