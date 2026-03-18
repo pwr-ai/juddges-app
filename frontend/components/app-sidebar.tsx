@@ -139,7 +139,7 @@ export function AppSidebar(): React.JSX.Element {
  </Link>
  </SidebarHeader>
  <SidebarContent className="gap-3 px-2">
- {/* Main Navigation - Search-first workflow */}
+ {/* Main Navigation - Public demo workflow */}
  <SidebarGroup className="p-0">
  <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.navigation')}</SidebarGroupLabel>
  <SidebarGroupContent className="px-0">
@@ -152,55 +152,6 @@ export function AppSidebar(): React.JSX.Element {
  </Link>
  </SidebarMenuButton>
  </SidebarMenuItem>
-
- <SidebarMenuItem>
- <SidebarMenuButton asChild isActive={pathname.startsWith("/collections")}>
- <Link href="/collections">
- <FolderOpen />
- <span>{t('navigation.researchCollections')}</span>
- </Link>
- </SidebarMenuButton>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <SidebarMenuButton asChild isActive={pathname === "/extract"}>
- <Link href="/extract">
- <FileInput />
- <span>{t('navigation.extractStructureData')}</span>
- </Link>
- </SidebarMenuButton>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <SidebarMenuButton
- asChild
- isActive={pathname === "/extractions"|| pathname?.startsWith("/extractions")}
- >
- <Link href="/extractions">
- <FileSearch />
- <span>{t('navigation.extractions')}</span>
- </Link>
- </SidebarMenuButton>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <SidebarMenuButton asChild isActive={pathname === "/schemas/base"}>
- <Link href="/schemas/base">
- <FileJson />
- <span>Base Schema</span>
- </Link>
- </SidebarMenuButton>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <SidebarMenuButton asChild isActive={pathname === "/dataset-comparison"}>
- <Link href="/dataset-comparison">
- <BarChart3 />
- <span>Dataset Comparison</span>
- </Link>
- </SidebarMenuButton>
- </SidebarMenuItem>
-
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>

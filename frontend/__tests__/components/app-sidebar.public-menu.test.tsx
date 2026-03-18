@@ -45,10 +45,6 @@ jest.mock('@/contexts/LanguageContext', () => ({
   }),
 }));
 
-jest.mock('@/lib/styles/components/chat', () => ({
-  ChatHistory: () => null,
-}));
-
 jest.mock('@/components/language-switcher', () => ({
   LanguageSwitcherMinimal: () => null,
 }));
@@ -73,7 +69,7 @@ describe('AppSidebar public navigation', () => {
     });
   });
 
-  it('shows search and extraction links for unauthenticated users', () => {
+  it('shows only the public demo path for unauthenticated users', () => {
     mockUseAuth.mockReturnValue({ user: null, loading: false });
 
     const { container } = render(
@@ -83,7 +79,9 @@ describe('AppSidebar public navigation', () => {
     );
 
     expect(container.querySelector('a[href="/search"]')).toBeInTheDocument();
-    expect(container.querySelector('a[href="/extract"]')).toBeInTheDocument();
-    expect(container.querySelector('a[href="/extractions"]')).toBeInTheDocument();
+    expect(container.querySelector('a[href="/extract"]')).not.toBeInTheDocument();
+    expect(container.querySelector('a[href="/extractions"]')).not.toBeInTheDocument();
+    expect(container.querySelector('a[href="/collections"]')).not.toBeInTheDocument();
+    expect(container.querySelector('a[href="/dataset-comparison"]')).not.toBeInTheDocument();
   });
 });

@@ -42,6 +42,25 @@ interface LandingPageProps {
   statsLoading?: boolean;
 }
 
+const demoQueries = [
+  {
+    label: "Frankowicze i abuzywne klauzule",
+    href: "/search?q=frankowicze%20i%20abuzywne%20klauzule&lang=pl&mode=thinking&type=judgment",
+  },
+  {
+    label: "Murder conviction appeal",
+    href: "/search?q=murder%20conviction%20appeal&lang=en&mode=thinking&type=judgment",
+  },
+  {
+    label: "Skarga do sądu administracyjnego",
+    href: "/search?q=skarga%20do%20s%C4%85du%20administracyjnego&lang=pl&mode=thinking&type=judgment",
+  },
+  {
+    label: "Consumer protection in financial services",
+    href: "/search?q=consumer%20protection%20in%20financial%20services&lang=en&mode=thinking&type=judgment",
+  },
+] as const;
+
 // ─────────────────────────────────────────────
 // Animated number counter (simplified)
 // ─────────────────────────────────────────────
@@ -175,14 +194,36 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
             className="flex flex-wrap gap-4 mb-16"
           >
             <Button size="lg" asChild className="h-13 px-8 text-base group shadow-md hover:shadow-lg transition-shadow duration-200">
-              <Link href="/auth/sign-up">
-                Get started free
+              <Link href="/search">
+                Try search
                 <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="h-13 px-8 text-base hover:shadow-md transition-shadow duration-200">
-              <Link href="/search">Try search</Link>
+              <Link href="/auth/sign-up">Create free account</Link>
             </Button>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mb-12"
+          >
+            <p className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground mb-4">
+              Popular demo queries
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {demoQueries.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="inline-flex items-center rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           </motion.div>
 
           {/* Inline stat strip */}
@@ -646,13 +687,13 @@ function TrustCTASection() {
 
           <div className="flex flex-wrap gap-4 justify-center mb-8">
             <Button size="lg" asChild className="h-13 px-10 text-base group shadow-md hover:shadow-lg transition-shadow duration-200">
-              <Link href="/auth/sign-up">
-                Create free account
+              <Link href="/search">
+                Open search
                 <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="h-13 px-10 text-base hover:shadow-md transition-shadow duration-200">
-              <Link href="/about">Learn more</Link>
+              <Link href="/auth/sign-up">Create free account</Link>
             </Button>
           </div>
 

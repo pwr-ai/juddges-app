@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSearchStore } from '@/lib/store/searchStore';
-import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -224,18 +223,6 @@ function SearchPageContent(): React.JSX.Element | null {
  }
  // eslint-disable-next-line react-hooks/exhaustive-deps
  }, []);
-
- // Check authentication on component mount
- useEffect(() => {
- const checkUser = async (): Promise<void> => {
- const { data, error } = await createClient().auth.getUser();
- if (error || !data?.user) {
- router.push('/login');
- }
- };
-
- checkUser();
- }, [router]);
 
  // Set mounted to true after component mounts
  useEffect(() => {

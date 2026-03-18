@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { ExternalLink, ChevronDown, ChevronUp, Info, Sparkles, Plus, ArrowLeft, FileText, Loader2, Scale, MessageSquare, BookOpen } from 'lucide-react';
 
@@ -11,6 +12,7 @@ import DOMPurify from 'dompurify';
 import { summarizeDocuments, type SummarizeDocumentsResponse, extractKeyPoints, type ExtractKeyPointsResponse } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import { VersionHistory } from '@/components/VersionHistory';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DocumentMetadata {
  document_id: string;
@@ -70,6 +72,24 @@ type Props = {
  htmlString?: string | null;
  metadata?: { title?: string | null };
 };
+
+function AuthRequiredAIActionsNotice({
+ message,
+}: {
+ message: string;
+}): React.JSX.Element {
+ return (
+ <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+ <p>
+ {message}{' '}
+ <Link href="/auth/login" className="font-medium underline underline-offset-4">
+ Sign in
+ </Link>{' '}
+ to use AI analysis on this document.
+ </p>
+ </div>
+ );
+}
 
 function SanitizedHtmlView({
  htmlString,
@@ -253,6 +273,7 @@ export default function DocumentPage(): React.JSX.Element {
  const router = useRouter();
  const searchParams = useSearchParams();
  const pathname = usePathname();
+ const { user, loading: authLoading } = useAuth();
  const documentId = params.id as string;
 
  const [metadata, setMetadata] = useState<DocumentMetadata | null>(null);
@@ -280,6 +301,7 @@ export default function DocumentPage(): React.JSX.Element {
  const [isExtractingKeyPoints, setIsExtractingKeyPoints] = useState(false);
  const [keyPointsError, setKeyPointsError] = useState<string | null>(null);
  const [isKeyPointsPanelOpen, setIsKeyPointsPanelOpen] = useState(false);
+ const canUseDocumentAI = Boolean(user);
 
  const fetchDocumentData = useCallback(async (): Promise<void> => {
  try {
@@ -961,6 +983,12 @@ export default function DocumentPage(): React.JSX.Element {
  : 'opacity-0 max-h-0 overflow-hidden'
  }`}
  >
+ {authLoading ? (
+ <p className="text-sm text-muted-foreground">Checking whether AI analysis is available for your account...</p>
+ ) : !canUseDocumentAI ? (
+ <AuthRequiredAIActionsNotice message="AI-generated summaries are available for signed-in users."/>
+ ) : (
+ <>
  {/* Summary Controls */}
  <div className="flex flex-col sm:flex-row gap-4 mb-4">
  <div className="flex-1">
@@ -1056,6 +1084,8 @@ export default function DocumentPage(): React.JSX.Element {
  Select summary type and length, then click &quot;Generate Summary&quot; to create an AI-powered analysis of this document.
  </p>
  )}
+ </>
+ )}
  </div>
  </BaseCard>
  </div>
@@ -1103,6 +1133,12 @@ export default function DocumentPage(): React.JSX.Element {
  : 'opacity-0 max-h-0 overflow-hidden'
  }`}
  >
+ {authLoading ? (
+ <p className="text-sm text-muted-foreground">Checking whether AI analysis is available for your account...</p>
+ ) : !canUseDocumentAI ? (
+ <AuthRequiredAIActionsNotice message="AI key-point extraction is available for signed-in users."/>
+ ) : (
+ <>
  {/* Extract Button */}
  <div className="mb-4">
  <Button
@@ -1223,6 +1259,8 @@ export default function DocumentPage(): React.JSX.Element {
  <p className="text-sm text-muted-foreground">
  Click &quot;Extract Key Points&quot; to identify key arguments, holdings, and legal principles from this document with source paragraph references.
  </p>
+ )}
+ </>
  )}
  </div>
  </BaseCard>
