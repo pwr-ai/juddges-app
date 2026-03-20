@@ -9,6 +9,7 @@ from app.embedding_providers import (
     BaseEmbeddingProvider,
     EmbeddingModelConfig,
     EmbeddingProviderType,
+    HuggingFaceEmbeddingProvider,
     get_default_model_id,
     get_embedding_provider,
     get_model_config,
@@ -63,6 +64,19 @@ class TestAvailableModels:
         key = "cohere/embed-multilingual-v3.0"
         assert key in AVAILABLE_MODELS
         assert AVAILABLE_MODELS[key].provider == EmbeddingProviderType.COHERE
+
+    def test_bge_m3_model_exists(self):
+        key = "huggingface/bge-m3"
+        assert key in AVAILABLE_MODELS
+        assert AVAILABLE_MODELS[key].provider == EmbeddingProviderType.HUGGINGFACE
+        assert AVAILABLE_MODELS[key].dimensions == 1024
+        assert AVAILABLE_MODELS[key].max_input_length == 8192
+
+    def test_bge_m3_768_model_exists(self):
+        key = "huggingface/bge-m3-768"
+        assert key in AVAILABLE_MODELS
+        assert AVAILABLE_MODELS[key].provider == EmbeddingProviderType.HUGGINGFACE
+        assert AVAILABLE_MODELS[key].dimensions == 768
 
 
 # ---------------------------------------------------------------------------
@@ -280,3 +294,66 @@ class TestSetActiveModel:
             pytest.raises(ValueError, match="OPENAI_API_KEY"),
         ):
             set_active_model("openai/text-embedding-3-small")
+
+    def test_sets_huggingface_model_without_api_key(self):
+        """HuggingFace models don't require API keys (local inference)."""
+        import app.embedding_providers as mod
+
+        mod._active_provider = None
+        mod._active_model_id = None
+
+        config = set_active_model("huggingface/bge-m3")
+        assert config.dimensions == 1024
+        assert config.provider == EmbeddingProviderType.HUGGINGFACE
+
+
+# ---------------------------------------------------------------------------
+# HuggingFaceEmbeddingProvider
+# ---------------------------------------------------------------------------
+
+
+class TestHuggingFaceEmbeddingProvider:
+    def test_truncate_embedding_reduces_dimensions(self):
+        config = EmbeddingModelConfig(
+            provider=EmbeddingProviderType.HUGGINGFACE,
+            model_name="BAAI/bge-m3",
+            dimensions=768,
+        )
+        provider = HuggingFaceEmbeddingProvider(config)
+        embedding = list(range(1024))
+        result = provider._truncate_embedding(embedding)
+        assert len(result) == 768
+        assert result == list(range(768))
+
+    def test_truncate_embedding_preserves_short(self):
+        config = EmbeddingModelConfig(
+            provider=EmbeddingProviderType.HUGGINGFACE,
+            model_name="BAAI/bge-m3",
+            dimensions=1024,
+        )
+        provider = HuggingFaceEmbeddingProvider(config)
+        embedding = list(range(1024))
+        result = provider._truncate_embedding(embedding)
+        assert len(result) == 1024
+
+    def test_huggingface_provider_type_in_enum(self):
+        assert EmbeddingProviderType.HUGGINGFACE == "huggingface"
+
+    def test_factory_recognizes_huggingface_provider(self):
+        import app.embedding_providers as mod
+
+        mod._active_provider = None
+        mod._active_model_id = None
+
+        provider = get_embedding_provider("huggingface/bge-m3")
+        assert isinstance(provider, HuggingFaceEmbeddingProvider)
+        assert provider.config.dimensions == 1024
+
+    def test_huggingface_models_no_api_key_required(self):
+        models = list_available_models()
+        hf_models = [
+            m for m in models if m["provider"] == EmbeddingProviderType.HUGGINGFACE
+        ]
+        assert len(hf_models) >= 2
+        for m in hf_models:
+            assert m["api_key_configured"] is True

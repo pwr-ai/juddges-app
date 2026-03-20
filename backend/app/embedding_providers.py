@@ -4,6 +4,7 @@ Embedding provider abstraction for legal document search.
 Supports switching between different embedding providers:
 - OpenAI (text-embedding-3-small, text-embedding-3-large)
 - Cohere (embed-english-v3.0, embed-multilingual-v3.0)
+- HuggingFace (BAAI/bge-m3 - multilingual dense/sparse/multi-vector)
 - Local SentenceTransformer models (e.g., sdadas/mmlw-roberta-large)
 """
 
@@ -20,6 +21,7 @@ class EmbeddingProviderType(str, Enum):
 
     OPENAI = "openai"
     COHERE = "cohere"
+    HUGGINGFACE = "huggingface"
     LOCAL = "local"
 
 
@@ -78,6 +80,20 @@ AVAILABLE_MODELS: dict[str, EmbeddingModelConfig] = {
         dimensions=1024,
         max_input_length=512,
         description="Cohere English model - optimized for English legal texts",
+    ),
+    "huggingface/bge-m3": EmbeddingModelConfig(
+        provider=EmbeddingProviderType.HUGGINGFACE,
+        model_name="BAAI/bge-m3",
+        dimensions=1024,
+        max_input_length=8192,
+        description="BGE-M3 multilingual model (1024d) - native Polish + English, self-hosted, dense/sparse/multi-vector",
+    ),
+    "huggingface/bge-m3-768": EmbeddingModelConfig(
+        provider=EmbeddingProviderType.HUGGINGFACE,
+        model_name="BAAI/bge-m3",
+        dimensions=768,
+        max_input_length=8192,
+        description="BGE-M3 multilingual model (768d via Matryoshka) - compatible with current pgvector schema",
     ),
     "local/mmlw-roberta-large": EmbeddingModelConfig(
         provider=EmbeddingProviderType.LOCAL,
@@ -217,10 +233,66 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
         )
 
 
+class HuggingFaceEmbeddingProvider(BaseEmbeddingProvider):
+    """HuggingFace embedding provider using FlagEmbedding for BGE-M3.
+
+    BGE-M3 supports dense, sparse, and multi-vector retrieval.
+    This provider uses dense embeddings by default for pgvector compatibility.
+    Supports Matryoshka dimension reduction (e.g., 1024 -> 768) via truncation.
+    """
+
+    def __init__(self, config: EmbeddingModelConfig):
+        super().__init__(config)
+        self._model = None
+
+    def _get_model(self):
+        if self._model is None:
+            try:
+                from FlagEmbedding import BGEM3FlagModel
+
+                logger.info(
+                    f"Loading HuggingFace model: {self.config.model_name} "
+                    f"(target dims: {self.config.dimensions})"
+                )
+                self._model = BGEM3FlagModel(self.config.model_name, use_fp16=True)
+            except ImportError:
+                raise ImportError(
+                    "FlagEmbedding is required for BGE-M3. "
+                    "Install with: pip install FlagEmbedding"
+                )
+        return self._model
+
+    def _truncate_embedding(self, embedding: list[float]) -> list[float]:
+        """Truncate embedding to target dimensions (Matryoshka representation)."""
+        if len(embedding) > self.config.dimensions:
+            return embedding[: self.config.dimensions]
+        return embedding
+
+    async def embed_text(self, text: str) -> list[float]:
+        result = await self.embed_texts([text])
+        return result[0]
+
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        import asyncio
+
+        texts = [self._truncate_text(t) for t in texts]
+        model = self._get_model()
+        loop = asyncio.get_event_loop()
+
+        def _encode():
+            output = model.encode(texts)
+            dense = output["dense_vecs"]
+            # dense_vecs is a numpy array of shape (n, native_dim)
+            return [self._truncate_embedding(vec.tolist()) for vec in dense]
+
+        return await loop.run_in_executor(None, _encode)
+
+
 # Provider factory
 _PROVIDER_CLASSES = {
     EmbeddingProviderType.OPENAI: OpenAIEmbeddingProvider,
     EmbeddingProviderType.COHERE: CohereEmbeddingProvider,
+    EmbeddingProviderType.HUGGINGFACE: HuggingFaceEmbeddingProvider,
     EmbeddingProviderType.LOCAL: LocalEmbeddingProvider,
 }
 
@@ -294,7 +366,8 @@ def list_available_models() -> list[dict]:
         elif config.provider == EmbeddingProviderType.OPENAI:
             model_dict["api_key_configured"] = bool(os.getenv("OPENAI_API_KEY"))
         else:
-            model_dict["api_key_configured"] = True  # Local models don't need API keys
+            # Local and HuggingFace models don't need API keys
+            model_dict["api_key_configured"] = True
         models.append(model_dict)
     return models
 
