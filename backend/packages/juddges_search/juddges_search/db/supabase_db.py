@@ -776,7 +776,7 @@ class SupabaseVectorDB:
         Pure vector similarity search.
 
         Args:
-            query_embedding: 1536-dimensional embedding vector
+            query_embedding: 1024-dimensional embedding vector
             match_count: Maximum number of results
             match_threshold: Minimum similarity score (0-1)
 
@@ -817,7 +817,7 @@ class SupabaseVectorDB:
 
         Args:
             query_text: Text query for full-text search
-            query_embedding: 1536-dimensional embedding vector
+            query_embedding: 1024-dimensional embedding vector
             document_type: Filter by document type (e.g., "judgment", "tax_interpretation")
             court_name: Filter by court name (partial match)
             language: Filter by language code (e.g., "pl", "en")
@@ -865,7 +865,7 @@ class SupabaseVectorDB:
         Chunk-level semantic search for RAG applications.
 
         Args:
-            query_embedding: 1536-dimensional embedding vector
+            query_embedding: 1024-dimensional embedding vector
             match_count: Maximum number of chunks to return
             match_threshold: Minimum similarity score (0-1)
             include_key_sections_only: If True, only return key sections (holdings, conclusions)

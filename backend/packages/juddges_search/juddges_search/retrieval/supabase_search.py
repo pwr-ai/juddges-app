@@ -54,7 +54,7 @@ class SupabaseSearchClient:
         Perform pure vector similarity search on document chunks.
 
         Args:
-            query_embedding: 1536-dimensional embedding vector
+            query_embedding: 1024-dimensional embedding vector
             match_count: Maximum number of results to return
             match_threshold: Minimum similarity score (0-1, where 1 is identical)
             languages: Optional list of language codes to filter (e.g., ["pl", "en"])

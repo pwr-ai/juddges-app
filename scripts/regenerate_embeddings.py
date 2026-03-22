@@ -31,10 +31,12 @@ def vector_to_pg_format(vector: List[float]) -> str:
     Returns:
         String in format '[val1,val2,val3,...]' for PostgreSQL vector type
     """
-    return '[' + ','.join(map(str, vector)) + ']'
+    return "[" + ",".join(map(str, vector)) + "]"
 
 
-def generate_embedding_single(text: str, transformers_url: str) -> Optional[List[float]]:
+def generate_embedding_single(
+    text: str, transformers_url: str
+) -> Optional[List[float]]:
     """Generate embedding for a single text."""
     try:
         truncated_text = text[:32000]
@@ -48,7 +50,7 @@ def generate_embedding_single(text: str, transformers_url: str) -> Optional[List
         vector = data.get("vector")
 
         # Validate vector
-        if vector and isinstance(vector, list) and len(vector) == 768:
+        if vector and isinstance(vector, list) and len(vector) == 1024:
             return vector
         else:
             return None
@@ -58,18 +60,22 @@ def generate_embedding_single(text: str, transformers_url: str) -> Optional[List
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Regenerate embeddings with proper vector format')
-    parser.add_argument('--limit', type=int, default=None,
-                       help='Limit number of judgments to process')
-    parser.add_argument('--force', action='store_true',
-                       help='Regenerate even if embeddings exist')
+    parser = argparse.ArgumentParser(
+        description="Regenerate embeddings with proper vector format"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Limit number of judgments to process"
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Regenerate even if embeddings exist"
+    )
 
     args = parser.parse_args()
 
     # Get configuration
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
-    transformers_url = os.getenv('TRANSFORMERS_INFERENCE_URL', 'http://localhost:8080')
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    transformers_url = os.getenv("TRANSFORMERS_INFERENCE_URL", "http://localhost:8080")
 
     if not supabase_url or not supabase_key:
         print("❌ Error: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
@@ -87,24 +93,26 @@ def main():
         print(f"❌ Cannot connect to transformer: {e}")
         sys.exit(1)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Embedding Generation with PostgreSQL Vector Format")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Initialize Supabase
     supabase: Client = create_client(supabase_url, supabase_key)
 
     # Fetch judgments
     print(f"🔍 Fetching judgments...")
-    result = supabase.table('judgments').select('id,full_text,embedding').execute()
-    judgments = result.data[:args.limit] if args.limit else result.data
+    result = supabase.table("judgments").select("id,full_text,embedding").execute()
+    judgments = result.data[: args.limit] if args.limit else result.data
 
     print(f"Found {len(judgments)} judgments")
 
     # Filter (Python client returns vectors as strings, so we just check for None)
-    needs_embedding = judgments if args.force else [
-        j for j in judgments if j['embedding'] is None or j['embedding'] == ''
-    ]
+    needs_embedding = (
+        judgments
+        if args.force
+        else [j for j in judgments if j["embedding"] is None or j["embedding"] == ""]
+    )
 
     print(f"📊 {len(needs_embedding)} need embeddings\n")
 
@@ -118,18 +126,18 @@ def main():
 
     for judgment in tqdm(needs_embedding, desc="Generating & saving"):
         # Generate
-        vector_list = generate_embedding_single(judgment['full_text'], transformers_url)
+        vector_list = generate_embedding_single(judgment["full_text"], transformers_url)
 
-        if vector_list and len(vector_list) == 768:
+        if vector_list and len(vector_list) == 1024:
             try:
                 # Convert to PostgreSQL vector format
                 vector_pg = vector_to_pg_format(vector_list)
 
                 # Use RPC function for proper vector insertion
-                supabase.rpc('update_judgment_embedding', {
-                    'judgment_id': judgment['id'],
-                    'embedding_text': vector_pg
-                }).execute()
+                supabase.rpc(
+                    "update_judgment_embedding",
+                    {"judgment_id": judgment["id"], "embedding_text": vector_pg},
+                ).execute()
 
                 updated += 1
 
@@ -139,11 +147,11 @@ def main():
         else:
             failed += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"✅ Success: {updated}/100")
     if failed > 0:
         print(f"⚠️  Failed: {failed}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

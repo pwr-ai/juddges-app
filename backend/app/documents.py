@@ -50,7 +50,7 @@ from app.utils import (
 from app.utils.date_utils import parse_date
 
 router = APIRouter(prefix="/documents", tags=["documents"])
-JUDGMENTS_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
+JUDGMENTS_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 # Cache for document IDs with configurable TTL
 _document_ids_cache: dict[str, Any] = {

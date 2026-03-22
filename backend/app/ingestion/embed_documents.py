@@ -2,7 +2,7 @@
 Embedding generation script for judgments.
 
 Generates document-level embeddings for the judgments table using
-OpenAI's text-embedding-3-small model at 768 dimensions.
+the configured embedding provider (default: BAAI/bge-m3 at 1024d).
 
 The embedding is generated from the first ~8000 characters of full_text
 (approximately 2000 tokens), which captures the most important content
@@ -15,18 +15,14 @@ Usage:
 
 import argparse
 import asyncio
-import os
 import time
 
 from loguru import logger
-from openai import AsyncOpenAI
 from supabase import Client
 
 from app.core.supabase import get_supabase_client
+from app.embedding_providers import get_default_model_id, get_embedding_provider
 
-# Configuration — dimensions must match DB schema (vector(768))
-EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 DEFAULT_BATCH_SIZE = 100
 MAX_RETRIES = 3
 RETRY_DELAY = 2.0  # seconds
@@ -36,8 +32,7 @@ RETRY_DELAY = 2.0  # seconds
 # This captures the judgment header, parties, and key holdings.
 DOC_EMBEDDING_MAX_CHARS = 8000
 
-# OpenAI allows max 300,000 tokens per embedding request.
-# With ~2000 tokens per doc (8000 chars), 100 docs ≈ 200K tokens (safe).
+# Maximum texts per embedding API call
 API_SUB_BATCH_SIZE = 100
 
 
@@ -47,12 +42,11 @@ class EmbeddingGenerator:
     def __init__(
         self,
         supabase_client: Client,
-        openai_client: AsyncOpenAI,
         batch_size: int = DEFAULT_BATCH_SIZE,
         dry_run: bool = False,
     ):
         self.supabase = supabase_client
-        self.openai = openai_client
+        self.provider = get_embedding_provider()
         self.batch_size = batch_size
         self.dry_run = dry_run
         self.stats = {
@@ -60,7 +54,6 @@ class EmbeddingGenerator:
             "successful": 0,
             "failed": 0,
             "skipped": 0,
-            "tokens_used": 0,
         }
 
     async def generate_batch_embeddings(
@@ -68,8 +61,7 @@ class EmbeddingGenerator:
     ) -> list[list[float] | None]:
         """Generate embeddings for a batch of texts.
 
-        Automatically splits into sub-batches of API_SUB_BATCH_SIZE to stay
-        under the OpenAI 300K token-per-request limit.
+        Automatically splits into sub-batches of API_SUB_BATCH_SIZE.
         """
         # Filter out empty texts but keep track of positions
         valid_indices = []
@@ -84,22 +76,16 @@ class EmbeddingGenerator:
 
         results: list[list[float] | None] = [None] * len(texts)
 
-        # Process in sub-batches to stay under API token limits
+        # Process in sub-batches
         for start in range(0, len(valid_texts), API_SUB_BATCH_SIZE):
             sub_texts = valid_texts[start : start + API_SUB_BATCH_SIZE]
             sub_indices = valid_indices[start : start + API_SUB_BATCH_SIZE]
 
             for attempt in range(MAX_RETRIES):
                 try:
-                    response = await self.openai.embeddings.create(
-                        input=sub_texts,
-                        model=EMBEDDING_MODEL,
-                        dimensions=EMBEDDING_DIMENSIONS,
-                    )
-                    self.stats["tokens_used"] += response.usage.total_tokens
-
-                    for j, embedding_obj in enumerate(response.data):
-                        results[sub_indices[j]] = embedding_obj.embedding
+                    embeddings = await self.provider.embed_texts(sub_texts)
+                    for j, emb in enumerate(embeddings):
+                        results[sub_indices[j]] = emb
                     break
                 except Exception as e:
                     if attempt < MAX_RETRIES - 1:
@@ -209,7 +195,9 @@ class EmbeddingGenerator:
 
         logger.info(f"Starting embedding generation for {total_to_process} judgments")
         logger.info(f"Batch size: {self.batch_size}")
-        logger.info(f"Model: {EMBEDDING_MODEL} ({EMBEDDING_DIMENSIONS}d)")
+        logger.info(
+            f"Model: {self.provider.config.model_name} ({self.provider.config.dimensions}d)"
+        )
         logger.info(f"Max chars per doc: {DOC_EMBEDDING_MAX_CHARS}")
         logger.info(f"Dry run: {self.dry_run}")
 
@@ -236,8 +224,7 @@ class EmbeddingGenerator:
             logger.info(
                 f"Progress: {self.stats['total_processed']}/{total_to_process} "
                 f"({self.stats['total_processed'] / total_to_process * 100:.1f}%) | "
-                f"Rate: {rate:.1f} docs/sec | "
-                f"Tokens: {self.stats['tokens_used']:,}"
+                f"Rate: {rate:.1f} docs/sec"
             )
 
         elapsed = time.time() - start_time
@@ -275,17 +262,12 @@ async def main():
         logger.error("Failed to initialize Supabase client")
         return
 
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        logger.error("OPENAI_API_KEY environment variable not set")
-        return
-
-    openai_client = AsyncOpenAI(api_key=openai_api_key)
+    model_id = get_default_model_id()
+    logger.info(f"Using embedding model: {model_id}")
 
     # Run embedding generation
     generator = EmbeddingGenerator(
         supabase_client=supabase_client,
-        openai_client=openai_client,
         batch_size=args.batch_size,
         dry_run=args.dry_run,
     )
@@ -300,11 +282,6 @@ async def main():
     print(f"Successful:       {stats['successful']}")
     print(f"Failed:           {stats['failed']}")
     print(f"Skipped:          {stats['skipped']}")
-    print(f"Tokens used:      {stats['tokens_used']:,}")
-
-    # Estimate cost (OpenAI text-embedding-3-small: $0.02 per 1M tokens)
-    estimated_cost = stats["tokens_used"] / 1_000_000 * 0.02
-    print(f"Estimated cost:   ${estimated_cost:.4f}")
     print("=" * 50)
 
 

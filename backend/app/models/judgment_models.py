@@ -359,7 +359,7 @@ class Judgment(BaseModel):
 
     # Vector embedding
     embedding: list[float] | None = Field(
-        None, description="1536-dimensional embedding vector for semantic search"
+        None, description="1024-dimensional embedding vector for semantic search"
     )
 
     # Coding scheme data (flexible JSONB fields)

@@ -12,9 +12,9 @@ from tqdm import tqdm
 load_dotenv()
 
 # Get Supabase connection string
-supabase_url = os.getenv('SUPABASE_URL')  # https://xxx.supabase.co
-project_ref = supabase_url.split('//')[1].split('.')[0]
-password = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+supabase_url = os.getenv("SUPABASE_URL")  # https://xxx.supabase.co
+project_ref = supabase_url.split("//")[1].split(".")[0]
+password = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # Construct connection string
 conn_str = f"postgresql://postgres.{project_ref}:{password}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
@@ -40,21 +40,21 @@ try:
 
     for jid, full_text in tqdm(judgments, desc="Processing"):
         # Generate embedding
-        resp = requests.post(f'{transformers_url}/vectors',
-                           json={'text': full_text[:32000]},
-                           timeout=60)
+        resp = requests.post(
+            f"{transformers_url}/vectors", json={"text": full_text[:32000]}, timeout=60
+        )
 
         if resp.status_code == 200:
-            vector_list = resp.json().get('vector')
+            vector_list = resp.json().get("vector")
 
-            if vector_list and len(vector_list) == 768:
+            if vector_list and len(vector_list) == 1024:
                 # Convert to PostgreSQL array format
                 vector_array = vector_list
 
                 # Update using proper PostgreSQL vector type
                 cur.execute(
-                    "UPDATE judgments SET embedding = %s::vector(768) WHERE id = %s",
-                    (str(vector_array), jid)
+                    "UPDATE judgments SET embedding = %s::vector(1024) WHERE id = %s",
+                    (str(vector_array), jid),
                 )
                 conn.commit()
                 updated += 1
@@ -72,4 +72,5 @@ try:
 except Exception as e:
     print(f"❌ Error: {e}")
     import traceback
+
     traceback.print_exc()

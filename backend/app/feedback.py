@@ -188,7 +188,7 @@ Expected Supabase tables (create these manually or via migration):
        },
        "search_params": {
          "mode": "hybrid",
-         "embedding_model": "text-embedding-3-small",
+         "embedding_model": "BAAI/bge-m3",
          "top_k": 50,
          "reranking_enabled": true,
          "reranking_model": "cohere-rerank-v3"

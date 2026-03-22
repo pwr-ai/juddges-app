@@ -17,20 +17,16 @@ Usage:
 
 import argparse
 import asyncio
-import os
 import re
 import time
 
 import tiktoken
 from loguru import logger
-from openai import AsyncOpenAI
 from supabase import Client
 
 from app.core.supabase import get_supabase_client
+from app.embedding_providers import get_default_model_id, get_embedding_provider
 
-# Configuration — dimensions must match DB schema (vector(768))
-EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSION", "768"))
 DEFAULT_BATCH_SIZE = 50
 MAX_RETRIES = 3
 RETRY_DELAY = 2.0
@@ -40,8 +36,7 @@ TARGET_CHUNK_SIZE = 400  # tokens
 CHUNK_OVERLAP = 100  # tokens
 MIN_CHUNK_SIZE = 50  # minimum tokens to create a chunk
 
-# Maximum chunks to embed in a single OpenAI API call
-# text-embedding-3-small supports up to 2048 inputs per request
+# Maximum chunks to embed in a single API call
 EMBEDDING_BATCH_SIZE = 200
 
 # Polish legal document section patterns
@@ -81,19 +76,17 @@ class DocumentChunker:
     def __init__(
         self,
         supabase_client: Client,
-        openai_client: AsyncOpenAI,
         batch_size: int = DEFAULT_BATCH_SIZE,
         dry_run: bool = False,
     ):
         self.supabase = supabase_client
-        self.openai = openai_client
+        self.provider = get_embedding_provider()
         self.batch_size = batch_size
         self.dry_run = dry_run
-        self.tokenizer = tiktoken.get_encoding("cl100k_base")  # OpenAI's encoding
+        self.tokenizer = tiktoken.get_encoding("cl100k_base")
         self.stats = {
             "documents_processed": 0,
             "chunks_created": 0,
-            "tokens_used": 0,
             "failed": 0,
         }
 
@@ -240,21 +233,16 @@ class DocumentChunker:
 
         texts = [chunk["chunk_text"] for chunk in chunks]
 
-        # Split into sub-batches if needed (API limit)
+        # Split into sub-batches if needed
         all_embeddings: list[list[float] | None] = [None] * len(texts)
         for start in range(0, len(texts), EMBEDDING_BATCH_SIZE):
             batch_texts = texts[start : start + EMBEDDING_BATCH_SIZE]
 
             for attempt in range(MAX_RETRIES):
                 try:
-                    response = await self.openai.embeddings.create(
-                        input=batch_texts,
-                        model=EMBEDDING_MODEL,
-                        dimensions=EMBEDDING_DIMENSIONS,
-                    )
-                    self.stats["tokens_used"] += response.usage.total_tokens
-                    for j, obj in enumerate(response.data):
-                        all_embeddings[start + j] = obj.embedding
+                    embeddings = await self.provider.embed_texts(batch_texts)
+                    for j, emb in enumerate(embeddings):
+                        all_embeddings[start + j] = emb
                     break
                 except Exception as e:
                     if attempt < MAX_RETRIES - 1:
@@ -469,8 +457,7 @@ class DocumentChunker:
             logger.info(
                 f"Progress: {self.stats['documents_processed']} docs, "
                 f"{self.stats['chunks_created']} chunks | "
-                f"Rate: {rate:.1f} docs/sec | "
-                f"Tokens: {self.stats['tokens_used']:,}"
+                f"Rate: {rate:.1f} docs/sec"
             )
 
         elapsed = time.time() - start_time
@@ -510,17 +497,12 @@ async def main():
         logger.error("Failed to initialize Supabase client")
         return
 
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        logger.error("OPENAI_API_KEY not set")
-        return
-
-    openai_client = AsyncOpenAI(api_key=openai_api_key)
+    model_id = get_default_model_id()
+    logger.info(f"Using embedding model: {model_id}")
 
     # Run chunker
     chunker = DocumentChunker(
         supabase_client=supabase_client,
-        openai_client=openai_client,
         batch_size=args.batch_size,
         dry_run=args.dry_run,
     )
@@ -534,10 +516,6 @@ async def main():
     print(f"Judgments processed: {stats['documents_processed']}")
     print(f"Chunks created:      {stats['chunks_created']}")
     print(f"Failed:              {stats['failed']}")
-    print(f"Tokens used:         {stats['tokens_used']:,}")
-
-    estimated_cost = stats["tokens_used"] / 1_000_000 * 0.02
-    print(f"Estimated cost:      ${estimated_cost:.4f}")
     print("=" * 50)
 
 

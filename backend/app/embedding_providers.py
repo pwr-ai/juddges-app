@@ -44,13 +44,13 @@ class EmbeddingModelConfig(BaseModel):
 
 # Pre-defined model configurations
 AVAILABLE_MODELS: dict[str, EmbeddingModelConfig] = {
-    "openai/text-embedding-3-small-768": EmbeddingModelConfig(
-        provider=EmbeddingProviderType.OPENAI,
-        model_name="text-embedding-3-small",
-        dimensions=768,
-        max_input_length=8000,
-        description="OpenAI small embedding model (768d) aligned with current judgments pgvector schema",
-        is_default=False,
+    "huggingface/bge-m3": EmbeddingModelConfig(
+        provider=EmbeddingProviderType.HUGGINGFACE,
+        model_name="BAAI/bge-m3",
+        dimensions=1024,
+        max_input_length=8192,
+        description="BGE-M3 multilingual model (1024d) - native Polish + English, self-hosted, dense/sparse/multi-vector",
+        is_default=True,
     ),
     "openai/text-embedding-3-small": EmbeddingModelConfig(
         provider=EmbeddingProviderType.OPENAI,
@@ -58,7 +58,6 @@ AVAILABLE_MODELS: dict[str, EmbeddingModelConfig] = {
         dimensions=1536,
         max_input_length=8000,
         description="OpenAI small embedding model - fast, cost-effective, good quality",
-        is_default=True,
     ),
     "openai/text-embedding-3-large": EmbeddingModelConfig(
         provider=EmbeddingProviderType.OPENAI,
@@ -80,20 +79,6 @@ AVAILABLE_MODELS: dict[str, EmbeddingModelConfig] = {
         dimensions=1024,
         max_input_length=512,
         description="Cohere English model - optimized for English legal texts",
-    ),
-    "huggingface/bge-m3": EmbeddingModelConfig(
-        provider=EmbeddingProviderType.HUGGINGFACE,
-        model_name="BAAI/bge-m3",
-        dimensions=1024,
-        max_input_length=8192,
-        description="BGE-M3 multilingual model (1024d) - native Polish + English, self-hosted, dense/sparse/multi-vector",
-    ),
-    "huggingface/bge-m3-768": EmbeddingModelConfig(
-        provider=EmbeddingProviderType.HUGGINGFACE,
-        model_name="BAAI/bge-m3",
-        dimensions=768,
-        max_input_length=8192,
-        description="BGE-M3 multilingual model (768d via Matryoshka) - compatible with current pgvector schema",
     ),
     "local/mmlw-roberta-large": EmbeddingModelConfig(
         provider=EmbeddingProviderType.LOCAL,
@@ -237,8 +222,8 @@ class HuggingFaceEmbeddingProvider(BaseEmbeddingProvider):
     """HuggingFace embedding provider using FlagEmbedding for BGE-M3.
 
     BGE-M3 supports dense, sparse, and multi-vector retrieval.
-    This provider uses dense embeddings by default for pgvector compatibility.
-    Supports Matryoshka dimension reduction (e.g., 1024 -> 768) via truncation.
+    This provider uses dense embeddings (1024d) for pgvector compatibility.
+    The model outputs fixed 1024-dimensional vectors (no Matryoshka support).
     """
 
     def __init__(self, config: EmbeddingModelConfig):
@@ -252,7 +237,7 @@ class HuggingFaceEmbeddingProvider(BaseEmbeddingProvider):
 
                 logger.info(
                     f"Loading HuggingFace model: {self.config.model_name} "
-                    f"(target dims: {self.config.dimensions})"
+                    f"({self.config.dimensions}d)"
                 )
                 self._model = BGEM3FlagModel(self.config.model_name, use_fp16=True)
             except ImportError:
@@ -261,12 +246,6 @@ class HuggingFaceEmbeddingProvider(BaseEmbeddingProvider):
                     "Install with: pip install FlagEmbedding"
                 )
         return self._model
-
-    def _truncate_embedding(self, embedding: list[float]) -> list[float]:
-        """Truncate embedding to target dimensions (Matryoshka representation)."""
-        if len(embedding) > self.config.dimensions:
-            return embedding[: self.config.dimensions]
-        return embedding
 
     async def embed_text(self, text: str) -> list[float]:
         result = await self.embed_texts([text])
@@ -282,8 +261,8 @@ class HuggingFaceEmbeddingProvider(BaseEmbeddingProvider):
         def _encode():
             output = model.encode(texts)
             dense = output["dense_vecs"]
-            # dense_vecs is a numpy array of shape (n, native_dim)
-            return [self._truncate_embedding(vec.tolist()) for vec in dense]
+            # dense_vecs is a numpy array of shape (n, 1024)
+            return [vec.tolist() for vec in dense]
 
         return await loop.run_in_executor(None, _encode)
 
@@ -316,15 +295,11 @@ def get_default_model_id() -> str:
     if active_model and active_model in AVAILABLE_MODELS:
         return active_model
 
-    configured_dimension = os.getenv("EMBEDDING_DIMENSION", "").strip()
-    if configured_dimension == "768":
-        return "openai/text-embedding-3-small-768"
-
     # Fall back to the model marked as default
     for model_id, config in AVAILABLE_MODELS.items():
         if config.is_default:
             return model_id
-    return "openai/text-embedding-3-small"
+    return "huggingface/bge-m3"
 
 
 def get_embedding_provider(model_id: str | None = None) -> BaseEmbeddingProvider:

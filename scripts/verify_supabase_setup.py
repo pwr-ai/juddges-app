@@ -58,7 +58,7 @@ REQUIRED_FUNCTIONS = [
     "is_admin",
 ]
 
-EXPECTED_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "768"))
+EXPECTED_EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "1024"))
 
 
 # =============================================================================
@@ -71,7 +71,11 @@ def check_env_vars() -> Tuple[bool, List[str]]:
     missing = []
     for var in REQUIRED_ENV_VARS:
         value = os.getenv(var)
-        if not value or value.startswith("your-") or value == "https://placeholder.supabase.co":
+        if (
+            not value
+            or value.startswith("your-")
+            or value == "https://placeholder.supabase.co"
+        ):
             missing.append(var)
     return len(missing) == 0, missing
 
@@ -91,7 +95,9 @@ def check_database_connection(client: Client) -> Tuple[bool, str]:
     """Test database connection by running a simple query."""
     try:
         # Try to query auth.users count (doesn't matter if empty)
-        result = client.table("judgments").select("id", count="exact").limit(0).execute()
+        result = (
+            client.table("judgments").select("id", count="exact").limit(0).execute()
+        )
         return True, f"Connected successfully (judgments count: {result.count or 0})"
     except Exception as e:
         return False, f"Connection failed: {str(e)}"
@@ -106,10 +112,14 @@ def check_extensions(client: Client) -> Tuple[bool, Dict[str, bool]]:
         # Query pg_extension to check installed extensions
         response = client.rpc(
             "exec_sql",
-            {"sql": "SELECT extname FROM pg_extension WHERE extname IN ('vector', 'pg_trgm')"},
+            {
+                "sql": "SELECT extname FROM pg_extension WHERE extname IN ('vector', 'pg_trgm')"
+            },
         ).execute()
 
-        installed = {row["extname"] for row in response.data} if response.data else set()
+        installed = (
+            {row["extname"] for row in response.data} if response.data else set()
+        )
 
         for ext in REQUIRED_EXTENSIONS:
             is_installed = ext in installed
@@ -118,7 +128,9 @@ def check_extensions(client: Client) -> Tuple[bool, Dict[str, bool]]:
                 all_ok = False
 
     except Exception as e:
-        console.print(f"[yellow]Warning: Could not check extensions via RPC: {e}[/yellow]")
+        console.print(
+            f"[yellow]Warning: Could not check extensions via RPC: {e}[/yellow]"
+        )
         # Fallback: assume extensions are installed if we can't check
         for ext in REQUIRED_EXTENSIONS:
             extensions_status[ext] = True
@@ -173,7 +185,10 @@ def check_functions(client: Client) -> Tuple[bool, Dict[str, bool]]:
                     functions_status[func] = True
                 except Exception as e:
                     # If we get a specific error about params, function exists
-                    if "function" in str(e).lower() and "does not exist" in str(e).lower():
+                    if (
+                        "function" in str(e).lower()
+                        and "does not exist" in str(e).lower()
+                    ):
                         functions_status[func] = False
                         all_ok = False
                     else:
@@ -201,7 +216,10 @@ def check_auth_schema(client: Client) -> Tuple[bool, str]:
         # Try to query auth.users (even if empty)
         # Note: This requires service role key
         response = client.auth.admin.list_users()
-        return True, f"Auth schema initialized ({len(response.users) if hasattr(response, 'users') else 0} users)"
+        return (
+            True,
+            f"Auth schema initialized ({len(response.users) if hasattr(response, 'users') else 0} users)",
+        )
     except Exception as e:
         return False, f"Auth check failed: {str(e)}"
 
@@ -252,7 +270,9 @@ def main():
     for ext, status in ext_status.items():
         icon = "✓" if status else "✗"
         color = "green" if status else "red"
-        console.print(f"[{color}]{icon} Extension '{ext}': {'installed' if status else 'missing'}[/{color}]")
+        console.print(
+            f"[{color}]{icon} Extension '{ext}': {'installed' if status else 'missing'}[/{color}]"
+        )
 
     # Step 5: Check tables
     console.print("\n[bold cyan]Step 5:[/bold cyan] Checking required tables...")
@@ -260,7 +280,9 @@ def main():
     for table, status in tables_status.items():
         icon = "✓" if status else "✗"
         color = "green" if status else "red"
-        console.print(f"[{color}]{icon} Table '{table}': {'exists' if status else 'missing'}[/{color}]")
+        console.print(
+            f"[{color}]{icon} Table '{table}': {'exists' if status else 'missing'}[/{color}]"
+        )
 
     # Step 6: Check RLS
     console.print("\n[bold cyan]Step 6:[/bold cyan] Checking Row Level Security...")
@@ -274,7 +296,9 @@ def main():
     for func, status in func_status.items():
         icon = "✓" if status else "✗"
         color = "green" if status else "red"
-        console.print(f"[{color}]{icon} Function '{func}': {'exists' if status else 'missing'}[/{color}]")
+        console.print(
+            f"[{color}]{icon} Function '{func}': {'exists' if status else 'missing'}[/{color}]"
+        )
 
     # Step 8: Check auth schema
     console.print("\n[bold cyan]Step 8:[/bold cyan] Checking Supabase Auth...")
@@ -288,16 +312,20 @@ def main():
     all_checks_passed = env_ok and db_ok and tables_ok and auth_ok
 
     if all_checks_passed:
-        console.print(Panel.fit(
-            "✅ All checks passed! Supabase is properly configured.",
-            style="bold green"
-        ))
+        console.print(
+            Panel.fit(
+                "✅ All checks passed! Supabase is properly configured.",
+                style="bold green",
+            )
+        )
         sys.exit(0)
     else:
-        console.print(Panel.fit(
-            "⚠️  Some checks failed. Please review the output above.",
-            style="bold yellow"
-        ))
+        console.print(
+            Panel.fit(
+                "⚠️  Some checks failed. Please review the output above.",
+                style="bold yellow",
+            )
+        )
         sys.exit(1)
 
 
@@ -310,5 +338,6 @@ if __name__ == "__main__":
     except Exception as e:
         console.print(f"\n[red]Unexpected error: {e}[/red]")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
