@@ -380,3 +380,180 @@ Need to release a new version?
 | Production (registry) | `docker-compose.yml` | Docker Hub | :3006* | :8002* | (no port) |
 
 \* Production ports are `expose`d internally (behind nginx-proxy), not mapped to the host by default.
+
+---
+
+## 10. Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    Production Host                        │
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Frontend   │  │   Backend    │  │  Meilisearch  │  │
+│  │  (Next.js)   │  │  (FastAPI)   │  │   (Search)    │  │
+│  │  Port: 3006  │  │  Port: 8002  │  │  Port: 7700   │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────┘  │
+│         │                  │                             │
+│         │          ┌───────┴───────┐                     │
+│         │          │               │                     │
+│         │   ┌──────▼──────┐ ┌─────▼──────┐             │
+│         │   │   Worker    │ │   Beat     │             │
+│         │   │  (Celery)   │ │ (Scheduler)│             │
+│         │   └─────────────┘ └────────────┘             │
+│         │                                               │
+│  ┌──────▼───────────────────────────────────────────┐  │
+│  │              Docker Network (app-network)         │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  External Services:                                      │
+│  - Supabase (PostgreSQL + Auth + pgvector)              │
+│  - Redis (Celery broker)                                │
+│  - OpenAI API (embeddings + LLM)                        │
+│  - Cohere API (reranking, optional)                     │
+│  - Langfuse (observability, optional)                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Service Summary
+
+| Service | Image | Port | Purpose |
+|---------|-------|------|---------|
+| `frontend` | `juddges-frontend` | 3006 | Next.js standalone server |
+| `backend` | `juddges-backend` | 8002 | FastAPI with 12 Gunicorn workers |
+| `backend-worker` | `juddges-backend` (shared) | — | Celery async task worker |
+| `backend-beat` | `juddges-backend` (shared) | — | Celery periodic task scheduler |
+| `meilisearch` | `getmeili/meilisearch:v1.13` | 7700 | Autocomplete search engine |
+
+---
+
+## 11. Health Checks
+
+All production services include health checks:
+
+| Service | Check | Interval | Timeout | Retries | Start Period |
+|---------|-------|----------|---------|---------|--------------|
+| Frontend | HTTP GET `127.0.0.1:3006` | 30s | 10s | 3 | 40s |
+| Backend | HTTP GET `/health/healthz` | 30s | 10s | 3 | 40s |
+| Worker | `celery inspect ping` | 60s | 30s | 3 | 60s |
+| Meilisearch | HTTP GET `/health` | 30s | 5s | 3 | — |
+
+```bash
+# All services
+docker compose ps
+
+# Specific service health
+docker inspect --format='{{.State.Health.Status}}' juddges-app-backend-1
+
+# Health check logs
+docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' juddges-app-backend-1
+```
+
+### Backend Health Endpoints
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /health/healthz` | None | Basic liveness (used by Docker) |
+| `GET /health/status` | API Key | Detailed status with service checks |
+
+---
+
+## 12. Resource Limits
+
+### Production Defaults
+
+| Service | CPU Limit | Memory Limit | CPU Reserved | Memory Reserved |
+|---------|-----------|--------------|-------------|-----------------|
+| Frontend | 1 | 2 GB | 0.5 | 1 GB |
+| Backend | 8 | 16 GB | 4 | 12 GB |
+| Worker | 2 | 4 GB | 1 | 2 GB |
+| Beat | 0.5 | 512 MB | 0.25 | 256 MB |
+
+### Backend Worker Configuration
+
+```
+Workers:           12 uvicorn workers
+Timeout:           120 seconds
+Graceful timeout:  30 seconds
+Keep-alive:        5 seconds
+Max requests:      1000 per worker (with 50 jitter)
+```
+
+---
+
+## 13. CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+**File:** `.github/workflows/ci.yml`
+
+```
+Push to develop/main or PR
+          │
+          ├─── backend-lint (Ruff format + lint)
+          ├─── backend-test (pytest -m unit)
+          ├─── frontend-lint (ESLint)
+          ├─── frontend-test (Jest)
+          └─── docker-build (validate production build)
+                    │
+                    │ All pass
+                    ▼
+          ┌─────────────────┐
+          │  Push to develop │──→ deploy-dev (tag: dev-latest)
+          └─────────────────┘
+          ┌─────────────────┐
+          │  Push prod-v* tag│──→ deploy-prod (tag: version + latest)
+          └─────────────────┘
+```
+
+### Release Flow
+
+```bash
+# 1. Develop features on feature branches
+git checkout -b feature/my-feature develop
+
+# 2. Merge to develop (triggers dev deployment)
+git checkout develop && git merge feature/my-feature
+
+# 3. When ready for production, build and tag
+./scripts/build_and_push_prod.sh
+
+# 4. Push the tag (triggers prod deployment via CI)
+git push origin prod-v0.2.0
+```
+
+---
+
+## 14. Observability
+
+### Langfuse Integration (Optional)
+
+LLM call observability via Langfuse:
+
+```bash
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_HOST=https://cloud.langfuse.com
+ENABLE_LANGFUSE=true
+```
+
+Tracks: LLM query analysis, embedding generation, chat chain invocations, query enhancement.
+
+### Watchtower Labels
+
+Services are labeled for Watchtower auto-update support:
+
+```yaml
+labels:
+  - "com.centurylinklabs.watchtower.enable=true"
+  - "com.juddges.service=application"
+```
+
+---
+
+## Related Documentation
+
+- [Architecture Overview](../architecture/ARCHITECTURE.md)
+- [Search Architecture](../architecture/SEARCH_ARCHITECTURE.md)
+- [Developer Onboarding](../getting-started/DEVELOPER_ONBOARDING.md)
+- [API Reference](../api/API_REFERENCE.md)

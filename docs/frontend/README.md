@@ -8,29 +8,8 @@ This directory contains comprehensive documentation for the Juddges App frontend
 
 ## Documents
 
-### 1. [UX_UI_REVIEW_AND_RECOMMENDATIONS.md](./UX_UI_REVIEW_AND_RECOMMENDATIONS.md)
-**Comprehensive UX/UI quality assessment**
-
-**Contents**:
-- Executive summary of current state
-- Component architecture assessment
-- User flow analysis (search, chat, auth, document viewing)
-- Testing coverage analysis (unit, E2E, accessibility)
-- Design system consistency review
-- Critical recommendations with priority rankings
-- 30-day action plan
-- Mobile-first checklist
-- Accessibility compliance gaps
-
-**Key Findings**:
-- ✅ **Strengths**: Sophisticated Legal Glass 2.0 design system, comprehensive Radix UI integration
-- ❌ **Critical Gaps**: 0% test coverage, incomplete user flows, missing core components
-- 📊 **Overall Rating**: 6.5/10
-
-**When to Read**:
-- Before starting new feature development
-- During sprint planning
-- When prioritizing technical debt
+### 1. UX/UI Review and Recommendations
+**Archived** to `.context/ux-ui-review.md` (point-in-time audit from Feb 2026).
 
 ---
 
@@ -91,13 +70,7 @@ This directory contains comprehensive documentation for the Juddges App frontend
 
 ### For New Developers
 
-1. **Understand the Current State**
-   ```bash
-   # Read UX/UI review first
-   cat docs/frontend/UX_UI_REVIEW_AND_RECOMMENDATIONS.md
-   ```
-
-2. **Set Up Testing**
+1. **Set Up Testing**
    ```bash
    # Install dependencies
    cd frontend
