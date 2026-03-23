@@ -164,3 +164,9 @@ frontend/app/test-supabase/
 # Celery
 celerybeat-schedule
 *celerybeat-schedule*
+
+# MinIO sync (local tooling)
+.minio-sync.*
+
+# Git worktrees (local)
+.worktrees/
