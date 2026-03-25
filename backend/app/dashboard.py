@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from loguru import logger
 from pydantic import BaseModel
 from supabase import Client, create_client
@@ -71,24 +71,55 @@ _stats_cache = {"data": None, "timestamp": None}
 _cache_ttl = 14400  # 4 hours
 
 
+# ---------------------------------------------------------------------------
+# Pydantic models
+# ---------------------------------------------------------------------------
+
+
+class JurisdictionCounts(BaseModel):
+    PL: int = 0
+    UK: int = 0
+
+
+class DistributionItem(BaseModel):
+    name: str
+    count: int
+    jurisdiction: str | None = None
+
+
+class DataCompleteness(BaseModel):
+    embeddings_pct: float = 0.0
+    structure_extraction_pct: float = 0.0
+    deep_analysis_pct: float = 0.0
+    with_summary_pct: float = 0.0
+    with_keywords_pct: float = 0.0
+    with_legal_topics_pct: float = 0.0
+    with_cited_legislation_pct: float = 0.0
+    avg_text_length_chars: float = 0.0
+
+
+class ComplexityMetrics(BaseModel):
+    avg_complexity: float | None = None
+    avg_reasoning_quality: float | None = None
+    precedential_value_distribution: dict[str, int] = {}
+    research_value_distribution: dict[str, int] = {}
+
+
 class DashboardStats(BaseModel):
-    """Statistics for dashboard display.
-
-    Provides granular statistics with breakdowns by language/country:
-    - total_documents: Sum of all documents (judgments + tax_interpretations)
-    - judgments: Total court judgments with breakdowns by language
-    - tax_interpretations: Total tax interpretations with breakdowns by language
-    """
-
-    total_documents: int
-    judgments: int
-    judgments_pl: int = 0  # Polish court judgments
-    judgments_uk: int = 0  # UK court judgments
-    tax_interpretations: int
-    tax_interpretations_pl: int = 0  # Polish tax interpretations
-    tax_interpretations_uk: int = 0  # UK tax interpretations
-    added_this_week: int
-    last_updated: str | None = None
+    total_judgments: int = 0
+    jurisdictions: JurisdictionCounts = JurisdictionCounts()
+    court_levels: list[DistributionItem] = []
+    top_courts: list[DistributionItem] = []
+    decisions_per_year: list[dict] = []
+    date_range: dict[str, str | None] = {"oldest": None, "newest": None}
+    case_types: list[DistributionItem] = []
+    data_completeness: DataCompleteness = DataCompleteness()
+    top_legal_domains: list[DistributionItem] = []
+    top_keywords: list[DistributionItem] = []
+    top_cited_legislation: list[DistributionItem] = []
+    complexity_metrics: ComplexityMetrics = ComplexityMetrics()
+    judicial_tones: list[DistributionItem] = []
+    computed_at: str | None = None
 
 
 class DocumentSummary(BaseModel):
@@ -117,30 +148,9 @@ class TrendingTopic(BaseModel):
     category: str
 
 
-_DOC_TYPE_TO_FIELD = {
-    "TOTAL": "total_documents",
-    "judgment": "judgments",
-    "judgment_pl": "judgments_pl",
-    "judgment_uk": "judgments_uk",
-    "tax_interpretation": "tax_interpretations",
-    "tax_interpretation_pl": "tax_interpretations_pl",
-    "tax_interpretation_uk": "tax_interpretations_uk",
-}
-
-
-def _default_dashboard_stats() -> DashboardStats:
-    """Return zeroed dashboard stats used on backend errors."""
-    return DashboardStats(
-        total_documents=0,
-        judgments=0,
-        judgments_pl=0,
-        judgments_uk=0,
-        tax_interpretations=0,
-        tax_interpretations_pl=0,
-        tax_interpretations_uk=0,
-        added_this_week=0,
-        last_updated=None,
-    )
+# ---------------------------------------------------------------------------
+# Cache helpers
+# ---------------------------------------------------------------------------
 
 
 async def _get_cached_dashboard_stats(
@@ -167,57 +177,6 @@ async def _get_cached_dashboard_stats(
     return None
 
 
-def _parse_row_timestamp(created_at: Any) -> datetime | None:
-    """Parse a created_at value into datetime when possible."""
-    if not created_at:
-        return None
-    try:
-        if isinstance(created_at, str):
-            return datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        return created_at
-    except Exception as e:
-        logger.warning(f"Could not parse created_at timestamp: {e}")
-        return None
-
-
-def _parse_doc_type_stats(
-    rows: list[dict[str, Any]] | None,
-) -> tuple[dict[str, int], datetime | None]:
-    """Parse doc_type_stats rows into dashboard metric fields."""
-    counts = dict.fromkeys(_DOC_TYPE_TO_FIELD.values(), 0)
-    last_updated: datetime | None = None
-
-    for row in rows or []:
-        doc_type = row.get("doc_type", "")
-        field_name = _DOC_TYPE_TO_FIELD.get(doc_type)
-        if field_name:
-            counts[field_name] = row.get("count", 0)
-
-        row_time = _parse_row_timestamp(row.get("created_at"))
-        if row_time and (last_updated is None or row_time > last_updated):
-            last_updated = row_time
-
-    return counts, last_updated
-
-
-async def _fetch_added_this_week_count() -> int:
-    """Fetch count of documents added in the last 7 days."""
-    one_week_ago = datetime.now(UTC) - timedelta(days=7)
-    try:
-        response = (
-            supabase.table("legal_documents")
-            .select("document_id", count="exact")
-            .gte("ingestion_date", one_week_ago.isoformat())
-            .execute()
-        )
-        added_count = response.count or 0
-        logger.info(f"Documents added this week (from Supabase): {added_count:,}")
-        return added_count
-    except Exception as e:
-        logger.warning(f"Could not fetch 'added_this_week' from Supabase: {e}")
-        return 0
-
-
 async def _update_dashboard_cache(
     cache_key: str, stats: DashboardStats, now: datetime
 ) -> None:
@@ -236,22 +195,54 @@ async def _update_dashboard_cache(
     logger.debug("Updated in-memory dashboard stats cache")
 
 
+def _clear_stats_cache() -> None:
+    """Clear the in-memory stats cache."""
+    _stats_cache["data"] = None
+    _stats_cache["timestamp"] = None
+    logger.info("Cleared in-memory dashboard stats cache")
+
+
+# ---------------------------------------------------------------------------
+# Fallback stats computation
+# ---------------------------------------------------------------------------
+
+
+async def _compute_fallback_stats() -> DashboardStats:
+    """Compute basic stats directly from judgments table as fallback."""
+    try:
+        # Simple count query
+        total = supabase.table("judgments").select("id", count="exact").execute()
+        pl = (
+            supabase.table("judgments")
+            .select("id", count="exact")
+            .eq("jurisdiction", "PL")
+            .execute()
+        )
+        uk = (
+            supabase.table("judgments")
+            .select("id", count="exact")
+            .eq("jurisdiction", "UK")
+            .execute()
+        )
+
+        return DashboardStats(
+            total_judgments=total.count or 0,
+            jurisdictions=JurisdictionCounts(PL=pl.count or 0, UK=uk.count or 0),
+        )
+    except Exception as e:
+        logger.error(f"Fallback stats computation failed: {e}")
+        return DashboardStats()
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+
 @router.get("/stats", response_model=DashboardStats)
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_api_key)):
-    """
-    Get key statistics for dashboard display.
-
-    Returns:
-        - Total document count
-        - Count by document type
-        - Documents added this week
-        - Last update timestamp
-
-    Note: Stats are read from the doc_type_stats table (pre-computed).
-    The 'added_this_week' count is fetched from Supabase using a time-based filter.
-    Results are cached for 4 hours in Redis and in-memory cache.
-    """
+    """Get precomputed dashboard statistics."""
     cache_key = "dashboard:stats"
     now = datetime.now(UTC)
     cached_stats = await _get_cached_dashboard_stats(cache_key, now)
@@ -259,42 +250,94 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
         return cached_stats
 
     try:
-        # Fetch document counts from doc_type_stats table (pre-computed)
-        logger.info("Fetching dashboard stats from doc_type_stats table...")
-        stats_response = supabase.table("doc_type_stats").select("*").execute()
-        counts, last_updated = _parse_doc_type_stats(stats_response.data)
-        last_updated_str = last_updated.isoformat() if last_updated else None
-
-        logger.info("Fetching 'added_this_week' count...")
-        added_this_week = await _fetch_added_this_week_count()
-
-        logger.info(
-            "Stats from table: "
-            f"{counts['total_documents']:,} total, "
-            f"{counts['judgments']:,} judgments "
-            f"({counts['judgments_pl']:,} PL, {counts['judgments_uk']:,} UK), "
-            f"{counts['tax_interpretations']:,} tax interpretations "
-            f"({counts['tax_interpretations_pl']:,} PL, {counts['tax_interpretations_uk']:,} UK)"
+        response = (
+            supabase.table("dashboard_precomputed_stats")
+            .select("stat_key, stat_value")
+            .execute()
         )
 
+        if not response.data:
+            # Fallback: try to compute basic stats directly from judgments
+            return await _compute_fallback_stats()
+
+        # Build stats from precomputed values
+        stats_map = {row["stat_key"]: row["stat_value"] for row in response.data}
+
         stats = DashboardStats(
-            total_documents=counts["total_documents"],
-            judgments=counts["judgments"],
-            judgments_pl=counts["judgments_pl"],
-            judgments_uk=counts["judgments_uk"],
-            tax_interpretations=counts["tax_interpretations"],
-            tax_interpretations_pl=counts["tax_interpretations_pl"],
-            tax_interpretations_uk=counts["tax_interpretations_uk"],
-            added_this_week=added_this_week,
-            last_updated=last_updated_str,
+            total_judgments=stats_map.get("total_judgments", 0),
+            jurisdictions=JurisdictionCounts(
+                **stats_map.get("judgments_by_jurisdiction", {"PL": 0, "UK": 0})
+            ),
+            court_levels=[
+                DistributionItem(
+                    name=x.get("level", ""),
+                    count=x.get("count", 0),
+                    jurisdiction=x.get("jurisdiction"),
+                )
+                for x in stats_map.get("court_level_distribution", [])
+            ],
+            top_courts=[
+                DistributionItem(
+                    name=x.get("name", ""),
+                    count=x.get("count", 0),
+                    jurisdiction=x.get("jurisdiction"),
+                )
+                for x in stats_map.get("top_courts", [])
+            ],
+            decisions_per_year=stats_map.get("decisions_per_year", []),
+            date_range=stats_map.get("date_range", {"oldest": None, "newest": None}),
+            case_types=[
+                DistributionItem(
+                    name=x.get("type", ""),
+                    count=x.get("count", 0),
+                )
+                for x in stats_map.get("case_type_distribution", [])
+            ],
+            data_completeness=DataCompleteness(
+                **stats_map.get("data_completeness", {})
+            ),
+            top_legal_domains=[
+                DistributionItem(
+                    name=x.get("name", ""),
+                    count=x.get("count", 0),
+                )
+                for x in stats_map.get("top_legal_domains", [])
+            ],
+            top_keywords=[
+                DistributionItem(
+                    name=x.get("name", ""),
+                    count=x.get("count", 0),
+                )
+                for x in stats_map.get("top_keywords", [])
+            ],
+            top_cited_legislation=[
+                DistributionItem(
+                    name=x.get("name", ""),
+                    count=x.get("count", 0),
+                )
+                for x in stats_map.get("top_cited_legislation", [])
+            ],
+            complexity_metrics=ComplexityMetrics(
+                **stats_map.get("complexity_metrics", {})
+            ),
+            judicial_tones=[
+                DistributionItem(
+                    name=x.get("tone", ""),
+                    count=x.get("count", 0),
+                )
+                for x in stats_map.get("judicial_tone_distribution", [])
+            ],
+            computed_at=stats_map.get("computed_at")
+            if "computed_at" in stats_map
+            else None,
         )
 
         await _update_dashboard_cache(cache_key, stats, now)
         return stats
 
     except Exception as e:
-        logger.error(f"Error fetching dashboard stats: {e}")
-        return _default_dashboard_stats()
+        logger.error(f"Error fetching precomputed stats: {e}")
+        return await _compute_fallback_stats()
 
 
 @router.post("/refresh-stats")
@@ -303,36 +346,64 @@ async def refresh_dashboard_stats(
     request: Request, api_key: str = Depends(verify_api_key)
 ):
     """
-    Manually clear the dashboard statistics cache.
+    Trigger a refresh of precomputed dashboard statistics.
 
-    This forces the next /stats request to recount from the database.
+    Calls the SQL function to recompute stats and clears all caches so that
+    the next /stats request returns fresh data.
 
     Returns:
         dict: Status message
     """
-    logger.info("Manual dashboard stats cache clear triggered")
+    logger.info("Manual dashboard stats refresh triggered")
 
     try:
-        # Clear caches to force fresh recount on next request
-        if REDIS_AVAILABLE and redis_client:
-            try:
-                await redis_client.delete("dashboard:stats")
-                logger.info("Cleared Redis cache")
-            except Exception as e:
-                logger.warning(f"Could not clear Redis cache: {e}")
+        # Call the SQL function to recompute stats
+        supabase.rpc("refresh_dashboard_stats").execute()
+        logger.info("refresh_dashboard_stats RPC call succeeded")
+    except Exception as e:
+        logger.error(f"Error refreshing stats via RPC: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-        _stats_cache["data"] = None
-        _stats_cache["timestamp"] = None
-        logger.info("Cleared in-memory cache")
+    # Clear caches regardless of RPC outcome so stale data is not served
+    if REDIS_AVAILABLE and redis_client:
+        try:
+            await redis_client.delete("dashboard:stats")
+            logger.info("Cleared Redis cache")
+        except Exception as e:
+            logger.warning(f"Could not clear Redis cache: {e}")
+
+    _clear_stats_cache()
+
+    return {"status": "ok", "message": "Stats refreshed"}
+
+
+@router.get("/health")
+async def dashboard_health():
+    """Check dashboard data availability."""
+    try:
+        stats = (
+            supabase.table("dashboard_precomputed_stats")
+            .select("stat_key, computed_at")
+            .limit(1)
+            .execute()
+        )
+        judgments = supabase.table("judgments").select("id", count="exact").execute()
+
+        has_precomputed = len(stats.data) > 0
+        computed_at = stats.data[0]["computed_at"] if has_precomputed else None
 
         return {
-            "status": "success",
-            "message": "Dashboard statistics cache cleared. Next request will recount from the database.",
+            "status": "healthy" if has_precomputed else "degraded",
+            "total_judgments_in_db": judgments.count or 0,
+            "precomputed_stats_available": has_precomputed,
+            "stats_computed_at": computed_at,
+            "backend_version": "1.0.0",
         }
-
     except Exception as e:
-        logger.error(f"Error clearing dashboard cache: {e}")
-        return {"status": "error", "message": f"Failed to clear cache: {e!s}"}
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+        }
 
 
 @router.get("/recent-documents", response_model=list[DocumentSummary])
