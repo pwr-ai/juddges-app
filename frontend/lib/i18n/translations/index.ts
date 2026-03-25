@@ -8,8 +8,6 @@ import type { LocaleCode, Translations } from '../types';
 import { en } from './en';
 import { pl } from './pl';
 import { uk } from './uk';
-import { ar } from './ar';
-import { he } from './he';
 
 /**
  * All translations keyed by locale code
@@ -18,8 +16,6 @@ export const translations: Record<LocaleCode, Translations> = {
   en,
   pl,
   uk,
-  ar,
-  he,
 };
 
 /**
@@ -32,4 +28,4 @@ export function getTranslations(locale: LocaleCode): Translations {
 /**
  * Export individual translations for direct import if needed
  */
-export { en, pl, uk, ar, he };
+export { en, pl, uk };

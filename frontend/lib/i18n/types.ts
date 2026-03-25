@@ -13,7 +13,7 @@
  * - 'ar' - Arabic (RTL) - for RTL support
  * - 'he' - Hebrew (RTL) - for RTL support
  */
-export type LocaleCode = 'en' | 'pl' | 'uk' | 'ar' | 'he';
+export type LocaleCode = 'en' | 'pl' | 'uk';
 
 /**
  * Text direction

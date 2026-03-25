@@ -44,28 +44,6 @@ export const localeConfigs: Record<LocaleCode, LocaleConfig> = {
     defaultCurrency: 'UAH',
     flag: '🇺🇦',
   },
-  ar: {
-    code: 'ar',
-    nativeName: 'العربية',
-    englishName: 'Arabic',
-    direction: 'rtl',
-    dateFormat: 'DD/MM/YYYY',
-    decimalSeparator: '٫',
-    thousandsSeparator: '٬',
-    defaultCurrency: 'SAR',
-    flag: '🇸🇦',
-  },
-  he: {
-    code: 'he',
-    nativeName: 'עברית',
-    englishName: 'Hebrew',
-    direction: 'rtl',
-    dateFormat: 'DD/MM/YYYY',
-    decimalSeparator: '.',
-    thousandsSeparator: ',',
-    defaultCurrency: 'ILS',
-    flag: '🇮🇱',
-  },
 };
 
 /**
@@ -77,12 +55,12 @@ export const DEFAULT_LOCALE: LocaleCode = 'en';
  * Available locales (can be a subset of all defined locales)
  * This allows enabling/disabling locales without removing their configs
  */
-export const AVAILABLE_LOCALES: LocaleCode[] = ['en', 'pl', 'uk', 'ar', 'he'];
+export const AVAILABLE_LOCALES: LocaleCode[] = ['en', 'pl', 'uk'];
 
 /**
  * RTL locales for quick lookup
  */
-export const RTL_LOCALES: LocaleCode[] = ['ar', 'he'];
+export const RTL_LOCALES: LocaleCode[] = [];
 
 /**
  * Storage key for persisting locale preference
