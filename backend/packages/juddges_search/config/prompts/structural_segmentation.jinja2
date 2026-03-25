@@ -1,0 +1,21 @@
+{{extraction_context}}
+
+{% if additional_instructions %}
+{{additional_instructions}}
+{% endif %}
+
+{% set lang = (language|default('pl')|lower) %}
+{% set t = {
+  'pl': {
+    'judgment': 'Tekst orzeczenia do segmentacji strukturalnej:'
+  },
+  'en': {
+    'judgment': 'Judgment text for structural segmentation:'
+  }
+} %}
+{% set labels = t.get(lang, t['pl']) %}
+
+{{ labels.judgment }}
+====
+{{ full_text }}
+====

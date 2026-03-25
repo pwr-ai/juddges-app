@@ -1,0 +1,414 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "English Judgment Structure Schema",
+  "description": "Schema for segmenting English court judgments into standardised structural sections. Each section contains the verbatim text from the judgment. Sections that are not present in the document should be set to null.",
+  "type": "object",
+  "required": [
+    "case_identification",
+    "court_composition",
+    "parties",
+    "legal_representation",
+    "procedural_history",
+    "charges_or_indictment",
+    "operative_part",
+    "costs_and_fees",
+    "facts_of_the_case",
+    "prosecution_case",
+    "defence_case",
+    "evidence_summary",
+    "legal_framework",
+    "appeal_grounds",
+    "court_analysis",
+    "sentencing_remarks",
+    "conclusion",
+    "dissenting_opinion",
+    "ancillary_orders",
+    "section_count",
+    "structure_confidence"
+  ],
+  "properties": {
+    "case_identification": {
+      "type": ["object", "null"],
+      "description": "Case identifiers: neutral citation number, case number, court name, judgment date, court location. Extract the header block at the top of the judgment.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of key identifiers (citation, court, date)"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Case Identification",
+      "x-ui-order": 1
+    },
+    "court_composition": {
+      "type": ["object", "null"],
+      "description": "The bench: names and titles of judges hearing the case (e.g. 'Before: LORD JUSTICE GREEN, MR JUSTICE GARNHAM'). In UK judgments this typically appears after the court name and before the parties.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary listing judge names and roles"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Court Composition",
+      "x-ui-order": 2
+    },
+    "parties": {
+      "type": ["object", "null"],
+      "description": "Names and roles of the parties (appellant, respondent, defendant, Crown, co-defendants). In UK judgments: 'Between: REGINA - and - [Defendant Name]'. Include all named individuals.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of party names and their roles"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Parties",
+      "x-ui-order": 3
+    },
+    "legal_representation": {
+      "type": ["object", "null"],
+      "description": "Barristers, solicitors, and counsel appearing for each party. In UK judgments: 'Mr X QC (instructed by Y) for the Appellant'. Include all named representatives.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of who represented whom"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Legal Representation",
+      "x-ui-order": 4
+    },
+    "procedural_history": {
+      "type": ["object", "null"],
+      "description": "The procedural background: prior proceedings, lower court decisions and dates, trial chronology, previous appeals. In UK appeal judgments this often appears in the opening paragraphs after the introduction (e.g. 'On [date] at [court], the appellant was convicted of...').",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of procedural timeline"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Procedural History",
+      "x-ui-order": 5
+    },
+    "charges_or_indictment": {
+      "type": ["object", "null"],
+      "description": "The formal charges, counts on the indictment, offences charged. What the defendant was accused of. In UK judgments often stated as 'Count 1: conspiracy to supply drugs of Class A...' or woven into the procedural history.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of what was charged"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Charges / Indictment",
+      "x-ui-order": 6
+    },
+    "operative_part": {
+      "type": ["object", "null"],
+      "description": "The actual ruling, order, or disposition. The binding decision of the court. In UK appeal judgments: 'The appeal is dismissed' or 'The conviction is quashed'. In sentencing: the sentences imposed. This is the most legally important section.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of the court's decision"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Operative Part (Ruling)",
+      "x-ui-order": 7
+    },
+    "costs_and_fees": {
+      "type": ["object", "null"],
+      "description": "Orders on costs, legal aid fees, fee waivers. Relatively rare in UK criminal judgments but present in some cases. Set to null if no cost orders are mentioned.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of cost orders"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Costs & Fees",
+      "x-ui-order": 8
+    },
+    "facts_of_the_case": {
+      "type": ["object", "null"],
+      "description": "The factual narrative: what happened according to the court's findings or the prosecution's case. The events, circumstances, and background. In UK judgments this is often the longest section, told chronologically in numbered paragraphs. Look for headings like 'The Facts', 'Background', 'The Case against the Appellant'.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "2-3 sentence summary of the key facts"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Facts of the Case",
+      "x-ui-order": 9
+    },
+    "prosecution_case": {
+      "type": ["object", "null"],
+      "description": "The Crown/prosecution's theory, arguments, and evidence presentation as described in the judgment. If the prosecution case is not separately described from the facts, set to null. Look for 'The Crown's case was that...' or 'The prosecution contended...'.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of the prosecution's position"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Prosecution Case",
+      "x-ui-order": 10
+    },
+    "defence_case": {
+      "type": ["object", "null"],
+      "description": "The defendant's version, arguments, and defence theory. Look for 'The appellant's case was that...' or 'The defence submitted...'. If merged with facts, set to null.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of the defence's position"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Defence Case",
+      "x-ui-order": 11
+    },
+    "evidence_summary": {
+      "type": ["object", "null"],
+      "description": "Key evidence cited in the judgment: witness testimony, forensic evidence, documentary evidence, expert reports, CCTV, phone records. Only extract if there is a distinct evidence discussion section. If evidence is woven throughout the facts, set to null.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of key evidence types"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Evidence Summary",
+      "x-ui-order": 12
+    },
+    "legal_framework": {
+      "type": ["object", "null"],
+      "description": "Statutes, Acts of Parliament, sentencing guidelines, and case law precedents cited by the court. Look for references to specific legislation (e.g. 'Sexual Offences Act 2003'), sentencing guidelines, or leading cases. If there is a dedicated 'The Law' section, extract it. Also extract jury directions on the law.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary listing key statutes and precedents"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Legal Framework",
+      "x-ui-order": 13
+    },
+    "appeal_grounds": {
+      "type": ["array", "null"],
+      "description": "Specific grounds of appeal raised by each party. Extract as an array with one entry per ground. If this is not an appeal case, set to null.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ground_number": {
+            "type": "string",
+            "description": "Ground number or label (e.g. 'Ground 1', 'First ground')"
+          },
+          "ground_description": {
+            "type": "string",
+            "description": "Brief description of what this ground argues"
+          },
+          "raised_by": {
+            "type": "string",
+            "description": "Who raised this ground (e.g. 'appellant', 'Crown', 'Attorney General')"
+          },
+          "text": {
+            "type": "string",
+            "description": "Verbatim text where this ground is stated"
+          }
+        },
+        "required": ["ground_number", "ground_description", "raised_by", "text"],
+        "additionalProperties": false
+      },
+      "x-ui-label": "Appeal Grounds",
+      "x-ui-order": 14
+    },
+    "court_analysis": {
+      "type": ["array", "null"],
+      "description": "The court's legal reasoning and analysis. Extract as an array with one entry per issue or ground analysed. This is the core intellectual content of the judgment. In UK appeal judgments, the court typically addresses each ground of appeal in turn. Look for 'In our judgment...', 'We consider that...', 'The answer to this question is...'.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "issue_label": {
+            "type": "string",
+            "description": "The issue or ground being analysed (e.g. 'Ground 1: Inconsistent verdict', 'The safety of the conviction')"
+          },
+          "text": {
+            "type": "string",
+            "description": "Verbatim text of the court's analysis of this issue"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "How the court resolved this issue (e.g. 'rejected', 'accepted', 'partially accepted')"
+          }
+        },
+        "required": ["issue_label", "text", "outcome"],
+        "additionalProperties": false
+      },
+      "x-ui-label": "Court Analysis",
+      "x-ui-order": 15
+    },
+    "sentencing_remarks": {
+      "type": ["object", "null"],
+      "description": "The court's reasoning on sentence: aggravating and mitigating factors, sentencing guidelines applied, starting point, reductions for guilty plea, totality principle. Set to null if sentencing is not discussed.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of sentencing approach"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Sentencing Remarks",
+      "x-ui-order": 16
+    },
+    "conclusion": {
+      "type": ["object", "null"],
+      "description": "The court's closing summary before or including the final operative decision. Look for 'For these reasons...', 'In conclusion...', 'Accordingly...'. This wraps up the analysis and states the final result.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of the conclusion"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Conclusion",
+      "x-ui-order": 17
+    },
+    "dissenting_opinion": {
+      "type": ["object", "null"],
+      "description": "Any dissenting or minority judgment. Very rare in UK criminal appeals but possible. Set to null if there is no dissent.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of the dissenting opinion"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary of the dissenting view"
+        },
+        "judge_name": {
+          "type": "string",
+          "description": "Name of the dissenting judge"
+        }
+      },
+      "required": ["text", "summary", "judge_name"],
+      "additionalProperties": false,
+      "x-ui-label": "Dissenting Opinion",
+      "x-ui-order": 18
+    },
+    "ancillary_orders": {
+      "type": ["object", "null"],
+      "description": "Ancillary or supplementary orders: Sexual Offences Prevention Orders (SOPO), restraining orders, confiscation orders, compensation orders, disqualification, deportation recommendations. Set to null if none mentioned.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Verbatim text of this section from the judgment"
+        },
+        "summary": {
+          "type": "string",
+          "description": "One-sentence summary listing ancillary orders"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Ancillary Orders",
+      "x-ui-order": 19
+    },
+    "section_count": {
+      "type": "integer",
+      "description": "The number of non-null sections identified in this judgment (out of 19 possible). This helps measure structural completeness.",
+      "x-ui-label": "Sections Found",
+      "x-ui-order": 20
+    },
+    "structure_confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Your confidence in the structural segmentation. 'high' = clear section boundaries, headings present; 'medium' = sections identifiable but boundaries are fuzzy; 'low' = document is poorly structured or unusual format.",
+      "x-ui-label": "Segmentation Confidence",
+      "x-ui-order": 21,
+      "x-enum-labels": {
+        "high": "High - clear structure",
+        "medium": "Medium - fuzzy boundaries",
+        "low": "Low - unusual format"
+      }
+    }
+  },
+  "additionalProperties": false
+}

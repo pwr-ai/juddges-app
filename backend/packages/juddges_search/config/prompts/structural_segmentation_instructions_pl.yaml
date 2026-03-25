@@ -1,0 +1,148 @@
+language: pl
+content: |
+  Instrukcje segmentacji strukturalnej polskich orzeczeń sądowych
+
+  Twoim celem jest podział orzeczenia sądowego na ustandaryzowane sekcje strukturalne. Wyodrębnij dosłowny tekst każdej sekcji i napisz krótkie podsumowanie. Pracuj wyłącznie na podstawie dokumentu źródłowego. Nie wymyślaj ani nie parafrazuj treści.
+
+  Stosuj poniższe zasady:
+
+  1) Zasady ogólne:
+     - Wyodrębniaj DOSŁOWNY tekst z orzeczenia do pola "text". Nie parafrazuj, nie przerabiaj, nie streszczaj w polu text. Kopiuj dokładne słowa.
+     - Pole "summary" powinno zawierać zwięzłe 1-3-zdaniowe podsumowanie napisane przez Ciebie.
+     - Sekcje, które nie występują lub nie są identyfikowalne w dokumencie, MUSZĄ mieć wartość null.
+     - Nie wymuszaj umieszczenia treści w sekcji, do której nie pasuje. W razie wątpliwości ustaw null.
+     - Sekcje mogą się nieznacznie nakładać na granicach. Gdy tekst może należeć do dwóch sekcji, przypisz go do bardziej szczegółowej.
+     - Niektóre orzeczenia są krótkie i mogą mieć tylko 5-8 identyfikowalnych sekcji. To normalne.
+
+  2) Wskazówki identyfikacji sekcji — polskie orzeczenia karne:
+
+     WAŻNE: Polskie orzeczenia występują w dwóch formatach:
+     - FORMAT SWOBODNY (starszy styl): ciągły tekst z nagłówkami WYROK, UZASADNIENIE
+     - FORMULARZ UK 2 (nowszy styl): strukturyzowany formularz z ponumerowanymi sekcjami 1.1, 1.2, 2.1 itd.
+     Oba formaty powinny być segmentowane na te same sekcje.
+
+     a) case_identification: Nagłówek dokumentu.
+        Format swobodny: Zaczyna się od "Sygn. akt ...", potem "WYROK W IMIENIU RZECZYPOSPOLITEJ POLSKIEJ", data.
+        Formularz UK 2: "Sygnatura akt" na początku formularza + sekcja 1.1 "Oznaczenie wyroku".
+        Kończy się przed składem sądu.
+
+     b) court_composition: Skład orzekający.
+        Format swobodny: "Sąd Apelacyjny w ... w składzie:", "Przewodniczący: SSA ...", "Sędziowie: ...", "Protokolant: ...".
+        Formularz UK 2: Informacja o składzie może być w nagłówku.
+        Kończy się przed stronami.
+
+     c) parties: Strony postępowania.
+        Format swobodny: "sprawy: T. K. i A. M.", "oskarżonych z art. ...", dane oskarżonych.
+        Formularz UK 2: Informacja o oskarżonym w kontekście sekcji 1.1-1.2.
+        Uwzględnij prokuratora ("przy udziale prokuratora: ...").
+
+     d) legal_representation: Pełnomocnicy.
+        Format swobodny: "przy udziale prokuratora: [imię]", "obrońca z urzędu adw. ...".
+        Także informacje o wynagrodzeniu obrońcy z urzędu (ale sam koszt idzie do costs_and_fees).
+        Jeśli nie da się wyodrębnić, ustaw null.
+
+     e) procedural_history: Historia proceduralna.
+        Format swobodny: "na skutek apelacji wniesionych przez obrońców oskarżonych", "od wyroku Sądu Okręgowego w ... z dnia ...".
+        Formularz UK 2: Sekcje 1.1-1.4 (Oznaczenie wyroku, Podmiot wnoszący apelację, Granice zaskarżenia, Wnioski).
+        Opisuje drogę sprawy przez instancje.
+
+     f) charges_or_indictment: Zarzuty.
+        Format swobodny: "zostali oskarżeni o to, że: w dniu ... w miejscowości ... działając wspólnie i w porozumieniu...".
+        Zawiera kwalifikację prawną: "tj. o przestępstwo z art. 280 § 2 kk".
+        Także opis czynu przypisanego przez sąd I instancji (jeśli różny od zarzucanego).
+
+     g) operative_part: Sentencja wyroku. KLUCZOWA SEKCJA.
+        W polskich orzeczeniach sentencja pojawia się PRZED uzasadnieniem (inaczej niż w UK).
+        Format swobodny: Punkty I, II, III po nagłówku: "I. Utrzymuje w mocy zaskarżony wyrok",
+        "uchyla zaskarżony wyrok i przekazuje sprawę do ponownego rozpoznania",
+        "zmienia zaskarżony wyrok w ten sposób, że...".
+        Formularz UK 2: Sekcja 5 ("Rozstrzygnięcie sądu odwoławczego").
+
+     h) costs_and_fees: Koszty.
+        Format swobodny: "Zasądza od Skarbu Państwa na rzecz adw. ... kwotę ...",
+        "Zwalnia oskarżonych od ponoszenia kosztów sądowych za postępowanie odwoławcze".
+        Często w numerowanych punktach sentencji (II, III, IV).
+        Formularz UK 2: Sekcja 6 ("Koszty procesu").
+
+     i) facts_of_the_case: Stan faktyczny.
+        Format swobodny: Początek UZASADNIENIA, opis zdarzenia, ustalenia sądu I instancji.
+        Formularz UK 2: Sekcja 2 ("Ustalenie faktów"), podsekcje 2.1.1, 2.1.2.
+        Zawiera opis czynu, okoliczności zdarzenia.
+
+     j) prosecution_case: Stanowisko oskarżyciela.
+        Format swobodny: "Prokurator w apelacji zarzucił...", "Oskarżyciel publiczny wniósł o...".
+        Formularz UK 2: Zarzuty prokuratora w sekcji 3.
+        Jeśli stanowisko prokuratora nie jest wyodrębnione, ustaw null.
+
+     k) defence_case: Stanowisko obrony.
+        Format swobodny: "Obrońca oskarżonego T. K. zarzucił:", "Obrońca wniósł o ...".
+        Formularz UK 2: Zarzuty obrońcy w sekcji 3.
+        Obejmuje pełen tekst zarzutów apelacyjnych i wniosków obrońcy.
+
+     l) evidence_summary: Podsumowanie dowodów.
+        Format swobodny: Omówienie zeznań świadków, opinii biegłych. Wyodrębnij tylko jeśli jest oddzielna sekcja.
+        Formularz UK 2: Sekcja 2 zawiera ocenę dowodów przeprowadzonych przez sąd odwoławczy.
+        Jeśli dowody są wplecione w stan faktyczny lub analizę, ustaw null.
+
+     m) legal_framework: Podstawy prawne.
+        Format swobodny: Odwołania do artykułów kodeksów (art. 280 § 1 kk, art. 438 kpk),
+        uchwał i postanowień Sądu Najwyższego, komentarzy prawnych.
+        Obejmuje fragmenty wykładni przepisów prawa.
+
+     n) appeal_grounds: Zarzuty apelacyjne.
+        Format swobodny: Wyliczenie zarzutów: "zarzucił: - obrazę przepisów prawa materialnego...",
+        każdy zarzut z osobna.
+        Formularz UK 2: Sekcja 1.1.2 (checkboxy art. 438 pkt 1-4 kpk) PLUS sekcja 3 z opisem.
+        Utwórz jeden wpis na zarzut. Podaj kto go podniósł.
+
+     o) court_analysis: Rozważania prawne sądu. JĄDRO ORZECZENIA.
+        Format swobodny: "Sąd Apelacyjny zważył, co następuje:", analiza każdego zarzutu.
+        Formularz UK 2: Kolumna "Zwięźle o powodach uznania zarzutu za zasadny/niezasadny".
+        Utwórz jeden wpis na analizowane zagadnienie. Podaj wynik (zasadny/niezasadny/częściowo).
+
+     p) sentencing_remarks: Rozważania o karze.
+        Format swobodny: "W zakresie wymiaru kary...", analiza okoliczności obciążających i łagodzących,
+        art. 53 kk, art. 54 kk (młodociany), art. 60 kk (nadzwyczajne złagodzenie).
+        Obejmuje rozważania o warunkowym zawieszeniu, karze łącznej.
+        Ustaw null jeśli kara nie jest omawiana.
+
+     q) conclusion: Konkluzja.
+        Format swobodny: "Z tych przyczyn...", "W konsekwencji...", "Mając powyższe na uwadze...",
+        "Podstawą rozstrzygnięcia był przepis art. 437 § 1 kpk".
+        Obejmuje końcowe zdania uzasadnienia przed podpisami.
+
+     r) dissenting_opinion: Zdanie odrębne.
+        Szukaj: "ZDANIE ODRĘBNE", "Sędzia ... zgłosił zdanie odrębne".
+        Ustaw null jeśli brak.
+
+     s) ancillary_orders: Środki karne dodatkowe.
+        "na podstawie art. 46 § 1 kk orzekł obowiązek naprawienia szkody",
+        "środek karny w postaci zakazu...", nawiązki, przepadek, zakazy.
+        Ustaw null jeśli brak.
+
+  3) Obsługa różnych typów orzeczeń:
+     - Wyrok sądu apelacyjnego: Skupienie na appeal_grounds, court_analysis, sentencing_remarks.
+     - Wyrok sądu I instancji: Skupienie na facts_of_the_case, charges_or_indictment, sentencing_remarks.
+     - Postanowienie: Może mieć mniej sekcji — wiele ustawionych na null.
+
+  4) Specyfika Formularza UK 2:
+     - Sekcje 1.x → procedural_history, appeal_grounds
+     - Sekcja 2.x → facts_of_the_case, evidence_summary
+     - Sekcja 3.x → defence_case, prosecution_case, court_analysis (ze zarzutami i ich oceną)
+     - Sekcja 4.x → operative_part (okoliczności wpływające na wymiar kary)
+     - Sekcja 5.x → operative_part (rozstrzygnięcie)
+     - Sekcja 6.x → costs_and_fees
+     - Przy formularzach UK 2 pewność (structure_confidence) powinna być "high".
+
+  5) section_count i structure_confidence:
+     - Policz tylko sekcje nie-null (z 19 możliwych sekcji treści, bez section_count i structure_confidence).
+     - "high": wyraźne nagłówki, Formularz UK 2, lub bardzo czytelna struktura.
+     - "medium": sekcje rozpoznawalne, ale granice rozmyte (ciągły tekst).
+     - "low": nietypowy format, bardzo krótkie orzeczenie, trudne do segmentacji.
+
+  6) Zasady ekstrakcji tekstu:
+     - Zachowaj numery paragrafów jeśli występują.
+     - Zachowaj strukturę formatowania z oryginału.
+     - Dla bardzo długich sekcji (>5000 znaków) możesz obciąć z "[...kontynuacja...]", ale uwzględnij początek i koniec.
+     - Nie poprawiaj artefaktów OCR ani formatowania — wyodrębniaj tak jak jest.
+     - Pisz podsumowania po polsku.

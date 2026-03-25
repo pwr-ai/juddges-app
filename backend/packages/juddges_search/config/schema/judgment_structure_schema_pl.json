@@ -1,0 +1,414 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Polish Judgment Structure Schema",
+  "description": "Schemat segmentacji polskich orzeczeń sądowych na ustandaryzowane sekcje strukturalne. Każda sekcja zawiera dosłowny tekst z orzeczenia. Sekcje nieobecne w dokumencie powinny mieć wartość null.",
+  "type": "object",
+  "required": [
+    "case_identification",
+    "court_composition",
+    "parties",
+    "legal_representation",
+    "procedural_history",
+    "charges_or_indictment",
+    "operative_part",
+    "costs_and_fees",
+    "facts_of_the_case",
+    "prosecution_case",
+    "defence_case",
+    "evidence_summary",
+    "legal_framework",
+    "appeal_grounds",
+    "court_analysis",
+    "sentencing_remarks",
+    "conclusion",
+    "dissenting_opinion",
+    "ancillary_orders",
+    "section_count",
+    "structure_confidence"
+  ],
+  "properties": {
+    "case_identification": {
+      "type": ["object", "null"],
+      "description": "Dane identyfikacyjne sprawy: sygnatura akt, nazwa sądu, data orzeczenia. W polskich orzeczeniach to nagłówek zaczynający się od 'Sygn. akt ...' a następnie 'WYROK W IMIENIU RZECZYPOSPOLITEJ POLSKIEJ' i data. W formularzach UK 2 to sekcja 1.1.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie kluczowych identyfikatorów (sygnatura, sąd, data)"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Oznaczenie sprawy",
+      "x-ui-order": 1
+    },
+    "court_composition": {
+      "type": ["object", "null"],
+      "description": "Skład sądu orzekającego: imiona i nazwiska sędziów z ich funkcjami (Przewodniczący, Sędziowie, Sędzia sprawozdawca), protokolant. Szukaj wzorca: 'Przewodniczący: SSA ...', 'Sędziowie: ...', 'Protokolant: ...'.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie składu sędziowskiego"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Skład sądu",
+      "x-ui-order": 2
+    },
+    "parties": {
+      "type": ["object", "null"],
+      "description": "Strony postępowania: oskarżeni (imiona, dane osobowe jeśli podane), oskarżyciel publiczny (prokurator), oskarżyciel posiłkowy, pokrzywdzeni. W polskich orzeczeniach: 'sprawy: T. K. i A. M. oskarżonych z art. 280 § 2 kk'.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie stron i ich ról"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Strony",
+      "x-ui-order": 3
+    },
+    "legal_representation": {
+      "type": ["object", "null"],
+      "description": "Pełnomocnicy i obrońcy stron: adwokaci, radcowie prawni, prokurator z imienia i nazwiska. Szukaj: 'przy udziale prokuratora: ...', 'obrońca oskarżonego adw. ...'. Uwzględnij informacje o obronie z urzędu.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie kto kogo reprezentował"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Pełnomocnicy",
+      "x-ui-order": 4
+    },
+    "procedural_history": {
+      "type": ["object", "null"],
+      "description": "Historia proceduralna sprawy: wcześniejsze postępowania, wyroki sądów niższej instancji, daty, przebieg procesu. Szukaj: 'od wyroku Sądu Okręgowego w ... z dnia ...', 'na skutek apelacji wniesionych przez ...'. W formularzach UK 2 to sekcje 1.1-1.4.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie chronologii postępowania"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Historia proceduralna",
+      "x-ui-order": 5
+    },
+    "charges_or_indictment": {
+      "type": ["object", "null"],
+      "description": "Zarzuty z aktu oskarżenia: opis czynów zarzucanych oskarżonym, kwalifikacja prawna. Szukaj: 'oskarżonych z art. ...', 'zostali oskarżeni o to, że: ...'. W formularzach UK 2 zarzuty są opisane w kontekście zaskarżenia.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie zarzutów"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Zarzuty / Akt oskarżenia",
+      "x-ui-order": 6
+    },
+    "operative_part": {
+      "type": ["object", "null"],
+      "description": "Sentencja wyroku: właściwe rozstrzygnięcie sądu. W polskich orzeczeniach pojawia się zwykle PRZED uzasadnieniem, zaraz po nagłówku. Szukaj: 'utrzymuje w mocy zaskarżony wyrok', 'uchyla zaskarżony wyrok', 'zmienia zaskarżony wyrok', 'uznaje oskarżonego za winnego'. To najważniejsza prawnie sekcja.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie rozstrzygnięcia sądu"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Sentencja (rozstrzygnięcie)",
+      "x-ui-order": 7
+    },
+    "costs_and_fees": {
+      "type": ["object", "null"],
+      "description": "Rozstrzygnięcie o kosztach: koszty sądowe, wynagrodzenie obrońcy z urzędu, zwolnienie od kosztów. Częste w polskich orzeczeniach. Szukaj: 'Zasądza od Skarbu Państwa na rzecz adw. ... kwotę ...', 'Zwalnia oskarżonych od ponoszenia kosztów sądowych'.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie rozstrzygnięcia o kosztach"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Koszty",
+      "x-ui-order": 8
+    },
+    "facts_of_the_case": {
+      "type": ["object", "null"],
+      "description": "Stan faktyczny sprawy: ustalenia faktyczne sądu, co się wydarzyło. W polskich orzeczeniach apelacyjnych: opis czynu z wyroku sądu I instancji. Szukaj początku UZASADNIENIA, fragmentów opisujących zdarzenia. W formularzach UK 2: sekcja 2 (Ustalenie faktów).",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "2-3 zdania podsumowujące kluczowe fakty"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Stan faktyczny",
+      "x-ui-order": 9
+    },
+    "prosecution_case": {
+      "type": ["object", "null"],
+      "description": "Stanowisko oskarżyciela: argumenty prokuratora, zarzuty z apelacji prokuratora. Szukaj: 'Prokurator wniósł o ...', 'Oskarżyciel publiczny zarzucił ...'. Jeśli stanowisko prokuratora nie jest wyodrębnione, ustaw null.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie stanowiska oskarżyciela"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Stanowisko oskarżyciela",
+      "x-ui-order": 10
+    },
+    "defence_case": {
+      "type": ["object", "null"],
+      "description": "Stanowisko obrony: argumenty obrońcy, zarzuty apelacji obrońcy. Szukaj: 'Obrońca oskarżonego zarzucił:', 'Obrońca wniósł o ...'. W formularzach UK 2: sekcja 3 z opisem zarzutów.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie stanowiska obrony"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Stanowisko obrony",
+      "x-ui-order": 11
+    },
+    "evidence_summary": {
+      "type": ["object", "null"],
+      "description": "Kluczowe dowody omówione w orzeczeniu: zeznania świadków, opinie biegłych, dowody rzeczowe, dokumenty. Wyodrębnij tylko jeśli istnieje oddzielna sekcja o dowodach. W formularzach UK 2 sekcja 2.1 zawiera ocenę dowodów. Jeśli dowody są wplecione w fakty, ustaw null.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie kluczowych rodzajów dowodów"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Podsumowanie dowodów",
+      "x-ui-order": 12
+    },
+    "legal_framework": {
+      "type": ["object", "null"],
+      "description": "Podstawy prawne: przepisy ustaw, kodeksów, orzecznictwo Sądu Najwyższego powołane przez sąd. Szukaj: odwołań do artykułów Kodeksu karnego (art. 280 § 1 kk), Kodeksu postępowania karnego (art. 437 § 1 kpk), uchwał SN. Wyodrębnij fragmenty wykładni prawnej.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie kluczowych przepisów i precedensów"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Podstawy prawne",
+      "x-ui-order": 13
+    },
+    "appeal_grounds": {
+      "type": ["array", "null"],
+      "description": "Zarzuty apelacyjne podniesione przez strony. Wyodrębnij jako tablicę z jednym wpisem na zarzut. W polskich orzeczeniach szukaj: 'zarzucił: obrazę przepisów prawa materialnego...', 'art. 438 pkt 1/2/3/4 kpk'. W formularzach UK 2: sekcja 1.1.2 z checkboxami i sekcja 3 z opisem zarzutów. Jeśli to nie apelacja, ustaw null.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ground_number": {
+            "type": "string",
+            "description": "Numer lub oznaczenie zarzutu (np. 'zarzut I', 'art. 438 pkt 2 kpk')"
+          },
+          "ground_description": {
+            "type": "string",
+            "description": "Krótki opis istoty zarzutu"
+          },
+          "raised_by": {
+            "type": "string",
+            "description": "Kto podniósł zarzut (np. 'obrońca oskarżonego', 'prokurator')"
+          },
+          "text": {
+            "type": "string",
+            "description": "Dosłowny tekst w którym zarzut jest sformułowany"
+          }
+        },
+        "required": ["ground_number", "ground_description", "raised_by", "text"],
+        "additionalProperties": false
+      },
+      "x-ui-label": "Zarzuty apelacyjne",
+      "x-ui-order": 14
+    },
+    "court_analysis": {
+      "type": ["array", "null"],
+      "description": "Rozważania prawne sądu: analiza każdego zarzutu lub zagadnienia prawnego. Wyodrębnij jako tablicę z jednym wpisem na analizowane zagadnienie. To merytoryczne jądro orzeczenia. Szukaj: 'Sąd Apelacyjny zważył, co następuje:', 'W ocenie Sądu ...', 'Zarzut ten jest niezasadny, ponieważ...'. W formularzach UK 2: kolumna 'Zwięźle o powodach uznania zarzutu za zasadny/niezasadny'.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "issue_label": {
+            "type": "string",
+            "description": "Analizowane zagadnienie lub zarzut (np. 'Zarzut obrazy art. 280 § 1 kk', 'Kwestia wymiaru kary')"
+          },
+          "text": {
+            "type": "string",
+            "description": "Dosłowny tekst analizy sądu dotyczącej tego zagadnienia"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Jak sąd rozstrzygnął to zagadnienie (np. 'niezasadny', 'zasadny', 'częściowo zasadny')"
+          }
+        },
+        "required": ["issue_label", "text", "outcome"],
+        "additionalProperties": false
+      },
+      "x-ui-label": "Rozważania sądu",
+      "x-ui-order": 15
+    },
+    "sentencing_remarks": {
+      "type": ["object", "null"],
+      "description": "Rozważania o wymiarze kary: okoliczności obciążające i łagodzące, dyrektywy wymiaru kary, nadzwyczajne złagodzenie, warunkowe zawieszenie. Szukaj: 'W zakresie wymiaru kary...', 'art. 53 kk', 'okoliczności obciążające/łagodzące'. Ustaw null jeśli kara nie jest omawiana.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie podejścia do wymiaru kary"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Rozważania o karze",
+      "x-ui-order": 16
+    },
+    "conclusion": {
+      "type": ["object", "null"],
+      "description": "Końcowe podsumowanie sądu przed lub zawierające rozstrzygnięcie. Szukaj: 'Z tych przyczyn...', 'W konsekwencji...', 'Mając powyższe na uwadze...', 'Podstawą rozstrzygnięcia był przepis art. 437 § 1 kpk'.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie konkluzji"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Konkluzja",
+      "x-ui-order": 17
+    },
+    "dissenting_opinion": {
+      "type": ["object", "null"],
+      "description": "Zdanie odrębne sędziego. Szukaj: 'ZDANIE ODRĘBNE', 'Sędzia ... zgłosił zdanie odrębne'. Ustaw null jeśli brak zdania odrębnego.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst zdania odrębnego"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie zdania odrębnego"
+        },
+        "judge_name": {
+          "type": "string",
+          "description": "Imię i nazwisko sędziego zgłaszającego zdanie odrębne"
+        }
+      },
+      "required": ["text", "summary", "judge_name"],
+      "additionalProperties": false,
+      "x-ui-label": "Zdanie odrębne",
+      "x-ui-order": 18
+    },
+    "ancillary_orders": {
+      "type": ["object", "null"],
+      "description": "Środki karne i inne rozstrzygnięcia dodatkowe: nawiązki, obowiązek naprawienia szkody, przepadek, zakazy, zobowiązania. Szukaj: 'na podstawie art. 46 § 1 kk orzekł...', 'środek karny w postaci...'. Ustaw null jeśli brak.",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Dosłowny tekst tej sekcji z orzeczenia"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Jednoznaniowe podsumowanie środków karnych"
+        }
+      },
+      "required": ["text", "summary"],
+      "additionalProperties": false,
+      "x-ui-label": "Środki karne",
+      "x-ui-order": 19
+    },
+    "section_count": {
+      "type": "integer",
+      "description": "Liczba zidentyfikowanych sekcji (nie-null) w tym orzeczeniu (z 19 możliwych). Miara kompletności strukturalnej.",
+      "x-ui-label": "Liczba sekcji",
+      "x-ui-order": 20
+    },
+    "structure_confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Pewność segmentacji strukturalnej. 'high' = wyraźne granice sekcji, nagłówki obecne lub formularz UK 2; 'medium' = sekcje rozpoznawalne ale granice rozmyte; 'low' = dokument słabo ustrukturyzowany lub nietypowy format.",
+      "x-ui-label": "Pewność segmentacji",
+      "x-ui-order": 21,
+      "x-enum-labels": {
+        "high": "Wysoka - wyraźna struktura",
+        "medium": "Średnia - rozmyte granice",
+        "low": "Niska - nietypowy format"
+      }
+    }
+  },
+  "additionalProperties": false
+}

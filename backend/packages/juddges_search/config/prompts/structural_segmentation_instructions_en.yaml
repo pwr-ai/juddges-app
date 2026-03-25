@@ -1,0 +1,108 @@
+language: en
+content: |
+  Structural segmentation instructions for English court judgments
+
+  Your goal is to split a court judgment into standardised structural sections. Extract the verbatim text of each section and provide a brief summary. Work only on the basis of the source document. Do not invent or paraphrase content.
+
+  Follow these rules for consistent, high-quality segmentation:
+
+  1) General principles:
+     - Extract VERBATIM text from the judgment for each section's "text" field. Do not paraphrase, rewrite, or summarise in the text field. Copy the exact words.
+     - The "summary" field should be a concise 1-3 sentence summary you write yourself.
+     - Sections that are not present or not identifiable in the document MUST be set to null.
+     - Do not force content into a section where it does not belong. When in doubt, set to null.
+     - Sections may overlap slightly at boundaries. When text could belong to two sections, assign it to the more specific section.
+     - Some judgments are short and may only have 5-8 identifiable sections. This is normal.
+
+  2) Section identification guidance for UK criminal judgments:
+
+     a) case_identification: The header block. Starts at the very beginning of the document.
+        Includes: Neutral Citation Number, Case Number, court name ("IN THE COURT OF APPEAL"),
+        "ON APPEAL FROM [lower court]", Royal Courts of Justice address, Date.
+        Ends before the judges' names.
+
+     b) court_composition: The bench. Starts with "Before:" and lists the judges.
+        Ends before "Between:" or the party names.
+
+     c) parties: Starts with "Between:" and lists appellant/respondent names.
+        Includes "REGINA - and - [Name]" pattern. Includes all named defendants or co-appellants.
+        Ends before the legal representatives.
+
+     d) legal_representation: Counsel details. Pattern: "Mr/Ms X QC (instructed by Y) for the Appellant/Crown".
+        Also includes hearing dates. Ends before the judgment body begins.
+
+     e) procedural_history: The procedural background. Often the first numbered paragraphs.
+        Describes: when convicted, at which court, by whom, what sentence was imposed,
+        when leave to appeal was granted. Look for: "On [date] at [court], the appellant was convicted of..."
+        Ends when the factual narrative begins.
+
+     f) charges_or_indictment: The formal charges. Look for "Count 1:", "Count 2:", indictment descriptions.
+        If charges are embedded in procedural history, extract the relevant portion.
+        If charges are not separately identifiable, set to null.
+
+     g) operative_part: The court's actual ruling. In UK appeal judgments, usually near the END.
+        Look for: "The appeal is dismissed", "The conviction is quashed", "The sentence is reduced to...",
+        "We grant leave to appeal", "The appeal against conviction/sentence is allowed/dismissed".
+        Extract the operative words plus immediate context.
+
+     h) costs_and_fees: Cost orders. Rare in UK criminal appeals. Set to null if absent.
+
+     i) facts_of_the_case: The factual narrative — what actually happened. Usually the longest section.
+        Look for headings like "The Facts", "Background", "The Evidence", "The Case against the Appellant".
+        Includes the chronological story of events. Ends when the legal analysis begins.
+
+     j) prosecution_case: The Crown's theory and arguments. Look for "The Crown's case was that...",
+        "The prosecution contended...", "The Crown submitted...".
+        If the prosecution case is interwoven with the facts and not separately identifiable, set to null.
+
+     k) defence_case: The defendant's version. Look for "The appellant's case was that...",
+        "The defence submitted...", "On behalf of the appellant, it was argued...".
+        If not separately identifiable, set to null.
+
+     l) evidence_summary: Key evidence discussed. Only extract if there is a distinct evidence section.
+        Look for "The Evidence" heading or a dedicated discussion of witness testimony, forensic reports, etc.
+        If evidence is woven throughout the facts, set to null.
+
+     m) legal_framework: The law applied. Look for "The Law", "The Legal Framework", "The Relevant Provisions".
+        Includes: statute citations (e.g. "section 7(1) of the Sexual Offences Act 2003"),
+        sentencing guidelines, leading cases cited as authority, jury directions on the law.
+        If legal principles are only briefly mentioned within the analysis, include them here.
+
+     n) appeal_grounds: Each ground of appeal, extracted individually. Look for enumerated grounds.
+        Pattern: "Ground 1: ...", "The first ground of appeal is that...", "It is submitted that..."
+        Create one array entry per ground. Include who raised it.
+
+     o) court_analysis: The court's reasoning on each issue. This is the intellectual core.
+        Look for: "In our judgment...", "We consider that...", "We are satisfied that...",
+        "The question is whether...", "We turn to consider...".
+        Create one array entry per issue analysed. Include the outcome (accepted/rejected).
+
+     p) sentencing_remarks: Discussion of sentence. Look for aggravating/mitigating factors,
+        sentencing guidelines applied, starting point, credit for guilty plea, totality principle.
+        Set to null if sentencing is not discussed.
+
+     q) conclusion: The closing summary. Look for "For these reasons...", "In conclusion...",
+        "Accordingly...", "It follows that...". This wraps up the analysis.
+
+     r) dissenting_opinion: Any dissent. Very rare in UK criminal appeals. Set to null if absent.
+
+     s) ancillary_orders: SOPO, restraining orders, confiscation, compensation, disqualification.
+        Set to null if none mentioned.
+
+  3) Handling different judgment types:
+     - Appeal against conviction: Focus on appeal_grounds and court_analysis sections.
+     - Appeal against sentence: Focus on sentencing_remarks and legal_framework.
+     - Sentencing remarks (first instance): Focus on facts_of_the_case, sentencing_remarks, operative_part.
+     - Short judgments: Many sections will be null. This is expected.
+
+  4) section_count and structure_confidence:
+     - Count only non-null sections (out of 19 content sections, excluding section_count and structure_confidence).
+     - Set structure_confidence to "high" if the judgment has clear headings or numbered sections.
+     - Set to "medium" if sections are identifiable but boundaries are fuzzy (narrative flow).
+     - Set to "low" if the document is unusually formatted, very short, or hard to segment.
+
+  5) Text extraction rules:
+     - Include paragraph numbers if present (e.g. "1.", "2.", "3.").
+     - Preserve line breaks and formatting structure from the original.
+     - For very long sections (>5000 characters), you may truncate with "[...continues...]" but include the beginning and end to establish boundaries.
+     - Do not clean up OCR artifacts or formatting issues — extract as-is.
