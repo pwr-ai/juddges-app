@@ -1,0 +1,50 @@
+# Dockerfile for Topic Analysis Scripts
+# Optimized for ML workloads with GPU support
+
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY scripts/requirements.txt requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy scripts and config
+COPY scripts/ scripts/
+COPY .env .env
+
+# Create data directory
+RUN mkdir -p data/
+
+# Set up environment
+ENV PYTHONPATH=/app
+ENV TOKENIZERS_PARALLELISM=false
+
+# Default command runs topic analysis
+CMD ["python", "scripts/analyze_uk_topics.py"]
+
+# Usage examples:
+#
+# Build:
+#   docker build -f Dockerfile.analysis -t juddges-analysis .
+#
+# Run full analysis:
+#   docker run --rm -v $(pwd)/data:/app/data juddges-analysis
+#
+# Run with sample:
+#   docker run --rm -v $(pwd)/data:/app/data juddges-analysis python scripts/analyze_uk_topics.py --sample 500
+#
+# Run ingestion:
+#   docker run --rm -v $(pwd)/data:/app/data juddges-analysis python scripts/ingest_judgments.py --uk 100
+#
+# Interactive shell:
+#   docker run --rm -it -v $(pwd)/data:/app/data juddges-analysis bash
