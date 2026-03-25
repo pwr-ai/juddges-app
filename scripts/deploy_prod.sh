@@ -235,6 +235,13 @@ main() {
     ok "=== Deployment complete ==="
     echo ""
 
+    # Send Discord notification
+    if [[ -f "${REPO_ROOT}/scripts/notify_discord.sh" ]]; then
+        info "Sending Discord notification ..."
+        bash "${REPO_ROOT}/scripts/notify_discord.sh" deploy "${tag}" "success" || true
+    fi
+    echo ""
+
     # Show final status
     docker compose -f "${COMPOSE_FILE}" ps
     echo ""

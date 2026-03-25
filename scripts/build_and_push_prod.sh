@@ -330,6 +330,11 @@ main() {
         ok "Pushed commit and tag prod-v${new_version} to origin"
     fi
 
+    # Send Discord notification
+    if [[ -f "${REPO_ROOT}/scripts/notify_discord.sh" ]]; then
+        info "Sending Discord notification ..."
+        bash "${REPO_ROOT}/scripts/notify_discord.sh" build "${new_version}" "${notes_file}" || true
+    fi
     echo ""
     ok "=== Build complete ==="
     echo ""
