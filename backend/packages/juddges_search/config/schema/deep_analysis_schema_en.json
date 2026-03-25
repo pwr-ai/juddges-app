@@ -1,0 +1,381 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "English Deep Analysis Schema",
+  "description": "Schema for deep per-document analysis of English court judgments. Extracts analytical dimensions not captured by base schema or structural segmentation: complexity, reasoning quality, legal doctrine, and outcome-relevant features.",
+  "type": "object",
+  "required": [
+    "case_complexity",
+    "legal_domains",
+    "reasoning_patterns",
+    "reasoning_quality_score",
+    "reasoning_quality_explanation",
+    "key_legal_principles",
+    "precedent_treatment",
+    "statutory_interpretation_methods",
+    "burden_and_standard_of_proof",
+    "procedural_fairness_issues",
+    "judicial_tone",
+    "policy_considerations",
+    "outcome_determinative_factors",
+    "novel_legal_points",
+    "practice_implications",
+    "cross_reference_potential",
+    "document_quality",
+    "analysis_confidence"
+  ],
+  "properties": {
+    "case_complexity": {
+      "type": "object",
+      "description": "Overall complexity assessment of the case across multiple dimensions.",
+      "properties": {
+        "overall_score": {
+          "type": "integer",
+          "description": "Complexity score from 1 (simple, single-issue) to 5 (highly complex, multi-party, novel law). Base this on number of parties, issues, length of reasoning, novelty of legal questions."
+        },
+        "factual_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "How factually complex is the case? 'simple' = single event, few parties; 'moderate' = multiple events or parties; 'complex' = extended timeline, many parties, conflicting evidence."
+        },
+        "legal_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "How legally complex? 'simple' = straightforward application of settled law; 'moderate' = some interpretive questions; 'complex' = novel points, conflicting authorities, multiple legal frameworks."
+        },
+        "num_legal_issues": {
+          "type": "integer",
+          "description": "Count of distinct legal issues or grounds addressed by the court."
+        },
+        "num_statutes_cited": {
+          "type": "integer",
+          "description": "Count of distinct statutes or Acts of Parliament cited."
+        },
+        "num_cases_cited": {
+          "type": "integer",
+          "description": "Count of distinct case law authorities cited."
+        }
+      },
+      "required": ["overall_score", "factual_complexity", "legal_complexity", "num_legal_issues", "num_statutes_cited", "num_cases_cited"],
+      "additionalProperties": false,
+      "x-ui-label": "Case Complexity",
+      "x-ui-order": 1
+    },
+    "legal_domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "homicide",
+          "sexual_offences",
+          "drug_offences",
+          "fraud_and_financial_crime",
+          "violent_offences",
+          "theft_and_burglary",
+          "firearms_and_weapons",
+          "public_order",
+          "terrorism",
+          "road_traffic",
+          "organised_crime",
+          "cybercrime",
+          "domestic_abuse",
+          "child_abuse",
+          "immigration_offences",
+          "environmental_offences",
+          "regulatory_offences",
+          "contempt_of_court",
+          "joint_enterprise",
+          "conspiracy",
+          "attempt",
+          "sentencing_law",
+          "evidence_law",
+          "procedure",
+          "human_rights",
+          "mental_health",
+          "youth_justice",
+          "other"
+        ]
+      },
+      "description": "Primary legal domains or offence categories involved in this case. Select all that apply.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Legal Domains",
+      "x-ui-order": 2
+    },
+    "reasoning_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "textual_interpretation",
+          "purposive_interpretation",
+          "precedent_following",
+          "precedent_distinguishing",
+          "analogical_reasoning",
+          "policy_based_reasoning",
+          "proportionality_analysis",
+          "balancing_test",
+          "totality_principle",
+          "deductive_reasoning",
+          "inductive_reasoning",
+          "factual_inference"
+        ]
+      },
+      "description": "Types of legal reasoning employed by the court. Select all that apply.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Reasoning Patterns",
+      "x-ui-order": 3,
+      "x-enum-labels": {
+        "textual_interpretation": "Textual/literal interpretation of statute",
+        "purposive_interpretation": "Purposive/teleological interpretation",
+        "precedent_following": "Following binding/persuasive precedent",
+        "precedent_distinguishing": "Distinguishing precedent on facts/law",
+        "analogical_reasoning": "Reasoning by analogy to similar cases",
+        "policy_based_reasoning": "Policy-based reasoning (public interest, deterrence)",
+        "proportionality_analysis": "Proportionality analysis (HRA/ECHR)",
+        "balancing_test": "Balancing competing interests/rights",
+        "totality_principle": "Totality principle in sentencing",
+        "deductive_reasoning": "Deductive logic (rule → facts → conclusion)",
+        "inductive_reasoning": "Inductive reasoning (facts → principle)",
+        "factual_inference": "Drawing factual inferences from circumstantial evidence"
+      }
+    },
+    "reasoning_quality_score": {
+      "type": "integer",
+      "description": "Quality of the court's reasoning from 1 to 5. 1 = cursory, conclusory, little analysis. 3 = adequate, addresses main points. 5 = thorough, well-structured, considers all angles, clear chain of logic. Base this on: depth of analysis, engagement with arguments, clarity of reasoning chain.",
+      "x-ui-label": "Reasoning Quality",
+      "x-ui-order": 4
+    },
+    "reasoning_quality_explanation": {
+      "type": "string",
+      "description": "Brief explanation (2-3 sentences) of why you assigned the reasoning quality score. What makes the reasoning strong or weak?",
+      "x-ui-label": "Quality Explanation",
+      "x-ui-order": 5
+    },
+    "key_legal_principles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "principle": {
+            "type": "string",
+            "description": "Statement of the legal principle articulated or applied"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the principle: statute name, case citation, or 'common law'"
+          },
+          "how_applied": {
+            "type": "string",
+            "description": "How the court applied this principle to the facts (1-2 sentences)"
+          }
+        },
+        "required": ["principle", "source", "how_applied"],
+        "additionalProperties": false
+      },
+      "description": "Key legal principles articulated, applied, or developed in this judgment. Extract the most important 3-5 principles.",
+      "x-ui-label": "Key Legal Principles",
+      "x-ui-order": 6
+    },
+    "precedent_treatment": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "case_citation": {
+            "type": "string",
+            "description": "Case citation (e.g. 'R v Jogee [2016] UKSC 8')"
+          },
+          "treatment": {
+            "type": "string",
+            "enum": ["followed", "applied", "distinguished", "doubted", "overruled", "considered", "cited"],
+            "description": "How this precedent was treated"
+          },
+          "significance": {
+            "type": "string",
+            "description": "Why this precedent matters in this case (1 sentence)"
+          }
+        },
+        "required": ["case_citation", "treatment", "significance"],
+        "additionalProperties": false
+      },
+      "description": "How the court treated cited precedents. Extract the 3-5 most significant case citations. Null if no precedents discussed.",
+      "x-ui-label": "Precedent Treatment",
+      "x-ui-order": 7
+    },
+    "statutory_interpretation_methods": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string",
+        "enum": ["literal_rule", "golden_rule", "mischief_rule", "purposive_approach", "hansard_reference", "explanatory_notes", "international_obligations"]
+      },
+      "description": "Methods of statutory interpretation used by the court. Null if no statutory interpretation involved.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Interpretation Methods",
+      "x-ui-order": 8
+    },
+    "burden_and_standard_of_proof": {
+      "type": ["object", "null"],
+      "description": "Discussion of burden and standard of proof if addressed. Null if not discussed.",
+      "properties": {
+        "standard_discussed": {
+          "type": "string",
+          "enum": ["beyond_reasonable_doubt", "balance_of_probabilities", "both", "other"],
+          "description": "What standard of proof was discussed"
+        },
+        "burden_issues": {
+          "type": "string",
+          "description": "Any specific burden of proof issues raised (reverse burden, evidential burden, etc.)"
+        }
+      },
+      "required": ["standard_discussed", "burden_issues"],
+      "additionalProperties": false,
+      "x-ui-label": "Burden & Standard of Proof",
+      "x-ui-order": 9
+    },
+    "procedural_fairness_issues": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Any procedural fairness concerns raised or discussed: jury directions, disclosure, abuse of process, delay, bad character evidence handling. Null if none.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Fairness Issues",
+      "x-ui-order": 10
+    },
+    "judicial_tone": {
+      "type": "string",
+      "enum": ["neutral_analytical", "critical", "sympathetic", "deferential", "emphatic", "cautious"],
+      "description": "Predominant tone of the judgment. 'neutral_analytical' = dispassionate legal analysis; 'critical' = critical of lower court or parties; 'sympathetic' = acknowledges hardship; 'deferential' = defers to lower court/jury; 'emphatic' = strong conviction in reasoning; 'cautious' = hedged, careful qualifications.",
+      "x-filter-type": "facet",
+      "x-ui-label": "Judicial Tone",
+      "x-ui-order": 11,
+      "x-enum-labels": {
+        "neutral_analytical": "Neutral/Analytical",
+        "critical": "Critical",
+        "sympathetic": "Sympathetic",
+        "deferential": "Deferential to lower court",
+        "emphatic": "Emphatic/Confident",
+        "cautious": "Cautious/Hedged"
+      }
+    },
+    "policy_considerations": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Policy considerations mentioned by the court: public protection, deterrence, rehabilitation, public interest, victim impact, proportionality, consistency. Null if no policy discussion.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Policy Considerations",
+      "x-ui-order": 12
+    },
+    "outcome_determinative_factors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "factor": {
+            "type": "string",
+            "description": "The factor that was most decisive"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["favoured_appellant", "favoured_respondent", "neutral"],
+            "description": "Which side this factor favoured"
+          },
+          "weight": {
+            "type": "string",
+            "enum": ["decisive", "significant", "minor"],
+            "description": "How much weight the court gave this factor"
+          }
+        },
+        "required": ["factor", "direction", "weight"],
+        "additionalProperties": false
+      },
+      "description": "The 3-5 factors that most determined the outcome. What tipped the balance? These are the factors a lawyer would focus on when predicting outcomes in similar cases.",
+      "x-ui-label": "Outcome Determinative Factors",
+      "x-ui-order": 13
+    },
+    "novel_legal_points": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Any novel or unusual legal points raised or decided. Points where the court developed the law, addressed a question of first impression, or resolved a circuit split. Null if no novel points.",
+      "x-ui-label": "Novel Legal Points",
+      "x-ui-order": 14
+    },
+    "practice_implications": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Practical implications for legal practitioners. What should lawyers take away from this judgment? E.g. 'Defence solicitors should ensure X', 'Judges should direct juries on Y', 'The CPS should consider Z when charging'. Null if no clear practice implications.",
+      "x-ui-label": "Practice Implications",
+      "x-ui-order": 15
+    },
+    "cross_reference_potential": {
+      "type": "object",
+      "description": "How useful is this judgment for cross-referencing with other cases.",
+      "properties": {
+        "precedential_value": {
+          "type": "string",
+          "enum": ["high", "medium", "low", "none"],
+          "description": "'high' = establishes or clarifies a legal principle; 'medium' = useful application of existing law; 'low' = routine application; 'none' = highly fact-specific with no broader applicability."
+        },
+        "research_value": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "'high' = comprehensive review of law in this area; 'medium' = useful discussion; 'low' = minimal analysis."
+        },
+        "suggested_search_queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "3-5 semantic search queries that would help find similar or related judgments. Write these as natural language queries a legal researcher would use."
+        }
+      },
+      "required": ["precedential_value", "research_value", "suggested_search_queries"],
+      "additionalProperties": false,
+      "x-ui-label": "Cross-Reference Potential",
+      "x-ui-order": 16
+    },
+    "document_quality": {
+      "type": "object",
+      "description": "Assessment of the document text quality (OCR issues, completeness).",
+      "properties": {
+        "text_quality": {
+          "type": "string",
+          "enum": ["clean", "minor_issues", "significant_issues", "poor"],
+          "description": "'clean' = no OCR or formatting issues; 'minor_issues' = occasional typos or formatting glitches; 'significant_issues' = noticeable OCR errors affecting readability; 'poor' = substantial text corruption."
+        },
+        "completeness": {
+          "type": "string",
+          "enum": ["complete", "likely_complete", "truncated", "partial"],
+          "description": "Whether the document appears to contain the full judgment text."
+        },
+        "quality_notes": {
+          "type": "string",
+          "description": "Brief notes on any specific quality issues observed (e.g. 'paragraphs 15-20 have OCR artifacts', 'document appears truncated mid-sentence')."
+        }
+      },
+      "required": ["text_quality", "completeness", "quality_notes"],
+      "additionalProperties": false,
+      "x-ui-label": "Document Quality",
+      "x-ui-order": 17
+    },
+    "analysis_confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Your overall confidence in this analysis. 'high' = clear, well-structured judgment with confident analysis. 'medium' = some ambiguity but reasonable analysis. 'low' = poor document quality, unusual format, or highly ambiguous content.",
+      "x-filter-type": "facet",
+      "x-ui-label": "Analysis Confidence",
+      "x-ui-order": 18,
+      "x-enum-labels": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence"
+      }
+    }
+  },
+  "additionalProperties": false
+}

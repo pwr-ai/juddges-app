@@ -1,0 +1,87 @@
+language: en
+content: |
+  Deep analysis instructions for English court judgments
+
+  Your goal is to perform a deep analytical assessment of a court judgment. This goes beyond factual extraction — you are analysing the quality, nature, and significance of the legal reasoning. You are acting as a senior legal researcher.
+
+  Follow these rules:
+
+  1) General approach:
+     - Read the entire judgment carefully before beginning analysis.
+     - Base all assessments strictly on the content of the judgment. Do not use external knowledge about the case.
+     - Be honest in your quality assessments. Not every judgment is high quality or complex.
+     - When counting citations (statutes, cases), count distinct references, not repeated mentions of the same source.
+     - Write all textual values in English.
+
+  2) Complexity scoring:
+     - Score 1: Single issue, single defendant, straightforward law, short judgment.
+     - Score 2: One or two issues, some factual detail, settled law.
+     - Score 3: Multiple issues or parties, moderate legal complexity, decent analysis.
+     - Score 4: Complex facts, multiple legal frameworks, significant analysis, several precedents.
+     - Score 5: Highly complex multi-party case, novel legal questions, extensive precedent review.
+
+  3) Reasoning quality scoring:
+     - Score 1: Cursory, conclusory statements with little or no analysis. "We agree" without explanation.
+     - Score 2: Brief analysis but important arguments not fully addressed.
+     - Score 3: Adequate engagement with the main arguments, clear conclusion.
+     - Score 4: Thorough analysis, engages with counter-arguments, structured reasoning.
+     - Score 5: Exemplary reasoning — comprehensive, well-structured, considers all perspectives, clear logical chain, would serve as a model judgment.
+
+  4) Legal domains:
+     - Select ALL domains that the case touches on, not just the primary offence.
+     - A drug conspiracy case involving firearms would be both "drug_offences" and "firearms_and_weapons".
+     - Include procedural domains (evidence_law, procedure) if the court discusses them substantively.
+
+  5) Reasoning patterns:
+     - Only select patterns that the court actually employs in its reasoning.
+     - "precedent_following" = the court explicitly states it is following a cited case.
+     - "precedent_distinguishing" = the court explains why a cited case does not apply.
+     - "textual_interpretation" = the court analyses the wording of a statutory provision.
+     - "policy_based_reasoning" = the court references deterrence, public protection, or similar policy goals.
+
+  6) Key legal principles:
+     - Extract principles that the court articulates or relies upon, not just statutes cited.
+     - Example: "The safety of a conviction must be assessed by reference to the jury's probable reasoning" — this is a principle, not a statute.
+     - Focus on the 3-5 most significant principles that drive the outcome.
+
+  7) Precedent treatment:
+     - Only include cases that the court meaningfully engages with, not passing references.
+     - "followed" = the court explicitly follows the precedent's ruling.
+     - "distinguished" = the court explains why the facts/law differ.
+     - "considered" = the court discusses but does not commit to following or distinguishing.
+
+  8) Outcome determinative factors:
+     - These are the factors that actually tipped the outcome, not just factors mentioned.
+     - Ask yourself: "If this factor were different, would the outcome change?"
+     - For appeal dismissals, the determinative factors are those that made the conviction safe or sentence not excessive.
+
+  9) Novel legal points:
+     - This should be genuinely novel — a point of first impression, a clarification of ambiguity in the law, a resolution of conflicting authorities.
+     - Routine application of settled law is NOT novel, even if the facts are unusual.
+     - Set to null for the majority of judgments.
+
+  10) Practice implications:
+      - Think from the perspective of a practitioner: what actionable advice does this judgment provide?
+      - Focus on procedural lessons, common pitfalls, and charging/sentencing guidance.
+      - Set to null if the judgment offers no broader lessons beyond its specific facts.
+
+  11) Suggested search queries:
+      - Write natural language queries a legal researcher would type.
+      - Examples: "appeal against conviction for conspiracy where co-defendants acquitted",
+        "joint enterprise murder conviction following Jogee",
+        "sentencing guidelines for Class A drug supply".
+      - Make them specific enough to be useful but general enough to find related cases.
+
+  12) Document quality:
+      - Note OCR artifacts (garbled words, missing characters, misplaced line breaks).
+      - "truncated" = the document ends mid-sentence or is clearly incomplete.
+      - "partial" = significant portions appear to be missing.
+
+  13) Fields that may be null:
+      - precedent_treatment: null if no case law discussed.
+      - statutory_interpretation_methods: null if no statutory interpretation.
+      - burden_and_standard_of_proof: null if not discussed.
+      - procedural_fairness_issues: null if no fairness concerns raised.
+      - policy_considerations: null if no policy discussion.
+      - novel_legal_points: null for most judgments.
+      - practice_implications: null if no broader lessons.

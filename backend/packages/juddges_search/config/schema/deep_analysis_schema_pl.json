@@ -1,0 +1,385 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Polish Deep Analysis Schema",
+  "description": "Schemat pogłębionej analizy polskich orzeczeń sądowych. Wyodrębnia wymiary analityczne nieuwzględnione w schemacie bazowym ani segmentacji: złożoność, jakość rozumowania, doktryna prawna, czynniki determinujące wynik.",
+  "type": "object",
+  "required": [
+    "case_complexity",
+    "legal_domains",
+    "reasoning_patterns",
+    "reasoning_quality_score",
+    "reasoning_quality_explanation",
+    "key_legal_principles",
+    "precedent_treatment",
+    "statutory_interpretation_methods",
+    "burden_and_standard_of_proof",
+    "procedural_fairness_issues",
+    "judicial_tone",
+    "policy_considerations",
+    "outcome_determinative_factors",
+    "novel_legal_points",
+    "practice_implications",
+    "cross_reference_potential",
+    "document_quality",
+    "analysis_confidence"
+  ],
+  "properties": {
+    "case_complexity": {
+      "type": "object",
+      "description": "Ogólna ocena złożoności sprawy w wielu wymiarach.",
+      "properties": {
+        "overall_score": {
+          "type": "integer",
+          "description": "Ocena złożoności od 1 (prosta, jedno zagadnienie) do 5 (bardzo złożona, wielu oskarżonych, nowe zagadnienia prawne). Uwzględnij liczbę stron, zagadnień, długość rozumowania, nowość pytań prawnych."
+        },
+        "factual_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "Złożoność faktyczna: 'simple' = jedno zdarzenie, mało stron; 'moderate' = wiele zdarzeń lub stron; 'complex' = rozciągnięta oś czasu, wielu oskarżonych, sprzeczne dowody."
+        },
+        "legal_complexity": {
+          "type": "string",
+          "enum": ["simple", "moderate", "complex"],
+          "description": "Złożoność prawna: 'simple' = proste zastosowanie utrwalonego prawa; 'moderate' = pewne kwestie interpretacyjne; 'complex' = nowe zagadnienia, sprzeczne orzecznictwo."
+        },
+        "num_legal_issues": {
+          "type": "integer",
+          "description": "Liczba odrębnych zagadnień prawnych lub zarzutów rozpatrywanych przez sąd."
+        },
+        "num_statutes_cited": {
+          "type": "integer",
+          "description": "Liczba odrębnych przepisów ustaw/kodeksów powołanych."
+        },
+        "num_cases_cited": {
+          "type": "integer",
+          "description": "Liczba odrębnych orzeczeń sądowych powołanych jako precedensy."
+        }
+      },
+      "required": ["overall_score", "factual_complexity", "legal_complexity", "num_legal_issues", "num_statutes_cited", "num_cases_cited"],
+      "additionalProperties": false,
+      "x-ui-label": "Złożoność sprawy",
+      "x-ui-order": 1
+    },
+    "legal_domains": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "zabojstwo",
+          "przestepstwa_seksualne",
+          "narkotyki",
+          "oszustwo_i_przestepstwa_finansowe",
+          "przestepstwa_z_przemoca",
+          "kradziez_i_wlamanie",
+          "bron_palna_i_niebezpieczne_przedmioty",
+          "porzadek_publiczny",
+          "terroryzm",
+          "przestepstwa_drogowe",
+          "przestepczosc_zorganizowana",
+          "cyberprzestepczosc",
+          "przemoc_domowa",
+          "przestepstwa_wobec_dzieci",
+          "rozboj",
+          "wymuszenie",
+          "korupcja",
+          "przestepstwa_skarbowe",
+          "przestepstwa_przeciwko_wymiarowi_sprawiedliwosci",
+          "wspolsprawstwo",
+          "usilowanie",
+          "prawo_karne_materialne",
+          "prawo_dowodowe",
+          "procedura_karna",
+          "prawa_czlowieka",
+          "zdrowie_psychiczne",
+          "prawo_karne_nieletnich",
+          "inne"
+        ]
+      },
+      "description": "Główne dziedziny prawne lub kategorie przestępstw w tej sprawie. Wybierz wszystkie pasujące.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Dziedziny prawne",
+      "x-ui-order": 2
+    },
+    "reasoning_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "wykladnia_jezykowa",
+          "wykladnia_celowosciowa",
+          "wykladnia_systemowa",
+          "wykladnia_historyczna",
+          "podazanie_za_orzecznictwem_sn",
+          "rozroznianie_stanow_faktycznych",
+          "rozumowanie_przez_analogie",
+          "rozumowanie_oparte_na_polityce_karnej",
+          "analiza_proporcjonalnosci",
+          "wazenie_interesow",
+          "zasada_absorbcji_kary",
+          "rozumowanie_dedukcyjne",
+          "rozumowanie_indukcyjne",
+          "wnioskowanie_z_dowodow_posrednich"
+        ]
+      },
+      "description": "Rodzaje rozumowania prawnego zastosowane przez sąd. Wybierz wszystkie pasujące.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Wzorce rozumowania",
+      "x-ui-order": 3,
+      "x-enum-labels": {
+        "wykladnia_jezykowa": "Wykładnia językowa (literalna)",
+        "wykladnia_celowosciowa": "Wykładnia celowościowa (teleologiczna)",
+        "wykladnia_systemowa": "Wykładnia systemowa",
+        "wykladnia_historyczna": "Wykładnia historyczna",
+        "podazanie_za_orzecznictwem_sn": "Podążanie za orzecznictwem SN/SA",
+        "rozroznianie_stanow_faktycznych": "Rozróżnianie stanów faktycznych",
+        "rozumowanie_przez_analogie": "Rozumowanie przez analogię",
+        "rozumowanie_oparte_na_polityce_karnej": "Rozumowanie oparte na polityce karnej",
+        "analiza_proporcjonalnosci": "Analiza proporcjonalności",
+        "wazenie_interesow": "Ważenie konkurujących interesów",
+        "zasada_absorbcji_kary": "Zasada absorpcji/kumulacji kar",
+        "rozumowanie_dedukcyjne": "Rozumowanie dedukcyjne (przepis → fakty → wniosek)",
+        "rozumowanie_indukcyjne": "Rozumowanie indukcyjne (fakty → zasada)",
+        "wnioskowanie_z_dowodow_posrednich": "Wnioskowanie z dowodów poszlakowych"
+      }
+    },
+    "reasoning_quality_score": {
+      "type": "integer",
+      "description": "Jakość rozumowania sądu od 1 do 5. 1 = pobieżne, konkluzywne, mało analizy. 3 = wystarczające, odnosi się do głównych punktów. 5 = dogłębne, dobrze ustrukturyzowane, rozważa wszystkie aspekty, jasny łańcuch logiczny.",
+      "x-ui-label": "Jakość rozumowania",
+      "x-ui-order": 4
+    },
+    "reasoning_quality_explanation": {
+      "type": "string",
+      "description": "Krótkie wyjaśnienie (2-3 zdania) dlaczego przyznano tę ocenę jakości rozumowania. Co sprawia, że rozumowanie jest mocne lub słabe? Pisz po polsku.",
+      "x-ui-label": "Wyjaśnienie oceny",
+      "x-ui-order": 5
+    },
+    "key_legal_principles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "principle": {
+            "type": "string",
+            "description": "Sformułowanie zasady prawnej artykułowanej lub stosowanej"
+          },
+          "source": {
+            "type": "string",
+            "description": "Źródło zasady: nazwa ustawy, sygnatura orzeczenia SN/SA, lub 'doktryna'"
+          },
+          "how_applied": {
+            "type": "string",
+            "description": "Jak sąd zastosował tę zasadę do faktów (1-2 zdania)"
+          }
+        },
+        "required": ["principle", "source", "how_applied"],
+        "additionalProperties": false
+      },
+      "description": "Kluczowe zasady prawne artykułowane, stosowane lub rozwijane w orzeczeniu. Wyodrębnij 3-5 najważniejszych.",
+      "x-ui-label": "Kluczowe zasady prawne",
+      "x-ui-order": 6
+    },
+    "precedent_treatment": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "case_citation": {
+            "type": "string",
+            "description": "Sygnatura orzeczenia (np. 'wyrok SN z 15.04.2020, II KK 112/20')"
+          },
+          "treatment": {
+            "type": "string",
+            "enum": ["followed", "applied", "distinguished", "doubted", "departed_from", "considered", "cited"],
+            "description": "Jak sąd potraktował ten precedens"
+          },
+          "significance": {
+            "type": "string",
+            "description": "Dlaczego ten precedens jest istotny w tej sprawie (1 zdanie)"
+          }
+        },
+        "required": ["case_citation", "treatment", "significance"],
+        "additionalProperties": false
+      },
+      "description": "Jak sąd potraktował powoływane orzecznictwo. Wyodrębnij 3-5 najważniejszych. Null jeśli brak orzeczeń.",
+      "x-ui-label": "Orzecznictwo",
+      "x-ui-order": 7
+    },
+    "statutory_interpretation_methods": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string",
+        "enum": ["wykladnia_jezykowa", "wykladnia_celowosciowa", "wykladnia_systemowa", "wykladnia_historyczna", "odwolanie_do_uzasadnienia_ustawy", "wykladnia_prokonstytucyjna", "odwolanie_do_prawa_miedzynarodowego"]
+      },
+      "description": "Metody wykładni przepisów zastosowane przez sąd. Null jeśli brak wykładni.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Metody wykładni",
+      "x-ui-order": 8
+    },
+    "burden_and_standard_of_proof": {
+      "type": ["object", "null"],
+      "description": "Omówienie ciężaru i standardu dowodu, jeśli poruszane. Null jeśli nie omawiane.",
+      "properties": {
+        "standard_discussed": {
+          "type": "string",
+          "enum": ["beyond_reasonable_doubt", "balance_of_probabilities", "both", "other"],
+          "description": "Jaki standard dowodu omówiono (w polskim prawie karnym: 'nie dające się usunąć wątpliwości' = beyond_reasonable_doubt)"
+        },
+        "burden_issues": {
+          "type": "string",
+          "description": "Szczegółowe kwestie ciężaru dowodu (art. 5 § 2 kpk, domniemanie niewinności, ciężar dowodu na oskarżycielu)"
+        }
+      },
+      "required": ["standard_discussed", "burden_issues"],
+      "additionalProperties": false,
+      "x-ui-label": "Ciężar i standard dowodu",
+      "x-ui-order": 9
+    },
+    "procedural_fairness_issues": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Kwestie rzetelności proceduralnej: prawo do obrony, prawidłowość pouczeń, ujawnienie dowodów, przewlekłość postępowania, dopuszczalność dowodów. Null jeśli brak.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Kwestie proceduralne",
+      "x-ui-order": 10
+    },
+    "judicial_tone": {
+      "type": "string",
+      "enum": ["neutral_analytical", "critical", "sympathetic", "deferential", "emphatic", "cautious"],
+      "description": "Dominujący ton orzeczenia. 'neutral_analytical' = zdystansowana analiza prawna; 'critical' = krytyczny wobec sądu niższej instancji lub stron; 'sympathetic' = uznaje trudności; 'deferential' = deferentny wobec sądu I instancji; 'emphatic' = silne przekonanie; 'cautious' = ostrożny, z zastrzeżeniami.",
+      "x-filter-type": "facet",
+      "x-ui-label": "Ton orzeczenia",
+      "x-ui-order": 11,
+      "x-enum-labels": {
+        "neutral_analytical": "Neutralny/Analityczny",
+        "critical": "Krytyczny",
+        "sympathetic": "Empatyczny",
+        "deferential": "Deferentny wobec I instancji",
+        "emphatic": "Stanowczy/Pewny",
+        "cautious": "Ostrożny/Z zastrzeżeniami"
+      }
+    },
+    "policy_considerations": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Względy polityki karnej: prewencja ogólna, prewencja szczególna, odstraszanie, resocjalizacja, interes publiczny, ochrona społeczeństwa, wpływ na ofiarę. Null jeśli brak.",
+      "x-filter-type": "array_contains",
+      "x-ui-label": "Polityka karna",
+      "x-ui-order": 12
+    },
+    "outcome_determinative_factors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "factor": {
+            "type": "string",
+            "description": "Czynnik który był najbardziej decydujący"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["favoured_appellant", "favoured_respondent", "neutral"],
+            "description": "Na czyją korzyść przemawiał ten czynnik"
+          },
+          "weight": {
+            "type": "string",
+            "enum": ["decisive", "significant", "minor"],
+            "description": "Jaką wagę sąd przypisał temu czynnikowi"
+          }
+        },
+        "required": ["factor", "direction", "weight"],
+        "additionalProperties": false
+      },
+      "description": "3-5 czynników, które najbardziej zdeterminowały wynik. Co przesądziło? To czynniki, na których prawnik skupiłby się przewidując wyniki w podobnych sprawach.",
+      "x-ui-label": "Czynniki determinujące wynik",
+      "x-ui-order": 13
+    },
+    "novel_legal_points": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Nowe lub nietypowe zagadnienia prawne poruszone lub rozstrzygnięte. Punkty gdzie sąd rozwinął prawo, odniósł się do kwestii po raz pierwszy, lub rozstrzygnął rozbieżności w orzecznictwie. Null jeśli brak.",
+      "x-ui-label": "Nowe zagadnienia prawne",
+      "x-ui-order": 14
+    },
+    "practice_implications": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Praktyczne implikacje dla prawników. Co powinni wynieść z tego orzeczenia? Np. 'Obrońcy powinni zwrócić uwagę na...', 'Sądy powinny pouczać o...', 'Prokuratura powinna rozważyć... przy formułowaniu zarzutów'. Null jeśli brak. Pisz po polsku.",
+      "x-ui-label": "Implikacje praktyczne",
+      "x-ui-order": 15
+    },
+    "cross_reference_potential": {
+      "type": "object",
+      "description": "Jak przydatne jest to orzeczenie do porównań z innymi sprawami.",
+      "properties": {
+        "precedential_value": {
+          "type": "string",
+          "enum": ["high", "medium", "low", "none"],
+          "description": "'high' = ustala lub wyjaśnia zasadę prawną; 'medium' = przydatne zastosowanie istniejącego prawa; 'low' = rutynowe zastosowanie; 'none' = ściśle uzależnione od faktów."
+        },
+        "research_value": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "'high' = kompleksowy przegląd prawa w danej dziedzinie; 'medium' = użyteczna analiza; 'low' = minimalna analiza."
+        },
+        "suggested_search_queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "3-5 zapytań semantycznych, które pomogłyby znaleźć podobne lub powiązane orzeczenia. Pisz po polsku, jako naturalne zapytania badacza prawa."
+        }
+      },
+      "required": ["precedential_value", "research_value", "suggested_search_queries"],
+      "additionalProperties": false,
+      "x-ui-label": "Potencjał badawczy",
+      "x-ui-order": 16
+    },
+    "document_quality": {
+      "type": "object",
+      "description": "Ocena jakości tekstu dokumentu (błędy OCR, kompletność).",
+      "properties": {
+        "text_quality": {
+          "type": "string",
+          "enum": ["clean", "minor_issues", "significant_issues", "poor"],
+          "description": "'clean' = brak problemów; 'minor_issues' = sporadyczne literówki; 'significant_issues' = zauważalne błędy OCR; 'poor' = znaczne uszkodzenie tekstu."
+        },
+        "completeness": {
+          "type": "string",
+          "enum": ["complete", "likely_complete", "truncated", "partial"],
+          "description": "Czy dokument wydaje się zawierać pełny tekst orzeczenia."
+        },
+        "quality_notes": {
+          "type": "string",
+          "description": "Krótkie uwagi o konkretnych problemach z jakością (np. 'akapity 15-20 mają artefakty OCR', 'dokument wygląda na urwany w połowie zdania')."
+        }
+      },
+      "required": ["text_quality", "completeness", "quality_notes"],
+      "additionalProperties": false,
+      "x-ui-label": "Jakość dokumentu",
+      "x-ui-order": 17
+    },
+    "analysis_confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Ogólna pewność tej analizy. 'high' = jasne, dobrze ustrukturyzowane orzeczenie. 'medium' = pewna niejednoznaczność. 'low' = słaba jakość dokumentu, nietypowy format.",
+      "x-filter-type": "facet",
+      "x-ui-label": "Pewność analizy",
+      "x-ui-order": 18,
+      "x-enum-labels": {
+        "high": "Wysoka pewność",
+        "medium": "Średnia pewność",
+        "low": "Niska pewność"
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,90 @@
+language: pl
+content: |
+  Instrukcje pogłębionej analizy polskich orzeczeń sądowych
+
+  Twoim celem jest przeprowadzenie pogłębionej oceny analitycznej orzeczenia sądowego. To wykracza poza ekstrakcję faktów — analizujesz jakość, charakter i znaczenie rozumowania prawnego. Działasz jako doświadczony badacz prawa.
+
+  Zasady:
+
+  1) Podejście ogólne:
+     - Przeczytaj uważnie całe orzeczenie przed rozpoczęciem analizy.
+     - Opieraj wszystkie oceny wyłącznie na treści orzeczenia. Nie używaj wiedzy zewnętrznej o sprawie.
+     - Bądź uczciwy w ocenach jakości. Nie każde orzeczenie jest wysokiej jakości.
+     - Licząc cytowania (przepisy, orzeczenia), licz odrębne źródła, nie powtórzenia.
+     - Pisz wartości tekstowe (wyjaśnienia, podsumowania, implikacje) po polsku.
+
+  2) Ocena złożoności (1-5):
+     - 1: Jedno zagadnienie, jeden oskarżony, utrwalone prawo, krótkie orzeczenie.
+     - 2: Jedno-dwa zagadnienia, pewne szczegóły faktyczne, brak kontrowersji prawnych.
+     - 3: Kilka zagadnień lub stron, umiarkowana złożoność prawna, przyzwoita analiza.
+     - 4: Złożone fakty, wiele ram prawnych, znacząca analiza, kilka precedensów.
+     - 5: Bardzo złożona sprawa wielopodmiotowa, nowe pytania prawne, obszerny przegląd orzecznictwa.
+
+  3) Ocena jakości rozumowania (1-5):
+     - 1: Pobieżne, konkluzywne stwierdzenia bez analizy. "Sąd nie podziela zarzutów" bez wyjaśnienia.
+     - 2: Krótka analiza, ważne argumenty nie w pełni omówione.
+     - 3: Wystarczające odniesienie się do głównych argumentów, jasna konkluzja.
+     - 4: Dogłębna analiza, odniesienie się do kontrargumentów, strukturyzowane rozumowanie.
+     - 5: Wzorcowe rozumowanie — kompleksowe, dobrze ustrukturyzowane, rozważa wszystkie perspektywy, jasny łańcuch logiczny.
+
+  4) Dziedziny prawne:
+     - Wybierz WSZYSTKIE dziedziny, których sprawa dotyczy, nie tylko główne przestępstwo.
+     - Rozbój z użyciem pojazdu to zarówno "rozboj" jak i "przestepstwa_z_przemoca".
+     - Uwzględnij dziedziny proceduralne (prawo_dowodowe, procedura_karna) jeśli sąd je omawia merytorycznie.
+
+  5) Wzorce rozumowania:
+     - Wybieraj tylko wzorce, które sąd rzeczywiście stosuje w swoim rozumowaniu.
+     - "podazanie_za_orzecznictwem_sn" = sąd wprost powołuje się na orzeczenie SN/SA.
+     - "rozroznianie_stanow_faktycznych" = sąd wyjaśnia dlaczego powoływane orzeczenie nie ma zastosowania.
+     - "wykladnia_jezykowa" = sąd analizuje brzmienie przepisu.
+     - "rozumowanie_oparte_na_polityce_karnej" = sąd odwołuje się do prewencji, ochrony społeczeństwa.
+
+  6) Kluczowe zasady prawne:
+     - Wyodrębniaj zasady, które sąd artykułuje lub na których się opiera, nie tylko powołane przepisy.
+     - Przykład: "Sąd odwoławczy nie jest uprawniony do czynienia własnych ustaleń faktycznych w sposób odmienny od sądu I instancji, gdy ten oparł się na dowodach bezpośrednio przeprowadzonych" — to zasada.
+     - Skup się na 3-5 najważniejszych zasadach determinujących wynik.
+
+  7) Orzecznictwo:
+     - Uwzględniaj tylko orzeczenia, z którymi sąd merytorycznie się mierzy.
+     - "followed" = sąd wprost podąża za rozstrzygnięciem.
+     - "distinguished" = sąd wyjaśnia dlaczego stany faktyczne/prawne się różnią.
+     - "considered" = sąd omawia, ale nie deklaruje jednoznacznie.
+     - Podawaj sygnatury w formacie polskim (np. "wyrok SN z 15.04.2020, II KK 112/20").
+
+  8) Czynniki determinujące wynik:
+     - To czynniki, które FAKTYCZNIE przesądziły wynik, nie tylko wymienione.
+     - Zadaj sobie pytanie: "Gdyby ten czynnik był inny, czy wynik by się zmienił?"
+     - Dla oddalenia apelacji — czynniki, które sprawiły, że wyrok I instancji był prawidłowy.
+     - Dla zmiany wyroku — czynniki, które przesądziły o konieczności korekty.
+
+  9) Nowe zagadnienia prawne:
+     - To musi być GENUINIE nowe — pierwsza interpretacja, wyjaśnienie niejasności, rozstrzygnięcie rozbieżności.
+     - Rutynowe stosowanie utrwalonego prawa NIE jest nowe, nawet jeśli fakty są nietypowe.
+     - Ustaw null dla większości orzeczeń.
+
+  10) Implikacje praktyczne:
+      - Myśl z perspektywy praktyka: jakie działania sugeruje to orzeczenie?
+      - Skup się na lekcjach proceduralnych, typowych pułapkach, wskazówkach dotyczących kwalifikacji i wymiaru kary.
+      - Pisz po polsku.
+
+  11) Sugerowane zapytania:
+      - Pisz po polsku, naturalne zapytania badacza prawa.
+      - Przykłady: "rozbój z użyciem samochodu kwalifikacja art. 280",
+        "apelacja od wyroku za narkotyki współsprawstwo",
+        "nadzwyczajne złagodzenie kary młodociany art. 60".
+      - Wystarczająco szczegółowe, ale na tyle ogólne, by znaleźć powiązane sprawy.
+
+  12) Jakość dokumentu:
+      - Zanotuj artefakty OCR (zniekształcone słowa, brakujące znaki, zanonimizowane dane jako "(...)" to NIE jest błąd OCR).
+      - "truncated" = dokument kończy się w połowie zdania.
+      - "partial" = brakuje znacznych fragmentów.
+      - Anonimizacja danych osobowych (np. "T. K.", "(...)") jest normalna w polskich orzeczeniach i nie stanowi problemu jakości.
+
+  13) Pola mogące być null:
+      - precedent_treatment: null jeśli brak omówienia orzecznictwa.
+      - statutory_interpretation_methods: null jeśli brak wykładni.
+      - burden_and_standard_of_proof: null jeśli nie omawiane.
+      - procedural_fairness_issues: null jeśli brak.
+      - policy_considerations: null jeśli brak dyskusji o polityce karnej.
+      - novel_legal_points: null dla większości orzeczeń.
+      - practice_implications: null jeśli brak szerszych lekcji.
