@@ -34,15 +34,34 @@ export async function GET() {
     console.error("[Dashboard Stats] Error fetching dashboard stats: ", error);
     // Return default values on error
     const defaultData = {
-      total_documents: 0,
-      judgments: 0,
-      judgments_pl: 0,
-      judgments_uk: 0,
-      tax_interpretations: 0,
-      tax_interpretations_pl: 0,
-      tax_interpretations_uk: 0,
-      added_this_week: 0,
-      last_updated: null,
+      total_judgments: 0,
+      jurisdictions: { PL: 0, UK: 0 },
+      court_levels: [],
+      top_courts: [],
+      decisions_per_year: [],
+      date_range: { oldest: null, newest: null },
+      case_types: [],
+      data_completeness: {
+        embeddings_pct: 0,
+        structure_extraction_pct: 0,
+        deep_analysis_pct: 0,
+        with_summary_pct: 0,
+        with_keywords_pct: 0,
+        with_legal_topics_pct: 0,
+        with_cited_legislation_pct: 0,
+        avg_text_length_chars: 0,
+      },
+      top_legal_domains: [],
+      top_keywords: [],
+      top_cited_legislation: [],
+      complexity_metrics: {
+        avg_complexity: null,
+        avg_reasoning_quality: null,
+        precedential_value_distribution: {},
+        research_value_distribution: {},
+      },
+      judicial_tones: [],
+      computed_at: null,
     };
     return NextResponse.json(defaultData);
   }

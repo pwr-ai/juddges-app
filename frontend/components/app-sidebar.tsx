@@ -141,14 +141,13 @@ export function AppSidebar(): React.JSX.Element {
  <SidebarContent className="gap-3 px-2">
  {/* Main Navigation - Public demo workflow */}
  <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.navigation')}</SidebarGroupLabel>
  <SidebarGroupContent className="px-0">
  <SidebarMenu className="space-y-1">
  <SidebarMenuItem>
  <SidebarMenuButton asChild isActive={pathname === "/search"}>
  <Link href="/search">
  <Search />
- <span>{t('navigation.search')}</span>
+ <span>{t('navigation.searchJudgments')}</span>
  </Link>
  </SidebarMenuButton>
  </SidebarMenuItem>
@@ -214,15 +213,14 @@ export function AppSidebar(): React.JSX.Element {
  <SidebarContent className="gap-3 px-2">
  {/* Primary Navigation - Search-first workflow */}
  <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.navigation')}</SidebarGroupLabel>
  <SidebarGroupContent className="px-0">
  <SidebarMenu className="space-y-1">
  <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.search')} isIconMode={isIconMode}>
+ <ConditionalTooltip content={t('navigation.searchJudgments')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/search"}>
  <Link href="/search">
  <Search />
- <span>{t('navigation.search')}</span>
+ <span>{t('navigation.searchJudgments')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
@@ -230,11 +228,11 @@ export function AppSidebar(): React.JSX.Element {
 
  {isAdmin && (
  <SidebarMenuItem>
- <ConditionalTooltip content="Saved Searches"isIconMode={isIconMode}>
+ <ConditionalTooltip content={t('navigation.savedSearches')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/saved-searches"}>
  <Link href="/saved-searches">
  <Bookmark />
- <span>Saved Searches</span>
+ <span>{t('navigation.savedSearches')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
@@ -253,44 +251,44 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuItem>
 
  <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.extractStructureData')} isIconMode={isIconMode}>
+ <ConditionalTooltip content={t('navigation.dataExtraction')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/extract"}>
  <Link href="/extract">
  <FileInput />
- <span>{t('navigation.extractStructureData')}</span>
+ <span>{t('navigation.dataExtraction')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
 
  <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.extractions')} isIconMode={isIconMode}>
+ <ConditionalTooltip content={t('navigation.extractionResults')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/extractions"|| pathname?.startsWith("/extractions")}>
  <Link href="/extractions">
  <FileSearch />
- <span>{t('navigation.extractions')}</span>
+ <span>{t('navigation.extractionResults')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
 
  <SidebarMenuItem>
- <ConditionalTooltip content="Base Schema (EN/PL)"isIconMode={isIconMode}>
+ <ConditionalTooltip content={t('navigation.baseTemplate')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/schemas/base"}>
  <Link href="/schemas/base">
  <FileJson />
- <span>Base Schema</span>
+ <span>{t('navigation.baseTemplate')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
 
  <SidebarMenuItem>
- <ConditionalTooltip content="Dataset Comparison"isIconMode={isIconMode}>
+ <ConditionalTooltip content={t('navigation.compareDatasets')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/dataset-comparison"}>
  <Link href="/dataset-comparison">
  <BarChart3 />
- <span>Dataset Comparison</span>
+ <span>{t('navigation.compareDatasets')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>

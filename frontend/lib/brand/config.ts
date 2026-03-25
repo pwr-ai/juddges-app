@@ -55,8 +55,8 @@ export interface BrandConfig {
 export const brandConfigs: Record<BrandType, BrandConfig> = {
   juddges: {
     id: 'juddges',
-    name: 'JuDDGES',
-    shortName: 'JuDDGES',
+    name: 'Juddges',
+    shortName: 'Juddges',
     tagline: 'Judicial Decision Data Gathering, Encoding, and Sharing',
     logo: '/brands/juddges/logo.svg',
     favicon: '/brands/juddges/favicon.ico',
@@ -67,13 +67,13 @@ export const brandConfigs: Record<BrandType, BrandConfig> = {
       accentForeground: 'oklch(0.20 0.02 30.00)',
     },
     metadata: {
-      title: 'JuDDGES - Judicial Decision Data Gathering, Encoding, and Sharing',
+      title: 'Juddges - Judicial Decision Data Gathering, Encoding, and Sharing',
       description:
-        'JuDDGES revolutionizes accessibility and analysis of judicial decisions across legal systems using NLP and Human-In-The-Loop technologies. Search Polish and UK court judgments with AI-powered semantic search.',
-      ogTitle: 'JuDDGES | Judicial Decision Data Gathering, Encoding, and Sharing',
+        'Juddges revolutionizes accessibility and analysis of judicial decisions across legal systems using NLP and Human-In-The-Loop technologies. Search Polish and UK court judgments with AI-powered semantic search.',
+      ogTitle: 'Juddges | Judicial Decision Data Gathering, Encoding, and Sharing',
     },
     supportEmail: 'lukasz.augustyniak@pwr.edu.pl',
-    copyrightHolder: 'JuDDGES',
+    copyrightHolder: 'Juddges',
   },
 };
 

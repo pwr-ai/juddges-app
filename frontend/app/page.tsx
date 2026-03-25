@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SkeletonTrendingTopic, SkeletonChatCard, SkeletonDocumentCard, SkeletonExtractionCard } from "@/components/ui/skeleton-card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "@/contexts/LanguageContext";
 import {
  useDashboardStats,
  useRecentDocuments,
@@ -101,6 +102,7 @@ function formatChatTimestamp(dateString: string): string {
 
 export default function HomePage(): React.JSX.Element {
  const { user, loading: authLoading } = useAuth();
+ const { t } = useTranslation();
 
  // Use React Query hooks for data fetching with automatic caching
  const {
@@ -150,7 +152,7 @@ export default function HomePage(): React.JSX.Element {
  if (!authLoading && !user) {
  return (
  <LandingPage
- stats={statsError ? null : stats as Parameters<typeof LandingPage>[0]['stats']}
+ stats={null}
  statsLoading={statsLoading}
  />
  );
@@ -164,12 +166,12 @@ export default function HomePage(): React.JSX.Element {
  {/* Current Statistics Section Card */}
  <BaseCard className="rounded-xl sm:rounded-2xl !p-4 sm:!p-5 md:!p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Current Statistics</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.databaseOverview')}</h2>
  <Link
  href="/statistics"
  className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
  >
- View all
+ {t('dashboard.viewAll')}
  <ChevronRight className="size-3.5"/>
  </Link>
  </div>
@@ -182,14 +184,14 @@ export default function HomePage(): React.JSX.Element {
  </div>
  ) : statsError ? (
  <div className="p-4 rounded-xl border border-destructive/50 bg-destructive/10 text-destructive">
- <p className="text-sm font-medium">Failed to load statistics</p>
+ <p className="text-sm font-medium">{t('dashboard.failedToLoadStats')}</p>
  <p className="text-xs mt-1 text-destructive/80">
  {statsErrorDetails instanceof Error ? statsErrorDetails.message : "Unknown error"}
  </p>
  </div>
  ) : stats ? (
  <StatsCardV1
- stats={stats as Parameters<typeof StatsCardV1>[0]['stats']}
+ stats={stats}
  formatLastUpdated={formatLastUpdated}
  />
  ) : null}
@@ -199,12 +201,12 @@ export default function HomePage(): React.JSX.Element {
  {/* Your Last Chats Section Card */}
  <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Your Last Chats</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.recentConversations')}</h2>
  <Link
  href="/chat"
  className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
  >
- View all
+ {t('dashboard.viewAll')}
  <ChevronRight className="size-3.5"/>
  </Link>
  </div>
@@ -251,10 +253,10 @@ export default function HomePage(): React.JSX.Element {
  <div className="p-4 rounded-full w-fit mx-auto mb-3">
  <MessageSquare className="size-8 text-[rgba(71,85,105,0.2)]"/>
  </div>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No chats yet. Ask JuDDGES a legal question to get started.</p>
+ <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">{t('dashboard.noChats')}</p>
  <Link href="/chat">
  <PrimaryButton size="sm"icon={MessageSquare}>
- Start Chat
+ {t('dashboard.startChat')}
  </PrimaryButton>
  </Link>
  </div>
@@ -265,13 +267,13 @@ export default function HomePage(): React.JSX.Element {
  {/* Your Generated Schemas Section Card */}
  <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Your Last Schemas</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.extractionTemplates')}</h2>
  {userSchemas.length > 0 && (
  <Link
  href="/schema-chat"
  className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
  >
- View all
+ {t('dashboard.viewAll')}
  <ChevronRight className="size-3.5"/>
  </Link>
  )}
@@ -326,10 +328,10 @@ export default function HomePage(): React.JSX.Element {
  <div className="p-4 rounded-full w-fit mx-auto mb-3">
  <FileJson className="size-8 text-[rgba(71,85,105,0.2)]"/>
  </div>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No schemas yet. Let JuDDGES generate your first extraction schema.</p>
+ <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">{t('dashboard.noSchemas')}</p>
  <Link href="/schema-chat">
  <PrimaryButton size="sm"icon={Zap}>
- Generate Schema
+ {t('dashboard.generateTemplate')}
  </PrimaryButton>
  </Link>
  </div>
@@ -340,12 +342,12 @@ export default function HomePage(): React.JSX.Element {
  {/* Highlighted Documents Section Card - List Format */}
  <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-2 sm:mb-3">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Highlighted Documents</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.recentJudgments')}</h2>
  <Link
  href="/search"
  className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
  >
- View all
+ {t('dashboard.viewAll')}
  <ChevronRight className="size-3.5"/>
  </Link>
  </div>
@@ -415,10 +417,10 @@ export default function HomePage(): React.JSX.Element {
  // Legal Glassmorphism 2.0 - Zero State
  <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
  <FileText className="size-6 text-[rgba(71,85,105,0.2)] mx-auto mb-2"/>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-3">No documents yet. Explore JuDDGES to discover court judgments.</p>
+ <p className="text-xs text-[rgba(71,85,105,0.6)] mb-3">{t('dashboard.noDocuments')}</p>
  <Link href="/search">
  <PrimaryButton size="sm"icon={Search}>
- Browse Documents
+ {t('dashboard.browseJudgments')}
  </PrimaryButton>
  </Link>
  </div>
@@ -429,7 +431,7 @@ export default function HomePage(): React.JSX.Element {
  {/* Trending Topics Section Card */}
  <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-2 sm:mb-3">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Trending Topics</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.popularLegalTopics')}</h2>
  </div>
  <div className="flex-1 flex flex-col">
  {trendsLoading ? (
@@ -474,7 +476,7 @@ export default function HomePage(): React.JSX.Element {
  // Legal Glassmorphism 2.0 - Zero State
  <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
  <TrendingUp className="size-6 text-[rgba(71,85,105,0.2)] mx-auto mb-2"/>
- <p className="text-xs text-[rgba(71,85,105,0.6)]">No trending topics available</p>
+ <p className="text-xs text-[rgba(71,85,105,0.6)]">{t('dashboard.noTrending')}</p>
  </div>
  )}
  </div>
@@ -483,12 +485,12 @@ export default function HomePage(): React.JSX.Element {
  {/* Documents in Collections Card */}
  <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Documents in Collections</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.researchCollections')}</h2>
  <Link
  href="/collections"
  className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
  >
- View all
+ {t('dashboard.viewAll')}
  <ChevronRight className="size-3.5"/>
  </Link>
  </div>
@@ -529,12 +531,12 @@ export default function HomePage(): React.JSX.Element {
  {/* Last Extractions Card */}
  <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
  <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">Last Extractions</h2>
+ <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.recentExtractions')}</h2>
  <Link
  href="/extract"
  className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
  >
- View all
+ {t('dashboard.viewAll')}
  <ChevronRight className="size-3.5"/>
  </Link>
  </div>
@@ -588,10 +590,10 @@ export default function HomePage(): React.JSX.Element {
  <div className="p-4 rounded-full w-fit mx-auto mb-3">
  <Zap className="size-8 text-[rgba(71,85,105,0.2)]"/>
  </div>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">No extractions yet. Use JuDDGES to extract structured data from documents.</p>
+ <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">{t('dashboard.noExtractions')}</p>
  <Link href="/extract">
  <PrimaryButton size="sm"icon={Zap}>
- Start Extraction
+ {t('dashboard.startExtraction')}
  </PrimaryButton>
  </Link>
  </div>
