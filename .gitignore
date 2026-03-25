@@ -128,9 +128,12 @@ sdist/
 var/
 wheels/
 
-# Allow tracking specific frontend style components needed by the app build.
+# Allow tracking specific frontend lib directories needed by the app build.
 !frontend/lib/
 frontend/lib/*
+!frontend/lib/brand/
+!frontend/lib/i18n/
+!frontend/lib/api/
 !frontend/lib/stats/
 !frontend/lib/styles/
 frontend/lib/styles/*
