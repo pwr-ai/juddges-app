@@ -156,6 +156,7 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+.claude/
 .context/
 .codex/
 .playwright-mcp/
