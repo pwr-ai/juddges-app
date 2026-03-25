@@ -10,10 +10,17 @@ const nextConfig = {
     ignoreDuringBuilds: false,
   },
   experimental: {
-    reactCompiler: true,
+    // reactCompiler disabled: causes "e[o] is undefined" chunk errors during
+    // RSC navigation due to circular re-exports in the styled components barrel.
+    // Re-enable once barrel is fully refactored into standalone modules.
+    reactCompiler: false,
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+    ],
   },
   // Production optimizations
   compress: true,

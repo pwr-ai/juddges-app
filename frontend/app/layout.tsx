@@ -27,6 +27,7 @@ const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-instrument-serif",
+  preload: false, // Only used on admin and landing pages, not globally
 });
 
 const fallbackSiteUrl = "https://juddges.com";
@@ -115,7 +116,8 @@ export default function RootLayout({
           Provides automatic recovery by reloading the page when chunk errors occur.
           Note: No 'async' attribute - must load synchronously to catch early errors.
         */}
-        <script src="/chunk-error-handler.js" async />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/chunk-error-handler.js" />
 
         {/*
           Runtime Environment Configuration
