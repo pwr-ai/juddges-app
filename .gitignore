@@ -121,30 +121,12 @@ pip-delete-this-directory.txt
 MANIFEST
 dist/
 downloads/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
 wheels/
-
-# Allow tracking specific frontend lib directories needed by the app build.
-!frontend/lib/
-frontend/lib/*
-!frontend/lib/brand/
-!frontend/lib/i18n/
-!frontend/lib/api/
-!frontend/lib/stats/
-!frontend/lib/styles/
-frontend/lib/styles/*
-!frontend/lib/styles/components/
-frontend/lib/styles/components/*
-!frontend/lib/styles/components/document-card.tsx
-!frontend/lib/styles/components/search-document-card.tsx
-!frontend/lib/styles/components/search/
-frontend/lib/styles/components/search/*
-!frontend/lib/styles/components/search/SearchForm.tsx
-!frontend/lib/styles/components/search/SearchResultsSection.tsx
 
 # mypy
 .mypy_cache/

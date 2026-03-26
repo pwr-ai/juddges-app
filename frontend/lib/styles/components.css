@@ -1,0 +1,87 @@
+/**
+ * Component-specific CSS variables and classes
+ * These variables and classes are used by styled components in /lib/styles/components/
+ *
+ * Note: This file will be merged/replaced with global.css later during standardization
+ */
+
+:root {
+  /* Primary Button Gradient Colors - Light Mode */
+  --color-primary-button-light-start: oklch(0.85 0.15 265.00); /* #b9c8fc */
+  --color-primary-button-light-end: oklch(0.90 0.10 300.00); /* #e2d5f2 */
+}
+
+/* Primary Button Gradient Classes */
+[data-primary-button-gradient] {
+  background-image: linear-gradient(to bottom right, var(--color-primary-button-light-start), var(--color-primary-button-light-end));
+}
+
+/* Legal Reference Badge - Force text wrapping */
+[data-slot="legal-reference-badge"] {
+  display: inline-block !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  width: auto !important;
+  flex-shrink: 1 !important;
+  flex-grow: 0 !important;
+}
+
+/* Sonner Toast Styles - Enhanced Transparency and Blur */
+/* EXACTLY matching working blur pattern from SchemaFilters and schemas/page */
+/* CRITICAL: Only style individual toasts, don't override Sonner's layout system */
+[data-sonner-toast] {
+  /* Enhanced Transparency - matching working pattern (0.1 opacity) */
+  background: rgba(255, 255, 255, 0.1) !important;
+
+  /* CRITICAL: Blur Effect - EXACT values from working examples */
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+
+  /* Fix corners - ensure border radius is applied */
+  border-radius: 16px !important;
+
+  /* Max width only - let Sonner handle positioning and stacking */
+  max-width: 420px !important;
+
+  /* Enhanced shadow for depth */
+  box-shadow:
+    0 8px 32px rgba(15, 23, 42, 0.15),
+    0 4px 16px rgba(99, 102, 241, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+/* AI Badge Shimmer Animation - "Data Flow" Effect */
+/* Simulates data moving through a fiber optic cable */
+/* Duration: 3s total interval (1.5s animation + 1.5s pause) */
+@keyframes ai-badge-shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+  }
+  50% {
+    transform: translateX(200%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-20deg);
+  }
+}
+
+/* Apply shimmer animation to AI Badge ::before pseudo-element */
+[data-ai-badge]::before {
+  animation: ai-badge-shimmer 3s ease-in-out infinite;
+}
+
+/* User Message - Gemini Style */
+/* Background: Brighter than page background */
+[data-user-message-gemini] {
+  background: #f8fafc !important; /* Brighter - slate-50 */
+}
+
+/* User Message - No shadows at all */
+[data-user-message-shadow] {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+}
