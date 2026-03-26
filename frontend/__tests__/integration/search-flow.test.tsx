@@ -57,6 +57,7 @@ function createDefaultSearchStore(): Record<string, any> {
       legalConcepts: new Set(),
       documentTypes: new Set(),
       issuingBodies: new Set(),
+      languages: new Set(),
       jurisdictions: new Set(),
       courtLevels: new Set(),
       legalDomains: new Set(),
@@ -94,6 +95,11 @@ function createDefaultSearchStore(): Record<string, any> {
       legalConcepts: [],
       documentTypes: [],
       issuingBodies: [],
+      languages: [],
+      jurisdictions: [],
+      courtLevels: [],
+      legalDomains: [],
+      customMetadataKeys: [],
     })),
   };
 }

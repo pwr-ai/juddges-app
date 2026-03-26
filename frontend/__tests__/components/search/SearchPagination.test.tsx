@@ -11,7 +11,7 @@ describe('SearchPagination', () => {
   const defaultProps = {
     currentPage: 2,
     totalPages: 10,
-    totalItems: 100,
+    totalResults: 100,
     pageSize: 10,
     onPageChange: jest.fn(),
     onPageSizeChange: jest.fn(),
@@ -21,11 +21,13 @@ describe('SearchPagination', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the current range and page indicator from the shared pagination component', () => {
+  it('renders navigation buttons and page numbers', () => {
     render(<SearchPagination {...defaultProps} />);
 
-    expect(screen.getByText('Showing 11–20 of 100')).toBeInTheDocument();
-    expect(screen.getByText('2 / 10')).toBeInTheDocument();
+    expect(screen.getByLabelText('Previous page')).toBeInTheDocument();
+    expect(screen.getByLabelText('Next page')).toBeInTheDocument();
+    expect(screen.getByLabelText('First page')).toBeInTheDocument();
+    expect(screen.getByLabelText('Last page')).toBeInTheDocument();
   });
 
   it('changes page with previous and next buttons', async () => {
@@ -34,8 +36,8 @@ describe('SearchPagination', () => {
 
     render(<SearchPagination {...defaultProps} onPageChange={onPageChange} />);
 
-    await user.click(screen.getByRole('button', { name: 'Previous' }));
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByLabelText('Previous page'));
+    await user.click(screen.getByLabelText('Next page'));
 
     expect(onPageChange).toHaveBeenNthCalledWith(1, 1);
     expect(onPageChange).toHaveBeenNthCalledWith(2, 3);
@@ -44,21 +46,20 @@ describe('SearchPagination', () => {
   it('disables buttons on the first and last page', () => {
     const { rerender } = render(<SearchPagination {...defaultProps} currentPage={1} />);
 
-    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getByLabelText('Previous page')).toBeDisabled();
+    expect(screen.getByLabelText('First page')).toBeDisabled();
 
     rerender(<SearchPagination {...defaultProps} currentPage={10} totalPages={10} />);
 
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByLabelText('Next page')).toBeDisabled();
+    expect(screen.getByLabelText('Last page')).toBeDisabled();
   });
 
-  it('changes page size through the shared select control', async () => {
-    const user = userEvent.setup();
-    const onPageSizeChange = jest.fn();
+  it('renders nothing when there are no results', () => {
+    const { container } = render(
+      <SearchPagination {...defaultProps} totalResults={0} totalPages={0} />
+    );
 
-    render(<SearchPagination {...defaultProps} onPageSizeChange={onPageSizeChange} />);
-
-    await user.selectOptions(screen.getByRole('combobox'), '20');
-
-    expect(onPageSizeChange).toHaveBeenCalledWith(20);
+    expect(container.firstChild).toBeNull();
   });
 });

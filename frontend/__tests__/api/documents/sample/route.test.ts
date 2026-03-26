@@ -59,7 +59,7 @@ describe('GET /api/documents/sample', () => {
 
     expect(response.status).toBe(200);
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://backend.test/documents/sample?sample_size=10&only_with_coordinates=false',
+      'http://backend.test/documents/sample?sample_size=20&only_with_coordinates=true',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({

@@ -6,6 +6,50 @@ const createJestConfig = nextJest({
   dir: './',
 })
 
+// ESM-only packages that need to be transformed by Jest.
+// Grouped by prefix where possible to keep the list manageable.
+const esmPackages = [
+  'uuid',
+  'geist',
+  'react-markdown',
+  'remark-.*',
+  'rehype-.*',
+  'unified',
+  'bail',
+  'devlop',
+  'is-plain-obj',
+  'trough',
+  'vfile',
+  'vfile-message',
+  'unist-util-.*',
+  'mdast-util-.*',
+  'micromark.*',
+  'decode-named-character-reference',
+  'character-entities.*',
+  'property-information',
+  'hast-util-.*',
+  'space-separated-tokens',
+  'comma-separated-tokens',
+  'estree-util-.*',
+  'trim-lines',
+  'zwitch',
+  'html-url-attributes',
+  'longest-streak',
+  'stringify-entities',
+  'parse-entities',
+  'parse5',
+  'is-alphabetical',
+  'is-alphanumerical',
+  'is-decimal',
+  'is-hexadecimal',
+  'ccount',
+  'lowlight',
+  'react-day-picker',
+  'date-fns',
+  'nanoid',
+  'zod',
+].join('|')
+
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
@@ -62,5 +106,16 @@ const customJestConfig = {
   },
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
+// Wrap the resolved config to override transformIgnorePatterns from next/jest.
+// next/jest adds its own patterns that block ESM packages; we replace them
+// with patterns that include negative lookaheads for all ESM-only dependencies.
+const jestConfig = createJestConfig(customJestConfig)
+module.exports = async () => {
+  const resolvedConfig = await jestConfig()
+  resolvedConfig.transformIgnorePatterns = [
+    `/node_modules/(?!.pnpm)(?!(${esmPackages})/)`,
+    `/node_modules/.pnpm/(?!(${esmPackages})@)`,
+    '^.+\\.module\\.(css|sass|scss)$',
+  ]
+  return resolvedConfig
+}

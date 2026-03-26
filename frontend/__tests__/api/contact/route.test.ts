@@ -96,8 +96,8 @@ describe('POST /api/contact', () => {
     });
     const emailFailure = await POST(buildRequest(validPayload));
 
-    expect(dbFailure.status).toBe(500);
-    expect((await dbFailure.json()).error).toBe('DATABASE_ERROR');
+    expect(dbFailure.status).toBe(503);
+    expect((await dbFailure.json()).error).toBe('DATABASE_UNAVAILABLE');
     expect(emailFailure.status).toBe(500);
     expect((await emailFailure.json()).error).toBe('INTERNAL_ERROR');
   });
@@ -116,6 +116,6 @@ describe('POST /api/contact', () => {
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(429);
-    expect(secondData.error).toBe('RATE_LIMITED');
+    expect(secondData.error).toBe('RATE_LIMIT_EXCEEDED');
   });
 });

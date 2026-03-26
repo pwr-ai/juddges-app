@@ -22,7 +22,7 @@ describe('ChatInput', () => {
     render(<ChatInput {...defaultProps} />);
 
     expect(
-      screen.getByPlaceholderText(/Ask a question about legal cases/i)
+      screen.getByPlaceholderText(/Message\.\.\./i)
     ).toBeInTheDocument();
   });
 

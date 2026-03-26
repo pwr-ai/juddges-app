@@ -181,18 +181,18 @@ export function buildSchemaPreviewData(
     return {};
   }
 
-  const schema = compileSchemaFieldsToJSONSchema(fields, {
+  const result = compileSchemaFieldsToJSONSchema(fields, {
     name: schemaName,
     description: schemaDescription,
   });
 
-  if (!schema) {
+  if (!result.success || !result.schema) {
     return {};
   }
   const placeholderData: Record<string, unknown> = {};
 
-  if (schema.properties) {
-    Object.entries(schema.properties).forEach(([fieldName, fieldDef]) => {
+  if (result.schema.properties) {
+    Object.entries(result.schema.properties).forEach(([fieldName, fieldDef]) => {
       placeholderData[fieldName] = buildPlaceholder(
         fieldName,
         (fieldDef as unknown as Record<string, unknown>) || {}
