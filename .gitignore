@@ -156,3 +156,9 @@ celerybeat-schedule
 
 # Git worktrees (local)
 .worktrees/
+
+# Deployment artifacts
+.deploy-history
+
+# Test data
+test_queries.jsonl
