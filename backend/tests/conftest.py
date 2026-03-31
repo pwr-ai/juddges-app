@@ -166,16 +166,22 @@ def pytest_collection_modifyitems(config, items):
                 continue
 
         ai_required = False
-        if nodeid.startswith("tests/packages/schema_generator_agent/test_agents.py"):
-            ai_required = True
-        elif nodeid.startswith("tests/packages/schema_generator_agent/test_workflow.py"):
-            ai_required = True
-        elif nodeid.startswith(
-            "tests/packages/schema_generator_agent/test_edge_cases.py"
-        ) and item.name in {
-            "test_empty_user_input_handling",
-            "test_very_long_user_input",
-        }:
+        if (
+            nodeid.startswith("tests/packages/schema_generator_agent/test_agents.py")
+            or nodeid.startswith(
+                "tests/packages/schema_generator_agent/test_workflow.py"
+            )
+            or (
+                nodeid.startswith(
+                    "tests/packages/schema_generator_agent/test_edge_cases.py"
+                )
+                and item.name
+                in {
+                    "test_empty_user_input_handling",
+                    "test_very_long_user_input",
+                }
+            )
+        ):
             ai_required = True
 
         if ai_required:
@@ -192,10 +198,15 @@ def pytest_collection_modifyitems(config, items):
                 continue
 
         skip_marker = item.get_closest_marker("skip")
-        if local_profile and skip_marker and skip_marker.kwargs.get("reason") in {
-            "Batch similar documents endpoint is not part of the current API.",
-            "Requires running FastAPI app",
-        }:
+        if (
+            local_profile
+            and skip_marker
+            and skip_marker.kwargs.get("reason")
+            in {
+                "Batch similar documents endpoint is not part of the current API.",
+                "Requires running FastAPI app",
+            }
+        ):
             deselected.append(item)
             continue
 
