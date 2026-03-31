@@ -40,7 +40,7 @@ from app.clustering import router as clustering_router
 from app.collections import router as collections_router
 from app.dashboard import router as dashboard_router
 from app.deduplication import router as deduplication_router
-from app.documents import router as documents_router
+from app.documents_pkg import router as documents_router
 from app.embeddings_api import router as embeddings_router
 from app.evaluations import router as evaluations_router
 from app.example_questions import router as example_questions_router
@@ -66,8 +66,8 @@ from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limite
 from app.recommendations import router as recommendations_router
 from app.research_assistant import router as research_assistant_router
 from app.schema_generation_agent import router as schema_generator_agent_router
-from app.schemas import cleanup_expired_sessions
-from app.schemas import router as schemas_router
+from app.schemas_pkg import cleanup_expired_sessions
+from app.schemas_pkg import router as schemas_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
 from app.topic_modeling import router as topic_modeling_router

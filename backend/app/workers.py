@@ -24,7 +24,7 @@ from app.models import (
     DocumentExtractionResponse,
     DocumentProcessingStatus,
 )
-from app.schemas import _fetch_schema_from_db
+from app.schemas_pkg import _fetch_schema_from_db
 from app.utils.document_fetcher import get_documents_by_id
 
 load_dotenv()

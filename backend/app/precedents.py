@@ -15,7 +15,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from app.documents import generate_embedding
+from app.documents_pkg import generate_embedding
 from app.models import validate_id_format
 from app.rate_limiter import limiter
 

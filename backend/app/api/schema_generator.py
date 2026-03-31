@@ -34,7 +34,7 @@ from app.errors import (
 )
 
 # Import from schemas module to reuse session management
-from app.schemas import _generation_sessions
+from app.schemas_pkg import _generation_sessions
 
 router = APIRouter(prefix="/schema-generator", tags=["schema-generator-chat"])
 

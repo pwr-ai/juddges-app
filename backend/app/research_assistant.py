@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import AuthenticatedUser, get_optional_user
 from app.core.supabase import get_supabase_client
-from app.documents import generate_embedding
+from app.documents_pkg import generate_embedding
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/research-assistant", tags=["research-assistant"])
