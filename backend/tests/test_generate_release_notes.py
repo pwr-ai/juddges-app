@@ -7,7 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "scripts" / "generate_release_notes.py"
+MODULE_PATH = (
+    Path(__file__).resolve().parents[2] / "scripts" / "generate_release_notes.py"
+)
 
 
 def load_module():
@@ -27,7 +29,9 @@ def test_build_release_context_uses_latest_prod_tag(monkeypatch, tmp_path):
         if args == ("tag", "--list", "prod-v*", "--sort=-v:refname"):
             return "prod-v0.1.2\nprod-v0.1.1"
         if args == ("log", "--no-merges", "--format=%h%x09%s", "prod-v0.1.2..HEAD"):
-            return "abc1234\tfeat: add export endpoint\ndef5678\tfix: harden auth checks"
+            return (
+                "abc1234\tfeat: add export endpoint\ndef5678\tfix: harden auth checks"
+            )
         raise AssertionError(f"Unexpected git args: {args}")
 
     monkeypatch.setattr(module, "run_git", fake_run_git)
@@ -75,7 +79,9 @@ def test_generate_release_notes_payload_uses_openai_parse(monkeypatch):
         previous_tag="prod-v0.1.2",
         to_ref="HEAD",
         commit_entries=[
-            module.CommitEntry(short_hash="abc1234", subject="feat: add export endpoint")
+            module.CommitEntry(
+                short_hash="abc1234", subject="feat: add export endpoint"
+            )
         ],
     )
 
@@ -96,7 +102,9 @@ def test_render_markdown_includes_sections_and_source_commits():
         previous_tag="prod-v0.1.2",
         to_ref="HEAD",
         commit_entries=[
-            module.CommitEntry(short_hash="abc1234", subject="feat: add export endpoint"),
+            module.CommitEntry(
+                short_hash="abc1234", subject="feat: add export endpoint"
+            ),
             module.CommitEntry(short_hash="def5678", subject="fix: harden auth checks"),
         ],
     )

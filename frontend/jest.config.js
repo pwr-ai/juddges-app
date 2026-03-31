@@ -54,6 +54,11 @@ const esmPackages = [
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   moduleNameMapper: {
+    // Mock the missing lib/env/client module used by lib/supabase/client.ts.
+    // Matches both the @/ alias form and the literal relative import string
+    // '../env/client' that appears in the compiled output from lib/supabase/.
+    '^@/lib/env/client$': '<rootDir>/tests/__mocks__/env-client.ts',
+    '^\\.\\./env/client$': '<rootDir>/tests/__mocks__/env-client.ts',
     // Handle module aliases (this will be automatically configured for you based on your tsconfig.json paths)
     '^@/(.*)$': '<rootDir>/$1',
   },

@@ -24,10 +24,11 @@ async def test_dashboard_stats_with_auth(authenticated_client: AsyncClient):
     assert response.status_code in [200, 500, 502, 503]
     if response.status_code == 200:
         data = response.json()
-        assert "total_documents" in data
-        assert "judgments" in data
-        assert "tax_interpretations" in data
-        assert "added_this_week" in data
+        # DashboardStats model uses total_judgments (not total_documents)
+        assert "total_judgments" in data
+        assert "jurisdictions" in data
+        assert "court_levels" in data
+        assert "computed_at" in data
 
 
 @pytest.mark.anyio

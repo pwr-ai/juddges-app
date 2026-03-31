@@ -3,7 +3,6 @@
 import pytest
 from juddges_search.models import DocumentType
 from langchain_openai import ChatOpenAI
-
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.basic_agents import (
     ProblemDefinerAgent,
@@ -27,7 +26,8 @@ def prompts():
     return load_prompts(DocumentType.JUDGMENT)
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_problem_definer_helper_extracts_intent(llm, prompts):
     """Test problem definer helper extracts user intent."""
     agent = ProblemDefinerHelperAgent(llm, prompts["problem_definer_helper"])
@@ -60,7 +60,8 @@ def test_problem_definer_helper_extracts_intent(llm, prompts):
     assert len(result["problem_help"]) > 0
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_problem_definer_creates_definition(llm, prompts):
     """Test problem definer creates structured problem definition."""
     agent = ProblemDefinerAgent(llm, prompts["problem_definer"])
@@ -93,7 +94,8 @@ def test_problem_definer_creates_definition(llm, prompts):
     assert len(result["problem_definition"]) > 0
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_schema_generator_creates_valid_schema(llm, prompts):
     """Test schema generator creates valid JSON Schema."""
     agent = SchemaGeneratorAgent(llm, prompts["schema_generator"])
@@ -130,7 +132,8 @@ def test_schema_generator_creates_valid_schema(llm, prompts):
         assert schema["type"] == "object"
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_schema_assessment_validates_quality(llm, prompts):
     """Test schema assessment agent validates schema quality."""
     agent = SchemaAssessmentAgent(llm, prompts["schema_assessment"])
@@ -183,7 +186,8 @@ def test_schema_assessment_validates_quality(llm, prompts):
     assert isinstance(assessment["needs_refinement"], bool)
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_schema_assessment_flags_poor_quality(llm, prompts):
     """Test schema assessment identifies poor quality schemas."""
     agent = SchemaAssessmentAgent(llm, prompts["schema_assessment"])
@@ -222,7 +226,8 @@ def test_schema_assessment_flags_poor_quality(llm, prompts):
     assert assessment["needs_refinement"] is True
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_schema_refiner_improves_schema(llm, prompts):
     """Test schema refiner agent improves schema based on assessment."""
     agent = SchemaRefinerAgent(llm, prompts["schema_refiner"])
@@ -300,7 +305,8 @@ def test_agent_state_structure():
     assert "assessment_result" in state
 
 
-@pytest.mark.unit
+@pytest.mark.integration
+@pytest.mark.ai
 def test_agents_handle_empty_state_gracefully(llm, prompts):
     """Test that agents handle minimal state without crashing."""
     # Create minimal state
