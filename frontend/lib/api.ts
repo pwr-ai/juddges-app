@@ -236,6 +236,8 @@ export async function streamChatQuestion(
     let fullText = "";
     let documentIds: string[] | undefined;
     let latestChunkSequence = 0;
+    // Track pending animation timeout IDs so we can cancel them on new chunks
+    let pendingAnimationTimeouts: ReturnType<typeof setTimeout>[] = [];
 
     try {
       while (true) {
@@ -363,6 +365,17 @@ export async function streamChatQuestion(
                 const textLength = extractedText.length;
 
                 if (textLength > fullText.length) {
+                  // Cancel any in-progress animation before starting a new one
+                  // This prevents visual "jumping" when a new chunk arrives mid-animation
+                  if (pendingAnimationTimeouts.length > 0) {
+                    for (const tid of pendingAnimationTimeouts) {
+                      clearTimeout(tid);
+                    }
+                    pendingAnimationTimeouts = [];
+                    // Jump to the current full text so the user sees all content so far
+                    callbacks.onToken(fullText);
+                  }
+
                   const chunkSequence = ++latestChunkSequence;
                   const previousLength = fullText.length;
                   fullText = extractedText;
@@ -390,7 +403,8 @@ export async function streamChatQuestion(
                         currentPos = nextPos;
 
                         if (currentPos < extractedText.length) {
-                          setTimeout(streamChunks, CHUNK_DELAY_MS);
+                          const tid = setTimeout(streamChunks, CHUNK_DELAY_MS);
+                          pendingAnimationTimeouts.push(tid);
                         }
                       }
                     };

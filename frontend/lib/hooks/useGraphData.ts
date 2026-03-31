@@ -19,7 +19,7 @@ interface Document {
   document_type: DocumentType;
   full_text: string;
   summary?: string | null;
-  created_at: string;
+  created_at: string | null | undefined;
   language?: string;
   keywords?: string[];
   legal_concepts?: Array<{ concept_name: string }>;
@@ -110,14 +110,19 @@ const matchesFilters = (doc: Document, filters: SimilarityFilters): boolean => {
     return false;
   }
 
-  // Date range filter
+  // Date range filter — skip if created_at is missing or invalid
   if (filters.dateRange) {
-    const docDate = new Date(doc.created_at);
-    if (
-      docDate < filters.dateRange.start ||
-      docDate > filters.dateRange.end
-    ) {
-      return false;
+    if (!doc.created_at) {
+      // Don't exclude documents with missing dates from date-filtered results
+      // They simply can't be compared, so let them through
+    } else {
+      const docDate = new Date(doc.created_at);
+      if (
+        !isNaN(docDate.getTime()) &&
+        (docDate < filters.dateRange.start || docDate > filters.dateRange.end)
+      ) {
+        return false;
+      }
     }
   }
 
@@ -179,7 +184,9 @@ export const useGraphData = (
       documentId: doc.document_id,
       fullText: doc.full_text,
       summary: doc.summary || undefined,
-      date: new Date(doc.created_at),
+      date: doc.created_at && !isNaN(new Date(doc.created_at).getTime())
+        ? new Date(doc.created_at)
+        : null,
       language: doc.language || 'unknown',
       keywords: doc.keywords || [],
       legalConcepts: doc.legal_concepts,
@@ -287,7 +294,8 @@ export const getEdgeColor = (
 /**
  * Format date for display
  */
-export const formatDate = (date: Date): string => {
+export const formatDate = (date: Date | null): string => {
+  if (!date) return 'Unknown date';
   return new Intl.DateTimeFormat('en-GB', {
     year: 'numeric',
     month: 'short',

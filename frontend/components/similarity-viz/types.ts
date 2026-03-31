@@ -11,7 +11,7 @@ export interface GraphNode {
   documentId: string;
   fullText: string;
   summary?: string;
-  date: Date;
+  date: Date | null;
   language: string;
   keywords: string[];
   legalConcepts?: Array<{ concept_name: string }>;

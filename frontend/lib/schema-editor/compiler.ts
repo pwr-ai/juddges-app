@@ -364,19 +364,108 @@ export function exportSchemaAsJSON(
  * @param schema - Compiled JSON Schema
  * @returns YAML string (simplified)
  */
+/**
+ * Escape a YAML scalar value if it contains special characters.
+ * Wraps in double quotes and escapes internal double quotes/backslashes.
+ */
+function yamlEscapeValue(value: string): string {
+  // Characters that require quoting in YAML values
+  if (/[:#'"{}[\],&*?|>!%@`\n\r\t\\]/.test(value) || value.trim() !== value) {
+    const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `"${escaped}"`;
+  }
+  return value;
+}
+
+/**
+ * Render a JSON Schema property as YAML lines at a given indent level.
+ */
+function renderPropertyYAML(
+  key: string,
+  prop: JSONSchemaProperty,
+  indent: number,
+  requiredFields: string[] = []
+): string {
+  const pad = ' '.repeat(indent);
+  const lines: string[] = [];
+
+  lines.push(`${pad}${key}:`);
+  lines.push(`${pad}  type: ${prop.type}`);
+
+  if (prop.description) {
+    lines.push(`${pad}  description: ${yamlEscapeValue(prop.description)}`);
+  }
+
+  // Include required status
+  if (requiredFields.includes(key)) {
+    lines.push(`${pad}  required: true`);
+  }
+
+  // Basic validation rules
+  if (prop.pattern !== undefined) lines.push(`${pad}  pattern: ${yamlEscapeValue(prop.pattern)}`);
+  if (prop.minLength !== undefined) lines.push(`${pad}  minLength: ${prop.minLength}`);
+  if (prop.maxLength !== undefined) lines.push(`${pad}  maxLength: ${prop.maxLength}`);
+  if (prop.minimum !== undefined) lines.push(`${pad}  minimum: ${prop.minimum}`);
+  if (prop.maximum !== undefined) lines.push(`${pad}  maximum: ${prop.maximum}`);
+  if (prop.minItems !== undefined) lines.push(`${pad}  minItems: ${prop.minItems}`);
+  if (prop.maxItems !== undefined) lines.push(`${pad}  maxItems: ${prop.maxItems}`);
+  if (prop.uniqueItems !== undefined) lines.push(`${pad}  uniqueItems: ${prop.uniqueItems}`);
+  if (prop.enum) {
+    lines.push(`${pad}  enum:`);
+    for (const val of prop.enum) {
+      lines.push(`${pad}    - ${typeof val === 'string' ? yamlEscapeValue(val) : val}`);
+    }
+  }
+  if (prop.format) lines.push(`${pad}  format: ${prop.format}`);
+
+  // Nested object properties
+  if (prop.properties && Object.keys(prop.properties).length > 0) {
+    const childRequired = Array.isArray((prop as any).required)
+      ? (prop as any).required as string[]
+      : [];
+    lines.push(`${pad}  properties:`);
+    for (const [childKey, childProp] of Object.entries(prop.properties)) {
+      lines.push(renderPropertyYAML(childKey, childProp, indent + 4, childRequired));
+    }
+  }
+
+  // Array items
+  if (prop.items) {
+    lines.push(`${pad}  items:`);
+    lines.push(`${pad}    type: ${prop.items.type}`);
+    if (prop.items.description) {
+      lines.push(`${pad}    description: ${yamlEscapeValue(prop.items.description)}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
 export function exportSchemaAsYAML(schema: CompiledJSONSchema): string {
-  // Simple YAML export (for production, use js-yaml library)
-  return `# JSON Schema
-$schema: ${schema.$schema || 'http://json-schema.org/draft-07/schema#'}
-${schema.title ? `title: ${schema.title}` : ''}
-${schema.description ? `description: ${schema.description}` : ''}
-type: object
-properties:
-${Object.entries(schema.properties)
-  .map(([key, prop]) => `  ${key}:\n    type: ${prop.type}`)
-  .join('\n')}
-required:
-${schema.required.map((r) => `  - ${r}`).join('\n')}
-additionalProperties: false
-`;
+  const lines: string[] = [];
+  lines.push('# JSON Schema');
+  lines.push(`$schema: ${schema.$schema || 'http://json-schema.org/draft-07/schema#'}`);
+
+  // Only emit title/description if they exist (avoid blank lines)
+  if (schema.title) {
+    lines.push(`title: ${yamlEscapeValue(schema.title)}`);
+  }
+  if (schema.description) {
+    lines.push(`description: ${yamlEscapeValue(schema.description)}`);
+  }
+
+  lines.push('type: object');
+  lines.push('properties:');
+
+  for (const [key, prop] of Object.entries(schema.properties)) {
+    lines.push(renderPropertyYAML(key, prop, 2, schema.required));
+  }
+
+  lines.push('required:');
+  for (const r of schema.required) {
+    lines.push(`  - ${r}`);
+  }
+  lines.push('additionalProperties: false');
+
+  return lines.join('\n') + '\n';
 }
