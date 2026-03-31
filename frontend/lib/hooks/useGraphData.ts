@@ -111,18 +111,13 @@ const matchesFilters = (doc: Document, filters: SimilarityFilters): boolean => {
   }
 
   // Date range filter — skip if created_at is missing or invalid
-  if (filters.dateRange) {
-    if (!doc.created_at) {
-      // Don't exclude documents with missing dates from date-filtered results
-      // They simply can't be compared, so let them through
-    } else {
-      const docDate = new Date(doc.created_at);
-      if (
-        !isNaN(docDate.getTime()) &&
-        (docDate < filters.dateRange.start || docDate > filters.dateRange.end)
-      ) {
-        return false;
-      }
+  if (filters.dateRange && doc.created_at) {
+    const docDate = new Date(doc.created_at);
+    if (
+      !isNaN(docDate.getTime()) &&
+      (docDate < filters.dateRange.start || docDate > filters.dateRange.end)
+    ) {
+      return false;
     }
   }
 
