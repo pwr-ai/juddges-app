@@ -103,10 +103,10 @@ const customJestConfig = {
   // Coverage thresholds — start low, increase as coverage improves
   coverageThreshold: {
     global: {
-      statements: 3,
-      branches: 2,
-      functions: 3,
-      lines: 3,
+      statements: 18,
+      branches: 10,
+      functions: 15,
+      lines: 18,
     },
   },
 }

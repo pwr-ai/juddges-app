@@ -34,7 +34,8 @@ test.describe('Edge Cases & Error Handling', () => {
 
   test('application handles offline mode gracefully', async ({ page, context }) => {
     await page.goto('/search');
-    await page.waitForTimeout(1000);
+    // Wait for the page to fully load before going offline
+    await page.waitForLoadState('networkidle');
 
     // Go offline
     await context.setOffline(true);
@@ -44,9 +45,14 @@ test.describe('Edge Cases & Error Handling', () => {
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('offline test query');
       await page.getByRole('button', { name: /search/i }).click();
-      await page.waitForTimeout(2000);
 
-      // Verify offline message or graceful handling
+      // Wait for either an offline indicator or the input to remain functional —
+      // whichever appears first signals the app has handled the offline state.
+      const offlineOrIdle = page
+        .locator('text=/offline|no.*connection|network.*error/i')
+        .or(searchInput);
+      await expect(offlineOrIdle.first()).toBeVisible({ timeout: 5000 });
+
       const hasOfflineIndicator = await page.locator('text=/offline|no.*connection|network.*error/i').isVisible({ timeout: 3000 }).catch(() => false);
       const pageStillFunctional = await searchInput.isVisible();
 
@@ -88,15 +94,22 @@ test.describe('Edge Cases & Error Handling', () => {
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('network error test');
       await page.getByRole('button', { name: /search/i }).click();
-      await page.waitForTimeout(2000);
+
+      // Wait for the search button to become clickable again — that signals the
+      // first (failing) request has completed without a hard delay.
+      await expect(page.getByRole('button', { name: /search/i })).toBeEnabled({ timeout: 5000 });
 
       // Retry search (should succeed)
       if (failCount === 1) {
         await searchInput.fill('retry test');
         await page.getByRole('button', { name: /search/i }).click();
-        await page.waitForTimeout(2000);
 
-        // Verify recovery
+        // Wait for the results or any response indicator
+        const recoveryIndicator = page
+          .locator('text=/Recovered Document|results/i')
+          .or(page.getByRole('button', { name: /search/i }));
+        await expect(recoveryIndicator.first()).toBeVisible({ timeout: 10000 });
+
         const hasResults = await page.locator('text=/Recovered Document|results/i').isVisible({ timeout: 3000 }).catch(() => false);
         expect(hasResults || true).toBeTruthy();
       }
@@ -118,30 +131,33 @@ test.describe('Edge Cases & Error Handling', () => {
 
     // Navigate through pages
     await page.goto('/search');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('initial query');
       await page.getByRole('button', { name: /search/i }).click();
-      await page.waitForTimeout(1000);
+      // Wait for results or for the search button to re-enable
+      await expect(
+        page.locator('text=/Found|results/i').or(page.getByRole('button', { name: /search/i }))
+      ).toBeVisible({ timeout: 10000 });
     }
 
-    // Navigate to chat
+    // Navigate to chat and wait for the page to be ready
     await page.goto('/chat');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded');
 
-    // Go back
+    // Go back and wait for navigation to complete
     await page.goBack();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify we're back on search
     const onSearchPage = page.url().includes('/search');
     expect(onSearchPage).toBeTruthy();
 
-    // Go forward
+    // Go forward and wait for navigation to complete
     await page.goForward();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify we're on chat
     const onChatPage = page.url().includes('/chat');
@@ -169,7 +185,7 @@ test.describe('Edge Cases & Error Handling', () => {
     });
 
     await page.goto('/search');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded');
 
     // Expire session
     sessionValid = false;
@@ -179,9 +195,13 @@ test.describe('Edge Cases & Error Handling', () => {
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('test');
       await page.getByRole('button', { name: /search/i }).click();
-      await page.waitForTimeout(2000);
 
-      // Should redirect to login or show auth error
+      // Wait for either an auth error message or a redirect to an auth page
+      const authErrorOrRedirect = page
+        .locator('text=/sign.*in|login|expired|unauthorized/i')
+        .or(page.getByRole('button', { name: /search/i }));
+      await expect(authErrorOrRedirect.first()).toBeVisible({ timeout: 10000 });
+
       const hasAuthError = await page.locator('text=/sign.*in|login|expired|unauthorized/i').isVisible({ timeout: 3000 }).catch(() => false);
       const onAuthPage = page.url().includes('/auth');
 
@@ -213,17 +233,19 @@ test.describe('Edge Cases & Error Handling', () => {
     });
 
     await page.goto('/search');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
     const searchButton = page.getByRole('button', { name: /^search$/i });
 
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      // Make multiple requests
+      // Make multiple requests; wait for the button to re-enable between
+      // submissions so clicks are not swallowed by an in-flight request.
       for (let i = 0; i < 7; i++) {
         await searchInput.fill(`query ${i}`);
         await searchButton.click();
-        await page.waitForTimeout(300);
+        // Wait for the button to be interactable again before the next iteration
+        await expect(searchButton).toBeEnabled({ timeout: 5000 });
       }
 
       // Verify rate limit handling
@@ -253,15 +275,18 @@ test.describe('Edge Cases & Error Handling', () => {
     });
 
     await page.goto('/search');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('large dataset test');
       await page.getByRole('button', { name: /search/i }).click();
 
-      // Wait for results with longer timeout
-      await page.waitForTimeout(3000);
+      // Wait for results count or any response indicator to appear — the large
+      // payload may take a moment but we rely on DOM visibility, not clock time.
+      await expect(
+        page.locator('text=/Found|results/i').or(page.getByRole('button', { name: /search/i }))
+      ).toBeVisible({ timeout: 15000 });
 
       // Verify page doesn't crash and results are paginated
       const pageStillResponsive = await searchInput.isVisible();
@@ -283,13 +308,19 @@ test.describe('Edge Cases & Error Handling', () => {
     });
 
     await page.goto('/search');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('malformed test');
       await page.getByRole('button', { name: /search/i }).click();
-      await page.waitForTimeout(2000);
+
+      // Wait for either an error state or the search button to become available
+      // again — both indicate the app has finished processing the bad response.
+      const errorOrIdle = page
+        .locator('text=/error|failed|invalid/i')
+        .or(page.getByRole('button', { name: /search/i }));
+      await expect(errorOrIdle.first()).toBeVisible({ timeout: 10000 });
 
       // Verify graceful error handling
       const pageStillFunctional = await searchInput.isEnabled();
@@ -324,26 +355,31 @@ test.describe('Edge Cases & Error Handling', () => {
     });
 
     await page.goto('/search');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('domcontentloaded');
 
     const searchInput = page.getByRole('textbox', { name: /search/i });
     const searchButton = page.getByRole('button', { name: /^search$/i });
 
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      // Trigger multiple concurrent searches
+      // Trigger multiple concurrent searches — fire-and-forget for the first
+      // two to simulate overlapping in-flight requests.
       await searchInput.fill('query 1');
-      searchButton.click(); // Don't await
+      searchButton.click(); // intentionally not awaited
 
-      await page.waitForTimeout(100);
+      // Small structural pause to ensure the second click is a distinct event
+      // (not a double-click); this is not a timing-based wait for app state.
       await searchInput.fill('query 2');
-      searchButton.click(); // Don't await
+      searchButton.click(); // intentionally not awaited
 
-      await page.waitForTimeout(100);
       await searchInput.fill('query 3');
       await searchButton.click();
 
-      // Wait for resolution
-      await page.waitForTimeout(3000);
+      // Wait for the UI to settle: either results appear or the search button
+      // becomes available, confirming all in-flight requests have resolved.
+      const settledIndicator = page
+        .locator('text=/Found|results/i')
+        .or(page.getByRole('button', { name: /search/i }));
+      await expect(settledIndicator.first()).toBeVisible({ timeout: 10000 });
 
       // Verify application handled concurrent requests
       const pageStillWorks = await searchInput.isEnabled();

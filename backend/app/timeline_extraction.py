@@ -8,7 +8,7 @@ sequence events, and identify key milestones in legal proceedings.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
@@ -17,8 +17,12 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.models import validate_id_format
+from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/timeline", tags=["timeline"])
+
+# Per-endpoint rate limit for computationally expensive timeline extraction
+TIMELINE_RATE_LIMIT = "10/hour"
 
 
 # ===== Prompt Templates =====
@@ -240,7 +244,9 @@ def _format_document_for_timeline(doc: dict[str, Any]) -> str:
         "and sequence events in legal proceedings."
     ),
 )
+@limiter.limit(TIMELINE_RATE_LIMIT)
 async def extract_timeline(
+    http_request: Request,
     request: TimelineExtractionRequest,
 ) -> TimelineExtractionResponse:
     """Extract a chronological timeline from legal documents."""

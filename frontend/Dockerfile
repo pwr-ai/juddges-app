@@ -13,7 +13,7 @@
 # ==============================================================================
 # Base Stage - Common Setup
 # ==============================================================================
-FROM node:24-alpine AS base
+FROM node:24.11-alpine AS base
 WORKDIR /app
 
 # ==============================================================================
@@ -54,10 +54,12 @@ FROM base AS deps
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies fresh from package.json
-# Using npm install (not ci) because this is a workspace sub-project without its own lockfile
-# Use --no-cache in docker build to force completely fresh npm install
-RUN npm cache clean --force && npm install --legacy-peer-deps
+# Install dependencies from lockfile for production reproducibility
+# npm ci is preferred over npm install for production builds:
+# - Faster, reliable, reproducible builds using package-lock.json
+# - Automatically removes node_modules before installing
+# Development uses npm install for flexibility with dependency resolution
+RUN npm cache clean --force && npm ci
 
 # ==============================================================================
 # Builder Stage - Production Build
@@ -90,7 +92,7 @@ RUN npm run build
 # ==============================================================================
 # Production Target - Optimized Runtime
 # ==============================================================================
-FROM node:24-alpine AS production
+FROM node:24.11-alpine AS production
 
 # Create a non-root user for security
 RUN addgroup -g 1001 -S nodejs

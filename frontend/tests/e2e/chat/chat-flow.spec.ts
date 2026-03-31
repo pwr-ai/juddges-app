@@ -117,10 +117,7 @@ test.describe('Chat Flow', () => {
     await input.fill('Explain legal precedent');
     await page.locator('button[type="submit"]').first().click();
 
-    // Wait for streaming to start
-    await page.waitForTimeout(1000);
-
-    // Verify assistant message appears
+    // Verify assistant message appears — auto-wait handles the streaming delay
     const assistantMessages = page.locator('[data-testid="chat-message-assistant"], [data-testid="chat-message"][data-role="assistant"]');
     await expect(assistantMessages.first()).toBeVisible({ timeout: 10000 });
 
@@ -157,10 +154,7 @@ test.describe('Chat Flow', () => {
     await input.fill('Find cases about contract law');
     await page.locator('button[type="submit"]').first().click();
 
-    // Wait for response with sources
-    await page.waitForTimeout(2000);
-
-    // Check for sources section or badge
+    // Check for sources section or badge — no hard delay needed
     const sourcesIndicators = page.locator('[data-testid="message-sources"], [class*="sources"], text=sources, text=Source');
     await expect(sourcesIndicators.first()).toBeVisible({ timeout: 30000 });
   });
@@ -231,8 +225,8 @@ test.describe('Chat Flow', () => {
     const submitButton = page.locator('button[type="submit"]').first();
     await submitButton.click();
 
-    // Wait for potential error to appear
-    await page.waitForTimeout(2000);
+    // Wait for the send button to re-enable, confirming the error was handled
+    await expect(page.locator('button[type="submit"]').first()).toBeEnabled({ timeout: 10000 });
 
     // Test passes if no exceptions thrown (error handling might vary)
     expect(true).toBeTruthy();

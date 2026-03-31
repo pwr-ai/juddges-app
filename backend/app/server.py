@@ -358,7 +358,7 @@ app = FastAPI(
     openapi_tags=[
         {
             "name": "deprecated",
-            "description": "⚠️ **Deprecated endpoints** - These endpoints are deprecated and will be removed in v0.4.0. Please migrate to the recommended alternatives listed in each endpoint's documentation.",
+            "description": "**Deprecated endpoints** - These endpoints are deprecated and will be removed in v0.4.0. Please migrate to the recommended alternatives listed in each endpoint's documentation.",
         },
     ],
 )
@@ -377,6 +377,7 @@ logger.info(
 # Configure CORS with environment-based origins
 # In development: Allow localhost and common dev ports
 # In production: Restrict to specific frontend domains
+_app_env = os.getenv("APP_ENV", "").strip().lower()
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
 _parsed_origins = (
     [o.strip() for o in _raw_origins.split(",") if o.strip()] if _raw_origins else []
@@ -388,12 +389,26 @@ _default_origins = [
     "http://127.0.0.1:3006",
     "http://localhost:8004",  # Backend API docs
 ]
-ALLOWED_ORIGINS = _parsed_origins if _parsed_origins else _default_origins
-if _raw_origins and not _parsed_origins:
-    logger.warning(
-        f"ALLOWED_ORIGINS env var is set but contains no valid origins (value: '{_raw_origins}'). "
-        "Falling back to default development origins."
+
+if _parsed_origins:
+    ALLOWED_ORIGINS = _parsed_origins
+elif _app_env == "production":
+    # In production, refuse to fall back to permissive localhost origins.
+    # An empty list effectively blocks all cross-origin requests until
+    # ALLOWED_ORIGINS is correctly configured.
+    logger.critical(
+        "ALLOWED_ORIGINS is empty or malformed in production! "
+        f"(raw value: '{_raw_origins}'). "
+        "CORS will block all cross-origin requests until this is fixed."
     )
+    ALLOWED_ORIGINS = []
+else:
+    ALLOWED_ORIGINS = _default_origins
+    if _raw_origins and not _parsed_origins:
+        logger.warning(
+            f"ALLOWED_ORIGINS env var is set but contains no valid origins (value: '{_raw_origins}'). "
+            "Falling back to default development origins."
+        )
 
 # Add production origins if set (HTTPS only for security)
 if os.getenv("VIRTUAL_HOST_FRONTEND"):
@@ -443,11 +458,15 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
     # Content-Security-Policy: Mitigate XSS and injection attacks
+    # TODO: Replace 'unsafe-inline' with nonce-based CSP for script-src.
+    # Next.js requires inline scripts for hydration, so 'unsafe-inline' is kept
+    # as a temporary measure. The proper fix is to configure Next.js to emit a
+    # CSP nonce (via next.config.js headers or middleware) and pass it here.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob: https:; "
+        "img-src 'self' blob: https:; "
         "font-src 'self' data:; "
         "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com; "
         "frame-ancestors 'none'; "
@@ -534,10 +553,12 @@ app.include_router(experiments_router)
 # Guest sessions - no API key required (public endpoint)
 app.include_router(guest_sessions_router)
 
-# Analytics and feedback - use JWT authentication (implemented in endpoints)
-# These endpoints support both authenticated and anonymous users
-# Authentication is handled per-endpoint with get_optional_user dependency
-app.include_router(analytics_router)
+# Analytics - requires API key authentication to protect usage data
+app.include_router(analytics_router, dependencies=[Depends(verify_api_key)])
+
+# Feedback - intentionally open (no API key) to allow anonymous feedback
+# submissions from unauthenticated users. Per-endpoint auth via
+# get_optional_user handles authenticated vs anonymous feedback.
 app.include_router(feedback_router)
 
 # Include audit trail and compliance routers (JWT authentication required)

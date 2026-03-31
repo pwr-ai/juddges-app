@@ -20,7 +20,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy scripts and config
 COPY scripts/ scripts/
-COPY .env .env
+# NOTE: .env file removed from image for security
+# Pass secrets at runtime using --env-file or -e flags
 
 # Create data directory
 RUN mkdir -p data/

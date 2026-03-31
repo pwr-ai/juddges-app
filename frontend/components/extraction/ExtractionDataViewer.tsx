@@ -16,6 +16,7 @@ import { ExtractionObjectRenderer } from "./ExtractionObjectRenderer";
 import { cn } from "@/lib/utils";
 import { Grid3x3, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DOMPurify from "dompurify";
 
 export interface ExtractionDataViewerProps {
  /**
@@ -118,7 +119,7 @@ export function ExtractionDataViewer({
  } else {
  // Fallback: use a temporary element to copy HTML
  const tempDiv = document.createElement('div');
- tempDiv.innerHTML = htmlTable;
+ tempDiv.innerHTML = DOMPurify.sanitize(htmlTable);
  tempDiv.style.position = 'fixed';
  tempDiv.style.left = '-9999px';
  document.body.appendChild(tempDiv);

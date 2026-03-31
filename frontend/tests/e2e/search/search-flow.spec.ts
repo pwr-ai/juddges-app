@@ -135,8 +135,8 @@ test.describe('Search Functionality', () => {
       const filterOption = page.locator('input[type="checkbox"], [role="checkbox"]').first();
       if (await filterOption.count() > 0) {
         await filterOption.click();
-        // Verify filter was applied (results may change)
-        await page.waitForTimeout(1000);
+        // Wait for the UI to react to the filter change rather than a hard delay
+        await page.waitForLoadState('domcontentloaded');
       }
     }
 
@@ -194,11 +194,13 @@ test.describe('Search Functionality', () => {
     await page.fill('input[placeholder*="search"]', 'test query');
     await page.click('button:has-text("Search")');
 
-    // Wait for potential error message
-    await page.waitForTimeout(3000);
-
-    // Look for error indicators
-    // const errorElements = page.locator('.error, [class*="error"], .text-red, [class*="text-red"]');
+    // Wait for the UI to settle after the failed request — either an error
+    // element becomes visible or the search button returns to its default state.
+    // Both conditions are checked without a hard delay.
+    const errorOrIdle = page
+      .locator('.error, [class*="error"], .text-red, [class*="text-red"], [role="alert"]')
+      .or(page.getByRole('button', { name: /^search$/i }));
+    await expect(errorOrIdle.first()).toBeVisible({ timeout: 10000 });
 
     // Error handling might vary, so we just verify the search attempt was made
     expect(true).toBeTruthy();
@@ -262,11 +264,15 @@ test.describe('Search Functionality', () => {
     await page.fill('input[placeholder*="search"]', 'nonexistent query');
     await page.click('button:has-text("Search")');
 
-    // Wait and verify empty state message
-    await page.waitForTimeout(2000);
+    // Wait for either an empty-state message or the search button to re-enable,
+    // which signals the response has been processed — no hard timeout needed.
+    const emptyOrIdle = page
+      .locator('text=/no.*results|no.*found|nothing.*found/i')
+      .or(page.getByRole('button', { name: /^search$/i }));
+    await expect(emptyOrIdle.first()).toBeVisible({ timeout: 10000 });
 
-    // Look for empty state indicators
-    const emptyMessages = page.locator('text=No, text=found, text=match, text=empty');
+    // If an explicit empty state message is present, assert it
+    const emptyMessages = page.locator('text=/no.*results|no.*found|nothing.*found/i');
     if (await emptyMessages.count() > 0) {
       await expect(emptyMessages.first()).toBeVisible();
     }

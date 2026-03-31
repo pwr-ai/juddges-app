@@ -278,11 +278,14 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       stopGeneration();
       // Wait a bit for the abort to complete and state to update
       await new Promise(resolve => setTimeout(resolve, 150));
-      
+
       // Remove any partial assistant message that might have been added (empty content)
-      // Get the cleaned messages directly from the state update
-      currentMessages = messages.filter(m => !(m.role === "assistant" && !m.content));
-      setMessages(currentMessages);
+      // Use functional update to avoid stale closure
+      setMessages(prev => {
+        const filtered = prev.filter(m => !(m.role === "assistant" && !m.content));
+        currentMessages = filtered;
+        return filtered;
+      });
     }
 
     // Find the message to edit

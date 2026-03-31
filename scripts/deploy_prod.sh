@@ -21,6 +21,9 @@ COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
 ENV_FILE="${REPO_ROOT}/.env"
 DEPLOY_LOG="${REPO_ROOT}/.deploy-history"
 
+# Expected services that must be running after deploy
+REQUIRED_SERVICES=("frontend" "backend" "meilisearch" "backend-worker" "backend-beat")
+
 # ------------------------------------------------------------------------------
 # Color output
 # ------------------------------------------------------------------------------
@@ -34,6 +37,47 @@ info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
 ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 err()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+
+# ------------------------------------------------------------------------------
+# Pre-flight checks
+# ------------------------------------------------------------------------------
+preflight_checks() {
+    info "Running pre-flight checks ..."
+
+    # Check Docker daemon is running
+    if ! docker info >/dev/null 2>&1; then
+        err "Docker daemon is not running. Start Docker and try again."
+        exit 1
+    fi
+    ok "Docker daemon is running"
+
+    # Check available disk space (warn if < 5GB free)
+    local avail_kb
+    avail_kb=$(df --output=avail "${REPO_ROOT}" 2>/dev/null | tail -1 | tr -d ' ')
+    if [[ -n "${avail_kb}" ]]; then
+        local avail_gb=$(( avail_kb / 1024 / 1024 ))
+        if [[ ${avail_gb} -lt 5 ]]; then
+            warn "Low disk space: ${avail_gb}GB available (< 5GB). Deployments may fail."
+        else
+            ok "Disk space: ${avail_gb}GB available"
+        fi
+    fi
+
+    # Log current running container versions for rollback reference
+    info "Current container versions:"
+    local container_id
+    for svc in "${REQUIRED_SERVICES[@]}"; do
+        container_id=$(docker compose -f "${COMPOSE_FILE}" ps -q "${svc}" 2>/dev/null || true)
+        if [[ -n "${container_id}" ]]; then
+            local img
+            img=$(docker inspect --format='{{.Config.Image}}' "${container_id}" 2>/dev/null || echo "unknown")
+            echo "  ${svc}: ${img}"
+        else
+            echo "  ${svc}: not running"
+        fi
+    done
+    echo ""
+}
 
 # ------------------------------------------------------------------------------
 # Show current deployment status
@@ -86,6 +130,39 @@ pull_images() {
 }
 
 # ------------------------------------------------------------------------------
+# Check individual service health
+# ------------------------------------------------------------------------------
+check_service_status() {
+    local svc="$1"
+    local status
+    status=$(docker compose -f "${COMPOSE_FILE}" ps --format json "${svc}" 2>/dev/null | \
+        timeout 5 python3 -c "
+import sys, json
+data = sys.stdin.read().strip()
+if not data:
+    print('missing')
+    sys.exit()
+for line in data.split('\n'):
+    if not line: continue
+    try:
+        svc = json.loads(line)
+        state = svc.get('State', '').lower()
+        health = svc.get('Health', '').lower()
+        if state != 'running':
+            print('stopped')
+        elif 'unhealthy' in health:
+            print('unhealthy')
+        elif 'healthy' in health:
+            print('healthy')
+        else:
+            print('running')
+    except:
+        print('unknown')
+" 2>/dev/null || echo "unknown")
+    echo "${status}"
+}
+
+# ------------------------------------------------------------------------------
 # Deploy with docker compose
 # ------------------------------------------------------------------------------
 deploy() {
@@ -111,46 +188,87 @@ deploy() {
     local all_healthy=false
 
     while [[ ${elapsed} -lt ${max_wait} ]]; do
-        local unhealthy
-        unhealthy=$(docker compose -f "${COMPOSE_FILE}" ps --format json 2>/dev/null | \
-            python3 -c "
-import sys, json
-lines = sys.stdin.read().strip().split('\n')
-unhealthy = 0
-for line in lines:
-    if not line: continue
-    try:
-        svc = json.loads(line)
-        health = svc.get('Health', svc.get('Status', ''))
-        if 'unhealthy' in health.lower():
-            unhealthy += 1
-    except: pass
-print(unhealthy)
-" 2>/dev/null || echo "0")
+        local all_ok=true
+        local status_line=""
 
-        local running
-        running=$(docker compose -f "${COMPOSE_FILE}" ps --status running --format json 2>/dev/null | \
-            python3 -c "import sys; print(len([l for l in sys.stdin.read().strip().split('\n') if l]))" 2>/dev/null || echo "0")
+        for svc in "${REQUIRED_SERVICES[@]}"; do
+            local svc_status
+            svc_status=$(check_service_status "${svc}")
+            status_line="${status_line} ${svc}=${svc_status}"
 
-        if [[ "${running}" -ge 3 && "${unhealthy}" -eq 0 ]]; then
+            if [[ "${svc_status}" == "unhealthy" || "${svc_status}" == "stopped" || "${svc_status}" == "missing" ]]; then
+                all_ok=false
+            elif [[ "${svc_status}" != "healthy" && "${svc_status}" != "running" ]]; then
+                all_ok=false
+            fi
+        done
+
+        if ${all_ok}; then
             all_healthy=true
             break
         fi
 
         sleep 5
         elapsed=$((elapsed + 5))
-        echo -n "."
+        echo -ne "\r  [${elapsed}s/${max_wait}s]${status_line}"
     done
     echo ""
 
     if ${all_healthy}; then
         ok "All services are running!"
     else
-        warn "Some services may not be fully healthy yet. Check with: docker compose -f ${COMPOSE_FILE} ps"
+        warn "Health check timed out after ${max_wait}s. Service status:"
+        for svc in "${REQUIRED_SERVICES[@]}"; do
+            local svc_status
+            svc_status=$(check_service_status "${svc}")
+            if [[ "${svc_status}" != "healthy" && "${svc_status}" != "running" ]]; then
+                err "  ${svc}: ${svc_status}"
+            else
+                ok "  ${svc}: ${svc_status}"
+            fi
+        done
+        warn "To rollback, run: ./scripts/deploy_prod.sh --rollback"
+        warn "To check logs:    docker compose -f ${COMPOSE_FILE} logs <service-name>"
     fi
 
     # Log deployment
     echo "$(date -Iseconds) deployed ${tag} from $(hostname)" >> "${DEPLOY_LOG}"
+}
+
+# ------------------------------------------------------------------------------
+# Post-deploy validation
+# ------------------------------------------------------------------------------
+post_deploy_validation() {
+    info "Running post-deploy validation ..."
+    local validation_passed=true
+
+    # Test frontend HTTP response
+    info "Checking frontend (http://localhost:3006/) ..."
+    if curl -sf --max-time 10 http://localhost:3006/ >/dev/null 2>&1; then
+        ok "Frontend is responding with HTTP 200"
+    else
+        warn "Frontend is not responding on http://localhost:3006/"
+        warn "  This may be expected if frontend is only exposed via reverse proxy."
+        validation_passed=false
+    fi
+
+    # Test backend health endpoint
+    info "Checking backend health (http://localhost:8002/health/healthz) ..."
+    if curl -sf --max-time 10 http://localhost:8002/health/healthz >/dev/null 2>&1; then
+        ok "Backend health endpoint is responding"
+    else
+        warn "Backend health endpoint is not responding on http://localhost:8002/health/healthz"
+        warn "  This may be expected if ports are only exposed within Docker network."
+        validation_passed=false
+    fi
+
+    if ! ${validation_passed}; then
+        warn "Post-deploy validation had warnings. Services may still be healthy inside Docker."
+        warn "Check container-level health: docker compose -f ${COMPOSE_FILE} ps"
+        warn "To rollback if needed:        ./scripts/deploy_prod.sh --rollback"
+    else
+        ok "Post-deploy validation passed"
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -211,6 +329,9 @@ main() {
     info "Compose file:      ${COMPOSE_FILE}"
     echo ""
 
+    # Pre-flight checks
+    preflight_checks
+
     # Show what's currently running
     info "Currently running:"
     docker compose -f "${COMPOSE_FILE}" ps 2>/dev/null || echo "  (nothing running)"
@@ -230,6 +351,10 @@ main() {
 
     # Deploy
     deploy "${tag}"
+    echo ""
+
+    # Post-deploy validation
+    post_deploy_validation
 
     echo ""
     ok "=== Deployment complete ==="

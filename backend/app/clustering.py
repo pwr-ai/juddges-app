@@ -14,12 +14,17 @@ from collections import Counter
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.rate_limiter import limiter
+
 router = APIRouter(prefix="/clustering", tags=["clustering"])
+
+# Per-endpoint rate limit for computationally expensive clustering
+CLUSTERING_RATE_LIMIT = "10/hour"
 
 
 # ===== Models =====
@@ -331,7 +336,10 @@ def _kmeans(
     response_model=ClusteringResponse,
     summary="Cluster documents by semantic similarity",
 )
-async def get_semantic_clusters(request: ClusteringRequest) -> ClusteringResponse:
+@limiter.limit(CLUSTERING_RATE_LIMIT)
+async def get_semantic_clusters(
+    http_request: Request, request: ClusteringRequest
+) -> ClusteringResponse:
     """
     Cluster documents using their embedding vectors.
 

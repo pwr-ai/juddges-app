@@ -311,8 +311,6 @@ def extract_information_from_documents_task(
         total_documents = len(documents)
 
         for idx, doc in enumerate(documents):
-            time.time()
-
             # Extract information - this may fail if LLM service is unavailable
             # The extractor has its own retry logic, but we catch connection errors here too
             # Select language-specific extraction instructions based on request language
@@ -410,7 +408,6 @@ def extract_information_from_documents_task(
             )
 
         # Check results and update task state accordingly
-        datetime.now(UTC)
         # NOTE: Do NOT call update_state() with final states (SUCCESS, FAILURE, etc.) before returning!
         # When we call update_state() and then return a value, Celery's Redis backend may store
         # the metadata from update_state() instead of the actual return value when fetching with .get().

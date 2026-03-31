@@ -2,13 +2,17 @@
 
 import asyncio
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from loguru import logger
 from pydantic import BaseModel
 
 from app.core.supabase import get_supabase_client
+from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/example_questions", tags=["example_questions"])
+
+# Per-endpoint rate limit for example questions (lightweight endpoint)
+EXAMPLE_QUESTIONS_RATE_LIMIT = "30/hour"
 
 
 class ExampleQuestionsResponse(BaseModel):
@@ -18,8 +22,9 @@ class ExampleQuestionsResponse(BaseModel):
 
 
 @router.get("", response_model=ExampleQuestionsResponse)
+@limiter.limit(EXAMPLE_QUESTIONS_RATE_LIMIT)
 async def get_example_questions(
-    num_polish: int = 2, num_english: int = 2
+    http_request: Request, num_polish: int = 2, num_english: int = 2
 ) -> ExampleQuestionsResponse:
     """
     Get randomly sampled example questions from database.

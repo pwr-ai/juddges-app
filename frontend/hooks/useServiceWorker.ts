@@ -11,30 +11,50 @@ export function useServiceWorker() {
       return;
     }
 
+    let registrationRef: ServiceWorkerRegistration | null = null;
+    let newWorkerRef: ServiceWorker | null = null;
+
+    // Store references to event listener functions for cleanup
+    const onStateChange = () => {
+      if (
+        newWorkerRef?.state === "installed" &&
+        navigator.serviceWorker.controller
+      ) {
+        setUpdateAvailable(true);
+      }
+    };
+
+    const onUpdateFound = () => {
+      const newWorker = registrationRef?.installing;
+      if (!newWorker) return;
+
+      newWorkerRef = newWorker;
+      newWorker.addEventListener("statechange", onStateChange);
+    };
+
     // Register the service worker
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
       .then((registration) => {
+        registrationRef = registration;
         setIsRegistered(true);
 
         // Check for updates periodically
-        registration.addEventListener("updatefound", () => {
-          const newWorker = registration.installing;
-          if (!newWorker) return;
-
-          newWorker.addEventListener("statechange", () => {
-            if (
-              newWorker.state === "installed" &&
-              navigator.serviceWorker.controller
-            ) {
-              setUpdateAvailable(true);
-            }
-          });
-        });
+        registration.addEventListener("updatefound", onUpdateFound);
       })
       .catch((error) => {
         console.warn("Service worker registration failed: ", error);
       });
+
+    // Cleanup function to remove event listeners
+    return () => {
+      if (registrationRef) {
+        registrationRef.removeEventListener("updatefound", onUpdateFound);
+      }
+      if (newWorkerRef) {
+        newWorkerRef.removeEventListener("statechange", onStateChange);
+      }
+    };
   }, []);
 
   const applyUpdate = () => {

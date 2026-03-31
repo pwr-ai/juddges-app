@@ -7,7 +7,7 @@ and legal issues. Uses semantic similarity and legal reasoning to rank results.
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
@@ -17,8 +17,12 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.documents import generate_embedding
 from app.models import validate_id_format
+from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/precedents", tags=["precedents"])
+
+# Per-endpoint rate limit for precedent search (lighter than full analysis endpoints)
+PRECEDENTS_RATE_LIMIT = "30/hour"
 
 
 # ===== Request/Response Models =====
@@ -465,7 +469,10 @@ def _rank_precedents(precedents: list[PrecedentMatch]) -> list[PrecedentMatch]:
         "legal reasoning to rank results by relevance."
     ),
 )
-async def find_precedents(request: FindPrecedentsRequest) -> FindPrecedentsResponse:
+@limiter.limit(PRECEDENTS_RATE_LIMIT)
+async def find_precedents(
+    http_request: Request, request: FindPrecedentsRequest
+) -> FindPrecedentsResponse:
     """Find relevant precedent cases using semantic search and AI analysis."""
     logger.info(
         f"Precedent search request: query_length={len(request.query)}, "

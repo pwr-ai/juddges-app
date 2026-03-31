@@ -8,7 +8,7 @@ find potential counter-arguments.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
@@ -17,8 +17,12 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.models import validate_id_format
+from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/argumentation", tags=["argumentation"])
+
+# Per-endpoint rate limit for computationally expensive argumentation analysis
+ARGUMENTATION_RATE_LIMIT = "10/hour"
 
 
 # ===== Prompt Constants =====
@@ -270,7 +274,9 @@ def _format_document_for_analysis(doc: dict[str, Any]) -> str:
         "Uses AI to decompose complex legal reasoning into structured components."
     ),
 )
+@limiter.limit(ARGUMENTATION_RATE_LIMIT)
 async def analyze_arguments(
+    http_request: Request,
     request: ArgumentationRequest,
 ) -> ArgumentationResponse:
     """Analyze the argumentation structure of legal documents."""

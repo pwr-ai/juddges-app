@@ -8,7 +8,7 @@ multi-document synthesis.
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from juddges_search.prompts.summarization import (
@@ -24,8 +24,12 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.models import validate_id_format
+from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/summarize", tags=["summarization"])
+
+# Per-endpoint rate limit for computationally expensive summarization
+SUMMARIZATION_RATE_LIMIT = "10/hour"
 
 
 # ===== Request/Response Models =====
@@ -162,7 +166,10 @@ def _format_document_for_summary(doc: dict[str, Any]) -> str:
         "Supports executive summaries, key findings extraction, and multi-document synthesis."
     ),
 )
-async def summarize_documents(request: SummarizeRequest) -> SummarizeResponse:
+@limiter.limit(SUMMARIZATION_RATE_LIMIT)
+async def summarize_documents(
+    http_request: Request, request: SummarizeRequest
+) -> SummarizeResponse:
     """Generate an AI summary of legal documents."""
     logger.info(
         f"Summarization request: type={request.summary_type}, "
@@ -331,7 +338,10 @@ class KeyPointsResponse(BaseModel):
         "reference to its source paragraph in the document."
     ),
 )
-async def extract_key_points(request: KeyPointsRequest) -> KeyPointsResponse:
+@limiter.limit(SUMMARIZATION_RATE_LIMIT)
+async def extract_key_points(
+    http_request: Request, request: KeyPointsRequest
+) -> KeyPointsResponse:
     """Extract structured key points from a legal document."""
     logger.info(f"Key points extraction request: document={request.document_id}")
 

@@ -14,12 +14,17 @@ from collections import Counter
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.rate_limiter import limiter
+
 router = APIRouter(prefix="/topic-modeling", tags=["topic-modeling"])
+
+# Per-endpoint rate limit for computationally expensive topic modeling
+TOPIC_MODELING_RATE_LIMIT = "10/hour"
 
 
 # ===== Models =====
@@ -669,7 +674,10 @@ def _build_topics(
     response_model=TopicModelingResponse,
     summary="Identify emerging legal topics and trends",
 )
-async def analyze_topics(request: TopicModelingRequest) -> TopicModelingResponse:
+@limiter.limit(TOPIC_MODELING_RATE_LIMIT)
+async def analyze_topics(
+    http_request: Request, request: TopicModelingRequest
+) -> TopicModelingResponse:
     """
     Perform topic modeling on the document corpus.
 
@@ -748,7 +756,9 @@ async def analyze_topics(request: TopicModelingRequest) -> TopicModelingResponse
     response_model=TopicModelingResponse,
     summary="Quick trending topics analysis",
 )
+@limiter.limit(TOPIC_MODELING_RATE_LIMIT)
 async def get_trending_topics(
+    http_request: Request,
     num_topics: int = Query(default=5, ge=2, le=15, description="Number of topics"),
     sample_size: int = Query(
         default=200, ge=20, le=500, description="Documents to analyze"

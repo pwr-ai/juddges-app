@@ -1,7 +1,7 @@
 # ==============================================================================
 # Base Stage - Common Poetry setup
 # ==============================================================================
-FROM python:3.12-slim AS base
+FROM python:3.12.10-slim AS base
 
 RUN pip install --no-cache-dir poetry==2.1.3 && \
     poetry config virtualenvs.create false
@@ -53,7 +53,7 @@ RUN poetry install --no-interaction --no-ansi --no-root --only main
 # ==============================================================================
 # Production Stage - Optimized for production deployment
 # ==============================================================================
-FROM python:3.12-slim AS production
+FROM python:3.12.10-slim AS production
 
 WORKDIR /app
 
