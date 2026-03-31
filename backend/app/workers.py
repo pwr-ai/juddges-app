@@ -213,6 +213,11 @@ def extract_information_from_documents_task(
     Returns:
         List of DocumentExtractionResponse objects with extracted data
     """
+    # Create a single event loop for the entire task to avoid the overhead and
+    # potential RuntimeError of calling asyncio.run() multiple times (once per
+    # document).  We use loop.run_until_complete() for each async call and close
+    # the loop in a finally block.
+    loop = asyncio.new_event_loop()
     try:
         # Track job start time
         job_start_time = time.time()
@@ -242,7 +247,7 @@ def extract_information_from_documents_task(
         logger.info(f"LLM initialized: model={llm.model_name}, api_base={api_base}")
 
         # Get documents - this may fail if Supabase is unavailable
-        documents = asyncio.run(get_documents_by_id(request.document_ids))
+        documents = loop.run_until_complete(get_documents_by_id(request.document_ids))
 
         # Schema must be provided as dict from Supabase (with 'name', 'description', 'text' fields)
         # If not provided, fetch it from the database
@@ -326,7 +331,7 @@ def extract_information_from_documents_task(
                 )
 
             try:
-                extracted_data = asyncio.run(
+                extracted_data = loop.run_until_complete(
                     extractor.extract_information_with_structured_output(
                         {
                             "extraction_context": request.extraction_context,
@@ -473,6 +478,8 @@ def extract_information_from_documents_task(
         )
 
         return failed_results
+    finally:
+        loop.close()
 
 
 # Mock Celery task for schema generation

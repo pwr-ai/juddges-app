@@ -17,6 +17,7 @@ Date: 2025-10-12
 """
 
 import hashlib
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -24,6 +25,10 @@ from fastapi import BackgroundTasks
 from loguru import logger
 
 from app.core.auth_jwt import get_admin_supabase_client
+
+# Default salt for development only -- in production, set the AUDIT_HASH_SALT env var
+_DEFAULT_AUDIT_SALT = "juddges_audit_salt_2025_default"
+_AUDIT_HASH_SALT: str | None = None  # resolved lazily
 
 
 class AuditService:
@@ -118,9 +123,17 @@ class AuditService:
         if not ip_address:
             return None
 
-        # Hash the IP address with a salt
-        salt = "juddges_audit_salt_2025"  # Use env variable in production
-        hashed = hashlib.sha256(f"{ip_address}{salt}".encode()).hexdigest()
+        # Read salt from environment variable, falling back to a default for dev
+        global _AUDIT_HASH_SALT
+        if _AUDIT_HASH_SALT is None:
+            _AUDIT_HASH_SALT = os.environ.get("AUDIT_HASH_SALT", _DEFAULT_AUDIT_SALT)
+            if _AUDIT_HASH_SALT == _DEFAULT_AUDIT_SALT:
+                logger.warning(
+                    "AUDIT_HASH_SALT env var is not set -- using default salt. "
+                    "Set AUDIT_HASH_SALT in production for secure IP anonymization."
+                )
+
+        hashed = hashlib.sha256(f"{ip_address}{_AUDIT_HASH_SALT}".encode()).hexdigest()
         return hashed[:16]  # First 16 chars for brevity
 
     @staticmethod

@@ -596,7 +596,21 @@ Respond ONLY with valid JSON in this exact format:
         # Parse JSON response
         import json
 
-        return json.loads(content)
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as json_err:
+            logger.warning(
+                f"Malformed JSON from LLM response: {json_err}. "
+                f"Raw content: {content!r}"
+            )
+            return {
+                "topics": [],
+                "gaps": [],
+                "next_steps": [],
+                "coverage_score": 0.0,
+                "summary": "Analysis unavailable due to an error.",
+                "warning": "The AI returned an invalid response format. Please try again.",
+            }
 
     except Exception as e:
         logger.error(f"Error analyzing with LLM: {e}")
@@ -607,6 +621,7 @@ Respond ONLY with valid JSON in this exact format:
             "next_steps": [],
             "coverage_score": 0.0,
             "summary": "Analysis unavailable due to an error.",
+            "error": f"LLM analysis failed: {type(e).__name__}",
         }
 
 

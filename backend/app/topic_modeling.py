@@ -8,6 +8,7 @@ Provides:
 - Trend direction detection (emerging, stable, declining)
 """
 
+import math
 import time
 from collections import Counter
 from typing import Any
@@ -255,7 +256,10 @@ def _build_tfidf_matrix(
     word_to_idx = {w: i for i, w in enumerate(vocabulary)}
 
     if not vocabulary:
-        return np.zeros((n_docs, 1)), ["(empty)"]
+        raise ValueError(
+            "Insufficient textual content for topic analysis. "
+            "No valid vocabulary words found after filtering."
+        )
 
     # Build TF-IDF matrix
     n_features = len(vocabulary)
@@ -383,8 +387,11 @@ def _detect_trend(weights: list[float]) -> tuple[str, float]:
 
     slope = np.sum((x - x_mean) * (y - y_mean)) / ss_xx
 
-    # Normalize slope relative to mean weight
+    # Normalize slope relative to mean weight, guarding against inf/NaN
     relative_slope = slope / y_mean if y_mean > 0 else 0.0
+    if not math.isfinite(relative_slope):
+        # Clamp to safe range when y_mean is near-zero and causes overflow
+        relative_slope = 10.0 if slope > 0 else (-10.0 if slope < 0 else 0.0)
 
     # Classify trend
     if relative_slope > 0.1:

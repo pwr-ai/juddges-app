@@ -298,7 +298,9 @@ def _kmeans(
         distances = np.min(
             [np.sum((embeddings - c) ** 2, axis=1) for c in centroids[:i]], axis=0
         )
-        probs = distances / distances.sum()
+        total = distances.sum()
+        # Fall back to uniform selection when all points match existing centroids
+        probs = np.ones(n) / n if total == 0 else distances / total
         centroids[i] = embeddings[rng.choice(n, p=probs)]
 
     # Iterate

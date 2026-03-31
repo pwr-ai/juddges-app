@@ -15,9 +15,11 @@ Date: 2025-10-12
 """
 
 import contextlib
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from fastapi import HTTPException
 from loguru import logger
 from supabase import Client
 
@@ -250,21 +252,31 @@ class RetentionService:
                 .execute()
             )
 
-            if result.data:
-                request_id = result.data[0].get("id")
-                logger.info(
-                    f"Created data deletion request {request_id} for user {user_id} "
-                    f"(type: {request_type})"
+            if not result.data:
+                logger.error(
+                    f"Data deletion request insert returned no rows for user {user_id}"
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to create data deletion request: no rows inserted.",
                 )
 
-                return {
-                    "status": "success",
-                    "request_id": request_id,
-                    "message": "Data deletion request created. It will be processed within 30 days as required by GDPR.",
-                    "request_details": result.data[0],
-                    "timestamp": datetime.now(UTC).isoformat(),
-                }
+            request_id = result.data[0].get("id")
+            logger.info(
+                f"Created data deletion request {request_id} for user {user_id} "
+                f"(type: {request_type})"
+            )
 
+            return {
+                "status": "success",
+                "request_id": request_id,
+                "message": "Data deletion request created. It will be processed within 30 days as required by GDPR.",
+                "request_details": result.data[0],
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(
                 f"Failed to create data deletion request for user {user_id}: {e}"
@@ -417,14 +429,27 @@ class RetentionService:
         Returns:
             Number of records anonymized
         """
-        # For anonymization, we replace user_id with an anonymized hash
-        anonymized_id = f"anonymized_{user_id[:8]}"
+        # Use a one-way hash so the anonymized ID cannot be reversed to the original
+        anonymized_id = hashlib.sha256(user_id.encode()).hexdigest()[:16]
 
         table_mapping = {
             "audit_logs": "audit_logs",
             "analytics": "events",
             "feedback": ["search_feedback", "feature_requests"],
             "search_queries": "search_queries",
+        }
+
+        # PII fields to scrub per table (beyond user_id replacement)
+        pii_scrub_fields: dict[str, dict[str, Any]] = {
+            "audit_logs": {
+                "ip_address": None,
+                "user_agent": None,
+            },
+            "search_queries": {
+                "ip_address": None,
+                "user_agent": None,
+                "query": "[REDACTED]",
+            },
         }
 
         table_names = table_mapping.get(data_type)
@@ -437,9 +462,14 @@ class RetentionService:
 
         total_anonymized = 0
         for table_name in table_names:
+            # Build the update payload: always replace user_id, plus any PII scrub fields
+            update_payload: dict[str, Any] = {"user_id": anonymized_id}
+            if table_name in pii_scrub_fields:
+                update_payload.update(pii_scrub_fields[table_name])
+
             result = (
                 client.table(table_name)
-                .update({"user_id": anonymized_id})
+                .update(update_payload)
                 .eq("user_id", user_id)
                 .execute()
             )

@@ -234,14 +234,31 @@ async def submit_ocr_job(
             f"Allowed: {allowed_types[source_type]}",
         )
 
+    # Initialize job_id before try block so except handler can safely reference it
+    job_id: str | None = None
+
     try:
         if language_hint:
             logger.info(f"OCR language hint provided: {language_hint}")
 
-        # Read file content
-        file_content = await file.read()
-        if len(file_content) > 50 * 1024 * 1024:  # 50MB limit
-            raise HTTPException(status_code=400, detail="File size exceeds 50MB limit")
+        # Read file content in chunks to avoid loading oversized files into memory
+        max_size = 50 * 1024 * 1024  # 50MB limit
+        chunk_size = 1024 * 1024  # 1MB chunks
+        chunks: list[bytes] = []
+        bytes_read = 0
+
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            bytes_read += len(chunk)
+            if bytes_read > max_size:
+                raise HTTPException(
+                    status_code=400, detail="File size exceeds 50MB limit"
+                )
+            chunks.append(chunk)
+
+        file_content = b"".join(chunks)
 
         # Create job in database
         supabase = get_supabase_client()
@@ -309,16 +326,17 @@ async def submit_ocr_job(
     except Exception as e:
         logger.error(f"OCR processing error: {e!s}", exc_info=True)
         # If job was created, mark it as failed
-        try:
-            supabase = get_supabase_client()
-            supabase.table("ocr_jobs").update(
-                {
-                    "status": "failed",
-                    "error_message": str(e),
-                }
-            ).eq("id", job_id).execute()
-        except Exception:
-            pass
+        if job_id is not None:
+            try:
+                supabase = get_supabase_client()
+                supabase.table("ocr_jobs").update(
+                    {
+                        "status": "failed",
+                        "error_message": str(e),
+                    }
+                ).eq("id", job_id).execute()
+            except Exception:
+                pass
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {e!s}")
 
 

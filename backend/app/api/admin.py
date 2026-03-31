@@ -150,22 +150,39 @@ async def get_platform_stats(
     last_week = datetime.now(UTC) - timedelta(days=7)
 
     # Total users via Supabase Auth Admin API
+    # NOTE: gotrue-py does not expose a direct count endpoint. We paginate
+    # through pages of users until we get an incomplete page or hit a safety
+    # limit. If the limit is reached, a warning is logged because the count
+    # may be an undercount.
+    _USER_PAGE_SIZE = 1000
+    _MAX_PAGES = 20  # Safety limit: up to 20,000 users before warning
     total_users = 0
     try:
-        users_response = client.auth.admin.list_users(page=1, per_page=1)
-        # gotrue-py returns a list directly; check for total via pagination metadata
-        # The response is a list of users; for a count we can use a large per_page
-        # and count them, or fall back to listing a large page.
-        # list_users returns a list when successful.
-        if isinstance(users_response, list):
-            # Fetch with large per_page to get total; use page=1 for count heuristic
-            all_users_response = client.auth.admin.list_users(page=1, per_page=10000)
-            if isinstance(all_users_response, list):
-                total_users = len(all_users_response)
+        page = 1
+        while page <= _MAX_PAGES:
+            users_response = client.auth.admin.list_users(
+                page=page, per_page=_USER_PAGE_SIZE
+            )
+            if isinstance(users_response, list):
+                batch_size = len(users_response)
+            else:
+                # Some gotrue-py versions return an object with .users attribute
+                users_list = getattr(users_response, "users", users_response)
+                batch_size = len(users_list) if users_list else 0
+
+            total_users += batch_size
+
+            # If we got fewer than a full page, we have reached the end
+            if batch_size < _USER_PAGE_SIZE:
+                break
+            page += 1
         else:
-            # Some versions return an object with .users attribute
-            users_list = getattr(users_response, "users", users_response)
-            total_users = len(users_list) if users_list else 0
+            # Reached safety limit -- count may be truncated
+            logger.warning(
+                f"Admin stats: user count reached pagination limit "
+                f"({_MAX_PAGES} pages x {_USER_PAGE_SIZE}). "
+                f"Reported count ({total_users}) may be an undercount."
+            )
     except Exception as e:
         logger.warning(f"Admin stats: could not fetch user count: {e}")
 

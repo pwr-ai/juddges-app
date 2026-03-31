@@ -109,8 +109,13 @@ class RevertVersionRequest(BaseModel):
 # ===== Helper Functions =====
 
 
-def _compute_content_hash(text: str) -> str:
-    """Compute SHA-256 hash of document text."""
+def _compute_content_hash(text: str | None) -> str | None:
+    """Compute SHA-256 hash of document text.
+
+    Returns None if text is None, allowing callers to handle missing content.
+    """
+    if text is None:
+        return None
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
@@ -600,21 +605,48 @@ async def revert_to_version(
             "extracted_data": current_doc.get("extracted_data") or {},
         }
 
-        db.client.table("document_versions").insert(pre_revert_data).execute()
+        snapshot_response = (
+            db.client.table("document_versions").insert(pre_revert_data).execute()
+        )
 
-        # Now revert the document content
-        revert_hash = _compute_content_hash(target_version["full_text"])
-        update_data = {
-            "title": target_version.get("title") or current_doc.get("title"),
-            "full_text": target_version["full_text"],
-            "summary": target_version.get("summary"),
-            "content_hash": revert_hash,
-            "current_version": next_version + 1,
-        }
+        # Now revert the document content; if this fails, roll back the snapshot
+        # to avoid leaving a phantom version record with an un-reverted document.
+        try:
+            revert_hash = _compute_content_hash(target_version["full_text"])
+            update_data = {
+                "title": target_version.get("title") or current_doc.get("title"),
+                "full_text": target_version["full_text"],
+                "summary": target_version.get("summary"),
+                "content_hash": revert_hash,
+                "current_version": next_version + 1,
+            }
 
-        db.client.table("legal_documents").update(update_data).eq(
-            "document_id", document_id
-        ).execute()
+            db.client.table("legal_documents").update(update_data).eq(
+                "document_id", document_id
+            ).execute()
+        except Exception as update_err:
+            # Compensating transaction: remove the pre-revert snapshot
+            logger.error(
+                f"Document update failed during revert of {document_id}, "
+                f"rolling back pre-revert snapshot (version {next_version}): {update_err}",
+                exc_info=True,
+            )
+            try:
+                snapshot_id = snapshot_response.data[0]["id"]
+                db.client.table("document_versions").delete().eq(
+                    "id", snapshot_id
+                ).execute()
+                logger.info(
+                    f"Successfully rolled back pre-revert snapshot {snapshot_id} "
+                    f"for document {document_id}"
+                )
+            except Exception as rollback_err:
+                logger.error(
+                    f"Failed to roll back pre-revert snapshot for {document_id}: "
+                    f"{rollback_err}",
+                    exc_info=True,
+                )
+            raise
 
         logger.info(
             f"Reverted document {document_id} to version {request.version_number} "

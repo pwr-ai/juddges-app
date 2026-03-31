@@ -489,7 +489,15 @@ async def check_all_services() -> dict[str, ServiceHealth]:
     """
     logger.info("Running health checks for all services")
 
-    # Run all checks concurrently
+    # Run all checks concurrently, capturing exceptions per-service
+    service_names = [
+        "redis",
+        "postgresql",
+        "supabase",
+        "celery",
+        "langfuse",
+        "meilisearch",
+    ]
     results = await asyncio.gather(
         check_redis(),
         check_postgresql(),
@@ -497,18 +505,23 @@ async def check_all_services() -> dict[str, ServiceHealth]:
         check_celery(),
         check_langfuse(),
         check_meilisearch(),
-        return_exceptions=False,  # Let exceptions propagate
+        return_exceptions=True,  # Prevent one failing check from crashing all others
     )
 
-    # Map results to service names
-    services = {
-        "redis": results[0],
-        "postgresql": results[1],
-        "supabase": results[2],
-        "celery": results[3],
-        "langfuse": results[4],
-        "meilisearch": results[5],
-    }
+    # Map results to service names, converting exceptions to unhealthy status
+    services: dict[str, ServiceHealth] = {}
+    for name, result in zip(service_names, results, strict=False):
+        if isinstance(result, BaseException):
+            logger.error(f"Health check for {name} raised an exception: {result}")
+            services[name] = ServiceHealth(
+                name=name,
+                status=ServiceStatus.UNHEALTHY,
+                message=f"Health check failed with exception: {type(result).__name__}",
+                error=str(result),
+                last_checked=datetime.now(UTC),
+            )
+        else:
+            services[name] = result
 
     logger.info(f"Health checks completed: {len(services)} services checked")
     return services
