@@ -73,6 +73,9 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
     useState<AbortController | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Always-current messages ref to avoid stale closures after async operations
+  const messagesRef = useRef<Message[]>(messages);
+  messagesRef.current = messages;
   // Track the current assistant message ID being generated to ignore responses from aborted generations
   const currentAssistantMessageIdRef = useRef<string | null>(null);
 
@@ -272,21 +275,15 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
     });
 
     // If generation is in progress, abort it first
-    let currentMessages = messages;
     if (isLoading) {
       hookLogger.info('Aborting current generation to proceed with edit');
       stopGeneration();
-      // Wait a bit for the abort to complete and state to update
-      await new Promise(resolve => setTimeout(resolve, 150));
-
       // Remove any partial assistant message that might have been added (empty content)
-      // Use functional update to avoid stale closure
-      setMessages(prev => {
-        const filtered = prev.filter(m => !(m.role === "assistant" && !m.content));
-        currentMessages = filtered;
-        return filtered;
-      });
+      setMessages(prev => prev.filter(m => !(m.role === "assistant" && !m.content)));
     }
+
+    // Read latest messages from ref to avoid stale closure after async abort
+    const currentMessages = messagesRef.current.filter(m => !(m.role === "assistant" && !m.content));
 
     // Find the message to edit
     const messageIndex = currentMessages.findIndex(m => m.id === messageId);
@@ -598,14 +595,17 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       return;
     }
 
+    // Read latest messages from ref to avoid stale closure
+    const currentMessages = messagesRef.current;
+
     // Find the message to regenerate
-    const messageIndex = messages.findIndex(m => m.id === messageId);
+    const messageIndex = currentMessages.findIndex(m => m.id === messageId);
     if (messageIndex === -1) {
       hookLogger.error('Message not found', { messageId });
       return;
     }
 
-    const messageToRegenerate = messages[messageIndex];
+    const messageToRegenerate = currentMessages[messageIndex];
     if (messageToRegenerate.role !== "assistant") {
       hookLogger.error('Can only regenerate assistant messages', {
         messageId,
@@ -616,11 +616,11 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
 
     // Find the user message that preceded this assistant message
     let userMessageIndex = messageIndex - 1;
-      
-    // Ensure we’re matching the right user message.
+
+    // Ensure we're matching the right user message.
     // Regenerations can reorder messages, so find the proper index.
-    if (messages[userMessageIndex].role !== "user") {
-      userMessageIndex = findPrevUserIndex(messages, messageIndex);
+    if (currentMessages[userMessageIndex].role !== "user") {
+      userMessageIndex = findPrevUserIndex(currentMessages, messageIndex);
     }
 
     if (userMessageIndex < 0) {
@@ -632,14 +632,14 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       return;
     }
 
-    const userMessage = messages[userMessageIndex];
+    const userMessage = currentMessages[userMessageIndex];
     hookLogger.debug('Found user message to regenerate', {
       userMessageId: userMessage.id,
       userMessageLength: userMessage.content.length
     });
 
     // Remove the assistant message that we're regenerating
-    const messagesUpToUser = messages.slice(0, userMessageIndex + 1);
+    const messagesUpToUser = currentMessages.slice(0, userMessageIndex + 1);
     setMessages(messagesUpToUser);
     setFragments([]); // Clear fragments
 
