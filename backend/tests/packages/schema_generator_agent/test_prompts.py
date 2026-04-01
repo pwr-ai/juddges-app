@@ -10,7 +10,7 @@ import yaml
 def prompt_dir():
     """Get the prompt directory path."""
     return Path(
-        "/home/laugustyniak/github/legal-ai/juddges-app/backend/packages/schema_generator_agent/schema_generator_agent/configs/prompt/law"
+        "/home/laugustyniak/github/juddges-app/backend/packages/schema_generator_agent/schema_generator_agent/configs/prompt/law"
     )
 
 
