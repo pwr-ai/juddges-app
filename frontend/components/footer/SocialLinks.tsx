@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 const socialLinks = [
  {
- href: "https://github.com/pwr-ai/legal-ai",
+ href: "https://github.com/pwr-ai/juddges-app",
  icon: Github,
  label: "GitHub Repository",
  },

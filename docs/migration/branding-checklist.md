@@ -67,7 +67,7 @@ This document tracks what has been updated and what still needs to be changed fr
 
 Find remaining JuDDGES references:
 ```bash
-cd /home/laugustyniak/github/legal-ai/juddges-app
+cd /home/laugustyniak/github/juddges-app
 
 # Search in code
 grep -r "JuDDGES" frontend/ backend/ --include="*.ts" --include="*.tsx" --include="*.py"

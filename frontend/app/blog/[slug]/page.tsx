@@ -64,7 +64,7 @@ Natural language processing (NLP) has become the backbone of modern legal AI sys
 Here's an example of how you might use a legal AI API in Python:
 
 \`\`\`python
-from legal_ai import LegalResearchClient
+from juddges import LegalResearchClient
 
 # Initialize the client
 client = LegalResearchClient(api_key="your_api_key")
@@ -212,7 +212,7 @@ The future of AI in legal research is bright, but it requires careful navigation
 | DocAnalyzer | Limited | Advanced | Limited | $$ |
 | OpenLegal | Yes | Basic | No | Free |
 
-For more information, check out the [official documentation](https://docs.example.com) or visit our [GitHub repository](https://github.com/example/legal-ai).
+For more information, check out the [official documentation](https://docs.example.com) or visit our [GitHub repository](https://github.com/pwr-ai/juddges-app).
 
 When using these platforms, remember to use the \`--secure\` flag for sensitive data and always verify results with the \`verify_citations()\` function.
 

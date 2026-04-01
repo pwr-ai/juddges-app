@@ -246,10 +246,10 @@ export function ContactSection({
                       Get a response within 24 hours
                     </p>
                     <a
-                      href="mailto:enterprise@legal-ai.augustyniak.ai"
+                      href="mailto:enterprise@juddges.augustyniak.ai"
                       className="text-sm text-primary hover:underline"
                     >
-                      enterprise@legal-ai.augustyniak.ai
+                      enterprise@juddges.augustyniak.ai
                     </a>
                   </div>
                 </CardContent>

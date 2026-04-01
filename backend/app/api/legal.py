@@ -128,8 +128,8 @@ async def get_dpa_info(user: AuthenticatedUser | None = Depends(get_optional_use
             effective_date="2025-01-01",
             data_processor={
                 "name": "Juddges",
-                "contact": "legal@legal-ai.augustyniak.ai",
-                "dpo_email": "dpo@legal-ai.augustyniak.ai",
+                "contact": "legal@juddges.augustyniak.ai",
+                "dpo_email": "dpo@juddges.augustyniak.ai",
                 "address": "To be determined",
                 "registration_number": "To be determined",
             },

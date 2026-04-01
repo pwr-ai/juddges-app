@@ -147,8 +147,8 @@ export default function CookiePolicyPage() {
  <div className="space-y-2 text-sm">
  <p>
  <strong>Email:</strong>{""}
- <a href="mailto:privacy@legal-ai.augustyniak.ai"className="text-primary hover:underline">
- privacy@legal-ai.augustyniak.ai
+ <a href="mailto:privacy@juddges.augustyniak.ai"className="text-primary hover:underline">
+ privacy@juddges.augustyniak.ai
  </a>
  </p>
  <p>

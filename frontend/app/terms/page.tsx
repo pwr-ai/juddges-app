@@ -198,7 +198,7 @@ export default function TermsPage(): React.ReactElement {
  <SectionHeader title="5.3 Open Source Components"className="mb-2"/>
  <p>
  Certain components of the platform are open source. See our{""}
- <a href="https://github.com/pwr-ai/legal-ai"className="text-primary hover:underline"target="_blank"rel="noopener noreferrer">
+ <a href="https://github.com/pwr-ai/juddges-app"className="text-primary hover:underline"target="_blank"rel="noopener noreferrer">
  GitHub repository
  </a>
  {""}for licenses and attribution.

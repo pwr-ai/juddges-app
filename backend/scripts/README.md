@@ -109,16 +109,16 @@ curl -X POST -H "X-API-Key: your-api-key" http://localhost:8002/health/status/in
 
 ```bash
 # Check backend health status
-docker inspect --format='{{.State.Health.Status}}' legal-ai-backend
+docker inspect --format='{{.State.Health.Status}}' juddges-backend
 
 # Check worker health status
-docker inspect --format='{{.State.Health.Status}}' legal-ai-backend-worker
+docker inspect --format='{{.State.Health.Status}}' juddges-backend-worker
 
 # Watch health check events
-docker events --filter 'event=health_status' --filter 'container=legal-ai-backend'
+docker events --filter 'event=health_status' --filter 'container=juddges-backend'
 
 # Test health check command manually
-docker exec legal-ai-backend wget -O- http://localhost:8002/health/healthz
+docker exec juddges-backend wget -O- http://localhost:8002/health/healthz
 ```
 
 **Documentation:**
@@ -250,20 +250,20 @@ mkdir -p backend/logs
 1. **Check backend logs:**
 
    ```bash
-   docker logs legal-ai-backend --tail 50
+   docker logs juddges-backend --tail 50
    ```
 
 2. **Verify endpoint accessibility:**
 
    ```bash
-   docker exec legal-ai-backend wget -O- http://localhost:8002/health/healthz
+   docker exec juddges-backend wget -O- http://localhost:8002/health/healthz
    ```
 
 3. **Check service connectivity:**
 
    ```bash
-   docker exec legal-ai-backend nc -zv db 5432
-   docker exec legal-ai-backend nc -zv redis 6379
+   docker exec juddges-backend nc -zv db 5432
+   docker exec juddges-backend nc -zv redis 6379
    ```
 
 ## Related Documentation

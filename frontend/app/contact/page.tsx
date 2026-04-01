@@ -297,7 +297,7 @@ export default function ContactPage() {
             />
             <div className="flex flex-col gap-3">
               <a
-                href="https://github.com/laugustyniak/legal-ai"
+                href="https://github.com/pwr-ai/juddges-app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border"

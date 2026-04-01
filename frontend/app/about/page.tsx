@@ -366,7 +366,7 @@ export default function AboutPage(): React.JSX.Element {
 
  <SecondaryButton
  className="h-auto py-6"
- onClick={() => window.open('https://github.com/laugustyniak/legal-ai', '_blank')}
+ onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}
  >
  <div className="flex flex-col items-center gap-3">
  <Github className="size-6"/>
