@@ -106,7 +106,7 @@ export function formatNumber(
   const config = getLocaleConfig(locale);
 
   // Map our locale codes to Intl locale codes
-  const intlLocale = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale;
+  const intlLocale = locale === 'pl' ? 'pl-PL' : locale;
 
   try {
     return new Intl.NumberFormat(intlLocale, options).format(value);
@@ -131,7 +131,7 @@ export function formatDate(
   const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
 
   // Map our locale codes to Intl locale codes
-  const intlLocale = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale;
+  const intlLocale = locale === 'pl' ? 'pl-PL' : locale;
 
   try {
     return new Intl.DateTimeFormat(intlLocale, options).format(dateObj);
@@ -153,7 +153,7 @@ export function formatCurrency(
   const currencyCode = currency ?? config.defaultCurrency;
 
   // Map our locale codes to Intl locale codes
-  const intlLocale = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale;
+  const intlLocale = locale === 'pl' ? 'pl-PL' : locale;
 
   try {
     return new Intl.NumberFormat(intlLocale, {
@@ -178,7 +178,7 @@ export function formatRelativeTime(
   const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
 
   // Map our locale codes to Intl locale codes
-  const intlLocale = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale;
+  const intlLocale = locale === 'pl' ? 'pl-PL' : locale;
 
   try {
     const rtf = new Intl.RelativeTimeFormat(intlLocale, { numeric: 'auto' });
@@ -214,7 +214,7 @@ export function getOrdinal(num: number, locale: LocaleCode): string {
   }
 
   // For other locales, just return the number
-  // Polish, Ukrainian, Arabic, Hebrew typically use different patterns
+  // Polish, Arabic, Hebrew typically use different patterns
   return String(num);
 }
 
@@ -228,7 +228,7 @@ export function pluralize(
   forms: { zero?: string; one: string; few?: string; many?: string; other: string }
 ): string {
   // Use Intl.PluralRules for accurate pluralization
-  const intlLocale = locale === 'uk' ? 'uk-UA' : locale === 'pl' ? 'pl-PL' : locale;
+  const intlLocale = locale === 'pl' ? 'pl-PL' : locale;
 
   try {
     const pluralRules = new Intl.PluralRules(intlLocale);
