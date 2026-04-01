@@ -156,3 +156,6 @@ celerybeat-schedule
 
 # Git worktrees (local)
 .worktrees/
+
+# Research papers (separate repos)
+papers/
