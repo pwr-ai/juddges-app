@@ -4,7 +4,7 @@ React JSON Schema Form (RJSF) v5 integration for visual schema field editing wit
 
 ## Overview
 
-This module provides a complete RJSF v5 integration for editing schema fields in the AI-Tax application. It includes:
+This module provides a complete RJSF v5 integration for editing schema fields in the Juddges application. It includes:
 
 - **Custom widgets** for Pydantic field types
 - **Field templates** matching shadcn/ui design
@@ -590,4 +590,4 @@ When adding new widgets or modifying existing ones:
 
 ## License
 
-Internal use only - AI-Tax project.
+Internal use only - Juddges project.
