@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import type { AutocompleteSuggestion } from "@/hooks/useSearchAutocomplete";
 import { DocumentType } from "@/types/search";
 
-type SearchMode = string;
+type SearchMode = "thinking" | "rabbit";
 
 /**
  * Sanitize HTML from Meilisearch highlights: allow only {@code <mark>} tags via DOMPurify.

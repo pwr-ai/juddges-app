@@ -400,7 +400,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  newDescription: editDescription
  });
  try {
- await updateCollection(id, { name: editName, description: editDescription || undefined });
+ await updateCollection(id, editName, editDescription || undefined);
  setCollection(prev => prev ? { ...prev, name: editName, description: editDescription || undefined } : null);
  setIsClosing(true);
  setTimeout(() => {

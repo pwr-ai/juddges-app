@@ -44,7 +44,7 @@ export async function GET(
     // Validate query parameters with Zod
     const searchParams = request.nextUrl.searchParams;
     const { top_k } = validateQueryParams(similarDocumentsQuerySchema, {
-      top_k: searchParams.get('top_k') ?? undefined
+      top_k: searchParams.get('top_k')
     });
 
     const backendUrl = getBackendUrl();

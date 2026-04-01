@@ -475,7 +475,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  <div className="font-medium text-foreground truncate">{schema.name}</div>
  {schema.is_verified && <VerifiedBadge size="sm"/>}
  </div>
- <div className="text-xs text-muted-foreground">{schema.category} • Updated {new Date(schema.updated_at).toLocaleDateString()}</div>
+ <div className="text-xs text-muted-foreground">{schema.category} • Updated {new Date(schema.updatedAt).toLocaleDateString()}</div>
  </div>
  </div>
  </button>

@@ -42,10 +42,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       document_types,
       include_clusters
     } = validateQueryParams(similarityGraphQuerySchema, {
-      sample_size: searchParams.get('sample_size') ?? undefined,
-      similarity_threshold: searchParams.get('similarity_threshold') ?? undefined,
-      document_types: searchParams.get('document_types') ?? undefined,
-      include_clusters: searchParams.get('include_clusters') ?? undefined,
+      sample_size: searchParams.get('sample_size'),
+      similarity_threshold: searchParams.get('similarity_threshold'),
+      document_types: searchParams.get('document_types'),
+      include_clusters: searchParams.get('include_clusters'),
     });
 
     // Build query parameters for backend
