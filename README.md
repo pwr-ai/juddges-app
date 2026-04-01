@@ -227,9 +227,16 @@ Build Docker images with semantic versioning and push to Docker Hub (`laugustyni
 ./scripts/build_and_push_prod.sh 2.1.0        # Use explicit version
 ```
 
-The script builds two images from the repo's `.env` file for frontend build args, tags them with the version and `latest`, pushes to Docker Hub, and creates a git tag:
-- `laugustyniak/juddges-frontend:<version>`
-- `laugustyniak/juddges-backend:<version>` (also used by backend-worker)
+The build script performs the following steps:
+1. Resolves the next version from git tags (prefix `prod-v`, e.g., `prod-v1.0.0`)
+2. Syncs the version across `VERSION`, `backend/pyproject.toml`, `frontend/package.json`, and `.env.example`
+3. Loads `.env` for frontend build args (`NEXT_PUBLIC_*`) and Docker Hub credentials (`DOCKER_USERNAME`, `DOCKER_TOKEN`)
+4. Builds and pushes two Docker images (tagged with version and `latest`):
+   - `laugustyniak/juddges-frontend:<version>`
+   - `laugustyniak/juddges-backend:<version>` (also used by backend-worker and backend-beat)
+5. Generates AI-powered release notes via OpenAI (requires `OPENAI_API_KEY`)
+6. Commits version-synced files and creates an annotated git tag (`prod-v<version>`)
+7. Optionally pushes commit and tag to origin, and sends a Discord notification
 
 ### Deploy on Production Host
 
@@ -242,11 +249,18 @@ Pull images from Docker Hub and restart containers:
 ./scripts/deploy_prod.sh --rollback           # Rollback to previous version
 ```
 
-The deploy script pulls images, restarts containers via `docker-compose.yml`, waits for health checks, and logs deployment history to `.deploy-history`.
+The deploy script performs the following steps:
+1. Runs pre-flight checks (Docker daemon, disk space, current container versions)
+2. Pulls images from Docker Hub for the requested version
+3. Stops existing containers gracefully (`docker compose down`)
+4. Starts containers with the new images (`docker compose up -d`)
+5. Waits up to 120s for all required services to become healthy: `frontend`, `backend`, `meilisearch`, `backend-worker`, `backend-beat`
+6. Runs post-deploy HTTP validation (frontend on port 3006, backend health on port 8002)
+7. Logs deployment to `.deploy-history` for rollback support and sends a Discord notification
 
 ### Versioning
 
-Versions are tracked as git tags (`v0.1.0`, `v1.0.0`, etc.). The build script reads the latest tag, increments it, and creates a new tag after a successful push.
+Versions are tracked as git tags with the `prod-v` prefix (e.g., `prod-v0.1.3`, `prod-v1.0.0`). The build script reads the latest `prod-v*` tag, increments it, and creates a new annotated tag after a successful push. Legacy `v*` tags are used as fallback if no `prod-v*` tags exist.
 
 ## Contributing
 

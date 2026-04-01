@@ -43,7 +43,7 @@ This document defines the design and implementation strategy for displaying lega
 
 **Current Message Structure:**
 ```typescript
-// /home/laugustyniak/github/legal-ai/juddges-app/frontend/types/message.ts
+// /home/laugustyniak/github/juddges-app/frontend/types/message.ts
 interface Message {
   id: string
   role: "user" | "assistant"

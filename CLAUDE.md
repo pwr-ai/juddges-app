@@ -209,18 +209,32 @@ Next.js 15 with App Router:
 
 **Image Strategy**:
 - Two images built: `juddges-frontend` and `juddges-backend`
-- `backend-worker` reuses the `juddges-backend` image with a different command (Celery)
+- `backend-worker` and `backend-beat` reuse the `juddges-backend` image with different commands (Celery worker/beat)
 - Images tagged with semantic version (`0.1.0`) and `latest`
 - `docker-compose.yml` has both `image:` and `build:` on each service — `image:` for Hub pulls, `build:` for local builds
 - Version tag controlled by `JUDDGES_IMAGE_TAG` env var (defaults to `latest`)
 
-**Versioning**: Git tags (`v0.1.0`, `v1.0.0`) are the source of truth. The build script reads the latest tag and auto-increments.
+**Required Services** (checked by deploy script health monitoring):
+- `frontend`, `backend`, `meilisearch`, `backend-worker`, `backend-beat`
 
-**Deployment Flow**:
-1. Developer runs `build_and_push_prod.sh` locally (loads `.env` for frontend build args)
-2. Images pushed to Docker Hub
-3. On production host, run `deploy_prod.sh` to pull and restart
-4. Deploy history logged to `.deploy-history` for rollback support
+**Versioning**: Git tags with `prod-v` prefix (e.g., `prod-v0.1.3`, `prod-v1.0.0`) are the source of truth. The build script reads the latest `prod-v*` tag and auto-increments. Legacy `v*` tags are used as fallback.
+
+**Build Flow** (`build_and_push_prod.sh`):
+1. Resolves next version from `prod-v*` git tags
+2. Syncs version across `VERSION`, `backend/pyproject.toml`, `frontend/package.json`, `.env.example`
+3. Loads `.env` for frontend build args and Docker Hub credentials (`DOCKER_USERNAME`, `DOCKER_TOKEN`)
+4. Builds and pushes Docker images to Docker Hub
+5. Generates AI-powered release notes via OpenAI (requires `OPENAI_API_KEY`)
+6. Commits version files, creates annotated git tag `prod-v<version>`
+7. Optionally pushes to origin and sends Discord notification
+
+**Deploy Flow** (`deploy_prod.sh`):
+1. Pre-flight checks (Docker daemon, disk space, current container versions)
+2. Pulls images from Docker Hub
+3. Stops existing containers, starts new ones via `docker compose`
+4. Waits up to 120s for all required services to become healthy
+5. Post-deploy HTTP validation (frontend port 3006, backend health port 8002)
+6. Logs to `.deploy-history` for rollback support, sends Discord notification
 
 ## Key Files
 
