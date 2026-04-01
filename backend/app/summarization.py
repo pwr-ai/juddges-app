@@ -168,16 +168,16 @@ def _format_document_for_summary(doc: dict[str, Any]) -> str:
 )
 @limiter.limit(SUMMARIZATION_RATE_LIMIT)
 async def summarize_documents(
-    http_request: Request, request: SummarizeRequest
+    request: Request, summarize_request: SummarizeRequest
 ) -> SummarizeResponse:
     """Generate an AI summary of legal documents."""
     logger.info(
-        f"Summarization request: type={request.summary_type}, "
-        f"length={request.length}, documents={request.document_ids}"
+        f"Summarization request: type={summarize_request.summary_type}, "
+        f"length={summarize_request.length}, documents={summarize_request.document_ids}"
     )
 
     # Fetch documents
-    documents = await _fetch_document_content(request.document_ids)
+    documents = await _fetch_document_content(summarize_request.document_ids)
 
     if not documents:
         raise HTTPException(
@@ -190,13 +190,13 @@ async def summarize_documents(
 
     # Build focus areas instruction
     focus_instruction = ""
-    if request.focus_areas:
-        areas_str = ", ".join(request.focus_areas)
+    if summarize_request.focus_areas:
+        areas_str = ", ".join(summarize_request.focus_areas)
         focus_instruction = f"- Pay special attention to these focus areas: {areas_str}"
 
     # Select prompt template
-    prompt_template = SUMMARY_TYPE_PROMPTS[request.summary_type]
-    target_length = SUMMARY_LENGTH_MAP[request.length]
+    prompt_template = SUMMARY_TYPE_PROMPTS[summarize_request.summary_type]
+    target_length = SUMMARY_LENGTH_MAP[summarize_request.length]
 
     # Build the prompt
     filled_prompt = prompt_template.format(
@@ -230,7 +230,7 @@ async def summarize_documents(
     # Extract and validate response
     summary_text = result.get("summary", "")
     key_points = result.get("key_points", [])
-    doc_ids = result.get("document_ids", request.document_ids)
+    doc_ids = result.get("document_ids", summarize_request.document_ids)
 
     if not summary_text:
         raise HTTPException(
@@ -242,8 +242,8 @@ async def summarize_documents(
         summary=summary_text,
         key_points=key_points,
         document_ids=doc_ids,
-        summary_type=request.summary_type,
-        length=request.length,
+        summary_type=summarize_request.summary_type,
+        length=summarize_request.length,
     )
 
 
@@ -340,13 +340,13 @@ class KeyPointsResponse(BaseModel):
 )
 @limiter.limit(SUMMARIZATION_RATE_LIMIT)
 async def extract_key_points(
-    http_request: Request, request: KeyPointsRequest
+    request: Request, key_points_request: KeyPointsRequest
 ) -> KeyPointsResponse:
     """Extract structured key points from a legal document."""
-    logger.info(f"Key points extraction request: document={request.document_id}")
+    logger.info(f"Key points extraction request: document={key_points_request.document_id}")
 
     # Fetch document
-    documents = await _fetch_document_content([request.document_id])
+    documents = await _fetch_document_content([key_points_request.document_id])
 
     if not documents:
         raise HTTPException(
@@ -360,8 +360,8 @@ async def extract_key_points(
 
     # Build focus areas instruction
     focus_instruction = ""
-    if request.focus_areas:
-        areas_str = ", ".join(request.focus_areas)
+    if key_points_request.focus_areas:
+        areas_str = ", ".join(key_points_request.focus_areas)
         focus_instruction = f"- Pay special attention to these focus areas: {areas_str}"
 
     # Build the prompt
@@ -419,5 +419,5 @@ async def extract_key_points(
         arguments=arguments,
         holdings=holdings,
         legal_principles=legal_principles,
-        document_id=request.document_id,
+        document_id=key_points_request.document_id,
     )

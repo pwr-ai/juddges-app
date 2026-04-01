@@ -246,17 +246,17 @@ def _format_document_for_timeline(doc: dict[str, Any]) -> str:
 )
 @limiter.limit(TIMELINE_RATE_LIMIT)
 async def extract_timeline(
-    http_request: Request,
-    request: TimelineExtractionRequest,
+    request: Request,
+    timeline_request: TimelineExtractionRequest,
 ) -> TimelineExtractionResponse:
     """Extract a chronological timeline from legal documents."""
     logger.info(
-        f"Timeline extraction request: depth={request.extraction_depth}, "
-        f"documents={request.document_ids}"
+        f"Timeline extraction request: depth={timeline_request.extraction_depth}, "
+        f"documents={timeline_request.document_ids}"
     )
 
     # Fetch documents
-    documents = await _fetch_document_content(request.document_ids)
+    documents = await _fetch_document_content(timeline_request.document_ids)
 
     if not documents:
         raise HTTPException(
@@ -271,15 +271,15 @@ async def extract_timeline(
 
     # Build focus areas instruction
     focus_instruction = ""
-    if request.focus_areas:
-        areas_str = ", ".join(request.focus_areas)
+    if timeline_request.focus_areas:
+        areas_str = ", ".join(timeline_request.focus_areas)
         focus_instruction = (
             f"- Pay special attention to these temporal aspects: {areas_str}"
         )
 
     # Build the prompt
     filled_prompt = TIMELINE_EXTRACTION_PROMPT.format(
-        extraction_depth=request.extraction_depth,
+        extraction_depth=timeline_request.extraction_depth,
         document_content=formatted_docs,
         focus_areas_instruction=focus_instruction,
     )
@@ -328,7 +328,7 @@ async def extract_timeline(
     # Extract metadata
     timeline_summary = result.get("timeline_summary", "")
     date_range_data = result.get("date_range", {})
-    doc_ids = result.get("document_ids", request.document_ids)
+    doc_ids = result.get("document_ids", timeline_request.document_ids)
 
     return TimelineExtractionResponse(
         events=events,
@@ -339,5 +339,5 @@ async def extract_timeline(
         ),
         document_ids=doc_ids,
         total_events=len(events),
-        extraction_depth=request.extraction_depth,
+        extraction_depth=timeline_request.extraction_depth,
     )
