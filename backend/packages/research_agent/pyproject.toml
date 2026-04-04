@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "research_agent"
+version = "0.1.0"
+description = "Legal Research Agent - autonomous multi-step legal research with tool-using LangGraph agent"
+authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
+readme = "README.md"
+packages = [
+    { include = "research_agent" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+langchain = "^0.3"
+langchain-openai = "^0.3.7"
+langchain-core = "^0.3.74"
+langgraph = "^0.6.4"
+juddges-search = {path = "../juddges_search", develop=true}
+loguru = "*"
+pydantic = ">=2.11.7,<3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.8"
+pytest = "^8.4.1"
+pytest-asyncio = "^0.24.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.pytest.ini_options]
+minversion = "8.0.0"
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]

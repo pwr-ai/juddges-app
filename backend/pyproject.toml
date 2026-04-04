@@ -8,6 +8,7 @@ packages = [
     { include = "app" },
     { include = "packages/juddges_search" },
     { include = "packages/schema_generator_agent" },
+    { include = "packages/research_agent" },
 ]
 
 [tool.poetry.dependencies]
@@ -20,6 +21,7 @@ langchain-community = "^0.3.19"
 langchain-openai = "^0.3.7"
 juddges_search = { path = "packages/juddges_search", develop = true }
 schema_generator_agent = { path = "packages/schema_generator_agent", develop = true }
+research_agent = { path = "packages/research_agent", develop = true }
 langfuse = "^3.2.3"
 aiohttp = "^3.11.14"
 httpx = "^0.27.0"
