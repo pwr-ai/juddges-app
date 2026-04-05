@@ -17,6 +17,14 @@ from app.core.supabase import get_supabase_client
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
+# Column projections for evaluation tables.
+_EVAL_COLS = (
+    "id, schema_version_id, document_id, playground_run_id, "
+    "overall_rating, overall_notes, extracted_data, evaluator_user_id, "
+    "created_at, updated_at"
+)
+_FIELD_EVAL_COLS = "evaluation_id, field_path, field_name, is_correct, extracted_value, evaluator_notes"
+
 # Use shared Supabase client
 supabase = get_supabase_client()
 
@@ -124,7 +132,7 @@ def _get_field_evaluations(evaluation_id: str) -> list[FieldEvaluation]:
     try:
         response = (
             supabase.table("extraction_field_evaluations")
-            .select("*")
+            .select(_FIELD_EVAL_COLS)
             .eq("evaluation_id", evaluation_id)
             .execute()
         )
@@ -412,7 +420,7 @@ async def get_evaluation(
     try:
         result = (
             supabase.table("extraction_evaluations")
-            .select("*")
+            .select(_EVAL_COLS)
             .eq("id", evaluation_id)
             .single()
             .execute()
@@ -477,7 +485,7 @@ async def update_evaluation(
         # Check evaluation exists and user has access
         existing = (
             supabase.table("extraction_evaluations")
-            .select("*")
+            .select(_EVAL_COLS)
             .eq("id", evaluation_id)
             .single()
             .execute()
@@ -684,7 +692,7 @@ async def get_schema_evaluations(
         offset = (page - 1) * page_size
         result = (
             supabase.table("extraction_evaluations")
-            .select("*")
+            .select(_EVAL_COLS)
             .in_("schema_version_id", version_ids)
             .order("created_at", desc=True)
             .range(offset, offset + page_size - 1)
@@ -774,7 +782,7 @@ async def get_document_evaluations(
     try:
         query = (
             supabase.table("extraction_evaluations")
-            .select("*")
+            .select(_EVAL_COLS)
             .eq("document_id", document_id)
         )
 

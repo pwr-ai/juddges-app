@@ -30,6 +30,16 @@ from app.models import (
 
 router = APIRouter(prefix="/ocr", tags=["ocr"])
 
+# Column projections for OCR tables.
+_OCR_JOB_COLS = (
+    "id, document_id, status, source_type, source_filename, extracted_text, "
+    "confidence_score, page_count, language_detected, corrected_text, "
+    "correction_notes, corrected_at, created_at, updated_at, completed_at, error_message"
+)
+_OCR_PAGE_COLS = (
+    "page_number, extracted_text, confidence_score, word_count, quality_metrics"
+)
+
 
 def _compute_quality_metrics(text: str, confidence: float) -> dict:
     """Compute quality metrics for extracted OCR text."""
@@ -441,7 +451,9 @@ async def get_ocr_job(job_id: str) -> OCRJobStatus:
         supabase = get_supabase_client()
 
         # Fetch job
-        result = supabase.table("ocr_jobs").select("*").eq("id", job_id).execute()
+        result = (
+            supabase.table("ocr_jobs").select(_OCR_JOB_COLS).eq("id", job_id).execute()
+        )
         if not result.data:
             raise HTTPException(status_code=404, detail=f"OCR job {job_id} not found")
 
@@ -450,7 +462,7 @@ async def get_ocr_job(job_id: str) -> OCRJobStatus:
         # Fetch page results
         pages_result = (
             supabase.table("ocr_page_results")
-            .select("*")
+            .select(_OCR_PAGE_COLS)
             .eq("job_id", job_id)
             .execute()
         )
@@ -479,7 +491,7 @@ async def list_ocr_jobs(
     """List OCR jobs with optional filters."""
     try:
         supabase = get_supabase_client()
-        query = supabase.table("ocr_jobs").select("*", count="exact")
+        query = supabase.table("ocr_jobs").select(_OCR_JOB_COLS, count="exact")
 
         if document_id:
             query = query.eq("document_id", document_id)

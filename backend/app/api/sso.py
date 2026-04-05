@@ -25,6 +25,16 @@ from app.core.auth_jwt import (
 
 router = APIRouter(prefix="/api/sso", tags=["SSO Management"])
 
+# Column projection for sso_connections — explicit list prevents fetching
+# secrets like oauth_client_secret that are write-only and stored separately.
+_SSO_CONNECTION_COLS = (
+    "id, name, slug, organization, provider_type, status, domain, "
+    "auto_provision_users, default_account_type, supabase_provider_id, "
+    "saml_entity_id, saml_sso_url, saml_metadata_url, "
+    "oauth_client_id, oauth_authorization_url, oauth_token_url, "
+    "oauth_userinfo_url, oauth_scopes, created_at, updated_at"
+)
+
 
 # ===== Models =====
 
@@ -198,7 +208,9 @@ async def list_connections(
     try:
         client = get_admin_supabase_client()
         query = (
-            client.table("sso_connections").select("*").order("created_at", desc=True)
+            client.table("sso_connections")
+            .select(_SSO_CONNECTION_COLS)
+            .order("created_at", desc=True)
         )
 
         if status:
@@ -230,7 +242,7 @@ async def get_connection(
         client = get_admin_supabase_client()
         result = (
             client.table("sso_connections")
-            .select("*")
+            .select(_SSO_CONNECTION_COLS)
             .eq("id", connection_id)
             .single()
             .execute()

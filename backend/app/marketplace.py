@@ -236,7 +236,11 @@ def _fetch_top_listings(
     """Fetch top published listings by given order column."""
     response = (
         supabase.table("marketplace_listings")
-        .select("*")
+        .select(
+            "id, schema_id, publisher_id, title, description, category, tags, "
+            "version, download_count, avg_rating, rating_count, status, "
+            "is_featured, license, published_at, created_at, updated_at"
+        )
         .eq("status", "published")
         .order(order_column, desc=True)
         .limit(limit)

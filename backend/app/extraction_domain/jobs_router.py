@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from celery.result import AsyncResult
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from loguru import logger
+from supabase import PostgrestAPIError, StorageException
 
 from app.extraction_domain.shared import (
     _check_supabase_available,
@@ -105,6 +106,8 @@ def _safe_get_task_state(task_result: AsyncResult, job_id: str) -> str | None:
     try:
         return task_result.state
     except Exception as state_error:
+        # Broad catch: Celery task state access can raise connection errors,
+        # backend unavailability, or kombu/amqp exceptions.
         if _is_task_not_captured_error(state_error):
             logger.warning(
                 f"Task {job_id} not found or not captured by worker: {state_error}"
@@ -121,13 +124,13 @@ def _load_job_record(job_id: str) -> dict | None:
     try:
         job_data = (
             supabase.table("extraction_jobs")
-            .select("*")
+            .select("job_id, status, completed_documents, total_documents, results")
             .eq("job_id", job_id)
             .single()
             .execute()
         )
         return job_data.data
-    except Exception as supabase_error:
+    except (PostgrestAPIError, StorageException) as supabase_error:
         logger.warning(
             f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}"
         )
@@ -251,7 +254,11 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
 
         return _in_progress_batch_response(new_task.id)
     except Exception as resubmit_error:
-        logger.error(f"Failed to resubmit job {job_id}: {resubmit_error}")
+        # Broad catch: resubmit involves both Celery task submission and
+        # Supabase update; either can raise arbitrary exceptions.
+        logger.error(
+            f"Failed to resubmit job {job_id}: {resubmit_error}", exc_info=True
+        )
         return None
 
 
@@ -299,6 +306,7 @@ def _handle_not_ready_task(
             results=None,
         )
     except Exception as ready_error:
+        # Broad catch: Celery task.ready() can raise backend/connection errors.
         logger.warning(f"Error checking if task {job_id} is ready: {ready_error}")
         if not task_result.info:
             return _pending_batch_response(job_id)
@@ -330,6 +338,7 @@ def _handle_failed_task(
             task_id=job_id, status=simplified_status, results=[]
         )
     except Exception as failed_check_error:
+        # Broad catch: Celery task.failed() can raise backend/connection errors.
         logger.warning(f"Error checking if task {job_id} failed: {failed_check_error}")
         return None
 
@@ -431,6 +440,8 @@ async def create_extraction_job(
     except HTTPException:
         raise
     except Exception as e:
+        # Broad catch: task submission involves Celery, Supabase, and schema
+        # validation; any of these may raise arbitrary exceptions.
         logger.error(
             "Unexpected error creating extraction job: {}", str(e), exc_info=True
         )
@@ -546,6 +557,8 @@ async def create_extraction_job_db(
     except HTTPException:
         raise
     except Exception as e:
+        # Broad catch: task submission involves Celery, Supabase, and schema
+        # validation; any of these may raise arbitrary exceptions.
         logger.error(
             "Unexpected error creating extraction job: {}", str(e), exc_info=True
         )
@@ -650,8 +663,10 @@ async def create_bulk_extraction(
                     )
                 )
             except Exception as e:
+                # Broad catch: per-schema job creation involves Celery + Supabase.
                 logger.error(
-                    f"Unexpected error creating job for schema {schema_id}: {e}"
+                    f"Unexpected error creating job for schema {schema_id}: {e}",
+                    exc_info=True,
                 )
                 jobs.append(
                     BulkExtractionJobInfo(
@@ -677,6 +692,7 @@ async def create_bulk_extraction(
     except HTTPException:
         raise
     except Exception as e:
+        # Broad catch: bulk extraction orchestrates multiple Celery + Supabase calls.
         logger.error(f"Unexpected error in bulk extraction: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -763,6 +779,8 @@ async def get_extraction_job(
                 results=responses,
             )
         except Exception as get_error:
+            # Broad catch: Celery task.get() can raise backend errors, celery.exceptions,
+            # or worker-specific exceptions when fetching results.
             if _is_worker_unavailable_message(str(get_error)):
                 logger.error(
                     f"Worker unavailable when getting results for job {job_id}: {get_error}"
@@ -772,6 +790,8 @@ async def get_extraction_job(
     except HTTPException:
         raise
     except Exception as e:
+        # Broad catch: get_extraction_job interacts with Celery and Supabase;
+        # either can raise arbitrary exceptions including connection failures.
         error_type = type(e).__name__
         error_message = str(e)
 
@@ -861,8 +881,11 @@ async def list_extraction_jobs(
             scheduled_tasks = inspect.scheduled() or {}
             reserved_tasks = inspect.reserved() or {}
         except Exception as e:
+            # Broad catch: Celery inspect API can raise kombu/amqp connection errors.
             logger.error(
-                "Failed to retrieve task information from Celery workers: {}", e
+                "Failed to retrieve task information from Celery workers: {}",
+                e,
+                exc_info=True,
             )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -945,7 +968,9 @@ async def list_extraction_jobs(
         )
 
     except Exception as e:
-        logger.error("Error listing extraction jobs: {}", str(e))
+        # Broad catch: listing jobs queries Celery inspect API which can raise
+        # arbitrary connection/broker exceptions.
+        logger.error("Error listing extraction jobs: {}", str(e), exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Error listing extraction jobs: {e!s}"
         )
@@ -1026,7 +1051,9 @@ async def cancel_or_delete_extraction_job(
         )
 
     except Exception as e:
-        logger.error("Error cancelling job {}: {}", job_id, str(e))
+        # Broad catch: Celery revoke() and task state access can raise arbitrary
+        # broker/connection exceptions.
+        logger.error("Error cancelling job {}: {}", job_id, str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error cancelling job: {e!s}")
 
 
@@ -1104,6 +1131,6 @@ async def delete_extraction_job(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (PostgrestAPIError, StorageException) as e:
         logger.error(f"Error deleting job {job_id}: {e!s}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error deleting job: {e!s}")

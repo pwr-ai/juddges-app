@@ -13,7 +13,7 @@ from juddges_search.info_extraction.schema_utils import (
     prepare_schema_from_db,
 )
 from loguru import logger
-from supabase import Client
+from supabase import Client, PostgrestAPIError, StorageException
 from werkzeug.utils import secure_filename
 
 from app.core.supabase import supabase_client
@@ -33,6 +33,12 @@ from .storage import (
     _load_schema_metadata,
     _save_schema_metadata,
     _save_schema_to_file,
+)
+
+# Column projection for extraction_schemas - avoids pulling any large/unused fields.
+_EXTRACTION_SCHEMA_COLS = (
+    "id, name, description, type, category, text, dates, "
+    "user_id, status, is_verified, created_at, updated_at"
 )
 
 
@@ -89,7 +95,7 @@ def register_crud_routes(router: APIRouter) -> None:
             # Build query - get schemas ordered by creation date (newest first) with pagination
             response = (
                 supabase_client.table("extraction_schemas")
-                .select("*")
+                .select(_EXTRACTION_SCHEMA_COLS)
                 .order("created_at", desc=True)
                 .range(offset, offset + page_size - 1)
                 .execute()
@@ -114,8 +120,8 @@ def register_crud_routes(router: APIRouter) -> None:
 
         except HTTPException:
             raise
-        except Exception as e:
-            logger.error(f"Failed to list schemas from database: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Failed to list schemas from database: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to list schemas from database: {e!s}",
@@ -150,8 +156,10 @@ def register_crud_routes(router: APIRouter) -> None:
             return schema
         except HTTPException:
             raise
-        except Exception as e:
-            logger.error(f"Failed to get schema {schema_id} from database: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(
+                f"Failed to get schema {schema_id} from database: {e}", exc_info=True
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve schema from database: {e!s}",
@@ -233,6 +241,8 @@ def register_crud_routes(router: APIRouter) -> None:
                 detail=f"Schema conversion failed: {e!s}",
             )
         except Exception as e:
+            # Broad catch: schema conversion may raise arbitrary errors from
+            # underlying JSON/YAML parsing or pydantic schema processing.
             logger.error(f"Failed to convert schema {schema_id}: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -257,8 +267,8 @@ def register_crud_routes(router: APIRouter) -> None:
             schemas = InformationExtractor.list_schemas()
             logger.info(f"Listed {len(schemas)} schemas")
             return schemas
-        except Exception as e:
-            logger.error(f"Failed to list schemas: {e}")
+        except OSError as e:
+            logger.error(f"Failed to list schemas: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to list schemas: {e!s}",
@@ -292,8 +302,8 @@ def register_crud_routes(router: APIRouter) -> None:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Schema '{schema_id}' not found: {e!s}",
             )
-        except Exception as e:
-            logger.error(f"Failed to get schema {schema_id}: {e}")
+        except OSError as e:
+            logger.error(f"Failed to get schema {schema_id}: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve schema: {e!s}",
@@ -395,8 +405,8 @@ def register_crud_routes(router: APIRouter) -> None:
 
         except HTTPException:
             raise
-        except Exception as e:
-            logger.error(f"Failed to create schema: {e}")
+        except OSError as e:
+            logger.error(f"Failed to create schema: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create schema: {e!s}",
@@ -519,8 +529,8 @@ def register_crud_routes(router: APIRouter) -> None:
 
         except HTTPException:
             raise
-        except Exception as e:
-            logger.error(f"Failed to update schema {schema_id}: {e}")
+        except OSError as e:
+            logger.error(f"Failed to update schema {schema_id}: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to update schema: {e!s}",
@@ -624,8 +634,8 @@ def register_crud_routes(router: APIRouter) -> None:
 
         except HTTPException:
             raise
-        except Exception as e:
-            logger.error(f"Failed to delete schema {schema_id}: {e}")
+        except OSError as e:
+            logger.error(f"Failed to delete schema {schema_id}: {e}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete schema: {e!s}",
@@ -645,7 +655,10 @@ def _fetch_schema_from_db(
         )
 
     response = (
-        db_client.table("extraction_schemas").select("*").eq("id", schema_id).execute()
+        db_client.table("extraction_schemas")
+        .select(_EXTRACTION_SCHEMA_COLS)
+        .eq("id", schema_id)
+        .execute()
     )
 
     if not response.data or len(response.data) == 0:

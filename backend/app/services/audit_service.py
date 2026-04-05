@@ -435,7 +435,14 @@ class AuditService:
                 end_date = datetime.now(UTC)
 
             # Build query
-            query = client.table("audit_logs").select("*").eq("user_id", user_id)
+            query = (
+                client.table("audit_logs")
+                .select(
+                    "id, user_id, action_type, resource_type, resource_id, "
+                    "session_id, ip_address, user_agent, created_at"
+                )
+                .eq("user_id", user_id)
+            )
 
             # Apply filters
             query = query.gte("created_at", start_date.isoformat())

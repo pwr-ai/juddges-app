@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from loguru import logger
 from pydantic import BaseModel
-from supabase import Client, create_client
+from supabase import Client, PostgrestAPIError, StorageException, create_client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
@@ -31,6 +31,8 @@ try:
     REDIS_AVAILABLE = True
     logger.info("Redis client initialized for dashboard caching")
 except Exception as e:
+    # Broad catch: covers ImportError (redis not installed), ValueError (bad port),
+    # and redis.exceptions.ConnectionError at import time.
     logger.warning(f"Redis not available, using in-memory cache: {e}")
     redis_client = None
     REDIS_AVAILABLE = False
@@ -163,7 +165,11 @@ async def _get_cached_dashboard_stats(
             if cached_data:
                 logger.debug("Returning Redis cached dashboard stats")
                 return DashboardStats(**json.loads(cached_data))
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            logger.warning(f"Redis cache read failed (bad data): {e}")
         except Exception as e:
+            # Broad catch: redis.exceptions.RedisError and connection errors
+            # can't be imported at module level without redis being installed.
             logger.warning(f"Redis cache read failed: {e}")
 
     if (
@@ -188,6 +194,8 @@ async def _update_dashboard_cache(
             )
             logger.debug("Updated Redis dashboard stats cache")
         except Exception as e:
+            # Broad catch: redis.exceptions.RedisError and connection errors
+            # can't be imported at module level without redis being installed.
             logger.warning(f"Redis cache write failed: {e}")
 
     _stats_cache["data"] = stats
@@ -229,8 +237,8 @@ async def _compute_fallback_stats() -> DashboardStats:
             total_judgments=total.count or 0,
             jurisdictions=JurisdictionCounts(PL=pl.count or 0, UK=uk.count or 0),
         )
-    except Exception as e:
-        logger.error(f"Fallback stats computation failed: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Fallback stats computation failed: {e}", exc_info=True)
         return DashboardStats()
 
 
@@ -335,8 +343,8 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
         await _update_dashboard_cache(cache_key, stats, now)
         return stats
 
-    except Exception as e:
-        logger.error(f"Error fetching precomputed stats: {e}")
+    except (PostgrestAPIError, StorageException, KeyError, ValueError) as e:
+        logger.error(f"Error fetching precomputed stats: {e}", exc_info=True)
         return await _compute_fallback_stats()
 
 
@@ -360,8 +368,8 @@ async def refresh_dashboard_stats(
         # Call the SQL function to recompute stats
         supabase.rpc("refresh_dashboard_stats").execute()
         logger.info("refresh_dashboard_stats RPC call succeeded")
-    except Exception as e:
-        logger.error(f"Error refreshing stats via RPC: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error refreshing stats via RPC: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
     # Clear caches regardless of RPC outcome so stale data is not served
@@ -370,6 +378,8 @@ async def refresh_dashboard_stats(
             await redis_client.delete("dashboard:stats")
             logger.info("Cleared Redis cache")
         except Exception as e:
+            # Broad catch: redis.exceptions.RedisError and connection errors
+            # can't be imported at module level without redis being installed.
             logger.warning(f"Could not clear Redis cache: {e}")
 
     _clear_stats_cache()
@@ -399,7 +409,7 @@ async def dashboard_health():
             "stats_computed_at": computed_at,
             "backend_version": "1.0.0",
         }
-    except Exception as e:
+    except (PostgrestAPIError, StorageException) as e:
         return {
             "status": "unhealthy",
             "error": str(e),
@@ -474,9 +484,9 @@ async def get_recent_documents(
                         logger.info(
                             f"Found document for '{query}': {doc_summary.title[:50] if doc_summary.title else 'Untitled'}"
                         )
-                    except Exception as e:
+                    except (ValueError, KeyError, TypeError) as e:
                         logger.warning(f"Error converting document: {e}")
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.warning(f"Error searching for '{query}': {e}")
 
         return results
@@ -503,8 +513,8 @@ async def get_recent_documents(
         )
         return unique_documents
 
-    except Exception as e:
-        logger.error(f"Error fetching highlighted documents: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching highlighted documents: {e}", exc_info=True)
         return []
 
 
@@ -629,7 +639,11 @@ async def get_featured_examples(
     try:
         response = (
             supabase.table("documents")
-            .select("*")
+            .select(
+                "id, title, document_type, date_issued, publication_date, "
+                "judgment_date, country, language, issuing_body, "
+                "full_text, docket_number, court_name, judgment_id"
+            )
             .in_("document_type", ["judgment", "tax_interpretation"])
             .not_.is_("title", "null")
             .limit(limit * 3)
@@ -649,8 +663,8 @@ async def get_featured_examples(
 
         return featured[:limit]
 
-    except Exception as e:
-        logger.error(f"Error fetching featured examples: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching featured examples: {e}", exc_info=True)
         return []
 
 
@@ -770,7 +784,7 @@ async def test_document_counts(
                 if count > 0:
                     type_counts[doc_type] = count
                     logger.info(f"{doc_type}: {count:,}")
-            except Exception as e:
+            except (PostgrestAPIError, StorageException) as e:
                 logger.warning(f"Could not count {doc_type}: {e}")
 
         # Get recent documents count
@@ -784,7 +798,7 @@ async def test_document_counts(
             )
             recent_count = recent_response.count or 0
             logger.info(f"Documents added this week: {recent_count:,}")
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.warning(f"Could not get weekly count: {e}")
             recent_count = 0
 
@@ -797,8 +811,8 @@ async def test_document_counts(
             "message": "Document counting is working!",
         }
 
-    except Exception as e:
-        logger.error(f"Error testing document counts: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error testing document counts: {e}", exc_info=True)
         return {
             "status": "error",
             "message": str(e),
