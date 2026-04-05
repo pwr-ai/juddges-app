@@ -2,9 +2,9 @@
 AI-powered schema generation: start, refine, get, and cancel generation sessions.
 """
 
-import asyncio
+import os
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -18,29 +18,67 @@ from schema_generator_agent.agents.schema_generator import (
     load_prompts,
 )
 
+from app.core.session_store import SESSION_TTL, SessionStore
+
 from .models import (
     SchemaGenerationRequest,
     SchemaGenerationResponse,
     SchemaRefinementRequest,
 )
 
-# Session storage for AI generation: session_id -> (agent, created_at)
+# In-memory store for agent objects (not JSON-serializable, must stay in-process).
+# session_id -> (agent, created_at)
 _generation_sessions: dict[str, tuple[SchemaGenerator, datetime]] = {}
 
 
+def _build_session_store() -> SessionStore:
+    """Create a SessionStore backed by Redis when configured, otherwise in-memory only."""
+    redis_host = os.getenv("REDIS_HOST", "").strip()
+    if not redis_host:
+        logger.info(
+            "REDIS_HOST not set — schema session metadata stored in-memory only"
+        )
+        return SessionStore(redis_client=None)
+
+    try:
+        import redis.asyncio as aioredis
+
+        redis_port = int(os.getenv("REDIS_PORT", "6379"))
+        redis_auth = os.getenv("REDIS_AUTH") or None
+        client = aioredis.Redis(
+            host=redis_host,
+            port=redis_port,
+            password=redis_auth,
+            db=2,  # Dedicated DB for schema generation session metadata
+            decode_responses=True,
+        )
+        logger.info(
+            f"Schema session store initialised with Redis at {redis_host}:{redis_port}"
+        )
+        return SessionStore(redis_client=client)
+    except Exception as e:
+        logger.warning(
+            f"Failed to create Redis client for session store, falling back to in-memory: {e}"
+        )
+        return SessionStore(redis_client=None)
+
+
+# Module-level SessionStore — holds serialisable session metadata in Redis.
+_session_store: SessionStore = _build_session_store()
+
+
 async def cleanup_expired_sessions():
-    """Background task to clean up expired generation sessions."""
-    while True:
-        await asyncio.sleep(300)  # Every 5 minutes
-        now = datetime.now(UTC)
-        expired = [
-            sid
-            for sid, (_, created) in _generation_sessions.items()
-            if now - created > timedelta(hours=1)
-        ]
-        for sid in expired:
-            del _generation_sessions[sid]
-            logger.info(f"Cleaned up expired generation session: {sid}")
+    """
+    No-op kept for backward compatibility.
+
+    Redis TTL handles expiry of session metadata automatically.
+    The in-memory agent dict is cleaned up on session cancellation or on
+    404 responses (agent gone after restart).
+    """
+    logger.info(
+        "cleanup_expired_sessions: Redis TTL handles session metadata expiry — "
+        "no manual sweep needed"
+    )
 
 
 def get_or_create_generation_agent(
@@ -132,6 +170,7 @@ def register_generation_routes(router: APIRouter) -> None:
                 request=request,
             )
 
+            created_at = datetime.now(UTC)
             initial_state = AgentState(
                 messages=[],
                 user_input=params.prompt,
@@ -148,12 +187,24 @@ def register_generation_routes(router: APIRouter) -> None:
                 conversation_id=session_id,
                 collection_id=params.collection_id,
                 confidence_score=None,
-                session_metadata={"created_at": datetime.now(UTC).isoformat()},
+                session_metadata={"created_at": created_at.isoformat()},
             )
 
             response = await agent.graph.ainvoke(
                 input=initial_state,
                 config={"configurable": {"thread_id": session_id}},
+            )
+
+            # Persist serialisable metadata to Redis (TTL-managed).
+            await _session_store.set(
+                session_id,
+                {
+                    "created_at": created_at.isoformat(),
+                    "status": "active",
+                    "document_type": params.document_type,
+                    "collection_id": params.collection_id,
+                },
+                ttl=SESSION_TTL,
             )
 
             # Add session metadata to response
@@ -258,7 +309,12 @@ def register_generation_routes(router: APIRouter) -> None:
             HTTPException: If session not found
         """
         try:
-            if session_id not in _generation_sessions:
+            # Check in-memory agent first; fall back to Redis metadata for
+            # sessions whose agent has been lost (e.g. after a restart).
+            in_memory = session_id in _generation_sessions
+            metadata = await _session_store.get(session_id)
+
+            if not in_memory and metadata is None:
                 logger.warning(f"Generation session not found: {session_id}")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -266,15 +322,19 @@ def register_generation_routes(router: APIRouter) -> None:
                 )
 
             logger.info(f"Retrieving generation session: {session_id}")
-            _agent, created_at = _generation_sessions[session_id]
 
-            # Return basic session metadata
-            # Note: Full state would require querying the agent's checkpoint
+            if in_memory:
+                _agent, created_at = _generation_sessions[session_id]
+                created_at_iso = created_at.isoformat()
+            else:
+                # Agent lost (process restart) but metadata still alive in Redis.
+                created_at_iso = (metadata or {}).get("created_at", "")
+
             return {
                 "session_id": session_id,
                 "status": "active",
                 "session_metadata": {
-                    "created_at": created_at.isoformat(),
+                    "created_at": created_at_iso,
                 },
             }
 
@@ -301,7 +361,10 @@ def register_generation_routes(router: APIRouter) -> None:
             HTTPException: If session not found
         """
         try:
-            if session_id not in _generation_sessions:
+            in_memory = session_id in _generation_sessions
+            metadata = await _session_store.get(session_id)
+
+            if not in_memory and metadata is None:
                 logger.warning(f"Generation session not found: {session_id}")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -309,7 +372,13 @@ def register_generation_routes(router: APIRouter) -> None:
                 )
 
             logger.info(f"Cancelling generation session: {session_id}")
-            del _generation_sessions[session_id]
+
+            # Remove agent from memory (if present).
+            _generation_sessions.pop(session_id, None)
+
+            # Remove metadata from Redis / fallback dict.
+            await _session_store.delete(session_id)
+
             logger.info(f"Generation session {session_id} cancelled successfully")
 
         except HTTPException:
