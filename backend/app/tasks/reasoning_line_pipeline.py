@@ -153,7 +153,7 @@ def _extract_simple_keywords(texts: list[str], top_n: int = 5) -> list[str]:
 def _fetch_unassigned_judgment_ids(limit: int = 100) -> list[dict[str, Any]]:
     """Fetch judgment IDs that are NOT in reasoning_line_members.
 
-    Returns list of dicts with id, embedding, decision_date, title, signature,
+    Returns list of dicts with id, embedding, decision_date, title, case_number,
     court_name, cited_legislation.
     """
     if not supabase_client:
@@ -167,7 +167,7 @@ def _fetch_unassigned_judgment_ids(limit: int = 100) -> list[dict[str, Any]]:
 
     # Fetch recent judgments with embeddings, ordered by decision_date DESC
     select_fields = (
-        "id, embedding, decision_date, title, signature, court_name, cited_legislation"
+        "id, embedding, decision_date, title, case_number, court_name, cited_legislation"
     )
     resp = (
         supabase_client.table("judgments")
@@ -462,8 +462,8 @@ def auto_discover_lines(self: Task) -> dict[str, Any]:
             text_parts = []
             if j.get("title"):
                 text_parts.append(j["title"])
-            if j.get("signature"):
-                text_parts.append(j["signature"])
+            if j.get("case_number"):
+                text_parts.append(j["case_number"])
             cluster_texts.append(" ".join(text_parts))
 
             # Collect legislation

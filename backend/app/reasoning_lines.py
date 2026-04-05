@@ -22,6 +22,7 @@ semantic drift peaks and tracking entering/exiting keywords.
 """
 
 import time
+import json
 import uuid
 from collections import Counter
 from datetime import UTC, datetime
@@ -515,7 +516,7 @@ async def discover_reasoning_lines(
 
     # Step 1: Fetch judgments with embeddings
     select_fields = (
-        "id, signature, title, summary, decision_date, court_name, "
+        "id, case_number, title, summary, decision_date, court_name, "
         "cited_legislation, legal_topics, keywords, embedding, deep_legal_domains"
     )
     try:
@@ -539,7 +540,16 @@ async def discover_reasoning_lines(
         f"(requested {body.sample_size})"
     )
 
-    # Step 2: Filter to documents with valid embeddings
+    # Step 2: Parse and filter to documents with valid embeddings
+    # Embeddings may be stored as JSON strings or lists depending on the table
+    for doc in docs:
+        emb = doc.get("embedding")
+        if isinstance(emb, str):
+            try:
+                doc["embedding"] = json.loads(emb)
+            except (json.JSONDecodeError, TypeError):
+                doc["embedding"] = None
+
     docs_with_embeddings = [
         doc
         for doc in docs
@@ -611,7 +621,7 @@ async def discover_reasoning_lines(
             cases.append(
                 DiscoveredCase(
                     judgment_id=str(doc["id"]),
-                    signature=doc.get("signature"),
+                    signature=doc.get("case_number"),
                     title=doc.get("title"),
                     court_name=doc.get("court_name"),
                     decision_date=(
@@ -761,7 +771,7 @@ async def create_reasoning_line(
     try:
         response = (
             db.client.table("judgments")
-            .select("id, signature, title, court_name, decision_date, embedding")
+            .select("id, case_number, title, court_name, decision_date, embedding")
             .in_("id", unique_ids)
             .execute()
         )
@@ -869,7 +879,7 @@ async def create_reasoning_line(
         members.append(
             ReasoningLineMember(
                 judgment_id=jid,
-                signature=judgment.get("signature"),
+                signature=judgment.get("case_number"),
                 title=judgment.get("title"),
                 court_name=judgment.get("court_name"),
                 decision_date=(
@@ -1051,7 +1061,7 @@ async def get_reasoning_line(request: Request, line_id: str) -> ReasoningLineDet
         try:
             j_response = (
                 db.client.table("judgments")
-                .select("id, signature, title, court_name, decision_date")
+                .select("id, case_number, title, court_name, decision_date")
                 .in_("id", judgment_ids)
                 .execute()
             )
@@ -1067,7 +1077,7 @@ async def get_reasoning_line(request: Request, line_id: str) -> ReasoningLineDet
         members.append(
             ReasoningLineMember(
                 judgment_id=jid,
-                signature=judgment.get("signature"),
+                signature=judgment.get("case_number"),
                 title=judgment.get("title"),
                 court_name=judgment.get("court_name"),
                 decision_date=(

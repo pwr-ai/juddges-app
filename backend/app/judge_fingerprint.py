@@ -12,6 +12,7 @@ from app.argumentation for higher-fidelity results.
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -120,8 +121,8 @@ class SampleCase(BaseModel):
     """A single case reference with its dominant reasoning pattern."""
 
     case_id: str = Field(description="Judgment ID")
-    signature: str | None = Field(
-        default=None, description="Case signature / reference number"
+    case_number: str | None = Field(
+        default=None, description="Case number / reference"
     )
     date: str | None = Field(default=None, description="Date of the judgment")
     dominant_pattern: str = Field(description="Dominant reasoning pattern in this case")
@@ -160,8 +161,7 @@ class JudgeSearchResult(BaseModel):
 async def _fetch_judgments_for_judge(judge_name: str) -> list[dict[str, Any]]:
     """Fetch judgments where the given judge participated.
 
-    Searches both the ``judges`` array column and the ``presiding_judge``
-    text column in the ``judgments`` table.
+    Searches the ``judges`` array column in the ``judgments`` table.
     """
     client = await get_async_supabase_client()
     if client is None:
@@ -171,32 +171,17 @@ async def _fetch_judgments_for_judge(judge_name: str) -> list[dict[str, Any]]:
         )
 
     try:
-        # Query judgments where the judge appears in the judges array
-        # or is the presiding judge. Supabase PostgREST uses `cs` (contains)
-        # for array columns.
+        # Query judgments where the judge appears in the judges JSONB array.
+        # PostgREST `cs` (contains) for JSONB arrays uses JSON array format.
         response_judges = (
             await client.table("judgments")
-            .select("id,signature,date,court_name,full_text,judges,presiding_judge")
-            .contains("judges", [judge_name])
+            .select("id,case_number,decision_date,court_name,full_text,judges")
+            .filter("judges", "cs", json.dumps([judge_name]))
             .limit(MAX_JUDGMENTS_PER_JUDGE)
             .execute()
         )
-        results_by_id: dict[str, dict[str, Any]] = {
-            row["id"]: row for row in (response_judges.data or [])
-        }
 
-        # Also query by presiding_judge (exact match)
-        response_presiding = (
-            await client.table("judgments")
-            .select("id,signature,date,court_name,full_text,judges,presiding_judge")
-            .eq("presiding_judge", judge_name)
-            .limit(MAX_JUDGMENTS_PER_JUDGE)
-            .execute()
-        )
-        for row in response_presiding.data or []:
-            results_by_id.setdefault(row["id"], row)
-
-        judgments = list(results_by_id.values())
+        judgments = list(response_judges.data or [])
         logger.info(f"Found {len(judgments)} judgments for judge '{judge_name}'")
         return judgments
 
@@ -266,7 +251,7 @@ def _build_judge_profile(
             aggregated_counts[style] += counts[style]
 
         # Collect date for period calculation
-        date_val = judgment.get("date")
+        date_val = judgment.get("decision_date")
         if date_val:
             dates.append(str(date_val))
 
@@ -280,7 +265,7 @@ def _build_judge_profile(
             sample_cases.append(
                 SampleCase(
                     case_id=str(judgment.get("id", "")),
-                    signature=judgment.get("signature"),
+                    case_number=judgment.get("case_number"),
                     date=str(date_val) if date_val else None,
                     dominant_pattern=dominant,
                     court_name=judgment.get("court_name"),
@@ -445,22 +430,27 @@ async def search_judges(
         )
 
     try:
-        # Search in presiding_judge column using ilike (case-insensitive)
+        # Fetch judgments that have judges data.
+        # The `judges` column is a TEXT[] array — we fetch all entries and
+        # filter/aggregate in Python since PostgREST has limited array search.
         response = (
             await client.table("judgments")
-            .select("presiding_judge")
-            .ilike("presiding_judge", f"%{q}%")
-            .not_.is_("presiding_judge", "null")
-            .limit(1000)
+            .select("judges")
+            .not_.is_("judges", "null")
+            .limit(2000)
             .execute()
         )
 
-        # Aggregate counts per judge name
+        # Aggregate counts per judge name, filtering by query match
+        q_lower = q.lower()
         judge_counts: dict[str, int] = {}
         for row in response.data or []:
-            name = row.get("presiding_judge")
-            if name:
-                judge_counts[name] = judge_counts.get(name, 0) + 1
+            judges_list = row.get("judges")
+            if not isinstance(judges_list, list):
+                continue
+            for name in judges_list:
+                if name and q_lower in name.lower():
+                    judge_counts[name] = judge_counts.get(name, 0) + 1
 
         # Sort by case count descending, then alphabetically
         sorted_judges = sorted(
