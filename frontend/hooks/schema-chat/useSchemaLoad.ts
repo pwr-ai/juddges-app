@@ -5,6 +5,7 @@ import type { SchemaSaveResponse } from "@/lib/schema-editor/service";
 import { parseImportTextToSchema } from "@/lib/schema-chat/import-parser";
 import type { SchemaStatus } from "@/types/extraction_schemas";
 import type { SchemaField } from "@/hooks/schema-editor/types";
+import { logger } from "@/lib/logger";
 
 interface UseSchemaLoadParams {
   user: { id: string } | null;
@@ -61,7 +62,7 @@ export function useSchemaLoad({
       const schemas = await schemaService.listSchemas();
       setSavedSchemas(schemas as any);
     } catch (error) {
-      console.error("Error fetching schemas: ", error);
+      logger.error("Error fetching schemas: ", error);
       toast.error("Failed to load schemas");
     } finally {
       setIsLoadingSchemas(false);
@@ -158,7 +159,7 @@ export function useSchemaLoad({
         setShowLoadSchemaDialog(false);
         setPendingLoadSchemaId(null);
       } catch (error) {
-        console.error("Error loading schema: ", error);
+        logger.error("Error loading schema: ", error);
         toast.error("Failed to load schema", {
           id: "load-schema",
           description:

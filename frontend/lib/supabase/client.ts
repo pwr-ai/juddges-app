@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { env } from "@/lib/env/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Create a Supabase client for client-side operations
@@ -11,7 +12,7 @@ export function createClient() {
   // During build time, return a dummy client if vars are placeholders
   // This allows the build to complete without crashing
   if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
-    console.warn('Building with placeholder Supabase credentials - will be replaced at runtime');
+    logger.warn('Building with placeholder Supabase credentials - will be replaced at runtime');
     return createBrowserClient('https://placeholder.supabase.co', 'placeholder-key');
   }
 

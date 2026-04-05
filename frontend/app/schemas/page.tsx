@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { logger } from "@/lib/logger";
 
 type TabValue = 'all' | 'my-schemas' | 'public-schemas';
 type ViewMode = 'list' | 'grid';
@@ -127,7 +128,7 @@ export default function SchemasPage() {
  setStats(data);
  } catch (err) {
  // Stats are optional, so we don't show error toast
- console.error('Failed to fetch schema stats:', err);
+ logger.error('Failed to fetch schema stats:', err);
  }
  }, []);
 
@@ -153,7 +154,7 @@ export default function SchemasPage() {
  }
  }
  } catch (error) {
- console.warn('Failed to calculate field count:', error);
+ logger.warn('Failed to calculate field count:', error);
  }
  return 0;
  };

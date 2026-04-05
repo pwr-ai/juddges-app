@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || "http://localhost:8000";
 const BACKEND_API_KEY = process.env.BACKEND_API_KEY;
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
   } catch (error) {
-    console.error("Error fetching example questions: ", error);
+    logger.error("Error fetching example questions: ", error);
     return NextResponse.json(
       { error: "Failed to fetch example questions" },
       { status: 500 }

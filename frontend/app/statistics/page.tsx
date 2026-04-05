@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { FileText, Database, Globe, Calendar, RefreshCw, Eye } from 'lucide-react';
 import { DocumentDialog } from '@/lib/styles/components';
 import { SearchDocument } from '@/types/search';
+import { logger } from "@/lib/logger";
 
 interface ExtendedSearchDocument extends Omit<SearchDocument, 'issuing_body' | 'legal_references' | 'legal_concepts' | 'thesis'> {
   full_text_preview?: string;
@@ -73,7 +74,7 @@ export default function StatisticsPage() {
         sampleDocument: data.sampleDocument
       });
     } catch (err) {
-      console.error('Error fetching sample document:', err);
+      logger.error('Error fetching sample document:', err);
     } finally {
       setSampleDocumentLoading(false);
     }
@@ -95,7 +96,7 @@ export default function StatisticsPage() {
         setStatistics(data);
       }
     } catch (err) {
-      console.error('Error precomputing statistics:', err);
+      logger.error('Error precomputing statistics:', err);
     } finally {
       setPrecomputeLoading(false);
     }

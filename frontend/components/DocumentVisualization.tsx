@@ -38,6 +38,7 @@ import {
  SearchInput,
  ErrorCard,
 } from '@/lib/styles/components';
+import { logger } from "@/lib/logger";
 
 // Dynamically import Plotly to avoid SSR issues
 const Plot = dynamic(
@@ -297,7 +298,7 @@ const DocumentVisualization: React.FC<DocumentVisualizationProps> = ({ className
  cacheRef.current.set(cacheKey, data);
 
  } catch (err) {
- console.error('Error fetching graph data:', err);
+ logger.error('Error fetching graph data:', err);
  setError(err instanceof Error ? err.message : 'Failed to load graph data');
  setLoadingStats(false);
  setLoadingConfig(false);

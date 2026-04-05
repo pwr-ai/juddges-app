@@ -5,7 +5,7 @@
   ],
   "rules": {
     "react-hooks/exhaustive-deps": "error",
-    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-console": ["warn", { "allow": [] }],
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/explicit-function-return-type": ["warn", {
       "allowExpressions": true,
@@ -13,5 +13,13 @@
       "allowHigherOrderFunctions": true,
       "allowDirectConstAssertionInArrowFunctions": true
     }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
 }

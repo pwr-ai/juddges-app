@@ -9,6 +9,7 @@ import { SecondaryButton, TextButton, DropdownButton } from "@/lib/styles/compon
 import { BookOpen, Filter, Calendar, FileType, ArrowUpDown, Settings, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPublications } from "@/lib/api/publications";
+import { logger } from "@/lib/logger";
 
 type FilterYear = number |"all";
 type FilterType = PublicationType |"all";
@@ -29,7 +30,7 @@ export default function PublicationsPage() {
  const data = await getPublications();
  setPublications(data);
  } catch (error) {
- console.error("Failed to fetch publications from API, using static data: ", error);
+ logger.error("Failed to fetch publications from API, using static data: ", error);
  // Fallback to static publications if API fails
  setPublications(staticPublications as PublicationWithResources[]);
  } finally {

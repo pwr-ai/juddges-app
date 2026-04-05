@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendUrl } from "../../utils/backend-url";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Dashboard Stats] Error response: ", errorText);
+      logger.error("[Dashboard Stats] Error response: ", errorText);
       throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
 
@@ -31,7 +32,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("[Dashboard Stats] Error fetching dashboard stats: ", error);
+    logger.error("[Dashboard Stats] Error fetching dashboard stats: ", error);
     // Return default values on error
     const defaultData = {
       total_judgments: 0,

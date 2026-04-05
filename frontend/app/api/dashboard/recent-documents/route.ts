@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendUrl } from "../../utils/backend-url";
+import { logger } from "@/lib/logger";
 
 // Force dynamic rendering - disable Next.js route caching
 export const dynamic = 'force-dynamic';
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Recent Documents] Error response: ", errorText);
+      logger.error("[Recent Documents] Error response: ", errorText);
       throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
 
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[Recent Documents] Error fetching recent documents: ", error);
+    logger.error("[Recent Documents] Error fetching recent documents: ", error);
     return NextResponse.json([]);
   }
 }

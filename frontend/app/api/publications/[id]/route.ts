@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
@@ -27,7 +28,7 @@ export async function GET(
           { status: 404 }
         );
       }
-      console.error(`Backend API returned error status: ${response.status}`);
+      logger.error(`Backend API returned error status: ${response.status}`);
       return NextResponse.json(
         { error: "Failed to fetch publication from backend" },
         { status: response.status }
@@ -37,7 +38,7 @@ export async function GET(
     const publication = await response.json();
     return NextResponse.json(publication);
   } catch (error) {
-    console.error("Error in GET publication: ", error);
+    logger.error("Error in GET publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -83,7 +84,7 @@ export async function PUT(
         );
       }
       const errorText = await response.text();
-      console.error(`Backend API returned error status: ${response.status}`, errorText);
+      logger.error(`Backend API returned error status: ${response.status}`, errorText);
       return NextResponse.json(
         { error: "Failed to update publication" },
         { status: response.status }
@@ -93,7 +94,7 @@ export async function PUT(
     const publication = await response.json();
     return NextResponse.json(publication);
   } catch (error) {
-    console.error("Error in PUT publication: ", error);
+    logger.error("Error in PUT publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -136,7 +137,7 @@ export async function DELETE(
           { status: 404 }
         );
       }
-      console.error(`Backend API returned error status: ${response.status}`);
+      logger.error(`Backend API returned error status: ${response.status}`);
       return NextResponse.json(
         { error: "Failed to delete publication" },
         { status: response.status }
@@ -145,7 +146,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Publication deleted successfully" });
   } catch (error) {
-    console.error("Error in DELETE publication: ", error);
+    logger.error("Error in DELETE publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

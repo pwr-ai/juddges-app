@@ -23,6 +23,7 @@ import {
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { logger } from "@/lib/logger";
 
 /**
  * Props for SchemaCard component
@@ -130,7 +131,7 @@ export function SchemaCard({
  }
  }
  } catch (error) {
- console.warn('Failed to calculate field count:', error);
+ logger.warn('Failed to calculate field count:', error);
  }
  return 0;
  };

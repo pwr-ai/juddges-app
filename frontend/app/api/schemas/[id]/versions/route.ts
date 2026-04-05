@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/schemas/[id]/versions
@@ -22,7 +23,7 @@ export async function GET(
       .single();
 
     if (schemaError) {
-      console.error('Error fetching schema:', schemaError);
+      logger.error('Error fetching schema:', schemaError);
       return NextResponse.json(
         { error: 'Schema not found', details: schemaError.message },
         { status: 404 }
@@ -49,7 +50,7 @@ export async function GET(
       .order('version_number', { ascending: false });
 
     if (error) {
-      console.error('Error fetching schema versions:', error);
+      logger.error('Error fetching schema versions:', error);
       return NextResponse.json(
         { error: 'Failed to fetch schema versions', details: error.message },
         { status: 500 }
@@ -63,7 +64,7 @@ export async function GET(
       total: versions?.length || 0,
     });
   } catch (error) {
-    console.error('Unexpected error in versions API:', error);
+    logger.error('Unexpected error in versions API:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },
       { status: 500 }
@@ -100,7 +101,7 @@ export async function POST(
     });
 
     if (error) {
-      console.error('Error rolling back schema:', error);
+      logger.error('Error rolling back schema:', error);
       return NextResponse.json(
         { error: 'Failed to rollback schema', details: error.message },
         { status: 500 }
@@ -112,7 +113,7 @@ export async function POST(
       message: `Successfully rolled back to version ${version_number}`,
     });
   } catch (error) {
-    console.error('Unexpected error in rollback API:', error);
+    logger.error('Unexpected error in rollback API:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },
       { status: 500 }

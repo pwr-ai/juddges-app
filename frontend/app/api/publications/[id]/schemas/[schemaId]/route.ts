@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
@@ -32,7 +33,7 @@ export async function DELETE(
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error: ${response.status}`);
+      logger.error(`Backend API returned error: ${response.status}`);
       return NextResponse.json(
         { error: "Failed to unlink schema" },
         { status: response.status }
@@ -41,7 +42,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Schema unlinked successfully" });
   } catch (error) {
-    console.error("Error unlinking schema: ", error);
+    logger.error("Error unlinking schema: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

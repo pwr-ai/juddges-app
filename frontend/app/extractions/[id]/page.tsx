@@ -35,6 +35,7 @@ import { ExtractionDataViewer } from "@/lib/styles/components/extraction";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import { ExtractionResultsTable } from "@/components/extraction-results-table";
+import { logger } from "@/lib/logger";
 import"./print.css";
 
 /**
@@ -154,10 +155,10 @@ function JobDetailsContent() {
  }
 
  if (errorData.details) {
- console.error("Error details: ", errorData.details);
+ logger.error("Error details: ", errorData.details);
  }
  if (errorData.code) {
- console.error("Error code: ", errorData.code);
+ logger.error("Error code: ", errorData.code);
  }
  } catch {
  // If response is not JSON, use status text
@@ -175,7 +176,7 @@ function JobDetailsContent() {
  document.title = baseTitle;
  }
  } catch (err) {
- console.error("Error fetching job details: ", err);
+ logger.error("Error fetching job details: ", err);
  const errorMessage = err instanceof Error ? err.message : "Failed to load job details";
  toast.error("Error", {
  description: errorMessage,

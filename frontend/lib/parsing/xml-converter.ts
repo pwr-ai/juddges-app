@@ -1,6 +1,7 @@
 // Convert custom XML tags from Polish court documents to HTML
 
 import { JSDOM } from 'jsdom';
+import { logger } from "@/lib/logger";
 
 /**
  * Convert custom XML tags from Polish court documents to HTML
@@ -242,7 +243,7 @@ export function convertXmlTagsToHtml(input: string): string {
 
     return body.innerHTML;
   } catch (e) {
-    console.error('Error converting XML tags:', e);
+    logger.error('Error converting XML tags:', e);
     // Fallback to original input if parsing fails
     return input;
   }

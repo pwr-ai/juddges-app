@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
 const API_KEY = process.env.BACKEND_API_KEY;
@@ -12,7 +13,7 @@ const API_KEY = process.env.BACKEND_API_KEY;
 export async function POST() {
   try {
     if (!API_KEY) {
-      console.error('BACKEND_API_KEY not configured');
+      logger.error('BACKEND_API_KEY not configured');
       return NextResponse.json(
         { error: 'Server configuration error: API key not set' },
         { status: 500 }
@@ -36,7 +37,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Failed to invalidate cache:', error);
+    logger.error('Failed to invalidate cache:', error);
     return NextResponse.json(
       {
         error: 'Failed to connect to backend',

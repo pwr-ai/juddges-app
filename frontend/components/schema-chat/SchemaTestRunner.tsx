@@ -23,6 +23,7 @@ import {
  DialogHeader,
  DialogTitle,
 } from "@/components/ui/dialog";
+import { logger } from "@/lib/logger";
 
 interface Document {
  id: string;
@@ -83,7 +84,7 @@ export function SchemaTestRunner({
  // Auto-select first 3 documents
  setSelectedDocs(new Set(sampleDocs.slice(0, 3).map((d: Document) => d.id)));
  } catch (error) {
- console.error("Error fetching documents: ", error);
+ logger.error("Error fetching documents: ", error);
  toast.error("Failed to load documents");
  } finally {
  setIsLoading(false);
@@ -123,7 +124,7 @@ export function SchemaTestRunner({
  }
  );
  } catch (error) {
- console.error("Error running test: ", error);
+ logger.error("Error running test: ", error);
  toast.error("Failed to run schema test");
  } finally {
  setIsTesting(false);

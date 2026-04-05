@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { UserAvatar } from "./user-avatar";
 import { PlanBadge } from "./plan-badge";
 import useCurrentUserName from "@/hooks/use-current-user-name";
+import { logger } from "@/lib/logger";
 
 export interface UserCardProps {
   /** Optional className for additional styling */
@@ -62,7 +63,7 @@ export function UserCard({
       router.push("/auth/login");
       onClose?.();
     } catch (error) {
-      console.error("Error logging out: ", error);
+      logger.error("Error logging out: ", error);
     }
   };
 
