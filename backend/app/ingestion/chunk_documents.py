@@ -429,12 +429,14 @@ class DocumentChunker:
             f"Found {len(existing_ids)} judgments already chunked, skipping them"
         )
 
-        while True:
+        has_more = True
+        while has_more:
             remaining = (
                 limit - self.stats["documents_processed"] if limit else self.batch_size
             )
             if limit and remaining <= 0:
-                break
+                has_more = False
+                continue
             batch_limit = min(self.batch_size, remaining)
             judgments = self.get_judgments_without_chunks(
                 limit=batch_limit,
@@ -443,7 +445,8 @@ class DocumentChunker:
 
             if not judgments:
                 logger.info("No more judgments to process")
-                break
+                has_more = False
+                continue
 
             await self.process_batch(judgments)
 
