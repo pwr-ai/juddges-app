@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy scripts and config
 COPY scripts/ scripts/
-# NOTE: .env file removed from image for security
-# Pass secrets at runtime using --env-file or -e flags
+# Do NOT copy .env into the image — secrets would be baked into the Docker layer.
+# Instead, inject environment variables at runtime:
+#   docker run --env-file .env --rm -v $(pwd)/data:/app/data juddges-analysis
 
 # Create data directory
 RUN mkdir -p data/
