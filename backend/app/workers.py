@@ -35,14 +35,35 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 
 celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
 
-# Auto-discover tasks in the app.tasks package
-celery_app.autodiscover_tasks(["app.tasks"])
+# Explicitly register task modules so the worker knows about them.
+# NOTE: autodiscover_tasks(["app.tasks"]) only finds ``app.tasks.tasks``
+# (a file named tasks.py), not arbitrarily named modules like
+# ``meilisearch_sync.py``.  Using conf.imports is explicit and avoids the
+# circular-import hazard (meilisearch_sync imports celery_app from here).
+celery_app.conf.imports = [
+    "app.tasks.meilisearch_sync",
+    "app.tasks.reasoning_line_pipeline",
+]
 
 # Celery Beat schedule — periodic background jobs
 celery_app.conf.beat_schedule = {
     "meilisearch-full-sync-every-6h": {
         "task": "meilisearch.full_sync",
         "schedule": 6 * 60 * 60,  # every 6 hours
+    },
+    "reasoning-lines-auto-assign-weekly": {
+        "task": "reasoning_lines.auto_assign",
+        "schedule": 7 * 24 * 60 * 60,  # every 7 days
+    },
+    "reasoning-lines-auto-discover-weekly": {
+        "task": "reasoning_lines.auto_discover",
+        "schedule": 7 * 24 * 60 * 60,  # every 7 days
+        "options": {"countdown": 3600},  # offset by 1 hour from auto_assign
+    },
+    "reasoning-lines-detect-events-weekly": {
+        "task": "reasoning_lines.detect_events",
+        "schedule": 7 * 24 * 60 * 60,  # every 7 days
+        "options": {"countdown": 7200},  # offset by 2 hours
     },
 }
 celery_app.conf.timezone = "UTC"
