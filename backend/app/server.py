@@ -498,6 +498,42 @@ async def redirect_root_to_docs():
     return RedirectResponse("/docs")
 
 
+# ============================================================================
+# Router Registration — Authentication Tiers
+# ============================================================================
+# PUBLIC:    health_router (/health, /health/healthz — no auth)
+#            guest_sessions_router (/api/guest-sessions — public)
+#            blog_router — public GET endpoints (list/get posts, categories)
+#            legal_router — static legal documents (DPA, retention policies)
+#
+# API_KEY:   LangServe routes (/qa, /chat, /enhance_query)
+#            documents_router, collections_router, publications_router
+#            extraction_router, schemas_router, schema_generator_agent_router
+#            schema_generator_router, example_questions_router
+#            dashboard_router, playground_router, evaluations_router
+#            summarization_router, precedents_router, deduplication_router
+#            versioning_router, ocr_router, clustering_router
+#            recommendations_router, research_assistant_router
+#            topic_modeling_router, argumentation_router, embeddings_router
+#            marketplace_router, timeline_router, search_router
+#            graphql_router — /graphql
+#            health_router — /health/status (sub-route API key guard)
+#
+# USER:      blog_router — API_KEY at router level + JWT per-endpoint for
+#                          write operations (like, bookmark, admin CRUD)
+#            experiments_router — JWT enforced per-endpoint
+#
+# ADMIN:     admin_router (/api/admin — require_admin on every endpoint)
+#
+# MIXED:     analytics_router — API_KEY at router level,
+#                               get_optional_user per endpoint
+#            feedback_router  — no router-level auth (allows anonymous),
+#                               get_optional_user per endpoint
+#            audit_router     — JWT enforced per-endpoint
+#            consent_router   — JWT enforced per-endpoint
+#            sso_router       — check-domain PUBLIC, admin endpoints ADMIN
+# ============================================================================
+
 # Add routes with API key protection
 add_routes(app, chain, path="/qa", dependencies=[Depends(verify_api_key)])
 add_routes(app, chat_chain, path="/chat", dependencies=[Depends(verify_api_key)])
