@@ -38,4 +38,6 @@ limiter = Limiter(
     # Fall back to process-local limits if Redis storage is unavailable.
     in_memory_fallback=DEFAULT_RATE_LIMITS,
     in_memory_fallback_enabled=True,
+    # Emit X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers.
+    headers_enabled=True,
 )
