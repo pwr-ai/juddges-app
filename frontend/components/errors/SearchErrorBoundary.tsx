@@ -4,6 +4,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { Search, AlertCircle } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
+import { logger } from "@/lib/logger";
 
 /**
  * Search Error Fallback Component
@@ -75,7 +76,7 @@ export function SearchErrorBoundary({ children }: { children: React.ReactNode })
  fallback={SearchErrorFallback}
  onError={(error, errorInfo) => {
  // Log search-specific errors with context
- console.error('Search error:', {
+ logger.error('Search error:', {
  error: error.message,
  stack: error.stack,
  componentStack: errorInfo.componentStack,

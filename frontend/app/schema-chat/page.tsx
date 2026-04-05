@@ -36,6 +36,7 @@ import { SchemaDialogs } from "@/components/schema-chat/SchemaDialogs";
 import { useSchemaLoad } from "@/hooks/schema-chat/useSchemaLoad";
 import { useSchemaSave } from "@/hooks/schema-chat/useSchemaSave";
 import { useSchemaMetadataOps } from "@/hooks/schema-chat/useSchemaMetadataOps";
+import { logger } from "@/lib/logger";
 
 interface Collection {
  id: string;
@@ -158,7 +159,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  const data = await response.json();
  setCollections(data);
  } catch (error) {
- console.error("Error fetching collections: ", error);
+ logger.error("Error fetching collections: ", error);
  toast.error("Failed to load collections");
  }
  };

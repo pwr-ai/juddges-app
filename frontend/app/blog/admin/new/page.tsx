@@ -12,6 +12,7 @@ import {
   Header,
   IconButton,
 } from "@/lib/styles/components";
+import { logger } from "@/lib/logger";
 
 export default function NewPostPage(): React.JSX.Element {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function NewPostPage(): React.JSX.Element {
         description: "Your draft has been saved.",
       });
     } catch (error) {
-      console.error("Error saving draft: ", error);
+      logger.error("Error saving draft: ", error);
       toast.error("Failed to save draft", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });
@@ -74,7 +75,7 @@ export default function NewPostPage(): React.JSX.Element {
 
       router.push("/blog/admin");
     } catch (error) {
-      console.error("Error publishing post: ", error);
+      logger.error("Error publishing post: ", error);
       toast.error("Failed to publish post", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });

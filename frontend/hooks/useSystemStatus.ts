@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { DetailedStatusResponse } from '@/types/health';
 import { getDetailedStatus } from '@/lib/api/health';
+import { logger } from "@/lib/logger";
 
 interface UseSystemStatusOptions {
   pollInterval?: number; // in milliseconds
@@ -36,7 +37,7 @@ export function useSystemStatus(
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to fetch status');
       setError(error);
-      console.error('Failed to fetch system status:', error);
+      logger.error('Failed to fetch system status:', error);
     } finally {
       setLoading(false);
     }

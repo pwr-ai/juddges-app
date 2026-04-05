@@ -59,7 +59,7 @@ export interface ItemFeedbackProps {
  * <ItemFeedback
  * itemId="msg-123"
  * itemType="message"
- * onFeedbackChange={(type) => console.log('Feedback:', type)}
+ * onFeedbackChange={(type) => logger.debug('Feedback:', type)}
  * />
  */
 export function ItemFeedback({
@@ -262,7 +262,7 @@ export function ItemFeedback({
  .eq('id', existingFeedback.id);
 
  if (updateError) {
- console.error('Error updating feedback:', updateError);
+ logger.error('Error updating feedback:', updateError);
  throw updateError;
  }
  } else {
@@ -282,12 +282,12 @@ export function ItemFeedback({
  .insert(feedbackData);
 
  if (insertError) {
- console.error('Error inserting feedback:', insertError);
+ logger.error('Error inserting feedback:', insertError);
  throw insertError;
  }
  }
  } catch (error) {
- console.error('Error saving feedback:', error);
+ logger.error('Error saving feedback:', error);
  throw error;
  }
  };
@@ -305,12 +305,12 @@ export function ItemFeedback({
  .maybeSingle();
 
  if (!existingItem) {
- console.warn(
+ logger.warn(
  `${itemType} not found in database. This is normal for new items. Feedback will be saved for item ID: ${id}`
  );
  }
  } catch (error) {
- console.error(`Error checking ${itemType} existence:`, error);
+ logger.error(`Error checking ${itemType} existence:`, error);
  }
  };
 

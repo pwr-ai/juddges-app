@@ -140,7 +140,7 @@ export async function GET() {
     const jobsError = jobsQueryResult.error;
 
     if (jobsError) {
-      console.error("Error fetching jobs: ", jobsError);
+      logger.error("Error fetching jobs: ", jobsError);
       return NextResponse.json(
         { error: "Failed to fetch jobs" },
         { status: 500 }
@@ -313,7 +313,7 @@ export async function GET() {
       total: jobsWithCollectionNames.length
     });
   } catch (error) {
-    console.error("Error in jobs route: ", error);
+    logger.error("Error in jobs route: ", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

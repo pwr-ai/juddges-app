@@ -83,7 +83,7 @@ export interface CompilationResult {
  * });
  *
  * if (result.success) {
- *   console.log(result.schema);
+ *   logger.debug(result.schema);
  * }
  * ```
  */

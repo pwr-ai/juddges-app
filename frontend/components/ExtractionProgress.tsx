@@ -22,6 +22,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { DocumentProcessingStatus } from "@/types/search";
+import { logger } from "@/lib/logger";
 
 interface ExtractionResult {
   document_id: string;
@@ -138,7 +139,7 @@ export function ExtractionProgress({
       } catch (error) {
         retryCountRef.current += 1;
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error("Failed to poll extraction results: ", errorMessage);
+        logger.error("Failed to poll extraction results: ", errorMessage);
 
         if (retryCountRef.current > 30) {
           setError("Too many connection errors. Please refresh the page.");

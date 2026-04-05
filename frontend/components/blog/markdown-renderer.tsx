@@ -15,6 +15,7 @@ import "highlight.js/styles/github-dark.css";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
+import { logger } from "@/lib/logger";
 
 // Register languages
 hljs.registerLanguage("typescript", typescript);
@@ -39,7 +40,7 @@ function CodeBlock({ language, children }: { language: string; children: string 
       try {
         hljs.highlightElement(codeRef.current);
       } catch (error) {
-        console.error("Error highlighting code: ", error);
+        logger.error("Error highlighting code: ", error);
       }
     }
   }, [language, children]);

@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ErrorCode } from "@/lib/errors";
 import { cleanDocumentIdForUrl } from "@/lib/document-utils";
+import { logger } from "@/lib/logger";
 
 interface Collection {
  id: string;
@@ -210,7 +211,7 @@ function logError(response: Response, errorData: unknown, parsedDetails: Record<
  errorLog.rawErrorData = errorData;
  }
 
- console.error("Extraction error: ", errorLog);
+ logger.error("Extraction error: ", errorLog);
 }
 
 interface ExtractionResult {
@@ -365,7 +366,7 @@ function ExtractPageContent() {
  try {
  const errorData = await schemasResponse.json();
  errorMessage = errorData.message || errorData.error || errorMessage;
- console.error('Schemas API error:', errorData);
+ logger.error('Schemas API error:', errorData);
  } catch {
  // Use default error message if parsing fails
  }
@@ -424,11 +425,11 @@ function ExtractPageContent() {
 
  setRecentJobs(mappedJobs);
  } else {
- console.warn('Failed to fetch extractions');
+ logger.warn('Failed to fetch extractions');
  setRecentJobs([]);
  }
  } catch (error) {
- console.error('Error fetching extractions:', error);
+ logger.error('Error fetching extractions:', error);
  setRecentJobs([]);
  }
 
@@ -465,7 +466,7 @@ function ExtractPageContent() {
  setPreselectedFromUrl(preselected);
  }
  } catch (error) {
- console.error('Error fetching data:', error);
+ logger.error('Error fetching data:', error);
  const errorMessage = error instanceof Error ? error.message : "Failed to load collections and schemas";
  toast.error(errorMessage);
  } finally {
@@ -519,7 +520,7 @@ function ExtractPageContent() {
  setRecentJobs(mappedJobs);
  }
  } catch (error) {
- console.error('Error polling extractions:', error);
+ logger.error('Error polling extractions:', error);
  }
  }, 5000); // Poll every 5 seconds
 
@@ -601,20 +602,20 @@ function ExtractPageContent() {
 
  setCollectionDocuments(documentsWithMetadata);
  } else {
- console.warn('Invalid metadata response format:', metadataData);
+ logger.warn('Invalid metadata response format:', metadataData);
  // Continue with documents without metadata
  }
  } else {
- console.warn('Failed to fetch document metadata:', metadataResponse.status, await metadataResponse.text().catch(() => ''));
+ logger.warn('Failed to fetch document metadata:', metadataResponse.status, await metadataResponse.text().catch(() => ''));
  // Continue with documents without metadata
  }
  } catch (metadataError) {
- console.warn('Failed to fetch document metadata:', metadataError);
+ logger.warn('Failed to fetch document metadata:', metadataError);
  // Continue with documents without metadata
  }
  }
  } catch (error) {
- console.error('Error fetching documents:', error);
+ logger.error('Error fetching documents:', error);
  setDocumentsError(error instanceof Error ? error.message : 'Failed to load documents');
  setCollectionDocuments([]);
  } finally {
@@ -703,7 +704,7 @@ function ExtractPageContent() {
  handleExtract();
  }, 200);
  } catch (error) {
- console.error('Error retrying extraction:', error);
+ logger.error('Error retrying extraction:', error);
  toast.error("Failed to retry extraction. Please configure manually.");
  }
  };
@@ -765,7 +766,7 @@ function ExtractPageContent() {
  duration: 7000, // Show error longer so user can read it
  });
  } catch (parseError) {
- console.error("Failed to parse error response: ", parseError);
+ logger.error("Failed to parse error response: ", parseError);
  const errorMessage = STATUS_MESSAGES[response.status]
  || `Server error (${response.status}). ${response.statusText || 'Please try again or contact support.'}`;
 
@@ -781,7 +782,7 @@ function ExtractPageContent() {
  const { job_id } = data;
 
  if (!job_id) {
- console.error("No job_id in response: ", data);
+ logger.error("No job_id in response: ", data);
  toast.error("The server did not return a valid job ID. Please try again or contact support.", {
  duration: 7000,
  });
@@ -829,12 +830,12 @@ function ExtractPageContent() {
  setRecentJobs(mappedJobs);
  }
  } catch (error) {
- console.error('Error refreshing extractions list:', error);
+ logger.error('Error refreshing extractions list:', error);
  }
 
  toast.success("The extraction process has been initiated. Monitor progress in the recent extractions section.");
  } catch (error) {
- console.error("Extraction request failed: ", error);
+ logger.error("Extraction request failed: ", error);
 
  const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
@@ -880,7 +881,7 @@ function ExtractPageContent() {
 
  toast.success("Schema generated and saved successfully");
  } catch (error) {
- console.error('Failed to save generated schema:', error);
+ logger.error('Failed to save generated schema:', error);
  toast.error("Schema generated but failed to save. Please try creating it manually.");
  }
  };

@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, ReactNode } from "react";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -33,7 +34,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
       error.message.includes("Failed to fetch dynamically imported module");
 
     if (isChunkError) {
-      console.error("ChunkLoadError detected, reloading page...", error);
+      logger.error("ChunkLoadError detected, reloading page...", error);
 
       // Clear service worker cache if present
       if ('caches' in window) {
@@ -45,7 +46,7 @@ export class ChunkErrorBoundary extends Component<Props, State> {
       // Reload the page to get fresh chunks
       window.location.reload();
     } else {
-      console.error("Runtime error: ", error);
+      logger.error("Runtime error: ", error);
     }
   }
 

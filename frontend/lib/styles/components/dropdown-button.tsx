@@ -16,6 +16,7 @@ import {
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { logger } from "@/lib/logger";
 
 export interface DropdownButtonOption {
  value: string;
@@ -48,7 +49,7 @@ export interface DropdownButtonProps {
  * ]}
  * onChange={(value) => {
  * // eslint-disable-next-line no-console
- * console.log(value);
+ * logger.debug(value);
  * }}
  * />
  */

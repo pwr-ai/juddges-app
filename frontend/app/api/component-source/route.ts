@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { logger } from "@/lib/logger";
 
 /**
  * API route to read component source files
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Security: Only allow reading from lib/styles/components directory
-    if (!componentPath.startsWith('@/lib/styles/components/') && 
+    if (!componentPath.startsWith('@/lib/styles/components/') &&
         !componentPath.startsWith('lib/styles/components/')) {
       return NextResponse.json(
         { error: 'Invalid component path' },
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (!relativePath.startsWith('lib/')) {
       relativePath = `lib/${relativePath}`;
     }
-    
+
     // In Next.js, process.cwd() is the app root (frontend directory)
     // So we can directly join with the relative path
     const filePath = join(process.cwd(), relativePath);
@@ -43,11 +44,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ sourceCode });
   } catch (error) {
-    console.error('Error reading component source:', error);
+    logger.error('Error reading component source:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to read component source' },
       { status: 500 }
     );
   }
 }
-

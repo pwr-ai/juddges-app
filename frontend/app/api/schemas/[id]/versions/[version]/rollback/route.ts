@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/schemas/[id]/versions/[version]/rollback
@@ -37,7 +38,7 @@ export async function POST(
     });
 
     if (error) {
-      console.error('Error rolling back schema:', error);
+      logger.error('Error rolling back schema:', error);
       return NextResponse.json(
         { error: 'Failed to rollback schema', details: error.message },
         { status: 500 }
@@ -62,7 +63,7 @@ export async function POST(
       change_summary: `Rolled back to version ${versionNumber}`,
     });
   } catch (error) {
-    console.error('Unexpected error in rollback API:', error);
+    logger.error('Unexpected error in rollback API:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: String(error) },
       { status: 500 }

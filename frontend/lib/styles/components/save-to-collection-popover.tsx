@@ -16,6 +16,7 @@ import { SearchDocument } from "@/types/search";
 import { SecondaryButton, showSuccessToast } from "@/lib/styles/components";
 import { ModalSaveButton } from "@/lib/styles/components/modal-save-button";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 export interface SaveToCollectionPopoverProps {
   /** Documents to save */
@@ -159,7 +160,7 @@ export function SaveToCollectionPopover({
         toast.error("Failed to save any documents");
       }
     } catch (error) {
-      console.error("Error saving to collection: ", error);
+      logger.error("Error saving to collection: ", error);
       toast.error("Failed to save document(s) to collection");
     } finally {
       setSaving(false);
@@ -252,7 +253,7 @@ export function SaveToCollectionPopover({
         toast.warning("Collection created but failed to save documents");
       }
     } catch (error) {
-      console.error("Error creating collection: ", error);
+      logger.error("Error creating collection: ", error);
       toast.error("Failed to create collection");
     } finally {
       setIsCreating(false);

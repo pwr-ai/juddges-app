@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
 
@@ -61,7 +62,7 @@ export async function PATCH(
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Failed to update SSO connection status:', error);
+    logger.error('Failed to update SSO connection status:', error);
     return NextResponse.json(
       { error: 'Failed to update SSO connection' },
       { status: 500 }

@@ -26,10 +26,24 @@ export default [
     extends: ["next/core-web-vitals", "next/typescript"],
     rules: {
       "react-hooks/exhaustive-deps": "error",
-      "no-console": ["error", { allow: ["warn", "error"] }],
+      "no-console": ["warn", { allow: [] }],
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },
+    overrides: [
+      {
+        files: ["**/__tests__/**", "**/*.test.*", "**/*.spec.*", "**/tests/**"],
+        rules: {
+          "no-console": "off",
+        },
+      },
+      {
+        files: ["lib/logger.ts"],
+        rules: {
+          "no-console": "off",
+        },
+      },
+    ],
   }),
 ];

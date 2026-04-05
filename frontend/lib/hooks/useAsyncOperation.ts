@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useState } from 'react';
+import { logger } from "@/lib/logger";
 
 export interface AsyncOperationState<T> {
   data: T | null;
@@ -59,7 +60,7 @@ const defaultErrorTransform = (error: unknown): string => {
  *     if (!response.ok) throw new Error('Failed to fetch user');
  *     return response.json();
  *   },
- *   { onSuccess: (user) => console.log('User loaded:', user.name) }
+ *   { onSuccess: (user) => logger.debug('User loaded:', user.name) }
  * );
  *
  * // Later: execute('123')

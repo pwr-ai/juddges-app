@@ -16,6 +16,7 @@ import { ExtractionObjectRenderer } from "./ExtractionObjectRenderer";
 import { cn } from "@/lib/utils";
 import { Grid3x3, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 export interface ExtractionDataViewerProps {
  /**
@@ -145,7 +146,7 @@ export function ExtractionDataViewer({
  description: `Copied"${section.title}"section to clipboard`
  });
  } catch (error) {
- console.error('Failed to copy to clipboard:', error);
+ logger.error('Failed to copy to clipboard:', error);
  // Fallback to plain text
  const textToCopy = formatSectionAsPlainText(section, detectedLanguage);
  await navigator.clipboard.writeText(textToCopy);

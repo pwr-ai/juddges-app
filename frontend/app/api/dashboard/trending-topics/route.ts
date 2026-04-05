@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendUrl } from "../../utils/backend-url";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching trending topics: ", error);
+    logger.error("Error fetching trending topics: ", error);
     return NextResponse.json([]);
   }
 }

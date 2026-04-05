@@ -520,7 +520,7 @@ export async function searchDocuments(
   if (!response.ok) {
     // Log the actual error for developers but show a user-friendly message
     const errorData = await response.json().catch(() => ({ error: 'Failed to fetch search results' }));
-    console.error('Search API error:', response.status, errorData);
+    logger.error('Search API error:', response.status, errorData);
     throw new Error('Search request failed. Please try again.');
   }
 

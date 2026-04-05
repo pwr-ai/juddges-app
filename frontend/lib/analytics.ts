@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 /**
  * Analytics utility for tracking user events
  * Supports Google Analytics, Facebook Pixel, and custom analytics
@@ -58,7 +59,7 @@ export function trackEvent(event: AnalyticsEvent): void {
 
   // Console log in development
   if (process.env.NODE_ENV === "development") {
-    console.warn("[Analytics]", {
+    logger.warn("[Analytics]", {
       action,
       category,
       label,

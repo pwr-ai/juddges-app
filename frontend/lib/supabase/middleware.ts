@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { logger } from "@/lib/logger";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -50,7 +51,7 @@ export async function updateSession(request: NextRequest) {
     // This allows unauthenticated users to access public pages without console spam
   } catch (error) {
     // Catch any unexpected errors and continue without user
-    console.error("Unexpected error in auth middleware: ", error);
+    logger.error("Unexpected error in auth middleware: ", error);
   }
 
   if (

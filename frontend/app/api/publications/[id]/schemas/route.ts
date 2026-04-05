@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
@@ -38,7 +39,7 @@ export async function POST(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Backend API returned error: ${response.status}`, errorText);
+      logger.error(`Backend API returned error: ${response.status}`, errorText);
       return NextResponse.json(
         { error: "Failed to link schema" },
         { status: response.status }
@@ -48,7 +49,7 @@ export async function POST(
     const result = await response.json();
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Error linking schema: ", error);
+    logger.error("Error linking schema: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

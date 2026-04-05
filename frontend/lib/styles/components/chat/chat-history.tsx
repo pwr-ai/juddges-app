@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { showSuccessToast, DeleteConfirmationDialog, LoadingIndicator } from "@/lib/styles/components";
+import { logger } from "@/lib/logger";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function ChatHistory(): React.JSX.Element {
@@ -128,9 +129,9 @@ export function ChatHistory(): React.JSX.Element {
  // Actually delete from database
  try {
  await deleteChat(chatId);
- console.warn('[Chat Delete] Processed expired deletion:', chatId);
+ logger.warn('[Chat Delete] Processed expired deletion:', chatId);
  } catch (error) {
- console.error(`Failed to delete chat ${chatId} from database:`, error);
+ logger.error(`Failed to delete chat ${chatId} from database:`, error);
  }
  }
 
@@ -149,7 +150,7 @@ export function ChatHistory(): React.JSX.Element {
  // Clear loading state
  setIsProcessingPendingDeletions(false);
  } catch (error) {
- console.error('Error processing pending deletions:', error);
+ logger.error('Error processing pending deletions:', error);
  setIsProcessingPendingDeletions(false);
  }
  }, [deleteChat]);
@@ -380,7 +381,7 @@ export function ChatHistory(): React.JSX.Element {
  });
  sessionStorage.setItem('pendingChatDeletions', JSON.stringify(pendingArray));
  } catch (error) {
- console.error('Failed to store pending deletion in sessionStorage:', error);
+ logger.error('Failed to store pending deletion in sessionStorage:', error);
  }
 
  return next;
@@ -390,7 +391,7 @@ export function ChatHistory(): React.JSX.Element {
  // Function to handle when toast is dismissed (either by timeout or manual dismissal)
  // This triggers the time-based deletion processing
  const performActualDeletion = async (): Promise<void> => {
- console.warn('[Chat Delete] Toast dismissed, triggering deletion processing');
+ logger.warn('[Chat Delete] Toast dismissed, triggering deletion processing');
  // Trigger the pending deletions processor
  // It will check if enough time has passed and handle cancellations
  await processPendingDeletions();
@@ -414,10 +415,10 @@ export function ChatHistory(): React.JSX.Element {
  label: "Undo",
  onClick: async () => {
  try {
- console.warn('[Chat Delete] Undo clicked, cancelling deletion:', chatIdToDelete);
+ logger.warn('[Chat Delete] Undo clicked, cancelling deletion:', chatIdToDelete);
  // Mark this specific deletion as cancelled FIRST
  cancelledDeletionsRef.current.add(chatIdToDelete);
- console.warn('[Chat Delete] Added to cancelled deletions:', Array.from(cancelledDeletionsRef.current));
+ logger.warn('[Chat Delete] Added to cancelled deletions:', Array.from(cancelledDeletionsRef.current));
 
  // Also store in sessionStorage for persistence
  try {
@@ -428,7 +429,7 @@ export function ChatHistory(): React.JSX.Element {
  sessionStorage.setItem('cancelledChatDeletions', JSON.stringify(cancelledArray));
  }
  } catch (error) {
- console.error('Failed to store cancelled deletion in sessionStorage:', error);
+ logger.error('Failed to store cancelled deletion in sessionStorage:', error);
  }
 
  // Remove from sessionStorage pending deletions
@@ -444,7 +445,7 @@ export function ChatHistory(): React.JSX.Element {
  }
  }
  } catch (error) {
- console.error('Failed to remove from sessionStorage:', error);
+ logger.error('Failed to remove from sessionStorage:', error);
  }
 
  // Use flushSync to restore chat in UI synchronously
@@ -471,7 +472,7 @@ export function ChatHistory(): React.JSX.Element {
  // so the detail page will load it successfully
  router.push(`/chat/${chatIdToDelete}`);
  } catch (error) {
- console.error('Failed to restore chat:', error);
+ logger.error('Failed to restore chat:', error);
  toast.error("Failed to restore chat. Please try again.");
  }
  },
@@ -481,7 +482,7 @@ export function ChatHistory(): React.JSX.Element {
  onDismiss: performActualDeletion, // Trigger actual deletion when toast is dismissed
  });
  } catch (error) {
- console.error('Failed to delete chat:', error);
+ logger.error('Failed to delete chat:', error);
  setIsDeleting(false);
  // Remove from deleting chats if there was an error
  if (chatToDelete) {

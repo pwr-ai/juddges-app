@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/mock/extractions?job_id=<job_id> - Returns mocked extraction results
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Error reading fake extraction job file: ", error);
+    logger.error("Error reading fake extraction job file: ", error);
     return NextResponse.json(
       {
         error: "Failed to load mocked extraction job",

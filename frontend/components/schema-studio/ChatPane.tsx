@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { ChatInput } from "@/lib/styles/components";
 import type { SchemaMessage } from "./types";
 import { ExtractionInstructionsPanel } from "./ExtractionInstructionsPanel";
+import { logger } from "@/lib/logger";
 
 /**
  * Props for the ChatPane component
@@ -47,7 +48,7 @@ interface ChatPaneProps {
  * sessionId="session-123"
  * collectionId="collection-456"
  * collectionName="Tax Documents"
- * onSchemaGenerated={(schema, prompt) => console.log(schema)}
+ * onSchemaGenerated={(schema, prompt) => logger.debug(schema)}
  * />
  * ```
  */
@@ -171,7 +172,7 @@ export function ChatPane({
  }
 
  } catch (error) {
- console.error("Error in schema generation: ", error);
+ logger.error("Error in schema generation: ", error);
 
  const errorMessage: SchemaMessage = {
  id: `msg-${Date.now()}`,

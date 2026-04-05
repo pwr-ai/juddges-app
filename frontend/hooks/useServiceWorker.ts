@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 export function useServiceWorker() {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -33,7 +34,7 @@ export function useServiceWorker() {
         });
       })
       .catch((error) => {
-        console.warn("Service worker registration failed: ", error);
+        logger.warn("Service worker registration failed: ", error);
       });
   }, []);
 

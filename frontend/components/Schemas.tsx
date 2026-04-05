@@ -8,6 +8,7 @@ import json from 'highlight.js/lib/languages/json';
 import DOMPurify from 'dompurify';
 import 'highlight.js/styles/vs2015.css';
 import YAML from 'yaml';
+import { logger } from "@/lib/logger";
 
 // Register languages
 hljs.registerLanguage('yaml', yaml);
@@ -35,7 +36,7 @@ function CodeBlock({ code, language }: CodeBlockProps) {
       });
       setHighlighted(sanitized);
     } catch (error) {
-      console.error('Highlight error:', error);
+      logger.error('Highlight error:', error);
       // Escape plain text fallback
       const escaped = code
         .replace(/&/g, '&amp;')

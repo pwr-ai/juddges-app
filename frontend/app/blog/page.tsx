@@ -27,6 +27,7 @@ import {
   IconButton,
   FilterToggleGroup,
 } from "@/lib/styles/components";
+import { logger } from "@/lib/logger";
 
 // Mock data - replace with actual API calls
 const mockCategories: BlogCategory[] = [
@@ -173,7 +174,7 @@ export default function BlogPage(): React.JSX.Element {
         setPosts(publishedPosts);
         setFilteredPosts(publishedPosts);
       } catch (error) {
-        console.error("Error fetching posts: ", error);
+        logger.error("Error fetching posts: ", error);
         toast.error("Failed to load blog posts", {
           description: error instanceof Error ? error.message : "An unexpected error occurred.",
         });
