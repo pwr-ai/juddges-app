@@ -49,6 +49,16 @@ jobs:
         working-directory: backend
         run: poetry run ruff check .
 
+      - name: Check code complexity
+        working-directory: backend
+        run: |
+          poetry run radon cc app/ packages/ -a -nc --total-average 2>&1 | tail -5
+          # Fail if any function has complexity grade F (>40)
+          if poetry run radon cc app/ packages/ -nc -n F 2>&1 | grep -q "F "; then
+            echo "ERROR: Functions with Grade F complexity detected"
+            exit 1
+          fi
+
   backend-test:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
