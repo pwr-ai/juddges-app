@@ -76,7 +76,15 @@ jobs:
 
       - name: Run unit tests with coverage
         working-directory: backend
-        run: poetry run pytest -v -m unit --cov=app --cov-report=term-missing --cov-fail-under=50
+        run: poetry run pytest -v -m unit --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=50
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage-report
+          path: backend/htmlcov/
+          retention-days: 30
 
   frontend-lint:
     name: Frontend Lint
@@ -117,6 +125,14 @@ jobs:
       - name: Run unit tests with coverage
         working-directory: frontend
         run: npm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 30
 
   frontend-build:
     name: Frontend Build
@@ -237,6 +253,39 @@ jobs:
         continue-on-error: true
         env:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ============================================================================
+  # SBOM Generation (main branch only)
+  # ============================================================================
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Generate backend SBOM
+        working-directory: backend
+        run: |
+          pip install poetry
+          poetry export -f requirements.txt --without-hashes -o sbom-backend.txt
+      - name: Generate frontend SBOM
+        working-directory: frontend
+        run: npm ls --json > sbom-frontend.json 2>/dev/null || true
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            backend/sbom-backend.txt
+            frontend/sbom-frontend.json
+          retention-days: 90
 
   # ============================================================================
   # Docker Build Validation (PRs and pushes to develop/main, not tags)
