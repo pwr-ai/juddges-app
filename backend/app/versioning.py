@@ -272,7 +272,11 @@ async def get_version_detail(
 
         response = (
             db.client.table("document_versions")
-            .select("*")
+            .select(
+                "id, document_id, version_number, title, full_text, summary, "
+                "content_hash, change_description, change_type, created_by, "
+                "created_at, extracted_data"
+            )
             .eq("document_id", document_id)
             .eq("version_number", version_number)
             .limit(1)
@@ -541,7 +545,11 @@ async def revert_to_version(
         # Get the target version
         target_response = (
             db.client.table("document_versions")
-            .select("*")
+            .select(
+                "id, document_id, version_number, title, full_text, summary, "
+                "content_hash, change_description, change_type, created_by, "
+                "created_at, extracted_data"
+            )
             .eq("document_id", document_id)
             .eq("version_number", request.version_number)
             .limit(1)

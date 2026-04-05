@@ -530,7 +530,11 @@ async def get_playground_run(
     try:
         response = (
             supabase.table("playground_test_runs")
-            .select("*")
+            .select(
+                "id, user_id, schema_id, schema_version_id, document_id, "
+                "status, extracted_data, error_message, execution_time_ms, "
+                "schema_name, schema_version, document_title, created_at"
+            )
             .eq("id", run_id)
             .eq("user_id", x_user_id)
             .single()

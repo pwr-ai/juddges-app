@@ -148,7 +148,11 @@ def register_versioning_routes(router: APIRouter) -> None:
         try:
             response = (
                 supabase_client.table("schema_versions")
-                .select("*")
+                .select(
+                    "id, schema_id, version_number, schema_snapshot, field_snapshot, "
+                    "change_type, change_summary, changed_fields, diff_from_previous, "
+                    "user_id, created_at"
+                )
                 .eq("schema_id", schema_id)
                 .eq("version_number", version_number)
                 .single()

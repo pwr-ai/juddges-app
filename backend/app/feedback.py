@@ -469,7 +469,9 @@ async def get_search_feedback_summary(
             client = get_admin_supabase_client()
 
         # Build query
-        query = client.table("search_feedback").select("*")
+        query = client.table("search_feedback").select(
+            "id, user_id, document_id, search_query, rating, reason, result_position, created_at"
+        )
 
         if document_id:
             query = query.eq("document_id", document_id)
@@ -557,7 +559,10 @@ async def get_recent_feature_feedback(
             client = get_admin_supabase_client()
 
         # Build query
-        query = client.table("feature_requests").select("*")
+        query = client.table("feature_requests").select(
+            "id, user_id, feedback_type, feature_name, title, description, "
+            "priority, status, upvotes, created_at"
+        )
 
         if feedback_type:
             query = query.eq("feedback_type", feedback_type)

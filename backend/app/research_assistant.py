@@ -340,7 +340,15 @@ async def list_research_contexts(
             logger.warning("Supabase client not available for listing contexts")
             return []
 
-        query = supabase.table("research_contexts").select("*").eq("user_id", user_id)
+        query = (
+            supabase.table("research_contexts")
+            .select(
+                "id, user_id, chat_id, title, analyzed_topics, identified_gaps, "
+                "suggested_next_steps, related_document_ids, coverage_score, "
+                "status, created_at, updated_at"
+            )
+            .eq("user_id", user_id)
+        )
 
         if status:
             query = query.eq("status", status)

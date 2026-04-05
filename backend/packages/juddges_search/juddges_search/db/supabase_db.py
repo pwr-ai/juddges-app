@@ -2,7 +2,7 @@ import os
 import warnings
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
-from supabase import create_client, Client
+from supabase import create_client, Client, PostgrestAPIError, StorageException
 from supabase.client import ClientOptions
 from loguru import logger
 from fastapi import HTTPException
@@ -14,6 +14,24 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ssl.SSLSo
 # This is a library issue, not an issue with our code
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*timeout.*parameter.*deprecated.*")
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*verify.*parameter.*deprecated.*")
+
+# ---------------------------------------------------------------------------
+# Column projection constants
+# Keeps queries explicit and avoids fetching large vector columns
+# (embedding, summary_embedding) that are only needed in search RPC calls.
+# ---------------------------------------------------------------------------
+_COLLECTIONS_COLS = "id, user_id, name, description, created_at, updated_at"
+_COLLECTION_DOC_EXISTS_COLS = "collection_id, document_id"
+_EXTRACTION_SCHEMA_COLS = (
+    "id, name, description, type, category, text, dates, user_id, status, is_verified, created_at, updated_at"
+)
+# legal_documents columns -- embedding deliberately excluded here.
+# Callers that need the vector use the get_document_chunks RPC path.
+_LEGAL_DOCUMENT_COLS = (
+    "supabase_document_id, document_id, title, document_type, court_name, "
+    "date_issued, language, summary, full_text, country, document_number, "
+    "issuing_body, ingestion_date, extracted_data, current_version, content_hash"
+)
 
 
 class CollectionsDB:
@@ -32,7 +50,7 @@ class CollectionsDB:
         logger.info(f"Initialized CollectionsDB with Supabase client: {self.url[:50]}...")
 
     def _handle_error(self, operation: str, error: Exception) -> None:
-        logger.error(f"Supabase error during {operation}: {error}")
+        logger.error(f"Supabase error during {operation}: {error}", exc_info=True)
 
         error_msg = str(error).lower()
         if "duplicate key" in error_msg or "already exists" in error_msg:
@@ -47,7 +65,7 @@ class CollectionsDB:
             # First get all collections for the user
             response = (
                 self.client.table("collections")
-                .select("*")
+                .select(_COLLECTIONS_COLS)
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
                 .execute()
@@ -96,8 +114,8 @@ class CollectionsDB:
                 collection["document_count"] = len(docs)
 
             return collections
-        except Exception as e:
-            logger.error(f"Error getting user collections: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting user collections: {e}", exc_info=True)
             return []
 
     async def find_collection(
@@ -106,7 +124,11 @@ class CollectionsDB:
         try:
             # First get the collection
             response = (
-                self.client.table("collections").select("*").eq("id", collection_id).eq("user_id", user_id).execute()
+                self.client.table("collections")
+                .select(_COLLECTIONS_COLS)
+                .eq("id", collection_id)
+                .eq("user_id", user_id)
+                .execute()
             )
 
             if not response.data:
@@ -164,8 +186,8 @@ class CollectionsDB:
 
             collection["collection_supabase_documents"] = all_documents
             return collection
-        except Exception as e:
-            logger.error(f"Error finding collection: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error finding collection: {e}", exc_info=True)
             return None
 
     async def create_collection(self, user_id: str, name: str, description: Optional[str] = None) -> Dict[str, Any]:
@@ -177,7 +199,7 @@ class CollectionsDB:
             response = self.client.table("collections").insert(data).execute()
 
             return response.data[0] if response.data else {}
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("create_collection", e)
             return {}
 
@@ -197,7 +219,7 @@ class CollectionsDB:
             return response.data[0]
         except HTTPException:
             raise
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("update_collection", e)
             return {}
 
@@ -212,8 +234,8 @@ class CollectionsDB:
             )
 
             return bool(response.data)
-        except Exception as e:
-            logger.error(f"Error deleting collection: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error deleting collection: {e}", exc_info=True)
             return False
 
     async def add_document(self, collection_id: str, document_id: str, user_id: str) -> bool:
@@ -226,7 +248,7 @@ class CollectionsDB:
             # Use collection_supabase_documents table for document IDs (text type)
             existing = (
                 self.client.table("collection_supabase_documents")
-                .select("*")
+                .select(_COLLECTION_DOC_EXISTS_COLS)
                 .eq("collection_id", collection_id)
                 .eq("document_id", document_id)
                 .execute()
@@ -243,12 +265,12 @@ class CollectionsDB:
             logger.info(f"Added document {document_id} to collection {collection_id}")
             return True
 
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
 
-            logger.error(f"Error adding document to collection: {e}")
+            logger.error(f"Error adding document to collection: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to add document: {str(e)}")
 
     async def remove_document(self, collection_id: str, document_id: str, user_id: str) -> bool:
@@ -269,8 +291,8 @@ class CollectionsDB:
             logger.info(f"Removed document {document_id} from collection {collection_id}")
             return True
 
-        except Exception as e:
-            logger.error(f"Error removing document from collection: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error removing document from collection: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to remove document: {str(e)}")
 
     async def get_collection_documents(self, collection_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -287,8 +309,8 @@ class CollectionsDB:
                 raise HTTPException(status_code=404, detail="Collection not found")
         except HTTPException:
             raise
-        except Exception as e:
-            logger.error(f"Error checking collection existence: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error checking collection existence: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to check collection: {str(e)}")
 
         try:
@@ -318,8 +340,8 @@ class CollectionsDB:
             logger.info(f"Retrieved {len(documents)} documents from collection {collection_id}")
             return documents
 
-        except Exception as e:
-            logger.error(f"Error getting collection documents: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting collection documents: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to get documents: {str(e)}")
 
 
@@ -337,7 +359,7 @@ class SupabaseDB:
         logger.info(f"Initialized SupabaseDB with Supabase client: {self.url[:50]}...")
 
     def _handle_error(self, operation: str, error: Exception) -> None:
-        logger.error(f"Supabase error during {operation}: {error}")
+        logger.error(f"Supabase error during {operation}: {error}", exc_info=True)
 
         error_msg = str(error).lower()
         if "duplicate key" in error_msg or "already exists" in error_msg:
@@ -387,7 +409,7 @@ class SupabaseDB:
             response = self.client.table("extraction_schemas").insert(data).execute()
 
             return response.data[0] if response.data else {}
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("add_schema", e)
             return {}  # Unreachable, as _handle_error always raises
 
@@ -426,7 +448,7 @@ class SupabaseDB:
             response = self.client.table("extraction_schemas").update(data).eq("id", schema_id).execute()
 
             return response.data[0] if response.data else {}
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("update_schema", e)
             return {}  # Unreachable
 
@@ -445,17 +467,23 @@ class SupabaseDB:
             response = self.client.table("extraction_schemas").select(columns).order("created_at", desc=True).execute()
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("get_schemas", e)
             return []  # Unreachable
 
     async def get_schema_by_name(self, schema_name: str) -> Optional[Dict[str, Any]]:
         """Retrieves a specific schema by its name."""
         try:
-            response = self.client.table("extraction_schemas").select("*").eq("name", schema_name).limit(1).execute()
+            response = (
+                self.client.table("extraction_schemas")
+                .select(_EXTRACTION_SCHEMA_COLS)
+                .eq("name", schema_name)
+                .limit(1)
+                .execute()
+            )
 
             return response.data[0] if response.data else None
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("get_schema_by_name", e)
 
 
@@ -474,7 +502,7 @@ class PublicationsDB:
         logger.info(f"Initialized PublicationsDB with Supabase client: {self.url[:50]}...")
 
     def _handle_error(self, operation: str, error: Exception) -> None:
-        logger.error(f"Supabase error during {operation}: {error}")
+        logger.error(f"Supabase error during {operation}: {error}", exc_info=True)
 
         error_msg = str(error).lower()
         if "duplicate key" in error_msg or "already exists" in error_msg:
@@ -518,8 +546,8 @@ class PublicationsDB:
             )
 
             return response.data or []
-        except Exception as e:
-            logger.error(f"Error getting publications: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting publications: {e}", exc_info=True)
             return []
 
     async def get_publication(self, publication_id: str) -> Optional[Dict[str, Any]]:
@@ -537,8 +565,8 @@ class PublicationsDB:
             )
 
             return response.data[0] if response.data else None
-        except Exception as e:
-            logger.error(f"Error getting publication: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting publication: {e}", exc_info=True)
             return None
 
     async def create_publication(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -577,7 +605,7 @@ class PublicationsDB:
             return await self.get_publication(publication_id) or publication
         except HTTPException:
             raise
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("create_publication", e)
             return {}
 
@@ -593,7 +621,7 @@ class PublicationsDB:
             return await self.get_publication(publication_id) or response.data[0]
         except HTTPException:
             raise
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             self._handle_error("update_publication", e)
             return {}
 
@@ -603,8 +631,8 @@ class PublicationsDB:
             # Junction tables will cascade delete due to ON DELETE CASCADE
             response = self.client.table("publications").delete().eq("id", publication_id).execute()
             return bool(response.data)
-        except Exception as e:
-            logger.error(f"Error deleting publication: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error deleting publication: {e}", exc_info=True)
             return False
 
     async def add_schema_link(self, publication_id: str, schema_id: str, description: Optional[str] = None) -> bool:
@@ -617,11 +645,11 @@ class PublicationsDB:
             self.client.table("publication_schemas").insert(data).execute()
             logger.info(f"Linked schema {schema_id} to publication {publication_id}")
             return True
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
-            logger.error(f"Error linking schema: {e}")
+            logger.error(f"Error linking schema: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to link schema: {str(e)}")
 
     async def remove_schema_link(self, publication_id: str, schema_id: str) -> bool:
@@ -632,8 +660,8 @@ class PublicationsDB:
             ).execute()
             logger.info(f"Removed schema {schema_id} from publication {publication_id}")
             return True
-        except Exception as e:
-            logger.error(f"Error removing schema link: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error removing schema link: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to remove schema link: {str(e)}")
 
     async def add_collection_link(
@@ -648,11 +676,11 @@ class PublicationsDB:
             self.client.table("publication_collections").insert(data).execute()
             logger.info(f"Linked collection {collection_id} to publication {publication_id}")
             return True
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
-            logger.error(f"Error linking collection: {e}")
+            logger.error(f"Error linking collection: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to link collection: {str(e)}")
 
     async def remove_collection_link(self, publication_id: str, collection_id: str) -> bool:
@@ -663,8 +691,8 @@ class PublicationsDB:
             ).execute()
             logger.info(f"Removed collection {collection_id} from publication {publication_id}")
             return True
-        except Exception as e:
-            logger.error(f"Error removing collection link: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error removing collection link: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to remove collection link: {str(e)}")
 
     async def get_publication_schemas(self, publication_id: str) -> List[Dict[str, Any]]:
@@ -677,8 +705,8 @@ class PublicationsDB:
                 .execute()
             )
             return response.data or []
-        except Exception as e:
-            logger.error(f"Error getting publication schemas: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting publication schemas: {e}", exc_info=True)
             return []
 
     async def get_publication_collections(self, publication_id: str) -> List[Dict[str, Any]]:
@@ -691,8 +719,8 @@ class PublicationsDB:
                 .execute()
             )
             return response.data or []
-        except Exception as e:
-            logger.error(f"Error getting publication collections: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting publication collections: {e}", exc_info=True)
             return []
 
     async def add_extraction_job_link(
@@ -707,11 +735,11 @@ class PublicationsDB:
             self.client.table("publication_extraction_jobs").insert(data).execute()
             logger.info(f"Linked extraction job {job_id} to publication {publication_id}")
             return True
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
-            logger.error(f"Error linking extraction job: {e}")
+            logger.error(f"Error linking extraction job: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to link extraction job: {str(e)}")
 
     async def remove_extraction_job_link(self, publication_id: str, job_id: str) -> bool:
@@ -722,8 +750,8 @@ class PublicationsDB:
             ).execute()
             logger.info(f"Removed extraction job {job_id} from publication {publication_id}")
             return True
-        except Exception as e:
-            logger.error(f"Error removing extraction job link: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error removing extraction job link: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Failed to remove extraction job link: {str(e)}")
 
     async def get_publication_extraction_jobs(self, publication_id: str) -> List[Dict[str, Any]]:
@@ -736,8 +764,8 @@ class PublicationsDB:
                 .execute()
             )
             return response.data or []
-        except Exception as e:
-            logger.error(f"Error getting publication extraction jobs: {e}")
+        except (PostgrestAPIError, StorageException) as e:
+            logger.error(f"Error getting publication extraction jobs: {e}", exc_info=True)
             return []
 
 
@@ -794,7 +822,7 @@ class SupabaseVectorDB:
             ).execute()
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Vector search failed: {e}")
             raise HTTPException(status_code=500, detail=f"Vector search failed: {str(e)}")
 
@@ -850,7 +878,7 @@ class SupabaseVectorDB:
             ).execute()
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Hybrid search failed: {e}")
             raise HTTPException(status_code=500, detail=f"Hybrid search failed: {str(e)}")
 
@@ -885,7 +913,7 @@ class SupabaseVectorDB:
             ).execute()
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Chunk search failed: {e}")
             raise HTTPException(status_code=500, detail=f"Chunk search failed: {str(e)}")
 
@@ -914,7 +942,7 @@ class SupabaseVectorDB:
             ).execute()
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to get document chunks: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to get chunks: {str(e)}")
 
@@ -933,11 +961,15 @@ class SupabaseVectorDB:
         """
         try:
             response = (
-                self.client.table("legal_documents").select("*").eq("document_id", document_id).limit(1).execute()
+                self.client.table("legal_documents")
+                .select(_LEGAL_DOCUMENT_COLS)
+                .eq("document_id", document_id)
+                .limit(1)
+                .execute()
             )
 
             return response.data[0] if response.data else None
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch document {document_id}: {e}")
             return None
 
@@ -958,10 +990,15 @@ class SupabaseVectorDB:
             return []
 
         try:
-            response = self.client.table("legal_documents").select("*").in_("document_id", document_ids).execute()
+            response = (
+                self.client.table("legal_documents")
+                .select(_LEGAL_DOCUMENT_COLS)
+                .in_("document_id", document_ids)
+                .execute()
+            )
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch documents: {e}")
             return []
 
@@ -975,7 +1012,7 @@ class SupabaseVectorDB:
         try:
             response = self.client.rpc("get_embedding_stats").execute()
             return response.data[0] if response.data else {}
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to get embedding stats: {e}")
             return {}
 
@@ -1018,7 +1055,7 @@ class SupabaseVectorDB:
             response = query_builder.range(offset, offset + limit - 1).execute()
 
             return response.data or []
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Full-text search failed: {e}")
             raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
@@ -1060,7 +1097,7 @@ def reset_collections_db():
         try:
             if hasattr(_collections_db.client, "close"):
                 _collections_db.client.close()
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.warning(f"Error closing Supabase client: {e}")
     _collections_db = None
 
@@ -1087,7 +1124,7 @@ def reset_publications_db():
         try:
             if hasattr(_publications_db.client, "close"):
                 _publications_db.client.close()
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.warning(f"Error closing Publications Supabase client: {e}")
     _publications_db = None
 
@@ -1111,6 +1148,6 @@ def reset_vector_db():
         try:
             if hasattr(_vector_db.client, "close"):
                 _vector_db.client.close()
-        except Exception as e:
+        except (PostgrestAPIError, StorageException) as e:
             logger.warning(f"Error closing Vector Supabase client: {e}")
     _vector_db = None
