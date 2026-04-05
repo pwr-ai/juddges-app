@@ -116,9 +116,7 @@ def validate_environment_variables():
             missing_required.append(f"  - {var_name}: {description}")
             logger.error(f"Missing required environment variable: {var_name}")
         else:
-            # Mask sensitive values in logs
-            masked_value = value[:4] + "..." if len(value) > 4 else "***"
-            logger.info(f"Environment variable {var_name}: {masked_value}")
+            logger.info(f"  {var_name}: configured")
 
     # Check optional variables
     for var_name, description in optional_vars.items():
@@ -127,12 +125,7 @@ def validate_environment_variables():
             missing_optional.append(f"  - {var_name}: {description}")
             logger.warning(f"Optional environment variable not set: {var_name}")
         else:
-            # Mask sensitive values in logs
-            if "KEY" in var_name or "TOKEN" in var_name or "AUTH" in var_name:
-                masked_value = value[:4] + "..." if len(value) > 4 else "***"
-            else:
-                masked_value = value
-            logger.info(f"Environment variable {var_name}: {masked_value}")
+            logger.info(f"  {var_name}: configured")
 
     # Raise error if required variables are missing
     if missing_required:
