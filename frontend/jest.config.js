@@ -95,13 +95,13 @@ const customJestConfig = {
     '/tests/',
     '/__tests__/',
   ],
-  // Coverage thresholds — start low, increase as coverage improves
+  // Coverage thresholds — set above current levels to prevent regression
   coverageThreshold: {
     global: {
-      statements: 3,
-      branches: 2,
-      functions: 3,
-      lines: 3,
+      statements: 6,
+      branches: 4,
+      functions: 5,
+      lines: 6,
     },
   },
 }

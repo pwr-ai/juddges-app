@@ -76,7 +76,7 @@ jobs:
 
       - name: Run unit tests with coverage
         working-directory: backend
-        run: poetry run pytest -v -m unit --cov=app --cov-report=term-missing --cov-fail-under=50
+        run: poetry run pytest -v -m unit --cov=app --cov=packages --cov-report=term-missing --cov-fail-under=50
 
   frontend-lint:
     name: Frontend Lint
@@ -97,6 +97,26 @@ jobs:
       - name: Document type check & lint
         working-directory: frontend
         run: npm run validate
+
+  frontend-test:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: frontend
+        run: npm run test -- --ci
 
   # ============================================================================
   # Security Scanning
