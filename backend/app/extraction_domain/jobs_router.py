@@ -121,7 +121,11 @@ def _load_job_record(job_id: str) -> dict | None:
     try:
         job_data = (
             supabase.table("extraction_jobs")
-            .select("*")
+            .select(
+                "job_id, status, completed_documents, total_documents, results, "
+                "collection_id, schema_id, document_ids, language, extraction_context, "
+                "prompt_id, created_at, updated_at"
+            )
             .eq("job_id", job_id)
             .single()
             .execute()

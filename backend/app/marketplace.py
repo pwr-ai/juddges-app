@@ -19,6 +19,16 @@ from app.core.supabase import get_supabase_client
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 
+# Standard column sets to avoid SELECT * on tables with vector columns
+LISTING_COLUMNS = (
+    "id, schema_id, publisher_id, title, description, long_description, category, "
+    "tags, version, download_count, avg_rating, rating_count, status, is_featured, "
+    "license, changelog, published_at, created_at, updated_at"
+)
+REVIEW_COLUMNS = (
+    "id, listing_id, reviewer_id, rating, review_text, created_at, updated_at"
+)
+
 
 # ===== Request/Response Models =====
 
@@ -160,7 +170,7 @@ def _build_published_listings_query(supabase: Any) -> Any:
     """Create a query builder for published marketplace listings."""
     return (
         supabase.table("marketplace_listings")
-        .select("*", count="exact")
+        .select(LISTING_COLUMNS, count="exact")
         .eq("status", "published")
     )
 
@@ -236,7 +246,7 @@ def _fetch_top_listings(
     """Fetch top published listings by given order column."""
     response = (
         supabase.table("marketplace_listings")
-        .select("*")
+        .select(LISTING_COLUMNS)
         .eq("status", "published")
         .order(order_column, desc=True)
         .limit(limit)
@@ -365,7 +375,7 @@ async def get_my_listings(
     try:
         query_builder = (
             supabase.table("marketplace_listings")
-            .select("*", count="exact")
+            .select(LISTING_COLUMNS, count="exact")
             .eq("publisher_id", user_id)
         )
 
@@ -410,7 +420,9 @@ async def get_listing_detail(listing_id: str) -> MarketplaceListingDetail:
     try:
         response = (
             supabase.table("marketplace_listings")
-            .select("*, extraction_schemas(text, name, type, category)")
+            .select(
+                f"{LISTING_COLUMNS}, extraction_schemas(text, name, type, category)"
+            )
             .eq("id", listing_id)
             .single()
             .execute()
@@ -600,7 +612,7 @@ async def download_schema(
         # Get listing with schema data
         listing_resp = (
             supabase.table("marketplace_listings")
-            .select("*, extraction_schemas(text)")
+            .select(f"{LISTING_COLUMNS}, extraction_schemas(text)")
             .eq("id", listing_id)
             .eq("status", "published")
             .single()
@@ -764,7 +776,7 @@ async def get_listing_reviews(
         offset = (page - 1) * page_size
         resp = (
             supabase.table("marketplace_reviews")
-            .select("*", count="exact")
+            .select(REVIEW_COLUMNS, count="exact")
             .eq("listing_id", listing_id)
             .order("created_at", desc=True)
             .range(offset, offset + page_size - 1)

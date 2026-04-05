@@ -47,7 +47,7 @@ class CollectionsDB:
             # First get all collections for the user
             response = (
                 self.client.table("collections")
-                .select("*")
+                .select("id, name, description, user_id, created_at, updated_at")
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
                 .execute()
@@ -106,7 +106,11 @@ class CollectionsDB:
         try:
             # First get the collection
             response = (
-                self.client.table("collections").select("*").eq("id", collection_id).eq("user_id", user_id).execute()
+                self.client.table("collections")
+                .select("id, name, description, user_id, created_at, updated_at")
+                .eq("id", collection_id)
+                .eq("user_id", user_id)
+                .execute()
             )
 
             if not response.data:
@@ -226,7 +230,7 @@ class CollectionsDB:
             # Use collection_supabase_documents table for document IDs (text type)
             existing = (
                 self.client.table("collection_supabase_documents")
-                .select("*")
+                .select("collection_id, document_id")
                 .eq("collection_id", collection_id)
                 .eq("document_id", document_id)
                 .execute()
@@ -452,7 +456,15 @@ class SupabaseDB:
     async def get_schema_by_name(self, schema_name: str) -> Optional[Dict[str, Any]]:
         """Retrieves a specific schema by its name."""
         try:
-            response = self.client.table("extraction_schemas").select("*").eq("name", schema_name).limit(1).execute()
+            response = (
+                self.client.table("extraction_schemas")
+                .select(
+                    "id, name, text, type, category, description, user_id, is_public, version, status, created_at, updated_at"
+                )
+                .eq("name", schema_name)
+                .limit(1)
+                .execute()
+            )
 
             return response.data[0] if response.data else None
         except Exception as e:
@@ -933,7 +945,18 @@ class SupabaseVectorDB:
         """
         try:
             response = (
-                self.client.table("legal_documents").select("*").eq("document_id", document_id).limit(1).execute()
+                self.client.table("legal_documents")
+                .select(
+                    "document_id, document_type, title, date_issued, publication_date, "
+                    "ingestion_date, last_updated, issuing_body, language, document_number, "
+                    "country, full_text, summary, keywords, metadata, x, y, thesis, "
+                    "processing_status, source_url, parties, outcome, raw_content, "
+                    "presiding_judge, judges, legal_bases, court_name, department_name, "
+                    "extracted_legal_bases, references, embedding, summary_embedding"
+                )
+                .eq("document_id", document_id)
+                .limit(1)
+                .execute()
             )
 
             return response.data[0] if response.data else None
@@ -958,7 +981,19 @@ class SupabaseVectorDB:
             return []
 
         try:
-            response = self.client.table("legal_documents").select("*").in_("document_id", document_ids).execute()
+            response = (
+                self.client.table("legal_documents")
+                .select(
+                    "document_id, document_type, title, date_issued, publication_date, "
+                    "ingestion_date, last_updated, issuing_body, language, document_number, "
+                    "country, full_text, summary, keywords, metadata, x, y, thesis, "
+                    "processing_status, source_url, parties, outcome, raw_content, "
+                    "presiding_judge, judges, legal_bases, court_name, department_name, "
+                    "extracted_legal_bases, references"
+                )
+                .in_("document_id", document_ids)
+                .execute()
+            )
 
             return response.data or []
         except Exception as e:

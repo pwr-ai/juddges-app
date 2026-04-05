@@ -629,7 +629,10 @@ async def get_featured_examples(
     try:
         response = (
             supabase.table("documents")
-            .select("*")
+            .select(
+                "id, title, document_type, date_issued, publication_date, "
+                "judgment_date, country, language, issuing_body"
+            )
             .in_("document_type", ["judgment", "tax_interpretation"])
             .not_.is_("title", "null")
             .limit(limit * 3)

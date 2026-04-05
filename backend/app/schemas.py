@@ -41,6 +41,16 @@ from app.core.supabase import supabase_client
 
 router = APIRouter(prefix="/schemas", tags=["schemas"])
 
+# Standard column sets to avoid SELECT * on tables with vector columns
+EXTRACTION_SCHEMA_COLUMNS = (
+    "id, name, text, type, category, description, user_id, is_public, "
+    "version, status, created_at, updated_at"
+)
+SCHEMA_VERSION_COLUMNS = (
+    "id, schema_id, version_number, schema_snapshot, field_snapshot, "
+    "change_type, change_summary, changed_fields, diff_from_previous, user_id, created_at"
+)
+
 # Session storage for AI generation: session_id -> (agent, created_at)
 _generation_sessions: dict[str, tuple[SchemaGenerator, datetime]] = {}
 SCHEMA_NAME_ALLOWED_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -110,7 +120,7 @@ async def list_schemas_from_db(
         # Build query - get schemas ordered by creation date (newest first) with pagination
         response = (
             supabase_client.table("extraction_schemas")
-            .select("*")
+            .select(EXTRACTION_SCHEMA_COLUMNS)
             .order("created_at", desc=True)
             .range(offset, offset + page_size - 1)
             .execute()
@@ -156,7 +166,10 @@ def _fetch_schema_from_db(
         )
 
     response = (
-        db_client.table("extraction_schemas").select("*").eq("id", schema_id).execute()
+        db_client.table("extraction_schemas")
+        .select(EXTRACTION_SCHEMA_COLUMNS)
+        .eq("id", schema_id)
+        .execute()
     )
 
     if not response.data or len(response.data) == 0:
@@ -2214,7 +2227,7 @@ async def get_schema_version(
     try:
         response = (
             supabase_client.table("schema_versions")
-            .select("*")
+            .select(SCHEMA_VERSION_COLUMNS)
             .eq("schema_id", schema_id)
             .eq("version_number", version_number)
             .single()

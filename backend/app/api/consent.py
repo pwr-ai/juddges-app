@@ -24,6 +24,15 @@ from app.core.auth_jwt import (
 # Router configuration
 router = APIRouter(prefix="/api/consent", tags=["User Consent"])
 
+# Standard column set for user_consent table queries
+USER_CONSENT_COLUMNS = (
+    "user_id, professional_acknowledgment_accepted, professional_acknowledgment_date, "
+    "professional_acknowledgment_version, terms_accepted, terms_accepted_date, "
+    "terms_accepted_version, privacy_policy_accepted, privacy_policy_accepted_date, "
+    "privacy_policy_accepted_version, data_processing_consent, data_processing_consent_date, "
+    "marketing_consent, marketing_consent_date, updated_at"
+)
+
 
 # ===== Models =====
 
@@ -176,7 +185,10 @@ async def update_consent(
 
         # Get updated consent status
         consent_result = (
-            client.table("user_consent").select("*").eq("user_id", user.id).execute()
+            client.table("user_consent")
+            .select(USER_CONSENT_COLUMNS)
+            .eq("user_id", user.id)
+            .execute()
         )
 
         if not consent_result.data:
@@ -261,7 +273,10 @@ async def get_consent_status(user: AuthenticatedUser = Depends(get_current_user)
 
         # Get consent status
         result = (
-            client.table("user_consent").select("*").eq("user_id", user.id).execute()
+            client.table("user_consent")
+            .select(USER_CONSENT_COLUMNS)
+            .eq("user_id", user.id)
+            .execute()
         )
 
         if not result.data:
