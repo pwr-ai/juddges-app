@@ -66,7 +66,6 @@ from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limite
 from app.recommendations import router as recommendations_router
 from app.research_assistant import router as research_assistant_router
 from app.schema_generation_agent import router as schema_generator_agent_router
-from app.schemas_pkg import cleanup_expired_sessions
 from app.schemas_pkg import router as schemas_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
@@ -248,23 +247,16 @@ async def lifespan(app: FastAPI):
     # Step 7: Preload datasets (DISABLED - datasets are loaded on-demand)
     logger.info("Dataset preloading disabled - datasets will load on first request")
 
-    # Step 8: Start background task for session cleanup
-    logger.info("Starting session cleanup background task...")
-    cleanup_task = asyncio.create_task(cleanup_expired_sessions())
-    logger.info("Session cleanup background task started successfully")
+    # Step 8: Session cleanup — Redis TTL handles expiry automatically.
+    # cleanup_expired_sessions() is retained as a no-op for compatibility.
+    logger.info(
+        "Session cleanup delegated to Redis TTL — no background sweep task needed"
+    )
 
     logger.info("Application startup completed successfully")
 
     # Yield control to the application
     yield
-
-    # Cleanup: Cancel the cleanup task on shutdown
-    logger.info("Stopping session cleanup background task...")
-    cleanup_task.cancel()
-    try:
-        await cleanup_task
-    except asyncio.CancelledError:
-        logger.info("Session cleanup background task cancelled successfully")
 
     # Cleanup on shutdown
     logger.info("Starting application shutdown sequence...")

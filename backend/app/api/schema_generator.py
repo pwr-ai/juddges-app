@@ -385,9 +385,8 @@ async def schema_chat(
                     f"Agent graph invocation failed for session {session_id}: {e}",
                     exc_info=True,
                 )
-                # Clean up failed session
-                if session_id in _generation_sessions:
-                    del _generation_sessions[session_id]
+                # Clean up failed session from in-memory agent store.
+                _generation_sessions.pop(session_id, None)
 
                 # Provide user-friendly error based on exception type
                 error_str = str(e).lower()
