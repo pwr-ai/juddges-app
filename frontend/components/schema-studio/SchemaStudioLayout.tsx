@@ -16,6 +16,7 @@ import { schemaService } from "@/lib/schema-editor/service";
 import { toast } from "sonner";
 import { Layers, History } from "lucide-react";
 import type { SchemaField } from "@/hooks/schema-editor/types";
+import { logger } from "@/lib/logger";
 
 /**
  * Props for the SchemaStudioLayout component
@@ -157,7 +158,7 @@ export function SchemaStudioLayout({
           setPanelSizes([canvasSize, chatSize]);
         }
       } catch (error) {
-        console.error("Failed to parse saved layout sizes: ", error);
+        logger.error("Failed to parse saved layout sizes: ", error);
       }
     }
   }, []);

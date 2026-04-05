@@ -51,6 +51,7 @@ import {
 } from "@/lib/blog/admin-api";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 export default function AdminBlogPage(): React.JSX.Element {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function AdminBlogPage(): React.JSX.Element {
         setFilteredPosts(postsResponse.data);
         setStats(statsResponse);
       } catch (error) {
-        console.error("Error fetching blog admin data: ", error);
+        logger.error("Error fetching blog admin data: ", error);
         toast.error("Failed to load posts", {
           description:
             error instanceof Error
@@ -133,14 +134,14 @@ export default function AdminBlogPage(): React.JSX.Element {
         const refreshedStats = await fetchAdminStats();
         setStats(refreshedStats);
       } catch (refreshError) {
-        console.warn("Failed to refresh stats after delete", refreshError);
+        logger.warn("Failed to refresh stats after delete", refreshError);
       }
 
       toast.success("Post deleted successfully", {
         description: "The post has been permanently removed.",
       });
     } catch (error) {
-      console.error("Error deleting post: ", error);
+      logger.error("Error deleting post: ", error);
       toast.error("Failed to delete post", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
       });

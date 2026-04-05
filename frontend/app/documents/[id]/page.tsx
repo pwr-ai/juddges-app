@@ -13,6 +13,7 @@ import { summarizeDocuments, type SummarizeDocumentsResponse, extractKeyPoints, 
 import ReactMarkdown from 'react-markdown';
 import { VersionHistory } from '@/components/VersionHistory';
 import { useAuth } from '@/contexts/AuthContext';
+import { logger } from "@/lib/logger";
 
 interface DocumentMetadata {
  document_id: string;
@@ -339,7 +340,7 @@ export default function DocumentPage(): React.JSX.Element {
  setHtmlString(fetchHtmlData);
 
  } catch (err) {
- console.error('Error fetching document:', err);
+ logger.error('Error fetching document:', err);
  setError(err instanceof Error ? err.message : 'Failed to load document');
  } finally {
  setLoading(false);
@@ -382,7 +383,7 @@ export default function DocumentPage(): React.JSX.Element {
  } as SimilarDocument;
  }
  } catch (err) {
- console.error(`Error fetching metadata for ${doc.document_id}:`, err);
+ logger.error(`Error fetching metadata for ${doc.document_id}:`, err);
  }
  return doc;
  })
@@ -392,7 +393,7 @@ export default function DocumentPage(): React.JSX.Element {
  const filtered = enriched.filter((doc): doc is SimilarDocument => doc !== null);
  setEnrichedSimilarDocs(filtered);
  } catch (err) {
- console.error('Error fetching similar documents metadata:', err);
+ logger.error('Error fetching similar documents metadata:', err);
  // Also filter the fallback
  const normalizedCurrentId = cleanDocumentIdForUrl(documentId).toLowerCase().trim();
  const filtered = similarDocs.filter((doc: SimilarDocument) => {
@@ -430,7 +431,7 @@ export default function DocumentPage(): React.JSX.Element {
  }, 500);
  }
  } catch (error) {
- console.error('Failed to print document:', error);
+ logger.error('Failed to print document:', error);
  }
  }, [htmlUrl]);
 
@@ -450,7 +451,7 @@ export default function DocumentPage(): React.JSX.Element {
 
  setSummaryResult(result);
  } catch (err) {
- console.error('Error generating summary:', err);
+ logger.error('Error generating summary:', err);
  setSummaryError(err instanceof Error ? err.message : 'Failed to generate summary');
  } finally {
  setIsSummarizing(false);
@@ -471,7 +472,7 @@ export default function DocumentPage(): React.JSX.Element {
 
  setKeyPointsResult(result);
  } catch (err) {
- console.error('Error extracting key points:', err);
+ logger.error('Error extracting key points:', err);
  setKeyPointsError(err instanceof Error ? err.message : 'Failed to extract key points');
  } finally {
  setIsExtractingKeyPoints(false);

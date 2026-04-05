@@ -1,4 +1,5 @@
 import { JudgmentData } from '../app/use-cases/swiss-franc/types';
+import { logger } from "@/lib/logger";
 
 export interface ChartDataItem {
   year: string;
@@ -16,7 +17,7 @@ export function prepareChartData(
   options: ChartDataPreparationOptions
 ): ChartDataItem[] {
   if (!data || data.length === 0) {
-    console.warn('No data provided to prepareChartData');
+    logger.warn('No data provided to prepareChartData');
     return [];
   }
 
@@ -35,7 +36,7 @@ export function prepareChartData(
   });
 
   if (data.length === 0) {
-    console.warn('No valid data after filtering');
+    logger.warn('No valid data after filtering');
     return [];
   }
 

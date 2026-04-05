@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { submitBulkExtraction, BulkExtractionResponse, BulkExtractionJobInfo } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 interface BulkExtractionDialogProps {
  isOpen: boolean;
@@ -208,7 +209,7 @@ export function BulkExtractionDialog({
  const acceptedCount = result.jobs.filter(j => j.status === 'accepted').length;
  toast.success(`Started ${acceptedCount} extraction jobs for ${documentCount} documents.`);
  } catch (error) {
- console.error('Bulk extraction failed:', error);
+ logger.error('Bulk extraction failed:', error);
  toast.error(error instanceof Error ? error.message : 'Failed to start bulk extraction');
  } finally {
  setIsSubmitting(false);

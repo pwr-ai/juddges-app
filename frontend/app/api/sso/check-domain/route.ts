@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('SSO domain check failed:', error);
+    logger.error('SSO domain check failed:', error);
     return NextResponse.json({ sso_enabled: false }, { status: 200 });
   }
 }

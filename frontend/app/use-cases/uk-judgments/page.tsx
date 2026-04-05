@@ -9,6 +9,7 @@ import { columns } from "./columns";
 import { DateRangePicker } from "@/lib/styles/components";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
+import { logger } from "@/lib/logger";
 
 export interface UKJudgmentData {
   id: string;
@@ -49,7 +50,7 @@ export default function UKJudgmentsAnalysisPage() {
         ];
         setData(mockData);
       } catch (error) {
-        console.error("Error fetching data: ", error);
+        logger.error("Error fetching data: ", error);
       }
     };
 

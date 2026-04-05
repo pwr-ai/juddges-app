@@ -3,6 +3,7 @@
 import { ErrorBoundary } from './ErrorBoundary';
 import { MessageCircle, AlertCircle } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { logger } from "@/lib/logger";
 
 /**
  * Chat Error Fallback Component
@@ -91,7 +92,7 @@ export function ChatErrorBoundary({ children }: { children: React.ReactNode }) {
  fallback={ChatErrorFallback}
  onError={(error, errorInfo) => {
  // Log chat-specific errors with context
- console.error('Chat error:', {
+ logger.error('Chat error:', {
  error: error.message,
  stack: error.stack,
  componentStack: errorInfo.componentStack,

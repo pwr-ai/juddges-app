@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { logger } from "@/lib/logger";
 
 /**
  * Schema version from database
@@ -76,7 +77,7 @@ export function SchemaVersionHistory({
       const data = await response.json();
       setVersions(data.versions || []);
     } catch (error) {
-      console.error('Error fetching versions:', error);
+      logger.error('Error fetching versions:', error);
       toast.error('Failed to load version history');
     } finally {
       setLoading(false);
@@ -107,7 +108,7 @@ export function SchemaVersionHistory({
       await fetchVersions();
       onVersionRestored?.();
     } catch (error) {
-      console.error('Error rolling back:', error);
+      logger.error('Error rolling back:', error);
       toast.error('Failed to rollback schema');
     } finally {
       setIsRollingBack(false);

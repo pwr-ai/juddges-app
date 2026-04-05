@@ -48,20 +48,23 @@ class Logger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   debug(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
-      console.warn(this.formatMessage('DEBUG', message, data));
+      // eslint-disable-next-line no-console
+      console.log(this.formatMessage('DEBUG', message, data));
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   info(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.INFO)) {
-      console.warn(this.formatMessage('INFO', message, data));
+      // eslint-disable-next-line no-console
+      console.info(this.formatMessage('INFO', message, data));
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   warn(message: string, data?: any): void {
     if (this.shouldLog(LogLevel.WARN)) {
+      // eslint-disable-next-line no-console
       console.warn(this.formatMessage('WARN', message, data));
     }
   }
@@ -77,6 +80,7 @@ class Logger {
           name: error.name
         } : error
       };
+      // eslint-disable-next-line no-console
       console.error(this.formatMessage('ERROR', message, errorData));
     }
   }
@@ -147,4 +151,4 @@ const logger = new Logger();
 
 // Export singleton and classes
 export default logger;
-export { Logger, ContextLogger };
+export { logger, Logger, ContextLogger };

@@ -38,6 +38,7 @@ import {
  linkExtractionJob,
  unlinkExtractionJob,
 } from "@/lib/api/publications";
+import { logger } from "@/lib/logger";
 
 interface AvailableSchema {
  id: string;
@@ -149,7 +150,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  setAvailableJobs(jobsData);
  }
  } catch (err) {
- console.error("Failed to fetch resources: ", err);
+ logger.error("Failed to fetch resources: ", err);
  } finally {
  setResourceLoading(false);
  }

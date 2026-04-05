@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { getTranslations } from './translations';
 import { DEFAULT_LOCALE, getLocaleConfig } from './config';
+import { logger } from "@/lib/logger";
 
 /**
  * Get a nested value from an object using a dot-notation path
@@ -63,14 +64,14 @@ export function createTranslator(locale: LocaleCode) {
 
       // Log warning in development
       if (process.env.NODE_ENV === 'development') {
-        console.warn(`[i18n] Missing translation for key "${key}" in locale "${locale}", using fallback`);
+        logger.warn(`[i18n] Missing translation for key "${key}" in locale "${locale}", using fallback`);
       }
     }
 
     // If still not found, return the key with a warning
     if (translation === undefined) {
       if (process.env.NODE_ENV === 'development') {
-        console.error(`[i18n] Translation key "${key}" not found in any locale`);
+        logger.error(`[i18n] Translation key "${key}" not found in any locale`);
       }
       return key;
     }

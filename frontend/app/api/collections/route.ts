@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
@@ -28,7 +29,7 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error status: ${response.status}`);
+      logger.error(`Backend API returned error status: ${response.status}`);
       return NextResponse.json(
         { error: "Failed to fetch collections from backend" },
         { status: response.status }
@@ -38,7 +39,7 @@ export async function GET() {
     const collections = await response.json();
     return NextResponse.json(collections);
   } catch (error) {
-    console.error("Error in GET collections: ", error);
+    logger.error("Error in GET collections: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error status: ${response.status}`);
+      logger.error(`Backend API returned error status: ${response.status}`);
       return NextResponse.json(
         { error: "Failed to create collection" },
         { status: response.status }
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     const collection = await response.json();
     return NextResponse.json(collection);
   } catch (error) {
-    console.error("Error in POST collection: ", error);
+    logger.error("Error in POST collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

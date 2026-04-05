@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { logger } from "@/lib/logger";
 
 /**
  * TEMPORARY DEBUG ENDPOINT - NO DATABASE ACCESS, NO AUTH
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error("Error reading sample file: ", error);
+    logger.error("Error reading sample file: ", error);
     return NextResponse.json(
       {
         error: "Failed to read sample file",

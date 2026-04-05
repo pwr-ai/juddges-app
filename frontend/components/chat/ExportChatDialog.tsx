@@ -14,6 +14,7 @@ import { FileText, FileDown, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { ExportFormat, ChatExportData } from "@/lib/chat-export";
+import { logger } from "@/lib/logger";
 
 interface ExportChatDialogProps {
  open: boolean;
@@ -56,7 +57,7 @@ export function ExportChatDialog({
  });
  onOpenChange(false);
  } catch (error) {
- console.error("Export failed: ", error);
+ logger.error("Export failed: ", error);
  toast.error("Export failed", {
  description:
  error instanceof Error ? error.message : "Please try again",

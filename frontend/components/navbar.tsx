@@ -16,6 +16,7 @@ import { X, Trash2, Pencil, Printer, FileText, BookmarkPlus, ExternalLink, Arrow
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/lib/styles/components/tooltip";
 import { SaveToCollectionPopover } from "@/lib/styles/components/save-to-collection-popover";
+import { logger } from "@/lib/logger";
 
 export function Navbar(): React.ReactElement {
   const { user } = useAuth();
@@ -63,7 +64,7 @@ export function Navbar(): React.ReactElement {
             setFullMetadata(data);
           }
         } catch (error) {
-          console.error('Failed to fetch document metadata for navbar:', error);
+          logger.error('Failed to fetch document metadata for navbar:', error);
         }
       };
       fetchMetadata();
@@ -88,7 +89,7 @@ export function Navbar(): React.ReactElement {
             setCollectionName(data.name);
           }
         } catch (error) {
-          console.error('Failed to fetch collection data for navbar:', error);
+          logger.error('Failed to fetch collection data for navbar:', error);
         }
       };
       fetchCollectionData();
@@ -134,7 +135,7 @@ export function Navbar(): React.ReactElement {
         throw new Error('Failed to update collection');
       }
     } catch (error) {
-      console.error('Failed to update collection name', error);
+      logger.error('Failed to update collection name', error);
       toast.error("Failed to update collection name");
       setEditingTitle(collectionData.name);
     }
@@ -167,7 +168,7 @@ export function Navbar(): React.ReactElement {
         throw new Error('Failed to delete collection');
       }
     } catch (error) {
-      console.error('Failed to delete collection', error);
+      logger.error('Failed to delete collection', error);
       toast.error("Failed to delete collection");
     } finally {
       setIsDeletingCollection(false);
@@ -196,7 +197,7 @@ export function Navbar(): React.ReactElement {
         }, 500);
       }
     } catch (error) {
-      console.error('Failed to print document:', error);
+      logger.error('Failed to print document:', error);
       toast.error("Failed to print document");
     }
   };
