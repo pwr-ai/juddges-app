@@ -676,7 +676,7 @@ def _build_topics(
 )
 @limiter.limit(TOPIC_MODELING_RATE_LIMIT)
 async def analyze_topics(
-    http_request: Request, request: TopicModelingRequest
+    request: Request, body: TopicModelingRequest
 ) -> TopicModelingResponse:
     """
     Perform topic modeling on the document corpus.
@@ -687,13 +687,13 @@ async def analyze_topics(
     """
     start_time = time.perf_counter()
     db = get_vector_db()
-    docs = await _fetch_documents_for_topic_modeling(db, request)
+    docs = await _fetch_documents_for_topic_modeling(db, body)
 
-    if len(docs) < request.num_topics:
+    if len(docs) < body.num_topics:
         raise HTTPException(
             status_code=400,
-            detail=f"Not enough documents ({len(docs)}) for {request.num_topics} topics. "
-            f"Need at least {request.num_topics}.",
+            detail=f"Not enough documents ({len(docs)}) for {body.num_topics} topics. "
+            f"Need at least {body.num_topics}.",
         )
 
     # Build text representations and TF-IDF matrix
@@ -707,16 +707,16 @@ async def analyze_topics(
         )
 
     # NMF topic decomposition
-    num_topics = min(request.num_topics, len(docs) - 1, len(vocabulary) - 1)
+    num_topics = min(body.num_topics, len(docs) - 1, len(vocabulary) - 1)
     W, H = _nmf_decomposition(tfidf_matrix, num_topics)
 
     # Assign time periods
-    periods, doc_to_period = _assign_time_periods(docs, request.time_periods)
+    periods, doc_to_period = _assign_time_periods(docs, body.time_periods)
 
     doc_token_sets = _build_doc_token_sets(texts)
     topics = _build_topics(
         docs=docs,
-        request=request,
+        request=body,
         num_topics=num_topics,
         W=W,
         H=H,
@@ -758,7 +758,7 @@ async def analyze_topics(
 )
 @limiter.limit(TOPIC_MODELING_RATE_LIMIT)
 async def get_trending_topics(
-    http_request: Request,
+    request: Request,
     num_topics: int = Query(default=5, ge=2, le=15, description="Number of topics"),
     sample_size: int = Query(
         default=200, ge=20, le=500, description="Documents to analyze"
@@ -769,10 +769,10 @@ async def get_trending_topics(
 
     Convenience endpoint that uses sensible defaults for quick analysis.
     """
-    request = TopicModelingRequest(
+    body = TopicModelingRequest(
         sample_size=sample_size,
         num_topics=num_topics,
         num_keywords=6,
         time_periods=6,
     )
-    return await analyze_topics(request)
+    return await analyze_topics(request, body)

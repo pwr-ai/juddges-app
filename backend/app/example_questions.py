@@ -24,7 +24,7 @@ class ExampleQuestionsResponse(BaseModel):
 @router.get("", response_model=ExampleQuestionsResponse)
 @limiter.limit(EXAMPLE_QUESTIONS_RATE_LIMIT)
 async def get_example_questions(
-    http_request: Request, num_polish: int = 2, num_english: int = 2
+    request: Request, num_polish: int = 2, num_english: int = 2
 ) -> ExampleQuestionsResponse:
     """
     Get randomly sampled example questions from database.

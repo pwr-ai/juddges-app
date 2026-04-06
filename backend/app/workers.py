@@ -6,6 +6,7 @@ from typing import Any
 
 from celery import Celery, Task
 from celery.exceptions import Retry
+from celery.schedules import crontab
 from dotenv import load_dotenv
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.oai_schema_validation import (
@@ -43,6 +44,16 @@ celery_app.conf.beat_schedule = {
     "meilisearch-full-sync-every-6h": {
         "task": "meilisearch.full_sync",
         "schedule": 6 * 60 * 60,  # every 6 hours
+    },
+    "daily-digest-7am": {
+        "task": "digest.send",
+        "schedule": crontab(hour=7, minute=0),
+        "kwargs": {"frequency": "daily"},
+    },
+    "weekly-digest-monday-8am": {
+        "task": "digest.send",
+        "schedule": crontab(hour=8, minute=0, day_of_week=1),
+        "kwargs": {"frequency": "weekly"},
     },
 }
 celery_app.conf.timezone = "UTC"
