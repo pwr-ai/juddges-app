@@ -253,6 +253,25 @@ async def lifespan(app: FastAPI):
         "Session cleanup delegated to Redis TTL — no background sweep task needed"
     )
 
+    # Step 9: Eagerly initialize the embedding provider so misconfiguration
+    # (e.g. unreachable TEI endpoint) fails loudly at startup, not on first
+    # search request. The init also logs the active provider + URL + dim,
+    # which is the canonical source of truth for "which embedder is live".
+    try:
+        from app.embedding_providers import get_default_model_id, get_embedding_provider
+
+        model_id = get_default_model_id()
+        provider = get_embedding_provider(model_id)
+        logger.info(
+            f"Embedding provider ready: {model_id} "
+            f"(dim={provider.config.dimensions}, "
+            f"max_input={provider.config.max_input_length})"
+        )
+    except Exception as e:
+        logger.warning(
+            f"Embedding provider init failed (search will fall back to BM25): {e}"
+        )
+
     logger.info("Application startup completed successfully")
 
     # Yield control to the application

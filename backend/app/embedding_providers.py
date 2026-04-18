@@ -117,20 +117,66 @@ class BaseEmbeddingProvider(ABC):
         ...
 
     def _truncate_text(self, text: str) -> str:
-        """Truncate text to max input length."""
+        """Truncate text to max input length (character-based default).
+
+        Subclasses override for token-aware truncation when the backing API
+        enforces a token budget rather than a character budget (OpenAI).
+        Logs a warning when truncation fires so it's not silent.
+        """
         if len(text) > self.config.max_input_length:
+            logger.warning(
+                f"{self.__class__.__name__}: truncating input "
+                f"{len(text)} → {self.config.max_input_length} chars "
+                f"(model={self.config.model_name})"
+            )
             return text[: self.config.max_input_length]
         return text
 
 
 class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
-    """OpenAI embedding provider."""
+    """OpenAI embedding provider.
+
+    OpenAI embedding endpoints enforce a TOKEN limit (8192 tokens for
+    text-embedding-3-*), not a character limit. Polish text averages
+    ~2-3 chars/token, so a naive character-based truncation can still
+    blow the token budget. Override _truncate_text to count tokens with
+    tiktoken and cut there.
+    """
+
+    # OpenAI 3-* models: 8192 token context window. Leave a small headroom
+    # to stay safe across tokenizer versions.
+    _TOKEN_BUDGET = 8000
 
     def __init__(self, config: EmbeddingModelConfig):
         super().__init__(config)
         from openai import AsyncOpenAI
 
         self._client = AsyncOpenAI()
+        self._encoding = None
+
+    def _get_encoding(self):
+        import tiktoken
+
+        if self._encoding is None:
+            try:
+                self._encoding = tiktoken.encoding_for_model(self.config.model_name)
+            except KeyError:
+                # Newer model not yet in tiktoken registry — fall back to cl100k.
+                self._encoding = tiktoken.get_encoding("cl100k_base")
+        return self._encoding
+
+    def _truncate_text(self, text: str) -> str:
+        enc = self._get_encoding()
+        tokens = enc.encode(text)
+        if len(tokens) <= self._TOKEN_BUDGET:
+            return text
+        truncated = enc.decode(tokens[: self._TOKEN_BUDGET])
+        logger.warning(
+            f"OpenAI: token-truncating input {len(tokens)} → {self._TOKEN_BUDGET} "
+            f"tokens ({len(text)} → {len(truncated)} chars, "
+            f"model={self.config.model_name})"
+        )
+        return truncated
 
     async def embed_text(self, text: str) -> list[float]:
         text = self._truncate_text(text)

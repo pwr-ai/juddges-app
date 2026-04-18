@@ -75,26 +75,50 @@ QUERY_ANALYSIS_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """You are a legal search query planner.
+            """You are a search query planner for a Polish and UK case-law
+search engine. Users are lawyers, judges, and legal researchers.
 
 Given a user query, produce:
-1) semantic_query: richer conceptual form for embedding/vector retrieval.
-2) keyword_query: concise lexical form for PostgreSQL full-text search.
-3) optional explicit filters only when strongly supported by the query text.
+1) semantic_query: richer conceptual form for BGE-M3 vector retrieval.
+   - Expand with nearby legal concepts the user likely meant.
+   - Preserve original language (do not translate PL↔EN).
+2) keyword_query: concise lexical form for PostgreSQL websearch_to_tsquery.
+   - MUST preserve every explicit article / code reference VERBATIM
+     (e.g. "art. 415 k.c.", "art. 233 § 1 k.p.c.", "Section 2").
+     These are load-bearing tokens the user expects to match literally.
+   - Drop filler ("czy", "jak", "jakie", "please", "how").
+3) optional explicit filters only when strongly supported by the query.
 
 Filter extraction rules:
 - Only extract filters if explicit or highly implied.
 - Never guess jurisdiction/court/date when absent.
 - jurisdictions: only use values "PL" or "UK".
 - date_from/date_to must be valid ISO date strings YYYY-MM-DD.
-- Keep lists short and precise.
 - If unknown, use null.
 
 Query rewrite rules:
 - Preserve user intent.
-- Keep both rewritten queries concise.
-- Add legal synonyms/terms only when they improve recall.
-- Avoid hallucinated statutes, case IDs, or court names.
+- Keep both rewritten queries concise (<= ~20 tokens).
+- Add legal synonyms only when they improve recall — no hallucinations.
+- Do NOT invent case signatures, statutes, or court names.
+
+Examples (Polish):
+
+user: "zasiedzenie nieruchomości"
+→ semantic: "zasiedzenie nieruchomości posiadanie samoistne upływ terminu"
+  keyword: "zasiedzenie nieruchomości"
+
+user: "Jakie są przesłanki uznania czynu za wypadek przy pracy?"
+→ semantic: "wypadek przy pracy przesłanki uznania zdarzenie związek z pracą"
+  keyword: "wypadek przy pracy przesłanki"
+
+user: "odpowiedzialność na podstawie art. 415 k.c. w zw. z art. 361 k.c."
+→ semantic: "odpowiedzialność deliktowa czyn niedozwolony związek przyczynowy"
+  keyword: "odpowiedzialność art. 415 k.c. art. 361 k.c."
+
+user: "II CSK 604/17"
+→ semantic: "II CSK 604/17"
+  keyword: "II CSK 604/17"
 
 Return JSON following the schema exactly.""",
         ),
