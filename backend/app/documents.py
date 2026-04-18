@@ -62,19 +62,13 @@ _cache_lock = asyncio.Lock()
 async def generate_embedding(text: str) -> list[float]:
     """Generate embedding for text using the active embedding provider.
 
-    Uses the configured embedding provider (OpenAI, Cohere, or local model)
-    based on the EMBEDDING_MODEL_ID environment variable.
-
-    Args:
-        text: Text to embed
-
-    Returns:
-        Embedding vector (dimensions depend on the active model)
+    Thin re-export of app.documents_pkg.utils.generate_embedding so that
+    there is a SINGLE implementation (including the Redis cache layer).
+    Kept here for backwards-compatible imports from app.documents.
     """
-    from app.embedding_providers import get_embedding_provider
+    from app.documents_pkg.utils import generate_embedding as _impl
 
-    provider = get_embedding_provider()
-    return await provider.embed_text(text)
+    return await _impl(text)
 
 
 # Common Polish characters and words for language detection
