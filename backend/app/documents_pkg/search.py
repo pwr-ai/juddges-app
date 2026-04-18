@@ -248,6 +248,25 @@ async def _get_search_client():
     raise HTTPException(status_code=500, detail="Database client not initialized")
 
 
+def _relax_keyword_for_conceptual(keyword_query: str, language: str) -> str:
+    """For `conceptual` queries (≥4 content words), join tokens with " OR " so
+    websearch_to_tsquery treats them as alternatives, not an AND.
+
+    Without this, a 5-word Polish legal question like
+    "odpowiedzialność solidarna wspólników spółki cywilnej" requires all five
+    lemmata to co-occur in a doc → ~3 hits. With OR recall widens to 30-50
+    while the vector side + RRF keep ranking tight.
+    """
+    tokens = re.findall(r"\w+", keyword_query.lower())
+    if not tokens:
+        return keyword_query
+    stopwords = _POLISH_STOPWORDS if language == "polish" else _ENGLISH_STOPWORDS
+    kept = [t for t in tokens if len(t) >= 3 and t not in stopwords]
+    if len(kept) < 4:
+        return keyword_query
+    return " OR ".join(kept[:8])
+
+
 def _build_search_rpc_params(
     query_embedding: list[float] | None,
     keyword_query: str,
@@ -256,7 +275,10 @@ def _build_search_rpc_params(
     effective_alpha: float,
     limit: int,
     offset: int,
+    query_type: str = "mixed",
 ) -> dict[str, Any]:
+    if query_type == "conceptual":
+        keyword_query = _relax_keyword_for_conceptual(keyword_query, search_language)
     return {
         "query_embedding": query_embedding,
         "search_text": keyword_query if effective_alpha < 1.0 else None,

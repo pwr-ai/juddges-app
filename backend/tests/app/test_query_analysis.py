@@ -31,7 +31,6 @@ from app.query_analysis import (
     create_query_analysis_chain,
 )
 
-
 # ---------------------------------------------------------------------------
 # QueryAnalysisResult schema tests
 # ---------------------------------------------------------------------------
@@ -144,9 +143,7 @@ class TestClassifyAndRouteQuery:
     # -- Conceptual (4+ words, no identifiers) --
 
     def test_conceptual_long_query(self):
-        qtype, alpha = classify_and_route_query(
-            "duty of care in medical negligence"
-        )
+        qtype, alpha = classify_and_route_query("duty of care in medical negligence")
         assert qtype == "conceptual"
         assert alpha == pytest.approx(0.8)
 
@@ -182,6 +179,38 @@ class TestClassifyAndRouteQuery:
     def test_special_characters_only(self):
         qtype, _ = classify_and_route_query("!@#$%^&*()")
         assert qtype == "mixed"
+
+    # -- Case-number dominance (bug fix: long paragraph citing a sygnatura
+    #    used to be misrouted as case_number → alpha=0.1 → 0 results) --
+
+    def test_long_paragraph_citing_signature_is_not_case_number(self):
+        # Real-world query that exposed the bug: ~1100-char paragraph that
+        # mentions "II CSK 604/17" inside a legal argument. Should classify
+        # as conceptual, not case_number.
+        query = (
+            "W sprawie niniejszej kluczowe znaczenie ma ocena przesłanek "
+            "odpowiedzialności deliktowej pozwanego na gruncie art. 415 k.c. "
+            "Zgodnie z wyrokiem z dnia 12 lipca 2018 r., sygn. akt II CSK "
+            "604/17, ciężar wykazania bezprawności spoczywa na poszkodowanym, "
+            "co w realiach sprawy wymaga dogłębnej analizy materiału dowodowego."
+        )
+        qtype, _ = classify_and_route_query(query)
+        assert qtype != "case_number", (
+            f"{len(query)}-char paragraph with a cited sygnatura must not "
+            f"be routed as case_number (got {qtype})"
+        )
+
+    def test_skarga_kasacyjna_excerpt_is_not_case_number(self):
+        # Excerpt with multiple sygnatury: should classify as conceptual.
+        query = (
+            "Skarżący zaskarża wyrok Sądu Apelacyjnego w Warszawie z dnia "
+            "14 lutego 2025 r., sygn. akt I ACa 872/24, zarzucając naruszenie "
+            "art. 415 k.c. Podobne stanowisko zajął Sąd Najwyższy w wyroku "
+            "II CSK 123/18, gdzie wskazano na konieczność adekwatnego "
+            "związku przyczynowego."
+        )
+        qtype, _ = classify_and_route_query(query)
+        assert qtype != "case_number"
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +353,9 @@ class TestContainsAnyTerms:
     """Test whole-word matching helper."""
 
     def test_match_found(self):
-        assert _contains_any_terms("criminal sentencing guidelines", ("criminal",)) is True
+        assert (
+            _contains_any_terms("criminal sentencing guidelines", ("criminal",)) is True
+        )
 
     def test_no_match(self):
         assert _contains_any_terms("contract breach", ("criminal",)) is False
@@ -460,7 +491,9 @@ class TestAnalyzeQuery:
         mock_chain = AsyncMock()
         mock_chain.ainvoke = AsyncMock(return_value=fake_result)
 
-        with patch("app.query_analysis.create_query_analysis_chain", return_value=mock_chain):
+        with patch(
+            "app.query_analysis.create_query_analysis_chain", return_value=mock_chain
+        ):
             result = await analyze_query("contract breach")
             assert result.semantic_query == "expanded contract breach"
             assert result.jurisdictions == ["UK"]
@@ -475,7 +508,9 @@ class TestAnalyzeQuery:
         mock_chain = AsyncMock()
         mock_chain.ainvoke = AsyncMock(return_value=fake_result)
 
-        with patch("app.query_analysis.create_query_analysis_chain", return_value=mock_chain):
+        with patch(
+            "app.query_analysis.create_query_analysis_chain", return_value=mock_chain
+        ):
             result = await analyze_query("original query")
             assert result.semantic_query == "original query"
 
@@ -488,20 +523,22 @@ class TestAnalyzeQuery:
         mock_chain = AsyncMock()
         mock_chain.ainvoke = AsyncMock(return_value=fake_result)
 
-        with patch("app.query_analysis.create_query_analysis_chain", return_value=mock_chain):
+        with patch(
+            "app.query_analysis.create_query_analysis_chain", return_value=mock_chain
+        ):
             result = await analyze_query("original query")
             assert result.keyword_query == "original query"
 
     async def test_analyze_query_uses_provided_llm(self):
         """When llm argument is provided it should be passed to the chain factory."""
         fake_llm = MagicMock()
-        fake_result = QueryAnalysisResult(
-            semantic_query="test", keyword_query="test"
-        )
+        fake_result = QueryAnalysisResult(semantic_query="test", keyword_query="test")
         mock_chain = AsyncMock()
         mock_chain.ainvoke = AsyncMock(return_value=fake_result)
 
-        with patch("app.query_analysis.create_query_analysis_chain", return_value=mock_chain) as mock_create:
+        with patch(
+            "app.query_analysis.create_query_analysis_chain", return_value=mock_chain
+        ) as mock_create:
             await analyze_query("test", llm=fake_llm)
             mock_create.assert_called_once_with(fake_llm)
 
@@ -519,7 +556,11 @@ class TestAnalyzeQueryWithFallback:
         fake_result = QueryAnalysisResult(
             semantic_query="expanded", keyword_query="original"
         )
-        with patch("app.query_analysis.analyze_query", new_callable=AsyncMock, return_value=fake_result):
+        with patch(
+            "app.query_analysis.analyze_query",
+            new_callable=AsyncMock,
+            return_value=fake_result,
+        ):
             result, source, error = await analyze_query_with_fallback("test query")
             assert source == "llm"
             assert error is None

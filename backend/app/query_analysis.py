@@ -234,6 +234,31 @@ _STATUTE_RE = re.compile(
 _EXACT_PHRASE_RE = re.compile(r'^\s*"[^"]+"\s*$')
 
 
+# A case number must take up at least this fraction of the stripped query
+# to trigger case_number routing. Prevents long paragraphs that happen to
+# cite "II CSK 604/17" from being routed as a signature lookup.
+_CASE_NUMBER_MIN_COVERAGE = 0.30
+_CASE_NUMBER_MAX_QUERY_LEN = 80
+
+
+def _is_case_number_dominant(query: str) -> bool:
+    """Case-number routing should fire only when the signature *is* the query,
+    not merely mentioned inside a longer legal text.
+
+    Two conditions must both hold:
+    - query length ≤ 80 chars (signatures alone are short)
+    - matched case-number substring covers ≥ 30% of the stripped query
+    """
+    stripped_len = len(query.strip())
+    if stripped_len == 0 or stripped_len > _CASE_NUMBER_MAX_QUERY_LEN:
+        return False
+    for rx in (_POLISH_CASE_RE, _UK_CASE_RE):
+        m = rx.search(query)
+        if m and len(m.group(0)) / stripped_len >= _CASE_NUMBER_MIN_COVERAGE:
+            return True
+    return False
+
+
 def classify_and_route_query(query: str) -> tuple[str, float]:
     """Classify query type and return (query_type, recommended_alpha).
 
@@ -248,10 +273,9 @@ def classify_and_route_query(query: str) -> tuple[str, float]:
     if _EXACT_PHRASE_RE.match(query):
         return "exact_phrase", 0.15
 
-    # Case number detection takes priority over statute references because a
-    # case number string may also contain department codes that look like statute
-    # abbreviations (e.g. "KK" in "III KK 45/21").
-    if _POLISH_CASE_RE.search(query) or _UK_CASE_RE.search(query):
+    # Only route as case_number when the signature is the dominant part of the
+    # query. Using .search() naively fires on any paragraph that cites case law.
+    if _is_case_number_dominant(query):
         return "case_number", 0.1
 
     if _STATUTE_RE.search(query):

@@ -449,6 +449,7 @@ async def search_documents(request: SearchChunksRequest):
             effective_alpha=effective_alpha,
             limit=limit,
             offset=offset,
+            query_type=query_type,
         )
         supabase = await _get_search_client()
         results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
