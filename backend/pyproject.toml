@@ -72,6 +72,9 @@ check = ["lint", "format-check"]
 check-all = ["lint", "format-check", "test"]
 ci = ["lint", "format-check"]
 
+# Search benchmark (live backend required — see scripts/search_benchmark.py)
+bench-search = "python scripts/search_benchmark.py"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
