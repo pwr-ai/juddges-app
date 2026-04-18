@@ -186,10 +186,12 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
           placeholder="Liability for defective construction works in Poland"
           disabled={isSearching}
           className="h-11"
+          maxLength={2000}
+          aria-describedby="search-char-counter"
         />
         <Button
           type="submit"
-          disabled={isSearching || !query.trim()}
+          disabled={isSearching || !query.trim() || query.length > 2000}
           className="h-11 min-w-[112px]"
           aria-label="Search"
         >
@@ -197,6 +199,20 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
           Search
         </Button>
       </div>
+      {query.length >= 1500 && (
+        <div
+          id="search-char-counter"
+          className={`mt-1 text-right text-xs ${
+            query.length >= 2000
+              ? "text-destructive font-medium"
+              : "text-muted-foreground"
+          }`}
+          aria-live="polite"
+        >
+          {query.length} / 2000 characters
+          {query.length >= 2000 && " — maximum reached"}
+        </div>
+      )}
 
       {showSuggestions && (
         <div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-background/60 p-2">
