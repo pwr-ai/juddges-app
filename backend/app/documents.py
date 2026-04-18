@@ -1079,7 +1079,14 @@ async def _prepare_search_queries(
         query_analysis_source = "heuristic"
         query_analysis_error = "fast_path_text_only"
     else:
-        timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "1200"))
+        # Adaptive timeout: longer queries need more tokens to analyze. Scale
+        # the base timeout up for 500+ char queries so we don't fall back to
+        # heuristics prematurely on pasted paragraphs.
+        base_timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "1200"))
+        if len(query) >= 500 and base_timeout_ms > 0:
+            timeout_ms = int(base_timeout_ms * 1.67)  # 1200 → 2000
+        else:
+            timeout_ms = base_timeout_ms
         try:
             if timeout_ms > 0:
                 (
