@@ -509,6 +509,32 @@ async def search_documents(request: SearchChunksRequest):
 
         pagination = _build_search_pagination(offset, limit, len(results))
 
+        try:
+            from app.search_telemetry import record_search
+
+            record_search(
+                query=query,
+                query_type=query_type,
+                language=_detect_search_language(
+                    keyword_query, request.languages, effective_filters["jurisdictions"]
+                ),
+                hits=len(chunks),
+                chunks_preview=[
+                    {"document_id": c.document_id, "score": getattr(c, "score", None)}
+                    for c in chunks[:5]
+                ],
+                timing_breakdown=timing_breakdown.model_dump()
+                if hasattr(timing_breakdown, "model_dump")
+                else dict(timing_breakdown),
+                effective_alpha=effective_alpha,
+                alpha_was_routed=alpha_was_routed,
+                vector_fallback=vector_fallback,
+                fallback_used=fallback_used,
+                thinking_mode=request.mode == "thinking",
+            )
+        except Exception as telem_err:
+            logger.debug(f"Search telemetry skipped: {telem_err}")
+
         return SearchChunksResponse(
             chunks=chunks,
             documents=documents,
