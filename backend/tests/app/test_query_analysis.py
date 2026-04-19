@@ -615,7 +615,7 @@ class TestCreateQueryAnalysisChain:
             chain = create_query_analysis_chain()
             assert chain is not None
             mock_cls.assert_called_once_with(
-                model="gpt-4o-mini", temperature=0.1, max_tokens=500
+                model="gpt-5-mini", temperature=0.1, max_tokens=500
             )
 
     def test_creates_chain_with_provided_llm(self):

@@ -132,10 +132,17 @@ def create_query_analysis_chain(
 ):
     """Create query analysis chain with structured output."""
     if llm is None:
+        # GPT-5 is a reasoning model by default; without reasoning_effort
+        # it consumes the entire completion budget on hidden reasoning tokens,
+        # leaving nothing for the structured output (observed 500/500 reasoning
+        # with a "length limit reached" parse error). For query planning we
+        # don't need deep thinking — "minimal" keeps it close to the old
+        # gpt-4o-mini latency (~2-3s vs 5-6s).
+        # max_completion_tokens > reasoning + JSON output size; 2000 is safe.
         llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.1,
-            max_tokens=500,
+            model="gpt-5-mini",
+            max_completion_tokens=2000,
+            reasoning_effort="minimal",
         )
 
     model = llm.with_structured_output(QueryAnalysisResult)

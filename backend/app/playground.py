@@ -367,7 +367,7 @@ async def playground_extract(
                 "type": document_type,
             },
             model_info={
-                "model": "gpt-4o",  # Could be made configurable
+                "model": "gpt-5",  # Could be made configurable
                 "language": request.language,
             },
         )

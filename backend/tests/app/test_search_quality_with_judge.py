@@ -149,7 +149,7 @@ async def _judge_validity(query: str, chunks: list[dict[str, Any]]) -> dict[str,
                 "Return JSON object with keys: score (0..1), is_valid (bool), rationale (string)."
             )
             completion = await client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 response_format={"type": "json_object"},
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0,
@@ -176,7 +176,7 @@ async def _judge_validity(query: str, chunks: list[dict[str, Any]]) -> dict[str,
             else 0.0
         )
         return {
-            "judge_name": "openai:gpt-4o-mini",
+            "judge_name": "openai:gpt-5-mini",
             "valid_ratio": round(valid_ratio, 3),
             "avg_score": round(avg_score, 3),
             "judgments": judgments,

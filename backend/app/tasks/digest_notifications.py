@@ -116,7 +116,7 @@ def generate_highlights(
     if not judgments:
         return ""
 
-    llm = get_llm(name="gpt-4o-mini")
+    llm = get_llm(name="gpt-5-mini")
 
     items_text = "\n\n".join(
         f"- [{j.get('case_number', 'N/A')}] {j.get('title', '')} "

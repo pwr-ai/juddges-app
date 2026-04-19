@@ -20,9 +20,16 @@ async def test_search_returns_chunk_metadata():
     assert chunk.chunk_text is not None, "chunk_text should be present"
     assert len(chunk.chunk_text) > 0, "chunk_text should not be empty"
 
-    assert chunk.chunk_type in ["summary", "excerpt", "title", "full_text"], (
-        f"chunk_type should be valid type, got: {chunk.chunk_type}"
-    )
+    # "highlight" was added by migration 20260308000001 (ts_headline snippets
+    # for full-text matches). The valid set grows as the RPC evolves — assert
+    # presence rather than an exact whitelist.
+    assert chunk.chunk_type in [
+        "summary",
+        "excerpt",
+        "title",
+        "full_text",
+        "highlight",
+    ], f"chunk_type should be valid type, got: {chunk.chunk_type}"
 
     assert chunk.chunk_start_pos is not None, "chunk_start_pos should be present"
     assert chunk.chunk_start_pos >= 0, "chunk_start_pos should be non-negative"
@@ -35,10 +42,8 @@ async def test_search_returns_chunk_metadata():
     assert chunk.metadata is not None, "metadata should be present"
     assert isinstance(chunk.metadata, dict), "metadata should be a dict"
 
-    # Check metadata contains expected fields
-    assert "combined_score" in chunk.metadata, "metadata should include combined_score"
-
-    # Check scoring fields
+    # Scoring lives on dedicated DocumentChunk fields, not inside metadata
+    # (metadata carries document context: case_number, court_name, …).
     assert chunk.vector_score is not None or chunk.text_score is not None, (
         "At least one score should be present"
     )
@@ -120,10 +125,14 @@ async def test_chunk_type_reflects_content():
             # Typically limited to ~500 chars based on migration
             assert len(chunk.chunk_text) <= 1000, "Excerpt should be limited in length"
 
-        # All types should have matching positions
-        assert chunk.chunk_end_pos == len(chunk.chunk_text), (
-            f"chunk_end_pos should match text length for chunk_type={chunk.chunk_type}"
-        )
+        # For full extractions (summary/excerpt/title/full_text) chunk_end_pos
+        # equals the visible text length. For "highlight" chunks, chunk_end_pos
+        # is the position in the ORIGINAL document and chunk_text is a shorter
+        # ts_headline snippet — we skip the length-equality check there.
+        if chunk.chunk_type != "highlight":
+            assert chunk.chunk_end_pos == len(chunk.chunk_text), (
+                f"chunk_end_pos should match text length for chunk_type={chunk.chunk_type}"
+            )
 
 
 @pytest.mark.unit

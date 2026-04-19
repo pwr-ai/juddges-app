@@ -36,7 +36,7 @@ class BaseSchemaExtractor:
     def __init__(
         self,
         model: ChatOpenAI | None = None,
-        model_name: str = "gpt-4o-mini",
+        model_name: str = "gpt-5-mini",
     ):
         """Initialize the base schema extractor.
 

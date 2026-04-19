@@ -85,10 +85,10 @@ def test_generate_release_notes_payload_uses_openai_parse(monkeypatch):
         ],
     )
 
-    payload = module.generate_release_notes_payload(context, model="gpt-4o-mini")
+    payload = module.generate_release_notes_payload(context, model="gpt-5-mini")
 
     assert payload.headline == "Search improvements and deployment hardening"
-    assert captured["model"] == "gpt-4o-mini"
+    assert captured["model"] == "gpt-5-mini"
     assert captured["text_format"] is module.ReleaseNotesPayload
     assert "feat: add export endpoint" in captured["input"]
 

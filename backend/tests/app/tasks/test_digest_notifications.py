@@ -218,7 +218,7 @@ class TestGenerateHighlights:
         result = generate_highlights([_SAMPLE_JUDGMENT])
 
         assert "Highlights" in result or len(result) > 0
-        mock_get_llm.assert_called_once_with(name="gpt-4o-mini")
+        mock_get_llm.assert_called_once_with(name="gpt-5-mini")
         mock_llm.invoke.assert_called_once()
 
     def test_returns_empty_string_when_no_judgments(self):
@@ -226,14 +226,14 @@ class TestGenerateHighlights:
         assert result == ""
 
     @patch("app.tasks.digest_notifications.get_llm")
-    def test_uses_gpt4o_mini(self, mock_get_llm):
+    def test_uses_gpt5_mini(self, mock_get_llm):
         mock_llm = MagicMock()
         mock_llm.invoke.return_value = MagicMock(content="summary")
         mock_get_llm.return_value = mock_llm
 
         generate_highlights([_SAMPLE_JUDGMENT], max_highlights=3)
 
-        mock_get_llm.assert_called_once_with(name="gpt-4o-mini")
+        mock_get_llm.assert_called_once_with(name="gpt-5-mini")
 
     @patch("app.tasks.digest_notifications.get_llm")
     def test_passes_human_message_to_llm(self, mock_get_llm):

@@ -156,7 +156,7 @@ class AuditService:
             query: Search/question query
             response: AI response data
             session_id: Session identifier
-            model_used: AI model used (e.g., 'gpt-4', 'gemini-pro')
+            model_used: AI model used (e.g., 'gpt-5', 'gemini-pro')
             metadata: Additional metadata
             ip_address: Client IP address (will be anonymized)
             user_agent: Client user agent

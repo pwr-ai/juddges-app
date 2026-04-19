@@ -1082,9 +1082,11 @@ async def _prepare_search_queries(
         # Adaptive timeout: longer queries need more tokens to analyze. Scale
         # the base timeout up for 500+ char queries so we don't fall back to
         # heuristics prematurely on pasted paragraphs.
-        base_timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "1200"))
+        # GPT-5 with reasoning_effort=minimal lands around 2.0-2.5s median;
+        # base 3000ms gives headroom for p95 without regressing UX noticeably.
+        base_timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "3000"))
         if len(query) >= 500 and base_timeout_ms > 0:
-            timeout_ms = int(base_timeout_ms * 1.67)  # 1200 → 2000
+            timeout_ms = int(base_timeout_ms * 1.67)  # 3000 → 5000
         else:
             timeout_ms = base_timeout_ms
         try:

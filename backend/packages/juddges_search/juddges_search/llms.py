@@ -2,10 +2,10 @@ import os
 
 from langchain_openai import ChatOpenAI
 
-GPT_3 = "gpt-3.5-turbo-0125"
-GPT_4 = "gpt-4-0125-preview"
-GPT_4o = "gpt-4o-2024-08-06"
-GPT_4o_mini = "gpt-4o-mini-2024-07-18"
+GPT_3 = "gpt-5-nano"
+GPT_4 = "gpt-5"
+GPT_4o = "gpt-5"
+GPT_4o_mini = "gpt-5-mini"
 GPT_5_nano = "gpt-5-nano-2025-08-07"
 
 LLM_NAME = os.getenv("LLM_NAME") or GPT_4o

@@ -38,7 +38,7 @@ def test_create_chain_structure(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
 
     # Don't call the chain, just verify structure
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    llm = ChatOpenAI(model="gpt-5-mini", temperature=0.3)
     chain = create_query_enhancement_chain(llm)
 
     # Verify chain exists and has expected attributes
