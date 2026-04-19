@@ -75,6 +75,12 @@ from app.versioning import router as versioning_router
 # Suppress SSL ResourceWarnings from httpx/supabase/langchain clients
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ssl.SSLSocket.*")
 
+# Initialize Sentry error tracking early so startup errors are captured.
+# No-op when SENTRY_DSN is not set.
+from app.sentry import init_sentry  # noqa: E402
+
+init_sentry()
+
 
 def validate_environment_variables():
     """

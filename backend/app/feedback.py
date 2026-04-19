@@ -334,6 +334,9 @@ async def submit_search_feedback(
 
     except Exception as e:
         logger.error(f"Failed to submit search feedback: {e}")
+        from app.sentry import capture_exception
+
+        capture_exception(e, boundary="feedback_write", feedback_type="search")
         return SearchFeedbackResponse(
             status="failed",
             feedback_id=None,
@@ -427,6 +430,9 @@ async def submit_feature_feedback(
 
     except Exception as e:
         logger.error(f"Failed to submit feature feedback: {e}")
+        from app.sentry import capture_exception
+
+        capture_exception(e, boundary="feedback_write", feedback_type="feature")
         return FeatureFeedbackResponse(
             status="failed",
             feedback_id=None,
