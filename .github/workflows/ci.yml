@@ -179,6 +179,30 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run build
 
+      - name: Upload built frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: |
+            frontend/.next/
+            frontend/public/
+            frontend/package.json
+            frontend/package-lock.json
+            frontend/next.config.*
+          retention-days: 1
+
+  # ============================================================================
+  # Frontend E2E - Issue #98
+  #
+  # Previously: job existed but did not start any server, so Playwright had
+  # nothing to connect to. Now we start the production Next.js server against
+  # placeholder Supabase env values and wait on / before running tests.
+  # Backend is NOT started here (requires Supabase + TEI + Redis); the
+  # e2e suite is scoped to UI-only flows that tolerate a missing backend.
+  # Tests that require a live backend should live in the integration job
+  # (search-integration.yml).
+  # ============================================================================
+
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
@@ -197,9 +221,41 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Download built frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/
+
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install --with-deps
+
+      - name: Start frontend (background)
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8004
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          API_BASE_URL: http://localhost:8004
+          PORT: "3006"
+        run: |
+          nohup npm start > ../frontend-server.log 2>&1 &
+          echo $! > ../frontend-server.pid
+
+      - name: Wait for frontend to be ready
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3006/ -o /dev/null; then
+              echo "Frontend is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: Frontend did not become ready within 60s"
+          echo "---- server log ----"
+          cat frontend-server.log || true
+          exit 1
 
       - name: Run E2E tests
         working-directory: frontend
@@ -208,6 +264,21 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run test:e2e
+
+      - name: Stop frontend
+        if: always()
+        run: |
+          if [ -f frontend-server.pid ]; then
+            kill "$(cat frontend-server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload frontend server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-server-log
+          path: frontend-server.log
+          retention-days: 7
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
