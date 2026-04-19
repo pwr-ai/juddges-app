@@ -467,21 +467,41 @@ async def add_security_headers(request: Request, call_next):
     # Referrer-Policy: Control referrer information
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-    # Content-Security-Policy: Mitigate XSS and injection attacks
-    # TODO: Replace 'unsafe-inline' with nonce-based CSP for script-src.
-    # Next.js requires inline scripts for hydration, so 'unsafe-inline' is kept
-    # as a temporary measure. The proper fix is to configure Next.js to emit a
-    # CSP nonce (via next.config.js headers or middleware) and pass it here.
+    # Content-Security-Policy: Mitigate XSS and injection attacks.
+    #
+    # This header applies to the BACKEND API responses (port 8004). JSON
+    # endpoints don't execute scripts in the browser, but a loose CSP still
+    # weakens posture for scanners and edge-case HTML responses.
+    #
+    # Two profiles:
+    # - /docs, /redoc, /openapi.json — FastAPI's Swagger UI/ReDoc pages use
+    #   inline <script> bootstrap. Keep 'unsafe-inline' on that path only so
+    #   developer tools keep working.
+    # - Everything else (JSON API) — strict script-src 'self'. XSS risk on a
+    #   JSON endpoint is theoretical (browsers don't execute inline scripts
+    #   in application/json), but strict CSP is free defense in depth.
+    #
+    # Frontend CSP (Next.js hydration scripts) is a separate concern tracked
+    # apart from this middleware — Next.js middleware must emit a per-request
+    # nonce and this header's script-src must then include 'nonce-<…>'.
+    path = request.url.path
+    docs_paths = ("/docs", "/redoc", "/openapi.json")
+    script_src = (
+        "'self' 'unsafe-inline'"
+        if any(path.startswith(p) for p in docs_paths)
+        else "'self'"
+    )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        f"script-src {script_src}; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' blob: https:; "
+        "img-src 'self' blob: https: data:; "
         "font-src 'self' data:; "
         "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
-        "form-action 'self'"
+        "form-action 'self'; "
+        "upgrade-insecure-requests"
     )
 
     return response
