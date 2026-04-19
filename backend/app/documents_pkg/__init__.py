@@ -412,6 +412,18 @@ async def search_documents(request: SearchChunksRequest):
     limit = request.limit_docs or 20
     offset = request.offset or 0
 
+    try:
+        import sentry_sdk
+
+        sentry_sdk.add_breadcrumb(
+            category="search",
+            message="documents.search called",
+            data={"query_len": len(query), "limit": limit, "mode": request.mode},
+            level="info",
+        )
+    except Exception:
+        pass
+
     logger.info(
         f"Search request: query='{query[:100]}...', limit={limit}, "
         f"languages={request.languages}, document_types={request.document_types}, "
@@ -555,6 +567,9 @@ async def search_documents(request: SearchChunksRequest):
         raise
     except Exception as e:
         logger.opt(exception=True).error("Search error: {}", e)
+        from app.sentry import capture_exception
+
+        capture_exception(e, query=query[:200], limit=limit)
         raise HTTPException(status_code=500, detail=f"Search failed: {e!s}")
 
 

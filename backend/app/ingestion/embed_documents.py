@@ -193,6 +193,22 @@ class EmbeddingGenerator:
             logger.info("No judgments to process")
             return self.stats
 
+        try:
+            import sentry_sdk
+
+            sentry_sdk.add_breadcrumb(
+                category="ingestion",
+                message="embed_documents run started",
+                data={
+                    "total": total_to_process,
+                    "batch_size": self.batch_size,
+                    "dry_run": self.dry_run,
+                },
+                level="info",
+            )
+        except Exception:
+            pass
+
         logger.info(f"Starting embedding generation for {total_to_process} judgments")
         logger.info(f"Batch size: {self.batch_size}")
         logger.info(

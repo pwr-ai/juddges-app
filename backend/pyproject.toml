@@ -34,7 +34,11 @@ pydantic = ">=2.11.7,<3.0.0"
 litellm = "^1.78.0"
 pandas = "^2.2.0"
 openpyxl = "^3.1.0"
+sentry-sdk = { version = "^2.0.0", extras = ["fastapi"], optional = true }
 strawberry-graphql = {extras = ["fastapi"], version = "^0.291.3"}
+
+[tool.poetry.extras]
+observability = ["sentry-sdk"]
 
 [tool.poetry.group.dev.dependencies]
 langchain-cli = ">=0.0.36"
@@ -58,8 +62,8 @@ test-local-integration = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE
 test-local-ai = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_AI_TESTS = "1" } }
 test-local-legacy = { cmd = "pytest -q -rN", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_LEGACY_SCHEMA_API_TESTS = "1" } }
 test-local-legacy-schema-api = { cmd = "pytest -q -rN tests/app/schemas_extraction", env = { JUDDGES_PYTEST_PROFILE = "local", RUN_LEGACY_SCHEMA_API_TESTS = "1", RUN_REMOVED_LEGACY_SCHEMA_API_TESTS = "1" } }
-test-cov = "pytest tests/ --cov=juddges_search --cov-report=html --cov-report=term-missing"
-test-cov-html = "pytest tests/ --cov=juddges_search --cov-report=html"
+test-cov = "pytest tests/ -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=html --cov-report=term-missing --cov-fail-under=60"
+test-cov-html = "pytest tests/ -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=html"
 
 # Code quality commands
 lint = "ruff check ."
@@ -126,6 +130,21 @@ ignore = [
 "tests/**/*.py" = ["S101", "S106", "SIM102"]
 "scripts/**/*.py" = ["S608"]
 "examples/**/*.py" = ["S113"]
+
+[tool.coverage.run]
+source = ["app", "juddges_search", "schema_generator_agent"]
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+# Raise from the previous 50% gate. Set slightly below measured coverage
+# so CI stays green while preventing backsliding.
+fail_under = 60
+show_missing = true
+skip_covered = false
 
 [build-system]
 requires = ["poetry-core"]
