@@ -149,6 +149,10 @@ interface SearchState {
   toggleFiltersDialog: () => void;
   toggleDocumentDialog: () => void;
   setSelectedDocument: (document: SearchDocument | null) => void;
+
+  // Feedback votes — persists for the current session
+  feedbackVotes: Record<string, 'relevant' | 'not_relevant'>;
+  setFeedbackVote: (documentId: string, rating: 'relevant' | 'not_relevant' | null) => void;
 }
 
 // Helper functions for serialization
@@ -245,6 +249,9 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
   // Selection
   selectedDocumentIds: new Set<string>(),
+
+  // Feedback votes (session only, not persisted to localStorage)
+  feedbackVotes: {},
 
   // Actions
   setQuery: (query: string) => set({ query }),
@@ -1216,7 +1223,20 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
   setAvailableFilters: (availableFilters: AvailableFilters | null) => set({ availableFilters }),
   toggleFiltersDialog: () => set({ isFiltersDialogOpen: !get().isFiltersDialogOpen }),
   toggleDocumentDialog: () => set({ isDocumentDialogOpen: !get().isDocumentDialogOpen }),
-  setSelectedDocument: (document: SearchDocument | null) => set({ selectedDocument: document })
+  setSelectedDocument: (document: SearchDocument | null) => set({ selectedDocument: document }),
+
+  // Feedback vote actions
+  setFeedbackVote: (documentId: string, rating: 'relevant' | 'not_relevant' | null) => {
+    set((state) => {
+      const updated = { ...state.feedbackVotes };
+      if (rating === null) {
+        delete updated[documentId];
+      } else {
+        updated[documentId] = rating;
+      }
+      return { feedbackVotes: updated };
+    });
+  },
 }));
 
 // Set up store subscription for auto-saving with debounce

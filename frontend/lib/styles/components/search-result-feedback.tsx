@@ -112,6 +112,14 @@ export interface SearchResultFeedbackProps {
  * Optional callback when feedback is submitted
  */
  onFeedbackSubmit?: (rating: 'relevant' | 'not_relevant') => void;
+ /**
+ * Called when the user revokes their vote (clicks the active button again to toggle off)
+ */
+ onFeedbackRevoke?: () => void;
+ /**
+ * Pre-populated rating from persistent store so the vote survives navigation
+ */
+ initialRating?: 'relevant' | 'not_relevant' | null;
 }
 
 /**
@@ -138,15 +146,18 @@ export function SearchResultFeedback({
  searchContext,
  className,
  onFeedbackSubmit,
+ onFeedbackRevoke,
+ initialRating = null,
 }: SearchResultFeedbackProps): React.JSX.Element {
  const feedbackLogger = logger.child('SearchResultFeedback');
- const [feedbackState, setFeedbackState] = useState<'relevant' | 'not_relevant' | null>(null);
+ const [feedbackState, setFeedbackState] = useState<'relevant' | 'not_relevant' | null>(initialRating);
  const [isSubmitting, setIsSubmitting] = useState(false);
 
  const handleFeedback = async (rating: 'relevant' | 'not_relevant'): Promise<void> => {
  // Toggle off if clicking the same rating
  if (feedbackState === rating) {
  setFeedbackState(null);
+ onFeedbackRevoke?.();
  return;
  }
 
@@ -244,8 +255,8 @@ export function SearchResultFeedback({
  feedbackState === 'relevant' && 'bg-green-50 border-green-200',
  isSubmitting && 'opacity-50 cursor-not-allowed'
  )}
- title="This document is relevant for this query"
- aria-label="This document is relevant for this query"
+ title="Helpful"
+ aria-label="Mark as helpful"
  >
  <ThumbsUp
  size={14}
@@ -274,8 +285,8 @@ export function SearchResultFeedback({
  feedbackState === 'not_relevant' && 'bg-red-50 border-red-200',
  isSubmitting && 'opacity-50 cursor-not-allowed'
  )}
- title="This document is not relevant for this query"
- aria-label="This document is not relevant for this query"
+ title="Not helpful"
+ aria-label="Mark as not helpful"
  >
  <ThumbsDown
  size={14}
