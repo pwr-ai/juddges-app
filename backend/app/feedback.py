@@ -8,17 +8,50 @@ Author: Juddges Backend Team
 Date: 2025-10-09
 """
 
+import re
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.auth_jwt import AuthenticatedUser, get_optional_user, get_user_db_client
+from app.rate_limiter import limiter
 
 # Router configuration
 router = APIRouter(prefix="/api/feedback", tags=["User Feedback"])
+
+# ---------------------------------------------------------------------------
+# Abuse-prevention constants
+# ---------------------------------------------------------------------------
+
+# Maximum raw request body accepted before we abort (4 KiB).
+_MAX_BODY_BYTES = 4 * 1024
+
+# Maximum number of URLs (http/https) allowed in any free-text comment/description.
+_MAX_URLS_IN_TEXT = 5
+
+# Stricter per-feedback rate limit (applies to all feedback write endpoints).
+_FEEDBACK_RATE_LIMIT = "20 per hour"
+
+# Compiled pattern for URL detection.
+_URL_RE = re.compile(r"https?://", re.IGNORECASE)
+
+
+def _count_urls(text: str) -> int:
+    """Return the number of http/https URLs found in *text*."""
+    return len(_URL_RE.findall(text))
+
+
+async def _check_body_size(request: Request) -> None:
+    """Raise 413 if the raw request body exceeds *_MAX_BODY_BYTES*."""
+    body = await request.body()
+    if len(body) > _MAX_BODY_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Request body too large. Maximum allowed size is {_MAX_BODY_BYTES} bytes.",
+        )
 
 
 # ===== Models =====
@@ -267,8 +300,10 @@ Expected Supabase tables (create these manually or via migration):
 
 
 @router.post("/search", response_model=SearchFeedbackResponse)
+@limiter.limit(_FEEDBACK_RATE_LIMIT)
 async def submit_search_feedback(
-    request: SearchFeedbackRequest,
+    request: Request,
+    body: SearchFeedbackRequest,
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
@@ -280,13 +315,30 @@ async def submit_search_feedback(
     Supports both authenticated and anonymous users.
     If authenticated, user_id is extracted from JWT token.
 
+    Rate-limited to 20 submissions per hour per IP to prevent abuse.
+
     Args:
-        request: Search feedback request
+        request: Raw Starlette request (required by SlowAPI for rate limiting)
+        body: Search feedback payload
         user: Authenticated user (optional, extracted from JWT token)
 
     Returns:
         SearchFeedbackResponse with status
     """
+    await _check_body_size(request)
+
+    # Spam guard: reject empty or URL-heavy optional reason field.
+    if body.reason is not None:
+        if not body.reason.strip():
+            raise HTTPException(
+                status_code=422, detail="Feedback reason must not be empty."
+            )
+        if _count_urls(body.reason) > _MAX_URLS_IN_TEXT:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Feedback reason contains too many URLs (max {_MAX_URLS_IN_TEXT}).",
+            )
+
     try:
         # Extract user_id from authenticated user (secure)
         user_id = user.id if user else None
@@ -301,14 +353,14 @@ async def submit_search_feedback(
 
         # Store search feedback
         feedback_data = {
-            "document_id": request.document_id,
-            "search_query": request.search_query,
-            "rating": request.rating,
+            "document_id": body.document_id,
+            "search_query": body.search_query,
+            "rating": body.rating,
             "user_id": user_id,
-            "session_id": request.session_id,
-            "result_position": request.result_position,
-            "reason": request.reason,
-            "search_context": request.search_context or {},
+            "session_id": body.session_id,
+            "result_position": body.result_position,
+            "reason": body.reason,
+            "search_context": body.search_context or {},
             "created_at": datetime.now(UTC).isoformat(),
         }
 
@@ -316,14 +368,14 @@ async def submit_search_feedback(
         feedback_id = result.data[0]["id"] if result.data else None
 
         logger.info(
-            f"Stored search feedback: {request.rating} for document {request.document_id} "
-            f"(query: '{request.search_query[:30]}...', user: {user_id})"
+            f"Stored search feedback: {body.rating} for document {body.document_id} "
+            f"(query: '{body.search_query[:30]}...', user: {user_id})"
         )
 
         # Generate thank you message based on rating
-        if request.rating == "relevant":
+        if body.rating == "relevant":
             message = "Thank you! Your feedback helps us improve search results."
-        elif request.rating == "not_relevant":
+        elif body.rating == "not_relevant":
             message = "Thank you for the feedback! We'll work on improving relevance."
         else:
             message = "Thank you! Your feedback has been recorded."
@@ -342,8 +394,10 @@ async def submit_search_feedback(
 
 
 @router.post("/feature", response_model=FeatureFeedbackResponse)
+@limiter.limit(_FEEDBACK_RATE_LIMIT)
 async def submit_feature_feedback(
-    request: FeatureFeedbackRequest,
+    request: Request,
+    body: FeatureFeedbackRequest,
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
@@ -360,19 +414,35 @@ async def submit_feature_feedback(
     Supports both authenticated and anonymous users.
     If authenticated, user_id is extracted from JWT token.
 
+    Rate-limited to 20 submissions per hour per IP to prevent abuse.
+
     Args:
-        request: Feature feedback request
+        request: Raw Starlette request (required by SlowAPI for rate limiting)
+        body: Feature feedback payload
         user: Authenticated user (optional, extracted from JWT token)
 
     Returns:
         FeatureFeedbackResponse with status
     """
+    await _check_body_size(request)
+
+    # Spam guard: reject description that is only whitespace or URL-heavy.
+    if not body.description.strip():
+        raise HTTPException(
+            status_code=422, detail="Feedback description must not be empty."
+        )
+    if _count_urls(body.description) > _MAX_URLS_IN_TEXT:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Feedback description contains too many URLs (max {_MAX_URLS_IN_TEXT}).",
+        )
+
     try:
         # Extract user_id from authenticated user (secure)
         user_id = user.id if user else None
 
         # Get user's email from auth if not provided
-        user_email = request.user_email or (user.email if user else None)
+        user_email = body.user_email or (user.email if user else None)
 
         # Get appropriate Supabase client
         if user:
@@ -384,15 +454,15 @@ async def submit_feature_feedback(
 
         # Store feature feedback
         feedback_data = {
-            "feedback_type": request.feedback_type,
-            "feature_name": request.feature_name,
-            "title": request.title,
-            "description": request.description,
+            "feedback_type": body.feedback_type,
+            "feature_name": body.feature_name,
+            "title": body.title,
+            "description": body.description,
             "user_id": user_id,
             "user_email": user_email,
-            "priority": request.priority,
+            "priority": body.priority,
             "status": "new",  # Initial status
-            "attachments": request.attachments or [],
+            "attachments": body.attachments or [],
             "upvotes": 0,
             "created_at": datetime.now(UTC).isoformat(),
             "updated_at": datetime.now(UTC).isoformat(),
@@ -402,8 +472,8 @@ async def submit_feature_feedback(
         feedback_id = result.data[0]["id"] if result.data else None
 
         logger.info(
-            f"Stored feature feedback: {request.feedback_type} - '{request.title}' "
-            f"(feature: {request.feature_name}, user: {user_id})"
+            f"Stored feature feedback: {body.feedback_type} - '{body.title}' "
+            f"(feature: {body.feature_name}, user: {user_id})"
         )
 
         # Generate appropriate thank you message
@@ -415,7 +485,7 @@ async def submit_feature_feedback(
         }
 
         thank_you = thank_you_messages.get(
-            request.feedback_type, "Thank you for your feedback!"
+            body.feedback_type, "Thank you for your feedback!"
         )
 
         return FeatureFeedbackResponse(
@@ -600,8 +670,11 @@ async def get_recent_feature_feedback(
 
 
 @router.post("/feature/{feedback_id}/upvote")
+@limiter.limit(_FEEDBACK_RATE_LIMIT)
 async def upvote_feature_request(
-    feedback_id: str, user: AuthenticatedUser | None = Depends(get_optional_user)
+    request: Request,
+    feedback_id: str,
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
     """
     Upvote a feature request to show support.
