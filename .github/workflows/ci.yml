@@ -370,7 +370,12 @@ jobs:
           retention-days: 90
 
   # ============================================================================
-  # Docker Build Validation (PRs and pushes to develop/main, not tags)
+  # Docker Build Validation - Issue #101
+  #
+  # Both backend and frontend Dockerfiles are now built on every PR (and on
+  # pushes to develop/main). Catches broken Dockerfiles before deploy.
+  # Uses `docker buildx build --load` so the image is usable locally if we
+  # ever want to smoke-test it in a later job; no registry push.
   # ============================================================================
 
   docker-build:
@@ -378,14 +383,30 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
     strategy:
+      fail-fast: false
       matrix:
-        service: [backend]
+        service: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build image
-        working-directory: ${{ matrix.service }}
-        run: docker build --target production -f Dockerfile .
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          target: production
+          load: true
+          push: false
+          tags: juddges-${{ matrix.service }}:ci-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8004
+            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder
 
   # ============================================================================
   # Deploy to Dev/Staging (push to develop)
