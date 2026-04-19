@@ -1,0 +1,215 @@
+name: Search Integration (Nightly)
+
+# Issue #106 - Integration tier for the search-quality benchmark.
+#
+# Runs the pytest integration suite (`backend/tests/integration/test_search_quality.py`)
+# AND the search benchmark CLI (`backend/scripts/search_benchmark.py`) against a
+# live backend that we spin up in-job with docker compose.
+#
+# Triggers:
+#   - Nightly cron (02:30 UTC)
+#   - Manual workflow_dispatch (with optional api_url override to test remote)
+#
+# Secret gating:
+#   The workflow is SKIPPED with a clear warning if BACKEND_API_KEY (or
+#   Supabase credentials) are not configured. This keeps the job green in
+#   forks / unprivileged environments instead of failing mysteriously.
+#
+# Residual TODOs before this is fully useful:
+#   - Repo admin must add: BACKEND_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY,
+#     SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY.
+#   - Consider a dedicated CI Supabase project with a seeded judgments table
+#     so the benchmark's min_hits thresholds are meaningful.
+
+on:
+  schedule:
+    # 02:30 UTC every day
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'Optional backend URL to test against (skips in-job docker compose)'
+        required: false
+        default: ''
+      benchmark_runs:
+        description: 'Number of runs per query for benchmark (median)'
+        required: false
+        default: '3'
+
+concurrency:
+  group: search-integration-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Preflight (check required secrets)
+    runs-on: ubuntu-latest
+    outputs:
+      have_secrets: ${{ steps.check.outputs.have_secrets }}
+    steps:
+      - id: check
+        env:
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          missing=()
+          [ -z "${BACKEND_API_KEY}" ] && missing+=("BACKEND_API_KEY")
+          [ -z "${SUPABASE_URL}" ] && missing+=("SUPABASE_URL")
+          [ -z "${SUPABASE_ANON_KEY}" ] && missing+=("SUPABASE_ANON_KEY")
+          [ -z "${OPENAI_API_KEY}" ] && missing+=("OPENAI_API_KEY")
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::warning::Skipping search integration - missing secrets: ${missing[*]}"
+            echo "have_secrets=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_secrets=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  integration:
+    name: Search Benchmark + Integration Tests
+    needs: preflight
+    if: needs.preflight.outputs.have_secrets == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install backend deps
+        working-directory: backend
+        run: poetry install --with dev
+
+      # Either point at an already-running remote backend (manual dispatch)
+      # or boot one locally via docker compose. Booting a full backend in CI
+      # is expensive - ~3-5 minutes due to Python + TEI - but deterministic.
+      - name: Resolve target backend URL
+        id: target
+        env:
+          OVERRIDE_URL: ${{ github.event.inputs.api_url }}
+        run: |
+          if [ -n "${OVERRIDE_URL}" ]; then
+            echo "Using provided api_url"
+            echo "api_url=${OVERRIDE_URL}" >> "$GITHUB_OUTPUT"
+            echo "boot_locally=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "api_url=http://localhost:8004" >> "$GITHUB_OUTPUT"
+            echo "boot_locally=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare .env for docker compose
+        if: steps.target.outputs.boot_locally == 'true'
+        env:
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST: ${{ secrets.LANGFUSE_HOST }}
+        run: |
+          umask 077
+          {
+            echo "BACKEND_API_KEY=${BACKEND_API_KEY}"
+            echo "SUPABASE_URL=${SUPABASE_URL}"
+            echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
+            echo "OPENAI_API_KEY=${OPENAI_API_KEY}"
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}"
+            echo "LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}"
+            echo "LANGFUSE_HOST=${LANGFUSE_HOST}"
+            echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:8004"
+            echo "NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+          } > .env
+
+      - name: Start backend + deps (docker compose)
+        if: steps.target.outputs.boot_locally == 'true'
+        run: |
+          # Only bring up backend-dev + its deps; no frontend required.
+          docker compose -f docker-compose.dev.yml up -d backend-dev redis-dev meilisearch-dev
+
+      - name: Wait for backend to be healthy
+        if: steps.target.outputs.boot_locally == 'true'
+        env:
+          API_URL: ${{ steps.target.outputs.api_url }}
+        run: |
+          for i in {1..90}; do
+            if curl -fsS "${API_URL}/health" -o /dev/null; then
+              echo "Backend healthy after ${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ERROR: backend did not become healthy within 180s"
+          echo "---- backend logs ----"
+          docker compose -f docker-compose.dev.yml logs backend-dev || true
+          exit 1
+
+      - name: Run search integration tests
+        working-directory: backend
+        env:
+          RUN_INTEGRATION_TESTS: "1"
+          JUDDGES_BENCHMARK_API_URL: ${{ steps.target.outputs.api_url }}
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
+        run: |
+          poetry run pytest -v -m integration \
+            tests/integration/test_search_quality.py \
+            --tb=short
+
+      - name: Run search benchmark
+        working-directory: backend
+        env:
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY }}
+          API_URL: ${{ steps.target.outputs.api_url }}
+          RUNS: ${{ github.event.inputs.benchmark_runs || '3' }}
+        run: |
+          poetry run python scripts/search_benchmark.py \
+            --api-url "${API_URL}" \
+            --runs "${RUNS}" \
+            --output benchmark-results.json
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-benchmark-results
+          path: backend/benchmark-results.json
+          retention-days: 30
+
+      - name: Dump backend logs on failure
+        if: failure() && steps.target.outputs.boot_locally == 'true'
+        run: |
+          docker compose -f docker-compose.dev.yml logs backend-dev > backend.log 2>&1 || true
+
+      - name: Upload backend logs
+        if: failure() && steps.target.outputs.boot_locally == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-logs
+          path: backend.log
+          retention-days: 7
+
+      - name: Teardown
+        if: always() && steps.target.outputs.boot_locally == 'true'
+        run: |
+          docker compose -f docker-compose.dev.yml down -v || true
+          rm -f .env
