@@ -98,6 +98,22 @@ jobs:
         working-directory: backend
         run: poetry run pytest -v -m unit --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=50
 
+      # Issue #106 (unit-safe tier): import-check the integration test module so
+      # a broken import, syntax error, or missing fixture breaks CI early, but
+      # the tests themselves skip because RUN_INTEGRATION_TESTS is NOT set.
+      - name: Import-check search integration tests (skipped at runtime)
+        working-directory: backend
+        env:
+          RUN_INTEGRATION_TESTS: ""
+        run: |
+          poetry run pytest --collect-only -q tests/integration/test_search_quality.py
+          poetry run pytest -v tests/integration/test_search_quality.py
+
+      # Static sanity: benchmark script must at least parse and show --help.
+      - name: Import-check search benchmark script
+        working-directory: backend
+        run: poetry run python scripts/search_benchmark.py --help > /dev/null
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
