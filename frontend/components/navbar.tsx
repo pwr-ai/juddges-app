@@ -603,21 +603,26 @@ export function Navbar(): React.ReactElement {
           // Unauthenticated user controls
           <>
             <nav className="hidden sm:flex items-center gap-6 mr-2">
-              <Link
-                href="/about"
-                className={cn(
-                  "text-sm font-medium relative group",
-                  "text-muted-foreground hover:text-foreground",
-                  "transition-colors duration-200",
-                  // Underline effect
-                  "after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0",
-                  "after:bg-gradient-to-r after:from-primary after:to-primary/50",
-                  "after:transition-all after:duration-300",
-                  "hover:after:w-full"
-                )}
-              >
-                About
-              </Link>
+              {[
+                { href: "/about", label: "About" },
+                { href: "/changelog", label: "Changelog" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "text-sm font-medium relative group",
+                    "text-muted-foreground hover:text-foreground",
+                    "transition-colors duration-200",
+                    "after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0",
+                    "after:bg-gradient-to-r after:from-primary after:to-primary/50",
+                    "after:transition-all after:duration-300",
+                    "hover:after:w-full"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
             </nav>
 
             <SecondaryButton
