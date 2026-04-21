@@ -6,6 +6,13 @@ const baseConfig = {
   output: 'standalone',
   // Ensure tracing works correctly when multiple lockfiles exist in monorepo
   outputFileTracingRoot: path.join(__dirname, '..'),
+  // Include repo-root release-notes/*.md so /changelog can read them at runtime
+  // in standalone builds. Paths are relative to outputFileTracingRoot.
+  outputFileTracingIncludes: {
+    '/changelog': ['release-notes/**/*.md'],
+    '/changelog/[version]': ['release-notes/**/*.md'],
+    '/changelog/feed.xml': ['release-notes/**/*.md'],
+  },
   eslint: {
     ignoreDuringBuilds: false,
   },
