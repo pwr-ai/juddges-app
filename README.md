@@ -246,15 +246,60 @@ The deploy script pulls images, restarts containers via `docker-compose.yml`, wa
 
 ### Versioning
 
-Versions are tracked as git tags (`v0.1.0`, `v1.0.0`, etc.). The build script reads the latest tag, increments it, and creates a new tag after a successful push.
+Production versions are tracked as `prod-v*` git tags (`prod-v0.1.0`, `prod-v1.0.0`, …). The build script reads the latest `prod-v*` tag, increments it, and creates a new annotated tag from `main`. Pushing the tag is what triggers the production deploy in CI (see [Branching & Release Flow](#branching--release-flow) below).
+
+## Branching & Release Flow
+
+This repo uses a two-branch model:
+
+- **`main`** — production. Only `develop` → `main` release PRs and `hotfix/*` PRs land here. Pushing a `prod-v*` tag from `main` is the only thing that builds production images and deploys to prod.
+- **`develop`** — integration. All in-progress feature work lands here. Pushes to `develop` build `dev-latest` images (no production impact).
+
+### Day-to-day work (features, fixes)
+
+```bash
+git checkout develop && git pull
+git checkout -b feature/your-change          # or fix/your-bug
+# ... commit, push ...
+git push -u origin feature/your-change
+# Open a PR into develop (NOT main)
+```
+
+### Cutting a release
+
+```bash
+# 1. Open a PR from develop → main titled "release: vX.Y.Z" and merge it.
+
+# 2. From a clean main, run the build script:
+git checkout main && git pull
+./scripts/build_and_push_prod.sh             # patch bump (or: minor / major / 1.2.3)
+
+# 3. The script creates and (optionally) pushes the prod-vX.Y.Z tag.
+#    Pushing the tag triggers the deploy-prod GitHub Actions job, which
+#    builds and publishes the versioned + :latest images.
+
+# 4. On the production host:
+./scripts/deploy_prod.sh                     # pull :latest and restart
+```
+
+### Hotfixes
+
+```bash
+git checkout main && git pull
+git checkout -b hotfix/critical-thing
+# ... fix, commit, PR into main, merge ...
+# Cut the patch release as above, then back-merge main → develop:
+git checkout develop && git pull
+git merge main && git push
+```
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+1. Fork the repository (or branch directly if you have write access)
+2. Create your branch from **`develop`**: `git checkout develop && git pull && git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m "feat: add amazing feature"`
+4. Push: `git push origin feature/amazing-feature`
+5. Open a Pull Request **into `develop`** (never directly into `main`)
 
 ## License
 

@@ -348,15 +348,20 @@ frontend/app/
 
 ## Development Workflow
 
+> **Branching model**: `develop` is the integration branch — all feature/fix work happens there. `main` is reserved for production releases (and only release PRs from `develop` or `hotfix/*` PRs land on it). See the root `README.md` and `docs/how-to/deployment.md` for the full release flow.
+
 ### Making Changes
 
-#### 1. Create Feature Branch
+#### 1. Create Feature Branch from `develop`
 
 ```bash
+git checkout develop && git pull
 git checkout -b feature/your-feature-name
 # OR for bug fixes
 git checkout -b fix/bug-description
 ```
+
+> Branch from `main` only when working on a production hotfix (`hotfix/<name>`). All other work starts from `develop`.
 
 #### 2. Make Changes
 
@@ -439,6 +444,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a Pull Request on GitHub with:
+- **Base branch set to `develop`** (use `main` only for `hotfix/*` PRs)
 - Clear title describing the change
 - Description of what changed and why
 - Link to related issues

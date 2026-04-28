@@ -214,13 +214,21 @@ Next.js 15 with App Router:
 - `docker-compose.yml` has both `image:` and `build:` on each service — `image:` for Hub pulls, `build:` for local builds
 - Version tag controlled by `JUDDGES_IMAGE_TAG` env var (defaults to `latest`)
 
-**Versioning**: Git tags (`v0.1.0`, `v1.0.0`) are the source of truth. The build script reads the latest tag and auto-increments.
+**Versioning**: Git tags `prod-v*` (`prod-v0.1.0`, `prod-v1.0.0`, …) are the source of truth for production releases. The build script reads the latest `prod-v*` tag and auto-increments. (Legacy `v*` tags exist from before the rename — the script falls back to them only if no `prod-v*` tag is found.)
+
+**Branching & Release Flow** (canonical — same as root `README.md`):
+- `main` is production. Only release PRs (from `develop`) and `hotfix/*` PRs land here. Production deploys **only** from `main` via `prod-v*` tag pushes.
+- `develop` is the integration branch. Feature/fix branches start from `develop` and PR back into `develop`. Pushing to `develop` triggers the `deploy-dev` CI job (builds `dev-latest` images, no prod impact).
+- Releasing means: open `release: vX.Y.Z` PR from `develop` → `main`, merge, then run `./scripts/build_and_push_prod.sh` from a clean `main`. Pushing the resulting `prod-vX.Y.Z` tag triggers the `deploy-prod` CI job.
+- Hotfixes branch from `main`, PR back to `main`, then back-merge `main` → `develop`.
+- **Never open a feature PR directly against `main`.** When helping the user with branching commands, default to creating new branches from `develop`.
 
 **Deployment Flow**:
-1. Developer runs `build_and_push_prod.sh` locally (loads `.env` for frontend build args)
-2. Images pushed to Docker Hub
-3. On production host, run `deploy_prod.sh` to pull and restart
-4. Deploy history logged to `.deploy-history` for rollback support
+1. After a `develop` → `main` release PR is merged, the developer runs `build_and_push_prod.sh` from `main` (loads `.env` for frontend build args)
+2. The script creates a `prod-vX.Y.Z` git tag and (optionally) pushes it
+3. The tag push triggers GitHub Actions `deploy-prod`, which builds and pushes versioned + `:latest` images to Docker Hub
+4. On production host, run `deploy_prod.sh` to pull and restart
+5. Deploy history logged to `.deploy-history` for rollback support
 
 ## Key Files
 

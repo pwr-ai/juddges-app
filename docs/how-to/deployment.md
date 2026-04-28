@@ -138,11 +138,14 @@ docker compose up -d --build
 
 ## 5. Versioned Releases (SemVer)
 
+> **Important**: Releases are cut from `main` only. Before running this script, the work to be released must already be merged from `develop` into `main` via a release PR (`release: vX.Y.Z`). See [Section 13 — CI/CD Pipeline](#13-cicd-pipeline) for the full branching flow.
+
 The release flow is handled by `scripts/build_and_push_prod.sh`. It performs version bumping, file sync, Docker build + push, and git tagging in a single interactive script.
 
 ### Usage
 
 ```bash
+git checkout main && git pull                  # always run from clean main
 ./scripts/build_and_push_prod.sh              # Auto-increment patch (0.0.2 -> 0.0.3)
 ./scripts/build_and_push_prod.sh patch         # Same as above
 ./scripts/build_and_push_prod.sh minor         # Increment minor (0.0.3 -> 0.1.0)
@@ -152,7 +155,7 @@ The release flow is handled by `scripts/build_and_push_prod.sh`. It performs ver
 
 ### What the script does
 
-1. Reads the latest `v*` git tag to determine current version
+1. Reads the latest `prod-v*` git tag to determine current version (legacy `v*` fallback)
 2. Calculates the next version based on bump type
 3. Confirms with the user before proceeding
 4. **Syncs version** across all project files (see table below)
@@ -162,8 +165,8 @@ The release flow is handled by `scripts/build_and_push_prod.sh`. It performs ver
    - `<username>/juddges-frontend:<version>`
    - `<username>/juddges-backend:<version>`
 8. Commits the version-synced files with message `release: v<version>`
-9. Creates an annotated git tag `v<version>`
-10. Optionally pushes the commit and tag to origin
+9. Creates an annotated git tag `prod-v<version>`
+10. Optionally pushes the commit and tag to origin (the tag push triggers the `deploy-prod` CI job)
 
 ### Version files kept in sync
 
@@ -506,20 +509,53 @@ Push to develop/main or PR
           └─────────────────┘
 ```
 
+### Branching Model
+
+Two long-lived branches:
+
+- **`main`** — production. Only release PRs (from `develop`) and `hotfix/*` PRs land here. Production images are built **only** when a `prod-v*` tag is pushed (and tags should always be cut from `main`).
+- **`develop`** — integration. All in-progress feature work lands here. A push to `develop` triggers `deploy-dev`, which publishes `dev-latest` images to Docker Hub (no production impact).
+
+Short-lived branches:
+
+- `feature/<name>`, `fix/<name>` — branch from `develop`, PR back into `develop`.
+- `hotfix/<name>` — branch from `main`, PR back into `main`. After release, back-merge `main` → `develop` so the fix isn't lost on the next release.
+
+> **Never open a feature PR directly against `main`.** Branch protection on `main` should be configured to enforce this; see the project root README for the canonical flow.
+
 ### Release Flow
 
 ```bash
-# 1. Develop features on feature branches
-git checkout -b feature/my-feature develop
+# 1. Open a PR from develop → main titled "release: vX.Y.Z" and merge it via GitHub.
+#    All feature/fix work that should ship in this release must already be in develop.
 
-# 2. Merge to develop (triggers dev deployment)
-git checkout develop && git merge feature/my-feature
+# 2. Build, tag, and push from a clean main:
+git checkout main && git pull
+./scripts/build_and_push_prod.sh                # creates prod-vX.Y.Z tag
 
-# 3. When ready for production, build and tag
-./scripts/build_and_push_prod.sh
+# 3. Pushing the prod-v* tag (the script offers to do this) triggers
+#    the deploy-prod CI job, which builds versioned + :latest images.
+git push origin prod-vX.Y.Z                     # if you didn't push from the script
 
-# 4. Push the tag (triggers prod deployment via CI)
-git push origin prod-v0.2.0
+# 4. On the production host:
+./scripts/deploy_prod.sh                        # pulls :latest and restarts containers
+```
+
+### Hotfix Flow
+
+```bash
+# 1. Branch from main:
+git checkout main && git pull
+git checkout -b hotfix/<short-name>
+
+# 2. Fix, commit, open a PR into main, merge.
+
+# 3. Cut a patch release exactly as in the Release Flow above
+#    (./scripts/build_and_push_prod.sh, deploy_prod.sh on the host).
+
+# 4. Back-merge main → develop so the hotfix is included in the next release:
+git checkout develop && git pull
+git merge main && git push
 ```
 
 ---
