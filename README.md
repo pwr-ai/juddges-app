@@ -1,285 +1,163 @@
 # Juddges App
 
-AI-powered judicial decision search and analysis platform for Polish and UK court judgments.
+AI-powered judicial decision search and analysis platform for Polish and England & Wales court judgments.
 
-## Overview
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 
-Juddges App is a specialized legal AI application focused on court judgments and judicial decisions from Poland and the United Kingdom. Built on modern web technologies with semantic search capabilities.
+## What this is
+
+Juddges App is the web application companion to the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES) — a research initiative on legal NLP and human-in-the-loop machine learning for Polish and England & Wales judicial decisions. The app provides semantic and full-text search, retrieval-augmented chat, structured information extraction, and analytics over court judgments, making the research datasets and models accessible through an interactive interface.
+
+This repository is a separate, independently deployable codebase from the JuDDGES research repo; both projects are released under Apache 2.0 and are developed in parallel.
 
 ## Features
 
-- 🔍 **Semantic Search**: Vector-based search across 6,000+ sampled judgments (Polish + UK)
-- 🇵🇱 **Polish Judgments**: Polish court decisions with full-text search
-- 🇬🇧 **UK Judgments**: England & Wales Court of Appeal decisions
-- 🤖 **AI-Powered Analysis**: RAG-based chat for legal research
-- 📊 **Analytics Dashboard**: Judgment statistics and insights
-- 🔐 **Secure Authentication**: Supabase-powered user management
+- **Semantic search** over Polish and England & Wales judgments via Supabase pgvector and Meilisearch hybrid retrieval
+- **RAG-based chat** for legal research, grounded in retrieved judgments
+- **Structured extraction** of judgment metadata via LLM-driven schema generation
+- **Analytics dashboard** for jurisdiction, court, and decision-trend insights
+- **Document annotation** workflow with rich-text editing
+- **Supabase authentication** for user management and access control
 
-## Technology Stack
+## Architecture
 
-### Frontend
-- **Framework**: Next.js 15 (App Router)
-- **UI Library**: React 19 with Radix UI components
-- **Styling**: Tailwind CSS 4
-- **State Management**: Zustand + React Query
-- **Rich Text**: TipTap editor for document annotations
+| Layer            | Technology                                                                    |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Frontend         | Next.js 15 (App Router), React 19, Tailwind CSS 4, Zustand, TanStack Query    |
+| Backend API      | FastAPI on Python 3.12+, LangChain, LangServe, LiteLLM, Strawberry GraphQL    |
+| Primary database | PostgreSQL via Supabase, with `pgvector` for embeddings                       |
+| Search           | Meilisearch (full-text) + pgvector (semantic), combined for hybrid retrieval  |
+| Async tasks      | Celery with Redis (worker + beat scheduler)                                   |
+| Auth             | Supabase Auth                                                                 |
+| LLM observability | Langfuse (optional)                                                          |
+| Packaging        | Poetry (backend), npm (frontend), Docker Compose for local + production       |
 
-### Backend
-- **API Framework**: FastAPI (Python 3.12+)
-- **Database**: PostgreSQL with pgvector extension
-- **Vector Search**: Semantic search with embeddings
-- **Authentication**: Supabase Auth
-- **Monitoring**: Langfuse (optional)
+The backend is organized as a monorepo with reusable Poetry packages: `juddges_search` (RAG, vector retrieval, chains), `schema_generator_agent` (LangGraph agent for schema extraction), and `research_agent`.
 
-### Data Sources
-- Polish judgments from [HFforLegal/case-law](https://huggingface.co/datasets/HFforLegal/case-law)
-- UK judgments from [JuDDGES/en-appealcourt](https://huggingface.co/datasets/JuDDGES/en-appealcourt)
-
-## Quick Start
+## Quick start
 
 ### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+
-- Python 3.12+
-- Supabase account
 
-### Environment Setup
+- Docker with the `docker compose` plugin
+- Node.js 18+ (only needed if running the frontend outside Docker)
+- Python 3.12+ (only needed if running the backend outside Docker)
+- A Supabase project (URL and anon key)
+- An OpenAI API key (for embeddings and chat)
 
-1. **Copy environment files**:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Configure Supabase**:
-   - Create a new Supabase project at https://supabase.com
-   - Copy your project URL and anon key to `.env`
-
-3. **Run database migrations**:
-   ```bash
-   cd supabase
-   npx supabase db push
-   ```
-
-### Development
-
-Start all services with Docker Compose:
+### Local development with Docker
 
 ```bash
+# 1. Clone and enter the repo
+git clone https://github.com/pwr-ai/juddges-app.git
+cd juddges-app
+
+# 2. Configure environment
+cp .env.example .env
+# Edit .env to fill in SUPABASE_URL, SUPABASE_ANON_KEY,
+# SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY, and other required keys.
+
+# 3. Apply database migrations to your Supabase project
+cd supabase
+npx supabase db push
+cd ..
+
+# 4. Start all services with hot reload
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Services will be available at:
-- Frontend: http://localhost:3007
-- Backend API: http://localhost:8004
-- API Docs: http://localhost:8004/docs
+Once running, services are available at:
 
-### Data Ingestion
+- Frontend: <http://localhost:3026>
+- Backend API: <http://localhost:8004>
+- Backend API docs (Swagger UI): <http://localhost:8004/docs>
+- Backend API docs (ReDoc): <http://localhost:8004/redoc>
 
-Load sample judgments into the database:
+### Loading sample data
+
+The data ingestion script pulls Polish and England & Wales judgments from public Hugging Face datasets and writes them to your Supabase instance:
 
 ```bash
 cd scripts
+pip install -r requirements.txt
+
+# Quick smoke test (20 judgments total)
+python ingest_judgments.py --polish 10 --uk 10
+
+# Full sample dataset (~6,000 judgments)
 python ingest_judgments.py --polish 3000 --uk 3000
 ```
 
-For a quick test with fewer documents:
+### Running services individually
+
+If you prefer to run services natively (outside Docker), see the per-package READMEs and the [development how-to guides](docs/how-to/).
+
 ```bash
-python ingest_judgments.py --polish 10 --uk 10
+# Backend
+cd backend
+poetry install
+poetry run uvicorn app.server:app --reload --port 8004
+
+# Frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-## 📚 Documentation
+## Project structure
 
-### Developer Documentation
-
-Essential guides for developers:
-
-- **[DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md)** - Complete onboarding guide for new developers
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design decisions
-- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API documentation
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and workflow
-- **[CODE_STYLE.md](CODE_STYLE.md)** - Coding standards and best practices
-- **[TESTING.md](TESTING.md)** - Testing strategy and guidelines
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
-- **[CLAUDE.md](CLAUDE.md)** - Claude Code development instructions
-
-### Additional Documentation
-
-For detailed documentation, see the **[docs/](docs/)** directory:
-
-- **[Getting Started](docs/getting-started/)** - Setup guides and quick start
-- **[Guides](docs/guides/)** - How-to guides for common tasks
-- **[Architecture](docs/architecture/)** - System design and technical decisions
-- **[Features](docs/features/)** - Feature-specific documentation
-- **[Frontend](docs/frontend/)** - Frontend development guide
-- **[Migration](docs/migration/)** - JuDDGES → Juddges transition docs
-
-## Project Structure
-
-```
+```text
 juddges-app/
-├── frontend/              # Next.js application
-│   ├── app/              # App router pages
-│   ├── components/       # React components
-│   ├── lib/              # Utilities and hooks
-│   └── supabase/         # Supabase client config
-├── backend/              # FastAPI application
-│   ├── app/              # API endpoints
-│   ├── packages/         # Reusable packages
-│   └── tests/            # Backend tests
-├── supabase/             # Database configuration
-│   ├── migrations/       # SQL migration files
-│   └── config.toml       # Supabase config
-├── scripts/              # Data ingestion scripts
-│   ├── ingest_judgments.py
-│   └── requirements.txt
-└── docs/                 # Documentation
-    ├── getting-started/  # Setup guides
-    ├── guides/           # How-to guides
-    ├── architecture/     # System design
-    ├── features/         # Feature docs
-    ├── frontend/         # Frontend docs
-    └── migration/        # Migration docs
+├── frontend/              # Next.js 15 application (App Router)
+├── backend/               # FastAPI application
+│   ├── app/               # API routers, schemas, workers
+│   └── packages/          # Reusable Poetry packages
+│       ├── juddges_search/          # RAG, retrieval, chains
+│       ├── schema_generator_agent/  # LangGraph schema-extraction agent
+│       └── research_agent/          # Research agent
+├── supabase/              # Database migrations and Supabase config
+├── scripts/               # Data ingestion, deployment, evaluation
+├── docs/                  # Documentation (Diataxis-organized)
+├── docker-compose.yml     # Production stack
+└── docker-compose.dev.yml # Development stack with hot reload
 ```
 
-## Database Schema
+## Documentation
 
-The main `judgments` table structure:
+Documentation lives in [`docs/`](docs/) and follows the [Diataxis](https://diataxis.fr/) framework:
 
-```sql
-CREATE TABLE judgments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  case_number TEXT NOT NULL,
-  jurisdiction TEXT NOT NULL,  -- 'PL' or 'UK'
-  court_name TEXT,
-  decision_date DATE,
-  title TEXT,
-  summary TEXT,
-  full_text TEXT,
-  judges JSONB,
-  keywords TEXT[],
-  embedding vector(768),
-  metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+- [`docs/tutorials/`](docs/tutorials/) — Learning-oriented walkthroughs
+- [`docs/how-to/`](docs/how-to/) — Task-oriented guides
+- [`docs/reference/`](docs/reference/) — API and configuration reference
+- [`docs/explanation/`](docs/explanation/) — Architecture and concept deep-dives
+- [`docs/getting-started/`](docs/getting-started/) — Setup and onboarding
+- [`docs/architecture/`](docs/architecture/) — System design notes
+- [`docs/features/`](docs/features/) — Feature-specific documentation
 
-## API Endpoints
+For internal contributor guidelines, see [`CLAUDE.md`](CLAUDE.md) (development conventions for AI-assisted contributions).
 
-### Search
-- `GET /api/v1/search/judgments` - Search judgments by query
-- `POST /api/v1/search/semantic` - Semantic vector search
+## Related projects
 
-### Judgments
-- `GET /api/v1/judgments` - List judgments with pagination
-- `GET /api/v1/judgments/{id}` - Get judgment details
-- `POST /api/v1/judgments` - Create new judgment (admin)
-
-### Analytics
-- `GET /api/v1/analytics/stats` - Judgment statistics
-- `GET /api/v1/analytics/trends` - Decision trends over time
-
-## Development
-
-### Run Tests
-
-```bash
-# Fast local monorepo profile
-make test-local
-make test-local-integration
-make test-local-ai
-make test-local-legacy
-
-# Frontend tests
-cd frontend
-npm run test
-npm run test:local
-
-# Backend tests
-cd backend
-poetry run pytest
-poetry run poe test-local
-```
-
-### Code Quality
-
-```bash
-# Frontend linting
-cd frontend
-npm run lint
-
-# Backend formatting
-cd backend
-poetry run ruff format .
-poetry run ruff check .
-```
-
-## Production Deployment
-
-### Build & Push to Docker Hub
-
-Build Docker images with semantic versioning and push to Docker Hub (`laugustyniak/juddges-*`):
-
-```bash
-./scripts/build_and_push_prod.sh              # Auto-increment patch (0.1.0 -> 0.1.1)
-./scripts/build_and_push_prod.sh minor        # Increment minor (0.1.1 -> 0.2.0)
-./scripts/build_and_push_prod.sh major        # Increment major (0.2.0 -> 1.0.0)
-./scripts/build_and_push_prod.sh 2.1.0        # Use explicit version
-```
-
-The build script performs the following steps:
-1. Resolves the next version from git tags (prefix `prod-v`, e.g., `prod-v1.0.0`)
-2. Syncs the version across `VERSION`, `backend/pyproject.toml`, `frontend/package.json`, and `.env.example`
-3. Loads `.env` for frontend build args (`NEXT_PUBLIC_*`) and Docker Hub credentials (`DOCKER_USERNAME`, `DOCKER_TOKEN`)
-4. Builds and pushes two Docker images (tagged with version and `latest`):
-   - `laugustyniak/juddges-frontend:<version>`
-   - `laugustyniak/juddges-backend:<version>` (also used by backend-worker and backend-beat)
-5. Generates AI-powered release notes via OpenAI (requires `OPENAI_API_KEY`)
-6. Commits version-synced files and creates an annotated git tag (`prod-v<version>`)
-7. Optionally pushes commit and tag to origin, and sends a Discord notification
-
-### Deploy on Production Host
-
-Pull images from Docker Hub and restart containers:
-
-```bash
-./scripts/deploy_prod.sh                      # Deploy :latest
-./scripts/deploy_prod.sh 0.2.0               # Deploy specific version
-./scripts/deploy_prod.sh --status             # Show running containers
-./scripts/deploy_prod.sh --rollback           # Rollback to previous version
-```
-
-The deploy script performs the following steps:
-1. Runs pre-flight checks (Docker daemon, disk space, current container versions)
-2. Pulls images from Docker Hub for the requested version
-3. Stops existing containers gracefully (`docker compose down`)
-4. Starts containers with the new images (`docker compose up -d`)
-5. Waits up to 120s for all required services to become healthy: `frontend`, `backend`, `meilisearch`, `backend-worker`, `backend-beat`
-6. Runs post-deploy HTTP validation (frontend on port 3006, backend health on port 8002)
-7. Logs deployment to `.deploy-history` for rollback support and sends a Discord notification
-
-### Versioning
-
-Versions are tracked as git tags with the `prod-v` prefix (e.g., `prod-v0.1.3`, `prod-v1.0.0`). The build script reads the latest `prod-v*` tag, increments it, and creates a new annotated tag after a successful push. Legacy `v*` tags are used as fallback if no `prod-v*` tags exist.
+- [pwr-ai/JuDDGES](https://github.com/pwr-ai/JuDDGES) — the parent research project: datasets, NLP pipelines, and human-in-the-loop ML experiments for Polish and England & Wales judicial decisions.
 
 ## Contributing
 
+Contributions are welcome. Please open an issue to discuss substantial changes before submitting a pull request.
+
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Run the test and lint suites locally:
+   - Backend: `poetry run poe check-all`
+   - Frontend: `npm run validate && npm run test`
+4. Commit your changes and open a pull request against `main`
 
 ## License
 
-MIT License - See LICENSE file for details
+Juddges App is licensed under the [Apache License 2.0](LICENSE). The frontend (`frontend/package.json`) and backend (`backend/pyproject.toml`) are both released under the same license.
 
 ## Acknowledgments
 
-- Data sourced from HuggingFace legal datasets
-- Built on the foundation of the JuDDGES platform
-- Powered by Supabase and Next.js
-
-## Contact
-
-For questions or support, please open an issue on GitHub.
+- Polish judgments dataset: [HFforLegal/case-law](https://huggingface.co/datasets/HFforLegal/case-law)
+- England & Wales judgments dataset: [JuDDGES/en-appealcourt](https://huggingface.co/datasets/JuDDGES/en-appealcourt)
+- Built on the foundations of the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES)

@@ -21,7 +21,7 @@ Juddges App is an AI-powered judicial decision search and analysis platform for 
 cd frontend
 
 # Development
-npm run dev                    # Start dev server with Turbopack (port 3007 default)
+npm run dev                    # Start dev server with Turbopack (port 3026 default)
 npm run dev:stable            # Start dev server without Turbopack
 npm run dev:clean             # Clean cache and start dev server
 
@@ -201,7 +201,7 @@ Next.js 15 with App Router:
 ### API Communication
 - Frontend calls backend via fetch/axios through `/api` routes
 - Backend runs on port 8004 (dev) or 8002 (prod)
-- Frontend runs on port 3007 (dev) or 3006 (prod)
+- Frontend runs on port 3026 (dev) or 3006 (prod)
 - CORS configured for cross-origin requests during development
 
 ### Production Deployment Architecture
@@ -311,7 +311,7 @@ Next.js 15 with App Router:
 
 ## Port Configuration
 - **Frontend**:
-  - Development: 3007
+  - Development: 3026
   - Production: 3006
 - **Backend API**:
   - Development: 8004
