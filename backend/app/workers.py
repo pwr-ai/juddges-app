@@ -45,6 +45,7 @@ celery_app.conf.imports = [
     "app.tasks.meilisearch_sync",
     "app.tasks.reasoning_line_pipeline",
     "app.tasks.digest_notifications",
+    "app.tasks.maintenance",
 ]
 
 # Celery Beat schedule — periodic background jobs
@@ -76,6 +77,10 @@ celery_app.conf.beat_schedule = {
         "task": "digest.send",
         "schedule": crontab(hour=8, minute=0, day_of_week=1),
         "kwargs": {"frequency": "weekly"},
+    },
+    "vacuum-analyze-judgments-weekly": {
+        "task": "maintenance.vacuum_analyze",
+        "schedule": crontab(hour=3, minute=0, day_of_week=0),
     },
 }
 celery_app.conf.timezone = "UTC"
