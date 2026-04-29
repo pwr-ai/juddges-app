@@ -7,4 +7,5 @@ export { SearchPagination } from './SearchPagination';
 export { SearchLoadingModal } from './SearchLoadingModal';
 export { DocumentShuffleAnimation } from './DocumentShuffleAnimation';
 export { LoadingMessage } from './LoadingMessage';
-export { SearchPageSkeleton } from './search-page-skeleton'; 
+export { SearchPageSkeleton } from './search-page-skeleton';
+export { ZeroResultsEmptyState } from './ZeroResultsEmptyState';

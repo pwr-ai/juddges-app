@@ -69,7 +69,6 @@ from app.reasoning_lines import router as reasoning_lines_router
 from app.recommendations import router as recommendations_router
 from app.research_assistant import router as research_assistant_router
 from app.schema_generation_agent import router as schema_generator_agent_router
-from app.schemas_pkg import cleanup_expired_sessions
 from app.schemas_pkg import router as schemas_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
@@ -78,6 +77,12 @@ from app.versioning import router as versioning_router
 
 # Suppress SSL ResourceWarnings from httpx/supabase/langchain clients
 warnings.filterwarnings("ignore", category=ResourceWarning, message=".*ssl.SSLSocket.*")
+
+# Initialize Sentry error tracking early so startup errors are captured.
+# No-op when SENTRY_DSN is not set.
+from app.sentry import init_sentry  # noqa: E402
+
+init_sentry()
 
 
 def validate_environment_variables():
@@ -119,9 +124,7 @@ def validate_environment_variables():
             missing_required.append(f"  - {var_name}: {description}")
             logger.error(f"Missing required environment variable: {var_name}")
         else:
-            # Mask sensitive values in logs
-            masked_value = value[:4] + "..." if len(value) > 4 else "***"
-            logger.info(f"Environment variable {var_name}: {masked_value}")
+            logger.info(f"  {var_name}: configured")
 
     # Check optional variables
     for var_name, description in optional_vars.items():
@@ -130,12 +133,7 @@ def validate_environment_variables():
             missing_optional.append(f"  - {var_name}: {description}")
             logger.warning(f"Optional environment variable not set: {var_name}")
         else:
-            # Mask sensitive values in logs
-            if "KEY" in var_name or "TOKEN" in var_name or "AUTH" in var_name:
-                masked_value = value[:4] + "..." if len(value) > 4 else "***"
-            else:
-                masked_value = value
-            logger.info(f"Environment variable {var_name}: {masked_value}")
+            logger.info(f"  {var_name}: configured")
 
     # Raise error if required variables are missing
     if missing_required:
@@ -258,23 +256,35 @@ async def lifespan(app: FastAPI):
     # Step 7: Preload datasets (DISABLED - datasets are loaded on-demand)
     logger.info("Dataset preloading disabled - datasets will load on first request")
 
-    # Step 8: Start background task for session cleanup
-    logger.info("Starting session cleanup background task...")
-    cleanup_task = asyncio.create_task(cleanup_expired_sessions())
-    logger.info("Session cleanup background task started successfully")
+    # Step 8: Session cleanup — Redis TTL handles expiry automatically.
+    # cleanup_expired_sessions() is retained as a no-op for compatibility.
+    logger.info(
+        "Session cleanup delegated to Redis TTL — no background sweep task needed"
+    )
+
+    # Step 9: Eagerly initialize the embedding provider so misconfiguration
+    # (e.g. unreachable TEI endpoint) fails loudly at startup, not on first
+    # search request. The init also logs the active provider + URL + dim,
+    # which is the canonical source of truth for "which embedder is live".
+    try:
+        from app.embedding_providers import get_default_model_id, get_embedding_provider
+
+        model_id = get_default_model_id()
+        provider = get_embedding_provider(model_id)
+        logger.info(
+            f"Embedding provider ready: {model_id} "
+            f"(dim={provider.config.dimensions}, "
+            f"max_input={provider.config.max_input_length})"
+        )
+    except Exception as e:
+        logger.warning(
+            f"Embedding provider init failed (search will fall back to BM25): {e}"
+        )
 
     logger.info("Application startup completed successfully")
 
     # Yield control to the application
     yield
-
-    # Cleanup: Cancel the cleanup task on shutdown
-    logger.info("Stopping session cleanup background task...")
-    cleanup_task.cancel()
-    try:
-        await cleanup_task
-    except asyncio.CancelledError:
-        logger.info("Session cleanup background task cancelled successfully")
 
     # Cleanup on shutdown
     logger.info("Starting application shutdown sequence...")
@@ -460,21 +470,41 @@ async def add_security_headers(request: Request, call_next):
     # Referrer-Policy: Control referrer information
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
-    # Content-Security-Policy: Mitigate XSS and injection attacks
-    # TODO: Replace 'unsafe-inline' with nonce-based CSP for script-src.
-    # Next.js requires inline scripts for hydration, so 'unsafe-inline' is kept
-    # as a temporary measure. The proper fix is to configure Next.js to emit a
-    # CSP nonce (via next.config.js headers or middleware) and pass it here.
+    # Content-Security-Policy: Mitigate XSS and injection attacks.
+    #
+    # This header applies to the BACKEND API responses (port 8004). JSON
+    # endpoints don't execute scripts in the browser, but a loose CSP still
+    # weakens posture for scanners and edge-case HTML responses.
+    #
+    # Two profiles:
+    # - /docs, /redoc, /openapi.json — FastAPI's Swagger UI/ReDoc pages use
+    #   inline <script> bootstrap. Keep 'unsafe-inline' on that path only so
+    #   developer tools keep working.
+    # - Everything else (JSON API) — strict script-src 'self'. XSS risk on a
+    #   JSON endpoint is theoretical (browsers don't execute inline scripts
+    #   in application/json), but strict CSP is free defense in depth.
+    #
+    # Frontend CSP (Next.js hydration scripts) is a separate concern tracked
+    # apart from this middleware — Next.js middleware must emit a per-request
+    # nonce and this header's script-src must then include 'nonce-<…>'.
+    path = request.url.path
+    docs_paths = ("/docs", "/redoc", "/openapi.json")
+    script_src = (
+        "'self' 'unsafe-inline'"
+        if any(path.startswith(p) for p in docs_paths)
+        else "'self'"
+    )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        f"script-src {script_src}; "
         "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' blob: https:; "
+        "img-src 'self' blob: https: data:; "
         "font-src 'self' data:; "
         "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
-        "form-action 'self'"
+        "form-action 'self'; "
+        "upgrade-insecure-requests"
     )
 
     return response
@@ -507,6 +537,42 @@ async def add_cache_headers(request, call_next):
 async def redirect_root_to_docs():
     return RedirectResponse("/docs")
 
+
+# ============================================================================
+# Router Registration — Authentication Tiers
+# ============================================================================
+# PUBLIC:    health_router (/health, /health/healthz — no auth)
+#            guest_sessions_router (/api/guest-sessions — public)
+#            blog_router — public GET endpoints (list/get posts, categories)
+#            legal_router — static legal documents (DPA, retention policies)
+#
+# API_KEY:   LangServe routes (/qa, /chat, /enhance_query)
+#            documents_router, collections_router, publications_router
+#            extraction_router, schemas_router, schema_generator_agent_router
+#            schema_generator_router, example_questions_router
+#            dashboard_router, playground_router, evaluations_router
+#            summarization_router, precedents_router, deduplication_router
+#            versioning_router, ocr_router, clustering_router
+#            recommendations_router, research_assistant_router
+#            topic_modeling_router, argumentation_router, embeddings_router
+#            marketplace_router, timeline_router, search_router
+#            graphql_router — /graphql
+#            health_router — /health/status (sub-route API key guard)
+#
+# USER:      blog_router — API_KEY at router level + JWT per-endpoint for
+#                          write operations (like, bookmark, admin CRUD)
+#            experiments_router — JWT enforced per-endpoint
+#
+# ADMIN:     admin_router (/api/admin — require_admin on every endpoint)
+#
+# MIXED:     analytics_router — API_KEY at router level,
+#                               get_optional_user per endpoint
+#            feedback_router  — no router-level auth (allows anonymous),
+#                               get_optional_user per endpoint
+#            audit_router     — JWT enforced per-endpoint
+#            consent_router   — JWT enforced per-endpoint
+#            sso_router       — check-domain PUBLIC, admin endpoints ADMIN
+# ============================================================================
 
 # Add routes with API key protection
 add_routes(app, chain, path="/qa", dependencies=[Depends(verify_api_key)])

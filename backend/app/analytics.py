@@ -407,7 +407,11 @@ async def get_session_summary(
             client = get_admin_supabase_client()
 
         # Get all events for this session
-        query = client.table("events").select("*").eq("session_id", session_id)
+        query = (
+            client.table("events")
+            .select("id, user_id, session_id, event_name, event_data, created_at")
+            .eq("session_id", session_id)
+        )
 
         # If authenticated, filter by user_id for security
         if user:

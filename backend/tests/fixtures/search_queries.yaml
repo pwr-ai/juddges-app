@@ -1,0 +1,66 @@
+# Representative Polish legal queries used by the search benchmark + integration
+# tests. Adding or modifying entries here propagates to both scripts/search_benchmark.py
+# and tests/integration/test_search_quality.py.
+#
+# Thresholds are upper bounds we expect a healthy backend to stay under (ms) and
+# lower bounds for recall (min_hits). Tune as corpus grows.
+
+queries:
+  - id: Q1_short
+    description: "Short 2-word Polish keyword query — classic search box input"
+    query: "zasiedzenie nieruchomości"
+    expected_query_type: "mixed"
+    min_hits: 10
+    max_wall_ms: 2000
+
+  - id: Q2_conceptual
+    description: "5-word conceptual Polish legal phrase — multi-term recall"
+    query: "odpowiedzialność solidarna wspólników spółki cywilnej"
+    expected_query_type: "conceptual"
+    min_hits: 15
+    max_wall_ms: 2500
+
+  - id: Q3_question
+    description: "Natural-language Polish question — typical user research"
+    query: "Jakie są przesłanki uznania czynu za wypadek przy pracy w świetle orzecznictwa Sądu Najwyższego?"
+    expected_query_type: "conceptual"
+    min_hits: 20
+    max_wall_ms: 3500
+
+  - id: Q4_paragraph
+    description: "Legal paragraph with cited sygnatura — must NOT route as case_number"
+    query: >-
+      W sprawie niniejszej kluczowe znaczenie ma ocena przesłanek odpowiedzialności
+      deliktowej pozwanego na gruncie art. 415 k.c. w zw. z art. 361 § 1 i 2 k.c.,
+      albowiem powód wywodzi swoje roszczenie odszkodowawcze z zawinionego
+      działania polegającego na rozpowszechnianiu nieprawdziwych informacji.
+      Zgodnie z wyrokiem z dnia 12 lipca 2018 r., sygn. akt II CSK 604/17,
+      ciężar wykazania bezprawności spoczywa na poszkodowanym.
+    # expected type is not case_number — exact type depends on content
+    # (conceptual or statute_reference); test asserts != case_number.
+    forbidden_query_type: "case_number"
+    min_hits: 10
+    max_wall_ms: 3000
+
+  - id: Q5_skarga_kasacyjna
+    description: "Near-limit (≤1999 chars) excerpt from a skarga kasacyjna"
+    query: >-
+      Skarżący, działając na podstawie art. 3983 § 1 pkt 1 i 2 k.p.c., zaskarża
+      w całości wyrok Sądu Apelacyjnego w Warszawie z dnia 14 lutego 2025 r.,
+      sygn. akt I ACa 872/24, zarzucając mu naruszenie przepisów prawa
+      materialnego, a to art. 415 k.c. w zw. z art. 361 § 1 k.c. poprzez ich
+      błędną wykładnię polegającą na przyjęciu, że pomiędzy zachowaniem
+      pozwanego a szkodą poniesioną przez powoda nie zachodzi adekwatny
+      związek przyczynowy. Nadto zaskarżonemu orzeczeniu zarzucam naruszenie
+      przepisów postępowania, a mianowicie art. 233 § 1 k.p.c. poprzez
+      dokonanie dowolnej, a nie swobodnej oceny dowodów. Sąd drugiej instancji
+      naruszył również art. 328 § 2 k.p.c. w zw. z art. 391 § 1 k.p.c. przez
+      sporządzenie uzasadnienia w sposób uniemożliwiający kontrolę instancyjną.
+      W orzecznictwie Sądu Najwyższego ugruntowany jest pogląd, wyrażony m.in.
+      w wyroku z dnia 19 marca 2019 r., sygn. akt II CSK 123/18, iż uchybienie
+      obowiązkowi wszechstronnego rozważenia materiału dowodowego stanowi
+      naruszenie mające istotny wpływ na wynik sprawy. Mając powyższe na
+      uwadze, wnoszę o uchylenie zaskarżonego wyroku w całości.
+    forbidden_query_type: "case_number"
+    min_hits: 5
+    max_wall_ms: 3500

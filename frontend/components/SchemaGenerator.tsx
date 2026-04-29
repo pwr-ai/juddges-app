@@ -14,6 +14,7 @@ import {
  AIBadge,
 } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 interface SchemaGeneratorProps {
  isOpen: boolean;
@@ -121,7 +122,7 @@ export function SchemaGenerator({
  toast.success(`Using ${samples.length} sample document${samples.length > 1 ? 's' : ''} to improve schema generation`);
  }
  } catch (error) {
- console.error("Error fetching sample documents: ", error);
+ logger.error("Error fetching sample documents: ", error);
  setDocumentsFetchError("Failed to load sample documents. Schema generation will proceed without document context.");
  setSampleDocuments([]);
  } finally {
@@ -263,7 +264,7 @@ export function SchemaGenerator({
  );
 
  } catch (error) {
- console.error('Schema generation error:', error);
+ logger.error('Schema generation error:', error);
  toast.error("Failed to generate schema. Please try again.");
  setGenerationSteps(prev =>
  prev.map(step => ({ ...step, status: "failed"}))

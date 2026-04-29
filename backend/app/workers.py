@@ -6,6 +6,7 @@ from typing import Any
 
 from celery import Celery, Task
 from celery.exceptions import Retry
+from celery.schedules import crontab
 from dotenv import load_dotenv
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.oai_schema_validation import (
@@ -43,6 +44,7 @@ celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
 celery_app.conf.imports = [
     "app.tasks.meilisearch_sync",
     "app.tasks.reasoning_line_pipeline",
+    "app.tasks.digest_notifications",
 ]
 
 # Celery Beat schedule — periodic background jobs
@@ -64,6 +66,16 @@ celery_app.conf.beat_schedule = {
         "task": "reasoning_lines.detect_events",
         "schedule": 7 * 24 * 60 * 60,  # every 7 days
         "options": {"countdown": 7200},  # offset by 2 hours
+    },
+    "daily-digest-7am": {
+        "task": "digest.send",
+        "schedule": crontab(hour=7, minute=0),
+        "kwargs": {"frequency": "daily"},
+    },
+    "weekly-digest-monday-8am": {
+        "task": "digest.send",
+        "schedule": crontab(hour=8, minute=0, day_of_week=1),
+        "kwargs": {"frequency": "weekly"},
     },
 }
 celery_app.conf.timezone = "UTC"

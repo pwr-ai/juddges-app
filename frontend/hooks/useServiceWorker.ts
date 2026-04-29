@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { logger } from "@/lib/logger";
 
 export function useServiceWorker() {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -43,7 +44,7 @@ export function useServiceWorker() {
         registration.addEventListener("updatefound", onUpdateFound);
       })
       .catch((error) => {
-        console.warn("Service worker registration failed: ", error);
+        logger.warn("Service worker registration failed: ", error);
       });
 
     // Cleanup function to remove event listeners

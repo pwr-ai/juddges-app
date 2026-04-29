@@ -9,6 +9,13 @@ from loguru import logger
 
 from app.core.supabase import get_supabase_client
 
+# Column projection for judgments table.
+# embedding is ~6KB per row and is only included when return_vectors=True.
+_JUDGMENT_BASE_COLS = (
+    "document_id, title, summary, full_text, document_type, language, "
+    "country, metadata, publication_date, source, url"
+)
+
 
 async def get_documents_by_id(
     document_ids: list[str],
@@ -38,9 +45,15 @@ async def get_documents_by_id(
 
         # Fetch documents from Supabase judgments table
         # Use .in_() for efficient batch query
+        # Add embedding column only when the caller explicitly requests vectors.
+        cols = (
+            _JUDGMENT_BASE_COLS + ", embedding"
+            if return_vectors
+            else _JUDGMENT_BASE_COLS
+        )
         response = (
             supabase.table("judgments")
-            .select("*")
+            .select(cols)
             .in_("document_id", document_ids)
             .execute()
         )

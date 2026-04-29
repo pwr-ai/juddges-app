@@ -1,6 +1,7 @@
 // Legal reference highlighting
 
 import { SHOW_TEXT } from './dom-utils';
+import { logger } from "@/lib/logger";
 
 export function highlightLegalReferences(root: HTMLElement, document: Document, diagLog?: string[]): void {
   const skipTags = new Set(['SCRIPT', 'STYLE', 'CODE', 'MARK']);
@@ -15,7 +16,7 @@ export function highlightLegalReferences(root: HTMLElement, document: Document, 
   ): boolean => {
     try {
       if (!parent || !oldChild) {
-        console.error('[documents-html] replaceChild skipped: missing parent/child', ctx);
+        logger.error('[documents-html] replaceChild skipped: missing parent/child', ctx);
         if (diagLog) {
           diagLog.push(`[safeReplaceChild] missing parent/child ${JSON.stringify(ctx)}\n` + (new Error().stack || ''));
         }
@@ -23,7 +24,7 @@ export function highlightLegalReferences(root: HTMLElement, document: Document, 
       }
       // Ensure the parent still contains the child (DOM can mutate during wraps)
       if (!('contains' in parent) || typeof (parent as { contains: (node: Node) => boolean }).contains !== 'function' || !(parent as { contains: (node: Node) => boolean }).contains(oldChild)) {
-        console.error('[documents-html] replaceChild skipped: parent no longer contains child', ctx);
+        logger.error('[documents-html] replaceChild skipped: parent no longer contains child', ctx);
         if (diagLog) {
           diagLog.push(`[safeReplaceChild] parent-no-contain ${JSON.stringify(ctx)}\n` + (new Error().stack || ''));
         }
@@ -32,7 +33,7 @@ export function highlightLegalReferences(root: HTMLElement, document: Document, 
       (parent as Node).replaceChild(newChild, oldChild);
       return true;
     } catch (err) {
-      console.error('[documents-html] replaceChild failed:', { err, ...ctx });
+      logger.error('[documents-html] replaceChild failed:', { err, ...ctx });
       if (diagLog) {
         diagLog.push(`[safeReplaceChild] replace-failed ${JSON.stringify(ctx)}\n${(err instanceof Error ? err.stack : '') || ''}`);
       }

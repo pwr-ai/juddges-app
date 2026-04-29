@@ -156,7 +156,7 @@ class AuditService:
             query: Search/question query
             response: AI response data
             session_id: Session identifier
-            model_used: AI model used (e.g., 'gpt-4', 'gemini-pro')
+            model_used: AI model used (e.g., 'gpt-5', 'gemini-pro')
             metadata: Additional metadata
             ip_address: Client IP address (will be anonymized)
             user_agent: Client user agent
@@ -435,7 +435,14 @@ class AuditService:
                 end_date = datetime.now(UTC)
 
             # Build query
-            query = client.table("audit_logs").select("*").eq("user_id", user_id)
+            query = (
+                client.table("audit_logs")
+                .select(
+                    "id, user_id, action_type, resource_type, resource_id, "
+                    "session_id, ip_address, user_agent, created_at"
+                )
+                .eq("user_id", user_id)
+            )
 
             # Apply filters
             query = query.gte("created_at", start_date.isoformat())

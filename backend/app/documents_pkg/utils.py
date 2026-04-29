@@ -23,8 +23,10 @@ _cache_lock = asyncio.Lock()
 async def generate_embedding(text: str) -> list[float]:
     """Generate embedding for text using the active embedding provider.
 
-    Uses the configured embedding provider (OpenAI, Cohere, or local model)
-    based on the EMBEDDING_MODEL_ID environment variable.
+    Uses the configured embedding provider (OpenAI, Cohere, TEI, local)
+    based on the EMBEDDING_MODEL_ID environment variable. A Redis cache
+    (see app.embedding_cache) short-circuits repeat queries — search
+    over a small user base has very high repeat rate.
 
     Args:
         text: Text to embed
@@ -32,10 +34,20 @@ async def generate_embedding(text: str) -> list[float]:
     Returns:
         Embedding vector (dimensions depend on the active model)
     """
-    from app.embedding_providers import get_embedding_provider
+    from app import embedding_cache
+    from app.embedding_providers import get_default_model_id, get_embedding_provider
 
     provider = get_embedding_provider()
-    return await provider.embed_text(text)
+    model_id = get_default_model_id()
+    dimensions = provider.config.dimensions
+
+    cached = await embedding_cache.get(model_id, text, dimensions)
+    if cached is not None:
+        return cached
+
+    vec = await provider.embed_text(text)
+    await embedding_cache.set(model_id, text, dimensions, vec)
+    return vec
 
 
 # Common Polish characters and words for language detection

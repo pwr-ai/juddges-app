@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error status: ${response.status}`);
+      logger.error(`Backend API returned error status: ${response.status}`);
       return NextResponse.json(
         { error: "Failed to fetch publications from backend" },
         { status: response.status }
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
     const publications = await response.json();
     return NextResponse.json(publications);
   } catch (error) {
-    console.error("Error in GET publications: ", error);
+    logger.error("Error in GET publications: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Backend API returned error status: ${response.status}`, errorText);
+      logger.error(`Backend API returned error status: ${response.status}`, errorText);
       return NextResponse.json(
         { error: "Failed to create publication" },
         { status: response.status }
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
     const publication = await response.json();
     return NextResponse.json(publication);
   } catch (error) {
-    console.error("Error in POST publication: ", error);
+    logger.error("Error in POST publication: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

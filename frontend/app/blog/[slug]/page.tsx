@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
 
 // Mock data - replace with actual API call
 const mockPost: BlogPost = {
@@ -322,7 +323,7 @@ export default function BlogPostPage() {
         await new Promise((resolve) => setTimeout(resolve, 500));
         setPost(mockPost);
       } catch (error) {
-        console.error("Error fetching post: ", error);
+        logger.error("Error fetching post: ", error);
         toast.error("Failed to load post", {
           description: error instanceof Error ? error.message : "An unexpected error occurred.",
         });
@@ -340,13 +341,13 @@ export default function BlogPostPage() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error checking auth:', error);
+          logger.error('Error checking auth:', error);
           setIsLoggedIn(false);
           return;
         }
         setIsLoggedIn(!!session);
       } catch (error) {
-        console.error('Error checking auth:', error);
+        logger.error('Error checking auth:', error);
         setIsLoggedIn(false);
       }
     };
@@ -390,7 +391,7 @@ export default function BlogPostPage() {
           break;
       }
     } catch (error) {
-      console.error("Error sharing: ", error);
+      logger.error("Error sharing: ", error);
       toast.error("Failed to share", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
@@ -708,7 +709,7 @@ function DropdownShare({
         // Handle promise if async
         if (result instanceof Promise) {
           result.catch((error) => {
-            console.error("Error in share handler: ", error);
+            logger.error("Error in share handler: ", error);
           });
         }
       }}

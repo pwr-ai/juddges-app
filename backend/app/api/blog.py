@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
+from supabase import PostgrestAPIError, StorageException
 
 from app.core.auth_jwt import (
     AuthenticatedUser,
@@ -17,6 +18,15 @@ from app.core.auth_jwt import (
 )
 
 router = APIRouter(prefix="/blog", tags=["blog"])
+
+# Column projection for blog_posts — avoids pulling any large/unused fields.
+_BLOG_POST_COLS = (
+    "id, slug, title, excerpt, content, featured_image, author_id, category, "
+    "status, published_at, created_at, updated_at, read_time, views, likes_count, "
+    "ai_summary, deleted_at"
+)
+# Column projection for blog_categories
+_BLOG_CATEGORY_COLS = "id, name, description, created_at"
 
 
 # ==============================================
@@ -109,8 +119,8 @@ async def get_post_tags(supabase, post_id: str) -> list[str]:
             supabase.table("blog_tags").select("tag").eq("post_id", post_id).execute()
         )
         return [row["tag"] for row in response.data]
-    except Exception as e:
-        logger.error(f"Error fetching tags: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching tags: {e}", exc_info=True)
         return []
 
 
@@ -133,8 +143,8 @@ async def get_post_author(supabase, author_id: str) -> dict:
                 "avatar": response.data.get("avatar"),
                 "title": response.data.get("title") or "Researcher",
             }
-    except Exception:
-        pass
+    except (PostgrestAPIError, StorageException) as e:
+        logger.warning(f"Could not fetch author profile for {author_id}: {e}")
 
     return {"id": author_id, "name": "Anonymous", "title": "Researcher", "avatar": None}
 
@@ -145,8 +155,8 @@ async def increment_view_count(supabase, post_id: str):
         supabase.table("blog_posts").update(
             {"views": supabase.rpc("increment", {"x": 1})}
         ).eq("id", post_id).execute()
-    except Exception as e:
-        logger.error(f"Error incrementing view count: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error incrementing view count: {e}", exc_info=True)
 
 
 def ensure_user_can_access_post(
@@ -289,8 +299,8 @@ async def list_posts(
             },
         }
 
-    except Exception as e:
-        logger.error(f"Error listing posts: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error listing posts: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch blog posts")
 
 
@@ -305,7 +315,7 @@ async def get_post(slug: str):
         # Get post
         response = (
             supabase.table("blog_posts")
-            .select("*")
+            .select(_BLOG_POST_COLS)
             .eq("slug", slug)
             .eq("status", "published")
             .is_("deleted_at", "null")
@@ -346,8 +356,8 @@ async def get_post(slug: str):
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error fetching post: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching post: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch blog post")
 
 
@@ -359,7 +369,9 @@ async def list_categories():
     try:
         supabase = get_admin_supabase_client()
 
-        response = supabase.table("blog_categories").select("*").execute()
+        response = (
+            supabase.table("blog_categories").select(_BLOG_CATEGORY_COLS).execute()
+        )
 
         # Add post count for each category
         categories = []
@@ -376,8 +388,8 @@ async def list_categories():
 
         return {"data": categories}
 
-    except Exception as e:
-        logger.error(f"Error fetching categories: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching categories: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch categories")
 
 
@@ -445,8 +457,8 @@ async def toggle_like(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error toggling like: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error toggling like: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to toggle like")
 
 
@@ -500,8 +512,8 @@ async def toggle_bookmark(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error toggling bookmark: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error toggling bookmark: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to toggle bookmark")
 
 
@@ -538,8 +550,8 @@ async def get_bookmarks(
 
         return {"data": bookmarks}
 
-    except Exception as e:
-        logger.error(f"Error fetching bookmarks: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching bookmarks: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch bookmarks")
 
 
@@ -606,8 +618,8 @@ async def create_post(
 
         return {"success": True, "data": normalized_post}
 
-    except Exception as e:
-        logger.error(f"Error creating post: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error creating post: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create blog post")
 
 
@@ -632,7 +644,11 @@ async def list_admin_posts(
         supabase = get_admin_supabase_client()
         offset = (page - 1) * limit
 
-        list_query = supabase.table("blog_posts").select("*").is_("deleted_at", "null")
+        list_query = (
+            supabase.table("blog_posts")
+            .select(_BLOG_POST_COLS)
+            .is_("deleted_at", "null")
+        )
         count_query = (
             supabase.table("blog_posts")
             .select("id", count="exact")
@@ -679,8 +695,8 @@ async def list_admin_posts(
                 "has_prev": page > 1,
             },
         }
-    except Exception as e:
-        logger.error(f"Error listing admin posts: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error listing admin posts: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch admin blog posts")
 
 
@@ -694,7 +710,7 @@ async def get_admin_post(
         supabase = get_admin_supabase_client()
         response = (
             supabase.table("blog_posts")
-            .select("*")
+            .select(_BLOG_POST_COLS)
             .eq("id", post_id)
             .is_("deleted_at", "null")
             .single()
@@ -712,8 +728,8 @@ async def get_admin_post(
         return {"success": True, "data": normalize_post_response(post, tags, author)}
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error fetching admin post {post_id}: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching admin post {post_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch blog post")
 
 
@@ -728,7 +744,7 @@ async def update_post(
         supabase = get_admin_supabase_client()
         existing_response = (
             supabase.table("blog_posts")
-            .select("*")
+            .select(_BLOG_POST_COLS)
             .eq("id", post_id)
             .is_("deleted_at", "null")
             .single()
@@ -781,7 +797,7 @@ async def update_post(
 
         updated_response = (
             supabase.table("blog_posts")
-            .select("*")
+            .select(_BLOG_POST_COLS)
             .eq("id", post_id)
             .single()
             .execute()
@@ -796,8 +812,8 @@ async def update_post(
         }
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error updating post {post_id}: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error updating post {post_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update blog post")
 
 
@@ -831,8 +847,8 @@ async def delete_post(
         return {"success": True, "deleted_id": post_id}
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error deleting post {post_id}: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error deleting post {post_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete blog post")
 
 
@@ -875,6 +891,6 @@ async def get_admin_blog_stats(
             total_likes=total_likes,
             avg_read_time=avg_read_time,
         )
-    except Exception as e:
-        logger.error(f"Error fetching blog stats: {e}")
+    except (PostgrestAPIError, StorageException) as e:
+        logger.error(f"Error fetching blog stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch blog stats")

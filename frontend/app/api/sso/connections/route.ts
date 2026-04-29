@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from "@/lib/logger";
 
 const BACKEND_URL = process.env.API_BASE_URL || 'http://localhost:8004';
 
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Failed to list SSO connections:', error);
+    logger.error('Failed to list SSO connections:', error);
     return NextResponse.json(
       { error: 'Failed to fetch SSO connections' },
       { status: 500 }
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Failed to create SSO connection:', error);
+    logger.error('Failed to create SSO connection:', error);
     return NextResponse.json(
       { error: 'Failed to create SSO connection' },
       { status: 500 }

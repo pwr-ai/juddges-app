@@ -6,6 +6,16 @@ on:
     tags: ['prod-v*', 'dev-v*']
   pull_request:
     branches: [develop, main]
+  workflow_dispatch:
+    inputs:
+      allow_vuln_override:
+        description: 'Allow workflow to pass even if HIGH/CRITICAL vulnerabilities are found (emergency use only)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -49,6 +59,16 @@ jobs:
         working-directory: backend
         run: poetry run ruff check .
 
+      - name: Check code complexity
+        working-directory: backend
+        run: |
+          poetry run radon cc app/ packages/ -a -nc --total-average 2>&1 | tail -5
+          # Fail if any function has complexity grade F (>40)
+          if poetry run radon cc app/ packages/ -nc -n F 2>&1 | grep -q "F "; then
+            echo "ERROR: Functions with Grade F complexity detected"
+            exit 1
+          fi
+
   backend-test:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
@@ -76,7 +96,31 @@ jobs:
 
       - name: Run unit tests with coverage
         working-directory: backend
-        run: poetry run pytest -v -m unit --cov=app --cov-report=term-missing --cov-fail-under=50
+        run: poetry run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=60
+
+      # Issue #106 (unit-safe tier): import-check the integration test module so
+      # a broken import, syntax error, or missing fixture breaks CI early, but
+      # the tests themselves skip because RUN_INTEGRATION_TESTS is NOT set.
+      - name: Import-check search integration tests (skipped at runtime)
+        working-directory: backend
+        env:
+          RUN_INTEGRATION_TESTS: ""
+        run: |
+          poetry run pytest --collect-only -q tests/integration/test_search_quality.py
+          poetry run pytest -v tests/integration/test_search_quality.py
+
+      # Static sanity: benchmark script must at least parse and show --help.
+      - name: Import-check search benchmark script
+        working-directory: backend
+        run: poetry run python scripts/search_benchmark.py --help > /dev/null
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage-report
+          path: backend/htmlcov/
+          retention-days: 30
 
   frontend-lint:
     name: Frontend Lint
@@ -118,6 +162,14 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage
 
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          retention-days: 30
+
   frontend-build:
     name: Frontend Build
     runs-on: ubuntu-latest
@@ -143,6 +195,30 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run build
 
+      - name: Upload built frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: |
+            frontend/.next/
+            frontend/public/
+            frontend/package.json
+            frontend/package-lock.json
+            frontend/next.config.*
+          retention-days: 1
+
+  # ============================================================================
+  # Frontend E2E - Issue #98
+  #
+  # Previously: job existed but did not start any server, so Playwright had
+  # nothing to connect to. Now we start the production Next.js server against
+  # placeholder Supabase env values and wait on / before running tests.
+  # Backend is NOT started here (requires Supabase + TEI + Redis); the
+  # e2e suite is scoped to UI-only flows that tolerate a missing backend.
+  # Tests that require a live backend should live in the integration job
+  # (search-integration.yml).
+  # ============================================================================
+
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
@@ -161,9 +237,41 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Download built frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/
+
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install --with-deps
+
+      - name: Start frontend (background)
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8004
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          API_BASE_URL: http://localhost:8004
+          PORT: "3006"
+        run: |
+          nohup npm start > ../frontend-server.log 2>&1 &
+          echo $! > ../frontend-server.pid
+
+      - name: Wait for frontend to be ready
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:3006/ -o /dev/null; then
+              echo "Frontend is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "ERROR: Frontend did not become ready within 60s"
+          echo "---- server log ----"
+          cat frontend-server.log || true
+          exit 1
 
       - name: Run E2E tests
         working-directory: frontend
@@ -172,6 +280,21 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
         run: npm run test:e2e
+
+      - name: Stop frontend
+        if: always()
+        run: |
+          if [ -f frontend-server.pid ]; then
+            kill "$(cat frontend-server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload frontend server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-server-log
+          path: frontend-server.log
+          retention-days: 7
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -182,7 +305,14 @@ jobs:
           retention-days: 14
 
   # ============================================================================
-  # Security Scanning
+  # Security Scanning - Issue #100
+  #
+  # Previously every scan had `|| true` + `continue-on-error: true`, meaning
+  # CRITICAL/HIGH CVEs never blocked merge. Now:
+  #   - HIGH + CRITICAL -> job fails (blocks merge)
+  #   - MEDIUM + LOW    -> reported, non-blocking
+  # Emergency escape hatch: trigger workflow via the GitHub UI with
+  # `allow_vuln_override=true` to bypass. Usage must be documented in the PR.
   # ============================================================================
 
   backend-security:
@@ -195,13 +325,55 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pip-audit
-        run: pip install pip-audit
+      - name: Install tooling
+        run: |
+          pip install poetry pip-audit
 
-      - name: Audit Python dependencies
+      - name: Export requirements
         working-directory: backend
-        run: pip-audit -r <(pip install poetry && poetry export -f requirements.txt --without-hashes 2>/dev/null) --ignore-vuln PYSEC-2024-* || true
-        continue-on-error: true
+        run: poetry export -f requirements.txt --without-hashes -o /tmp/requirements.txt 2>/dev/null
+
+      - name: Audit Python dependencies (blocking on HIGH/CRITICAL)
+        id: backend_audit
+        continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
+        run: |
+          # pip-audit exits non-zero on any vuln by default. Filter the JSON
+          # output and re-fail only on HIGH/CRITICAL severities. MEDIUM/LOW
+          # are reported but do not block.
+          set +e
+          pip-audit -r /tmp/requirements.txt --format json > /tmp/pip-audit.json
+          rc=$?
+          set -e
+          if [ ! -s /tmp/pip-audit.json ]; then
+            echo "pip-audit produced no output (exit=$rc) - failing closed"
+            exit 1
+          fi
+          echo "---- pip-audit raw ----"
+          cat /tmp/pip-audit.json
+          python - <<'PY'
+          import json, sys
+          data = json.load(open("/tmp/pip-audit.json"))
+          # pip-audit JSON shape:
+          # {"dependencies": [{"name":..,"vulns":[{"id":..,"severity":..,...}]}]}
+          high = []
+          other = []
+          for dep in data.get("dependencies", []):
+              for v in dep.get("vulns", []) or []:
+                  sev = (v.get("severity") or "").upper()
+                  entry = f"{dep.get('name')} {dep.get('version','?')} :: {v.get('id')} ({sev or 'UNKNOWN'})"
+                  if sev in {"HIGH", "CRITICAL"}:
+                      high.append(entry)
+                  else:
+                      other.append(entry)
+          if other:
+              print("Non-blocking (MEDIUM/LOW/UNKNOWN):")
+              for e in other: print(f"  - {e}")
+          if high:
+              print("BLOCKING (HIGH/CRITICAL):")
+              for e in high: print(f"  - {e}")
+              sys.exit(1)
+          print("No HIGH/CRITICAL Python vulnerabilities")
+          PY
 
   frontend-security:
     name: Frontend Dependency Audit
@@ -219,10 +391,23 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Audit npm dependencies
+      - name: Audit npm dependencies (blocking on HIGH/CRITICAL)
+        id: frontend_audit
         working-directory: frontend
-        run: npm audit --production --audit-level=high || true
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
+        run: |
+          # `npm audit --audit-level=high` exits non-zero only when a HIGH or
+          # CRITICAL is present - MEDIUM/LOW are still listed but don't fail.
+          set +e
+          npm audit --production --json > /tmp/npm-audit.json
+          npm audit --production --audit-level=high
+          rc=$?
+          set -e
+          if [ $rc -ne 0 ]; then
+            echo "HIGH/CRITICAL npm vulnerability detected - failing build"
+            exit 1
+          fi
+          echo "No HIGH/CRITICAL npm vulnerabilities"
 
   secret-detection:
     name: Secret Detection
@@ -234,12 +419,50 @@ jobs:
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
+        continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
         env:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   # ============================================================================
-  # Docker Build Validation (PRs and pushes to develop/main, not tags)
+  # SBOM Generation (main branch only)
+  # ============================================================================
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Generate backend SBOM
+        working-directory: backend
+        run: |
+          pip install poetry
+          poetry export -f requirements.txt --without-hashes -o sbom-backend.txt
+      - name: Generate frontend SBOM
+        working-directory: frontend
+        run: npm ls --json > sbom-frontend.json 2>/dev/null || true
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            backend/sbom-backend.txt
+            frontend/sbom-frontend.json
+          retention-days: 90
+
+  # ============================================================================
+  # Docker Build Validation - Issue #101
+  #
+  # Both backend and frontend Dockerfiles are now built on every PR (and on
+  # pushes to develop/main). Catches broken Dockerfiles before deploy.
+  # Uses `docker buildx build --load` so the image is usable locally if we
+  # ever want to smoke-test it in a later job; no registry push.
   # ============================================================================
 
   docker-build:
@@ -247,14 +470,30 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
     strategy:
+      fail-fast: false
       matrix:
-        service: [backend]
+        service: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build image
-        working-directory: ${{ matrix.service }}
-        run: docker build --target production -f Dockerfile .
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Dockerfile
+          target: production
+          load: true
+          push: false
+          tags: juddges-${{ matrix.service }}:ci-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8004
+            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder
 
   # ============================================================================
   # Deploy to Dev/Staging (push to develop)

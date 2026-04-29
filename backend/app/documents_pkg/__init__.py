@@ -412,6 +412,18 @@ async def search_documents(request: SearchChunksRequest):
     limit = request.limit_docs or 20
     offset = request.offset or 0
 
+    try:
+        import sentry_sdk
+
+        sentry_sdk.add_breadcrumb(
+            category="search",
+            message="documents.search called",
+            data={"query_len": len(query), "limit": limit, "mode": request.mode},
+            level="info",
+        )
+    except Exception:
+        pass
+
     logger.info(
         f"Search request: query='{query[:100]}...', limit={limit}, "
         f"languages={request.languages}, document_types={request.document_types}, "
@@ -449,6 +461,7 @@ async def search_documents(request: SearchChunksRequest):
             effective_alpha=effective_alpha,
             limit=limit,
             offset=offset,
+            query_type=query_type,
         )
         supabase = await _get_search_client()
         results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
@@ -508,6 +521,32 @@ async def search_documents(request: SearchChunksRequest):
 
         pagination = _build_search_pagination(offset, limit, len(results))
 
+        try:
+            from app.search_telemetry import record_search
+
+            record_search(
+                query=query,
+                query_type=query_type,
+                language=_detect_search_language(
+                    keyword_query, request.languages, effective_filters["jurisdictions"]
+                ),
+                hits=len(chunks),
+                chunks_preview=[
+                    {"document_id": c.document_id, "score": getattr(c, "score", None)}
+                    for c in chunks[:5]
+                ],
+                timing_breakdown=timing_breakdown.model_dump()
+                if hasattr(timing_breakdown, "model_dump")
+                else dict(timing_breakdown),
+                effective_alpha=effective_alpha,
+                alpha_was_routed=alpha_was_routed,
+                vector_fallback=vector_fallback,
+                fallback_used=fallback_used,
+                thinking_mode=request.mode == "thinking",
+            )
+        except Exception as telem_err:
+            logger.debug(f"Search telemetry skipped: {telem_err}")
+
         return SearchChunksResponse(
             chunks=chunks,
             documents=documents,
@@ -528,6 +567,9 @@ async def search_documents(request: SearchChunksRequest):
         raise
     except Exception as e:
         logger.opt(exception=True).error("Search error: {}", e)
+        from app.sentry import capture_exception
+
+        capture_exception(e, query=query[:200], limit=limit)
         raise HTTPException(status_code=500, detail=f"Search failed: {e!s}")
 
 

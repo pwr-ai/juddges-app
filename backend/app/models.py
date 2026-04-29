@@ -333,8 +333,8 @@ class BaseSchemaExtractionRequest(BaseModel):
         default=None,
         description="Additional extraction instructions",
     )
-    llm_name: Literal["gpt-4o-mini", "gpt-4o", "gpt-4"] = Field(
-        default="gpt-4o-mini",
+    llm_name: Literal["gpt-5-nano", "gpt-5-mini", "gpt-5"] = Field(
+        default="gpt-5-mini",
         description="LLM model to use for extraction",
     )
 

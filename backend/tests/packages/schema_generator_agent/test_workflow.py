@@ -3,14 +3,13 @@
 import pytest
 from juddges_search.models import DocumentType
 from langchain_openai import ChatOpenAI
-
 from schema_generator_agent.agents.schema_generator import SchemaGenerator, load_prompts
 
 
 @pytest.fixture
 def llm():
     """Create LLM instance for testing."""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    return ChatOpenAI(model="gpt-5-mini", temperature=0.3)
 
 
 @pytest.fixture

@@ -252,7 +252,7 @@ chat_chain = (
         RunnableLambda(_route_to_appropriate_prompt).with_config(
             run_name="legal_prompt_router", tags=["prompt-selection", "format-routing"]
         ),
-        model.with_config(run_name="legal_chat_llm_call", tags=["gpt4o", "legal-assistant", "juddges"]),
+        model.with_config(run_name="legal_chat_llm_call", tags=["gpt5", "legal-assistant", "juddges"]),
         JsonOutputParser().with_config(run_name="legal_chat_json_parser", tags=["json-output", "structured-response"]),
     )
     .with_config(

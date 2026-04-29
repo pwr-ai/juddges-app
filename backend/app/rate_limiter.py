@@ -3,9 +3,45 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
+
+
+def _is_trusted_proxy() -> bool:
+    """Return True when TRUSTED_PROXY env var is set to a truthy value."""
+    return os.getenv("TRUSTED_PROXY", "false").strip().lower() in ("1", "true", "yes")
+
+
+def get_client_ip(request: Request) -> str:
+    """Resolve the real client IP for rate-limit keying.
+
+    When ``TRUSTED_PROXY=true`` the leftmost address in ``X-Forwarded-For``
+    (the original client) is used.  The leftmost value is chosen because
+    each proxy *appends* its own view of the client; only the first entry
+    was written by the actual client-facing proxy and cannot be spoofed by
+    downstream hops when the outermost proxy is trusted.
+
+    When ``TRUSTED_PROXY=false`` (the default) the raw socket address is
+    used, which is the safe behaviour for direct-to-internet deployments.
+    """
+    if _is_trusted_proxy():
+        forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
+        if forwarded_for:
+            # Take the *leftmost* (client) address; strip whitespace.
+            client_ip = forwarded_for.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+
+        real_ip = request.headers.get("X-Real-IP", "").strip()
+        if real_ip:
+            return real_ip
+
+    return get_remote_address(request)
 
 
 def build_rate_limit_storage_uri() -> str:
@@ -32,10 +68,12 @@ DEFAULT_RATE_LIMITS = [
 ]
 
 limiter = Limiter(
-    key_func=get_remote_address,
+    key_func=get_client_ip,
     default_limits=DEFAULT_RATE_LIMITS,
     storage_uri=RATE_LIMIT_STORAGE_URI,
     # Fall back to process-local limits if Redis storage is unavailable.
     in_memory_fallback=DEFAULT_RATE_LIMITS,
     in_memory_fallback_enabled=True,
+    # Emit X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers.
+    headers_enabled=True,
 )

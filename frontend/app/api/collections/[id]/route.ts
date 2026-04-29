@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse, NextRequest } from "next/server";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import logger from "@/lib/logger";
 
+const apiLogger = logger.child('collections-api');
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
 
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
     const id = match?.[1];
 
     if (!id) {
-      console.error("Invalid collection ID: ", id);
+      apiLogger.error("Invalid collection ID: ", id);
       return NextResponse.json(
         { error: "Invalid collection ID" },
         { status: 400 }
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error status: ${response.status}`);
+      apiLogger.error(`Backend API returned error status: ${response.status}`);
       if (response.status === 404) {
         return NextResponse.json(
           { error: "Collection not found" },
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
     const collection = await response.json();
     return NextResponse.json(collection);
   } catch (error) {
-    console.error("Error in GET collection: ", error);
+    apiLogger.error("Error in GET collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -85,7 +87,7 @@ export async function PUT(request: NextRequest) {
     const id = match?.[1];
 
     if (!id) {
-      console.error("Missing collection ID in PUT request");
+      apiLogger.error("Missing collection ID in PUT request");
       return NextResponse.json(
         { error: "Collection ID is required" },
         { status: 400 }
@@ -108,7 +110,7 @@ export async function PUT(request: NextRequest) {
     const { name } = body;
 
     if (!name) {
-      console.error("Missing name in PUT request for collection: ", id);
+      apiLogger.error("Missing name in PUT request for collection: ", id);
       return NextResponse.json(
         { error: "Name is required" },
         { status: 400 }
@@ -129,7 +131,7 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error status: ${response.status}`);
+      apiLogger.error(`Backend API returned error status: ${response.status}`);
       if (response.status === 404) {
         return NextResponse.json(
           { error: "Collection not found" },
@@ -145,7 +147,7 @@ export async function PUT(request: NextRequest) {
     const collection = await response.json();
     return NextResponse.json(collection);
   } catch (error) {
-    console.error("Error in PUT collection: ", error);
+    apiLogger.error("Error in PUT collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }
@@ -160,7 +162,7 @@ export async function DELETE(request: NextRequest) {
     const id = match?.[1];
 
     if (!id) {
-      console.error("Missing collection ID in DELETE request");
+      apiLogger.error("Missing collection ID in DELETE request");
       return NextResponse.json(
         { error: "Collection ID is required" },
         { status: 400 }
@@ -189,7 +191,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error(`Backend API returned error status: ${response.status}`);
+      apiLogger.error(`Backend API returned error status: ${response.status}`);
       if (response.status === 404) {
         return NextResponse.json(
           { error: "Collection not found" },
@@ -207,7 +209,7 @@ export async function DELETE(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error in DELETE collection: ", error);
+    apiLogger.error("Error in DELETE collection: ", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 }

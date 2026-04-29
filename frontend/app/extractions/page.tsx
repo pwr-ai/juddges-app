@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import { DocumentExtractionResult } from "@/types/search";
 import { DeleteConfirmationDialog } from "@/lib/styles/components/delete-confirmation-dialog";
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -211,7 +212,7 @@ function ExtractionsContent() {
  const data = await response.json();
  setJobs(data.jobs || []);
  } catch (error) {
- console.error("Error fetching extraction jobs: ", error);
+ logger.error("Error fetching extraction jobs: ", error);
  toast.error("Failed to load extraction jobs");
  } finally {
  setLoading(false);
@@ -303,7 +304,7 @@ function ExtractionsContent() {
  }
  }
  } catch (error) {
- console.warn('Could not fetch job details for document_ids:', error);
+ logger.warn('Could not fetch job details for document_ids:', error);
  }
  }
 
@@ -342,7 +343,7 @@ function ExtractionsContent() {
  router.push(`/extractions?jobId=${result.job_id}`);
  }
  } catch (error) {
- console.error('Error retrying extraction:', error);
+ logger.error('Error retrying extraction:', error);
  toast.error(error instanceof Error ? error.message : 'Failed to retry extraction');
  } finally {
  setRetryingJobs(prev => {
@@ -379,7 +380,7 @@ function ExtractionsContent() {
  setDeleteDialogOpen(false);
  setDeletingJobId(null);
  } catch (error) {
- console.error('Error deleting extraction job:', error);
+ logger.error('Error deleting extraction job:', error);
  toast.error(error instanceof Error ? error.message : 'Failed to delete extraction job');
  } finally {
  setIsDeleting(false);

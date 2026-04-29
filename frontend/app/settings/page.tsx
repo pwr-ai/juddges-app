@@ -15,6 +15,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
  User,
  Bell,
@@ -32,8 +36,17 @@ import {
  Zap,
  Globe,
  Cpu,
+ Mail,
+ MessageSquare,
+ Webhook,
+ Trash2,
+ Plus,
+ Pencil,
+ X,
 } from "lucide-react";
 import { Header } from "@/lib/styles/components";
+import { useEmailAlertStore } from "@/lib/store/emailAlertStore";
+import type { EmailAlertSubscription, CreateEmailAlertInput, UpdateEmailAlertInput } from "@/types/email-alert";
 
 interface EmbeddingModel {
  id: string;
@@ -241,6 +254,361 @@ function EmbeddingModelsSection() {
  );
 }
 
+/** Channel display config for badges and icons */
+const CHANNEL_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  email: {
+    label: "Email",
+    icon: <Mail className="h-3 w-3" />,
+    color: "bg-blue-100 text-blue-800",
+  },
+  in_app: {
+    label: "In-App",
+    icon: <Bell className="h-3 w-3" />,
+    color: "bg-green-100 text-green-800",
+  },
+  webhook: {
+    label: "Webhook",
+    icon: <Webhook className="h-3 w-3" />,
+    color: "bg-purple-100 text-purple-800",
+  },
+};
+
+interface SubscriptionFormData {
+  name: string;
+  query: string;
+  frequency: "daily" | "weekly";
+  channels: string[];
+  webhook_url: string;
+}
+
+const EMPTY_FORM: SubscriptionFormData = {
+  name: "",
+  query: "",
+  frequency: "daily",
+  channels: ["email"],
+  webhook_url: "",
+};
+
+function DigestSubscriptionsSection() {
+  const {
+    alerts,
+    isLoading,
+    error,
+    fetchAlerts,
+    createAlert,
+    updateAlert,
+    deleteAlert,
+    toggleAlert,
+  } = useEmailAlertStore();
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<SubscriptionFormData>(EMPTY_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
+
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (alert: EmailAlertSubscription) => {
+    setForm({
+      name: alert.name,
+      query: alert.query,
+      frequency: alert.frequency,
+      channels: [...alert.channels],
+      webhook_url: alert.webhook_url || "",
+    });
+    setEditingId(alert.id);
+    setShowForm(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.query.trim()) return;
+
+    setSubmitting(true);
+
+    if (editingId) {
+      const input: UpdateEmailAlertInput = {
+        name: form.name.trim(),
+        query: form.query.trim(),
+        frequency: form.frequency,
+        channels: form.channels,
+        webhook_url: form.channels.includes("webhook") ? form.webhook_url.trim() : undefined,
+      };
+      await updateAlert(editingId, input);
+    } else {
+      const input: CreateEmailAlertInput = {
+        name: form.name.trim(),
+        query: form.query.trim(),
+        frequency: form.frequency,
+        channels: form.channels,
+        webhook_url: form.channels.includes("webhook") ? form.webhook_url.trim() : undefined,
+      };
+      await createAlert(input);
+    }
+
+    setSubmitting(false);
+    resetForm();
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    await deleteAlert(id);
+    setDeletingId(null);
+  };
+
+  const handleChannelToggle = (channel: string, checked: boolean) => {
+    setForm((prev) => ({
+      ...prev,
+      channels: checked
+        ? [...prev.channels, channel]
+        : prev.channels.filter((c) => c !== channel),
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">Loading subscriptions...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Subscription list */}
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          className={`p-4 rounded-lg border transition-colors ${
+            alert.is_active
+              ? "border-border"
+              : "border-border bg-muted/30 opacity-75"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium">{alert.name}</span>
+                <Badge variant="outline" className="text-xs">
+                  {alert.frequency === "daily" ? "Daily" : "Weekly"}
+                </Badge>
+                {alert.channels.map((channel) => {
+                  const config = CHANNEL_CONFIG[channel];
+                  if (!config) return null;
+                  return (
+                    <span
+                      key={channel}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.color}`}
+                    >
+                      {config.icon}
+                      {config.label}
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                <MessageSquare className="h-3 w-3 inline mr-1" />
+                {alert.query}
+              </p>
+              {alert.last_sent_at && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Last sent: {new Date(alert.last_sent_at).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Switch
+                checked={alert.is_active}
+                onCheckedChange={(checked) => toggleAlert(alert.id, checked)}
+                aria-label={`Toggle ${alert.name}`}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleEdit(alert)}
+                className="h-8 w-8 p-0"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="sr-only">Edit</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDelete(alert.id)}
+                disabled={deletingId === alert.id}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+              >
+                {deletingId === alert.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                <span className="sr-only">Delete</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Empty state */}
+      {alerts.length === 0 && !showForm && (
+        <div className="text-center py-8 text-sm text-muted-foreground">
+          <Bell className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          <p>No digest subscriptions yet.</p>
+          <p className="mt-1">Create one to receive notifications about new matching judgments.</p>
+        </div>
+      )}
+
+      {/* Inline form for creating / editing */}
+      {showForm && (
+        <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-sm">
+              {editingId ? "Edit Subscription" : "New Subscription"}
+            </p>
+            <Button variant="ghost" size="sm" onClick={resetForm} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cancel</span>
+            </Button>
+          </div>
+
+          <div className="grid gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="alert-name">Name</Label>
+              <Input
+                id="alert-name"
+                placeholder="e.g. Tax law updates"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="alert-query">Search Query</Label>
+              <Input
+                id="alert-query"
+                placeholder="e.g. VAT deductions in construction"
+                value={form.query}
+                onChange={(e) => setForm((prev) => ({ ...prev, query: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Frequency</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="frequency"
+                    value="daily"
+                    checked={form.frequency === "daily"}
+                    onChange={() => setForm((prev) => ({ ...prev, frequency: "daily" }))}
+                    className="accent-primary"
+                  />
+                  Daily
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="frequency"
+                    value="weekly"
+                    checked={form.frequency === "weekly"}
+                    onChange={() => setForm((prev) => ({ ...prev, frequency: "weekly" }))}
+                    className="accent-primary"
+                  />
+                  Weekly
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Channels</Label>
+              <div className="flex gap-4">
+                {Object.entries(CHANNEL_CONFIG).map(([key, config]) => (
+                  <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={form.channels.includes(key)}
+                      onCheckedChange={(checked) =>
+                        handleChannelToggle(key, checked === true)
+                      }
+                    />
+                    <span className="flex items-center gap-1">
+                      {config.icon}
+                      {config.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {form.channels.includes("webhook") && (
+              <div className="space-y-1.5">
+                <Label htmlFor="alert-webhook">Webhook URL</Label>
+                <Input
+                  id="alert-webhook"
+                  placeholder="https://hooks.slack.com/services/..."
+                  value={form.webhook_url}
+                  onChange={(e) => setForm((prev) => ({ ...prev, webhook_url: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Slack or Discord webhook endpoint
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={submitting || !form.name.trim() || !form.query.trim() || form.channels.length === 0}
+            >
+              {submitting && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+              {editingId ? "Save Changes" : "Create Subscription"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={resetForm}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Add button */}
+      {!showForm && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setForm(EMPTY_FORM);
+            setEditingId(null);
+            setShowForm(true);
+          }}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Add Subscription
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
  const { user } = useAuth();
 
@@ -307,36 +675,15 @@ export default function SettingsPage() {
  <CardHeader>
  <CardTitle className="flex items-center gap-2">
  <Bell className="h-5 w-5"/>
- Notifications
+ Digest Subscriptions
  </CardTitle>
  <CardDescription>
- Configure how you receive updates
+ Subscribe to periodic digests of new court judgments matching your search queries.
+ Receive updates via email, in-app notifications, or webhook integrations.
  </CardDescription>
  </CardHeader>
- <CardContent className="space-y-4">
- <div className="flex items-center justify-between">
- <div>
- <p className="font-medium">Email notifications</p>
- <p className="text-sm text-muted-foreground">
- Receive updates about your extraction jobs
- </p>
- </div>
- <Button variant="outline"size="sm">
- Configure
- </Button>
- </div>
- <Separator />
- <div className="flex items-center justify-between">
- <div>
- <p className="font-medium">Research updates</p>
- <p className="text-sm text-muted-foreground">
- Get notified about new features and documents
- </p>
- </div>
- <Button variant="outline"size="sm">
- Configure
- </Button>
- </div>
+ <CardContent>
+ <DigestSubscriptionsSection />
  </CardContent>
  </Card>
 
@@ -518,7 +865,7 @@ export default function SettingsPage() {
  </CardHeader>
  <CardContent>
  <p className="text-sm text-amber-800">
- This platform is a research project by Wrocław University of Science and Technology.
+ This platform is a research project by Wroclaw University of Science and Technology.
  Some administrative features may require special permissions.
  </p>
  </CardContent>

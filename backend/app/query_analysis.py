@@ -75,26 +75,50 @@ QUERY_ANALYSIS_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """You are a legal search query planner.
+            """You are a search query planner for a Polish and UK case-law
+search engine. Users are lawyers, judges, and legal researchers.
 
 Given a user query, produce:
-1) semantic_query: richer conceptual form for embedding/vector retrieval.
-2) keyword_query: concise lexical form for PostgreSQL full-text search.
-3) optional explicit filters only when strongly supported by the query text.
+1) semantic_query: richer conceptual form for BGE-M3 vector retrieval.
+   - Expand with nearby legal concepts the user likely meant.
+   - Preserve original language (do not translate PL↔EN).
+2) keyword_query: concise lexical form for PostgreSQL websearch_to_tsquery.
+   - MUST preserve every explicit article / code reference VERBATIM
+     (e.g. "art. 415 k.c.", "art. 233 § 1 k.p.c.", "Section 2").
+     These are load-bearing tokens the user expects to match literally.
+   - Drop filler ("czy", "jak", "jakie", "please", "how").
+3) optional explicit filters only when strongly supported by the query.
 
 Filter extraction rules:
 - Only extract filters if explicit or highly implied.
 - Never guess jurisdiction/court/date when absent.
 - jurisdictions: only use values "PL" or "UK".
 - date_from/date_to must be valid ISO date strings YYYY-MM-DD.
-- Keep lists short and precise.
 - If unknown, use null.
 
 Query rewrite rules:
 - Preserve user intent.
-- Keep both rewritten queries concise.
-- Add legal synonyms/terms only when they improve recall.
-- Avoid hallucinated statutes, case IDs, or court names.
+- Keep both rewritten queries concise (<= ~20 tokens).
+- Add legal synonyms only when they improve recall — no hallucinations.
+- Do NOT invent case signatures, statutes, or court names.
+
+Examples (Polish):
+
+user: "zasiedzenie nieruchomości"
+→ semantic: "zasiedzenie nieruchomości posiadanie samoistne upływ terminu"
+  keyword: "zasiedzenie nieruchomości"
+
+user: "Jakie są przesłanki uznania czynu za wypadek przy pracy?"
+→ semantic: "wypadek przy pracy przesłanki uznania zdarzenie związek z pracą"
+  keyword: "wypadek przy pracy przesłanki"
+
+user: "odpowiedzialność na podstawie art. 415 k.c. w zw. z art. 361 k.c."
+→ semantic: "odpowiedzialność deliktowa czyn niedozwolony związek przyczynowy"
+  keyword: "odpowiedzialność art. 415 k.c. art. 361 k.c."
+
+user: "II CSK 604/17"
+→ semantic: "II CSK 604/17"
+  keyword: "II CSK 604/17"
 
 Return JSON following the schema exactly.""",
         ),
@@ -108,10 +132,17 @@ def create_query_analysis_chain(
 ):
     """Create query analysis chain with structured output."""
     if llm is None:
+        # GPT-5 is a reasoning model by default; without reasoning_effort
+        # it consumes the entire completion budget on hidden reasoning tokens,
+        # leaving nothing for the structured output (observed 500/500 reasoning
+        # with a "length limit reached" parse error). For query planning we
+        # don't need deep thinking — "minimal" keeps it close to the old
+        # gpt-4o-mini latency (~2-3s vs 5-6s).
+        # max_completion_tokens > reasoning + JSON output size; 2000 is safe.
         llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.1,
-            max_tokens=500,
+            model="gpt-5-mini",
+            max_completion_tokens=2000,
+            reasoning_effort="minimal",
         )
 
     model = llm.with_structured_output(QueryAnalysisResult)
@@ -234,6 +265,31 @@ _STATUTE_RE = re.compile(
 _EXACT_PHRASE_RE = re.compile(r'^\s*"[^"]+"\s*$')
 
 
+# A case number must take up at least this fraction of the stripped query
+# to trigger case_number routing. Prevents long paragraphs that happen to
+# cite "II CSK 604/17" from being routed as a signature lookup.
+_CASE_NUMBER_MIN_COVERAGE = 0.30
+_CASE_NUMBER_MAX_QUERY_LEN = 80
+
+
+def _is_case_number_dominant(query: str) -> bool:
+    """Case-number routing should fire only when the signature *is* the query,
+    not merely mentioned inside a longer legal text.
+
+    Two conditions must both hold:
+    - query length ≤ 80 chars (signatures alone are short)
+    - matched case-number substring covers ≥ 30% of the stripped query
+    """
+    stripped_len = len(query.strip())
+    if stripped_len == 0 or stripped_len > _CASE_NUMBER_MAX_QUERY_LEN:
+        return False
+    for rx in (_POLISH_CASE_RE, _UK_CASE_RE):
+        m = rx.search(query)
+        if m and len(m.group(0)) / stripped_len >= _CASE_NUMBER_MIN_COVERAGE:
+            return True
+    return False
+
+
 def classify_and_route_query(query: str) -> tuple[str, float]:
     """Classify query type and return (query_type, recommended_alpha).
 
@@ -248,10 +304,9 @@ def classify_and_route_query(query: str) -> tuple[str, float]:
     if _EXACT_PHRASE_RE.match(query):
         return "exact_phrase", 0.15
 
-    # Case number detection takes priority over statute references because a
-    # case number string may also contain department codes that look like statute
-    # abbreviations (e.g. "KK" in "III KK 45/21").
-    if _POLISH_CASE_RE.search(query) or _UK_CASE_RE.search(query):
+    # Only route as case_number when the signature is the dominant part of the
+    # query. Using .search() naively fires on any paragraph that cites case law.
+    if _is_case_number_dominant(query):
         return "case_number", 0.1
 
     if _STATUTE_RE.search(query):

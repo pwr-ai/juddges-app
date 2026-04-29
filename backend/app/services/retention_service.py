@@ -138,7 +138,15 @@ class RetentionService:
             # Export user consent
             consent_result = (
                 client.table("user_consent")
-                .select("*")
+                .select(
+                    "user_id, professional_acknowledgment_accepted, "
+                    "professional_acknowledgment_date, professional_acknowledgment_version, "
+                    "terms_accepted, terms_accepted_date, terms_accepted_version, "
+                    "privacy_policy_accepted, privacy_policy_accepted_date, "
+                    "privacy_policy_accepted_version, data_processing_consent, "
+                    "data_processing_consent_date, marketing_consent, "
+                    "marketing_consent_date, created_at, updated_at"
+                )
                 .eq("user_id", user_id)
                 .execute()
             )
@@ -159,14 +167,17 @@ class RetentionService:
 
             # Export analytics events
             events_result = (
-                client.table("events").select("*").eq("user_id", user_id).execute()
+                client.table("events")
+                .select("id, user_id, session_id, event_name, event_data, created_at")
+                .eq("user_id", user_id)
+                .execute()
             )
             export_data["events"] = events_result.data
 
             # Export search queries
             search_result = (
                 client.table("search_queries")
-                .select("*")
+                .select("id, user_id, session_id, query, created_at")
                 .eq("user_id", user_id)
                 .execute()
             )
@@ -175,7 +186,10 @@ class RetentionService:
             # Export feedback
             feedback_result = (
                 client.table("search_feedback")
-                .select("*")
+                .select(
+                    "id, user_id, document_id, search_query, rating, "
+                    "reason, result_position, created_at"
+                )
                 .eq("user_id", user_id)
                 .execute()
             )
@@ -183,7 +197,10 @@ class RetentionService:
 
             feature_feedback_result = (
                 client.table("feature_requests")
-                .select("*")
+                .select(
+                    "id, user_id, feedback_type, feature_name, title, "
+                    "description, priority, status, upvotes, created_at"
+                )
                 .eq("user_id", user_id)
                 .execute()
             )
@@ -305,7 +322,7 @@ class RetentionService:
             # Get the deletion request
             request_result = (
                 client.table("data_deletion_requests")
-                .select("*")
+                .select("id, user_id, request_type, data_types, status")
                 .eq("id", request_id)
                 .execute()
             )

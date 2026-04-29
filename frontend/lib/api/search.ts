@@ -1,5 +1,6 @@
 import { DocumentType, SearchDocumentsDirectResponse, SearchChunk, SearchDocument } from "@/types/search";
 import { apiLogger } from './client';
+import { logger } from "@/lib/logger";
 
 export interface SearchDocumentsDirectInput {
   query: string;
@@ -87,7 +88,7 @@ export async function searchDocuments(
   if (!response.ok) {
     // Log the actual error for developers but show a user-friendly message
     const errorData = await response.json().catch(() => ({ error: 'Failed to fetch search results' }));
-    console.error('Search API error:', response.status, errorData);
+    logger.error('Search API error:', response.status, errorData);
     throw new Error('Search request failed. Please try again.');
   }
 

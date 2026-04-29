@@ -4,8 +4,9 @@ Embedding provider abstraction for legal document search.
 Supports switching between different embedding providers:
 - OpenAI (text-embedding-3-small, text-embedding-3-large)
 - Cohere (embed-english-v3.0, embed-multilingual-v3.0)
-- HuggingFace (BAAI/bge-m3 - multilingual dense/sparse/multi-vector)
+- HuggingFace (BAAI/bge-m3 - multilingual dense/sparse/multi-vector, requires FlagEmbedding)
 - Local SentenceTransformer models (e.g., sdadas/mmlw-roberta-large)
+- TEI (remote HuggingFace Text Embeddings Inference server, HTTP)
 """
 
 import os
@@ -23,6 +24,7 @@ class EmbeddingProviderType(str, Enum):
     COHERE = "cohere"
     HUGGINGFACE = "huggingface"
     LOCAL = "local"
+    TEI = "tei"
 
 
 class EmbeddingModelConfig(BaseModel):
@@ -44,13 +46,21 @@ class EmbeddingModelConfig(BaseModel):
 
 # Pre-defined model configurations
 AVAILABLE_MODELS: dict[str, EmbeddingModelConfig] = {
+    "tei/bge-m3": EmbeddingModelConfig(
+        provider=EmbeddingProviderType.TEI,
+        model_name="BAAI/bge-m3",
+        dimensions=1024,
+        max_input_length=8192,
+        description="BGE-M3 via remote Text Embeddings Inference server - same model as ingest, no local deps",
+        is_default=True,
+    ),
     "huggingface/bge-m3": EmbeddingModelConfig(
         provider=EmbeddingProviderType.HUGGINGFACE,
         model_name="BAAI/bge-m3",
         dimensions=1024,
         max_input_length=8192,
-        description="BGE-M3 multilingual model (1024d) - native Polish + English, self-hosted, dense/sparse/multi-vector",
-        is_default=True,
+        description="BGE-M3 multilingual model (1024d) - requires FlagEmbedding installed locally (~2GB RAM)",
+        is_default=False,
     ),
     "openai/text-embedding-3-small": EmbeddingModelConfig(
         provider=EmbeddingProviderType.OPENAI,
@@ -107,20 +117,66 @@ class BaseEmbeddingProvider(ABC):
         ...
 
     def _truncate_text(self, text: str) -> str:
-        """Truncate text to max input length."""
+        """Truncate text to max input length (character-based default).
+
+        Subclasses override for token-aware truncation when the backing API
+        enforces a token budget rather than a character budget (OpenAI).
+        Logs a warning when truncation fires so it's not silent.
+        """
         if len(text) > self.config.max_input_length:
+            logger.warning(
+                f"{self.__class__.__name__}: truncating input "
+                f"{len(text)} → {self.config.max_input_length} chars "
+                f"(model={self.config.model_name})"
+            )
             return text[: self.config.max_input_length]
         return text
 
 
 class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
-    """OpenAI embedding provider."""
+    """OpenAI embedding provider.
+
+    OpenAI embedding endpoints enforce a TOKEN limit (8192 tokens for
+    text-embedding-3-*), not a character limit. Polish text averages
+    ~2-3 chars/token, so a naive character-based truncation can still
+    blow the token budget. Override _truncate_text to count tokens with
+    tiktoken and cut there.
+    """
+
+    # OpenAI 3-* models: 8192 token context window. Leave a small headroom
+    # to stay safe across tokenizer versions.
+    _TOKEN_BUDGET = 8000
 
     def __init__(self, config: EmbeddingModelConfig):
         super().__init__(config)
         from openai import AsyncOpenAI
 
         self._client = AsyncOpenAI()
+        self._encoding = None
+
+    def _get_encoding(self):
+        import tiktoken
+
+        if self._encoding is None:
+            try:
+                self._encoding = tiktoken.encoding_for_model(self.config.model_name)
+            except KeyError:
+                # Newer model not yet in tiktoken registry — fall back to cl100k.
+                self._encoding = tiktoken.get_encoding("cl100k_base")
+        return self._encoding
+
+    def _truncate_text(self, text: str) -> str:
+        enc = self._get_encoding()
+        tokens = enc.encode(text)
+        if len(tokens) <= self._TOKEN_BUDGET:
+            return text
+        truncated = enc.decode(tokens[: self._TOKEN_BUDGET])
+        logger.warning(
+            f"OpenAI: token-truncating input {len(tokens)} → {self._TOKEN_BUDGET} "
+            f"tokens ({len(text)} → {len(truncated)} chars, "
+            f"model={self.config.model_name})"
+        )
+        return truncated
 
     async def embed_text(self, text: str) -> list[float]:
         text = self._truncate_text(text)
@@ -267,12 +323,83 @@ class HuggingFaceEmbeddingProvider(BaseEmbeddingProvider):
         return await loop.run_in_executor(None, _encode)
 
 
+class TEIEmbeddingProvider(BaseEmbeddingProvider):
+    """HTTP client for a remote Text Embeddings Inference (TEI) server.
+
+    TEI (https://github.com/huggingface/text-embeddings-inference) hosts models
+    like BAAI/bge-m3 behind a simple HTTP API. Keeps the backend container
+    lightweight (no local model, no FlagEmbedding) and lets several services
+    share one warm GPU-backed embedder.
+
+    URL comes from TEI_EMBEDDING_URL (primary) or TRANSFORMERS_INFERENCE_URL
+    (legacy fallback). TLS verification is controlled by TEI_VERIFY_SSL
+    (default true; set to false for internal CAs / self-signed dev hosts).
+    """
+
+    def __init__(self, config: EmbeddingModelConfig):
+        super().__init__(config)
+        self._base_url = (
+            os.getenv("TEI_EMBEDDING_URL")
+            or os.getenv("TRANSFORMERS_INFERENCE_URL")
+            or ""
+        ).rstrip("/")
+        if not self._base_url:
+            raise ValueError(
+                "TEI_EMBEDDING_URL (or legacy TRANSFORMERS_INFERENCE_URL) "
+                "must be set to use the TEI embedding provider"
+            )
+        self._timeout = float(os.getenv("TEI_TIMEOUT_SECONDS", "10"))
+        self._verify_ssl = os.getenv("TEI_VERIFY_SSL", "true").lower() not in (
+            "false",
+            "0",
+            "no",
+        )
+        self._client = None
+        logger.info(
+            f"TEI provider configured: {self._base_url} "
+            f"(dim={config.dimensions}, verify_ssl={self._verify_ssl})"
+        )
+
+    def _get_client(self):
+        import httpx
+
+        if self._client is None:
+            self._client = httpx.AsyncClient(
+                base_url=self._base_url,
+                timeout=self._timeout,
+                verify=self._verify_ssl,
+            )
+        return self._client
+
+    async def embed_text(self, text: str) -> list[float]:
+        result = await self.embed_texts([text])
+        return result[0]
+
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        texts = [self._truncate_text(t) for t in texts]
+        payload = {"inputs": texts if len(texts) > 1 else texts[0]}
+        client = self._get_client()
+        response = await client.post("/embed", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        # TEI returns [[...]] for both single and batch; normalize defensively.
+        if data and isinstance(data[0], float):
+            data = [data]
+        for row in data:
+            if len(row) != self.config.dimensions:
+                raise ValueError(
+                    f"TEI returned dim={len(row)}, expected {self.config.dimensions}"
+                )
+        return data
+
+
 # Provider factory
 _PROVIDER_CLASSES = {
     EmbeddingProviderType.OPENAI: OpenAIEmbeddingProvider,
     EmbeddingProviderType.COHERE: CohereEmbeddingProvider,
     EmbeddingProviderType.HUGGINGFACE: HuggingFaceEmbeddingProvider,
     EmbeddingProviderType.LOCAL: LocalEmbeddingProvider,
+    EmbeddingProviderType.TEI: TEIEmbeddingProvider,
 }
 
 # Singleton provider cache

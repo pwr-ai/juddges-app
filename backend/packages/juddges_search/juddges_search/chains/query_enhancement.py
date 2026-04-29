@@ -40,16 +40,21 @@ def create_query_enhancement_chain(llm: ChatOpenAI | None = None):
     """Create the query enhancement chain.
 
     Args:
-        llm: Optional LLM instance. If None, uses default gpt-4o-mini.
+        llm: Optional LLM instance. If None, uses default gpt-5-mini.
 
     Returns:
         Runnable chain that enhances queries.
     """
     if llm is None:
+        # GPT-5 is a reasoning model; without reasoning_effort=minimal it burns
+        # the completion budget on hidden reasoning tokens. Query enhancement
+        # is a short rewrite — "minimal" is correct. Give it 1500 completion
+        # tokens (reasoning overhead + short rewrite) — temperature is ignored
+        # by reasoning models so we drop it.
         llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.3,  # Low temperature for consistency
-            max_tokens=200,
+            model="gpt-5-mini",
+            max_completion_tokens=1500,
+            reasoning_effort="minimal",
         )
 
     chain = QUERY_ENHANCEMENT_PROMPT | llm | StrOutputParser()

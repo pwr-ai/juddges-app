@@ -3,6 +3,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { logger } from "@/lib/logger";
 
 interface ErrorBoundaryProps {
  children: React.ReactNode;
@@ -52,7 +53,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
  // Log error details to console
- console.error('Error caught by ErrorBoundary:', error, errorInfo);
+ logger.error('Error caught by ErrorBoundary:', error, errorInfo);
 
  // Call custom error handler if provided
  if (this.props.onError) {

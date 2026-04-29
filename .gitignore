@@ -162,3 +162,20 @@ celerybeat-schedule
 
 # Test data
 test_queries.jsonl
+
+# Runtime-generated schema metadata/backups
+backend/packages/juddges_search/config/schema/*.meta.json
+backend/packages/juddges_search/config/schema/*.backup_*
+
+# Paper workspace artifacts
+papers/**/.git/
+papers/**/*.aux
+papers/**/*.bbl
+papers/**/*.blg
+papers/**/*.fdb_latexmk
+papers/**/*.fls
+papers/**/*.log
+papers/**/*.out
+papers/**/*.synctex.gz
+papers/**/*.toc
+papers/**/main.pdf

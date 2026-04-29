@@ -8,6 +8,7 @@ import type {
   FacetCount,
   ExtractedDataFilters,
 } from "@/components/filters/ExtractedDataFilters";
+import { logger } from "@/lib/logger";
 
 interface UseExtractedDataFiltersOptions {
   syncToUrl?: boolean;
@@ -240,7 +241,7 @@ export function useFacetCounts(
             `/api/extractions/base-schema/facets/${encodeURIComponent(field)}`
           );
           if (!response.ok) {
-            console.warn(`Failed to fetch facet counts for ${field}`);
+            logger.warn(`Failed to fetch facet counts for ${field}`);
             return { field, counts: [] };
           }
           const data = await response.json();

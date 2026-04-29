@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 interface SchemaField {
   description?: string;
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 
     if (!backendResponse.ok) {
       const errorText = await backendResponse.text();
-      console.error("Backend error: ", errorText);
+      logger.error("Backend error: ", errorText);
       throw new Error(`Failed to generate schema: ${backendResponse.status}`);
     }
 
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Schema chat error: ", error);
+    logger.error("Schema chat error: ", error);
     return NextResponse.json(
       { error: "Failed to process schema generation request" },
       { status: 500 }

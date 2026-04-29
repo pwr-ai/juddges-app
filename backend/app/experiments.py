@@ -394,7 +394,7 @@ async def get_experiment_results(
         # Get experiment info
         exp_result = (
             client.table("experiments")
-            .select("*")
+            .select("id, name, status")
             .eq("id", experiment_id)
             .single()
             .execute()
@@ -408,7 +408,7 @@ async def get_experiment_results(
         # Get variants
         var_result = (
             client.table("experiment_variants")
-            .select("*")
+            .select("id, experiment_id, name, is_control, weight, config")
             .eq("experiment_id", experiment_id)
             .execute()
         )

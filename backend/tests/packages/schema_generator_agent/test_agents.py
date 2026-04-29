@@ -17,7 +17,7 @@ from schema_generator_agent.agents.schema_generator import load_prompts
 @pytest.fixture
 def llm():
     """Create LLM instance for testing."""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    return ChatOpenAI(model="gpt-5-mini", temperature=0.3)
 
 
 @pytest.fixture

@@ -9,3 +9,5 @@ export * from './marketplace';
 export * from './research';
 export * from './judge-fingerprint';
 export * from './reasoning-lines';
+export * from './collections';
+export * from './publications';

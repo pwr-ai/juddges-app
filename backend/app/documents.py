@@ -62,19 +62,13 @@ _cache_lock = asyncio.Lock()
 async def generate_embedding(text: str) -> list[float]:
     """Generate embedding for text using the active embedding provider.
 
-    Uses the configured embedding provider (OpenAI, Cohere, or local model)
-    based on the EMBEDDING_MODEL_ID environment variable.
-
-    Args:
-        text: Text to embed
-
-    Returns:
-        Embedding vector (dimensions depend on the active model)
+    Thin re-export of app.documents_pkg.utils.generate_embedding so that
+    there is a SINGLE implementation (including the Redis cache layer).
+    Kept here for backwards-compatible imports from app.documents.
     """
-    from app.embedding_providers import get_embedding_provider
+    from app.documents_pkg.utils import generate_embedding as _impl
 
-    provider = get_embedding_provider()
-    return await provider.embed_text(text)
+    return await _impl(text)
 
 
 # Common Polish characters and words for language detection
@@ -1085,7 +1079,16 @@ async def _prepare_search_queries(
         query_analysis_source = "heuristic"
         query_analysis_error = "fast_path_text_only"
     else:
-        timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "1200"))
+        # Adaptive timeout: longer queries need more tokens to analyze. Scale
+        # the base timeout up for 500+ char queries so we don't fall back to
+        # heuristics prematurely on pasted paragraphs.
+        # GPT-5 with reasoning_effort=minimal lands around 2.0-2.5s median;
+        # base 3000ms gives headroom for p95 without regressing UX noticeably.
+        base_timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "3000"))
+        if len(query) >= 500 and base_timeout_ms > 0:
+            timeout_ms = int(base_timeout_ms * 1.67)  # 3000 → 5000
+        else:
+            timeout_ms = base_timeout_ms
         try:
             if timeout_ms > 0:
                 (

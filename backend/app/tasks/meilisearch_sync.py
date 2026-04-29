@@ -24,6 +24,17 @@ def _get_service() -> MeiliSearchService:
     return MeiliSearchService.from_env()
 
 
+# Column projection for judgments — embedding vector (~6KB per row) is excluded
+# because Meilisearch does not use it and transform_judgment_for_meilisearch
+# explicitly drops it anyway. Fetching it wastes bandwidth on every sync.
+_JUDGMENT_SYNC_COLS = (
+    "id, case_number, jurisdiction, court_name, court_level, decision_date, "
+    "publication_date, title, summary, full_text, judges, case_type, "
+    "decision_type, outcome, keywords, legal_topics, cited_legislation, "
+    "source_url, created_at, updated_at"
+)
+
+
 # ── Incremental sync ─────────────────────────────────────────────────────────
 
 
@@ -62,7 +73,10 @@ def sync_judgment_to_meilisearch(
         return {"status": "skipped", "reason": "no_supabase"}
 
     resp = (
-        supabase_client.table("judgments").select("*").eq("id", judgment_id).execute()
+        supabase_client.table("judgments")
+        .select(_JUDGMENT_SYNC_COLS)
+        .eq("id", judgment_id)
+        .execute()
     )
     if not resp.data:
         logger.warning(f"Judgment {judgment_id} not found in Supabase")
@@ -109,7 +123,7 @@ def full_sync_judgments_to_meilisearch(
         while True:
             resp = (
                 supabase_client.table("judgments")
-                .select("*")
+                .select(_JUDGMENT_SYNC_COLS)
                 .order("created_at")
                 .range(offset, offset + batch_size - 1)
                 .execute()

@@ -66,6 +66,16 @@ class TestAvailableModels:
         assert AVAILABLE_MODELS[key].provider == EmbeddingProviderType.HUGGINGFACE
         assert AVAILABLE_MODELS[key].dimensions == 1024
         assert AVAILABLE_MODELS[key].max_input_length == 8192
+        # BGE-M3 via local FlagEmbedding is kept as an option but no longer the
+        # default — the TEI-hosted variant (tei/bge-m3) is preferred.
+        assert AVAILABLE_MODELS[key].is_default is False
+
+    def test_tei_bge_m3_is_default(self):
+        key = "tei/bge-m3"
+        assert key in AVAILABLE_MODELS
+        assert AVAILABLE_MODELS[key].provider == EmbeddingProviderType.TEI
+        assert AVAILABLE_MODELS[key].dimensions == 1024
+        assert AVAILABLE_MODELS[key].max_input_length == 8192
         assert AVAILABLE_MODELS[key].is_default is True
 
 
@@ -104,7 +114,7 @@ class TestGetDefaultModelId:
             {"EMBEDDING_MODEL_ID": "", "EMBEDDING_DIMENSION": ""},
         ):
             model_id = get_default_model_id()
-            assert model_id == "huggingface/bge-m3"
+            assert model_id == "tei/bge-m3"
             assert AVAILABLE_MODELS[model_id].is_default is True
 
     def test_returns_default_model_when_no_env(self):

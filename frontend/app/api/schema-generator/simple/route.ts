@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
+import { logger } from "@/lib/logger";
 
 /**
  * Simple schema generation API route.
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
     if (!backendResponse.ok) {
       const errorData = await backendResponse.json().catch(() => ({}));
-      console.error("Backend error: ", errorData);
+      logger.error("Backend error: ", errorData);
       return NextResponse.json(
         {
           error: errorData.detail || "Failed to generate schema",
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("Schema generation error: ", error);
+    logger.error("Schema generation error: ", error);
     return NextResponse.json(
       {
         error: "Failed to process schema generation request",

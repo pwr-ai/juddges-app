@@ -1,11 +1,18 @@
 import path from 'path';
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const baseConfig = {
   // Output standalone build optimized for Docker
   output: 'standalone',
   // Ensure tracing works correctly when multiple lockfiles exist in monorepo
   outputFileTracingRoot: path.join(__dirname, '..'),
+  // Include repo-root release-notes/*.md so /changelog can read them at runtime
+  // in standalone builds. Paths are relative to outputFileTracingRoot.
+  outputFileTracingIncludes: {
+    '/changelog': ['release-notes/**/*.md'],
+    '/changelog/[version]': ['release-notes/**/*.md'],
+    '/changelog/feed.xml': ['release-notes/**/*.md'],
+  },
   eslint: {
     ignoreDuringBuilds: false,
   },
@@ -59,5 +66,27 @@ const nextConfig = {
     ];
   },
 };
+
+// Wrap with Sentry only when the package is installed and DSN is configured.
+// This keeps the build working in environments without @sentry/nextjs.
+let nextConfig = baseConfig;
+
+if (process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { withSentryConfig } = require('@sentry/nextjs');
+    nextConfig = withSentryConfig(baseConfig, {
+      // Suppresses Sentry CLI telemetry during build.
+      silent: true,
+      // Automatically tree-shake Sentry logger statements to reduce bundle size.
+      disableLogger: true,
+      // Upload source maps to Sentry for readable stack traces in production.
+      // Requires SENTRY_AUTH_TOKEN env var (optional — skips upload if unset).
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    });
+  } catch {
+    // @sentry/nextjs not installed — skip wrapping, Sentry stays disabled.
+  }
+}
 
 export default nextConfig;

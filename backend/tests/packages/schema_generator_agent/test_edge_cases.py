@@ -16,7 +16,7 @@ from schema_generator_agent.agents.schema_generator import (
 @pytest.fixture
 def llm():
     """Create LLM instance for testing."""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    return ChatOpenAI(model="gpt-5-mini", temperature=0.3)
 
 
 @pytest.fixture
@@ -248,7 +248,7 @@ def test_empty_user_input_handling():
     from langchain_openai import ChatOpenAI
     from schema_generator_agent.agents.basic_agents import ProblemDefinerHelperAgent
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    llm = ChatOpenAI(model="gpt-5-mini", temperature=0.3)
     prompts = load_prompts(DocumentType.JUDGMENT)
 
     agent = ProblemDefinerHelperAgent(llm, prompts["problem_definer_helper_prompt"])
@@ -286,7 +286,7 @@ def test_very_long_user_input():
     from langchain_openai import ChatOpenAI
     from schema_generator_agent.agents.basic_agents import ProblemDefinerHelperAgent
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    llm = ChatOpenAI(model="gpt-5-mini", temperature=0.3)
     prompts = load_prompts(DocumentType.JUDGMENT)
 
     agent = ProblemDefinerHelperAgent(llm, prompts["problem_definer_helper_prompt"])

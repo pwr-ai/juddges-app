@@ -126,7 +126,15 @@ async def _prepare_search_queries(
         query_analysis_source = "heuristic"
         query_analysis_error = "fast_path_text_only"
     else:
-        timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "1200"))
+        # Adaptive timeout: longer queries need more LLM thinking.
+        # GPT-5 with reasoning_effort=minimal has median ~2.5s but p95 reaches
+        # 3-4s. 5000ms base keeps tail regressions rare without bloating UX;
+        # 500+ char queries get 1.67x headroom for extra reasoning tokens.
+        base_timeout_ms = int(os.getenv("QUERY_ANALYSIS_TIMEOUT_MS", "5000"))
+        if len(query) >= 500 and base_timeout_ms > 0:
+            timeout_ms = int(base_timeout_ms * 1.67)
+        else:
+            timeout_ms = base_timeout_ms
         try:
             if timeout_ms > 0:
                 (
@@ -248,6 +256,25 @@ async def _get_search_client():
     raise HTTPException(status_code=500, detail="Database client not initialized")
 
 
+def _relax_keyword_for_conceptual(keyword_query: str, language: str) -> str:
+    """For `conceptual` queries (≥4 content words), join tokens with " OR " so
+    websearch_to_tsquery treats them as alternatives, not an AND.
+
+    Without this, a 5-word Polish legal question like
+    "odpowiedzialność solidarna wspólników spółki cywilnej" requires all five
+    lemmata to co-occur in a doc → ~3 hits. With OR recall widens to 30-50
+    while the vector side + RRF keep ranking tight.
+    """
+    tokens = re.findall(r"\w+", keyword_query.lower())
+    if not tokens:
+        return keyword_query
+    stopwords = _POLISH_STOPWORDS if language == "polish" else _ENGLISH_STOPWORDS
+    kept = [t for t in tokens if len(t) >= 3 and t not in stopwords]
+    if len(kept) < 4:
+        return keyword_query
+    return " OR ".join(kept[:8])
+
+
 def _build_search_rpc_params(
     query_embedding: list[float] | None,
     keyword_query: str,
@@ -256,7 +283,10 @@ def _build_search_rpc_params(
     effective_alpha: float,
     limit: int,
     offset: int,
+    query_type: str = "mixed",
 ) -> dict[str, Any]:
+    if query_type == "conceptual":
+        keyword_query = _relax_keyword_for_conceptual(keyword_query, search_language)
     return {
         "query_embedding": query_embedding,
         "search_text": keyword_query if effective_alpha < 1.0 else None,

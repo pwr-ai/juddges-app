@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Schema test error: ", error);
+    logger.error("Schema test error: ", error);
     return NextResponse.json(
       { error: "Failed to test schema" },
       { status: 500 }

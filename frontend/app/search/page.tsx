@@ -16,6 +16,7 @@ import {
  SearchResultsSection,
 } from '@/lib/styles/components';
 import { SearchLoadingModal } from '@/components/search';
+import { ZeroResultsEmptyState } from '@/components/search/ZeroResultsEmptyState';
 import { SearchErrorBoundary } from '@/components/errors/SearchErrorBoundary';
 import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
@@ -593,14 +594,19 @@ function SearchPageContent(): React.JSX.Element | null {
  }}
  />
  ) : !error && searchMetadata.length === 0 && query && hasPerformedSearch ? (
- <SearchEmptyState
- error={false}
+ <ZeroResultsEmptyState
  query={query}
- lastSearchMode={lastSearchMode}
- onBack={handleBack}
- onSwitchToThinking={() => {
- setSearchType('thinking');
- handleSearch('thinking');
+ activeFilters={[
+  ...(filters.dateFrom ? [{ label: `From: ${filters.dateFrom.toLocaleDateString()}`, onClear: () => setDateFilter('dateFrom', undefined) }] : []),
+  ...(filters.dateTo ? [{ label: `To: ${filters.dateTo.toLocaleDateString()}`, onClear: () => setDateFilter('dateTo', undefined) }] : []),
+  ...Array.from(filters.keywords).map(kw => ({ label: `Keyword: ${kw}`, onClear: () => toggleFilter('keywords', kw) })),
+  ...Array.from(filters.issuingBodies).map(body => ({ label: `Court: ${body}`, onClear: () => toggleFilter('issuingBodies', body) })),
+  ...Array.from(filters.documentTypes).map(dt => ({ label: `Type: ${dt}`, onClear: () => toggleFilter('documentTypes', dt) })),
+ ]}
+ onClearAllFilters={activeFilterCount > 0 ? resetFilters : undefined}
+ onSampleQuery={(q) => {
+  setQuery(q);
+  handleSearch(undefined, q);
  }}
  />
  ) : (

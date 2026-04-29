@@ -75,7 +75,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(`[documents/batch GET] Backend error: ${response.status}`, data);
+      logger.error(`[documents/batch GET] Backend error: ${response.status}`, data);
       return NextResponse.json(
         { error: data.detail || 'Failed to fetch documents by IDs' },
         { status: response.status }
@@ -84,10 +84,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in documents/batch GET proxy:', error);
+    logger.error('Error in documents/batch GET proxy:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to connect to backend service',
         details: errorMessage,
         hint: 'Check if backend service is running and API_BASE_URL environment variable is set correctly'
@@ -115,16 +115,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const body = await request.json();
-    
+
     // Connecting to backend
     logger.debug('[documents/batch POST] Calling backend', { url: `${backendUrl}/documents/batch` });
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-API-Key': apiKey,
       'X-User-ID': userData.user.id,
     };
-    
+
     const response = await fetch(`${backendUrl}/documents/batch`, {
       method: 'POST',
       headers,
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error(`[documents/batch POST] Backend error: ${response.status}`, data);
+      logger.error(`[documents/batch POST] Backend error: ${response.status}`, data);
       return NextResponse.json(
         { error: data.detail || 'Failed to fetch documents by IDs' },
         { status: response.status }
@@ -143,10 +143,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in documents/batch POST proxy:', error);
+    logger.error('Error in documents/batch POST proxy:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to connect to backend service',
         details: errorMessage,
         hint: 'Check if backend service is running and API_BASE_URL environment variable is set correctly'

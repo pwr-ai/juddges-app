@@ -73,7 +73,7 @@ describe('POST /api/extractions/base-schema', () => {
     const response = await POST(
       buildRequest({
         document_id: 'doc-1',
-        llm_name: 'gpt-4o-mini',
+        llm_name: 'gpt-5-mini',
       })
     );
 
@@ -88,7 +88,7 @@ describe('POST /api/extractions/base-schema', () => {
         }),
         body: JSON.stringify({
           document_ids: ['doc-1'],
-          llm_name: 'gpt-4o-mini',
+          llm_name: 'gpt-5-mini',
           jurisdiction_override: undefined,
           additional_instructions: undefined,
         }),

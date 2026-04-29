@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Phone, Calendar, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface ContactSectionProps {
   title?: string;
@@ -51,7 +52,7 @@ export function ContactSection({
       // Reset form
       setFormData({ name: "", email: "", company: "", message: "", website: "" });
     } catch (error) {
-      console.error("Contact form submission error: ", error);
+      logger.error("Contact form submission error: ", error);
       toast.error(
         error instanceof Error
           ? error.message

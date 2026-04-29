@@ -340,7 +340,15 @@ async def list_research_contexts(
             logger.warning("Supabase client not available for listing contexts")
             return []
 
-        query = supabase.table("research_contexts").select("*").eq("user_id", user_id)
+        query = (
+            supabase.table("research_contexts")
+            .select(
+                "id, user_id, chat_id, title, analyzed_topics, identified_gaps, "
+                "suggested_next_steps, related_document_ids, coverage_score, "
+                "status, created_at, updated_at"
+            )
+            .eq("user_id", user_id)
+        )
 
         if status:
             query = query.eq("status", status)
@@ -577,7 +585,7 @@ Respond ONLY with valid JSON in this exact format:
 
         client = get_openai_client()
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             messages=[
                 {
                     "role": "system",
@@ -585,8 +593,11 @@ Respond ONLY with valid JSON in this exact format:
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.7,
-            max_tokens=2000,
+            # GPT-5 ignores temperature on reasoning models; max_tokens is
+            # deprecated in favour of max_completion_tokens. Keep research
+            # reasoning at default effort (this is the analysis step — we
+            # actually want it to think).
+            max_completion_tokens=4000,
         )
 
         content = response.choices[0].message.content
