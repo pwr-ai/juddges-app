@@ -502,7 +502,9 @@ async def find_precedents(
     if precedents_request.filters:
         similar_results = _apply_filters(similar_results, precedents_request.filters)
 
-    candidates_data = await _load_candidate_documents(similar_results, precedents_request.limit)
+    candidates_data = await _load_candidate_documents(
+        similar_results, precedents_request.limit
+    )
     if not candidates_data:
         return _empty_precedents_response(precedents_request.query, enhanced_query)
 

@@ -343,7 +343,9 @@ async def extract_key_points(
     request: Request, key_points_request: KeyPointsRequest
 ) -> KeyPointsResponse:
     """Extract structured key points from a legal document."""
-    logger.info(f"Key points extraction request: document={key_points_request.document_id}")
+    logger.info(
+        f"Key points extraction request: document={key_points_request.document_id}"
+    )
 
     # Fetch document
     documents = await _fetch_document_content([key_points_request.document_id])

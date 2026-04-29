@@ -1,6 +1,5 @@
 """Tests for Research Agent graph nodes."""
 
-
 from research_agent.nodes import AnalyzerNode, PlannerNode, ReportWriterNode
 
 

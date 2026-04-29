@@ -1,6 +1,5 @@
 """Tests for framework-agnostic persistence layer."""
 
-
 from research_agent.persistence import (
     ResearchFinding,
     ResearchSession,

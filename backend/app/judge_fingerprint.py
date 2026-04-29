@@ -121,9 +121,7 @@ class SampleCase(BaseModel):
     """A single case reference with its dominant reasoning pattern."""
 
     case_id: str = Field(description="Judgment ID")
-    case_number: str | None = Field(
-        default=None, description="Case number / reference"
-    )
+    case_number: str | None = Field(default=None, description="Case number / reference")
     date: str | None = Field(default=None, description="Date of the judgment")
     dominant_pattern: str = Field(description="Dominant reasoning pattern in this case")
     court_name: str | None = Field(default=None, description="Name of the court")

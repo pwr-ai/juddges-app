@@ -166,9 +166,7 @@ def _fetch_unassigned_judgment_ids(limit: int = 100) -> list[dict[str, Any]]:
     assigned_ids = {row["judgment_id"] for row in (assigned_resp.data or [])}
 
     # Fetch recent judgments with embeddings, ordered by decision_date DESC
-    select_fields = (
-        "id, embedding, decision_date, title, case_number, court_name, cited_legislation"
-    )
+    select_fields = "id, embedding, decision_date, title, case_number, court_name, cited_legislation"
     resp = (
         supabase_client.table("judgments")
         .select(select_fields)

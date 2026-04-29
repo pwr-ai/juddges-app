@@ -21,8 +21,8 @@ how the embedding centroid shifts across rolling time windows, identifying
 semantic drift peaks and tracking entering/exiting keywords.
 """
 
-import time
 import json
+import time
 import uuid
 from collections import Counter
 from datetime import UTC, datetime
@@ -2100,15 +2100,11 @@ async def search_reasoning_lines(
         )
     except Exception as e:
         logger.error(f"Error fetching reasoning lines for search: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to fetch reasoning lines"
-        )
+        raise HTTPException(status_code=500, detail="Failed to fetch reasoning lines")
 
     rows = response.data or []
     if not rows:
-        return ReasoningLineSearchResponse(
-            results=[], query=body.query, total_found=0
-        )
+        return ReasoningLineSearchResponse(results=[], query=body.query, total_found=0)
 
     logger.info(
         f"Searching {len(rows)} reasoning lines for query: '{body.query[:80]}...'"
@@ -2145,9 +2141,7 @@ async def search_reasoning_lines(
                     row_embedding = np.array(row_embedding_raw, dtype=np.float32)
                     similarity = _cosine_similarity(query_embedding, row_embedding)
                 except (ValueError, TypeError) as e:
-                    logger.debug(
-                        f"Could not parse embedding for line {row['id']}: {e}"
-                    )
+                    logger.debug(f"Could not parse embedding for line {row['id']}: {e}")
                     # Fall through to text-based scoring for this row
                     similarity = 0.0
 
@@ -2238,9 +2232,7 @@ async def get_related_reasoning_lines(
         )
     except Exception as e:
         logger.error(f"Error fetching reasoning line {line_id}: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to fetch reasoning line"
-        )
+        raise HTTPException(status_code=500, detail="Failed to fetch reasoning line")
 
     if not target_resp.data:
         raise HTTPException(status_code=404, detail="Reasoning line not found")
@@ -2256,9 +2248,7 @@ async def get_related_reasoning_lines(
         try:
             target_embedding = np.array(target_emb_raw, dtype=np.float32)
         except (ValueError, TypeError) as e:
-            logger.warning(
-                f"Could not parse embedding for target line {line_id}: {e}"
-            )
+            logger.warning(f"Could not parse embedding for target line {line_id}: {e}")
 
     # Step 2: Fetch all other active reasoning lines
     try:
@@ -2271,17 +2261,13 @@ async def get_related_reasoning_lines(
         )
     except Exception as e:
         logger.error(f"Error fetching other reasoning lines: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to fetch reasoning lines"
-        )
+        raise HTTPException(status_code=500, detail="Failed to fetch reasoning lines")
 
     others = others_resp.data or []
     if not others:
         return RelatedLinesResponse(line_id=line_id, related=[])
 
-    logger.info(
-        f"Computing relatedness of {len(others)} lines to line {line_id}"
-    )
+    logger.info(f"Computing relatedness of {len(others)} lines to line {line_id}")
 
     # Step 3: Score each candidate by weighted combination
     # Weights: legal_bases Jaccard = 0.4, keywords Jaccard = 0.2, embedding cosine = 0.4
@@ -2308,9 +2294,7 @@ async def get_related_reasoning_lines(
             if row_emb_raw is not None:
                 try:
                     row_embedding = np.array(row_emb_raw, dtype=np.float32)
-                    embedding_sim = _cosine_similarity(
-                        target_embedding, row_embedding
-                    )
+                    embedding_sim = _cosine_similarity(target_embedding, row_embedding)
                 except (ValueError, TypeError):
                     pass
 
@@ -2345,9 +2329,7 @@ async def get_related_reasoning_lines(
         if score > 0.0  # Exclude completely unrelated lines
     ]
 
-    logger.info(
-        f"Found {len(related)} related lines for line {line_id}"
-    )
+    logger.info(f"Found {len(related)} related lines for line {line_id}")
 
     return RelatedLinesResponse(line_id=line_id, related=related)
 
@@ -2444,9 +2426,7 @@ def _detect_internal_branch(
         return False, 1.0, 0.0
 
     # Sort by decision_date
-    sorted_members = sorted(
-        members, key=lambda m: str(m.get("decision_date") or "")
-    )
+    sorted_members = sorted(members, key=lambda m: str(m.get("decision_date") or ""))
 
     mid = len(sorted_members) // 2
     first_half = sorted_members[:mid]
@@ -2454,12 +2434,18 @@ def _detect_internal_branch(
 
     # Compute centroid embeddings for each half
     first_embeddings = [
-        m["embedding"] for m in first_half
-        if m.get("embedding") and isinstance(m["embedding"], list) and len(m["embedding"]) > 0
+        m["embedding"]
+        for m in first_half
+        if m.get("embedding")
+        and isinstance(m["embedding"], list)
+        and len(m["embedding"]) > 0
     ]
     second_embeddings = [
-        m["embedding"] for m in second_half
-        if m.get("embedding") and isinstance(m["embedding"], list) and len(m["embedding"]) > 0
+        m["embedding"]
+        for m in second_half
+        if m.get("embedding")
+        and isinstance(m["embedding"], list)
+        and len(m["embedding"]) > 0
     ]
 
     if not first_embeddings or not second_embeddings:
@@ -2484,9 +2470,10 @@ def _detect_internal_branch(
 
     # Compute outcome divergence as sum of absolute differences across all outcome types
     all_outcomes = set(first_dist.keys()) | set(second_dist.keys())
-    outcome_divergence = sum(
-        abs(first_dist.get(k, 0.0) - second_dist.get(k, 0.0)) for k in all_outcomes
-    ) / 2.0  # Normalize to [0, 1]
+    outcome_divergence = (
+        sum(abs(first_dist.get(k, 0.0) - second_dist.get(k, 0.0)) for k in all_outcomes)
+        / 2.0
+    )  # Normalize to [0, 1]
 
     # Branch if centroid similarity is low AND outcomes differ significantly
     is_branch = similarity < 0.85 and outcome_divergence > 0.3
@@ -2555,8 +2542,10 @@ async def detect_events(request: Request) -> EventDetectionResult:
     try:
         lines_response = (
             db.client.table("reasoning_lines")
-            .select("id, label, legal_question, keywords, legal_bases, status, case_count, "
-                    "coherence_score, avg_embedding, date_range_start, date_range_end")
+            .select(
+                "id, label, legal_question, keywords, legal_bases, status, case_count, "
+                "coherence_score, avg_embedding, date_range_start, date_range_end"
+            )
             .in_("status", ["active", "merged"])
             .limit(MAX_LINES)
             .execute()
@@ -2614,7 +2603,10 @@ async def detect_events(request: Request) -> EventDetectionResult:
             for m in member_rows:
                 jid = str(m["judgment_id"])
                 if jid in judgment_map:
-                    merged = {**judgment_map[jid], "outcome_direction": m.get("outcome_direction")}
+                    merged = {
+                        **judgment_map[jid],
+                        "outcome_direction": m.get("outcome_direction"),
+                    }
                     enriched.append(merged)
 
             line_members[line_id] = enriched
@@ -2633,27 +2625,29 @@ async def detect_events(request: Request) -> EventDetectionResult:
 
         is_branch, sim, outcome_div = _detect_internal_branch(members)
         if is_branch:
-            event_rows.append({
-                "id": str(uuid.uuid4()),
-                "event_type": "branch",
-                "source_line_id": line_id,
-                "target_line_id": None,
-                "trigger_judgment_id": None,
-                "event_date": None,
-                "description": (
-                    f"Internal split detected in line '{line_by_id[line_id].get('label', '')}': "
-                    f"first/second half centroid similarity={sim}, "
-                    f"outcome divergence={outcome_div}"
-                ),
-                "confidence": round(min((1.0 - sim) + outcome_div, 1.0), 4),
-                "drift_score": round(1.0 - sim, 4),
-                "metadata": {
-                    "detection_type": "internal_split",
-                    "centroid_similarity": sim,
-                    "outcome_divergence": outcome_div,
-                },
-                "created_at": now,
-            })
+            event_rows.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "event_type": "branch",
+                    "source_line_id": line_id,
+                    "target_line_id": None,
+                    "trigger_judgment_id": None,
+                    "event_date": None,
+                    "description": (
+                        f"Internal split detected in line '{line_by_id[line_id].get('label', '')}': "
+                        f"first/second half centroid similarity={sim}, "
+                        f"outcome divergence={outcome_div}"
+                    ),
+                    "confidence": round(min((1.0 - sim) + outcome_div, 1.0), 4),
+                    "drift_score": round(1.0 - sim, 4),
+                    "metadata": {
+                        "detection_type": "internal_split",
+                        "centroid_similarity": sim,
+                        "outcome_divergence": outcome_div,
+                    },
+                    "created_at": now,
+                }
+            )
             branches_detected += 1
             logger.info(
                 f"Internal branch detected in line {line_id}: "
@@ -2671,7 +2665,9 @@ async def detect_events(request: Request) -> EventDetectionResult:
             line_b = line_by_id[lid_b]
 
             # Only compare lines that share at least 1 legal base
-            shares, overlap_ratio = _lines_share_legal_bases(line_a, line_b, min_overlap=1)
+            shares, overlap_ratio = _lines_share_legal_bases(
+                line_a, line_b, min_overlap=1
+            )
             if not shares:
                 continue
 
@@ -2680,8 +2676,12 @@ async def detect_events(request: Request) -> EventDetectionResult:
             emb_b = line_b.get("avg_embedding")
 
             if (
-                emb_a and isinstance(emb_a, list) and len(emb_a) > 0
-                and emb_b and isinstance(emb_b, list) and len(emb_b) > 0
+                emb_a
+                and isinstance(emb_a, list)
+                and len(emb_a) > 0
+                and emb_b
+                and isinstance(emb_b, list)
+                and len(emb_b) > 0
             ):
                 vec_a = np.array(emb_a, dtype=np.float32)
                 vec_b = np.array(emb_b, dtype=np.float32)
@@ -2692,29 +2692,31 @@ async def detect_events(request: Request) -> EventDetectionResult:
             # --- Branch detection (cross-line) ---
             # Dissimilar centroids but significant legal base overlap
             if centroid_sim is not None and centroid_sim < 0.7 and overlap_ratio > 0.3:
-                event_rows.append({
-                    "id": str(uuid.uuid4()),
-                    "event_type": "branch",
-                    "source_line_id": lid_a,
-                    "target_line_id": lid_b,
-                    "trigger_judgment_id": None,
-                    "event_date": None,
-                    "description": (
-                        f"Branch detected: lines '{line_a.get('label', '')}' and "
-                        f"'{line_b.get('label', '')}' share {overlap_ratio:.0%} of legal bases "
-                        f"but centroid similarity is only {centroid_sim:.3f}"
-                    ),
-                    "confidence": round(
-                        min((1.0 - centroid_sim) * overlap_ratio * 2, 1.0), 4
-                    ),
-                    "drift_score": round(1.0 - centroid_sim, 4),
-                    "metadata": {
-                        "detection_type": "cross_line_divergence",
-                        "centroid_similarity": round(centroid_sim, 4),
-                        "legal_base_overlap_ratio": round(overlap_ratio, 4),
-                    },
-                    "created_at": now,
-                })
+                event_rows.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "event_type": "branch",
+                        "source_line_id": lid_a,
+                        "target_line_id": lid_b,
+                        "trigger_judgment_id": None,
+                        "event_date": None,
+                        "description": (
+                            f"Branch detected: lines '{line_a.get('label', '')}' and "
+                            f"'{line_b.get('label', '')}' share {overlap_ratio:.0%} of legal bases "
+                            f"but centroid similarity is only {centroid_sim:.3f}"
+                        ),
+                        "confidence": round(
+                            min((1.0 - centroid_sim) * overlap_ratio * 2, 1.0), 4
+                        ),
+                        "drift_score": round(1.0 - centroid_sim, 4),
+                        "metadata": {
+                            "detection_type": "cross_line_divergence",
+                            "centroid_similarity": round(centroid_sim, 4),
+                            "legal_base_overlap_ratio": round(overlap_ratio, 4),
+                        },
+                        "created_at": now,
+                    }
+                )
                 branches_detected += 1
                 logger.info(
                     f"Cross-line branch: {lid_a} <-> {lid_b}, "
@@ -2731,30 +2733,32 @@ async def detect_events(request: Request) -> EventDetectionResult:
                 if shared_recent:
                     # Use the first shared judgment as the trigger
                     trigger_id = shared_recent[0]
-                    event_rows.append({
-                        "id": str(uuid.uuid4()),
-                        "event_type": "merge",
-                        "source_line_id": lid_a,
-                        "target_line_id": lid_b,
-                        "trigger_judgment_id": trigger_id,
-                        "event_date": None,
-                        "description": (
-                            f"Merge detected: lines '{line_a.get('label', '')}' and "
-                            f"'{line_b.get('label', '')}' have centroid similarity "
-                            f"{centroid_sim:.3f} and share {len(shared_recent)} recent judgment(s)"
-                        ),
-                        "confidence": round(
-                            centroid_sim * min(len(shared_recent) / 3.0, 1.0), 4
-                        ),
-                        "drift_score": None,
-                        "metadata": {
-                            "detection_type": "convergence",
-                            "centroid_similarity": round(centroid_sim, 4),
-                            "shared_recent_judgment_ids": shared_recent[:10],
-                            "shared_recent_count": len(shared_recent),
-                        },
-                        "created_at": now,
-                    })
+                    event_rows.append(
+                        {
+                            "id": str(uuid.uuid4()),
+                            "event_type": "merge",
+                            "source_line_id": lid_a,
+                            "target_line_id": lid_b,
+                            "trigger_judgment_id": trigger_id,
+                            "event_date": None,
+                            "description": (
+                                f"Merge detected: lines '{line_a.get('label', '')}' and "
+                                f"'{line_b.get('label', '')}' have centroid similarity "
+                                f"{centroid_sim:.3f} and share {len(shared_recent)} recent judgment(s)"
+                            ),
+                            "confidence": round(
+                                centroid_sim * min(len(shared_recent) / 3.0, 1.0), 4
+                            ),
+                            "drift_score": None,
+                            "metadata": {
+                                "detection_type": "convergence",
+                                "centroid_similarity": round(centroid_sim, 4),
+                                "shared_recent_judgment_ids": shared_recent[:10],
+                                "shared_recent_count": len(shared_recent),
+                            },
+                            "created_at": now,
+                        }
+                    )
                     merges_detected += 1
                     logger.info(
                         f"Merge detected: {lid_a} <-> {lid_b}, "
@@ -2770,35 +2774,35 @@ async def detect_events(request: Request) -> EventDetectionResult:
             shared_ids = ids_a & ids_b
             # If there are shared judgment IDs but centroids are moderately similar
             # (not high enough for merge, not low enough for branch)
-            if (
-                centroid_sim is not None
-                and 0.5 <= centroid_sim <= 0.85
-                and shared_ids
-            ):
-                event_rows.append({
-                    "id": str(uuid.uuid4()),
-                    "event_type": "influence",
-                    "source_line_id": lid_a,
-                    "target_line_id": lid_b,
-                    "trigger_judgment_id": sorted(shared_ids)[0] if shared_ids else None,
-                    "event_date": None,
-                    "description": (
-                        f"Influence detected: lines '{line_a.get('label', '')}' and "
-                        f"'{line_b.get('label', '')}' share {len(shared_ids)} judgment(s) "
-                        f"with moderate centroid similarity {centroid_sim:.3f}"
-                    ),
-                    "confidence": round(
-                        overlap_ratio * min(len(shared_ids) / 5.0, 1.0), 4
-                    ),
-                    "drift_score": None,
-                    "metadata": {
-                        "detection_type": "cross_citation",
-                        "centroid_similarity": round(centroid_sim, 4),
-                        "shared_judgment_ids": sorted(shared_ids)[:10],
-                        "shared_judgment_count": len(shared_ids),
-                    },
-                    "created_at": now,
-                })
+            if centroid_sim is not None and 0.5 <= centroid_sim <= 0.85 and shared_ids:
+                event_rows.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "event_type": "influence",
+                        "source_line_id": lid_a,
+                        "target_line_id": lid_b,
+                        "trigger_judgment_id": sorted(shared_ids)[0]
+                        if shared_ids
+                        else None,
+                        "event_date": None,
+                        "description": (
+                            f"Influence detected: lines '{line_a.get('label', '')}' and "
+                            f"'{line_b.get('label', '')}' share {len(shared_ids)} judgment(s) "
+                            f"with moderate centroid similarity {centroid_sim:.3f}"
+                        ),
+                        "confidence": round(
+                            overlap_ratio * min(len(shared_ids) / 5.0, 1.0), 4
+                        ),
+                        "drift_score": None,
+                        "metadata": {
+                            "detection_type": "cross_citation",
+                            "centroid_similarity": round(centroid_sim, 4),
+                            "shared_judgment_ids": sorted(shared_ids)[:10],
+                            "shared_judgment_count": len(shared_ids),
+                        },
+                        "created_at": now,
+                    }
+                )
                 influences_detected += 1
                 logger.info(
                     f"Influence detected: {lid_a} <-> {lid_b}, "
@@ -2855,8 +2859,10 @@ async def get_dag(request: Request) -> ReasoningLineDAG:
     try:
         lines_resp = (
             db.client.table("reasoning_lines")
-            .select("id, label, status, case_count, coherence_score, "
-                    "date_range_start, date_range_end, keywords")
+            .select(
+                "id, label, status, case_count, coherence_score, "
+                "date_range_start, date_range_end, keywords"
+            )
             .execute()
         )
     except Exception as e:
@@ -2873,7 +2879,9 @@ async def get_dag(request: Request) -> ReasoningLineDAG:
                 case_count=row.get("case_count", 0),
                 coherence_score=row.get("coherence_score"),
                 date_range_start=(
-                    str(row["date_range_start"]) if row.get("date_range_start") else None
+                    str(row["date_range_start"])
+                    if row.get("date_range_start")
+                    else None
                 ),
                 date_range_end=(
                     str(row["date_range_end"]) if row.get("date_range_end") else None
@@ -2886,8 +2894,10 @@ async def get_dag(request: Request) -> ReasoningLineDAG:
     try:
         events_resp = (
             db.client.table("reasoning_line_events")
-            .select("id, event_type, source_line_id, target_line_id, "
-                    "event_date, description, confidence, drift_score")
+            .select(
+                "id, event_type, source_line_id, target_line_id, "
+                "event_date, description, confidence, drift_score"
+            )
             .execute()
         )
     except Exception as e:
