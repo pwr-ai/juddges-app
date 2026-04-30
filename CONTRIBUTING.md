@@ -18,9 +18,9 @@ For security vulnerabilities, do **not** open a public issue. Follow the disclos
 4. Run lint, type checks, and the relevant test suites locally before pushing. See `docs/contributing/CONTRIBUTING.md` for exact commands per stack (frontend Next.js, backend FastAPI).
 5. Open a pull request against `develop`. Link related issues, describe what changed and why, and include a test plan.
 
-## Conduct
+## Code of Conduct
 
-We expect contributors to be respectful in issues, pull requests, and discussions. Concerns about contributor behaviour can be sent to aisolutions@lukaszaugustyniak.com.
+This project follows a project-specific code of conduct adapted for the JuDDGES App's cross-disciplinary, cross-jurisdictional research community. By participating, you agree to abide by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Report unacceptable behaviour to aisolutions@lukaszaugustyniak.com.
 
 ## Licensing
 
