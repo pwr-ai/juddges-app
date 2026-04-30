@@ -1,0 +1,15 @@
+nav:
+  - index.md
+  - Open Science: open-science
+  - Getting Started: getting-started
+  - Tutorials: tutorials
+  - How-to: how-to
+  - Reference: reference
+  - Explanation: explanation
+  - Architecture: architecture
+  - Features: features
+  - API: api
+  - Frontend: frontend
+  - Testing: testing
+  - Contributing: contributing
+  - ...
