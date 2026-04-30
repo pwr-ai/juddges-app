@@ -258,7 +258,7 @@ chat_chain = (
     .with_config(
         run_name="legal_chat_assistant",
         callbacks=callbacks,
-        tags=["legal-ai", "juddges", "chat-with-history", "wust-project", "legal-judgments"],
+        tags=["juddges", "chat-with-history", "wust-project", "legal-judgments"],
         metadata={
             "version": __version__,
             "purpose": "Legal judgments analysis for Polish tax law and criminal law with chat history and intelligent retrieval routing",

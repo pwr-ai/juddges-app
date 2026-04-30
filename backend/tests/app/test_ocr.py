@@ -1,14 +1,18 @@
 """Unit tests for app.ocr module -- pure helper functions and simulated OCR pipeline."""
 
+import io
 from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
 from app.ocr import (
     _build_job_status,
     _compute_quality_metrics,
     _format_timestamp,
     _simulate_ocr_processing,
+    submit_ocr_job,
 )
 
 # ---------------------------------------------------------------------------
@@ -265,13 +269,6 @@ class TestBuildJobStatus:
 # Regression tests for submit_ocr_job endpoint bugs
 # ---------------------------------------------------------------------------
 
-import io
-from unittest.mock import MagicMock, patch
-
-from fastapi import HTTPException
-
-from app.ocr import submit_ocr_job
-
 
 def _make_upload_file(
     content: bytes,
@@ -310,7 +307,6 @@ class TestSubmitOcrJobOversizeFile:
         # returns large "virtual" chunks.
         over_size = limit + 1
         bytes_returned = 0
-        chunk_size = 1024 * 1024  # matches the code's chunk_size
 
         mock_file = MagicMock()
         mock_file.filename = "big.pdf"
@@ -376,17 +372,19 @@ class TestSubmitOcrJobJobIdInitialization:
         small_content = b"%PDF-1.4 test"
         mock_file = _make_upload_file(small_content, content_type="application/pdf")
 
-        with patch(
-            "app.ocr.get_supabase_client",
-            side_effect=RuntimeError("Connection refused"),
+        with (
+            patch(
+                "app.ocr.get_supabase_client",
+                side_effect=RuntimeError("Connection refused"),
+            ),
+            pytest.raises(HTTPException) as exc_info,
         ):
-            with pytest.raises(HTTPException) as exc_info:
-                await submit_ocr_job(
-                    file=mock_file,
-                    document_id="doc-valid-id-1234",
-                    source_type="pdf",
-                    language_hint=None,
-                )
+            await submit_ocr_job(
+                file=mock_file,
+                document_id="doc-valid-id-1234",
+                source_type="pdf",
+                language_hint=None,
+            )
 
         # Should be a 500 with the original error message, NOT an UnboundLocalError
         assert exc_info.value.status_code == 500
@@ -410,14 +408,16 @@ class TestSubmitOcrJobJobIdInitialization:
             "DB write failed"
         )
 
-        with patch("app.ocr.get_supabase_client", return_value=mock_supabase):
-            with pytest.raises(HTTPException) as exc_info:
-                await submit_ocr_job(
-                    file=mock_file,
-                    document_id="doc-valid-id-1234",
-                    source_type="pdf",
-                    language_hint=None,
-                )
+        with (
+            patch("app.ocr.get_supabase_client", return_value=mock_supabase),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await submit_ocr_job(
+                file=mock_file,
+                document_id="doc-valid-id-1234",
+                source_type="pdf",
+                language_hint=None,
+            )
 
         assert exc_info.value.status_code == 500
         assert "DB write failed" in exc_info.value.detail

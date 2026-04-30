@@ -1,6 +1,5 @@
 export enum PublicationProject {
   JUDDGES = "JUDDGES",
-  AI_TAX = "AI_TAX",
 }
 
 export enum PublicationType {

@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from loguru import logger
 from pydantic import BaseModel
 from supabase import Client, PostgrestAPIError, StorageException, create_client
@@ -260,7 +260,7 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
     try:
         response = (
             supabase.table("dashboard_precomputed_stats")
-            .select("stat_key, stat_value")
+            .select("stat_key, stat_value, computed_at")
             .execute()
         )
 
@@ -270,6 +270,8 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
 
         # Build stats from precomputed values
         stats_map = {row["stat_key"]: row["stat_value"] for row in response.data}
+        # Get computed_at from the first row's column value
+        row_computed_at = response.data[0].get("computed_at") if response.data else None
 
         stats = DashboardStats(
             total_judgments=stats_map.get("total_judgments", 0),
@@ -335,9 +337,7 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
                 )
                 for x in stats_map.get("judicial_tone_distribution", [])
             ],
-            computed_at=stats_map.get("computed_at")
-            if "computed_at" in stats_map
-            else None,
+            computed_at=row_computed_at,
         )
 
         await _update_dashboard_cache(cache_key, stats, now)
@@ -672,6 +672,7 @@ async def get_featured_examples(
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_trending_topics(
     request: Request,
+    response: Response,
     category: str | None = None,
     limit: int = Query(default=5, ge=1, le=10),
     api_key: str = Depends(verify_api_key),

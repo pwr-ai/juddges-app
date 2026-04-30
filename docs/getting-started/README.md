@@ -37,7 +37,7 @@ Before you begin, ensure you have:
 
 1. **Clone and setup**:
    ```bash
-   cd ~/github/legal-ai/juddges-app
+   cd ~/github/juddges-app
    cp .env.example .env
    # Edit .env with your credentials
    ```

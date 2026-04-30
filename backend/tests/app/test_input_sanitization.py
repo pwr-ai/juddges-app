@@ -14,14 +14,13 @@ potentially dangerous payloads are not reflected back unsanitized.
 import pytest
 from httpx import AsyncClient
 
-
 # ---------------------------------------------------------------------------
 # XSS payload tests
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.security
 class TestXSSPayloads:
     """Verify that XSS payloads in user inputs are handled safely."""
@@ -113,7 +112,7 @@ class TestXSSPayloads:
 
 
 @pytest.mark.anyio
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.security
 class TestSQLInjection:
     """Verify that SQL injection payloads are handled safely."""
@@ -222,9 +221,7 @@ class TestOversizedInputs:
             headers=valid_api_headers,
         )
         # FastAPI should reject with 422 (validation error) or 400
-        assert response.status_code < 500, (
-            "Server error for oversized search query"
-        )
+        assert response.status_code < 500, "Server error for oversized search query"
         assert response.status_code in (400, 422), (
             f"Expected 400/422 for query exceeding max_length, got {response.status_code}"
         )
@@ -263,9 +260,7 @@ class TestOversizedInputs:
             json=payload,
             headers=valid_api_headers,
         )
-        assert response.status_code < 500, (
-            "Server error for oversized collection name"
-        )
+        assert response.status_code < 500, "Server error for oversized collection name"
 
     async def test_very_large_json_body(
         self, client: AsyncClient, valid_api_headers: dict[str, str]
@@ -277,9 +272,7 @@ class TestOversizedInputs:
             json=large_body,
             headers=valid_api_headers,
         )
-        assert response.status_code < 500, (
-            "Server error for oversized JSON body"
-        )
+        assert response.status_code < 500, "Server error for oversized JSON body"
 
     async def test_deeply_nested_json(
         self, client: AsyncClient, valid_api_headers: dict[str, str]
@@ -295,9 +288,7 @@ class TestOversizedInputs:
             json=nested,
             headers=valid_api_headers,
         )
-        assert response.status_code < 500, (
-            "Server error for deeply nested JSON"
-        )
+        assert response.status_code < 500, "Server error for deeply nested JSON"
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +297,7 @@ class TestOversizedInputs:
 
 
 @pytest.mark.anyio
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.security
 class TestUnicodeAndSpecialCharacters:
     """Verify that unicode and special characters are handled safely."""

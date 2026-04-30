@@ -149,6 +149,13 @@ class MeiliSearchService:
             response.raise_for_status()
             return response.json()
 
+    async def index_exists(self) -> bool:
+        """Check whether the index already exists (GET /indexes/{uid})."""
+        url = f"{self.base_url}/indexes/{self.index_name}"
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.get(url, headers=self._admin_headers())
+            return response.status_code == 200
+
     async def create_index(self, primary_key: str = "id") -> dict[str, Any]:
         """Create the index if it doesn't already exist."""
         if not self.admin_configured:

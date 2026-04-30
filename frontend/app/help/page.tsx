@@ -185,7 +185,7 @@ export default function HelpPage() {
  },
  {
  q: "I found a bug. How do I report it? ",
- a: "Please report bugs via lukasz.augustyniak@pwr.edu.pl or open an issue on our GitHub repository at github.com/laugustyniak/legal-ai. Include steps to reproduce, expected behavior, and any error messages.",
+ a: "Please report bugs via lukasz.augustyniak@pwr.edu.pl or open an issue on our GitHub repository at github.com/pwr-ai/juddges-app. Include steps to reproduce, expected behavior, and any error messages.",
  },
  {
  q: "Which browsers are supported? ",
@@ -258,7 +258,7 @@ export default function HelpPage() {
  </div>
  </LightCard>
 
- <LightCard padding="lg"className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"onClick={() => window.open('https://github.com/pwr-ai/legal-ai', '_blank')}>
+ <LightCard padding="lg"className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}>
  <div className="flex flex-col h-full">
  <FileText className="size-10 text-primary mb-4"/>
  <h3 className="font-semibold text-lg mb-3">Documentation</h3>

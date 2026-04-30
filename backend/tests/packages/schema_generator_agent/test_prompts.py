@@ -8,10 +8,14 @@ import yaml
 
 @pytest.fixture
 def prompt_dir():
-    """Get the prompt directory path."""
-    return Path(
-        "/home/laugustyniak/github/legal-ai/juddges-app/backend/packages/schema_generator_agent/schema_generator_agent/configs/prompt/law"
-    )
+    """Resolve the prompt directory relative to the package source.
+
+    Avoids hardcoded developer paths so the test runs in any checkout layout
+    (local dev, CI runners, Docker images).
+    """
+    import schema_generator_agent
+
+    return Path(schema_generator_agent.__file__).parent / "configs" / "prompt" / "law"
 
 
 def test_all_prompts_exist(prompt_dir):

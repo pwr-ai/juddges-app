@@ -606,7 +606,7 @@ function ExtractPageContent() {
  // Continue with documents without metadata
  }
  } else {
- logger.warn('Failed to fetch document metadata:', metadataResponse.status, await metadataResponse.text().catch(() => ''));
+ logger.warn('Failed to fetch document metadata:', { status: metadataResponse.status, body: await metadataResponse.text().catch(() => '') });
  // Continue with documents without metadata
  }
  } catch (metadataError) {

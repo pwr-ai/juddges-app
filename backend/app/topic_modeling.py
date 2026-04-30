@@ -676,7 +676,7 @@ def _build_topics(
 )
 @limiter.limit(TOPIC_MODELING_RATE_LIMIT)
 async def analyze_topics(
-    request: Request, body: TopicModelingRequest
+    request: Request, topic_request: TopicModelingRequest
 ) -> TopicModelingResponse:
     """
     Perform topic modeling on the document corpus.
@@ -687,13 +687,13 @@ async def analyze_topics(
     """
     start_time = time.perf_counter()
     db = get_vector_db()
-    docs = await _fetch_documents_for_topic_modeling(db, body)
+    docs = await _fetch_documents_for_topic_modeling(db, topic_request)
 
-    if len(docs) < body.num_topics:
+    if len(docs) < topic_request.num_topics:
         raise HTTPException(
             status_code=400,
-            detail=f"Not enough documents ({len(docs)}) for {body.num_topics} topics. "
-            f"Need at least {body.num_topics}.",
+            detail=f"Not enough documents ({len(docs)}) for {topic_request.num_topics} topics. "
+            f"Need at least {topic_request.num_topics}.",
         )
 
     # Build text representations and TF-IDF matrix
@@ -707,16 +707,16 @@ async def analyze_topics(
         )
 
     # NMF topic decomposition
-    num_topics = min(body.num_topics, len(docs) - 1, len(vocabulary) - 1)
+    num_topics = min(topic_request.num_topics, len(docs) - 1, len(vocabulary) - 1)
     W, H = _nmf_decomposition(tfidf_matrix, num_topics)
 
     # Assign time periods
-    periods, doc_to_period = _assign_time_periods(docs, body.time_periods)
+    periods, doc_to_period = _assign_time_periods(docs, topic_request.time_periods)
 
     doc_token_sets = _build_doc_token_sets(texts)
     topics = _build_topics(
         docs=docs,
-        request=body,
+        request=topic_request,
         num_topics=num_topics,
         W=W,
         H=H,
@@ -769,10 +769,10 @@ async def get_trending_topics(
 
     Convenience endpoint that uses sensible defaults for quick analysis.
     """
-    body = TopicModelingRequest(
+    topic_request = TopicModelingRequest(
         sample_size=sample_size,
         num_topics=num_topics,
         num_keywords=6,
         time_periods=6,
     )
-    return await analyze_topics(request, body)
+    return await analyze_topics(request, topic_request)

@@ -494,7 +494,8 @@ describe('getNodeColor', () => {
   });
 
   it('returns default color for unknown document type', () => {
-    const node = { documentType: 'unknown' as any } as GraphNode;
+    const prop = 'documentType' as const;
+    const node = { [prop]: 'unknown' } as unknown as GraphNode;
     expect(getNodeColor(node)).toBe('#8B5CF6');
   });
 });

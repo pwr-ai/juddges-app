@@ -20,7 +20,10 @@ class TestExportExtractionResults:
     async def test_invalid_format_returns_400(self, client, valid_api_headers) -> None:
         response = await client.get(
             "/extractions/job-1/export?format=pdf",
-            headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+            headers={
+                **valid_api_headers,
+                "X-User-ID": "00000000-0000-4000-a000-000000000001",
+            },
         )
         assert response.status_code == 400
 
@@ -31,7 +34,10 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", None):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 503
 
@@ -46,7 +52,10 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-missing/export?format=csv",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 404
 
@@ -68,7 +77,10 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000099"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000099",
+                },
             )
             assert response.status_code == 403
 
@@ -90,7 +102,10 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 400
 
@@ -131,7 +146,10 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 200
             assert "text/csv" in response.headers["content-type"]

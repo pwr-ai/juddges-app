@@ -6,6 +6,8 @@ Tests /dashboard/* routes for stats, documents, and trending topics.
 import pytest
 from httpx import AsyncClient
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.anyio
 @pytest.mark.api

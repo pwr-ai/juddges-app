@@ -1,5 +1,5 @@
 /**
- * Lightweight GraphQL client for the AI-Tax frontend.
+ * Lightweight GraphQL client for the Juddges frontend.
  *
  * Uses the standard fetch API to communicate with the GraphQL endpoint
  * via the Next.js API proxy route at /api/graphql.

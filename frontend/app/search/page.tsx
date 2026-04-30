@@ -93,7 +93,7 @@ function SearchPageContent(): React.JSX.Element | null {
  const [mounted, setMounted] = useState(false);
  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
  const searchInputRef = useRef<HTMLInputElement>(null);
- const [lastSearchMode, setLastSearchMode] = useState<string | null>(null);
+ const [lastSearchMode, setLastSearchMode] = useState<"thinking" | "rabbit" | null>(null);
  const [hasPerformedSearch, setHasPerformedSearch] = useState(false);
  const [searchTimestamp, setSearchTimestamp] = useState<string>('');
 
@@ -341,7 +341,7 @@ function SearchPageContent(): React.JSX.Element | null {
  }, [query, setQuery]);
 
  const handleSearch = async (
- overrideMode?: string,
+ overrideMode?: "thinking" | "rabbit",
  overrideQuery?: string,
  overrideDocumentTypes?: DocumentType[],
  overrideLanguages?: string[]
@@ -585,7 +585,6 @@ function SearchPageContent(): React.JSX.Element | null {
  {error && !isSearching && hasPerformedSearch ? (
  <SearchEmptyState
  error={true}
- errorMessage={error}
  query={query}
  lastSearchMode={lastSearchMode}
  onBack={handleBack}

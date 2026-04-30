@@ -69,7 +69,7 @@ function getMailConfig(): {
     apiKey,
     from: process.env.CONTACT_FROM_EMAIL || "onboarding@resend.dev",
     internalRecipient:
-      process.env.CONTACT_INTERNAL_EMAIL || "enterprise@legal-ai.augustyniak.ai",
+      process.env.CONTACT_INTERNAL_EMAIL || "enterprise@juddges.augustyniak.ai",
   };
 }
 
