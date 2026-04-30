@@ -1,6 +1,6 @@
 # Open Science Questionnaire — Juddges App
 
-This document answers the standard open-science / FAIR-software questionnaire for **Juddges App**, the web application companion to the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES). It is intended for funder reporting and external open-science assessments. For an internal rubric-style evaluation of the same project, see [`../explanation/open-science-assessment.md`](../explanation/open-science-assessment.md).
+This document answers the standard open-science / FAIR-software questionnaire for **Juddges App**, the web application companion to the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES). It is intended for funder reporting and external open-science assessments.
 
 The repository being described is: <https://github.com/pwr-ai/juddges-app>
 
