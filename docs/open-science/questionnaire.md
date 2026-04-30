@@ -1,6 +1,6 @@
 # Open Science Questionnaire — Juddges App
 
-This document answers the standard open-science / FAIR-software questionnaire for **Juddges App**, the web application companion to the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES). It is intended for funder reporting and external open-science assessments. For an internal rubric-style evaluation of the same project, see [`open-science-assessment.md`](open-science-assessment.md).
+This document answers the standard open-science / FAIR-software questionnaire for **Juddges App**, the web application companion to the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES). It is intended for funder reporting and external open-science assessments. For an internal rubric-style evaluation of the same project, see [`../explanation/open-science-assessment.md`](../explanation/open-science-assessment.md).
 
 The repository being described is: <https://github.com/pwr-ai/juddges-app>
 
@@ -86,7 +86,7 @@ Automated tests:
 - **Backend** — [`pytest`](https://pytest.org/) with `@pytest.mark.unit` / `@pytest.mark.integration` markers; integration tests require live database, Redis, and OpenAI API.
 - **Frontend** — Jest for unit tests and [Playwright](https://playwright.dev/) for end-to-end browser tests (`frontend/`).
 
-Search-quality regression is tracked separately, with the methodology documented in [`docs/explanation/search-benchmark-methodology.md`](search-benchmark-methodology.md).
+Search-quality regression is tracked separately, with the methodology documented in [`../explanation/search-benchmark-methodology.md`](../explanation/search-benchmark-methodology.md).
 
 ---
 
