@@ -55,7 +55,7 @@ We welcome many types of contributions:
 1. **Check existing issues**: Search issues to see if someone else has reported the same thing
 2. **Discuss major changes**: For significant changes, open an issue first to discuss
 3. **Read the docs**: Familiarize yourself with the architecture and code style
-4. **Set up your environment**: Follow the [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) guide
+4. **Set up your environment**: Follow the [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) guide
 
 ## Development Setup
 
@@ -88,7 +88,7 @@ cd frontend && npm install && cd ..
 docker compose -f docker-compose.dev.yml up
 ```
 
-For detailed setup instructions, see [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md).
+For detailed setup instructions, see [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md).
 
 ## Code Style
 
@@ -461,7 +461,7 @@ describe("SearchBar", () => {
 });
 ```
 
-For detailed testing guide, see [TESTING.md](./TESTING.md).
+For detailed testing guide, see [TESTING.md](../testing/TESTING.md).
 
 ## Documentation
 

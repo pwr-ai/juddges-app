@@ -25,7 +25,7 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     Install dependencies, set up Supabase, and run the app locally with Docker.
 
-    [:octicons-arrow-right-24: Getting started](getting-started/)
+    [:octicons-arrow-right-24: Getting started](getting-started/README.md)
 
 -   :material-book-open-variant:{ .lg .middle } **How-to guides**
 
@@ -33,7 +33,7 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     Task-oriented walkthroughs: deployment, ingestion, troubleshooting, benchmarks.
 
-    [:octicons-arrow-right-24: How-to guides](how-to/)
+    [:octicons-arrow-right-24: How-to guides](how-to/deployment.md)
 
 -   :material-file-document-multiple:{ .lg .middle } **Reference**
 
@@ -41,7 +41,7 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     Configuration, environment variables, performance, schemas.
 
-    [:octicons-arrow-right-24: Reference](reference/)
+    [:octicons-arrow-right-24: Reference](reference/environment-configuration.md)
 
 -   :material-sitemap:{ .lg .middle } **Architecture**
 
@@ -49,7 +49,7 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     System design, services, data flow, and design rationale.
 
-    [:octicons-arrow-right-24: Architecture](architecture/)
+    [:octicons-arrow-right-24: Architecture](architecture/README.md)
 
 -   :material-account-group:{ .lg .middle } **Contributing**
 
@@ -57,7 +57,7 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     How to file issues, open pull requests, and participate in the project.
 
-    [:octicons-arrow-right-24: Contributing](contributing/)
+    [:octicons-arrow-right-24: Contributing](contributing/CONTRIBUTING.md)
 
 </div>
 

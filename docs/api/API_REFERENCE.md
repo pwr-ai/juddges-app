@@ -950,6 +950,6 @@ Link: <http://api.example.com/documents?offset=20>; rel="next",
 ---
 
 For more information, see:
-- [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Getting started guide
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
+- [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) - Getting started guide
+- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - System architecture
 - [Interactive API Docs](http://localhost:8004/docs) - When backend is running

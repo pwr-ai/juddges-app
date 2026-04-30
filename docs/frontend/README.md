@@ -321,9 +321,9 @@ xl: 1280px  /* Large desktop */
 ## Resources
 
 ### Internal Documentation
-- [CLAUDE.md](../../CLAUDE.md) - Project-wide development guide
-- [README.md](../../README.md) - Project overview and setup
-- [SETUP_GUIDE.md](../../SETUP_GUIDE.md) - Detailed setup instructions
+- [CLAUDE.md](https://github.com/pwr-ai/juddges-app/blob/main/CLAUDE.md) - Project-wide development guide
+- [README.md](https://github.com/pwr-ai/juddges-app/blob/main/README.md) - Project overview and setup
+- [Setup Guide](../getting-started/setup-guide.md) - Detailed setup instructions
 
 ### External Resources
 - [Next.js 15 Documentation](https://nextjs.org/docs)
