@@ -11,13 +11,32 @@ authors:
   - family-names: Augustyniak
     given-names: Łukasz
     email: aisolutions@lukaszaugustyniak.com
+    affiliation: "Wrocław University of Science and Technology"
     # TODO: add ORCID — orcid: "https://orcid.org/0000-0000-0000-0000"
-    # TODO: add affiliation — affiliation: "Wrocław University of Science and Technology"
-  # TODO: add additional authors / co-maintainers, e.g.:
-  # - family-names: Surname
-  #   given-names: Given
-  #   orcid: "https://orcid.org/0000-0000-0000-0000"
-  #   affiliation: "Institution"
+  - family-names: Tagowski
+    given-names: Kamil
+    affiliation: "Wrocław University of Science and Technology"
+    # TODO: add ORCID
+  - family-names: Binkowski
+    given-names: Jakub
+    affiliation: "Wrocław University of Science and Technology"
+    # TODO: add ORCID
+  - family-names: Sawczyn
+    given-names: Albert
+    affiliation: "Wrocław University of Science and Technology"
+    # TODO: add ORCID
+  - family-names: Bernaczyk
+    given-names: Michał
+    affiliation: "Wrocław University"
+    # TODO: add ORCID
+  - family-names: Kamiński
+    given-names: Krzysztof
+    affiliation: "Court of Appeal, Wrocław"
+    # TODO: add ORCID
+  - family-names: Kajdanowicz
+    given-names: Tomasz
+    affiliation: "Wrocław University of Science and Technology"
+    # TODO: add ORCID
 repository-code: "https://github.com/pwr-ai/juddges-app"
 url: "https://github.com/pwr-ai/juddges-app"
 license: Apache-2.0
@@ -44,6 +63,18 @@ preferred-citation:
   authors:
     - family-names: Augustyniak
       given-names: Łukasz
+    - family-names: Tagowski
+      given-names: Kamil
+    - family-names: Binkowski
+      given-names: Jakub
+    - family-names: Sawczyn
+      given-names: Albert
+    - family-names: Bernaczyk
+      given-names: Michał
+    - family-names: Kamiński
+      given-names: Krzysztof
+    - family-names: Kajdanowicz
+      given-names: Tomasz
   doi: 10.5281/zenodo.19911856
   url: "https://github.com/pwr-ai/juddges-app"
   year: 2026
