@@ -2,7 +2,7 @@
 
 AI-powered judicial decision search and analysis platform for Polish and England & Wales court judgments.
 
-[![DOI](https://zenodo.org/badge/1153557974.svg)](https://doi.org/10.5281/zenodo.19911856)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19911856.svg)](https://doi.org/10.5281/zenodo.19911856)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
