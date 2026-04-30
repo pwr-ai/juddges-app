@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a new feature or enhancement for Juddges App
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. The clearer the problem statement, the easier it is to evaluate and prioritize.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve? Who hits it, and how often?
+      placeholder: As a legal researcher, I struggle to ... because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or change you'd like to see.
+      placeholder: Add a way to ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds, other tools, or alternative designs you considered.
+
+  - type: checkboxes
+    id: audience
+    attributes:
+      label: Who would benefit?
+      description: Select all groups that would benefit from this feature.
+      options:
+        - label: Legal experts
+        - label: Researchers
+        - label: Annotators
+        - label: Developers
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Willingness to contribute
+      description: Would you be open to helping implement this?
+      options:
+        - "Yes — I'd like to work on this"
+        - "Maybe — happy to help with parts of it"
+        - "No — just suggesting"
+    validations:
+      required: true

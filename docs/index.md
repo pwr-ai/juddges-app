@@ -15,9 +15,9 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     ---
 
-    FAIR-software questionnaire and citation guidance for funder reporting and external assessments.
+    FAIR4RS / EOSC software-sustainability report and citation guidance for funder reporting and external assessments.
 
-    [:octicons-arrow-right-24: Open Science questionnaire](open-science/questionnaire.md)
+    [:octicons-arrow-right-24: Open-Science & FAIR4RS report](open-science/index.md)
 
 -   :material-rocket-launch:{ .lg .middle } **Getting Started**
 

@@ -182,3 +182,6 @@ papers/**/*.out
 papers/**/*.synctex.gz
 papers/**/*.toc
 papers/**/main.pdf
+
+# MkDocs build output
+site/

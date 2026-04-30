@@ -1,0 +1,32 @@
+name: Documentation issue
+description: Report a problem with the docs or suggest an improvement
+labels: ["documentation", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to report missing, outdated, or confusing documentation.
+        The docs site lives at https://pwr-ai.github.io/juddges-app/ and source files are in `docs/`.
+
+  - type: input
+    id: page
+    attributes:
+      label: Which doc page?
+      description: URL on the docs site, or path to a file in `docs/` (e.g. `docs/how-to/deploy.md`).
+      placeholder: https://pwr-ai.github.io/juddges-app/how-to/... or docs/reference/api.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+      description: Describe what's incorrect, unclear, outdated, or absent.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: Suggested fix
+      description: Optional — wording, structure, or specific content you'd propose.
