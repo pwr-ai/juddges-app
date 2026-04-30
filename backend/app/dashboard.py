@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from loguru import logger
 from pydantic import BaseModel
 from supabase import Client, PostgrestAPIError, StorageException, create_client
@@ -672,6 +672,7 @@ async def get_featured_examples(
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_trending_topics(
     request: Request,
+    response: Response,
     category: str | None = None,
     limit: int = Query(default=5, ge=1, le=10),
     api_key: str = Depends(verify_api_key),
