@@ -76,7 +76,10 @@ format-check = "ruff format . --check"
 
 # Combined commands
 check = ["lint", "format-check"]
-check-all = ["lint", "format-check", "test"]
+# check-all mirrors CI (`pytest -m unit`) so it can be run locally without
+# requiring Supabase, Redis, or OpenAI. Use `test-integration` for the live
+# suite and `test` for the full set when those services are available.
+check-all = ["lint", "format-check", "test-unit"]
 ci = ["lint", "format-check"]
 
 # Search benchmark (live backend required — see scripts/search_benchmark.py)
