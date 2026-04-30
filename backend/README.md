@@ -152,12 +152,16 @@ See `.env.sample` for required configuration variables:
 
 ## Contributing
 
-1. Create a feature branch from `main`
+This project uses a two-branch flow: `develop` is the integration branch, `main` is production-only. Feature work targets `develop`.
+
+1. Branch from `develop`: `git checkout develop && git pull && git checkout -b feature/your-change`
 2. Write tests for new functionality
 3. Ensure all tests pass: `poetry run pytest`
 4. Format code: `poetry run ruff format .`
 5. Run linting: `poetry run ruff check .`
-6. Submit pull request
+6. Open a pull request **into `develop`** (never directly into `main`)
+
+Releases roll up by opening a `release: vX.Y.Z` PR from `develop` → `main`; production deploys are tag-driven (`prod-v*` tags cut from `main`). See the root `README.md` and `docs/how-to/deployment.md` for the full release flow.
 
 ## License
 
