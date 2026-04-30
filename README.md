@@ -137,6 +137,48 @@ Documentation lives in [`docs/`](docs/) and follows the [Diataxis](https://diata
 
 For internal contributor guidelines, see [`CLAUDE.md`](CLAUDE.md) (development conventions for AI-assisted contributions).
 
+## Branching & release flow
+
+This repo uses a two-branch model:
+
+- **`main`** — production. Only `develop` → `main` release PRs and `hotfix/*` PRs land here. Production images are built **manually** from a clean `main` via `scripts/build_and_push_prod.sh`.
+- **`develop`** — integration. All in-progress feature work lands here.
+
+### Day-to-day work
+
+```bash
+git checkout develop && git pull
+git checkout -b feature/your-change          # or fix/your-bug
+# ... commit, push ...
+git push -u origin feature/your-change
+# Open a PR into develop (not main)
+```
+
+### Cutting a release
+
+```bash
+# 1. Open and merge a PR from develop → main titled "release: vX.Y.Z".
+
+# 2. From a clean main, run the build script:
+git checkout main && git pull
+./scripts/build_and_push_prod.sh             # patch bump (or: minor / major / X.Y.Z)
+# The script bumps the version, builds + pushes Docker images, and tags prod-vX.Y.Z.
+
+# 3. On the production host, pull and restart:
+./scripts/deploy_prod.sh                     # deploy :latest
+```
+
+### Hotfixes
+
+```bash
+git checkout main && git pull
+git checkout -b hotfix/critical-thing
+# ... fix, commit, PR into main, merge ...
+# Cut the patch release as above, then back-merge main → develop:
+git checkout develop && git pull
+git merge main && git push
+```
+
 ## Related projects
 
 - [pwr-ai/JuDDGES](https://github.com/pwr-ai/JuDDGES) — the parent research project: datasets, NLP pipelines, and human-in-the-loop ML experiments for Polish and England & Wales judicial decisions.
@@ -146,11 +188,11 @@ For internal contributor guidelines, see [`CLAUDE.md`](CLAUDE.md) (development c
 Contributions are welcome. Please open an issue to discuss substantial changes before submitting a pull request.
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
+2. Create your branch from **`develop`**: `git checkout develop && git pull && git checkout -b feature/your-feature`
 3. Run the test and lint suites locally:
    - Backend: `poetry run poe check-all`
    - Frontend: `npm run validate && npm run test`
-4. Commit your changes and open a pull request against `main`
+4. Commit your changes and open a pull request **into `develop`** (never directly into `main`)
 
 ## License
 

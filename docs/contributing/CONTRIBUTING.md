@@ -284,18 +284,26 @@ Closes #123"
 
 ## Pull Request Process
 
+> **Branching model**: this project uses two long-lived branches. `develop` is the integration branch where all feature work lands. `main` is reserved for production releases — only release PRs (from `develop`) and `hotfix/*` PRs are merged into `main`. **All feature/fix PRs must target `develop`, not `main`.** See the root `README.md` for the full release flow.
+
 ### Before Creating a PR
 
-1. **Update your fork:**
+1. **Update your fork's `develop`:**
    ```bash
    git fetch upstream
-   git checkout main
-   git merge upstream/main
+   git checkout develop
+   git merge upstream/develop
    ```
 
-2. **Create a feature branch:**
+2. **Create a feature branch from `develop`:**
    ```bash
    git checkout -b feature/your-feature-name
+   ```
+
+   For a production hotfix instead, branch from `main`:
+   ```bash
+   git checkout main && git merge upstream/main
+   git checkout -b hotfix/your-fix-name
    ```
 
 3. **Make your changes:**
@@ -329,7 +337,7 @@ Closes #123"
    git push origin feature/your-feature-name
    ```
 
-2. **Open a Pull Request** on GitHub
+2. **Open a Pull Request** on GitHub — set the base branch to **`develop`** (or `main` only for `hotfix/*` branches)
 
 3. **Fill out the PR template:**
 

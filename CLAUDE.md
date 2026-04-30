@@ -68,6 +68,16 @@ Router-per-domain (`documents.py`, `collections.py`, `analytics.py`, `feedback.p
 ### Database
 PostgreSQL via Supabase. Main schema: `supabase/migrations/20260209000001_create_judgments_table.sql` and follow-on migrations. The `judgments` table has full-text (GIN) and semantic (pgvector HNSW) indexes — combine for hybrid search.
 
+## Branching & Release Flow
+
+Two-branch model:
+
+- **`main`** is production. Only release PRs (from `develop`) and `hotfix/*` PRs land here. Production images are built **manually** from a clean `main` via `scripts/build_and_push_prod.sh`.
+- **`develop`** is the integration branch. Feature/fix branches start from `develop` and PR back into `develop`.
+- Releasing: open a `release: vX.Y.Z` PR from `develop` → `main`, merge, then run `./scripts/build_and_push_prod.sh` from `main`. The script bumps the version, builds + pushes images, and tags `prod-vX.Y.Z`.
+- Hotfixes branch from `main`, PR back to `main`, then back-merge `main` → `develop`.
+- **Never open a feature PR directly against `main`.** When helping the user with branching commands, default to creating new branches from `develop`.
+
 ## Production Deploy
 
 Docker images live on Docker Hub as `${DOCKER_USERNAME}/juddges-{frontend,backend}`.
