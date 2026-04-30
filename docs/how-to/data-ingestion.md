@@ -402,4 +402,4 @@ GROUP BY jurisdiction;
 
 ---
 
-**Need help?** Check the main [README](README.md) or [SETUP_GUIDE](SETUP_GUIDE.md) for more information.
+**Need help?** Check the [docs home](../index.md) or [setup guide](../getting-started/setup-guide.md) for more information.

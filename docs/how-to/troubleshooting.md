@@ -768,6 +768,6 @@ docker compose -f docker-compose.dev.yml up --build
 ---
 
 For more information:
-- [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Setup guide
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
+- [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) - Setup guide
+- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - System architecture
+- [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) - Contribution guidelines

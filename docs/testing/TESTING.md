@@ -769,6 +769,6 @@ jobs:
 ---
 
 For more information:
-- [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Setup guide
-- [CODE_STYLE.md](./CODE_STYLE.md) - Coding standards
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
+- [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) - Setup guide
+- [CODE_STYLE.md](../contributing/CODE_STYLE.md) - Coding standards
+- [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) - Contribution guidelines
