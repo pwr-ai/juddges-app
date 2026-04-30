@@ -13,16 +13,16 @@ authors:
     email: aisolutions@lukaszaugustyniak.com
     affiliation: "Wrocław University of Science and Technology"
     # TODO: add ORCID — orcid: "https://orcid.org/0000-0000-0000-0000"
-  - family-names: Tagowski
-    given-names: Kamil
-    affiliation: "Wrocław University of Science and Technology"
-    # TODO: add ORCID
   - family-names: Binkowski
     given-names: Jakub
     affiliation: "Wrocław University of Science and Technology"
     # TODO: add ORCID
   - family-names: Sawczyn
     given-names: Albert
+    affiliation: "Wrocław University of Science and Technology"
+    # TODO: add ORCID
+  - family-names: Tagowski
+    given-names: Kamil
     affiliation: "Wrocław University of Science and Technology"
     # TODO: add ORCID
   - family-names: Bernaczyk
@@ -63,12 +63,12 @@ preferred-citation:
   authors:
     - family-names: Augustyniak
       given-names: Łukasz
-    - family-names: Tagowski
-      given-names: Kamil
     - family-names: Binkowski
       given-names: Jakub
     - family-names: Sawczyn
       given-names: Albert
+    - family-names: Tagowski
+      given-names: Kamil
     - family-names: Bernaczyk
       given-names: Michał
     - family-names: Kamiński
