@@ -9,11 +9,11 @@ Complete guide for setting up, developing, building, releasing, and deploying Ju
 1. [Prerequisites](#1-prerequisites)
 2. [Initial Setup](#2-initial-setup)
 3. [Development (Local with Hot Reload)](#3-development-local-with-hot-reload)
-4. [Local Build & Deploy](#4-local-build--deploy)
+4. [Local Build & Deploy](#4-local-build-deploy)
 5. [Versioned Releases (SemVer)](#5-versioned-releases-semver)
 6. [Production Deployment (Registry Images)](#6-production-deployment-registry-images)
 7. [Rollback](#7-rollback)
-8. [Monitoring & Troubleshooting](#8-monitoring--troubleshooting)
+8. [Monitoring & Troubleshooting](#8-monitoring-troubleshooting)
 9. [Script Reference](#9-script-reference)
 
 ---

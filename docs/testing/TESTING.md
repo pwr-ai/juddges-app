@@ -8,7 +8,7 @@ Comprehensive testing strategy and guidelines for Juddges Legal Assistant.
 - [Testing Stack](#testing-stack)
 - [Backend Testing](#backend-testing)
 - [Frontend Testing](#frontend-testing)
-- [Integration Testing](#integration-testing)
+- [Integration Testing](#integration-tests)
 - [E2E Testing](#e2e-testing)
 - [Test Coverage](#test-coverage)
 - [Best Practices](#best-practices)

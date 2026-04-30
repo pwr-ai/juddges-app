@@ -10,7 +10,7 @@ Complete API documentation for the Juddges Legal Research Platform.
 - [Endpoints](#endpoints)
   - [Documents](#documents)
   - [Search](#search)
-  - [Chat & Q&A](#chat--qa)
+  - [Chat & Q&A](#chat-qa)
   - [Collections](#collections)
   - [Analytics](#analytics)
   - [Schemas](#schemas)
