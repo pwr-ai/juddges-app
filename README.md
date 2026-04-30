@@ -126,7 +126,11 @@ juddges-app/
 
 ## Documentation
 
-Documentation lives in [`docs/`](docs/) and follows the [Diataxis](https://diataxis.fr/) framework:
+**Rendered docs site:** <https://pwr-ai.github.io/juddges-app/>
+
+The full documentation is published as a searchable site, including the [Open Science questionnaire](https://pwr-ai.github.io/juddges-app/open-science/questionnaire/) for funder reporting and external assessments.
+
+The source markdown lives in [`docs/`](docs/) and follows the [Diataxis](https://diataxis.fr/) framework:
 
 - [`docs/tutorials/`](docs/tutorials/) — Learning-oriented walkthroughs
 - [`docs/how-to/`](docs/how-to/) — Task-oriented guides
@@ -135,6 +139,7 @@ Documentation lives in [`docs/`](docs/) and follows the [Diataxis](https://diata
 - [`docs/getting-started/`](docs/getting-started/) — Setup and onboarding
 - [`docs/architecture/`](docs/architecture/) — System design notes
 - [`docs/features/`](docs/features/) — Feature-specific documentation
+- [`docs/open-science/`](docs/open-science/) — Open-science / FAIR-software statements
 
 For internal contributor guidelines, see [`CLAUDE.md`](CLAUDE.md) (development conventions for AI-assisted contributions).
 
