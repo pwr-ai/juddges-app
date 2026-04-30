@@ -1,0 +1,54 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Juddges App"
+abstract: >-
+  AI-powered judicial decision search and analysis platform for Polish and
+  England & Wales court judgments. Web app companion to the JuDDGES research
+  project, providing hybrid semantic and full-text search, retrieval-augmented
+  chat, structured information extraction, and analytics over court judgments.
+type: software
+authors:
+  - family-names: Augustyniak
+    given-names: Łukasz
+    email: aisolutions@lukaszaugustyniak.com
+    # TODO: add ORCID — orcid: "https://orcid.org/0000-0000-0000-0000"
+    # TODO: add affiliation — affiliation: "Wrocław University of Science and Technology"
+  # TODO: add additional authors / co-maintainers, e.g.:
+  # - family-names: Surname
+  #   given-names: Given
+  #   orcid: "https://orcid.org/0000-0000-0000-0000"
+  #   affiliation: "Institution"
+repository-code: "https://github.com/pwr-ai/juddges-app"
+url: "https://github.com/pwr-ai/juddges-app"
+license: Apache-2.0
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.19911856
+    description: "Concept DOI — resolves to the latest released version"
+keywords:
+  - legal-nlp
+  - judicial-decisions
+  - case-law
+  - semantic-search
+  - retrieval-augmented-generation
+  - court-judgments
+  - poland
+  - united-kingdom
+# TODO: bump on each release
+version: 0.1.0
+# TODO: set the date of the corresponding release (YYYY-MM-DD)
+date-released: 2026-04-30
+preferred-citation:
+  type: software
+  title: "Juddges App"
+  authors:
+    - family-names: Augustyniak
+      given-names: Łukasz
+  doi: 10.5281/zenodo.19911856
+  url: "https://github.com/pwr-ai/juddges-app"
+  year: 2026
+references:
+  - type: software
+    title: "JuDDGES"
+    repository-code: "https://github.com/pwr-ai/JuDDGES"
+    notes: "Parent research project — datasets and NLP pipelines this app builds on"
