@@ -4,17 +4,26 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+try:
+    from langchain_core.runnables import Runnable
+except ImportError:
+    # Fallback if LangChain not available
+    class Runnable:
+        pass
+
+
+class FakeMessage(str):
+    """A string-like message that also has a content attribute for compatibility."""
+
+    def __new__(cls, content: str):
+        return str.__new__(cls, content)
+
+    def __init__(self, content: str):
+        self.content = content
+
 
 @dataclass
-class FakeMessage:
-    content: str
-
-    def __str__(self) -> str:
-        return self.content
-
-
-@dataclass
-class FakeChatModel:
+class FakeChatModel(Runnable[Any, FakeMessage]):
     """Deterministic, in-memory chat model for tests.
 
     Pass a list of response strings; each invoke() pops one in order.
@@ -25,8 +34,8 @@ class FakeChatModel:
     calls: list[Any] = field(default_factory=list)
     _cursor: int = 0
 
-    def invoke(self, messages: Any, **_: Any) -> FakeMessage:
-        self.calls.append(messages)
+    def invoke(self, input: Any, config: Any = None, **kwargs: Any) -> FakeMessage:
+        self.calls.append(input)
         if self._cursor >= len(self.responses):
             raise IndexError(
                 f"FakeChatModel exhausted: {len(self.responses)} responses "
@@ -36,5 +45,9 @@ class FakeChatModel:
         self._cursor += 1
         return FakeMessage(content=response)
 
-    async def ainvoke(self, messages: Any, **kwargs: Any) -> FakeMessage:
-        return self.invoke(messages, **kwargs)
+    async def ainvoke(self, input: Any, config: Any = None, **kwargs: Any) -> FakeMessage:
+        return self.invoke(input, config, **kwargs)
+
+    def with_config(self, **kwargs: Any) -> "FakeChatModel":
+        """Return self for LangChain compatibility. Config is ignored in tests."""
+        return self

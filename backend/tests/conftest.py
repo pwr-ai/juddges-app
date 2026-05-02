@@ -215,3 +215,11 @@ def pytest_collection_modifyitems(config, items):
     if deselected:
         config.hook.pytest_deselected(items=deselected)
         items[:] = selected
+
+
+@pytest.fixture
+def fake_llm():
+    """Yields a FakeChatModel; pre-seed responses by setting fake_llm.responses."""
+    from juddges_search.testing import FakeChatModel
+
+    return FakeChatModel(responses=[])

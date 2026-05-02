@@ -1,7 +1,7 @@
 from juddges_search.chains.models import DocumentRetrievalInput, Response
 from juddges_search.chains.retrieve import retrieve_documents_runnable
 from juddges_search.chains.callbacks import callbacks
-from juddges_search.llms import get_default_llm
+from juddges_search.llm_provider import get_llm_provider, LLMProvider
 from juddges_search.prompts.formatters.documents import format_documents_with_metadata
 from juddges_search.prompts.formatters.chat_history import format_chat_history_as_string
 from juddges_search.prompts.legal import (
@@ -16,8 +16,9 @@ from juddges_search.prompts.legal import (
 from juddges_search import __version__
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnableLambda, RunnableSequence, RunnableBranch
+from langchain_core.runnables import RunnableLambda, RunnableSequence, RunnableBranch, Runnable
 from loguru import logger
+from typing import Any
 
 
 def _build_legal_prompt(response_format: str = "adaptive") -> str:
@@ -58,7 +59,7 @@ LEGAL_CHAT_PROMPT_SHORT = _build_legal_prompt("short")
 LEGAL_CHAT_PROMPT_DETAILED = _build_legal_prompt("detailed")
 LEGAL_CHAT_PROMPT_ADAPTIVE = _build_legal_prompt("adaptive")
 
-model = get_default_llm(use_mini_model=False)
+# Model instantiation moved to build_chat_chain factory
 
 # Create chat prompt templates for all response formats
 # Using default f-string format instead of jinja2 to avoid conflicts with JSON curly braces in examples
@@ -105,7 +106,7 @@ def _select_prompt_by_format(inputs) -> ChatPromptTemplate:
         return chat_prompt_adaptive
 
 
-def _classify_query_type(inputs) -> str:
+def _classify_query_type(inputs, classifier_llm: LLMProvider | None = None) -> str:
     """
     Classify user query using a nano LLM to determine if document retrieval is needed.
 
@@ -117,6 +118,7 @@ def _classify_query_type(inputs) -> str:
 
     Args:
         inputs: Dictionary or Pydantic model containing 'question' and optionally 'chat_history'
+        classifier_llm: Optional LLM for classification. If None, uses default mini model.
 
     Returns:
         Query type string
@@ -142,7 +144,11 @@ User query: "{question}"
 
 Respond with ONLY the category name (reformulation, format_change, general_knowledge, or document_search)."""
 
-    nano_model = get_default_llm(use_mini_model=True)
+    if classifier_llm is None:
+        from juddges_search.llms import get_default_llm
+        nano_model = get_default_llm(use_mini_model=True)
+    else:
+        nano_model = classifier_llm
 
     try:
         classification = nano_model.invoke(classification_prompt).content.strip().lower()
@@ -185,20 +191,6 @@ def _handle_query_without_retrieval(inputs) -> dict:
     }
 
 
-# Enhanced document retrieval and formatting that includes chat history context
-retrieve_and_format_with_chat_runnable = (
-    retrieve_documents_runnable
-    | RunnableLambda(
-        lambda inputs: {
-            **inputs,
-            "context": format_documents_with_metadata(inputs["context"]),
-            "chat_history": format_chat_history_as_string(inputs)
-            if inputs.get("chat_history")
-            else "Brak wcześniejszej rozmowy.",
-            "response_format": inputs.get("response_format", "adaptive"),
-        }
-    )
-).with_config(run_name="retrieve_and_format_with_chat_runnable")
 
 
 def _route_to_appropriate_prompt(inputs: dict):
@@ -215,7 +207,97 @@ def _route_to_appropriate_prompt(inputs: dict):
     return prompt_template.invoke(inputs)
 
 
-# Conditional routing: decide whether to retrieve documents or skip retrieval
+def build_chat_chain(
+    *,
+    llm: LLMProvider | None = None,
+    retriever: Runnable | None = None,
+    classifier_llm: LLMProvider | None = None,
+) -> Runnable[Any, Any]:
+    """
+    Build a chat chain with injected dependencies for testing.
+
+    Args:
+        llm: LLM provider for main chat. If None, uses default LLM provider.
+        retriever: Document retriever. If None, uses default retrieve_documents_runnable.
+        classifier_llm: LLM for query classification. If None, uses default mini model.
+
+    Returns:
+        Complete chat chain runnable
+    """
+    # Use defaults if not provided
+    if llm is None:
+        llm = get_llm_provider()
+    if retriever is None:
+        retriever = retrieve_documents_runnable
+
+    # Create classification function with injected LLM
+    def _should_skip_retrieval_with_llm(inputs) -> bool:
+        """Check if retrieval should be skipped using the injected classifier LLM."""
+        query_type = _classify_query_type(inputs, classifier_llm=classifier_llm)
+        return query_type in ["reformulation", "format_change", "general_knowledge"]
+
+    # Enhanced document retrieval and formatting that includes chat history context
+    retrieve_and_format_with_chat_runnable = (
+        retriever
+        | RunnableLambda(
+            lambda inputs: {
+                **inputs,
+                "context": format_documents_with_metadata(inputs["context"]),
+                "chat_history": format_chat_history_as_string(inputs)
+                if inputs.get("chat_history")
+                else "Brak wcześniejszej rozmowy.",
+                "response_format": inputs.get("response_format", "adaptive"),
+            }
+        )
+    ).with_config(run_name="retrieve_and_format_with_chat_runnable")
+
+    # Branching logic for retrieval
+    retrieval_branch = RunnableBranch(
+        # If should skip retrieval, handle without document search
+        (
+            _should_skip_retrieval_with_llm,
+            RunnableLambda(_handle_query_without_retrieval).with_config(
+                run_name="skip_retrieval_handler", tags=["no-retrieval", "direct-response"]
+            ),
+        ),
+        # Otherwise, perform full retrieval
+        retrieve_and_format_with_chat_runnable,
+    ).with_config(run_name="retrieval_routing_branch")
+
+    # Build the complete chain
+    return (
+        RunnableSequence(
+            retrieval_branch,
+            RunnableLambda(_route_to_appropriate_prompt).with_config(
+                run_name="legal_prompt_router", tags=["prompt-selection", "format-routing"]
+            ),
+            llm.with_config(run_name="legal_chat_llm_call", tags=["gpt5", "legal-assistant", "juddges"]),
+            JsonOutputParser().with_config(run_name="legal_chat_json_parser", tags=["json-output", "structured-response"]),
+        )
+        .with_config(
+            run_name="legal_chat_assistant",
+            callbacks=callbacks,
+            tags=["legal-ai", "juddges", "chat-with-history", "wust-project", "legal-judgments"],
+            metadata={
+                "version": __version__,
+                "purpose": "Legal judgments analysis for Polish tax law and criminal law with chat history and intelligent retrieval routing",
+                "project": "Juddges - WUST",
+                "domain": "legal-judgments-multi-domain",
+                "features": [
+                    "chat_history",
+                    "document_retrieval",
+                    "legal_citations",
+                    "format_routing",
+                    "intelligent_retrieval_routing",
+                    "query_classification",
+                ],
+            },
+        )
+        .with_types(input_type=DocumentRetrievalInput, output_type=Response)
+    )
+
+
+# Conditional routing: decide whether to retrieve documents or skip retrieval (legacy)
 def _should_skip_retrieval(inputs) -> bool:
     """
     Determine if document retrieval should be skipped based on query classification.
@@ -230,49 +312,5 @@ def _should_skip_retrieval(inputs) -> bool:
     return query_type in ["reformulation", "format_change", "general_knowledge"]
 
 
-# Branching logic for retrieval
-retrieval_branch = RunnableBranch(
-    # If should skip retrieval, handle without document search
-    (
-        _should_skip_retrieval,
-        RunnableLambda(_handle_query_without_retrieval).with_config(
-            run_name="skip_retrieval_handler", tags=["no-retrieval", "direct-response"]
-        ),
-    ),
-    # Otherwise, perform full retrieval
-    retrieve_and_format_with_chat_runnable,
-).with_config(run_name="retrieval_routing_branch")
-
-
-# Main chat chain that handles chat history for legal consultations
-# Now with intelligent retrieval routing
-chat_chain = (
-    RunnableSequence(
-        retrieval_branch,
-        RunnableLambda(_route_to_appropriate_prompt).with_config(
-            run_name="legal_prompt_router", tags=["prompt-selection", "format-routing"]
-        ),
-        model.with_config(run_name="legal_chat_llm_call", tags=["gpt5", "legal-assistant", "juddges"]),
-        JsonOutputParser().with_config(run_name="legal_chat_json_parser", tags=["json-output", "structured-response"]),
-    )
-    .with_config(
-        run_name="legal_chat_assistant",
-        callbacks=callbacks,
-        tags=["legal-ai", "juddges", "chat-with-history", "wust-project", "legal-judgments"],
-        metadata={
-            "version": __version__,
-            "purpose": "Legal judgments analysis for Polish tax law and criminal law with chat history and intelligent retrieval routing",
-            "project": "Juddges - WUST",
-            "domain": "legal-judgments-multi-domain",
-            "features": [
-                "chat_history",
-                "document_retrieval",
-                "legal_citations",
-                "format_routing",
-                "intelligent_retrieval_routing",
-                "query_classification",
-            ],
-        },
-    )
-    .with_types(input_type=DocumentRetrievalInput, output_type=Response)
-)
+# Main chat chain - preserve compatibility for LangServe
+chat_chain = build_chat_chain()
