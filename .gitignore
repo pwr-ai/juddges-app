@@ -8,6 +8,11 @@
 .env.*.local
 .env.production
 .env.secrets
+.env.rls-verify
+
+# Local git worktrees (created by superpowers:using-git-worktrees skill)
+.worktrees/
+
 # Catch nested .env files in subdirectories (e.g., backend/packages/*/.env)
 **/.env
 **/.env.local
