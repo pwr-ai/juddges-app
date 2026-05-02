@@ -146,6 +146,7 @@ Respond with ONLY the category name (reformulation, format_change, general_knowl
 
     if classifier_llm is None:
         from juddges_search.llms import get_default_llm
+
         nano_model = get_default_llm(use_mini_model=True)
     else:
         nano_model = classifier_llm
@@ -189,8 +190,6 @@ def _handle_query_without_retrieval(inputs) -> dict:
         else "Brak wcześniejszej rozmowy.",
         "response_format": inputs.get("response_format", "adaptive"),
     }
-
-
 
 
 def _route_to_appropriate_prompt(inputs: dict):
@@ -272,7 +271,9 @@ def build_chat_chain(
                 run_name="legal_prompt_router", tags=["prompt-selection", "format-routing"]
             ),
             llm.with_config(run_name="legal_chat_llm_call", tags=["gpt5", "legal-assistant", "juddges"]),
-            JsonOutputParser().with_config(run_name="legal_chat_json_parser", tags=["json-output", "structured-response"]),
+            JsonOutputParser().with_config(
+                run_name="legal_chat_json_parser", tags=["json-output", "structured-response"]
+            ),
         )
         .with_config(
             run_name="legal_chat_assistant",
@@ -297,19 +298,6 @@ def build_chat_chain(
     )
 
 
-# Conditional routing: decide whether to retrieve documents or skip retrieval (legacy)
-def _should_skip_retrieval(inputs) -> bool:
-    """
-    Determine if document retrieval should be skipped based on query classification.
-
-    Args:
-        inputs: Input (dict or Pydantic model) with question
-
-    Returns:
-        True if retrieval should be skipped, False otherwise
-    """
-    query_type = _classify_query_type(inputs)
-    return query_type in ["reformulation", "format_change", "general_knowledge"]
 
 
 # Main chat chain - preserve compatibility for LangServe

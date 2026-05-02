@@ -1,4 +1,5 @@
 """Tests for chat chain that exercise the LLM injection seam without hitting OpenAI."""
+
 import os
 import pytest
 from unittest.mock import patch

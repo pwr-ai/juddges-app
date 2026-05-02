@@ -3,6 +3,7 @@
 Production code uses get_llm_provider() to obtain a chat model. Tests override
 this via a fixture or by passing a FakeChatModel directly to chain factories.
 """
+
 from __future__ import annotations
 
 import os

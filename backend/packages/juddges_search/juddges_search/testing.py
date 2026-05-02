@@ -1,25 +1,24 @@
 """Test doubles for the search package."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
 
-try:
-    from langchain_core.runnables import Runnable
-except ImportError:
-    # Fallback if LangChain not available
-    class Runnable:
-        pass
+from langchain_core.runnables import Runnable
 
 
 class FakeMessage(str):
-    """A string-like message that also has a content attribute for compatibility."""
+    """A message with content for compatibility."""
 
     def __new__(cls, content: str):
-        return str.__new__(cls, content)
+        instance = str.__new__(cls, content)
+        instance.content = content
+        return instance
 
     def __init__(self, content: str):
-        self.content = content
+        # str.__init__ is a no-op but this maintains the interface
+        pass
 
 
 @dataclass
@@ -49,5 +48,4 @@ class FakeChatModel(Runnable[Any, FakeMessage]):
         return self.invoke(input, config, **kwargs)
 
     def with_config(self, **kwargs: Any) -> "FakeChatModel":
-        """Return self for LangChain compatibility. Config is ignored in tests."""
         return self

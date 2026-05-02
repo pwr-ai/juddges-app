@@ -12,6 +12,7 @@ def test_get_llm_provider_function_exists():
 @pytest.mark.unit
 def test_llm_provider_protocol_runtime_checkable():
     """LLMProvider protocol should be runtime checkable."""
+
     class Dummy:
         def invoke(self, messages, **kwargs):
             return "ok"
