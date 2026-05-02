@@ -21,6 +21,7 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 PROJECT="juddges"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 IMAGES=(
     "frontend:frontend"       # <service-dir>:<image-suffix>
@@ -243,6 +244,21 @@ build_and_push() {
         "${build_context}"
 
     ok "Built ${full_image}:${version}"
+
+    # ------------------------------------------------------------------------
+    # Smoke-test the freshly built image BEFORE pushing it. Broken images
+    # must never reach Docker Hub. Currently only the backend image has a
+    # /health endpoint to smoke-test against; frontend smoke-testing would
+    # require a running backend stub.
+    # ------------------------------------------------------------------------
+    if [[ "${image_suffix}" == "backend" ]]; then
+        info "Smoke-testing ${full_image}:${version} before push ..."
+        if ! "${SCRIPT_DIR}/smoke_test_images.sh" "${version}"; then
+            err "Smoke test failed for ${full_image}:${version} — aborting push."
+            exit 1
+        fi
+        ok "Smoke test passed for ${full_image}:${version}"
+    fi
 
     info "Pushing ${full_image}:${version} ..."
     docker push "${full_image}:${version}"
