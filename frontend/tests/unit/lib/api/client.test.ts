@@ -1,11 +1,24 @@
+import { http, HttpResponse } from 'msw'
+
 import { apiClient, ApiError } from '@/lib/api/client'
 
-describe('apiClient', () => {
+import { server, setupMsw } from '../../../__mocks__/server'
+
+// The manual-mock describe block below temporarily replaces `global.fetch`
+// with a `jest.fn()` so that we can assert call arguments. Each test saves
+// and restores the previous fetch so the MSW describe block keeps its
+// interception working.
+
+describe('apiClient (manual fetch mocks)', () => {
+  let previousFetch: typeof fetch
+
   beforeEach(() => {
-    // Mock fetch on a per-test basis. Each test that needs a manual fetch mock
-    // sets it up inline; we keep beforeEach light so other describe blocks
-    // (e.g. MSW-based tests below) are not forced to override the mock.
-    global.fetch = jest.fn()
+    previousFetch = global.fetch
+    global.fetch = jest.fn() as unknown as typeof fetch
+  })
+
+  afterEach(() => {
+    global.fetch = previousFetch
   })
 
   it('returns parsed JSON on 200', async () => {
@@ -64,5 +77,23 @@ describe('apiClient', () => {
         headers: expect.objectContaining({ 'X-API-Key': 'secret' }),
       }),
     )
+  })
+})
+
+describe('apiClient with MSW', () => {
+  // Opt-in to MSW interception for this suite. `setupMsw` calls
+  // `server.listen()` in beforeAll and tears it down (restoring the previous
+  // `global.fetch`) in afterAll.
+  setupMsw()
+
+  it('hits a handler-served endpoint', async () => {
+    server.use(
+      http.get('http://localhost/api/example', () =>
+        HttpResponse.json({ message: 'hi' }),
+      ),
+    )
+
+    const res = await apiClient.get<{ message: string }>('http://localhost/api/example')
+    expect(res).toEqual({ message: 'hi' })
   })
 })
