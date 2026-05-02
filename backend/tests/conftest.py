@@ -223,3 +223,11 @@ def fake_llm():
     from juddges_search.testing import FakeChatModel
 
     return FakeChatModel(responses=[])
+
+
+# Import Celery fixtures
+from tests.conftest_celery import (  # noqa: F401
+    celery_eager,
+    mocked_extractor,
+    mocked_supabase,
+)
