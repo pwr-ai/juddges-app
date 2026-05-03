@@ -7,11 +7,49 @@ Tests for user-based authentication including:
 - Optional vs required authentication
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
 from httpx import AsyncClient
+from juddges_search.db.supabase_db import get_collections_db
 
 from app.collections import get_current_user
 from app.server import app
+
+
+@pytest.fixture(autouse=True)
+def _stub_collections_db():
+    """Replace the Supabase-backed collections DB with a stub for every test.
+
+    These tests exercise the auth/header layer of /collections endpoints and
+    have no business reaching real Supabase — without this stub, requests with
+    otherwise-valid headers fall through to the live client and fail on DNS
+    resolution in offline test environments.
+    """
+
+    def _collection(user_id: str = "stub-user") -> dict:
+        return {
+            "id": "stub-collection",
+            "user_id": user_id,
+            "name": "stub",
+            "description": None,
+            "created_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z",
+        }
+
+    stub = AsyncMock()
+    stub.get_user_collections.return_value = []
+    stub.get_collection.return_value = None
+    stub.create_collection.side_effect = lambda user_id, name, description: {
+        **_collection(user_id),
+        "name": name,
+        "description": description,
+    }
+    stub.update_collection.side_effect = lambda *args, **kwargs: _collection()
+    stub.delete_collection.return_value = None
+    app.dependency_overrides[get_collections_db] = lambda: stub
+    yield stub
+    app.dependency_overrides.pop(get_collections_db, None)
 
 
 @pytest.mark.anyio
