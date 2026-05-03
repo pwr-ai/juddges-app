@@ -298,7 +298,5 @@ def build_chat_chain(
     )
 
 
-
-
 # Main chat chain - preserve compatibility for LangServe
 chat_chain = build_chat_chain()

@@ -45,9 +45,7 @@ class TestUnauthenticatedAccessRejected:
         "/ocr/jobs",
     ]
 
-    async def test_get_endpoints_reject_missing_api_key(
-        self, client: AsyncClient
-    ):
+    async def test_get_endpoints_reject_missing_api_key(self, client: AsyncClient):
         """GET requests without X-API-Key header must return 401 or 403."""
         for endpoint in self.PROTECTED_GET_ENDPOINTS:
             response = await client.get(endpoint)
@@ -56,9 +54,7 @@ class TestUnauthenticatedAccessRejected:
                 "expected 401 or 403"
             )
 
-    async def test_post_endpoints_reject_missing_api_key(
-        self, client: AsyncClient
-    ):
+    async def test_post_endpoints_reject_missing_api_key(self, client: AsyncClient):
         """POST requests without X-API-Key header must return 401 or 403."""
         for endpoint in self.PROTECTED_POST_ENDPOINTS:
             response = await client.post(endpoint, json={})
@@ -67,9 +63,7 @@ class TestUnauthenticatedAccessRejected:
                 "expected 401 or 403"
             )
 
-    async def test_langserve_routes_reject_missing_api_key(
-        self, client: AsyncClient
-    ):
+    async def test_langserve_routes_reject_missing_api_key(self, client: AsyncClient):
         """LangServe chain endpoints (/qa, /chat, /enhance_query) require API key."""
         langserve_endpoints = [
             "/qa/invoke",
@@ -83,9 +77,7 @@ class TestUnauthenticatedAccessRejected:
                 "without API key, expected 401 or 403"
             )
 
-    async def test_graphql_rejects_missing_api_key(
-        self, client: AsyncClient
-    ):
+    async def test_graphql_rejects_missing_api_key(self, client: AsyncClient):
         """The /graphql endpoint must require API key authentication."""
         response = await client.post(
             "/graphql",
@@ -184,9 +176,7 @@ class TestPublicEndpointsAccessible:
         "/openapi.json",
     ]
 
-    async def test_public_endpoints_do_not_require_auth(
-        self, client: AsyncClient
-    ):
+    async def test_public_endpoints_do_not_require_auth(self, client: AsyncClient):
         """Public endpoints must not return 401 or 403."""
         for endpoint in self.PUBLIC_ENDPOINTS:
             response = await client.get(endpoint, follow_redirects=True)
@@ -216,9 +206,7 @@ class TestAdminEndpointBoundaries:
         "/api/admin/users",
     ]
 
-    async def test_admin_endpoints_reject_no_auth(
-        self, client: AsyncClient
-    ):
+    async def test_admin_endpoints_reject_no_auth(self, client: AsyncClient):
         """Admin endpoints must reject requests with no auth at all."""
         for endpoint in self.ADMIN_ENDPOINTS:
             response = await client.get(endpoint)
@@ -239,9 +227,7 @@ class TestAdminEndpointBoundaries:
                 f"(got {response.status_code}), expected 401/403/422"
             )
 
-    async def test_admin_endpoints_reject_fake_jwt(
-        self, client: AsyncClient
-    ):
+    async def test_admin_endpoints_reject_fake_jwt(self, client: AsyncClient):
         """Admin endpoints must reject a fabricated JWT token."""
         fake_jwt_headers = {
             "Authorization": "Bearer fake.jwt.token",
@@ -286,9 +272,7 @@ class TestJWTProtectedEndpoints:
         "/api/consent/status",
     ]
 
-    async def test_jwt_endpoints_reject_no_auth(
-        self, client: AsyncClient
-    ):
+    async def test_jwt_endpoints_reject_no_auth(self, client: AsyncClient):
         """JWT-protected endpoints must not accept requests without auth."""
         for endpoint in self.JWT_PROTECTED_ENDPOINTS:
             response = await client.get(endpoint)

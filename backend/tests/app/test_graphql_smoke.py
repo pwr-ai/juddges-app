@@ -9,7 +9,9 @@ async def test_graphql_endpoint_responds_to_introspection(client: AsyncClient):
     response = await client.post("/graphql", json=introspection)
 
     # GraphQL endpoint exists and responds correctly
-    assert response.status_code in (200, 401, 403, 405), f"Got status {response.status_code}"
+    assert response.status_code in (200, 401, 403, 405), (
+        f"Got status {response.status_code}"
+    )
     if response.status_code == 200:
         body = response.json()
         assert "data" in body or "errors" in body, f"Invalid GraphQL response: {body}"

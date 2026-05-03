@@ -1,4 +1,5 @@
 """End-to-end Celery task tests in eager mode with mocked Supabase."""
+
 import pytest
 
 
@@ -35,7 +36,9 @@ def test_extract_task_records_failure_on_extractor_error(
     from app.workers import extract_information_from_documents_task
 
     # Make the extractor fail
-    mocked_extractor.extract_information_with_structured_output.side_effect = RuntimeError("LLM down")
+    mocked_extractor.extract_information_with_structured_output.side_effect = (
+        RuntimeError("LLM down")
+    )
 
     request = DocumentExtractionRequest(
         collection_id="test-collection",

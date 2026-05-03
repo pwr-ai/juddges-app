@@ -1,4 +1,5 @@
 """Celery + Supabase + extractor fixtures for eager-mode worker tests."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -41,7 +42,7 @@ def mocked_extractor(monkeypatch):
     fake_extractor_class = MagicMock(return_value=fake_extractor_instance)
     monkeypatch.setattr(
         "juddges_search.info_extraction.extractor.InformationExtractor",
-        fake_extractor_class
+        fake_extractor_class,
     )
 
     # Mock the document fetcher
@@ -49,8 +50,7 @@ def mocked_extractor(monkeypatch):
     fake_document.full_text = "Sample document text"
     fake_get_documents_by_id = MagicMock(return_value=[fake_document])
     monkeypatch.setattr(
-        "app.utils.document_fetcher.get_documents_by_id",
-        fake_get_documents_by_id
+        "app.utils.document_fetcher.get_documents_by_id", fake_get_documents_by_id
     )
 
     # Mock the LLM

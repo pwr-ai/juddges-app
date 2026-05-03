@@ -100,14 +100,23 @@ _FAKE_CONFIG = EmbeddingModelConfig(
 class TestListModelsEndpoint:
     """GET /embeddings/models"""
 
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
     @patch(
         "app.embeddings_api.list_available_models",
         return_value=[
-            {"id": "openai/text-embedding-3-small", "provider": "openai", "dimensions": 1536},
+            {
+                "id": "openai/text-embedding-3-small",
+                "provider": "openai",
+                "dimensions": 1536,
+            },
         ],
     )
-    async def test_list_models_success(self, mock_list, mock_default, client, valid_api_headers):
+    async def test_list_models_success(
+        self, mock_list, mock_default, client, valid_api_headers
+    ):
         resp = await client.get("/embeddings/models", headers=valid_api_headers)
         assert resp.status_code == 200
         data = resp.json()
@@ -117,7 +126,9 @@ class TestListModelsEndpoint:
 
     @patch("app.embeddings_api.get_default_model_id", return_value="huggingface/bge-m3")
     @patch("app.embeddings_api.list_available_models", return_value=[])
-    async def test_list_models_empty(self, mock_list, mock_default, client, valid_api_headers):
+    async def test_list_models_empty(
+        self, mock_list, mock_default, client, valid_api_headers
+    ):
         resp = await client.get("/embeddings/models", headers=valid_api_headers)
         assert resp.status_code == 200
         assert resp.json()["models"] == []
@@ -133,8 +144,13 @@ class TestGetActiveModelEndpoint:
     """GET /embeddings/models/active"""
 
     @patch("app.embeddings_api.get_model_config", return_value=_FAKE_CONFIG)
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
-    async def test_get_active_model(self, mock_default, mock_config, client, valid_api_headers):
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
+    async def test_get_active_model(
+        self, mock_default, mock_config, client, valid_api_headers
+    ):
         resp = await client.get("/embeddings/models/active", headers=valid_api_headers)
         assert resp.status_code == 200
         data = resp.json()
@@ -168,7 +184,9 @@ class TestSetActiveModelEndpoint:
         "app.embeddings_api.set_active_model",
         side_effect=ValueError("Unknown model: bad/model"),
     )
-    async def test_set_active_model_invalid_model(self, mock_set, client, valid_api_headers):
+    async def test_set_active_model_invalid_model(
+        self, mock_set, client, valid_api_headers
+    ):
         resp = await client.post(
             "/embeddings/models/active",
             json={"model_id": "bad/model"},
@@ -198,9 +216,14 @@ class TestSetActiveModelEndpoint:
 class TestTestEmbeddingEndpoint:
     """POST /embeddings/test"""
 
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
     @patch("app.embeddings_api.get_embedding_provider")
-    async def test_embed_normal_text(self, mock_provider_fn, mock_default, client, valid_api_headers):
+    async def test_embed_normal_text(
+        self, mock_provider_fn, mock_default, client, valid_api_headers
+    ):
         # Set up mock provider that returns a 1536-dim embedding
         fake_embedding = [0.01 * i for i in range(1536)]
         provider = AsyncMock()
@@ -219,9 +242,14 @@ class TestTestEmbeddingEndpoint:
         assert len(data["embedding_preview"]) == 10
         provider.embed_text.assert_awaited_once_with("contract breach damages")
 
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
     @patch("app.embeddings_api.get_embedding_provider")
-    async def test_embed_unicode_text(self, mock_provider_fn, mock_default, client, valid_api_headers):
+    async def test_embed_unicode_text(
+        self, mock_provider_fn, mock_default, client, valid_api_headers
+    ):
         """Polish diacritics and special characters should be handled correctly."""
         fake_embedding = [0.5] * 1024
         provider = AsyncMock()
@@ -241,7 +269,9 @@ class TestTestEmbeddingEndpoint:
         provider.embed_text.assert_awaited_once_with(polish_text)
 
     @patch("app.embeddings_api.get_embedding_provider")
-    async def test_embed_with_explicit_model(self, mock_provider_fn, client, valid_api_headers):
+    async def test_embed_with_explicit_model(
+        self, mock_provider_fn, client, valid_api_headers
+    ):
         """When model_id is provided it should be used instead of default."""
         fake_embedding = [0.0] * 3072
         provider = AsyncMock()
@@ -257,12 +287,17 @@ class TestTestEmbeddingEndpoint:
         # Should call with the explicit model, not the default
         mock_provider_fn.assert_called_once_with("openai/text-embedding-3-large")
 
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
     @patch(
         "app.embeddings_api.get_embedding_provider",
         side_effect=Exception("Connection refused"),
     )
-    async def test_embed_provider_unavailable(self, mock_provider_fn, mock_default, client, valid_api_headers):
+    async def test_embed_provider_unavailable(
+        self, mock_provider_fn, mock_default, client, valid_api_headers
+    ):
         """When the embedding service is down, return 500 with detail."""
         resp = await client.post(
             "/embeddings/test",
@@ -272,9 +307,14 @@ class TestTestEmbeddingEndpoint:
         assert resp.status_code == 500
         assert "Embedding generation failed" in resp.json()["detail"]
 
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
     @patch("app.embeddings_api.get_embedding_provider")
-    async def test_embed_provider_runtime_error(self, mock_provider_fn, mock_default, client, valid_api_headers):
+    async def test_embed_provider_runtime_error(
+        self, mock_provider_fn, mock_default, client, valid_api_headers
+    ):
         """Provider initializes but embed_text raises at runtime."""
         provider = AsyncMock()
         provider.embed_text = AsyncMock(side_effect=RuntimeError("Rate limited"))
@@ -292,10 +332,15 @@ class TestTestEmbeddingEndpoint:
         """Empty text should still be accepted (no min_length constraint)."""
         # The endpoint doesn't enforce min_length, so this depends on
         # whether the provider handles it. We just verify the API accepts it.
-        with patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small"):
+        with patch(
+            "app.embeddings_api.get_default_model_id",
+            return_value="openai/text-embedding-3-small",
+        ):
             provider = AsyncMock()
             provider.embed_text = AsyncMock(return_value=[0.0] * 1536)
-            with patch("app.embeddings_api.get_embedding_provider", return_value=provider):
+            with patch(
+                "app.embeddings_api.get_embedding_provider", return_value=provider
+            ):
                 resp = await client.post(
                     "/embeddings/test",
                     json={"text": ""},
@@ -303,9 +348,14 @@ class TestTestEmbeddingEndpoint:
                 )
                 assert resp.status_code == 200
 
-    @patch("app.embeddings_api.get_default_model_id", return_value="openai/text-embedding-3-small")
+    @patch(
+        "app.embeddings_api.get_default_model_id",
+        return_value="openai/text-embedding-3-small",
+    )
     @patch("app.embeddings_api.get_embedding_provider")
-    async def test_embed_short_embedding_preview(self, mock_provider_fn, mock_default, client, valid_api_headers):
+    async def test_embed_short_embedding_preview(
+        self, mock_provider_fn, mock_default, client, valid_api_headers
+    ):
         """If embedding has fewer than 10 dimensions, preview should be shorter."""
         fake_embedding = [1.0, 2.0, 3.0]  # Only 3 dims
         provider = AsyncMock()
