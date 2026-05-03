@@ -8,7 +8,7 @@ Comprehensive testing strategy and guidelines for Juddges Legal Assistant.
 - [Testing Stack](#testing-stack)
 - [Backend Testing](#backend-testing)
 - [Frontend Testing](#frontend-testing)
-- [Integration Testing](#integration-testing)
+- [Integration Testing](#integration-tests)
 - [E2E Testing](#e2e-testing)
 - [Test Coverage](#test-coverage)
 - [Best Practices](#best-practices)
@@ -769,6 +769,6 @@ jobs:
 ---
 
 For more information:
-- [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Setup guide
-- [CODE_STYLE.md](./CODE_STYLE.md) - Coding standards
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
+- [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) - Setup guide
+- [CODE_STYLE.md](../contributing/CODE_STYLE.md) - Coding standards
+- [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) - Contribution guidelines

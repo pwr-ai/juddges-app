@@ -151,7 +151,7 @@ export function useSearchResults() {
     async (
       searchQuery: string,
       options?: {
-        overrideMode?: string;
+        overrideMode?: "thinking" | "rabbit";
         overrideDocumentTypes?: DocumentType[];
         overrideLanguages?: string[];
         onComplete?: () => void;
@@ -295,7 +295,7 @@ export function useSearchResults() {
         // Single state update for all chunks
         useSearchStore.setState({
           chunksCache: newCache,
-          loadingChunks: newLoading
+          loadingChunks: Array.from(newLoading)
         });
 
         // Verify chunks were stored correctly

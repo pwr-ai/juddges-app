@@ -71,9 +71,7 @@ def _has_real_supabase_config() -> bool:
         return False
     if "test-supabase.local" in url:
         return False
-    if key.startswith("test-"):
-        return False
-    return True
+    return not key.startswith("test-")
 
 
 def _is_local_test_profile() -> bool:
@@ -121,10 +119,7 @@ def pytest_ignore_collect(collection_path, config):
     if not run_performance and "/tests/performance/" in path:
         return True
 
-    if not run_integration and path.endswith("_integration.py"):
-        return True
-
-    return False
+    return not run_integration and path.endswith("_integration.py")
 
 
 def pytest_collection_modifyitems(config, items):

@@ -50,7 +50,7 @@ juddges-app/
 
 ---
 
-### 2. [SETUP_GUIDE.md](SETUP_GUIDE.md)
+### 2. [SETUP_GUIDE.md](../getting-started/setup-guide.md)
 **Purpose**: Complete step-by-step setup instructions
 
 **Contents**:
@@ -71,7 +71,7 @@ juddges-app/
 
 ---
 
-### 3. [DATA_INGESTION_GUIDE.md](DATA_INGESTION_GUIDE.md)
+### 3. [DATA_INGESTION_GUIDE.md](../how-to/data-ingestion.md)
 **Purpose**: Comprehensive guide to data ingestion process
 
 **Contents**:
@@ -92,7 +92,7 @@ juddges-app/
 
 ---
 
-### 4. [SUPABASE_MCP_GUIDE.md](SUPABASE_MCP_GUIDE.md)
+### 4. [SUPABASE_MCP_GUIDE.md](../how-to/supabase-mcp.md)
 **Purpose**: Guide for using Supabase MCP tools in Claude Code
 
 **Contents**:
@@ -113,7 +113,7 @@ juddges-app/
 
 ---
 
-### 5. [.env.example](.env.example)
+### 5. [.env.example](https://github.com/pwr-ai/juddges-app/blob/main/.env.example)
 **Purpose**: Environment variable template
 
 **Contents**:
@@ -407,7 +407,7 @@ The Juddges App foundation is now complete! You have:
 ✅ **MCP tools guide** for database management
 ✅ **Scalable architecture** ready for growth
 
-**Next action**: Follow the [SETUP_GUIDE.md](SETUP_GUIDE.md) to set up your Supabase project and ingest your first judgments!
+**Next action**: Follow the [SETUP_GUIDE.md](../getting-started/setup-guide.md) to set up your Supabase project and ingest your first judgments!
 
 ---
 

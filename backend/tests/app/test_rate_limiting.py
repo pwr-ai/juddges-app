@@ -204,8 +204,15 @@ class TestRateLimitBypass:
 
 @pytest.mark.anyio
 @pytest.mark.auth
+@pytest.mark.integration
 class TestRateLimitSecurity:
-    """Test security aspects of rate limiting."""
+    """Test security aspects of rate limiting.
+
+    Marked integration because the brute-force / enumeration scenarios send
+    real requests through routes that hit Supabase — without a reachable
+    backend the test crashes on DNS resolution rather than completing the
+    rate-limit assertion.
+    """
 
     async def test_rate_limit_prevents_brute_force(self, client: AsyncClient):
         """Test that rate limiting helps prevent brute force attacks."""

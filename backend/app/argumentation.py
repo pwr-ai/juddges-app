@@ -276,17 +276,17 @@ def _format_document_for_analysis(doc: dict[str, Any]) -> str:
 )
 @limiter.limit(ARGUMENTATION_RATE_LIMIT)
 async def analyze_arguments(
-    http_request: Request,
-    request: ArgumentationRequest,
+    request: Request,
+    argumentation_request: ArgumentationRequest,
 ) -> ArgumentationResponse:
     """Analyze the argumentation structure of legal documents."""
     logger.info(
-        f"Argumentation analysis request: documents={request.document_ids}, "
-        f"detail_level={request.detail_level}"
+        f"Argumentation analysis request: documents={argumentation_request.document_ids}, "
+        f"detail_level={argumentation_request.detail_level}"
     )
 
     # Fetch documents
-    documents = await _fetch_document_content(request.document_ids)
+    documents = await _fetch_document_content(argumentation_request.document_ids)
 
     if not documents:
         raise HTTPException(
@@ -301,8 +301,8 @@ async def analyze_arguments(
 
     # Build focus areas instruction
     focus_instruction = ""
-    if request.focus_areas:
-        areas_str = ", ".join(request.focus_areas)
+    if argumentation_request.focus_areas:
+        areas_str = ", ".join(argumentation_request.focus_areas)
         focus_instruction = (
             f"Pay special attention to arguments related to: {areas_str}"
         )
@@ -409,6 +409,6 @@ async def analyze_arguments(
     return ArgumentationResponse(
         arguments=arguments,
         overall_analysis=overall_analysis,
-        document_ids=request.document_ids,
+        document_ids=argumentation_request.document_ids,
         argument_count=len(arguments),
     )

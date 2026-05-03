@@ -65,36 +65,45 @@ const demoQueries = [
 // Animated number counter (simplified)
 // ─────────────────────────────────────────────
 
+function formatStatValue(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.floor(n / 1_000).toLocaleString()}K`;
+  return n.toLocaleString();
+}
+
 function AnimatedStat({ value, suffix = "" }: { value: number; suffix?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
-  const [display, setDisplay] = useState("0");
+  const isInView = useInView(ref, { once: true, margin: "-40px" });
+  const [display, setDisplay] = useState(() => formatStatValue(value));
 
   useEffect(() => {
-    if (!isInView) return;
+    if (value === 0) {
+      setDisplay("0");
+      return;
+    }
 
+    if (!isInView) {
+      // Show final value immediately even before in-view animation triggers
+      setDisplay(formatStatValue(value));
+      return;
+    }
+
+    let cancelled = false;
     const duration = 2000;
     const startTime = performance.now();
 
     function tick(now: number) {
+      if (cancelled) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.floor(eased * value);
-
-      if (current >= 1_000_000) {
-        setDisplay(`${(current / 1_000_000).toFixed(1)}M`);
-      } else if (current >= 1_000) {
-        setDisplay(`${Math.floor(current / 1_000).toLocaleString()}K`);
-      } else {
-        setDisplay(current.toLocaleString());
-      }
-
+      setDisplay(formatStatValue(current));
       if (progress < 1) requestAnimationFrame(tick);
     }
 
     requestAnimationFrame(tick);
+    return () => { cancelled = true; };
   }, [isInView, value]);
 
   return (

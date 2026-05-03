@@ -4,7 +4,7 @@ Feature-specific documentation for Juddges App functionality.
 
 ## 🎨 Feature Documentation
 
-### [Chat Sources](chat-sources/)
+### [Chat Sources](chat-sources/README.md)
 AI-powered chat interface with source citations:
 - Design and implementation details
 - Source citation system
@@ -14,7 +14,7 @@ AI-powered chat interface with source citations:
 
 **Tech**: LangChain, OpenAI API, React Query, TipTap
 
-### [Filtering](filtering/)
+### [Filtering](filtering/implementation.md)
 Advanced judgment filtering system:
 - Implementation details
 - 11+ filter criteria (case type, court level, jurisdiction, etc.)
@@ -24,7 +24,7 @@ Advanced judgment filtering system:
 
 **Tech**: PostgreSQL indexes, Supabase, React Query
 
-### [Schema Editor](schema-editor/)
+### [Schema Editor](schema-editor/load-feature.md)
 JSON schema editing features:
 - Load feature implementation
 - Save feature implementation
@@ -33,7 +33,7 @@ JSON schema editing features:
 
 **Tech**: React JSON Schema Form (RJSF), Monaco Editor
 
-### [Search](search/)
+### Search
 Multi-modal search functionality:
 - Semantic search (vector similarity)
 - Full-text search (PostgreSQL FTS)
@@ -73,9 +73,9 @@ Multi-modal search functionality:
 
 | Feature | Status | Documentation |
 |---------|--------|--------------|
-| Chat Sources | ✅ Implemented | [docs](chat-sources/) |
-| Filtering | ✅ Implemented | [docs](filtering/) |
-| Schema Editor | ✅ Implemented | [docs](schema-editor/) |
+| Chat Sources | ✅ Implemented | [docs](chat-sources/README.md) |
+| Filtering | ✅ Implemented | [docs](filtering/implementation.md) |
+| Schema Editor | ✅ Implemented | [docs](schema-editor/load-feature.md) |
 | Semantic Search | ✅ Implemented | Coming soon |
 | Full-Text Search | ✅ Implemented | Coming soon |
 | Hybrid Search | ✅ Implemented | Coming soon |
@@ -110,11 +110,11 @@ When adding a new feature:
    - Documentation review
    - Performance testing
 
-See [Frontend Styling Guide](../frontend/styling-guide/) for UI/UX standards.
+See [Frontend Styling Guide](../frontend/styling-guide/README.md) for UI/UX standards.
 
 ## 🔗 Related Documentation
 
-- [Architecture](../architecture/) - System design
-- [Frontend](../frontend/) - Frontend-specific docs
-- [Backend](../backend/) - Backend-specific docs
-- [API](../api/) - API reference
+- [Architecture](../architecture/README.md) - System design
+- [Frontend](../frontend/README.md) - Frontend-specific docs
+- Backend - Backend-specific docs
+- [API](../api/API_REFERENCE.md) - API reference

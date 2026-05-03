@@ -6,15 +6,15 @@ Deep dive into the Juddges hybrid search system — the core feature of the plat
 
 - [Overview](#overview)
 - [Search Pipeline](#search-pipeline)
-- [Query Classification & Alpha Routing](#query-classification--alpha-routing)
-- [Hybrid Search (BM25 + Vector)](#hybrid-search-bm25--vector)
+- [Query Classification & Alpha Routing](#query-classification-alpha-routing)
+- [Hybrid Search (BM25 + Vector)](#hybrid-search-bm25-vector)
 - [Language Detection](#language-detection)
 - [Cross-Encoder Reranking](#cross-encoder-reranking)
 - [Autocomplete (Meilisearch)](#autocomplete-meilisearch)
-- [Database Schema & Indexes](#database-schema--indexes)
+- [Database Schema & Indexes](#database-schema-indexes)
 - [Embedding Pipeline](#embedding-pipeline)
 - [API Contract](#api-contract)
-- [Performance & Timing](#performance--timing)
+- [Performance & Timing](#performance-timing)
 - [Configuration Reference](#configuration-reference)
 
 ---

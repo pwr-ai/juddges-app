@@ -131,5 +131,5 @@ Always include both:
 
 ---
 
-**For detailed information, see [Colors Styling Guide](./COLORS_STYLING_GUIDE.md)**
+**For detailed information, see Colors Styling Guide.**
 

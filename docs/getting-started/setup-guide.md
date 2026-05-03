@@ -19,7 +19,7 @@ Before you begin, ensure you have:
 
 ```bash
 # Navigate to your projects directory
-cd ~/github/legal-ai
+cd ~/github/juddges-app
 
 # The juddges-app directory has been created
 cd juddges-app

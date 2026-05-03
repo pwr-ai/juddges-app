@@ -14,14 +14,13 @@ potentially dangerous payloads are not reflected back unsanitized.
 import pytest
 from httpx import AsyncClient
 
-
 # ---------------------------------------------------------------------------
 # XSS payload tests
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.security
 class TestXSSPayloads:
     """Verify that XSS payloads in user inputs are handled safely."""
@@ -113,7 +112,7 @@ class TestXSSPayloads:
 
 
 @pytest.mark.anyio
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.security
 class TestSQLInjection:
     """Verify that SQL injection payloads are handled safely."""
@@ -298,7 +297,7 @@ class TestOversizedInputs:
 
 
 @pytest.mark.anyio
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.security
 class TestUnicodeAndSpecialCharacters:
     """Verify that unicode and special characters are handled safely."""

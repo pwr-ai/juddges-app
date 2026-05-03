@@ -255,7 +255,7 @@ export default function TermsPage() {
               <h3 className="font-medium text-foreground mb-2">6.3 Open Source Components</h3>
               <p>
                 Certain components of the platform are open source. See our{" "}
-                <a href="https://github.com/pwr-ai/legal-ai" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/pwr-ai/juddges-app" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
                   GitHub repository
                 </a>
                 {" "}for licenses and attribution.

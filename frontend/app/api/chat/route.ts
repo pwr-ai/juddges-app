@@ -48,7 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Prepare backend payload
     const backendPayload = {
       input: {
-        question: validated.message,
+        question: validated.question,
         max_documents: 10,
         score_threshold: 0,
         chat_history: [],
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     apiLogger.info('Calling backend chat API', {
       requestId,
       backendUrl,
-      questionLength: validated.message.length,
+      questionLength: validated.question.length,
       streamEnabled
     });
 

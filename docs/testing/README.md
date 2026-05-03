@@ -30,100 +30,29 @@ The Juddges testing strategy follows a balanced testing pyramid with:
 - Test infrastructure and CI/CD setup
 - Execution schedule (4-week roadmap)
 
-#### [TEST_MATRIX.csv](./TEST_MATRIX.csv)
-**Endpoint-by-endpoint test tracking spreadsheet:**
-- All 195 API endpoints cataloged
-- Priority levels (Critical, High, Medium, Low)
-- Test count per endpoint
-- Status tracking (Pending, In Progress, Complete)
-- Dependencies and notes
-- Ownership assignments
-
-#### [AGENT_ASSIGNMENTS.md](./AGENT_ASSIGNMENTS.md)
-**Work distribution for 6 specialized test agents:**
-- **Agent 1**: Backend Core APIs (Documents, Collections, Analytics) - 130 tests
-- **Agent 2**: Backend Advanced APIs (Schemas, Extraction, Chat) - 195 tests
-- **Agent 3**: Backend Supporting APIs (Auth, Publications, Experiments) - 175 tests
-- **Agent 4**: Frontend Core UI (Search, Chat, Documents) - 140 tests
-- **Agent 5**: Frontend Feature UI (Collections, Schemas, Forms) - 155 tests
-- **Agent 6**: E2E & Integration Tests - 125 tests
-
 ---
 
 ## 🎯 Quick Start
 
 ### For Test Writers
 
-1. **Choose your assignment** from [AGENT_ASSIGNMENTS.md](./AGENT_ASSIGNMENTS.md)
-2. **Copy the appropriate template** from `/templates/`
-3. **Follow the test patterns** in [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md)
-4. **Update [TEST_MATRIX.csv](./TEST_MATRIX.csv)** as you complete tests
+1. **Follow the test patterns** in [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md)
+2. **Pick a module** that needs coverage (see Progress Tracking below)
+3. **Write tests using AAA pattern** (Arrange, Act, Assert)
+4. **Track your progress** against the coverage targets
 
 ### For Project Managers
 
 1. **Review [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md)** for overall strategy
-2. **Track progress** using [TEST_MATRIX.csv](./TEST_MATRIX.csv)
-3. **Monitor agent assignments** in [AGENT_ASSIGNMENTS.md](./AGENT_ASSIGNMENTS.md)
-4. **Check daily/weekly metrics** in the master plan
+2. **Track progress** against the targets in this README
+3. **Check daily/weekly metrics** in the master plan
 
 ### For Developers
 
-1. **Write tests alongside code** using templates
+1. **Write tests alongside code** following the patterns in [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md)
 2. **Run tests locally** before committing
 3. **Aim for 80%+ coverage** in your modules
 4. **Follow AAA pattern** (Arrange, Act, Assert)
-
----
-
-## 📂 Templates
-
-The `/templates/` directory contains reusable test templates:
-
-### [backend_unit_test_template.py](./templates/backend_unit_test_template.py)
-**FastAPI endpoint testing template with:**
-- Fixtures for client, database, auth, sample data
-- CRUD operation tests (GET, POST, PUT, DELETE)
-- Error handling tests (404, 500, validation)
-- Authentication tests
-- Performance tests
-- Comprehensive examples for all HTTP methods
-
-**Usage:**
-```bash
-cp templates/backend_unit_test_template.py backend/tests/unit/test_your_module.py
-# Adapt for your specific API router
-```
-
-### [frontend_component_test_template.tsx](./templates/frontend_component_test_template.tsx)
-**React component testing template with:**
-- Rendering tests (loading, success, error, empty states)
-- User interaction tests (clicks, typing, keyboard nav)
-- Props and state tests
-- API integration tests (mocked with MSW)
-- Accessibility tests (jest-axe)
-- Edge case tests
-- Performance tests
-
-**Usage:**
-```bash
-cp templates/frontend_component_test_template.tsx frontend/__tests__/components/YourComponent.test.tsx
-# Adapt for your specific component
-```
-
-### [e2e_test_template.spec.ts](./templates/e2e_test_template.spec.ts)
-**Playwright E2E testing template with:**
-- Authentication flows (sign up, sign in, sign out)
-- Search flows (basic search, filters, document view)
-- Chat flows (conversation, follow-ups, collections)
-- Collection flows (create, add docs, export)
-- Error handling (network errors, session expiration)
-- Performance tests (load times, responsiveness)
-
-**Usage:**
-```bash
-cp templates/e2e_test_template.spec.ts frontend/tests/e2e/your_flow.spec.ts
-# Adapt for your specific user journey
-```
 
 ---
 
@@ -336,9 +265,8 @@ Coverage reports are uploaded to Codecov and available in PR comments.
 
 ### Before Writing Tests
 1. Review the [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md)
-2. Check [TEST_MATRIX.csv](./TEST_MATRIX.csv) for assignments
-3. Copy appropriate template from `/templates/`
-4. Follow project conventions
+2. Identify the module/endpoint that needs coverage
+3. Follow project conventions
 
 ### Test Checklist
 - [ ] Tests follow AAA pattern
@@ -348,7 +276,6 @@ Coverage reports are uploaded to Codecov and available in PR comments.
 - [ ] Error scenarios are tested
 - [ ] Tests pass locally
 - [ ] Coverage increased
-- [ ] TEST_MATRIX.csv updated
 
 ### Code Review Checklist
 - [ ] Tests cover new/changed functionality
@@ -363,8 +290,7 @@ Coverage reports are uploaded to Codecov and available in PR comments.
 
 ### Internal Documentation
 - [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md) - Complete testing strategy
-- [TEST_MATRIX.csv](./TEST_MATRIX.csv) - Endpoint test tracking
-- [AGENT_ASSIGNMENTS.md](./AGENT_ASSIGNMENTS.md) - Work distribution
+- [TESTING.md](./TESTING.md) - Testing guide and patterns
 
 ### External Resources
 - [Pytest Documentation](https://docs.pytest.org/)
@@ -379,12 +305,12 @@ Coverage reports are uploaded to Codecov and available in PR comments.
 
 ### Questions or Issues?
 - Review the [MASTER_TEST_PLAN.md](./MASTER_TEST_PLAN.md) first
-- Check templates for examples
+- Consult [TESTING.md](./TESTING.md) for examples
 - Ask in team chat or create an issue
 
 ### Reporting Problems
-- Flaky tests: Document in TEST_MATRIX.csv
-- Blockers: Update AGENT_ASSIGNMENTS.md
+- Flaky tests: Open an issue and tag with `test:flaky`
+- Blockers: Raise in team chat or weekly sync
 - Coverage issues: Note in weekly sync
 
 ---

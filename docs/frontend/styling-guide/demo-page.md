@@ -15,7 +15,7 @@ Before adding a component to the demo page, ensure:
 - ✅ Component uses Tailwind CSS classes (not hardcoded colors)
 - ✅ Component has proper JSX comments for context (optional but recommended)
 
-**Reference**: See [Creating New Components](./CREATING_NEW_COMPONENTS.md) for component creation guidelines.
+**Reference**: See [Creating New Components](./creating-components.md) for component creation guidelines.
 
 ---
 
@@ -531,9 +531,9 @@ Group related components into families:
 
 ## Related Documentation
 
-- **[Creating New Components](./CREATING_NEW_COMPONENTS.md)** - Guide for creating styled components
-- **[Colors Styling Guide](./COLORS_STYLING_GUIDE.md)** - Color system documentation
-- **[Component Colors Cheat Sheet](./COMPONENT_COLORS_CHEAT_SHEET.md)** - Quick color reference
+- **[Creating New Components](./creating-components.md)** - Guide for creating styled components
+- **Colors Styling Guide** - Color system documentation
+- **[Component Colors Cheat Sheet](./component-colors.md)** - Quick color reference
 - **Style Demo Page**: `/app/style-demo/page.tsx` - Live examples
 
 ---

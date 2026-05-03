@@ -31,6 +31,7 @@ from app.api.audit import router as audit_router
 from app.api.blog import router as blog_router
 from app.api.consent import router as consent_router
 from app.api.legal import router as legal_router
+from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
 from app.api.search import router as search_router
 from app.api.sso import router as sso_router
@@ -54,6 +55,7 @@ from app.guest_sessions import router as guest_sessions_router
 
 # Import health check router
 from app.health import router as health_router
+from app.judge_fingerprint import router as judge_fingerprint_router
 
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
@@ -63,6 +65,7 @@ from app.playground import router as playground_router
 from app.precedents import router as precedents_router
 from app.publications import router as publications_router
 from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
+from app.reasoning_lines import router as reasoning_lines_router
 from app.recommendations import router as recommendations_router
 from app.research_assistant import router as research_assistant_router
 from app.schema_generation_agent import router as schema_generator_agent_router
@@ -604,13 +607,16 @@ app.include_router(ocr_router, dependencies=[Depends(verify_api_key)])
 app.include_router(clustering_router, dependencies=[Depends(verify_api_key)])
 app.include_router(recommendations_router, dependencies=[Depends(verify_api_key)])
 app.include_router(research_assistant_router, dependencies=[Depends(verify_api_key)])
+app.include_router(research_agent_v2_router, dependencies=[Depends(verify_api_key)])
 app.include_router(topic_modeling_router, dependencies=[Depends(verify_api_key)])
 app.include_router(argumentation_router, dependencies=[Depends(verify_api_key)])
+app.include_router(judge_fingerprint_router, dependencies=[Depends(verify_api_key)])
 app.include_router(embeddings_router, dependencies=[Depends(verify_api_key)])
 app.include_router(marketplace_router, dependencies=[Depends(verify_api_key)])
 app.include_router(timeline_router, dependencies=[Depends(verify_api_key)])
 app.include_router(blog_router, dependencies=[Depends(verify_api_key)])
 app.include_router(search_router, dependencies=[Depends(verify_api_key)])
+app.include_router(reasoning_lines_router, dependencies=[Depends(verify_api_key)])
 
 # Experiments - uses JWT authentication (implemented in endpoints)
 app.include_router(experiments_router)

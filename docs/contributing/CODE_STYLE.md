@@ -664,5 +664,5 @@ lowercase/                 # Single-word directories
 
 For more information:
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
-- [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Setup guide
-- [TESTING.md](./TESTING.md) - Testing guide
+- [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) - Setup guide
+- [TESTING.md](../testing/TESTING.md) - Testing guide

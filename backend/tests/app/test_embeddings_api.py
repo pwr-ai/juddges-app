@@ -8,10 +8,9 @@ Tests cover:
 - Error handling for invalid models and provider failures
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
 from app.embedding_providers import EmbeddingModelConfig, EmbeddingProviderType
 from app.embeddings_api import (
@@ -21,7 +20,6 @@ from app.embeddings_api import (
     TestEmbeddingRequest,
     TestEmbeddingResponse,
 )
-
 
 # ---------------------------------------------------------------------------
 # Pydantic model validation tests
@@ -60,7 +58,7 @@ class TestPydanticModels:
 
     def test_test_embedding_request_max_length(self):
         """Text exceeding max_length=2000 should be rejected by Pydantic."""
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             TestEmbeddingRequest(text="a" * 2001)
 
     def test_test_embedding_response(self):

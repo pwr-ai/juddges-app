@@ -264,8 +264,8 @@ Get Data Processing Agreement (DPA) information.
   "effective_date": "2025-01-01",
   "data_processor": {
     "name": "JuDDGES",
-    "contact": "legal@legal-ai.augustyniak.ai",
-    "dpo_email": "dpo@legal-ai.augustyniak.ai"
+    "contact": "legal@juddges.augustyniak.ai",
+    "dpo_email": "dpo@juddges.augustyniak.ai"
   },
   "processing_purposes": [
     "Legal research and document analysis",
@@ -497,7 +497,7 @@ result = await RetentionService.request_data_deletion(
 1. **Run Database Migration:**
    ```bash
    # Execute the SQL migration in Supabase SQL editor
-   psql -d aiTax -f backend/migrations/002_audit_trail_and_compliance.sql
+   psql -d juddges -f backend/migrations/002_audit_trail_and_compliance.sql
    ```
 
 2. **Verify Tables:**

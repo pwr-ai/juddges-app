@@ -117,16 +117,16 @@ export function LandingFooter() {
             <ul className="space-y-3 text-sm">
               <li>
                 <a
-                  href="mailto:enterprise@legal-ai.augustyniak.ai"
+                  href="mailto:enterprise@juddges.augustyniak.ai"
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Mail className="size-4" />
-                  <span>enterprise@legal-ai.augustyniak.ai</span>
+                  <span>enterprise@juddges.augustyniak.ai</span>
                 </a>
               </li>
               <li>
                 <a
-                  href="https://github.com/pwr-ai/legal-ai"
+                  href="https://github.com/pwr-ai/juddges-app"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"

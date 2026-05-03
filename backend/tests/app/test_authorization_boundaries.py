@@ -13,7 +13,6 @@ verify_api_key / require_admin dependencies.
 import pytest
 from httpx import AsyncClient
 
-
 # ---------------------------------------------------------------------------
 # Unauthenticated access to API-key-protected endpoints
 # ---------------------------------------------------------------------------

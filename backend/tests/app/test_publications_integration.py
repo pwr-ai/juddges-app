@@ -6,6 +6,8 @@ Tests /publications/* routes for publication CRUD and resource linking.
 import pytest
 from httpx import AsyncClient
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.anyio
 @pytest.mark.api

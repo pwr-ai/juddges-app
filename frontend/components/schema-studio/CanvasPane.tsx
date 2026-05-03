@@ -190,8 +190,8 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
       // Convert to requested format
       const content =
         format === 'json'
-          ? exportSchemaAsJSON(fields, { pretty: true })
-          : exportSchemaAsYAML(fields);
+          ? exportSchemaAsJSON(prepResult.compiledSchema, true)
+          : exportSchemaAsYAML(prepResult.compiledSchema);
 
       // Create download
       const blob = new Blob([content], {
