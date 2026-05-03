@@ -3769,6 +3769,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/judge-fingerprint/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare reasoning styles of multiple judges
+         * @description Compare the reasoning fingerprints of 2-3 judges side by side. Returns a list of JudgeProfile objects, one per judge.
+         */
+        get: operations["compare_judges_judge_fingerprint_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/judge-fingerprint/profile/{judge_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get reasoning fingerprint for a judge
+         * @description Analyze a judge's reasoning style across their cases. Returns aggregated scores for textual, deductive, analogical, policy, and teleological reasoning based on keyword heuristics.
+         */
+        get: operations["get_judge_profile_judge_fingerprint_profile__judge_name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/judge-fingerprint/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search for judge names (autocomplete)
+         * @description Search for judge names matching a query string. Returns matching judge names with their case counts, useful for autocomplete.
+         */
+        get: operations["search_judges_judge_fingerprint_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/marketplace": {
         parameters: {
             query?: never;
@@ -4711,6 +4771,272 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reasoning-lines/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List saved reasoning lines
+         * @description Return a paginated list of saved reasoning lines, ordered by creation date
+         *     (newest first). Optionally filter by status.
+         */
+        get: operations["list_reasoning_lines_reasoning_lines__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save a discovered cluster as a persistent reasoning line
+         * @description Persist a reasoning line with its member judgments.
+         *
+         *     Fetches embeddings for each judgment to compute the centroid (avg_embedding)
+         *     and per-member similarity_to_centroid. Members are ordered chronologically
+         *     by decision_date.
+         */
+        post: operations["create_reasoning_line_reasoning_lines_create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/dag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get full DAG structure for visualization
+         * @description Returns all reasoning lines as nodes and all detected events as edges, forming a directed acyclic graph for visualization.
+         */
+        get: operations["get_dag_reasoning_lines_dag_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/detect-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Detect branch/merge/influence events across reasoning lines
+         * @description Scans all active reasoning lines and detects branch and merge events between them. Expensive computation — limited to 5 requests per hour.
+         */
+        post: operations["detect_events_reasoning_lines_detect_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discover clusters of judgments addressing the same legal question
+         * @description Discover reasoning-line clusters by combining embedding similarity with
+         *     shared legal bases.
+         *
+         *     Fetches judgments from the database, clusters them using K-Means on
+         *     normalized embeddings, then enriches each cluster with shared
+         *     cited_legislation, coherence scores, date ranges, and representative
+         *     cases. Returns a 2D PCA visualization graph.
+         */
+        post: operations["discover_reasoning_lines_reasoning_lines_discover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Semantic search for reasoning lines by natural language query
+         * @description Search reasoning lines using semantic similarity.
+         *
+         *     Generates an embedding for the query and compares it against the
+         *     avg_embedding of each active reasoning line using cosine similarity.
+         *     Falls back to text-based matching if embedding generation fails.
+         */
+        post: operations["search_reasoning_lines_reasoning_lines_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get full detail of a reasoning line with all members
+         * @description Retrieve a single reasoning line by ID, including all member judgments
+         *     with their metadata joined from the judgments table.
+         */
+        get: operations["get_reasoning_line_reasoning_lines__line_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete a reasoning line by setting status to superseded
+         * @description Soft-delete a reasoning line by setting its status to 'superseded'.
+         *     The line and its members remain in the database for historical reference.
+         */
+        delete: operations["delete_reasoning_line_reasoning_lines__line_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}/analyze-outcomes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Classify outcome direction for each member judgment using LLM
+         * @description Use LLM to classify each member judgment's outcome direction relative
+         *     to the reasoning line's legal question.
+         *
+         *     For each member that does not already have an outcome_direction set,
+         *     the LLM classifies the judgment as 'for', 'against', 'mixed', or
+         *     'procedural'. Results are persisted to the reasoning_line_members table.
+         *
+         *     Processes at most 50 members per call to avoid timeout. Members that
+         *     already have outcome_direction set are skipped.
+         */
+        post: operations["analyze_outcomes_reasoning_lines__line_id__analyze_outcomes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}/drift-analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Detect language drift within a reasoning line over time
+         * @description Detect language drift within a reasoning line by analyzing how the
+         *     embedding centroid shifts across rolling time windows.
+         *
+         *     Sorts member judgments chronologically, creates overlapping windows,
+         *     computes centroid drift between consecutive windows, extracts
+         *     entering/exiting keywords, and identifies significant drift peaks.
+         *     Drift events are persisted to the reasoning_line_events table.
+         */
+        post: operations["analyze_drift_reasoning_lines__line_id__drift_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find reasoning lines related to a given line
+         * @description Find reasoning lines related to a given line based on a weighted combination
+         *     of shared legal bases (Jaccard, weight 0.4), shared keywords (Jaccard,
+         *     weight 0.2), and embedding similarity (cosine, weight 0.4).
+         */
+        get: operations["get_related_reasoning_lines_reasoning_lines__line_id__related_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reasoning-lines/{line_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get temporal outcome distribution for a reasoning line
+         * @description Return time-bucketed outcome distribution for a reasoning line, suitable
+         *     for timeline visualization.
+         *
+         *     Automatically selects the bucketing granularity based on the date range:
+         *     - > 3 years: bucket by year
+         *     - 1-3 years: bucket by quarter
+         *     - < 1 year: bucket by month
+         *
+         *     Detects overall trend using linear regression on the 'for' ratio over time.
+         *     Returns 'insufficient_data' trend if fewer than 3 time periods have data.
+         */
+        get: operations["get_reasoning_line_timeline_reasoning_lines__line_id__timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/recommendations": {
         parameters: {
             query?: never;
@@ -4745,6 +5071,110 @@ export interface paths {
          * @description Record a user interaction with a document for improving recommendations.
          */
         post: operations["track_interaction_recommendations_track_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research-agent/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List user's research sessions
+         * @description List research sessions for the current user.
+         */
+        get: operations["list_sessions_research_agent_sessions_get"];
+        put?: never;
+        /**
+         * Start a new research session
+         * @description Create a research session and launch the agent in the background.
+         */
+        post: operations["start_session_research_agent_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research-agent/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get session status and results
+         * @description Read a research session by ID.
+         */
+        get: operations["get_session_research_agent_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research-agent/sessions/{session_id}/message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send user input to a decision point
+         * @description Placeholder for interrupt-resume: accepts user input at a decision point.
+         */
+        post: operations["send_message_research_agent_sessions__session_id__message_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research-agent/sessions/{session_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop a running research session
+         * @description Cancel the running agent task and mark the session as stopped.
+         */
+        post: operations["stop_session_research_agent_sessions__session_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research-agent/sessions/{session_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * SSE stream of session progress events
+         * @description Return an SSE stream that emits progress events for the given session.
+         */
+        get: operations["stream_session_research_agent_sessions__session_id__stream_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6468,6 +6898,22 @@ export interface components {
             task_id: string;
         };
         /**
+         * CasePeriod
+         * @description Time range covered by analyzed cases.
+         */
+        CasePeriod: {
+            /**
+             * First Case
+             * @description Date of the earliest case (ISO format)
+             */
+            first_case?: string | null;
+            /**
+             * Last Case
+             * @description Date of the most recent case (ISO format)
+             */
+            last_case?: string | null;
+        };
+        /**
          * CheckDocumentRequest
          * @description Request to check a single document for duplicates.
          */
@@ -7216,6 +7662,33 @@ export interface components {
             year: number;
         };
         /**
+         * CreateReasoningLineRequest
+         * @description Request to save a discovered cluster as a reasoning line.
+         */
+        CreateReasoningLineRequest: {
+            /** Coherence Score */
+            coherence_score?: number | null;
+            /**
+             * Judgment Ids
+             * @description List of judgment IDs to assign as members
+             */
+            judgment_ids: string[];
+            /** Keywords */
+            keywords?: string[];
+            /**
+             * Label
+             * @description Label for the reasoning line
+             */
+            label: string;
+            /** Legal Bases */
+            legal_bases?: string[];
+            /**
+             * Legal Question
+             * @description The legal question this line addresses
+             */
+            legal_question: string;
+        };
+        /**
          * CreateSchemaRequest
          * @description Request model for creating a new custom schema.
          */
@@ -7254,6 +7727,50 @@ export interface components {
              * @default amendment
              */
             change_type: string;
+        };
+        /**
+         * DAGEdge
+         * @description An event (branch, merge, drift, reversal, influence) as an edge in the DAG.
+         */
+        DAGEdge: {
+            /** Confidence */
+            confidence: number | null;
+            /** Description */
+            description: string | null;
+            /** Drift Score */
+            drift_score: number | null;
+            /** Event Date */
+            event_date: string | null;
+            /** Event Type */
+            event_type: string;
+            /** Id */
+            id: string;
+            /** Source Id */
+            source_id: string;
+            /** Target Id */
+            target_id: string;
+        };
+        /**
+         * DAGNode
+         * @description A reasoning line represented as a node in the DAG visualization.
+         */
+        DAGNode: {
+            /** Case Count */
+            case_count: number;
+            /** Coherence Score */
+            coherence_score: number | null;
+            /** Date Range End */
+            date_range_end: string | null;
+            /** Date Range Start */
+            date_range_start: string | null;
+            /** Id */
+            id: string;
+            /** Keywords */
+            keywords: string[];
+            /** Label */
+            label: string;
+            /** Status */
+            status: string;
         };
         /**
          * DPAInfoResponse
@@ -7678,6 +8195,71 @@ export interface components {
              * @description Application version
              */
             version: string;
+        };
+        /**
+         * DiscoveredCase
+         * @description A judgment within a discovered reasoning-line cluster.
+         */
+        DiscoveredCase: {
+            /** Cited Legislation */
+            cited_legislation?: string[];
+            /** Court Name */
+            court_name?: string | null;
+            /** Decision Date */
+            decision_date?: string | null;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Signature */
+            signature?: string | null;
+            /**
+             * Similarity To Centroid
+             * @description Cosine similarity to the cluster centroid
+             */
+            similarity_to_centroid: number;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * DiscoveredCluster
+         * @description A single reasoning-line cluster of judgments.
+         */
+        DiscoveredCluster: {
+            /** Case Count */
+            case_count: number;
+            /** Cluster Id */
+            cluster_id: number;
+            /**
+             * Coherence Score
+             * @description Average intra-cluster cosine similarity
+             */
+            coherence_score: number;
+            /**
+             * Date Range
+             * @description Earliest and latest decision_date in this cluster
+             */
+            date_range: {
+                [key: string]: string | null;
+            };
+            /**
+             * Keywords
+             * @description Top 5 TF-IDF keywords
+             */
+            keywords: string[];
+            /**
+             * Label
+             * @description Auto-generated label from top keywords
+             */
+            label: string;
+            /**
+             * Legal Bases
+             * @description Most common cited_legislation entries in this cluster
+             */
+            legal_bases: string[];
+            /**
+             * Top Cases
+             * @description Up to 10 representative cases sorted by similarity to centroid
+             */
+            top_cases: components["schemas"]["DiscoveredCase"][];
         };
         /** DistributionItem */
         DistributionItem: {
@@ -8155,6 +8737,86 @@ export interface components {
             version: string;
         };
         /**
+         * DriftAnalysisResponse
+         * @description Response from the language drift detection analysis.
+         */
+        DriftAnalysisResponse: {
+            /** Avg Drift */
+            avg_drift: number;
+            /** Drift Events Created */
+            drift_events_created: number;
+            /** Legal Question */
+            legal_question: string;
+            /** Line Id */
+            line_id: string;
+            /** Max Drift */
+            max_drift: number;
+            /** Peaks */
+            peaks: components["schemas"]["DriftPeak"][];
+            /** Total Members Analyzed */
+            total_members_analyzed: number;
+            /** Windows */
+            windows: components["schemas"]["DriftWindow"][];
+        };
+        /**
+         * DriftPeak
+         * @description A detected drift peak where language shifted significantly.
+         */
+        DriftPeak: {
+            /** Drift Score */
+            drift_score: number;
+            /** Entering Keywords */
+            entering_keywords: string[];
+            /** Exiting Keywords */
+            exiting_keywords: string[];
+            /** Period End */
+            period_end: string | null;
+            /** Period Start */
+            period_start: string | null;
+            /** Window Index */
+            window_index: number;
+        };
+        /**
+         * DriftWindow
+         * @description A single rolling time window in the drift analysis.
+         */
+        DriftWindow: {
+            /** Case Count */
+            case_count: number;
+            /**
+             * Drift Score
+             * @description 0 = no drift from previous window, higher = more drift
+             */
+            drift_score: number;
+            /**
+             * Entering Keywords
+             * @description New keywords not present in the previous window
+             */
+            entering_keywords?: string[];
+            /**
+             * Exiting Keywords
+             * @description Keywords that disappeared compared to the previous window
+             */
+            exiting_keywords?: string[];
+            /**
+             * Period End
+             * @description decision_date of the last judgment in this window
+             */
+            period_end: string | null;
+            /**
+             * Period Start
+             * @description decision_date of the first judgment in this window
+             */
+            period_start: string | null;
+            /**
+             * Top Keywords
+             * @description Top 5 keywords for this window
+             */
+            top_keywords: string[];
+            /** Window Index */
+            window_index: number;
+        };
+        /**
          * DuplicatePair
          * @description A pair of documents identified as duplicates.
          */
@@ -8285,6 +8947,22 @@ export interface components {
             schema_version_id: string;
             /** Updated At */
             updated_at: string;
+        };
+        /**
+         * EventDetectionResult
+         * @description Summary result of branch/merge/influence event detection across reasoning lines.
+         */
+        EventDetectionResult: {
+            /** Branches Detected */
+            branches_detected: number;
+            /** Influences Detected */
+            influences_detected: number;
+            /** Lines Analyzed */
+            lines_analyzed: number;
+            /** Merges Detected */
+            merges_detected: number;
+            /** Processing Time Ms */
+            processing_time_ms: number;
         };
         /**
          * EventProperties
@@ -8959,6 +9637,62 @@ export interface components {
              * @description Type of the issuing body
              */
             type?: string | null;
+        };
+        /**
+         * JudgeProfile
+         * @description Aggregated reasoning profile for a single judge.
+         */
+        JudgeProfile: {
+            /**
+             * Cases Analyzed
+             * @description Number of cases that were actually analyzed (may be less than total_cases)
+             */
+            cases_analyzed: number;
+            /**
+             * Dominant Style
+             * @description The highest-scoring reasoning style
+             */
+            dominant_style: string;
+            /**
+             * Judge Name
+             * @description Full name of the judge
+             */
+            judge_name: string;
+            /** @description Time range of analyzed cases */
+            period: components["schemas"]["CasePeriod"];
+            /**
+             * Sample Cases
+             * @description Up to 5 representative case references with their dominant pattern
+             */
+            sample_cases?: components["schemas"]["SampleCase"][];
+            /**
+             * Style Scores
+             * @description Reasoning style scores (0-100) for textual, deductive, analogical, policy, teleological
+             */
+            style_scores: {
+                [key: string]: number;
+            };
+            /**
+             * Total Cases
+             * @description Total number of cases found for this judge
+             */
+            total_cases: number;
+        };
+        /**
+         * JudgeSearchResult
+         * @description A single result from judge name search.
+         */
+        JudgeSearchResult: {
+            /**
+             * Case Count
+             * @description Number of cases associated with this judge
+             */
+            case_count: number;
+            /**
+             * Judge Name
+             * @description Full name of the judge
+             */
+            judge_name: string;
         };
         /** JurisdictionCounts */
         JurisdictionCounts: {
@@ -9823,6 +10557,27 @@ export interface components {
             total_words: number;
         };
         /**
+         * OutcomeClassificationResult
+         * @description Result of LLM-based outcome classification for a reasoning line's members.
+         */
+        OutcomeClassificationResult: {
+            /**
+             * Classified
+             * @description Number of members successfully classified
+             */
+            classified: number;
+            /**
+             * Errors
+             * @description Number of members where classification failed
+             */
+            errors: number;
+            /**
+             * Skipped
+             * @description Number of members skipped (already classified)
+             */
+            skipped: number;
+        };
+        /**
          * OutputTokenDetails
          * @description Breakdown of output token counts.
          *
@@ -10395,6 +11150,230 @@ export interface components {
             trending_topics: string[];
         };
         /**
+         * ReasoningLineDAG
+         * @description Full DAG structure combining reasoning line nodes and event edges.
+         */
+        ReasoningLineDAG: {
+            /** Edges */
+            edges: components["schemas"]["DAGEdge"][];
+            /** Nodes */
+            nodes: components["schemas"]["DAGNode"][];
+            /** Statistics */
+            statistics: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * ReasoningLineDetail
+         * @description Full detail of a reasoning line with members.
+         */
+        ReasoningLineDetail: {
+            /** Case Count */
+            case_count: number;
+            /** Coherence Score */
+            coherence_score: number | null;
+            /** Created At */
+            created_at: string;
+            /** Date Range End */
+            date_range_end: string | null;
+            /** Date Range Start */
+            date_range_start: string | null;
+            /** Id */
+            id: string;
+            /** Keywords */
+            keywords: string[];
+            /** Label */
+            label: string;
+            /** Legal Bases */
+            legal_bases: string[];
+            /** Legal Question */
+            legal_question: string;
+            /** Members */
+            members: components["schemas"]["ReasoningLineMember"][];
+            /** Status */
+            status: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /**
+         * ReasoningLineDiscoveryRequest
+         * @description Request to discover clusters of judgments addressing the same legal question.
+         */
+        ReasoningLineDiscoveryRequest: {
+            /**
+             * Legal Domain Filter
+             * @description Optional filter: only include judgments whose deep_legal_domains contain this value
+             */
+            legal_domain_filter?: string | null;
+            /**
+             * Min Shared Legal Bases
+             * @description Minimum number of shared cited_legislation entries to consider judgments related
+             * @default 1
+             */
+            min_shared_legal_bases: number;
+            /**
+             * Num Clusters
+             * @description Number of clusters to discover
+             * @default 8
+             */
+            num_clusters: number;
+            /**
+             * Sample Size
+             * @description Number of judgments to sample for clustering
+             * @default 200
+             */
+            sample_size: number;
+        };
+        /**
+         * ReasoningLineDiscoveryResponse
+         * @description Response from reasoning-line cluster discovery.
+         */
+        ReasoningLineDiscoveryResponse: {
+            /** Clusters */
+            clusters: components["schemas"]["DiscoveredCluster"][];
+            /** Statistics */
+            statistics: {
+                [key: string]: unknown;
+            };
+            /** Visualization */
+            visualization: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * ReasoningLineMember
+         * @description A judgment assigned to a reasoning line.
+         */
+        ReasoningLineMember: {
+            /** Court Name */
+            court_name?: string | null;
+            /** Decision Date */
+            decision_date?: string | null;
+            /** Judgment Id */
+            judgment_id: string;
+            /** Outcome Direction */
+            outcome_direction?: string | null;
+            /** Position In Line */
+            position_in_line: number;
+            /** Reasoning Pattern */
+            reasoning_pattern?: string | null;
+            /** Signature */
+            signature?: string | null;
+            /** Similarity To Centroid */
+            similarity_to_centroid: number;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * ReasoningLineSearchRequest
+         * @description Request for semantic search across reasoning lines.
+         */
+        ReasoningLineSearchRequest: {
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
+            /**
+             * Min Similarity
+             * @default 0.3
+             */
+            min_similarity: number;
+            /**
+             * Query
+             * @description Natural language legal question to search for
+             */
+            query: string;
+        };
+        /**
+         * ReasoningLineSearchResponse
+         * @description Response from semantic search across reasoning lines.
+         */
+        ReasoningLineSearchResponse: {
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["ReasoningLineSearchResult"][];
+            /** Total Found */
+            total_found: number;
+        };
+        /**
+         * ReasoningLineSearchResult
+         * @description A single reasoning line matching the search query.
+         */
+        ReasoningLineSearchResult: {
+            /** Case Count */
+            case_count: number;
+            /** Coherence Score */
+            coherence_score: number | null;
+            /** Id */
+            id: string;
+            /** Keywords */
+            keywords: string[];
+            /** Label */
+            label: string;
+            /** Legal Bases */
+            legal_bases: string[];
+            /** Legal Question */
+            legal_question: string;
+            /** Similarity */
+            similarity: number;
+        };
+        /**
+         * ReasoningLineSummary
+         * @description Summary of a saved reasoning line for list view.
+         */
+        ReasoningLineSummary: {
+            /** Case Count */
+            case_count: number;
+            /** Coherence Score */
+            coherence_score: number | null;
+            /** Created At */
+            created_at: string;
+            /** Date Range End */
+            date_range_end: string | null;
+            /** Date Range Start */
+            date_range_start: string | null;
+            /** Id */
+            id: string;
+            /** Keywords */
+            keywords: string[];
+            /** Label */
+            label: string;
+            /** Legal Bases */
+            legal_bases: string[];
+            /** Legal Question */
+            legal_question: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * ReasoningLineTimeline
+         * @description Temporal outcome distribution for a reasoning line.
+         */
+        ReasoningLineTimeline: {
+            /** Legal Question */
+            legal_question: string;
+            /** Line Id */
+            line_id: string;
+            /** Points */
+            points: components["schemas"]["TimelinePoint"][];
+            /** Total Classified */
+            total_classified: number;
+            /** Total Unclassified */
+            total_unclassified: number;
+            /**
+             * Trend
+             * @description Overall trend: emerging_consensus, stable_split, shifting, insufficient_data
+             */
+            trend: string;
+            /**
+             * Trend Slope
+             * @description Linear regression slope of for_ratio over time
+             */
+            trend_slope: number;
+        };
+        /**
          * RecommendationItem
          * @description A single recommended document.
          */
@@ -10501,6 +11480,38 @@ export interface components {
              * @description Document title
              */
             title?: string | null;
+        };
+        /**
+         * RelatedLinesResponse
+         * @description Response containing lines related to a given reasoning line.
+         */
+        RelatedLinesResponse: {
+            /** Line Id */
+            line_id: string;
+            /** Related */
+            related: components["schemas"]["RelatedReasoningLine"][];
+        };
+        /**
+         * RelatedReasoningLine
+         * @description A reasoning line related to a given line.
+         */
+        RelatedReasoningLine: {
+            /** Case Count */
+            case_count: number;
+            /** Id */
+            id: string;
+            /** Keywords */
+            keywords: string[];
+            /** Label */
+            label: string;
+            /** Legal Question */
+            legal_question: string;
+            /** Relatedness Score */
+            relatedness_score: number;
+            /** Shared Keywords */
+            shared_keywords: string[];
+            /** Shared Legal Bases */
+            shared_legal_bases: string[];
         };
         /**
          * RelevanceLabel
@@ -10847,6 +11858,37 @@ export interface components {
             ip_address?: string | null;
             /** User Id */
             user_id?: string | null;
+        };
+        /**
+         * SampleCase
+         * @description A single case reference with its dominant reasoning pattern.
+         */
+        SampleCase: {
+            /**
+             * Case Id
+             * @description Judgment ID
+             */
+            case_id: string;
+            /**
+             * Case Number
+             * @description Case number / reference
+             */
+            case_number?: string | null;
+            /**
+             * Court Name
+             * @description Name of the court
+             */
+            court_name?: string | null;
+            /**
+             * Date
+             * @description Date of the judgment
+             */
+            date?: string | null;
+            /**
+             * Dominant Pattern
+             * @description Dominant reasoning pattern in this case
+             */
+            dominant_pattern: string;
         };
         /**
          * SaveResearchContextRequest
@@ -11797,6 +12839,14 @@ export interface components {
              */
             size: number;
         };
+        /** SendMessageRequest */
+        SendMessageRequest: {
+            /**
+             * Message
+             * @description User message
+             */
+            message: string;
+        };
         /**
          * ServiceHealth
          * @description Health information for a single service.
@@ -11867,6 +12917,41 @@ export interface components {
          * @enum {string}
          */
         ServiceStatus: "healthy" | "degraded" | "unhealthy" | "unknown";
+        /** SessionResponse */
+        SessionResponse: {
+            /** Created At */
+            created_at: string;
+            /**
+             * Current Step
+             * @default 0
+             */
+            current_step: number;
+            /** Decision Points */
+            decision_points?: {
+                [key: string]: unknown;
+            }[];
+            /** Findings */
+            findings?: {
+                [key: string]: unknown;
+            }[];
+            /** Id */
+            id: string;
+            /** Initial Query */
+            initial_query: string;
+            /** Mode */
+            mode: string;
+            /**
+             * Progress
+             * @default 0
+             */
+            progress: number;
+            /** Report */
+            report?: {
+                [key: string]: unknown;
+            } | null;
+            /** Status */
+            status: string;
+        };
         /**
          * SessionSummary
          * @description Summary of a user session.
@@ -12133,6 +13218,36 @@ export interface components {
              * @description Whether generation succeeded
              */
             success: boolean;
+        };
+        /** StartSessionRequest */
+        StartSessionRequest: {
+            /**
+             * Max Iterations
+             * @description Maximum research iterations
+             * @default 10
+             */
+            max_iterations: number;
+            /**
+             * Mode
+             * @description Research mode
+             * @default guided
+             * @enum {string}
+             */
+            mode: "guided" | "exploratory" | "case_preparation";
+            /**
+             * Query
+             * @description Research query
+             */
+            query: string;
+        };
+        /** StartSessionResponse */
+        StartSessionResponse: {
+            /** Message */
+            message: string;
+            /** Session Id */
+            session_id: string;
+            /** Status */
+            status: string;
         };
         /**
          * SubmitReviewRequest
@@ -12418,6 +13533,38 @@ export interface components {
              * @description Total number of events extracted
              */
             total_events: number;
+        };
+        /**
+         * TimelinePoint
+         * @description A single time-bucketed point in the outcome timeline.
+         */
+        TimelinePoint: {
+            /** Against Count */
+            against_count: number;
+            /** End Date */
+            end_date: string;
+            /** For Count */
+            for_count: number;
+            /**
+             * For Ratio
+             * @description Ratio of 'for' outcomes to total classified
+             */
+            for_ratio: number;
+            /** Mixed Count */
+            mixed_count: number;
+            /**
+             * Period Label
+             * @description Human-readable period label, e.g. '2020-Q1' or '2020'
+             */
+            period_label: string;
+            /** Procedural Count */
+            procedural_count: number;
+            /** Start Date */
+            start_date: string;
+            /** Total */
+            total: number;
+            /** Unclassified Count */
+            unclassified_count: number;
         };
         /**
          * ToolCall
@@ -18932,6 +20079,103 @@ export interface operations {
             };
         };
     };
+    compare_judges_judge_fingerprint_compare_get: {
+        parameters: {
+            query: {
+                /** @description Comma-separated list of 2-3 judge names to compare */
+                judges: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProfile"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_judge_profile_judge_fingerprint_profile__judge_name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                judge_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_judges_judge_fingerprint_search_get: {
+        parameters: {
+            query: {
+                /** @description Search string for judge name autocomplete */
+                q: string;
+                /** @description Maximum number of results to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeSearchResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     browse_listings_marketplace_get: {
         parameters: {
             query?: {
@@ -20644,6 +21888,372 @@ export interface operations {
             };
         };
     };
+    list_reasoning_lines_reasoning_lines__get: {
+        parameters: {
+            query?: {
+                /** @description Filter by status */
+                status?: string | null;
+                /** @description Max results to return */
+                limit?: number;
+                /** @description Offset for pagination */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_reasoning_line_reasoning_lines_create_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReasoningLineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_dag_reasoning_lines_dag_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineDAG"];
+                };
+            };
+        };
+    };
+    detect_events_reasoning_lines_detect_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventDetectionResult"];
+                };
+            };
+        };
+    };
+    discover_reasoning_lines_reasoning_lines_discover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasoningLineDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineDiscoveryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_reasoning_lines_reasoning_lines_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasoningLineSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reasoning_line_reasoning_lines__line_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_reasoning_line_reasoning_lines__line_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_outcomes_reasoning_lines__line_id__analyze_outcomes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutcomeClassificationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_drift_reasoning_lines__line_id__drift_analysis_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriftAnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_related_reasoning_lines_reasoning_lines__line_id__related_get: {
+        parameters: {
+            query?: {
+                /** @description Max related lines */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelatedLinesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reasoning_line_timeline_reasoning_lines__line_id__timeline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReasoningLineTimeline"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_recommendations_recommendations_get: {
         parameters: {
             query?: {
@@ -20709,6 +22319,205 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sessions_research_agent_sessions_get: {
+        parameters: {
+            query?: {
+                /** @description Max sessions to return */
+                limit?: number;
+                /** @description Pagination offset */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_session_research_agent_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartSessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_research_agent_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_message_research_agent_sessions__session_id__message_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_session_research_agent_sessions__session_id__stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_session_research_agent_sessions__session_id__stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

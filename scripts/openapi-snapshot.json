@@ -1697,6 +1697,37 @@
         "title": "CancelJobResponse",
         "type": "object"
       },
+      "CasePeriod": {
+        "description": "Time range covered by analyzed cases.",
+        "properties": {
+          "first_case": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the earliest case (ISO format)",
+            "title": "First Case"
+          },
+          "last_case": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the most recent case (ISO format)",
+            "title": "Last Case"
+          }
+        },
+        "title": "CasePeriod",
+        "type": "object"
+      },
       "CheckDocumentRequest": {
         "description": "Request to check a single document for duplicates.",
         "properties": {
@@ -3268,6 +3299,61 @@
         "title": "CreatePublicationRequest",
         "type": "object"
       },
+      "CreateReasoningLineRequest": {
+        "description": "Request to save a discovered cluster as a reasoning line.",
+        "properties": {
+          "coherence_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coherence Score"
+          },
+          "judgment_ids": {
+            "description": "List of judgment IDs to assign as members",
+            "items": {
+              "type": "string"
+            },
+            "title": "Judgment Ids",
+            "type": "array"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "description": "Label for the reasoning line",
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Bases",
+            "type": "array"
+          },
+          "legal_question": {
+            "description": "The legal question this line addresses",
+            "title": "Legal Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "legal_question",
+          "judgment_ids"
+        ],
+        "title": "CreateReasoningLineRequest",
+        "type": "object"
+      },
       "CreateSchemaRequest": {
         "description": "Request model for creating a new custom schema.",
         "properties": {
@@ -3325,6 +3411,156 @@
           }
         },
         "title": "CreateVersionRequest",
+        "type": "object"
+      },
+      "DAGEdge": {
+        "description": "An event (branch, merge, drift, reversal, influence) as an edge in the DAG.",
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "drift_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drift Score"
+          },
+          "event_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Date"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "source_id",
+          "target_id",
+          "event_date",
+          "description",
+          "confidence",
+          "drift_score"
+        ],
+        "title": "DAGEdge",
+        "type": "object"
+      },
+      "DAGNode": {
+        "description": "A reasoning line represented as a node in the DAG visualization.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "coherence_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coherence Score"
+          },
+          "date_range_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range End"
+          },
+          "date_range_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range Start"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "status",
+          "case_count",
+          "coherence_score",
+          "date_range_start",
+          "date_range_end",
+          "keywords"
+        ],
+        "title": "DAGNode",
         "type": "object"
       },
       "DPAInfoResponse": {
@@ -3959,6 +4195,155 @@
           "response_time_ms"
         ],
         "title": "DetailedStatusResponse",
+        "type": "object"
+      },
+      "DiscoveredCase": {
+        "description": "A judgment within a discovered reasoning-line cluster.",
+        "properties": {
+          "cited_legislation": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited Legislation",
+            "type": "array"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "similarity_to_centroid": {
+            "description": "Cosine similarity to the cluster centroid",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Similarity To Centroid",
+            "type": "number"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "similarity_to_centroid"
+        ],
+        "title": "DiscoveredCase",
+        "type": "object"
+      },
+      "DiscoveredCluster": {
+        "description": "A single reasoning-line cluster of judgments.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "integer"
+          },
+          "coherence_score": {
+            "description": "Average intra-cluster cosine similarity",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coherence Score",
+            "type": "number"
+          },
+          "date_range": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "Earliest and latest decision_date in this cluster",
+            "title": "Date Range",
+            "type": "object"
+          },
+          "keywords": {
+            "description": "Top 5 TF-IDF keywords",
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "description": "Auto-generated label from top keywords",
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_bases": {
+            "description": "Most common cited_legislation entries in this cluster",
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Bases",
+            "type": "array"
+          },
+          "top_cases": {
+            "description": "Up to 10 representative cases sorted by similarity to centroid",
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredCase"
+            },
+            "title": "Top Cases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "label",
+          "keywords",
+          "legal_bases",
+          "case_count",
+          "coherence_score",
+          "date_range",
+          "top_cases"
+        ],
+        "title": "DiscoveredCluster",
         "type": "object"
       },
       "DistributionItem": {
@@ -4990,6 +5375,197 @@
         "title": "DownloadResponse",
         "type": "object"
       },
+      "DriftAnalysisResponse": {
+        "description": "Response from the language drift detection analysis.",
+        "properties": {
+          "avg_drift": {
+            "title": "Avg Drift",
+            "type": "number"
+          },
+          "drift_events_created": {
+            "title": "Drift Events Created",
+            "type": "integer"
+          },
+          "legal_question": {
+            "title": "Legal Question",
+            "type": "string"
+          },
+          "line_id": {
+            "title": "Line Id",
+            "type": "string"
+          },
+          "max_drift": {
+            "title": "Max Drift",
+            "type": "number"
+          },
+          "peaks": {
+            "items": {
+              "$ref": "#/components/schemas/DriftPeak"
+            },
+            "title": "Peaks",
+            "type": "array"
+          },
+          "total_members_analyzed": {
+            "title": "Total Members Analyzed",
+            "type": "integer"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/DriftWindow"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "line_id",
+          "legal_question",
+          "windows",
+          "peaks",
+          "avg_drift",
+          "max_drift",
+          "drift_events_created",
+          "total_members_analyzed"
+        ],
+        "title": "DriftAnalysisResponse",
+        "type": "object"
+      },
+      "DriftPeak": {
+        "description": "A detected drift peak where language shifted significantly.",
+        "properties": {
+          "drift_score": {
+            "title": "Drift Score",
+            "type": "number"
+          },
+          "entering_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Entering Keywords",
+            "type": "array"
+          },
+          "exiting_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exiting Keywords",
+            "type": "array"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "window_index": {
+            "title": "Window Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_index",
+          "drift_score",
+          "period_start",
+          "period_end",
+          "entering_keywords",
+          "exiting_keywords"
+        ],
+        "title": "DriftPeak",
+        "type": "object"
+      },
+      "DriftWindow": {
+        "description": "A single rolling time window in the drift analysis.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "drift_score": {
+            "description": "0 = no drift from previous window, higher = more drift",
+            "minimum": 0.0,
+            "title": "Drift Score",
+            "type": "number"
+          },
+          "entering_keywords": {
+            "description": "New keywords not present in the previous window",
+            "items": {
+              "type": "string"
+            },
+            "title": "Entering Keywords",
+            "type": "array"
+          },
+          "exiting_keywords": {
+            "description": "Keywords that disappeared compared to the previous window",
+            "items": {
+              "type": "string"
+            },
+            "title": "Exiting Keywords",
+            "type": "array"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "decision_date of the last judgment in this window",
+            "title": "Period End"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "decision_date of the first judgment in this window",
+            "title": "Period Start"
+          },
+          "top_keywords": {
+            "description": "Top 5 keywords for this window",
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Keywords",
+            "type": "array"
+          },
+          "window_index": {
+            "title": "Window Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_index",
+          "period_start",
+          "period_end",
+          "case_count",
+          "drift_score",
+          "top_keywords"
+        ],
+        "title": "DriftWindow",
+        "type": "object"
+      },
       "DuplicatePair": {
         "description": "A pair of documents identified as duplicates.",
         "properties": {
@@ -5344,6 +5920,40 @@
           "updated_at"
         ],
         "title": "EvaluationResponse",
+        "type": "object"
+      },
+      "EventDetectionResult": {
+        "description": "Summary result of branch/merge/influence event detection across reasoning lines.",
+        "properties": {
+          "branches_detected": {
+            "title": "Branches Detected",
+            "type": "integer"
+          },
+          "influences_detected": {
+            "title": "Influences Detected",
+            "type": "integer"
+          },
+          "lines_analyzed": {
+            "title": "Lines Analyzed",
+            "type": "integer"
+          },
+          "merges_detected": {
+            "title": "Merges Detected",
+            "type": "integer"
+          },
+          "processing_time_ms": {
+            "title": "Processing Time Ms",
+            "type": "number"
+          }
+        },
+        "required": [
+          "branches_detected",
+          "merges_detected",
+          "influences_detected",
+          "lines_analyzed",
+          "processing_time_ms"
+        ],
+        "title": "EventDetectionResult",
         "type": "object"
       },
       "EventProperties": {
@@ -6735,6 +7345,82 @@
           }
         },
         "title": "IssuingBody",
+        "type": "object"
+      },
+      "JudgeProfile": {
+        "description": "Aggregated reasoning profile for a single judge.",
+        "properties": {
+          "cases_analyzed": {
+            "description": "Number of cases that were actually analyzed (may be less than total_cases)",
+            "title": "Cases Analyzed",
+            "type": "integer"
+          },
+          "dominant_style": {
+            "description": "The highest-scoring reasoning style",
+            "title": "Dominant Style",
+            "type": "string"
+          },
+          "judge_name": {
+            "description": "Full name of the judge",
+            "title": "Judge Name",
+            "type": "string"
+          },
+          "period": {
+            "$ref": "#/components/schemas/CasePeriod",
+            "description": "Time range of analyzed cases"
+          },
+          "sample_cases": {
+            "description": "Up to 5 representative case references with their dominant pattern",
+            "items": {
+              "$ref": "#/components/schemas/SampleCase"
+            },
+            "title": "Sample Cases",
+            "type": "array"
+          },
+          "style_scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Reasoning style scores (0-100) for textual, deductive, analogical, policy, teleological",
+            "title": "Style Scores",
+            "type": "object"
+          },
+          "total_cases": {
+            "description": "Total number of cases found for this judge",
+            "title": "Total Cases",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "judge_name",
+          "total_cases",
+          "style_scores",
+          "dominant_style",
+          "cases_analyzed",
+          "period"
+        ],
+        "title": "JudgeProfile",
+        "type": "object"
+      },
+      "JudgeSearchResult": {
+        "description": "A single result from judge name search.",
+        "properties": {
+          "case_count": {
+            "description": "Number of cases associated with this judge",
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "judge_name": {
+            "description": "Full name of the judge",
+            "title": "Judge Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "judge_name",
+          "case_count"
+        ],
+        "title": "JudgeSearchResult",
         "type": "object"
       },
       "JurisdictionCounts": {
@@ -8390,6 +9076,33 @@
         "title": "OCRQualityMetrics",
         "type": "object"
       },
+      "OutcomeClassificationResult": {
+        "description": "Result of LLM-based outcome classification for a reasoning line's members.",
+        "properties": {
+          "classified": {
+            "description": "Number of members successfully classified",
+            "title": "Classified",
+            "type": "integer"
+          },
+          "errors": {
+            "description": "Number of members where classification failed",
+            "title": "Errors",
+            "type": "integer"
+          },
+          "skipped": {
+            "description": "Number of members skipped (already classified)",
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "classified",
+          "skipped",
+          "errors"
+        ],
+        "title": "OutcomeClassificationResult",
+        "type": "object"
+      },
       "OutputTokenDetails": {
         "additionalProperties": true,
         "description": "Breakdown of output token counts.\n\nDoes *not* need to sum to full output token count. Does *not* need to have all keys.\n\nExample:\n    .. code-block:: python\n\n        {\n            \"audio\": 10,\n            \"reasoning\": 200,\n        }\n\n.. versionadded:: 0.3.9",
@@ -9599,6 +10312,562 @@
         "title": "QuickSuggestion",
         "type": "object"
       },
+      "ReasoningLineDAG": {
+        "description": "Full DAG structure combining reasoning line nodes and event edges.",
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/DAGEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/DAGNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "statistics": {
+            "additionalProperties": true,
+            "title": "Statistics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges",
+          "statistics"
+        ],
+        "title": "ReasoningLineDAG",
+        "type": "object"
+      },
+      "ReasoningLineDetail": {
+        "description": "Full detail of a reasoning line with members.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "coherence_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coherence Score"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "date_range_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range End"
+          },
+          "date_range_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range Start"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Bases",
+            "type": "array"
+          },
+          "legal_question": {
+            "title": "Legal Question",
+            "type": "string"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ReasoningLineMember"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "legal_question",
+          "keywords",
+          "legal_bases",
+          "status",
+          "case_count",
+          "coherence_score",
+          "date_range_start",
+          "date_range_end",
+          "created_at",
+          "updated_at",
+          "members"
+        ],
+        "title": "ReasoningLineDetail",
+        "type": "object"
+      },
+      "ReasoningLineDiscoveryRequest": {
+        "description": "Request to discover clusters of judgments addressing the same legal question.",
+        "properties": {
+          "legal_domain_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional filter: only include judgments whose deep_legal_domains contain this value",
+            "title": "Legal Domain Filter"
+          },
+          "min_shared_legal_bases": {
+            "default": 1,
+            "description": "Minimum number of shared cited_legislation entries to consider judgments related",
+            "minimum": 0.0,
+            "title": "Min Shared Legal Bases",
+            "type": "integer"
+          },
+          "num_clusters": {
+            "default": 8,
+            "description": "Number of clusters to discover",
+            "maximum": 20.0,
+            "minimum": 2.0,
+            "title": "Num Clusters",
+            "type": "integer"
+          },
+          "sample_size": {
+            "default": 200,
+            "description": "Number of judgments to sample for clustering",
+            "maximum": 500.0,
+            "minimum": 20.0,
+            "title": "Sample Size",
+            "type": "integer"
+          }
+        },
+        "title": "ReasoningLineDiscoveryRequest",
+        "type": "object"
+      },
+      "ReasoningLineDiscoveryResponse": {
+        "description": "Response from reasoning-line cluster discovery.",
+        "properties": {
+          "clusters": {
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredCluster"
+            },
+            "title": "Clusters",
+            "type": "array"
+          },
+          "statistics": {
+            "additionalProperties": true,
+            "title": "Statistics",
+            "type": "object"
+          },
+          "visualization": {
+            "additionalProperties": true,
+            "title": "Visualization",
+            "type": "object"
+          }
+        },
+        "required": [
+          "clusters",
+          "statistics",
+          "visualization"
+        ],
+        "title": "ReasoningLineDiscoveryResponse",
+        "type": "object"
+      },
+      "ReasoningLineMember": {
+        "description": "A judgment assigned to a reasoning line.",
+        "properties": {
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Date"
+          },
+          "judgment_id": {
+            "title": "Judgment Id",
+            "type": "string"
+          },
+          "outcome_direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome Direction"
+          },
+          "position_in_line": {
+            "title": "Position In Line",
+            "type": "integer"
+          },
+          "reasoning_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Pattern"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "similarity_to_centroid": {
+            "title": "Similarity To Centroid",
+            "type": "number"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "judgment_id",
+          "position_in_line",
+          "similarity_to_centroid"
+        ],
+        "title": "ReasoningLineMember",
+        "type": "object"
+      },
+      "ReasoningLineSearchRequest": {
+        "description": "Request for semantic search across reasoning lines.",
+        "properties": {
+          "limit": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "min_similarity": {
+            "default": 0.3,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Similarity",
+            "type": "number"
+          },
+          "query": {
+            "description": "Natural language legal question to search for",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ReasoningLineSearchRequest",
+        "type": "object"
+      },
+      "ReasoningLineSearchResponse": {
+        "description": "Response from semantic search across reasoning lines.",
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ReasoningLineSearchResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_found": {
+            "title": "Total Found",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "results",
+          "query",
+          "total_found"
+        ],
+        "title": "ReasoningLineSearchResponse",
+        "type": "object"
+      },
+      "ReasoningLineSearchResult": {
+        "description": "A single reasoning line matching the search query.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "coherence_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coherence Score"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Bases",
+            "type": "array"
+          },
+          "legal_question": {
+            "title": "Legal Question",
+            "type": "string"
+          },
+          "similarity": {
+            "title": "Similarity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "legal_question",
+          "keywords",
+          "legal_bases",
+          "case_count",
+          "coherence_score",
+          "similarity"
+        ],
+        "title": "ReasoningLineSearchResult",
+        "type": "object"
+      },
+      "ReasoningLineSummary": {
+        "description": "Summary of a saved reasoning line for list view.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "coherence_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coherence Score"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "date_range_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range End"
+          },
+          "date_range_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range Start"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Bases",
+            "type": "array"
+          },
+          "legal_question": {
+            "title": "Legal Question",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "legal_question",
+          "keywords",
+          "legal_bases",
+          "status",
+          "case_count",
+          "coherence_score",
+          "date_range_start",
+          "date_range_end",
+          "created_at"
+        ],
+        "title": "ReasoningLineSummary",
+        "type": "object"
+      },
+      "ReasoningLineTimeline": {
+        "description": "Temporal outcome distribution for a reasoning line.",
+        "properties": {
+          "legal_question": {
+            "title": "Legal Question",
+            "type": "string"
+          },
+          "line_id": {
+            "title": "Line Id",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TimelinePoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "total_classified": {
+            "title": "Total Classified",
+            "type": "integer"
+          },
+          "total_unclassified": {
+            "title": "Total Unclassified",
+            "type": "integer"
+          },
+          "trend": {
+            "description": "Overall trend: emerging_consensus, stable_split, shifting, insufficient_data",
+            "title": "Trend",
+            "type": "string"
+          },
+          "trend_slope": {
+            "description": "Linear regression slope of for_ratio over time",
+            "title": "Trend Slope",
+            "type": "number"
+          }
+        },
+        "required": [
+          "line_id",
+          "legal_question",
+          "points",
+          "trend",
+          "trend_slope",
+          "total_classified",
+          "total_unclassified"
+        ],
+        "title": "ReasoningLineTimeline",
+        "type": "object"
+      },
       "RecommendationItem": {
         "description": "A single recommended document.",
         "properties": {
@@ -9791,6 +11060,86 @@
           "reason"
         ],
         "title": "RelatedDocument",
+        "type": "object"
+      },
+      "RelatedLinesResponse": {
+        "description": "Response containing lines related to a given reasoning line.",
+        "properties": {
+          "line_id": {
+            "title": "Line Id",
+            "type": "string"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedReasoningLine"
+            },
+            "title": "Related",
+            "type": "array"
+          }
+        },
+        "required": [
+          "line_id",
+          "related"
+        ],
+        "title": "RelatedLinesResponse",
+        "type": "object"
+      },
+      "RelatedReasoningLine": {
+        "description": "A reasoning line related to a given line.",
+        "properties": {
+          "case_count": {
+            "title": "Case Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_question": {
+            "title": "Legal Question",
+            "type": "string"
+          },
+          "relatedness_score": {
+            "title": "Relatedness Score",
+            "type": "number"
+          },
+          "shared_keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Keywords",
+            "type": "array"
+          },
+          "shared_legal_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Legal Bases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "legal_question",
+          "keywords",
+          "case_count",
+          "relatedness_score",
+          "shared_legal_bases",
+          "shared_keywords"
+        ],
+        "title": "RelatedReasoningLine",
         "type": "object"
       },
       "RelevanceLabel": {
@@ -10576,6 +11925,63 @@
           "created_at"
         ],
         "title": "SSOLoginEventResponse",
+        "type": "object"
+      },
+      "SampleCase": {
+        "description": "A single case reference with its dominant reasoning pattern.",
+        "properties": {
+          "case_id": {
+            "description": "Judgment ID",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "case_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Case number / reference",
+            "title": "Case Number"
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Name of the court",
+            "title": "Court Name"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Date of the judgment",
+            "title": "Date"
+          },
+          "dominant_pattern": {
+            "description": "Dominant reasoning pattern in this case",
+            "title": "Dominant Pattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id",
+          "dominant_pattern"
+        ],
+        "title": "SampleCase",
         "type": "object"
       },
       "SaveResearchContextRequest": {
@@ -12353,6 +13759,22 @@
         "title": "SemanticCluster",
         "type": "object"
       },
+      "SendMessageRequest": {
+        "properties": {
+          "message": {
+            "description": "User message",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "SendMessageRequest",
+        "type": "object"
+      },
       "ServiceHealth": {
         "description": "Health information for a single service.",
         "example": {
@@ -12497,6 +13919,77 @@
         ],
         "title": "ServiceStatus",
         "type": "string"
+      },
+      "SessionResponse": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_step": {
+            "default": 0,
+            "title": "Current Step",
+            "type": "integer"
+          },
+          "decision_points": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Decision Points",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "initial_query": {
+            "title": "Initial Query",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "progress": {
+            "default": 0.0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "initial_query",
+          "status",
+          "created_at"
+        ],
+        "title": "SessionResponse",
+        "type": "object"
       },
       "SessionSummary": {
         "description": "Summary of a user session.",
@@ -13013,6 +14506,64 @@
         "title": "SimpleSchemaGenerationResponse",
         "type": "object"
       },
+      "StartSessionRequest": {
+        "properties": {
+          "max_iterations": {
+            "default": 10,
+            "description": "Maximum research iterations",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Iterations",
+            "type": "integer"
+          },
+          "mode": {
+            "default": "guided",
+            "description": "Research mode",
+            "enum": [
+              "guided",
+              "exploratory",
+              "case_preparation"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "query": {
+            "description": "Research query",
+            "maxLength": 5000,
+            "minLength": 5,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "StartSessionRequest",
+        "type": "object"
+      },
+      "StartSessionResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "status",
+          "message"
+        ],
+        "title": "StartSessionResponse",
+        "type": "object"
+      },
       "SubmitReviewRequest": {
         "description": "Request to submit a review for a listing.",
         "properties": {
@@ -13504,6 +15055,69 @@
           "extraction_depth"
         ],
         "title": "TimelineExtractionResponse",
+        "type": "object"
+      },
+      "TimelinePoint": {
+        "description": "A single time-bucketed point in the outcome timeline.",
+        "properties": {
+          "against_count": {
+            "title": "Against Count",
+            "type": "integer"
+          },
+          "end_date": {
+            "title": "End Date",
+            "type": "string"
+          },
+          "for_count": {
+            "title": "For Count",
+            "type": "integer"
+          },
+          "for_ratio": {
+            "description": "Ratio of 'for' outcomes to total classified",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "For Ratio",
+            "type": "number"
+          },
+          "mixed_count": {
+            "title": "Mixed Count",
+            "type": "integer"
+          },
+          "period_label": {
+            "description": "Human-readable period label, e.g. '2020-Q1' or '2020'",
+            "title": "Period Label",
+            "type": "string"
+          },
+          "procedural_count": {
+            "title": "Procedural Count",
+            "type": "integer"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unclassified_count": {
+            "title": "Unclassified Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_label",
+          "start_date",
+          "end_date",
+          "total",
+          "for_count",
+          "against_count",
+          "mixed_count",
+          "procedural_count",
+          "unclassified_count",
+          "for_ratio"
+        ],
+        "title": "TimelinePoint",
         "type": "object"
       },
       "ToolCall": {
@@ -25286,6 +26900,180 @@
         ]
       }
     },
+    "/judge-fingerprint/compare": {
+      "get": {
+        "description": "Compare the reasoning fingerprints of 2-3 judges side by side. Returns a list of JudgeProfile objects, one per judge.",
+        "operationId": "compare_judges_judge_fingerprint_compare_get",
+        "parameters": [
+          {
+            "description": "Comma-separated list of 2-3 judge names to compare",
+            "in": "query",
+            "name": "judges",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated list of 2-3 judge names to compare",
+              "examples": [
+                "Jan Kowalski,Anna Nowak"
+              ],
+              "title": "Judges",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JudgeProfile"
+                  },
+                  "title": "Response Compare Judges Judge Fingerprint Compare Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Compare reasoning styles of multiple judges",
+        "tags": [
+          "judge-fingerprint"
+        ]
+      }
+    },
+    "/judge-fingerprint/profile/{judge_name}": {
+      "get": {
+        "description": "Analyze a judge's reasoning style across their cases. Returns aggregated scores for textual, deductive, analogical, policy, and teleological reasoning based on keyword heuristics.",
+        "operationId": "get_judge_profile_judge_fingerprint_profile__judge_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "judge_name",
+            "required": true,
+            "schema": {
+              "title": "Judge Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get reasoning fingerprint for a judge",
+        "tags": [
+          "judge-fingerprint"
+        ]
+      }
+    },
+    "/judge-fingerprint/search": {
+      "get": {
+        "description": "Search for judge names matching a query string. Returns matching judge names with their case counts, useful for autocomplete.",
+        "operationId": "search_judges_judge_fingerprint_search_get",
+        "parameters": [
+          {
+            "description": "Search string for judge name autocomplete",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Search string for judge name autocomplete",
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum number of results to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Maximum number of results to return",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JudgeSearchResult"
+                  },
+                  "title": "Response Search Judges Judge Fingerprint Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Search for judge names (autocomplete)",
+        "tags": [
+          "judge-fingerprint"
+        ]
+      }
+    },
     "/marketplace": {
       "get": {
         "description": "Browse and search published extraction schemas in the marketplace.",
@@ -28273,6 +30061,593 @@
         "summary": "Create Feedback From Token"
       }
     },
+    "/reasoning-lines/": {
+      "get": {
+        "description": "Return a paginated list of saved reasoning lines, ordered by creation date\n(newest first). Optionally filter by status.",
+        "operationId": "list_reasoning_lines_reasoning_lines__get",
+        "parameters": [
+          {
+            "description": "Filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Max results to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max results to return",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Offset for pagination",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Offset for pagination",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReasoningLineSummary"
+                  },
+                  "title": "Response List Reasoning Lines Reasoning Lines  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "List saved reasoning lines",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/create": {
+      "post": {
+        "description": "Persist a reasoning line with its member judgments.\n\nFetches embeddings for each judgment to compute the centroid (avg_embedding)\nand per-member similarity_to_centroid. Members are ordered chronologically\nby decision_date.",
+        "operationId": "create_reasoning_line_reasoning_lines_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReasoningLineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReasoningLineDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Save a discovered cluster as a persistent reasoning line",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/dag": {
+      "get": {
+        "description": "Returns all reasoning lines as nodes and all detected events as edges, forming a directed acyclic graph for visualization.",
+        "operationId": "get_dag_reasoning_lines_dag_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReasoningLineDAG"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get full DAG structure for visualization",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/detect-events": {
+      "post": {
+        "description": "Scans all active reasoning lines and detects branch and merge events between them. Expensive computation \u2014 limited to 5 requests per hour.",
+        "operationId": "detect_events_reasoning_lines_detect_events_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetectionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Detect branch/merge/influence events across reasoning lines",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/discover": {
+      "post": {
+        "description": "Discover reasoning-line clusters by combining embedding similarity with\nshared legal bases.\n\nFetches judgments from the database, clusters them using K-Means on\nnormalized embeddings, then enriches each cluster with shared\ncited_legislation, coherence scores, date ranges, and representative\ncases. Returns a 2D PCA visualization graph.",
+        "operationId": "discover_reasoning_lines_reasoning_lines_discover_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasoningLineDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReasoningLineDiscoveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Discover clusters of judgments addressing the same legal question",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/search": {
+      "post": {
+        "description": "Search reasoning lines using semantic similarity.\n\nGenerates an embedding for the query and compares it against the\navg_embedding of each active reasoning line using cosine similarity.\nFalls back to text-based matching if embedding generation fails.",
+        "operationId": "search_reasoning_lines_reasoning_lines_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasoningLineSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReasoningLineSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Semantic search for reasoning lines by natural language query",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}": {
+      "delete": {
+        "description": "Soft-delete a reasoning line by setting its status to 'superseded'.\nThe line and its members remain in the database for historical reference.",
+        "operationId": "delete_reasoning_line_reasoning_lines__line_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Delete Reasoning Line Reasoning Lines  Line Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Soft-delete a reasoning line by setting status to superseded",
+        "tags": [
+          "reasoning-lines"
+        ]
+      },
+      "get": {
+        "description": "Retrieve a single reasoning line by ID, including all member judgments\nwith their metadata joined from the judgments table.",
+        "operationId": "get_reasoning_line_reasoning_lines__line_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReasoningLineDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get full detail of a reasoning line with all members",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}/analyze-outcomes": {
+      "post": {
+        "description": "Use LLM to classify each member judgment's outcome direction relative\nto the reasoning line's legal question.\n\nFor each member that does not already have an outcome_direction set,\nthe LLM classifies the judgment as 'for', 'against', 'mixed', or\n'procedural'. Results are persisted to the reasoning_line_members table.\n\nProcesses at most 50 members per call to avoid timeout. Members that\nalready have outcome_direction set are skipped.",
+        "operationId": "analyze_outcomes_reasoning_lines__line_id__analyze_outcomes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutcomeClassificationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Classify outcome direction for each member judgment using LLM",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}/drift-analysis": {
+      "post": {
+        "description": "Detect language drift within a reasoning line by analyzing how the\nembedding centroid shifts across rolling time windows.\n\nSorts member judgments chronologically, creates overlapping windows,\ncomputes centroid drift between consecutive windows, extracts\nentering/exiting keywords, and identifies significant drift peaks.\nDrift events are persisted to the reasoning_line_events table.",
+        "operationId": "analyze_drift_reasoning_lines__line_id__drift_analysis_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftAnalysisResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Detect language drift within a reasoning line over time",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}/related": {
+      "get": {
+        "description": "Find reasoning lines related to a given line based on a weighted combination\nof shared legal bases (Jaccard, weight 0.4), shared keywords (Jaccard,\nweight 0.2), and embedding similarity (cosine, weight 0.4).",
+        "operationId": "get_related_reasoning_lines_reasoning_lines__line_id__related_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Max related lines",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Max related lines",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatedLinesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Find reasoning lines related to a given line",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
+    "/reasoning-lines/{line_id}/timeline": {
+      "get": {
+        "description": "Return time-bucketed outcome distribution for a reasoning line, suitable\nfor timeline visualization.\n\nAutomatically selects the bucketing granularity based on the date range:\n- > 3 years: bucket by year\n- 1-3 years: bucket by quarter\n- < 1 year: bucket by month\n\nDetects overall trend using linear regression on the 'for' ratio over time.\nReturns 'insufficient_data' trend if fewer than 3 time periods have data.",
+        "operationId": "get_reasoning_line_timeline_reasoning_lines__line_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line_id",
+            "required": true,
+            "schema": {
+              "title": "Line Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReasoningLineTimeline"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get temporal outcome distribution for a reasoning line",
+        "tags": [
+          "reasoning-lines"
+        ]
+      }
+    },
     "/recommendations": {
       "get": {
         "description": "Get personalized document recommendations based on search history, viewed documents, and research context.",
@@ -28464,6 +30839,347 @@
         "summary": "Track user-document interaction",
         "tags": [
           "recommendations"
+        ]
+      }
+    },
+    "/research-agent/sessions": {
+      "get": {
+        "description": "List research sessions for the current user.",
+        "operationId": "list_sessions_research_agent_sessions_get",
+        "parameters": [
+          {
+            "description": "Max sessions to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Max sessions to return",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Pagination offset",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Pagination offset",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponse"
+                  },
+                  "title": "Response List Sessions Research Agent Sessions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List user's research sessions",
+        "tags": [
+          "research-agent-v2"
+        ]
+      },
+      "post": {
+        "description": "Create a research session and launch the agent in the background.",
+        "operationId": "start_session_research_agent_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartSessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start a new research session",
+        "tags": [
+          "research-agent-v2"
+        ]
+      }
+    },
+    "/research-agent/sessions/{session_id}": {
+      "get": {
+        "description": "Read a research session by ID.",
+        "operationId": "get_session_research_agent_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get session status and results",
+        "tags": [
+          "research-agent-v2"
+        ]
+      }
+    },
+    "/research-agent/sessions/{session_id}/message": {
+      "post": {
+        "description": "Placeholder for interrupt-resume: accepts user input at a decision point.",
+        "operationId": "send_message_research_agent_sessions__session_id__message_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Send Message Research Agent Sessions  Session Id  Message Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send user input to a decision point",
+        "tags": [
+          "research-agent-v2"
+        ]
+      }
+    },
+    "/research-agent/sessions/{session_id}/stop": {
+      "post": {
+        "description": "Cancel the running agent task and mark the session as stopped.",
+        "operationId": "stop_session_research_agent_sessions__session_id__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Stop Session Research Agent Sessions  Session Id  Stop Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stop a running research session",
+        "tags": [
+          "research-agent-v2"
+        ]
+      }
+    },
+    "/research-agent/sessions/{session_id}/stream": {
+      "get": {
+        "description": "Return an SSE stream that emits progress events for the given session.",
+        "operationId": "stream_session_research_agent_sessions__session_id__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "SSE stream of session progress events",
+        "tags": [
+          "research-agent-v2"
         ]
       }
     },

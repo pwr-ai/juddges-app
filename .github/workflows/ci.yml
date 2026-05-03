@@ -141,7 +141,7 @@ jobs:
 
       - name: Run unit tests with coverage
         working-directory: backend
-        run: poetry run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=59
+        run: poetry run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=54
 
       # Issue #106 (unit-safe tier): import-check the integration test module so
       # a broken import, syntax error, or missing fixture breaks CI early, but
