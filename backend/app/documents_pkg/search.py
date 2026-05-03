@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from juddges_search.models import LegalDocument
 from loguru import logger
 
+from app.config import settings
 from app.models import (
     PaginationMetadata,
     SearchChunksRequest,
@@ -217,6 +218,13 @@ async def _generate_search_embedding(
     if effective_alpha <= 0:
         return None, 0.0, False
 
+    from app.services.search_cache import get_cached_embedding, set_cached_embedding
+
+    # Check cache first
+    cached = await get_cached_embedding(semantic_query)
+    if cached is not None and len(cached) == JUDGMENTS_EMBEDDING_DIMENSION:
+        return cached, 0.0, False
+
     query_embedding: list[float] | None = None
     embedding_time_ms = 0.0
     vector_fallback = False
@@ -230,6 +238,8 @@ async def _generate_search_embedding(
             )
             query_embedding = None
             vector_fallback = True
+        else:
+            await set_cached_embedding(semantic_query, query_embedding)
         embedding_time_ms = (time.perf_counter() - embedding_start) * 1000
     except Exception as emb_err:
         logger.warning(
@@ -284,6 +294,7 @@ def _build_search_rpc_params(
     limit: int,
     offset: int,
     query_type: str = "mixed",
+    ef_search: int = 100,
 ) -> dict[str, Any]:
     if query_type == "conceptual":
         keyword_query = _relax_keyword_for_conceptual(keyword_query, search_language)
@@ -307,6 +318,7 @@ def _build_search_rpc_params(
         "result_limit": limit,
         "result_offset": offset,
         "rrf_k": 60,
+        "ef_search_value": ef_search,
     }
 
 
@@ -373,7 +385,11 @@ async def _run_zero_result_fallbacks(
     offset: int,
     vector_fallback: bool,
 ) -> tuple[list[dict[str, Any]], float, bool, str | None, str | None, bool]:
-    """Retry zero-result thinking queries with progressively broader rewrites."""
+    """Retry zero-result thinking queries with progressively broader rewrites.
+
+    All fallback attempts are fired in parallel via asyncio.gather; the first
+    non-empty result (in priority order) wins.
+    """
     explicit_filters = _build_effective_filters(request)
     attempts: list[tuple[str, str, str, float, dict[str, Any]]] = []
     seen: set[tuple[str, float, bool]] = set()
@@ -427,8 +443,17 @@ async def _run_zero_result_fallbacks(
             _empty_filters(),
         )
 
-    total_fallback_ms = 0.0
-    for stage, semantic_text, keyword_text, alpha, filters in attempts:
+    if not attempts:
+        return [], 0.0, False, None, None, vector_fallback
+
+    async def _run_single_fallback(
+        stage: str,
+        semantic_text: str,
+        keyword_text: str,
+        alpha: float,
+        filters: dict[str, Any],
+    ) -> tuple[str, list[dict[str, Any]], float, bool]:
+        """Execute a single fallback attempt and return (stage, results, ms, emb_fallback)."""
         emb_ms = 0.0
         emb_fallback = False
         if alpha <= 0:
@@ -440,7 +465,6 @@ async def _run_zero_result_fallbacks(
                 semantic_text,
                 alpha,
             )
-        vector_fallback = vector_fallback or emb_fallback
 
         fallback_language = _detect_search_language(
             keyword_text,
@@ -459,26 +483,56 @@ async def _run_zero_result_fallbacks(
         fallback_results, fallback_search_ms = await _run_hybrid_search(
             supabase, fallback_params
         )
-        total_fallback_ms += emb_ms + fallback_search_ms
+        total_ms = emb_ms + fallback_search_ms
+        return stage, fallback_results, total_ms, emb_fallback
+
+    wall_start = time.perf_counter()
+    outcomes = await asyncio.gather(
+        *[_run_single_fallback(*a) for a in attempts],
+        return_exceptions=True,
+    )
+    total_fallback_ms = (time.perf_counter() - wall_start) * 1000
+
+    winning_results: list[dict[str, Any]] = []
+    winning_stage: str | None = None
+    winning_keyword_text: str | None = None
+
+    for idx, outcome in enumerate(outcomes):
+        if isinstance(outcome, BaseException):
+            stage_name = attempts[idx][0]
+            logger.warning(
+                "Zero-result fallback attempt raised an exception",
+                stage=stage_name,
+                error=str(outcome),
+            )
+            continue
+
+        stage, fallback_results, _ms, emb_fallback = outcome
+        vector_fallback = vector_fallback or emb_fallback
 
         logger.info(
             "Zero-result fallback attempt",
             stage=stage,
-            alpha=alpha,
-            query=keyword_text,
+            alpha=attempts[idx][3],
+            query=attempts[idx][2],
             result_count=len(fallback_results),
-            filters_applied=_has_any_filters(filters),
+            filters_applied=_has_any_filters(attempts[idx][4]),
         )
 
-        if fallback_results:
-            return (
-                fallback_results,
-                total_fallback_ms,
-                True,
-                stage,
-                keyword_text,
-                vector_fallback,
-            )
+        if fallback_results and not winning_results:
+            winning_results = fallback_results
+            winning_stage = stage
+            winning_keyword_text = attempts[idx][2]
+
+    if winning_results:
+        return (
+            winning_results,
+            total_fallback_ms,
+            True,
+            winning_stage,
+            winning_keyword_text,
+            vector_fallback,
+        )
 
     return [], total_fallback_ms, False, None, None, vector_fallback
 
@@ -504,6 +558,20 @@ async def _rerank_if_enabled(
     top_k: int,
 ) -> tuple[list[dict[str, Any]], float]:
     if not results:
+        return results, 0.0
+
+    # Skip reranking when top results already have high confidence scores
+    top_scores = [
+        r.get("combined_score", 0.0) or 0.0
+        for r in results[: settings.RERANK_SKIP_MIN_RESULTS]
+    ]
+    if len(top_scores) >= settings.RERANK_SKIP_MIN_RESULTS and all(
+        s >= settings.RERANK_SKIP_THRESHOLD for s in top_scores
+    ):
+        logger.debug(
+            f"Skipping rerank: top {len(top_scores)} scores "
+            f"({[round(s, 3) for s in top_scores]}) all >= {settings.RERANK_SKIP_THRESHOLD}"
+        )
         return results, 0.0
 
     from app.reranker import rerank_results

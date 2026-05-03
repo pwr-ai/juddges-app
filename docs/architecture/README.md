@@ -82,8 +82,6 @@ This codebase was forked from JuDDGES:
 - **Package Names**: standardized on `juddges_search` (complete)
 - **Schema**: Custom judgments table with rich metadata (complete)
 
-See [Migration](../migration/) for transition documentation.
-
 ## 🚀 Coming Soon
 
 Additional architecture documentation:
@@ -114,6 +112,6 @@ Additional architecture documentation:
 
 ## 🔗 Related Documentation
 
-- [Getting Started](../getting-started/) - Initial setup
-- [Guides](../guides/) - How-to guides
-- [Features](../features/) - Feature-specific docs
+- [Getting Started](../getting-started/README.md) - Initial setup
+- [How-to Guides](../how-to/troubleshooting.md) - Task-oriented guides
+- [Features](../features/README.md) - Feature-specific docs

@@ -71,7 +71,7 @@ const MOCK_CHAT_RESPONSE = {
  */
 async function mockAuth(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
-    // @ts-expect-error window extension for test mocking
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.mockSupabaseClient = {
       auth: {
         getUser: () =>

@@ -68,7 +68,7 @@ export function Footer({ className }: { className?: string }) {
  {/* Column 3: Resources */}
  <FooterSection title="Resources">
  <li><FooterLink href="/help">Help Center</FooterLink></li>
- <li><FooterLink href="https://github.com/pwr-ai/legal-ai"external>
+ <li><FooterLink href="https://github.com/pwr-ai/juddges-app"external>
  GitHub
  </FooterLink></li>
  <li><FooterLink href="/contact">Contact</FooterLink></li>

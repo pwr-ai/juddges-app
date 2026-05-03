@@ -332,5 +332,5 @@ Migration involves:
 
 ---
 
-**For detailed guidelines, see [Colors Styling Guide](./COLORS_STYLING_GUIDE.md)**
+**For detailed guidelines, see the Colors Styling Guide.**
 

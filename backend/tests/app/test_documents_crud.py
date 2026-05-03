@@ -397,8 +397,14 @@ async def test_get_document_concurrent_requests(authenticated_client: AsyncClien
 
 @pytest.mark.anyio
 @pytest.mark.api
+@pytest.mark.integration
 async def test_get_document_special_characters_in_id(authenticated_client: AsyncClient):
-    """Test document retrieval with special characters in ID."""
+    """Test document retrieval with special characters in ID.
+
+    Marked integration because the route hits Supabase before any input
+    validation could catch malformed IDs; without a real backend it returns
+    500 from the unreachable DB rather than the documented 404/400/422.
+    """
     special_ids = [
         "id-with-dash",
         "id_with_underscore",

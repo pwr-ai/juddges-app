@@ -1,6 +1,7 @@
-"use client";
-
-// Re-export from standalone files (NOT from the barrel to avoid circular deps)
+// Re-export from standalone files (NOT from the barrel to avoid circular deps).
+// Header components themselves carry "use client" — re-exporting them from a
+// non-client module preserves their boundary while keeping
+// getHeaderGradientStyle (a pure string utility) callable from server context.
 export { Header } from "./HeaderWithIcon";
 export { SectionHeader } from "./section-header";
 export { SecondaryHeader } from "./secondary-header";

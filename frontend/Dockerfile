@@ -59,7 +59,7 @@ COPY package*.json ./
 # - Faster, reliable, reproducible builds using package-lock.json
 # - Automatically removes node_modules before installing
 # Development uses npm install for flexibility with dependency resolution
-RUN npm cache clean --force && npm ci
+RUN npm ci --legacy-peer-deps
 
 # ==============================================================================
 # Builder Stage - Production Build

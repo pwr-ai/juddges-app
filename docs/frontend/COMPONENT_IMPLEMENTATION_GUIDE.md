@@ -36,7 +36,7 @@ This guide provides **production-ready component templates** that can be impleme
 
 ### LoadingSpinner Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/LoadingSpinner.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/LoadingSpinner.tsx`
 
 ```tsx
 import { cn } from '@/lib/utils';
@@ -73,7 +73,7 @@ export function LoadingSpinner({ size = 'md', className, label }: LoadingSpinner
 
 ### SkeletonCard Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/SkeletonCard.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/SkeletonCard.tsx`
 
 ```tsx
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
@@ -111,7 +111,7 @@ export function SkeletonCard({ className, rows = 3 }: SkeletonCardProps) {
 
 ### FullPageLoader Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/FullPageLoader.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/FullPageLoader.tsx`
 
 ```tsx
 import { LoadingSpinner } from './LoadingSpinner';
@@ -136,7 +136,7 @@ export function FullPageLoader({ message = 'Loading...' }: FullPageLoaderProps) 
 
 ### EmptyState Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/EmptyState.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/EmptyState.tsx`
 
 ```tsx
 import { Button } from '@/components/ui/button';
@@ -229,7 +229,7 @@ export function EmptyJudgmentsList() {
 
 ### ErrorDisplay Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/ErrorDisplay.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/ErrorDisplay.tsx`
 
 ```tsx
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -323,7 +323,7 @@ export function UnauthorizedError() {
 
 ### SearchBar Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/search/SearchBar.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/search/SearchBar.tsx`
 
 ```tsx
 'use client';
@@ -460,7 +460,7 @@ export function SearchBar({
 
 ### SearchFilters Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/search/SearchFilters.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/search/SearchFilters.tsx`
 
 ```tsx
 'use client';
@@ -667,7 +667,7 @@ export function SearchFilters({ filters, onChange, onApply, onReset }: SearchFil
 
 ### SearchResults Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/search/SearchResults.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/search/SearchResults.tsx`
 
 ```tsx
 'use client';
@@ -825,7 +825,7 @@ export function SearchResults({
 
 ### ChatInterface Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/chat/ChatInterface.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/chat/ChatInterface.tsx`
 
 ```tsx
 'use client';
@@ -941,7 +941,7 @@ export function ChatInterface({
 
 ### ChatMessage Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/chat/ChatMessage.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/chat/ChatMessage.tsx`
 
 ```tsx
 import { User, Bot, Copy, Check } from 'lucide-react';
@@ -1037,7 +1037,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
 ### ChatInput Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/chat/ChatInput.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/chat/ChatInput.tsx`
 
 ```tsx
 'use client';
@@ -1123,7 +1123,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
 ### JudgmentCard Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/judgments/JudgmentCard.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/judgments/JudgmentCard.tsx`
 
 ```tsx
 'use client';
@@ -1204,7 +1204,7 @@ export function JudgmentCard({ judgment, className }: JudgmentCardProps) {
 
 ### DataTable Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/DataTable.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/DataTable.tsx`
 
 ```tsx
 'use client';
@@ -1372,7 +1372,7 @@ export function DataTable<TData, TValue>({
 
 ### CommandPalette Component
 
-**File**: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/components/shared/CommandPalette.tsx`
+**File**: `/home/laugustyniak/github/juddges-app/frontend/components/shared/CommandPalette.tsx`
 
 ```tsx
 'use client';

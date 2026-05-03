@@ -9,10 +9,11 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { containsHtml, htmlToMarkdown } from "@/lib/html-to-markdown";
+import type { SearchChunk } from "@/types/search";
 
 export interface HighlightedTextProps {
  text: string;
- chunks: { chunk_text: string }[];
+ chunks: SearchChunk[];
 }
 
 export const HighlightedText = ({ text, chunks }: HighlightedTextProps): React.JSX.Element | null => {
@@ -40,7 +41,8 @@ export const HighlightedText = ({ text, chunks }: HighlightedTextProps): React.J
  );
  }
 
- const sortedChunks = [...chunks].sort((a, b) => processedText.indexOf(a.chunk_text) - processedText.indexOf(b.chunk_text));
+ const validChunks = chunks.filter((c): c is SearchChunk & { chunk_text: string } => !!c.chunk_text);
+ const sortedChunks = [...validChunks].sort((a, b) => processedText.indexOf(a.chunk_text) - processedText.indexOf(b.chunk_text));
  let lastIndex = 0;
  const elements: React.ReactElement[] = [];
 

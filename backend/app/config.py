@@ -27,6 +27,21 @@ class Settings:
         os.getenv("DEFAULT_SIMILARITY_THRESHOLD", "0.7")
     )
 
+    # Search cache settings
+    SEARCH_CACHE_ENABLED: bool = (
+        os.getenv("SEARCH_CACHE_ENABLED", "true").lower() == "true"
+    )
+    SEARCH_EMBEDDING_CACHE_TTL: int = int(
+        os.getenv("SEARCH_EMBEDDING_CACHE_TTL", "3600")
+    )  # 1 hour
+    SEARCH_RESULT_CACHE_TTL: int = int(
+        os.getenv("SEARCH_RESULT_CACHE_TTL", "300")
+    )  # 5 minutes
+
+    # Reranking optimization
+    RERANK_SKIP_THRESHOLD: float = float(os.getenv("RERANK_SKIP_THRESHOLD", "0.82"))
+    RERANK_SKIP_MIN_RESULTS: int = int(os.getenv("RERANK_SKIP_MIN_RESULTS", "3"))
+
     # Legacy search limits
     MAX_CHUNKS_LEGACY_SEARCH: int = int(os.getenv("MAX_CHUNKS_LEGACY_SEARCH", "100"))
     MAX_DOCUMENTS_LEGACY_SEARCH: int = int(

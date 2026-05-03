@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a defect or unexpected behavior in Juddges App
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in the fields below so we can reproduce and triage quickly.
+
+        For security issues, please use the Security advisory link instead of opening a public issue.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Brief description
+      description: A clear, one-paragraph summary of the bug.
+      placeholder: When I do X, Y happens instead of Z.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the behavior. Include URLs, queries, or payloads where relevant.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Enter query '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-vs-actual
+    attributes:
+      label: Expected vs actual behavior
+      description: What did you expect to happen, and what happened instead?
+      placeholder: |
+        Expected: ...
+        Actual: ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Which area of the app is affected?
+      options:
+        - frontend
+        - backend
+        - search/RAG
+        - ingestion
+        - deployment
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or git SHA
+      description: Release tag (e.g. `prod-v0.1.3`), git SHA, or `main` / `develop`.
+      placeholder: prod-v0.1.3 or 1f8b8ba
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        For frontend issues — browser + version, OS.
+        For backend issues — Python version, Docker / docker compose version, OS.
+      placeholder: |
+        Browser: Chrome 131 on macOS 15.1
+        OR
+        Python 3.12.7, Docker 27.3.1, Ubuntu 24.04
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / stack traces
+      description: Paste logs, console output, or stack traces. They will be rendered as a code block.
+      render: shell

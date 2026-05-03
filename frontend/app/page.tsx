@@ -150,9 +150,18 @@ export default function HomePage(): React.JSX.Element {
 
  // For unauthenticated users, show the premium landing page
  if (!authLoading && !user) {
+ // Map DashboardStats to LandingStats interface
+ const landingStats = stats ? {
+ total_documents: stats.total_judgments,
+ judgments: stats.total_judgments,
+ judgments_pl: stats.jurisdictions?.PL ?? 0,
+ judgments_uk: stats.jurisdictions?.UK ?? 0,
+ last_updated: stats.computed_at,
+ } : null;
+
  return (
  <LandingPage
- stats={null}
+ stats={landingStats}
  statsLoading={statsLoading}
  />
  );
@@ -604,3 +613,4 @@ export default function HomePage(): React.JSX.Element {
  </PageContainer>
  );
 }
+

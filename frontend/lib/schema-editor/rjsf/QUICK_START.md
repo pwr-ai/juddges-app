@@ -32,7 +32,7 @@ A complete RJSF v5 integration for visual schema field editing, with **2,783 lin
 ### 1. Install RJSF Dependencies
 
 ```bash
-cd /home/laugustyniak/github/legal-ai/AI-Tax/frontend
+cd /home/laugustyniak/github/juddges-app/frontend
 
 npm install @rjsf/core@5.20.0 \
             @rjsf/utils@5.20.0 \

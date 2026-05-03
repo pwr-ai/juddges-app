@@ -175,12 +175,17 @@ async def setup_meilisearch_index(service: MeiliSearchService) -> bool:
         return False
 
     try:
-        # 1. Create index (idempotent — 409 if exists)
-        task_resp = await service.create_index(primary_key="id")
-        task_uid = task_resp.get("taskUid")
-        if task_uid is not None:
-            await service.wait_for_task(task_uid)
-        logger.info(f"Meilisearch index '{service.index_name}' created or exists")
+        # 1. Create index only if it doesn't already exist
+        if await service.index_exists():
+            logger.info(
+                f"Meilisearch index '{service.index_name}' already exists — skipping creation"
+            )
+        else:
+            task_resp = await service.create_index(primary_key="id")
+            task_uid = task_resp.get("taskUid")
+            if task_uid is not None:
+                await service.wait_for_task(task_uid)
+            logger.info(f"Meilisearch index '{service.index_name}' created")
 
         # 2. Apply settings
         settings_resp = await service.configure_index(MEILISEARCH_INDEX_SETTINGS)

@@ -836,7 +836,7 @@ Some code may still reference JuDDGES patterns:
 ---
 
 For more details, see related documentation:
-- [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Getting started guide
-- [API_REFERENCE.md](./API_REFERENCE.md) - Complete API documentation
-- [TESTING.md](./TESTING.md) - Testing strategy and guide
-- [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
+- [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md) - Getting started guide
+- [API_REFERENCE.md](../api/API_REFERENCE.md) - Complete API documentation
+- [TESTING.md](../testing/TESTING.md) - Testing strategy and guide
+- [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) - Contribution guidelines

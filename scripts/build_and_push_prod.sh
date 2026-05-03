@@ -9,6 +9,8 @@
 #   ./scripts/build_and_push_prod.sh minor         # Increment minor (0.1.1 -> 0.2.0)
 #   ./scripts/build_and_push_prod.sh major         # Increment major (0.2.0 -> 1.0.0)
 #   ./scripts/build_and_push_prod.sh 2.1.0         # Use explicit version
+#   ./scripts/build_and_push_prod.sh --yes patch   # Non-interactive (skip confirmations)
+#   ./scripts/build_and_push_prod.sh -y minor      # Short form
 #
 # Tags are created with 'prod-v' prefix (e.g., prod-v1.2.0) following
 # the Gitflow Docker Workflow convention.
@@ -254,8 +256,39 @@ build_and_push() {
 # Main
 # ------------------------------------------------------------------------------
 main() {
-    local bump_arg="${1:-patch}"
+    local bump_arg=""
     local notes_file=""
+    local auto_confirm=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -y|--yes)
+                auto_confirm=true
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: $0 [OPTIONS] [patch|minor|major|x.y.z]"
+                echo ""
+                echo "Options:"
+                echo "  -y, --yes   Skip all confirmation prompts (non-interactive mode)"
+                echo "  -h, --help  Show this help message"
+                echo ""
+                echo "Examples:"
+                echo "  $0                  # Interactive, auto-increment patch"
+                echo "  $0 minor            # Interactive, increment minor"
+                echo "  $0 --yes patch      # Non-interactive, increment patch"
+                echo "  $0 -y 2.1.0         # Non-interactive, explicit version"
+                exit 0
+                ;;
+            *)
+                bump_arg="$1"
+                shift
+                ;;
+        esac
+    done
+
+    bump_arg="${bump_arg:-patch}"
 
     info "=== Juddges Production Build & Push ==="
     echo ""
@@ -280,10 +313,14 @@ main() {
     echo ""
 
     # Confirm
-    read -rp "Proceed with build and push prod-v${new_version}? [y/N] " confirm
-    if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
-        info "Aborted."
-        exit 0
+    if [[ "${auto_confirm}" != true ]]; then
+        read -rp "Proceed with build and push prod-v${new_version}? [y/N] " confirm
+        if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
+            info "Aborted."
+            exit 0
+        fi
+    else
+        ok "Auto-confirmed: proceeding with build and push prod-v${new_version}"
     fi
     echo ""
 
@@ -323,8 +360,14 @@ main() {
     ok "Created tag prod-v${new_version}"
 
     # Push commit and tag to remote
-    read -rp "Push commit and tag prod-v${new_version} to origin? [y/N] " push_tag
-    if [[ "${push_tag}" == "y" || "${push_tag}" == "Y" ]]; then
+    if [[ "${auto_confirm}" != true ]]; then
+        read -rp "Push commit and tag prod-v${new_version} to origin? [y/N] " push_tag
+        if [[ "${push_tag}" == "y" || "${push_tag}" == "Y" ]]; then
+            git push origin HEAD
+            git push origin "prod-v${new_version}"
+            ok "Pushed commit and tag prod-v${new_version} to origin"
+        fi
+    else
         git push origin HEAD
         git push origin "prod-v${new_version}"
         ok "Pushed commit and tag prod-v${new_version} to origin"

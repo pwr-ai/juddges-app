@@ -20,7 +20,7 @@ export const localeConfigs: Record<LocaleCode, LocaleConfig> = {
     decimalSeparator: '.',
     thousandsSeparator: ',',
     defaultCurrency: 'USD',
-    flag: '🇺🇸',
+    flag: '🇬🇧',
   },
   pl: {
     code: 'pl',
@@ -33,17 +33,6 @@ export const localeConfigs: Record<LocaleCode, LocaleConfig> = {
     defaultCurrency: 'PLN',
     flag: '🇵🇱',
   },
-  uk: {
-    code: 'uk',
-    nativeName: 'Українська',
-    englishName: 'Ukrainian',
-    direction: 'ltr',
-    dateFormat: 'DD.MM.YYYY',
-    decimalSeparator: ',',
-    thousandsSeparator: ' ',
-    defaultCurrency: 'UAH',
-    flag: '🇺🇦',
-  },
 };
 
 /**
@@ -55,7 +44,7 @@ export const DEFAULT_LOCALE: LocaleCode = 'en';
  * Available locales (can be a subset of all defined locales)
  * This allows enabling/disabling locales without removing their configs
  */
-export const AVAILABLE_LOCALES: LocaleCode[] = ['en', 'pl', 'uk'];
+export const AVAILABLE_LOCALES: LocaleCode[] = ['en', 'pl'];
 
 /**
  * RTL locales for quick lookup

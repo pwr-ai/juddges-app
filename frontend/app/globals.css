@@ -111,7 +111,7 @@
 }
 
 /* Juddges Alternative Brand - Deep Blue Theme */
-[data-brand="legal-ai"] {
+[data-brand="juddges"] {
   --primary: oklch(0.60 0.20 240.00);
   --ring: oklch(0.60 0.20 240.00);
   --accent: oklch(0.92 0.04 240.00);

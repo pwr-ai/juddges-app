@@ -92,7 +92,7 @@ export {
 } from './config';
 
 // Re-export translations
-export { translations, getTranslations } from './translations';
+export { getTranslations } from './translations';
 
 // Re-export utilities
 export {

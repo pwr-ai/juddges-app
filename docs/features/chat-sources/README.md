@@ -12,19 +12,19 @@
 
 | Document | Purpose | Audience | Est. Reading Time |
 |----------|---------|----------|------------------|
-| **[Executive Summary](./CHAT_SOURCES_SUMMARY.md)** | High-level overview | Product, Leadership | 5 min |
-| **[Design Specification](./CHAT_SOURCES_CITATIONS_DESIGN.md)** | Complete technical design | Developers, Designers | 30 min |
-| **[Visual Reference](./CHAT_SOURCES_VISUAL_REFERENCE.md)** | Mockups and examples | Everyone | 15 min |
-| **[Design Options Comparison](./CHAT_SOURCES_DESIGN_OPTIONS_COMPARISON.md)** | Alternative approaches | Decision makers | 10 min |
-| **[Implementation Checklist](./CHAT_SOURCES_IMPLEMENTATION_CHECKLIST.md)** | Task tracking | Developers | 5 min |
-| **[Type Definitions](../types/chat-sources.ts)** | TypeScript interfaces | Developers | 5 min |
+| **Executive Summary** | High-level overview | Product, Leadership | 5 min |
+| **[Design Specification](./design.md)** | Complete technical design | Developers, Designers | 30 min |
+| **[Visual Reference](./visual-reference.md)** | Mockups and examples | Everyone | 15 min |
+| **[Design Options Comparison](./options-comparison.md)** | Alternative approaches | Decision makers | 10 min |
+| **[Implementation Checklist](./implementation.md)** | Task tracking | Developers | 5 min |
+| **[Type Definitions](https://github.com/pwr-ai/juddges-app/blob/main/frontend/types/chat-sources.ts)** | TypeScript interfaces | Developers | 5 min |
 
 ---
 
 ## Document Descriptions
 
 ### 1. Executive Summary
-**File:** `CHAT_SOURCES_SUMMARY.md`
+**File:** _Not yet available_
 
 **What it covers:**
 - Feature overview and goals
@@ -45,7 +45,7 @@
 ---
 
 ### 2. Design Specification
-**File:** `CHAT_SOURCES_CITATIONS_DESIGN.md`
+**File:** [`design.md`](./design.md)
 
 **What it covers:**
 - Complete component specifications
@@ -70,7 +70,7 @@
 ---
 
 ### 3. Visual Reference
-**File:** `CHAT_SOURCES_VISUAL_REFERENCE.md`
+**File:** [`visual-reference.md`](./visual-reference.md)
 
 **What it covers:**
 - ASCII mockups of all states
@@ -94,7 +94,7 @@
 ---
 
 ### 4. Design Options Comparison
-**File:** `CHAT_SOURCES_DESIGN_OPTIONS_COMPARISON.md`
+**File:** [`options-comparison.md`](./options-comparison.md)
 
 **What it covers:**
 - Three alternative design approaches
@@ -117,7 +117,7 @@
 ---
 
 ### 5. Implementation Checklist
-**File:** `CHAT_SOURCES_IMPLEMENTATION_CHECKLIST.md`
+**File:** [`implementation.md`](./implementation.md)
 
 **What it covers:**
 - Phase-by-phase task breakdown
@@ -139,7 +139,7 @@
 ---
 
 ### 6. Type Definitions
-**File:** `../types/chat-sources.ts`
+**File:** [`frontend/types/chat-sources.ts`](https://github.com/pwr-ai/juddges-app/blob/main/frontend/types/chat-sources.ts)
 
 **What it covers:**
 - TypeScript interfaces
@@ -409,26 +409,26 @@ A: Lazy loading and caching make it fast. Initial render: 100ms, expand: 800ms.
 ## Getting Started
 
 ### For Product Owners
-1. Read: [Executive Summary](./CHAT_SOURCES_SUMMARY.md)
-2. Review: [Design Options Comparison](./CHAT_SOURCES_DESIGN_OPTIONS_COMPARISON.md)
+1. Read: Executive Summary (not yet available)
+2. Review: [Design Options Comparison](./options-comparison.md)
 3. Approve: Timeline and approach
 4. Coordinate: Backend team for API changes
 
 ### For Designers
-1. Read: [Visual Reference](./CHAT_SOURCES_VISUAL_REFERENCE.md)
-2. Review: [Design Specification](./CHAT_SOURCES_CITATIONS_DESIGN.md) (Visual Design System section)
+1. Read: [Visual Reference](./visual-reference.md)
+2. Review: [Design Specification](./design.md) (Visual Design System section)
 3. Provide: Feedback on mockups
 4. Create: Any additional design assets needed
 
 ### For Developers
-1. Read: [Implementation Checklist](./CHAT_SOURCES_IMPLEMENTATION_CHECKLIST.md)
-2. Study: [Design Specification](./CHAT_SOURCES_CITATIONS_DESIGN.md) (Component Specifications + Implementation Guide)
-3. Review: [Type Definitions](../types/chat-sources.ts)
+1. Read: [Implementation Checklist](./implementation.md)
+2. Study: [Design Specification](./design.md) (Component Specifications + Implementation Guide)
+3. Review: [Type Definitions](https://github.com/pwr-ai/juddges-app/blob/main/frontend/types/chat-sources.ts)
 4. Start: Phase 1 implementation
 
 ### For QA
-1. Read: [Visual Reference](./CHAT_SOURCES_VISUAL_REFERENCE.md)
-2. Review: [Implementation Checklist](./CHAT_SOURCES_IMPLEMENTATION_CHECKLIST.md) (Testing section)
+1. Read: [Visual Reference](./visual-reference.md)
+2. Review: [Implementation Checklist](./implementation.md) (Testing section)
 3. Prepare: Test cases for all states
 4. Test: According to specification
 

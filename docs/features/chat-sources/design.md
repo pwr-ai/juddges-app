@@ -26,7 +26,7 @@ This document defines the design and implementation strategy for displaying lega
 2. [Design Options Overview](#design-options-overview)
 3. [Recommended Solution](#recommended-solution)
 4. [Component Specifications](#component-specifications)
-5. [Data Structure & Types](#data-structure--types)
+5. [Data Structure & Types](#data-structure-types)
 6. [Visual Design System](#visual-design-system)
 7. [Interaction Patterns](#interaction-patterns)
 8. [User Flows](#user-flows)
@@ -43,7 +43,7 @@ This document defines the design and implementation strategy for displaying lega
 
 **Current Message Structure:**
 ```typescript
-// /home/laugustyniak/github/legal-ai/juddges-app/frontend/types/message.ts
+// /home/laugustyniak/github/juddges-app/frontend/types/message.ts
 interface Message {
   id: string
   role: "user" | "assistant"

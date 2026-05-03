@@ -1,6 +1,6 @@
 /**
  * Plan Badge Component
- * Displays AI-Tax branding with PREVIEW badge
+ * Displays Juddges branding with PREVIEW badge
  * Clickable link to plans page
  */
 
@@ -15,7 +15,7 @@ export interface PlanBadgeProps {
   className?: string;
   /** Callback when badge is clicked */
   onClick?: () => void;
-  /** Text label to display (default: "AI-Tax") */
+  /** Text label to display (default: "Juddges") */
   label?: string;
   /** Size of the badge (default: "sm") */
   size?: "sm" | "lg";
@@ -28,7 +28,7 @@ export interface PlanBadgeProps {
 /**
  * Plan Badge Component
  *
- * A modern badge component that displays a label (default "AI-Tax") with a "PREVIEW" badge.
+ * A modern badge component that displays a label (default "Juddges") with a "PREVIEW" badge.
  * Clickable link that navigates to the plans page.
  *
  * @example
@@ -41,7 +41,7 @@ export interface PlanBadgeProps {
 export function PlanBadge({
   className,
   onClick,
-  label = "AI-Tax",
+  label = "Juddges",
   size = "sm",
   badgeText = "Preview",
   hideLabel = false,
