@@ -3,7 +3,20 @@
 -- =============================================================================
 -- Allows callers to tune HNSW recall vs speed via ef_search_value parameter.
 -- Default remains 100 (unchanged behavior).
+--
+-- Note: CREATE OR REPLACE only matches by full signature, so adding a new
+-- parameter would create a second overload instead of replacing. Drop the
+-- prior 19-arg version first so the COMMENT below is unambiguous.
 -- =============================================================================
+
+DROP FUNCTION IF EXISTS public.search_judgments_hybrid(
+    vector, text, text,
+    text[], text[], text[], text[], text[], text[],
+    text[], text[], text[],
+    date, date,
+    double precision, double precision,
+    int, int, int
+);
 
 CREATE OR REPLACE FUNCTION public.search_judgments_hybrid(
     -- Search parameters
