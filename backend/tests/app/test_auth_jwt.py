@@ -106,6 +106,15 @@ class TestGetAdminSupabaseClient:
 
         mod._admin_supabase_client = None
 
+    def teardown_method(self):
+        # Reset after the last test too — otherwise the MagicMock cached by
+        # `test_creates_client_once` leaks into unrelated tests (e.g.,
+        # require_admin checks in test_authorization_boundaries.py see a mock
+        # client and accept any auth).
+        import app.core.auth_jwt as mod
+
+        mod._admin_supabase_client = None
+
     def test_raises_when_env_vars_missing(self):
         with patch.dict(os.environ, {}, clear=True):
             # Remove the vars

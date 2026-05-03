@@ -35,8 +35,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { sample_size, only_with_coordinates } = validateQueryParams(
       documentSampleQuerySchema,
       {
-        sample_size: searchParams.get('sample_size') ?? undefined,
-        only_with_coordinates: searchParams.get('only_with_coordinates') ?? undefined
+        sample_size: searchParams.get('sample_size'),
+        only_with_coordinates: searchParams.get('only_with_coordinates')
       }
     );
 

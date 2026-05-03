@@ -602,7 +602,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
           !doc.legal_concepts?.some(concept => filters.legalConcepts.has(concept.concept_name))) return false;
 
       if (filters.documentTypes.size > 0 &&
-          !filters.documentTypes.has(doc.document_type)) return false;
+          !filters.documentTypes.has(doc.document_type ?? '')) return false;
 
       if (filters.issuingBodies.size > 0 &&
           !filters.issuingBodies.has(doc.issuing_body?.name || '')) return false;
@@ -723,7 +723,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
           !doc.legal_concepts?.some(concept => filters.legalConcepts.has(concept.concept_name))) return false;
 
       if (filters.documentTypes.size > 0 &&
-          !filters.documentTypes.has(doc.document_type)) return false;
+          !filters.documentTypes.has(doc.document_type ?? '')) return false;
 
       if (filters.issuingBodies.size > 0 &&
           !filters.issuingBodies.has(doc.issuing_body?.name || '')) return false;

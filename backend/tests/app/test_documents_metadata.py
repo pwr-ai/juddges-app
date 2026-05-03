@@ -324,8 +324,14 @@ async def test_get_citation_network_concurrent_requests(
 
 @pytest.mark.anyio
 @pytest.mark.api
+@pytest.mark.integration
 async def test_get_metadata_special_characters_in_id(authenticated_client: AsyncClient):
-    """Test metadata retrieval with special characters in ID."""
+    """Test metadata retrieval with special characters in ID.
+
+    Marked integration because the route hits Supabase before any ID
+    validation could trigger; returns 500 (DB unreachable) under unit-test
+    conditions rather than the documented 404/400/422.
+    """
     special_ids = [
         "id-with-dash",
         "id_with_underscore",

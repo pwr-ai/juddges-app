@@ -471,16 +471,16 @@ def _rank_precedents(precedents: list[PrecedentMatch]) -> list[PrecedentMatch]:
 )
 @limiter.limit(PRECEDENTS_RATE_LIMIT)
 async def find_precedents(
-    http_request: Request, request: FindPrecedentsRequest
+    request: Request, precedents_request: FindPrecedentsRequest
 ) -> FindPrecedentsResponse:
     """Find relevant precedent cases using semantic search and AI analysis."""
     logger.info(
-        f"Precedent search request: query_length={len(request.query)}, "
-        f"document_id={request.document_id}, limit={request.limit}"
+        f"Precedent search request: query_length={len(precedents_request.query)}, "
+        f"document_id={precedents_request.document_id}, limit={precedents_request.limit}"
     )
 
     db = get_vector_db()
-    search_text = await _build_search_text(request)
+    search_text = await _build_search_text(precedents_request)
     enhanced_text, _ = await _enhance_query(search_text)
     enhanced_query = enhanced_text if enhanced_text != search_text else None
     if enhanced_query:
@@ -488,26 +488,28 @@ async def find_precedents(
 
     embedding = await generate_embedding(enhanced_text)
     similar_results = await _search_precedent_candidates(
-        db=db, embedding=embedding, limit=request.limit
+        db=db, embedding=embedding, limit=precedents_request.limit
     )
     if not similar_results:
-        return _empty_precedents_response(request.query, enhanced_query)
+        return _empty_precedents_response(precedents_request.query, enhanced_query)
 
-    if request.document_id:
+    if precedents_request.document_id:
         similar_results = [
             result
             for result in similar_results
-            if result.get("document_id") != request.document_id
+            if result.get("document_id") != precedents_request.document_id
         ]
-    if request.filters:
-        similar_results = _apply_filters(similar_results, request.filters)
+    if precedents_request.filters:
+        similar_results = _apply_filters(similar_results, precedents_request.filters)
 
-    candidates_data = await _load_candidate_documents(similar_results, request.limit)
+    candidates_data = await _load_candidate_documents(
+        similar_results, precedents_request.limit
+    )
     if not candidates_data:
-        return _empty_precedents_response(request.query, enhanced_query)
+        return _empty_precedents_response(precedents_request.query, enhanced_query)
 
     analysis_map, analysis_enhanced_query = await _build_analysis_map(
-        request, candidates_data
+        precedents_request, candidates_data
     )
     if analysis_enhanced_query and not enhanced_query:
         enhanced_query = analysis_enhanced_query
@@ -516,16 +518,16 @@ async def find_precedents(
         _build_precedent_match(doc, analysis_map.get(doc.get("document_id", "")))
         for doc in candidates_data
     ]
-    precedents = _rank_precedents(precedents)[: request.limit]
+    precedents = _rank_precedents(precedents)[: precedents_request.limit]
 
     search_strategy = (
         "semantic_similarity + ai_analysis"
-        if request.include_analysis
+        if precedents_request.include_analysis
         else "semantic_similarity"
     )
 
     return FindPrecedentsResponse(
-        query=request.query,
+        query=precedents_request.query,
         precedents=precedents,
         total_found=len(precedents),
         search_strategy=search_strategy,

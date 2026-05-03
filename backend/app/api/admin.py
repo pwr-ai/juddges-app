@@ -14,7 +14,6 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from loguru import logger
 from pydantic import BaseModel, Field
-from supabase import PostgrestAPIError, StorageException
 
 from app.core.auth_jwt import (
     AuthenticatedUser,
@@ -198,7 +197,7 @@ async def get_platform_stats(
             .execute()
         )
         total_documents = docs_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin stats: could not fetch document count: {e}")
 
     # Searches today
@@ -211,7 +210,7 @@ async def get_platform_stats(
             .execute()
         )
         searches_today = searches_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin stats: could not fetch searches_today: {e}")
 
     # Active sessions in last 24h (distinct session_id in events table)
@@ -232,7 +231,7 @@ async def get_platform_stats(
                     if row.get("session_id")
                 }
             )
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin stats: could not fetch active sessions: {e}")
 
     # Documents added this week
@@ -245,7 +244,7 @@ async def get_platform_stats(
             .execute()
         )
         documents_added_this_week = recent_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin stats: could not fetch documents_added_this_week: {e}")
 
     logger.info(
@@ -361,7 +360,7 @@ async def get_recent_activity(
         logger.info(f"Admin activity fetched by {admin.email}: {len(entries)} entries")
         return entries
 
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin get_recent_activity failed: {e}")
         return []
 
@@ -389,7 +388,7 @@ async def get_search_queries(
             client.table("search_queries").select("id", count="exact").execute()
         )
         total = count_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin search queries count failed: {e}")
 
     try:
@@ -425,7 +424,7 @@ async def get_search_queries(
             queries=entries, total=total, page=page, limit=limit
         )
 
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin get_search_queries failed: {e}")
         return SearchQueriesResponse(queries=[], total=0, page=page, limit=limit)
 
@@ -452,7 +451,7 @@ async def get_document_stats(
             .execute()
         )
         total = total_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch total: {e}")
 
     # Counts by type from doc_type_stats (return as dict)
@@ -465,7 +464,7 @@ async def get_document_stats(
             doc_type = row.get("doc_type", "unknown")
             if doc_type != "TOTAL":
                 by_type[doc_type] = row.get("count", 0)
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch doc_type_stats: {e}")
 
     # Counts by country (return as dict)
@@ -475,7 +474,7 @@ async def get_document_stats(
         for row in country_response.data or []:
             country = row.get("country") or "unknown"
             by_country[country] = by_country.get(country, 0) + 1
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch country breakdown: {e}")
 
     # Counts by language (return as dict)
@@ -485,7 +484,7 @@ async def get_document_stats(
         for row in lang_response.data or []:
             lang = row.get("language") or "unknown"
             by_language[lang] = by_language.get(lang, 0) + 1
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch language breakdown: {e}")
 
     # Recent additions
@@ -498,7 +497,7 @@ async def get_document_stats(
             .execute()
         )
         added_this_week = recent_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch added_this_week: {e}")
 
     logger.info(f"Admin document stats fetched by {admin.email}")
@@ -599,7 +598,7 @@ async def get_content_stats(
             client.table("blog_posts").select("id", count="exact").execute()
         )
         total_posts = total_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin content stats: could not fetch total_posts: {e}")
 
     try:
@@ -611,7 +610,7 @@ async def get_content_stats(
             .execute()
         )
         published_count = pub_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin content stats: could not fetch published_count: {e}")
 
     try:
@@ -623,14 +622,14 @@ async def get_content_stats(
             .execute()
         )
         draft_count = draft_response.count or 0
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin content stats: could not fetch draft_count: {e}")
 
     try:
         # Total views (sum of views column)
         views_response = client.table("blog_posts").select("views").execute()
         total_views = sum(row.get("views", 0) or 0 for row in views_response.data or [])
-    except (PostgrestAPIError, StorageException) as e:
+    except Exception as e:
         logger.warning(f"Admin content stats: could not fetch total_views: {e}")
 
     logger.info(

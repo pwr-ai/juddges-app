@@ -232,7 +232,7 @@ export default function SavedSearchesPage() {
       searchStore.setSearchType(search.search_mode);
     }
     if (search.languages.length > 0) {
-      searchStore.setSelectedLanguages([...search.languages]);
+      searchStore.setSelectedLanguages(new Set(search.languages));
     }
     if (search.document_types.length > 0) {
       const types = search.document_types
@@ -283,8 +283,8 @@ export default function SavedSearchesPage() {
 
   const handleSaveEdit = async () => {
     if (editTarget) {
-      const { updateSavedSearch } = useSavedSearchStore.getState();
-      await updateSavedSearch(editTarget.id, {
+      const { updateSearch } = useSavedSearchStore.getState();
+      await updateSearch(editTarget.id, {
         name: editName,
         description: editDescription || null,
         folder: editFolder || null,
@@ -337,14 +337,14 @@ export default function SavedSearchesPage() {
               </Button>
               {folders.map(folder => (
                 <Button
-                  key={folder.id}
-                  variant={filterFolder === folder.name ? "secondary" : "ghost"}
+                  key={folder}
+                  variant={filterFolder === folder ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setFilterFolder(folder.name)}
+                  onClick={() => setFilterFolder(folder)}
                   className="h-8 text-xs"
                 >
                   <FolderOpen className="h-3 w-3 mr-1" />
-                  {folder.name}
+                  {folder}
                 </Button>
               ))}
             </div>

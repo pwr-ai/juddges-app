@@ -25,7 +25,7 @@ Per project guidelines, use Docker for npm operations:
 
 ```bash
 # Navigate to frontend directory
-cd /home/laugustyniak/github/legal-ai/juddges-app/frontend
+cd /home/laugustyniak/github/juddges-app/frontend
 
 # Install dependencies using Docker
 docker compose run --rm frontend npm install
@@ -36,7 +36,7 @@ docker compose run --rm frontend npm install
 If you have proper permissions:
 
 ```bash
-cd /home/laugustyniak/github/legal-ai/juddges-app/frontend
+cd /home/laugustyniak/github/juddges-app/frontend
 npm install
 ```
 
@@ -125,7 +125,7 @@ After installation, these features will work:
 ## Configuration Files
 
 ### jest.config.js
-Location: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/jest.config.js`
+Location: `/home/laugustyniak/github/juddges-app/frontend/jest.config.js`
 
 Key features:
 - Uses `next/jest` for TypeScript transformation
@@ -134,7 +134,7 @@ Key features:
 - Setup file: `tests/setup.ts`
 
 ### tests/setup.ts
-Location: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/tests/setup.ts`
+Location: `/home/laugustyniak/github/juddges-app/frontend/tests/setup.ts`
 
 Provides:
 - Testing Library jest-dom matchers
@@ -144,7 +144,7 @@ Provides:
 - Environment variable setup
 
 ### package.json
-Location: `/home/laugustyniak/github/legal-ai/juddges-app/frontend/package.json`
+Location: `/home/laugustyniak/github/juddges-app/frontend/package.json`
 
 Test scripts:
 - `npm test` - Run all tests
@@ -222,13 +222,13 @@ docker compose run --rm frontend npm install
 
 Comprehensive guides have been created:
 
-- **Reference Guide**: `/home/laugustyniak/github/legal-ai/juddges-app/docs/reference/jest-typescript-configuration.md`
+- **Reference Guide**: `/home/laugustyniak/github/juddges-app/docs/reference/jest-typescript-configuration.md`
   - Detailed explanation of configuration
   - TypeScript support features
   - Test patterns and examples
   - Best practices
 
-- **How-To Guide**: `/home/laugustyniak/github/legal-ai/juddges-app/docs/how-to/fix-jest-typescript-errors.md`
+- **How-To Guide**: `/home/laugustyniak/github/juddges-app/docs/how-to/fix-jest-typescript-errors.md`
   - Common error solutions
   - Step-by-step fixes
   - Installation troubleshooting

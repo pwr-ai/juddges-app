@@ -1024,10 +1024,10 @@ redis-cli ping
 
 After completing this onboarding guide:
 
-1. Read [ARCHITECTURE.md](./ARCHITECTURE.md) for deep dive into system design
-2. Review [API_REFERENCE.md](./API_REFERENCE.md) for complete API documentation
-3. Check [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines
-4. Explore [CODE_STYLE.md](./CODE_STYLE.md) for coding standards
+1. Read [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) for deep dive into system design
+2. Review [API_REFERENCE.md](../api/API_REFERENCE.md) for complete API documentation
+3. Check [CONTRIBUTING.md](../contributing/CONTRIBUTING.md) for contribution guidelines
+4. Explore [CODE_STYLE.md](../contributing/CODE_STYLE.md) for coding standards
 5. Browse open issues on GitHub labeled "good first issue"
 6. Join the team standup (if applicable)
 7. Pick your first task and start coding!

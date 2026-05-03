@@ -5,6 +5,10 @@ Tests for user-based authentication including:
 - X-User-ID header authentication
 - User isolation and permissions
 - Optional vs required authentication
+
+These tests exercise routes that reach real Supabase (no mocking layer is
+installed at the route handler boundary), so they are integration tests and
+should not run under `-m unit`.
 """
 
 import pytest
@@ -12,6 +16,8 @@ from httpx import AsyncClient
 
 from app.collections import get_current_user
 from app.server import app
+
+pytestmark = pytest.mark.integration
 
 
 @pytest.mark.anyio

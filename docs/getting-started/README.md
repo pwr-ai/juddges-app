@@ -37,7 +37,7 @@ Before you begin, ensure you have:
 
 1. **Clone and setup**:
    ```bash
-   cd ~/github/legal-ai/juddges-app
+   cd ~/github/juddges-app
    cp .env.example .env
    # Edit .env with your credentials
    ```
@@ -72,10 +72,10 @@ Before you begin, ensure you have:
 ## 📖 Next Steps
 
 After getting the app running:
-- [Data Ingestion Guide](../guides/data-ingestion.md) - Load more judgment data
+- [Data Ingestion Guide](../how-to/data-ingestion.md) - Load more judgment data
 - [Architecture Overview](../architecture/overview.md) - Understand the system
-- [Frontend Styling Guide](../frontend/styling-guide/) - Learn the UI system
-- [API Reference](../api/) - Explore API endpoints
+- [Frontend Styling Guide](../frontend/styling-guide/README.md) - Learn the UI system
+- [API Reference](../api/API_REFERENCE.md) - Explore API endpoints
 
 ## 🆘 Troubleshooting
 

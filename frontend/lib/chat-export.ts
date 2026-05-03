@@ -367,7 +367,7 @@ export function exportChatToPDF(
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(150, 150, 150);
-    doc.text(`AI Tax - ${title}`, margin, pageHeight - 10);
+    doc.text(`Juddges - ${title}`, margin, pageHeight - 10);
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 10, {
       align: "right",
     });
@@ -665,7 +665,7 @@ export async function exportChatToDocx(
 
   // Build DOCX document
   const docxDocument = new Document({
-    creator: "AI Tax",
+    creator: "Juddges",
     title: title,
     description: `Chat conversation export - ${title}`,
     sections: [
@@ -687,7 +687,7 @@ export async function exportChatToDocx(
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: "AI Tax - Chat Export",
+                    text: "Juddges - Chat Export",
                     color: "AAAAAA",
                     size: 16,
                   }),

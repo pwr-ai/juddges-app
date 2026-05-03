@@ -453,6 +453,7 @@ async def search_documents(request: SearchChunksRequest):
         search_language = _detect_search_language(
             keyword_query, request.languages, effective_filters["jurisdictions"]
         )
+        ef_search = 60 if offset > 0 else 100
         rpc_params = _build_search_rpc_params(
             query_embedding=query_embedding,
             keyword_query=keyword_query,
@@ -462,9 +463,27 @@ async def search_documents(request: SearchChunksRequest):
             limit=limit,
             offset=offset,
             query_type=query_type,
+            ef_search=ef_search,
         )
-        supabase = await _get_search_client()
-        results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
+        from app.services.search_cache import get_cached_results, set_cached_results
+
+        # SECURITY: cache key omits user identity. Only safe while every
+        # field returned here is public-read under RLS. See the SECURITY
+        # CONTRACT in app/services/search_cache.py before adding any
+        # per-user signal to this code path.
+        cached_results = await get_cached_results(
+            query=keyword_query,
+            filters=effective_filters,
+            alpha=effective_alpha,
+            limit=limit,
+            offset=offset,
+        )
+        if cached_results is not None:
+            results = cached_results
+            search_time_ms = 0.0
+        else:
+            supabase = await _get_search_client()
+            results, search_time_ms = await _run_hybrid_search(supabase, rpc_params)
         fallback_time_ms = 0.0
         fallback_used = False
         fallback_stage: str | None = None
@@ -493,6 +512,16 @@ async def search_documents(request: SearchChunksRequest):
             search_time_ms += fallback_time_ms
             if fallback_query:
                 enhanced_query_text = fallback_query
+
+        if cached_results is None and results:
+            await set_cached_results(
+                query=keyword_query,
+                results=results,
+                filters=effective_filters,
+                alpha=effective_alpha,
+                limit=limit,
+                offset=offset,
+            )
 
         results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
         chunks, documents = _build_search_result_payload(results)

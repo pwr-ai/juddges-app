@@ -179,8 +179,8 @@ export default function AccessibilityPage() {
  <div className="space-y-2 text-sm">
  <p>
  <strong>Email:</strong>{""}
- <a href="mailto:accessibility@legal-ai.augustyniak.ai"className="text-primary hover:underline">
- accessibility@legal-ai.augustyniak.ai
+ <a href="mailto:accessibility@juddges.augustyniak.ai"className="text-primary hover:underline">
+ accessibility@juddges.augustyniak.ai
  </a>
  </p>
  <p>

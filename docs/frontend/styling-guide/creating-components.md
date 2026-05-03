@@ -15,7 +15,7 @@ Before creating a new component, ensure you understand:
 - ✅ Dark mode patterns
 - ✅ Accessibility requirements
 
-**Reference**: See [Colors Styling Guide](./COLORS_STYLING_GUIDE.md) for details.
+**Reference**: See the Colors Styling Guide for details.
 
 ---
 
@@ -34,7 +34,7 @@ Identify which category your component belongs to:
 
 **Action**: Choose the appropriate pattern from existing components.
 
-**Reference**: See [Component Colors Cheat Sheet](./COMPONENT_COLORS_CHEAT_SHEET.md) for examples.
+**Reference**: See [Component Colors Cheat Sheet](./component-colors.md) for examples.
 
 ---
 
@@ -91,7 +91,7 @@ Use only these 6 values:
 
 **Action**: Choose appropriate opacity based on visual hierarchy.
 
-**Reference**: See [Colors Styling Guide - Opacity Scale](./COLORS_STYLING_GUIDE.md#opacity-scale)
+**Reference**: See the Colors Styling Guide - Opacity Scale section.
 
 ---
 
@@ -109,7 +109,7 @@ Use only these 6 values:
 
 **Action**: Add `dark:` variants for all color classes.
 
-**Reference**: See [Colors Styling Guide - Dark Mode Guidelines](./COLORS_STYLING_GUIDE.md#dark-mode-guidelines)
+**Reference**: See the Colors Styling Guide - Dark Mode Guidelines section.
 
 ---
 
@@ -123,7 +123,7 @@ Use only these 6 values:
 
 **Action**: Add focus state to all interactive elements.
 
-**Reference**: See [Colors Styling Guide - Accessibility Guidelines](./COLORS_STYLING_GUIDE.md#accessibility-guidelines)
+**Reference**: See the Colors Styling Guide - Accessibility Guidelines section.
 
 ---
 
@@ -806,8 +806,8 @@ After creating a new component:
    - Add usage examples
 
 4. **Update Documentation**
-   - Add to [Component Colors Cheat Sheet](./COMPONENT_COLORS_CHEAT_SHEET.md) if needed
-   - Update [Colors Styling Guide](./COLORS_STYLING_GUIDE.md) if new patterns introduced
+   - Add to [Component Colors Cheat Sheet](./component-colors.md) if needed
+   - Update the Colors Styling Guide if new patterns introduced
 
 ---
 
@@ -916,10 +916,10 @@ Strong overlay? → /80
 
 ## Resources
 
-- **Colors Styling Guide**: [COLORS_STYLING_GUIDE.md](./COLORS_STYLING_GUIDE.md)
-- **Quick Reference**: [COLORS_QUICK_REFERENCE.md](./COLORS_QUICK_REFERENCE.md)
-- **Component Cheat Sheet**: [COMPONENT_COLORS_CHEAT_SHEET.md](./COMPONENT_COLORS_CHEAT_SHEET.md)
-- **Migration Examples**: [COLOR_MIGRATION_EXAMPLES.md](./COLOR_MIGRATION_EXAMPLES.md)
+- **Colors Styling Guide**: see Styling Guide 2.0 ([guide-v2.md](./guide-v2.md))
+- **Quick Reference**: [colors-reference.md](./colors-reference.md)
+- **Component Cheat Sheet**: [component-colors.md](./component-colors.md)
+- **Migration Examples**: [migration-examples.md](./migration-examples.md)
 - **Existing Components**: `/lib/styles/components/`
 - **Style Demo**: `/app/style-demo/page.tsx`
 
@@ -952,5 +952,5 @@ Creating new components involves:
 4. ✅ Test thoroughly
 5. ✅ Document and integrate
 
-**For questions or clarifications, refer to the [Colors Styling Guide](./COLORS_STYLING_GUIDE.md)**
+**For questions or clarifications, refer to the Colors Styling Guide.**
 

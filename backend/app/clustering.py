@@ -338,7 +338,7 @@ def _kmeans(
 )
 @limiter.limit(CLUSTERING_RATE_LIMIT)
 async def get_semantic_clusters(
-    http_request: Request, request: ClusteringRequest
+    request: Request, clustering_request: ClusteringRequest
 ) -> ClusteringResponse:
     """
     Cluster documents using their embedding vectors.
@@ -357,10 +357,10 @@ async def get_semantic_clusters(
     try:
         query = db.client.table("legal_documents").select(select_fields)
 
-        if request.document_types:
-            query = query.in_("document_type", request.document_types)
+        if clustering_request.document_types:
+            query = query.in_("document_type", clustering_request.document_types)
 
-        response = query.limit(request.sample_size).execute()
+        response = query.limit(clustering_request.sample_size).execute()
     except Exception as e:
         logger.error(f"Error fetching documents for clustering: {e}")
         raise HTTPException(
@@ -379,11 +379,11 @@ async def get_semantic_clusters(
         and len(doc["embedding"]) > 0
     ]
 
-    if len(docs_with_embeddings) < request.num_clusters:
+    if len(docs_with_embeddings) < clustering_request.num_clusters:
         raise HTTPException(
             status_code=400,
             detail=f"Not enough documents with embeddings ({len(docs_with_embeddings)}) "
-            f"for {request.num_clusters} clusters. Need at least {request.num_clusters}.",
+            f"for {clustering_request.num_clusters} clusters. Need at least {clustering_request.num_clusters}.",
         )
 
     # Build embedding matrix
@@ -398,7 +398,7 @@ async def get_semantic_clusters(
     normalized = embeddings / norms
 
     # K-Means clustering
-    labels, centroids = _kmeans(normalized, request.num_clusters)
+    labels, centroids = _kmeans(normalized, clustering_request.num_clusters)
 
     # Normalize centroids too
     centroid_norms = np.linalg.norm(centroids, axis=1, keepdims=True)
@@ -410,7 +410,7 @@ async def get_semantic_clusters(
 
     # Extract keywords per cluster
     cluster_keywords = _extract_keywords_tfidf(
-        docs_with_embeddings, labels, request.num_clusters
+        docs_with_embeddings, labels, clustering_request.num_clusters
     )
 
     # Build clusters
@@ -418,7 +418,7 @@ async def get_semantic_clusters(
     nodes: list[ClusterNode] = []
     edges: list[ClusterEdge] = []
 
-    for cluster_id in range(request.num_clusters):
+    for cluster_id in range(clustering_request.num_clusters):
         mask = labels == cluster_id
         cluster_indices = np.where(mask)[0]
 
@@ -484,7 +484,7 @@ async def get_semantic_clusters(
     # Build edges between similar documents within the same cluster
     # Only add edges for pairs with high similarity to keep the graph readable
     similarity_threshold = 0.8
-    for cluster_id in range(request.num_clusters):
+    for cluster_id in range(clustering_request.num_clusters):
         cluster_indices = np.where(labels == cluster_id)[0]
         if len(cluster_indices) < 2:
             continue

@@ -151,10 +151,13 @@ def sample_schema_data() -> dict[str, Any]:
 @pytest.fixture(autouse=True)
 def clear_dependency_overrides():
     """
-    Clear any dependency overrides after each test.
+    Clear any dependency overrides before AND after each test.
 
-    This ensures tests don't interfere with each other.
+    Clearing on setup defends against teardown failures in earlier tests
+    (e.g., async exceptions that bypassed the yield), which would otherwise
+    leak overrides forward and cause spurious failures in unrelated tests.
     """
+    app.dependency_overrides.clear()
     yield
     app.dependency_overrides.clear()
 

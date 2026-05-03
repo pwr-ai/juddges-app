@@ -162,7 +162,7 @@ Based on the UX/UI review, here are the **immediate priorities**:
 **Legal Glass 2.0**:
 - Sophisticated glassmorphism with backdrop blur
 - OKLCH color space for perceptual uniformity
-- Multi-brand support (Juddges, JuDDGES, Legal-AI)
+- Multi-brand support (Juddges, JuDDGES)
 - Comprehensive dark mode
 - RTL language support
 
@@ -321,9 +321,9 @@ xl: 1280px  /* Large desktop */
 ## Resources
 
 ### Internal Documentation
-- [CLAUDE.md](../../CLAUDE.md) - Project-wide development guide
-- [README.md](../../README.md) - Project overview and setup
-- [SETUP_GUIDE.md](../../SETUP_GUIDE.md) - Detailed setup instructions
+- [CLAUDE.md](https://github.com/pwr-ai/juddges-app/blob/main/CLAUDE.md) - Project-wide development guide
+- [README.md](https://github.com/pwr-ai/juddges-app/blob/main/README.md) - Project overview and setup
+- [Setup Guide](../getting-started/setup-guide.md) - Detailed setup instructions
 
 ### External Resources
 - [Next.js 15 Documentation](https://nextjs.org/docs)

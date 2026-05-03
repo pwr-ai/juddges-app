@@ -1,0 +1,142 @@
+{
+  "@context": "https://w3id.org/codemeta/3.0",
+  "@type": "SoftwareSourceCode",
+  "name": "Juddges App",
+  "description": "Search, chat with, and analyze Polish and England & Wales court judgments — the web app companion to the JuDDGES research project.",
+  "codeRepository": "https://github.com/pwr-ai/juddges-app",
+  "url": "https://github.com/pwr-ai/juddges-app",
+  "license": "https://spdx.org/licenses/Apache-2.0",
+  "version": "0.1.0",
+  "dateCreated": "2026-04-30",
+  "datePublished": "2026-04-30",
+  "dateModified": "2026-04-30",
+  "developmentStatus": "active",
+  "applicationCategory": "Legal NLP / Information Retrieval",
+  "applicationSubCategory": "Judicial decision search and analysis",
+  "operatingSystem": [
+    "Linux",
+    "macOS",
+    "Windows"
+  ],
+  "programmingLanguage": [
+    {
+      "@type": "ComputerLanguage",
+      "name": "Python",
+      "url": "https://www.python.org/"
+    },
+    {
+      "@type": "ComputerLanguage",
+      "name": "TypeScript",
+      "url": "https://www.typescriptlang.org/"
+    }
+  ],
+  "runtimePlatform": [
+    "Python 3.12",
+    "Node.js 18",
+    "Docker"
+  ],
+  "softwareRequirements": [
+    "Python 3.12 or higher",
+    "Node.js 18 or higher",
+    "Docker with the docker compose plugin",
+    "Supabase project (PostgreSQL with pgvector)",
+    "OpenAI API key (for embeddings and chat)",
+    "Redis (for Celery broker and result backend)",
+    "Meilisearch (for full-text search)"
+  ],
+  "identifier": "https://doi.org/10.5281/zenodo.19911856",
+  "keywords": [
+    "legal-nlp",
+    "judicial-decisions",
+    "case-law",
+    "semantic-search",
+    "retrieval-augmented-generation",
+    "court-judgments",
+    "poland",
+    "united-kingdom"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Łukasz",
+      "familyName": "Augustyniak",
+      "email": "aisolutions@lukaszaugustyniak.com",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Wrocław University of Science and Technology"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Jakub",
+      "familyName": "Binkowski",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Wrocław University of Science and Technology"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Albert",
+      "familyName": "Sawczyn",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Wrocław University of Science and Technology"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Kamil",
+      "familyName": "Tagowski",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Wrocław University of Science and Technology"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Michał",
+      "familyName": "Bernaczyk",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Wrocław University"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Krzysztof",
+      "familyName": "Kamiński",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Court of Appeal, Wrocław"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Tomasz",
+      "familyName": "Kajdanowicz",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "Wrocław University of Science and Technology"
+      }
+    }
+  ],
+  "maintainer": {
+    "@type": "Person",
+    "givenName": "Łukasz",
+    "familyName": "Augustyniak",
+    "email": "aisolutions@lukaszaugustyniak.com",
+    "affiliation": {
+      "@type": "Organization",
+      "name": "Wrocław University of Science and Technology"
+    }
+  },
+  "isPartOf": {
+    "@type": "SoftwareSourceCode",
+    "name": "JuDDGES",
+    "codeRepository": "https://github.com/pwr-ai/JuDDGES",
+    "description": "Parent research project — datasets and NLP pipelines for Polish and England & Wales judicial decisions."
+  },
+  "readme": "https://github.com/pwr-ai/juddges-app/blob/main/README.md",
+  "issueTracker": "https://github.com/pwr-ai/juddges-app/issues"
+}

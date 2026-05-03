@@ -17,7 +17,7 @@
 5. [Component Patterns](#component-patterns)
 6. [Icon Protocol](#icon-protocol)
 7. [Typography](#typography)
-8. [Spacing & Layout](#spacing--layout)
+8. [Spacing & Layout](#spacing-layout)
 9. [Dark Mode Guidelines](#dark-mode-guidelines)
 10. [Accessibility](#accessibility)
 11. [Implementation Guide](#implementation-guide)
@@ -722,7 +722,7 @@ className={cardBackgroundGradients.base.light}
 
 ---
 
-*For detailed component-specific guidelines, see the [Component Colors Cheat Sheet](./COMPONENT_COLORS_CHEAT_SHEET.md).*
+*For detailed component-specific guidelines, see the [Component Colors Cheat Sheet](./component-colors.md).*
 
-*For quick reference, see the [Colors Quick Reference](./COLORS_QUICK_REFERENCE.md).*
+*For quick reference, see the [Colors Quick Reference](./colors-reference.md).*
 

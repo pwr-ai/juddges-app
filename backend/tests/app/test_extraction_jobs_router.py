@@ -390,7 +390,10 @@ class TestCancelExtractionJobEndpoint:
         ):
             response = await client.delete(
                 "/extractions/job-789",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -411,7 +414,10 @@ class TestCancelExtractionJobEndpoint:
         ):
             response = await client.delete(
                 "/extractions/job-done",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -430,7 +436,10 @@ class TestCancelExtractionJobEndpoint:
         ):
             response = await client.delete(
                 "/extractions/job-missing",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -456,7 +465,10 @@ class TestDeleteExtractionJobEndpoint:
         with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
             response = await client.delete(
                 "/extractions/job-1/delete",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -476,7 +488,10 @@ class TestDeleteExtractionJobEndpoint:
         with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
             response = await client.delete(
                 "/extractions/job-1/delete",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000099"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000099",
+                },
             )
             assert response.status_code == 403
 
@@ -486,7 +501,10 @@ class TestDeleteExtractionJobEndpoint:
         with patch("app.extraction_domain.jobs_router.supabase", None):
             response = await client.delete(
                 "/extractions/job-1/delete",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 503
 
@@ -503,7 +521,10 @@ class TestListExtractionJobsEndpoint:
         with patch("app.extraction_domain.jobs_router.celery_app", mock_celery_app):
             response = await client.get(
                 "/extractions",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             # The inner 503 HTTPException is caught by the outer `except Exception`
             # and re-wrapped as a 500 error
@@ -523,7 +544,10 @@ class TestListExtractionJobsEndpoint:
         with patch("app.extraction_domain.jobs_router.celery_app", mock_celery_app):
             response = await client.get(
                 "/extractions",
-                headers={**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000001"},
+                headers={
+                    **valid_api_headers,
+                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
+                },
             )
             assert response.status_code == 200
             data = response.json()

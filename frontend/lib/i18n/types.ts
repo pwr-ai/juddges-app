@@ -9,11 +9,10 @@
  * Supported locale codes
  * - 'en' - English (LTR)
  * - 'pl' - Polish (LTR)
- * - 'uk' - Ukrainian (LTR)
  * - 'ar' - Arabic (RTL) - for RTL support
  * - 'he' - Hebrew (RTL) - for RTL support
  */
-export type LocaleCode = 'en' | 'pl' | 'uk';
+export type LocaleCode = 'en' | 'pl';
 
 /**
  * Text direction

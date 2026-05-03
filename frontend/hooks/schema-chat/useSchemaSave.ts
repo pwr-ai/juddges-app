@@ -223,8 +223,8 @@ export function useSchemaSave({
 
         const content =
           format === "json"
-            ? exportSchemaAsJSON(fields, { pretty: true })
-            : exportSchemaAsYAML(fields);
+            ? exportSchemaAsJSON(prepResult.compiledSchema, true)
+            : exportSchemaAsYAML(prepResult.compiledSchema);
 
         const blob = new Blob([content], {
           type: format === "json" ? "application/json" : "text/yaml",
