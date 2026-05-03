@@ -3,15 +3,18 @@
 from pathlib import Path
 
 import pytest
+import schema_generator_agent
 import yaml
 
 
 @pytest.fixture
 def prompt_dir():
-    """Get the prompt directory path."""
-    return Path(
-        "/home/laugustyniak/github/legal-ai/juddges-app/backend/packages/schema_generator_agent/schema_generator_agent/configs/prompt/law"
-    )
+    """Path to the schema_generator_agent prompt directory.
+
+    Resolved via the installed package so the fixture works regardless of
+    where the repo lives on disk.
+    """
+    return Path(schema_generator_agent.__file__).parent / "configs" / "prompt" / "law"
 
 
 def test_all_prompts_exist(prompt_dir):
