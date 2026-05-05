@@ -112,9 +112,36 @@ export default function DatasetComparisonPage() {
   const ukJudges = stats.uk.judges.top_10;
   const plJudges = stats.pl.judges.top_10;
 
-  // Vocabulary domain words (filter stop words)
-  const stopWords = new Set(['the','of','to','that','in','and','a','was','he','on','is','it','had','not','for','as','be','by','his','which','s','at','this','with','have','or','an','we','were','mr','there','she','from','her','no','would','but','any','said','they','if','are',
-    'w','k','z','i','na','1','nie','do','o','si\u0119','2','a','p','r','to','co','od','tym','jest','3','4','po','jak','s','m','za','zw','przez','jego','tego']);
+  // Stop words filtered out of vocabulary plots so only domain-relevant
+  // legal terminology is shown. Covers function words, pronouns, single-letter
+  // tokens, digits, and Polish legal-document boilerplate (article references,
+  // date stamps, currency, common abbreviations).
+  const stopWords = new Set([
+    // English function words / pronouns
+    'the','of','to','that','in','and','a','an','was','were','is','are','be','been','being',
+    'he','she','it','they','we','i','you','him','her','his','hers','its','their','them','our','your','my',
+    'on','at','by','for','from','with','into','onto','upon','about','against','through',
+    'as','or','but','if','not','no','yes','this','that','these','those','which','who','whom','whose','what','when','where','why','how',
+    'have','has','had','having','do','does','did','doing','will','would','shall','should','can','could','may','might','must',
+    'said','say','says','there','here','also','only','just','than','then','so','such','any','some','all','each','every','one','two',
+    // English titles / generic
+    'mr','mrs','miss','ms','dr','sir','madam',
+    // Single-letter / OCR-noise English
+    's','t','d','m','re','ve','ll',
+    // Polish function words / pronouns / conjunctions
+    'w','z','i','o','a','u','e','na','do','od','po','za','ze','we','przez','dla','przy','nad','pod','mi\u0119dzy','wobec','bez','oraz','lub','albo','czy','ale','wi\u0119c','te\u017c','ju\u017c','jeszcze','tylko','tak\u017ce','jak','jako','tak','nie','tak','to','co','kto','kogo','komu','kim','czym','tego','tym','temu','tej','t\u0119','ta','te','ten','ci','ich','im','je','j\u0105','mu','jej','jego','sw\u00f3j','swoja','swoje','swoich',
+    '\u017ce','i\u017c','aby','\u017ceby','poniewa\u017c','gdy\u017c','cho\u0107','chocia\u017c','je\u017celi','je\u015bli','gdy','kiedy','dop\u00f3ki',
+    'by\u0107','jest','s\u0105','by\u0142','by\u0142a','by\u0142o','byli','by\u0142y','b\u0119dzie','b\u0119d\u0105','by\u0107','mie\u0107','ma','maj\u0105','mia\u0142','mia\u0142a',
+    'si\u0119','siebie','sob\u0105','sobie',
+    // Polish legal-document boilerplate / abbreviations
+    'art','zart','pkt','ust','ust.','par','\u00a7','zw','zw.','nr','tj','m.in','itp','itd',
+    'dnia','roku','rok','lat','lata','miesi\u0119cy','miesi\u0105ca','miesi\u0105ce','godzin','godziny',
+    'z\u0142','zlotych','z\u0142otych','euro','usd','pln',
+    // Polish single-letter / abbreviation noise (k.k., p., r., m., s., b.)
+    'k','p','r','b','c','d','s','m','n','t','x','y',
+    // Digits
+    '0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15',
+  ]);
   const ukDomainWords = stats.uk.vocabulary.top_50_words
     .filter(w => !stopWords.has(w.word))
     .slice(0, 15);
