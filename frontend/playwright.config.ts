@@ -79,23 +79,35 @@ export default defineConfig({
     }
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: 'npm run dev',
-      url: 'http://localhost:3006',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
-      stdout: 'ignore',
-      stderr: 'pipe',
-    },
-    {
-      command: 'cd ../backend && poetry run uvicorn app.server:app --port 8004',
-      url: 'http://localhost:8004',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
-      stdout: 'ignore',
-      stderr: 'pipe',
-    }
-  ],
+  /*
+   * Run your local dev server before starting the tests.
+   *
+   * In CI, the workflow itself starts a production frontend (`npm start` on
+   * 3006) and intentionally does NOT start the backend — the E2E suite is
+   * scoped to UI-only flows that tolerate a missing backend (see ci.yml,
+   * "Frontend E2E - Issue #98"). Letting Playwright also try to spawn a dev
+   * server would race the existing one ("port 3006 already used"), and
+   * spawning the backend uvicorn would fail because the E2E runner has no
+   * Python/Poetry. Skip webServer entirely in CI.
+   */
+  webServer: process.env.CI
+    ? undefined
+    : [
+        {
+          command: 'npm run dev',
+          url: 'http://localhost:3006',
+          reuseExistingServer: true,
+          timeout: 120 * 1000,
+          stdout: 'ignore',
+          stderr: 'pipe',
+        },
+        {
+          command: 'cd ../backend && poetry run uvicorn app.server:app --port 8004',
+          url: 'http://localhost:8004',
+          reuseExistingServer: true,
+          timeout: 120 * 1000,
+          stdout: 'ignore',
+          stderr: 'pipe',
+        },
+      ],
 });
