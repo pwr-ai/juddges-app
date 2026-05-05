@@ -243,9 +243,15 @@ describe('Complete Search Flow Integration', () => {
     it('should show typing animation header', async () => {
       renderWithProviders(<SearchPage />);
 
-      await waitFor(() => {
-        expect(screen.getByRole('heading')).toHaveTextContent(/search legal docume/i);
-      });
+      // Typing animation renders char-by-char; default waitFor timeout (1s)
+      // is too short on slower CI runners and the assertion races the
+      // animation. Bump to 5s — still fast enough to catch a regression.
+      await waitFor(
+        () => {
+          expect(screen.getByRole('heading')).toHaveTextContent(/search legal docume/i);
+        },
+        { timeout: 5000 }
+      );
     });
 
     it('should load persisted search state', async () => {

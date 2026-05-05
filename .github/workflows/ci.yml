@@ -290,10 +290,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          # The artifact preserves full paths (frontend/.next/, frontend/public/, …)
-          # so we must download to the repo root. Downloading to `frontend/` would
-          # produce `frontend/frontend/.next/` and `next start` wouldn't find the build.
-          path: .
+          # actions/upload-artifact@v4 strips the lowest common ancestor from
+          # paths, so the artifact entries are `.next/…`, `public/…`,
+          # `package.json`, `next.config.*` (no `frontend/` prefix). Download
+          # into `frontend/` so `next start` (run from `working-directory: frontend`)
+          # finds them at the expected locations.
+          path: frontend/
 
       - name: Install Playwright browsers
         working-directory: frontend
