@@ -207,3 +207,22 @@ def pytest_collection_modifyitems(config, items):
     if deselected:
         config.hook.pytest_deselected(items=deselected)
         items[:] = selected
+
+
+@pytest.fixture
+def fake_llm():
+    """Yields a FakeChatModel; pre-seed responses by setting fake_llm.responses."""
+    from juddges_search.testing import FakeChatModel
+
+    return FakeChatModel(responses=[])
+
+
+# Import Celery fixtures. E402 is suppressed because this import depends on the
+# sys.path manipulation above (so the `tests` package is importable); F401 is
+# suppressed because pytest auto-discovers the fixtures by name at collection
+# time and they have no direct in-module reference.
+from tests.conftest_celery import (  # noqa: E402, F401
+    celery_eager,
+    mocked_extractor,
+    mocked_supabase,
+)

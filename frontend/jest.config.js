@@ -48,6 +48,21 @@ const esmPackages = [
   'date-fns',
   'nanoid',
   'zod',
+  // MSW v2 + transitive deps that ship as ESM-only.
+  'msw',
+  '@mswjs/.*',
+  '@open-draft/.*',
+  '@bundled-es-modules/.*',
+  'rettime',
+  'headers-polyfill',
+  'outvariant',
+  'is-node-process',
+  'strict-event-emitter',
+  'until-async',
+  'cookie',
+  'tough-cookie',
+  'graphql',
+  'statuses',
 ].join('|')
 
 // Add any custom config to be passed to Jest
@@ -103,10 +118,10 @@ const customJestConfig = {
   // Coverage thresholds — start low, increase as coverage improves
   coverageThreshold: {
     global: {
-      statements: 18,
-      branches: 10,
-      functions: 15,
-      lines: 18,
+      statements: 21,
+      branches: 16,
+      functions: 17,
+      lines: 22,
     },
   },
 }
