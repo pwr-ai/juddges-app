@@ -373,10 +373,12 @@ jobs:
       - name: Install tooling
         run: |
           pip install poetry pip-audit
+          # Poetry 2.0+ removed `export` from core; the plugin is required.
+          poetry self add poetry-plugin-export
 
       - name: Export requirements
         working-directory: backend
-        run: poetry export -f requirements.txt --without-hashes -o /tmp/requirements.txt 2>/dev/null
+        run: poetry export -f requirements.txt --without-hashes -o /tmp/requirements.txt
 
       - name: Audit Python dependencies (blocking on HIGH/CRITICAL)
         id: backend_audit
@@ -462,11 +464,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+      # Switched from gitleaks-action (now requires a paid license for orgs)
+      # to TruffleHog, which is free and OSS. Same intent: scan history for
+      # leaked secrets and fail the job on verified findings.
+      - name: Run TruffleHog (verified secrets only)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --results=verified,unknown
         continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
-        env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   # ============================================================================
   # SBOM Generation (main branch only)
@@ -488,6 +494,7 @@ jobs:
         working-directory: backend
         run: |
           pip install poetry
+          poetry self add poetry-plugin-export
           poetry export -f requirements.txt --without-hashes -o sbom-backend.txt
       - name: Generate frontend SBOM
         working-directory: frontend
