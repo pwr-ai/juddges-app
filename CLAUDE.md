@@ -74,7 +74,7 @@ PostgreSQL via Supabase. Main schema: `supabase/migrations/20260209000001_create
 
 - **`main`** is the only active branch. Feature/fix branches start from `main` and PR back into `main`. Production images are built **manually** from a clean `main` via `scripts/build_and_push_prod.sh`.
 - When helping with branching commands, default to creating new branches from `main` (e.g. `git switch -c feat/foo origin/main`).
-- Branch protection on `main` still requires CI green + 1 review, but the repo owner can `gh pr merge --admin` when working solo. Use sparingly and only when CI failures are unrelated (e.g. Gitleaks license, transient infra).
+- Branch protection on `main` requires CI green on the 4 required checks (`Backend Lint`, `Backend Unit Tests`, `Frontend Lint & Typecheck`, `Frontend Unit Tests`). The "1 approving review" requirement was lifted while solo — re-add it before adding contributors. PRs can be merged via standard `gh pr merge --squash` once CI is green; `gh pr merge --admin` is only needed when an unrelated/non-required check is red (e.g. transient infra).
 - Releasing: tag a clean `main` and run `./scripts/build_and_push_prod.sh` (or pass `minor` / explicit version). The script bumps version, builds + pushes images, tags `prod-vX.Y.Z`. No release PR is needed in main-only mode.
 - `develop` branch still exists but is dormant. Do **not** open new PRs against it; if you find one, repoint to `main`. Re-enable two-branch flow only when more contributors join.
 
