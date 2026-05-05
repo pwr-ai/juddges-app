@@ -4,6 +4,7 @@ import yaml
 from dotenv import load_dotenv
 from juddges_search.models import DocumentType
 from langchain_openai import ChatOpenAI
+from rich.console import Console
 
 from schema_generator_agent.agents.schema_generator import SchemaGenerator
 from schema_generator_agent.settings import PROMPTS_PATH
@@ -12,6 +13,7 @@ MODEL_NAME = "llama3.3"
 SYSTEM_TYPE = "law"
 WV_COLLECTION_NAME = "LegalDocuments"
 
+console = Console()
 load_dotenv(".env")
 
 API_KEY = os.getenv("SELFHOSTED_API_KEY")
@@ -70,15 +72,15 @@ def main() -> None:
         prompts["schema_data_refiner_prompt"],
     )
 
-    print("🚀 DEMO")
-    print("=" * 60)
-    print("Input text with description of the schema to generate:")
+    console.print("🚀 DEMO")
+    console.print("=" * 60)
+    console.print("Input text with description of the schema to generate:")
     input_text = input()
 
     schema_system.stream_graph_updates(input_text)
 
-    print("\n" + "=" * 60)
-    print("✅ Schema generation demo completed!")
+    console.print("\n" + "=" * 60)
+    console.print("✅ Schema generation demo completed!")
 
 
 if __name__ == "__main__":

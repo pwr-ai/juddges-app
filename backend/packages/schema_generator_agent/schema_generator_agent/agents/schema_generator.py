@@ -6,6 +6,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
+from loguru import logger
+from rich.console import Console
 
 from schema_generator_agent.agents.agent_state import AgentState
 from schema_generator_agent.agents.basic_agents import (
@@ -22,6 +24,9 @@ from schema_generator_agent.agents.data_agents import (
     SchemaDataRefinerAgent,
 )
 from schema_generator_agent.settings import PROMPTS_PATH
+
+# Initialize rich console for user-facing output
+console = Console()
 
 
 class HumanFeedback:
@@ -128,9 +133,9 @@ class SchemaGenerator:
             raise NotImplementedError(
                 "Can't use function stream_graph_updates with use_interrupt set!"
             )
-        print("👤 Human:")
-        print(user_input)
-        print("-" * 50)
+        console.print("👤 Human:")
+        console.print(user_input)
+        console.print("-" * 50)
         """Process user input through the multi-agent workflow and display results."""
         initial_state = AgentState(
             messages=[],
@@ -155,11 +160,11 @@ class SchemaGenerator:
 
                 # Print with proper formatting to avoid truncation
                 if state["messages"][-1].type == "human":
-                    print("👤 Human:")
+                    console.print("👤 Human:")
                 else:
-                    print("🤖 Assistant:")
-                print(full_content)
-                print("-" * 50)
+                    console.print("🤖 Assistant:")
+                console.print(full_content)
+                console.print("-" * 50)
 
         return state
 
@@ -204,7 +209,7 @@ def route_after_assessment(state: AgentState) -> str:
     MAX_ROUNDS = 5
     MIN_CONFIDENCE = 0.85
 
-    print(f"Refinement rounds: {refinement_rounds}, Confidence: {confidence:.2f}")
+    logger.info(f"Refinement rounds: {refinement_rounds}, Confidence: {confidence:.2f}")
 
     needs_refinement = assessment.get("needs_refinement", False)
     low_confidence = confidence < MIN_CONFIDENCE
@@ -230,7 +235,7 @@ def route_after_data_assessment_merger(state: AgentState) -> str:
     MAX_ROUNDS = 5
     MIN_CONFIDENCE = 0.85
 
-    print(f"Data refinement rounds: {data_refinement_rounds}, Confidence: {confidence:.2f}")
+    logger.info(f"Data refinement rounds: {data_refinement_rounds}, Confidence: {confidence:.2f}")
 
     needs_refinement = assessment.get("needs_refinement", False)
     low_confidence = confidence < MIN_CONFIDENCE

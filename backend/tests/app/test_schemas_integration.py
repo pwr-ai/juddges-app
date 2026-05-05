@@ -16,6 +16,7 @@ from typing import Any
 import pytest
 from httpx import AsyncClient
 
+# TODO(simplify-audit): owner unknown - confirm whether to delete or fix; reason: "Mocks removed attribute app.schemas.InformationExtractor; tests need rewriting against the current schema-extraction API."
 pytestmark = pytest.mark.skip(
     reason=(
         "Mocks removed attribute app.schemas.InformationExtractor; tests "

@@ -346,7 +346,9 @@ async def submit_ocr_job(
                     }
                 ).eq("id", job_id).execute()
             except Exception:
-                pass
+                logger.exception(
+                    f"Failed to mark OCR job as failed for job_id={job_id}"
+                )
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {e!s}")
 
 

@@ -23,14 +23,11 @@ const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
 
 
 // Creates the placeholder object for a failed document
-const createErrorPlaceholder = (id: string, message: string, isWeaviateError: boolean = false): SearchDocument => {
+const createErrorPlaceholder = (id: string, message: string): SearchDocument => {
   return {
     document_id: id,
     document_type: 'error',
     summary: message,
-    // Store Weaviate error flag in a way that can be accessed by components
-    // We'll use a custom property that won't break the type
-    ...(isWeaviateError && { _isWeaviateError: true } as any),
 
     // Set all other nullable fields to null to satisfy the interface
     title: null,
@@ -139,19 +136,11 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
         const result = await response.json();
 
         let fetchedDocuments: (SearchDocument | null | undefined)[] = [];
-        const errorMap = new Map<string, boolean>();
 
         if (Array.isArray(result)) {
           fetchedDocuments = result;
         } else if (Array.isArray(result?.documents)) {
           fetchedDocuments = result.documents;
-        }
-
-        // Build error map from API response
-        if (Array.isArray(result?.errors)) {
-          result.errors.forEach((err: { document_id: string; isWeaviateError?: boolean }) => {
-            errorMap.set(String(err.document_id), err.isWeaviateError || false);
-          });
         }
 
         // 1) Normalize/unwrap -> SearchDocument[]
@@ -172,20 +161,15 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
           const found = docMap.get(key);
           if (found) return found;
 
-          const isWeaviateError = errorMap.get(key) || false;
-          const errorMessage = isWeaviateError
-            ? "Source information cannot be loaded!"
-            : "Document was not found!";
-
-          logger.warn(`⚠️ Missing document for id=${key}`, { isWeaviateError });
-          return createErrorPlaceholder(id, errorMessage, isWeaviateError);
+          logger.warn(`⚠️ Missing document for id=${key}`);
+          return createErrorPlaceholder(id, "Document was not found!");
         });
 
         // If we limited the IDs, add placeholders for the rest
         if (documentIds.length > MAX_SOURCE_CARDS) {
           const remainingIds = documentIds.slice(MAX_SOURCE_CARDS);
           const remainingPlaceholders = remainingIds.map(id =>
-            createErrorPlaceholder(id, `+${documentIds.length - MAX_SOURCE_CARDS} more sources available`, false)
+            createErrorPlaceholder(id, `+${documentIds.length - MAX_SOURCE_CARDS} more sources available`)
           );
           finalData.push(...remainingPlaceholders);
         }
@@ -200,29 +184,20 @@ export function useSourceDocuments({ documentIds, enabled = true }: UseSourceDoc
           return;
         }
 
-        // Check if it's a Weaviate error
         const error = err instanceof Error ? err : new Error('Unknown error');
-        const errorMessage = error.message.toLowerCase();
-        const isWeaviateError =
-          errorMessage.includes('weaviate') ||
-          errorMessage.includes('vector_db_unavailable') ||
-          errorMessage.includes('503');
 
         // Create error placeholders for limited documents only
         if (documentIds && documentIds.length > 0) {
           const MAX_SOURCE_CARDS = 20;
           const limitedDocumentIds = documentIds.slice(0, MAX_SOURCE_CARDS);
-          const errorMessage = isWeaviateError
-            ? "Source information cannot be loaded!"
-            : "Document was not found!";
           const errorPlaceholders = limitedDocumentIds.map(id =>
-            createErrorPlaceholder(id, errorMessage, isWeaviateError)
+            createErrorPlaceholder(id, "Document was not found!")
           );
 
           // Add placeholder for remaining documents if any
           if (documentIds.length > MAX_SOURCE_CARDS) {
             const remainingPlaceholders = documentIds.slice(MAX_SOURCE_CARDS).map(id =>
-              createErrorPlaceholder(id, `+${documentIds.length - MAX_SOURCE_CARDS} more sources available`, false)
+              createErrorPlaceholder(id, `+${documentIds.length - MAX_SOURCE_CARDS} more sources available`)
             );
             errorPlaceholders.push(...remainingPlaceholders);
           }

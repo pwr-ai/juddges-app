@@ -16,7 +16,7 @@ skip_if_no_api_keys = pytest.mark.skipif(
 @pytest.mark.asyncio
 async def test_thinking_mode_enhances_query():
     """Test that thinking mode enhances the query."""
-    from app.documents import search_documents
+    from app.documents_pkg import search_documents
 
     request = SearchChunksRequest(
         query="contract dispute", mode="thinking", limit_docs=5
@@ -35,7 +35,7 @@ async def test_thinking_mode_enhances_query():
 @pytest.mark.asyncio
 async def test_rabbit_mode_skips_enhancement():
     """Test that rabbit mode skips query enhancement."""
-    from app.documents import search_documents
+    from app.documents_pkg import search_documents
 
     request = SearchChunksRequest(
         query="contract dispute",
@@ -54,7 +54,7 @@ async def test_rabbit_mode_skips_enhancement():
 @pytest.mark.asyncio
 async def test_thinking_mode_timing_breakdown():
     """Test that thinking mode includes enhancement timing."""
-    from app.documents import search_documents
+    from app.documents_pkg import search_documents
 
     request = SearchChunksRequest(query="employment law", mode="thinking", limit_docs=3)
 
@@ -70,7 +70,7 @@ async def test_thinking_mode_timing_breakdown():
 @pytest.mark.asyncio
 async def test_rabbit_mode_no_enhancement_timing():
     """Test that rabbit mode has zero enhancement timing."""
-    from app.documents import search_documents
+    from app.documents_pkg import search_documents
 
     request = SearchChunksRequest(query="employment law", mode="rabbit", limit_docs=3)
 

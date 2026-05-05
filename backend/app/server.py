@@ -68,7 +68,6 @@ from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limite
 from app.reasoning_lines import router as reasoning_lines_router
 from app.recommendations import router as recommendations_router
 from app.research_assistant import router as research_assistant_router
-from app.schema_generation_agent import router as schema_generator_agent_router
 from app.schemas_pkg import router as schemas_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
@@ -293,12 +292,6 @@ async def lifespan(app: FastAPI):
     del app.state.checkpointer
     del app.state.agent
     logger.info("Application shutdown completed successfully")
-
-
-# Configure API key authentication at module level
-API_KEY = os.getenv("BACKEND_API_KEY")
-if not API_KEY:
-    raise ValueError("BACKEND_API_KEY environment variable not set")
 
 
 def custom_openapi():
@@ -548,8 +541,8 @@ async def redirect_root_to_docs():
 #
 # API_KEY:   LangServe routes (/qa, /chat, /enhance_query)
 #            documents_router, collections_router, publications_router
-#            extraction_router, schemas_router, schema_generator_agent_router
-#            schema_generator_router, example_questions_router
+#            extraction_router, schemas_router, schema_generator_router
+#            example_questions_router
 #            dashboard_router, playground_router, evaluations_router
 #            summarization_router, precedents_router, deduplication_router
 #            versioning_router, ocr_router, clustering_router
@@ -585,38 +578,39 @@ add_routes(
     dependencies=[Depends(verify_api_key)],
 )
 
-# Include existing routers
-app.include_router(documents_router, dependencies=[Depends(verify_api_key)])
-app.include_router(collections_router, dependencies=[Depends(verify_api_key)])
-app.include_router(publications_router, dependencies=[Depends(verify_api_key)])
-app.include_router(extraction_router, dependencies=[Depends(verify_api_key)])
-app.include_router(schemas_router, dependencies=[Depends(verify_api_key)])
-app.include_router(
-    schema_generator_agent_router, dependencies=[Depends(verify_api_key)]
-)
-app.include_router(schema_generator_router, dependencies=[Depends(verify_api_key)])
-app.include_router(example_questions_router, dependencies=[Depends(verify_api_key)])
-app.include_router(dashboard_router, dependencies=[Depends(verify_api_key)])
-app.include_router(playground_router, dependencies=[Depends(verify_api_key)])
-app.include_router(evaluations_router, dependencies=[Depends(verify_api_key)])
-app.include_router(summarization_router, dependencies=[Depends(verify_api_key)])
-app.include_router(precedents_router, dependencies=[Depends(verify_api_key)])
-app.include_router(deduplication_router, dependencies=[Depends(verify_api_key)])
-app.include_router(versioning_router, dependencies=[Depends(verify_api_key)])
-app.include_router(ocr_router, dependencies=[Depends(verify_api_key)])
-app.include_router(clustering_router, dependencies=[Depends(verify_api_key)])
-app.include_router(recommendations_router, dependencies=[Depends(verify_api_key)])
-app.include_router(research_assistant_router, dependencies=[Depends(verify_api_key)])
-app.include_router(research_agent_v2_router, dependencies=[Depends(verify_api_key)])
-app.include_router(topic_modeling_router, dependencies=[Depends(verify_api_key)])
-app.include_router(argumentation_router, dependencies=[Depends(verify_api_key)])
-app.include_router(judge_fingerprint_router, dependencies=[Depends(verify_api_key)])
-app.include_router(embeddings_router, dependencies=[Depends(verify_api_key)])
-app.include_router(marketplace_router, dependencies=[Depends(verify_api_key)])
-app.include_router(timeline_router, dependencies=[Depends(verify_api_key)])
-app.include_router(blog_router, dependencies=[Depends(verify_api_key)])
-app.include_router(search_router, dependencies=[Depends(verify_api_key)])
-app.include_router(reasoning_lines_router, dependencies=[Depends(verify_api_key)])
+# Routers protected by API key only (no extra prefix/tag overrides).
+API_KEY_PROTECTED_ROUTERS = [
+    documents_router,
+    collections_router,
+    publications_router,
+    extraction_router,
+    schemas_router,
+    schema_generator_router,
+    example_questions_router,
+    dashboard_router,
+    playground_router,
+    evaluations_router,
+    summarization_router,
+    precedents_router,
+    deduplication_router,
+    versioning_router,
+    ocr_router,
+    clustering_router,
+    recommendations_router,
+    research_assistant_router,
+    research_agent_v2_router,
+    topic_modeling_router,
+    argumentation_router,
+    judge_fingerprint_router,
+    embeddings_router,
+    marketplace_router,
+    timeline_router,
+    blog_router,
+    search_router,
+    reasoning_lines_router,
+]
+for _router in API_KEY_PROTECTED_ROUTERS:
+    app.include_router(_router, dependencies=[Depends(verify_api_key)])
 
 # Experiments - uses JWT authentication (implemented in endpoints)
 app.include_router(experiments_router)

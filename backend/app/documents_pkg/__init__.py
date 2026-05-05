@@ -421,8 +421,8 @@ async def search_documents(request: SearchChunksRequest):
             data={"query_len": len(query), "limit": limit, "mode": request.mode},
             level="info",
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Failed to record telemetry: {e}")
 
     logger.info(
         f"Search request: query='{query[:100]}...', limit={limit}, "

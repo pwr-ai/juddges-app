@@ -142,12 +142,9 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         nodeid = item.nodeid.replace("\\", "/")
 
-        # Auto-mark tests that use database or search as integration tests
-        if "search" in item.name.lower():
-            item.add_marker(pytest.mark.integration)
-
+        # Markers come from explicit @pytest.mark.* decorators or _integration.py filename gating.
         # Auto-mark tests that don't require external services as unit tests
-        elif not any(marker.name == "integration" for marker in item.iter_markers()):
+        if not any(marker.name == "integration" for marker in item.iter_markers()):
             item.add_marker(pytest.mark.unit)
 
         is_legacy_schema_suite = nodeid.startswith("tests/app/schemas_extraction/")

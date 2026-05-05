@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from app.documents import search_documents
+from app.documents_pkg import search_documents
 from app.models import SearchChunksRequest
 from app.query_analysis import QueryAnalysisResult
 

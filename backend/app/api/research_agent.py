@@ -210,8 +210,8 @@ async def _run_agent(
             from research_agent.persistence import SessionStatus as SS
 
             await session_store.update_status(session_id, SS.FAILED)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to update session status: {e}")
         _broadcast_event(
             session_id,
             {"type": "error", "message": str(exc), "ts": _now_iso()},

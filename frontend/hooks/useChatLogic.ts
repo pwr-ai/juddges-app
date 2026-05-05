@@ -14,22 +14,6 @@ function findPrevUserIndex(messages: Message[], fromIndex: number): number {
 }
 
 /**
- * Check if an error is related to Weaviate/document database issues
- */
-function isWeaviateError(error: Error): boolean {
-  const errorMessageLower = error.message.toLowerCase();
-  const errorDetails = (error as Error & { details?: unknown })?.details;
-  const errorDetailsStr = errorDetails ? JSON.stringify(errorDetails).toLowerCase() : '';
-  
-  return (
-    errorMessageLower.includes('weaviate') ||
-    errorDetailsStr.includes('weaviate') ||
-    errorMessageLower.includes('document was not found') ||
-    errorMessageLower.includes('hallucinated')
-  );
-}
-
-/**
  * Generate a user-friendly error message based on the error type
  */
 function getUserFriendlyErrorMessage(error: Error, context: 'send' | 'edit' | 'regenerate' = 'send'): string {
@@ -38,13 +22,8 @@ function getUserFriendlyErrorMessage(error: Error, context: 'send' | 'edit' | 'r
     edit: "I apologize, but I'm having trouble processing your edited message right now. ",
     regenerate: "I apologize, but I'm having trouble regenerating that response right now. "
   };
-  
-  let userMessage = contextMessages[context];
 
-  // Check for Weaviate errors first
-  if (isWeaviateError(error)) {
-    return "I'm sorry, but I cannot load the source information at this time. The document database is temporarily unavailable. Please try again later.";
-  }
+  let userMessage = contextMessages[context];
 
   if (error.message.includes('500')) {
     userMessage += "Our system is experiencing technical difficulties. Please try again in a moment.";
