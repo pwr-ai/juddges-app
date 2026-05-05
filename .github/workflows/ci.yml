@@ -286,7 +286,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: frontend/
+          # The artifact preserves full paths (frontend/.next/, frontend/public/, …)
+          # so we must download to the repo root. Downloading to `frontend/` would
+          # produce `frontend/frontend/.next/` and `next start` wouldn't find the build.
+          path: .
 
       - name: Install Playwright browsers
         working-directory: frontend
@@ -378,7 +381,13 @@ jobs:
 
       - name: Export requirements
         working-directory: backend
-        run: poetry export -f requirements.txt --without-hashes -o /tmp/requirements.txt
+        run: |
+          # Strip editable local-path packages (`-e file:///...`) — pip-audit
+          # tries to install them and the absolute paths from `poetry export`
+          # don't exist on the runner. Their deps are already covered by the
+          # exported pinned third-party packages.
+          poetry export -f requirements.txt --without-hashes -o /tmp/requirements.raw.txt
+          grep -v '^-e ' /tmp/requirements.raw.txt > /tmp/requirements.txt
 
       - name: Audit Python dependencies (blocking on HIGH/CRITICAL)
         id: backend_audit
