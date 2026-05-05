@@ -250,6 +250,10 @@ jobs:
             frontend/package.json
             frontend/package-lock.json
             frontend/next.config.*
+          # `actions/upload-artifact@v4` defaults `include-hidden-files: false`,
+          # which silently skips the dot-prefixed `.next/` directory — leaving
+          # ~22 files instead of the full Next.js build output. Enable it.
+          include-hidden-files: true
           retention-days: 1
 
   # ============================================================================
