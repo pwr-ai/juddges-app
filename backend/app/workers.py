@@ -29,6 +29,9 @@ from app.schemas_pkg import _fetch_schema_from_db
 from app.utils.document_fetcher import get_documents_by_id
 
 load_dotenv()
+# Safe defaults so `import app.workers` succeeds in environments without Celery
+# config (CI test collection, schema/type tooling). Real workers/beat set these
+# explicitly; production compose files pass them through.
 BROKER_URL = os.environ.get("CELERY_BROKER_URL", "memory://")
 BACKEND_URL = os.environ.get("CELERY_BACKEND_URL", "cache+memory://")
 PROJECT_NAME = os.environ.get("CELERY_PROJECT_NAME", "juddges")
