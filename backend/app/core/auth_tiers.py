@@ -58,7 +58,6 @@ Quick reference (as registered in server.py):
         publications_router     — /publications
         extraction_router       — /extraction
         schemas_router          — /schemas
-        schema_generator_agent_router — /schema-generation-agent
         schema_generator_router — /api/schema-generator
         example_questions_router
         dashboard_router

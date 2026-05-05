@@ -103,6 +103,7 @@ class TestErrorResponses:
             assert hasattr(exc, "details")
 
 
+# TODO(simplify-audit): owner unknown - confirm whether to delete or fix; reason: "Requires running FastAPI app"
 @pytest.mark.skip(reason="Requires running FastAPI app")
 class TestErrorHandlers:
     """Test global error handlers in the FastAPI app."""
