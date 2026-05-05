@@ -175,6 +175,18 @@ jobs:
             tests/integration/test_search_quality.py \
             --tb=short
 
+      - name: Run RLS + pgvector contract tests
+        if: ${{ env.SUPABASE_DB_URL != '' }}
+        working-directory: backend
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL_NONPROD }}
+          RUN_INTEGRATION_TESTS: "1"
+        run: |
+          poetry run pytest \
+            tests/integration/test_rls_policies.py \
+            tests/integration/test_pgvector_contract.py \
+            -v -m integration
+
       - name: Run search benchmark
         working-directory: backend
         env:
