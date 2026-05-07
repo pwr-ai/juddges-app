@@ -40,11 +40,11 @@ poetry.lock
 .venv-ingest/
 venv/
 
-# Python virtual environments
-env/
-ENV/
-env.bak/
-venv.bak/
+# Python virtual environments (top-level only — do NOT match nested code dirs like frontend/lib/env/)
+/env/
+/ENV/
+/env.bak/
+/venv.bak/
 
 # Testing
 .pytest_cache/
@@ -103,9 +103,9 @@ secrets/
 *.key
 *.cert
 
-# Data files (don't commit large datasets)
-data/
-datasets/
+# Data files (don't commit large datasets — top-level only)
+/data/
+/datasets/
 *.csv
 *.parquet
 *.jsonl
