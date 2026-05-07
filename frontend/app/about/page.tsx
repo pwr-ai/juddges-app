@@ -10,6 +10,7 @@ import {
  GraduationCap,
  ArrowRight,
  Sparkles,
+ Network,
 } from "lucide-react";
 import {
  Header,
@@ -288,6 +289,103 @@ export default function AboutPage(): React.JSX.Element {
  <span className="text-lg">🇬🇧</span> England & Wales
  </Badge>
  </div>
+ </div>
+ </div>
+ </LightCard>
+
+ {/* Project Ecosystem */}
+ <LightCard padding="lg" className="mb-10">
+ <SecondaryHeader
+ icon={Network}
+ title="Open Source Ecosystem"
+ className="mb-3"
+ />
+ <p className="text-base text-muted-foreground mb-6">
+ JuDDGES is built as a federation of focused open-source tools, not a single monolithic app
+ </p>
+ <div className="space-y-5">
+ <p className="text-base leading-relaxed">
+ This platform is one of several independently maintained projects that together form
+ the JuDDGES research pipeline. The parent research project hosts datasets, NLP pipelines,
+ and HITL experiments. A dedicated annotation workbench, maintained by partner contributors,
+ produces the verified ground-truth annotations that downstream tools — including this
+ platform — consume.
+ </p>
+ <p className="text-base leading-relaxed">
+ Keeping the projects separate but linked through shared open data formats lets each
+ team iterate on their own cadence while still contributing to a coherent whole.
+ </p>
+
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+ <LightCard padding="md">
+ <div className="flex items-start gap-3 mb-2">
+ <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+ <BookOpen className="size-5" />
+ </div>
+ <div className="font-semibold">JuDDGES (research)</div>
+ </div>
+ <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+ Parent research project: datasets, NLP pipelines, model training.
+ </p>
+ <a
+ href="https://github.com/pwr-ai/JuDDGES"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+ >
+ <Github className="size-3.5" /> pwr-ai/JuDDGES
+ </a>
+ </LightCard>
+
+ <LightCard padding="md">
+ <div className="flex items-start gap-3 mb-2">
+ <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+ <Users className="size-5" />
+ </div>
+ <div className="font-semibold">HITL Annotation Tool</div>
+ </div>
+ <p className="text-xs text-muted-foreground/80 mb-1.5">Middlesex University, London</p>
+ <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+ Upstream human-in-the-loop workbench for verifying LLM extractions.
+ </p>
+ <a
+ href="https://github.com/tsantosh7/hitl-tool"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+ >
+ <Github className="size-3.5" /> tsantosh7/hitl-tool
+ </a>
+ </LightCard>
+
+ <LightCard padding="md">
+ <div className="flex items-start gap-3 mb-2">
+ <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+ <Target className="size-5" />
+ </div>
+ <div className="font-semibold">JuDDGES App</div>
+ </div>
+ <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+ This platform — search, RAG chat, and structured extraction.
+ </p>
+ <a
+ href="https://github.com/pwr-ai/juddges-app"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+ >
+ <Github className="size-3.5" /> pwr-ai/juddges-app
+ </a>
+ </LightCard>
+ </div>
+
+ <div className="pt-2">
+ <PrimaryButton
+ icon={ArrowRight}
+ onClick={() => router.push("/ecosystem")}
+ >
+ Explore the full ecosystem
+ </PrimaryButton>
  </div>
  </div>
  </LightCard>

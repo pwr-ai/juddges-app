@@ -51,8 +51,10 @@ export function Footer({ className }: { className?: string }) {
  <FooterSection title="The Project">
  <li><FooterLink href="/about">About Us</FooterLink></li>
  <li><FooterLink href="/about#research">Our Research</FooterLink></li>
+ <li><FooterLink href="/ecosystem">Ecosystem</FooterLink></li>
  <li><FooterLink href="/team">Team</FooterLink></li>
  <li><FooterLink href="/publications">Publications</FooterLink></li>
+ <li><FooterLink href="https://juddges.org"external>juddges.org</FooterLink></li>
  <li><FooterLink href="https://pwr.edu.pl"external>University</FooterLink></li>
  </FooterSection>
 

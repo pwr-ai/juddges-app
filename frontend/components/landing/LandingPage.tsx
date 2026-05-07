@@ -21,6 +21,8 @@ import {
   Users,
   FlaskConical,
   ExternalLink,
+  Network,
+  Github,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -584,6 +586,53 @@ function AboutProjectSection() {
                 of Science and Technology
               </p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Ecosystem callout */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mt-8 rounded-2xl border border-border bg-gradient-to-br from-primary/[0.04] via-primary/[0.02] to-transparent p-6 md:p-8"
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div className="flex items-start gap-4 max-w-2xl">
+              <div className="shrink-0 p-3 rounded-xl bg-primary/10">
+                <Network className="size-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-1.5 tracking-[-0.01em]">
+                  Part of an open-source research ecosystem
+                </h3>
+                <p className="text-[15px] text-muted-foreground leading-relaxed">
+                  This platform works alongside a dedicated human-in-the-loop annotation
+                  workbench and the parent JuDDGES research repository, maintained across
+                  collaborating teams. Together they form an end-to-end open pipeline from
+                  raw judgment text to verified research data.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/ecosystem"
+              className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-primary/30 bg-background hover:bg-primary/5 text-sm font-medium text-primary transition-colors duration-200 group"
+            >
+              Explore the ecosystem
+              <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+
+          <div className="mt-5 pt-5 border-t border-border/50 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Github className="size-3.5" /> pwr-ai/JuDDGES
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Github className="size-3.5" /> tsantosh7/hitl-tool
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Github className="size-3.5" /> pwr-ai/juddges-app
+            </span>
           </div>
         </motion.div>
       </div>
