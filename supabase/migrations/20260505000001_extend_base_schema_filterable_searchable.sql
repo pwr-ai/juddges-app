@@ -77,32 +77,66 @@ CREATE INDEX IF NOT EXISTS idx_judgments_base_reason_sent_lenient_gin
 --   D — sentences received, ancillary orders, mental/job/home narrative fields
 -- All source columns are wrapped in coalesce() so a NULL source never poisons
 -- the generated value to NULL.
+--
+-- Note on f_immutable_tsvector: PostgreSQL requires STORED GENERATED expressions
+-- to be IMMUTABLE end-to-end. Two functions in the original expression are
+-- not IMMUTABLE in Postgres and need wrapping:
+--
+--   1. to_tsvector(regconfig, text) is IMMUTABLE in Postgres ≥ 14 (verified on
+--      the Supabase Postgres 17 target), so calling it directly with an
+--      explicit 'simple'::regconfig literal would actually be safe. We still
+--      route it through the wrapper for symmetry with the array variant below
+--      and to centralise the regconfig choice.
+--   2. array_to_string(anyarray, text) is STABLE — this is the *actual* blocker
+--      that fails the original migration with SQLSTATE 42P17 ("generation
+--      expression is not immutable"), regardless of whether the surrounding
+--      to_tsvector is IMMUTABLE or not.
+--
+-- Fix: wrap both flavors in plpgsql IMMUTABLE wrappers. plpgsql is opaque to
+-- the planner's deep-immutability check (which walks into inlinable LANGUAGE
+-- sql function bodies and re-derives volatility from their dependencies);
+-- LANGUAGE sql wrappers would still be rejected. We overload by argument
+-- type — the text variant handles text columns; the text[] variant embeds
+-- the array_to_string conversion internally so the GENERATED expression
+-- never references array_to_string at all.
 -- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.f_immutable_tsvector(text)
+RETURNS tsvector
+LANGUAGE plpgsql
+IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RETURN to_tsvector('simple'::regconfig, coalesce($1, '')); END; $$;
+
+CREATE OR REPLACE FUNCTION public.f_immutable_tsvector(text[])
+RETURNS tsvector
+LANGUAGE plpgsql
+IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RETURN to_tsvector('simple'::regconfig, array_to_string(coalesce($1, ARRAY[]::TEXT[]), ' ')); END; $$;
 
 ALTER TABLE public.judgments
     ADD COLUMN IF NOT EXISTS base_search_tsv tsvector
         GENERATED ALWAYS AS (
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_case_name, '')), 'A') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_neutral_citation_number, '')), 'A') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_keywords, ARRAY[]::TEXT[]), ' ')), 'A') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_appeal_court_judges_names, '')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_representative_name, '')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_crown_attorney_general_representative_name, '')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_convict_offences, ARRAY[]::TEXT[]), ' ')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_acquit_offences, ARRAY[]::TEXT[]), ' ')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_appeal_ground, ARRAY[]::TEXT[]), ' ')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_conv_court_names, '')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_sent_court_name, '')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_agg_fact_sent, ARRAY[]::TEXT[]), ' ')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_mit_fact_sent, ARRAY[]::TEXT[]), ' ')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_sentences_received, ARRAY[]::TEXT[]), ' ')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_what_ancilliary_orders, ARRAY[]::TEXT[]), ' ')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_mental_offence, '')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_victim_mental_offence, '')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_job_offence, '')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_home_offence, '')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_victim_job_offence, '')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, coalesce(base_victim_home_offence, '')), 'D')
+            setweight(public.f_immutable_tsvector(base_case_name), 'A') ||
+            setweight(public.f_immutable_tsvector(base_neutral_citation_number), 'A') ||
+            setweight(public.f_immutable_tsvector(base_keywords), 'A') ||
+            setweight(public.f_immutable_tsvector(base_appeal_court_judges_names), 'B') ||
+            setweight(public.f_immutable_tsvector(base_offender_representative_name), 'B') ||
+            setweight(public.f_immutable_tsvector(base_crown_attorney_general_representative_name), 'B') ||
+            setweight(public.f_immutable_tsvector(base_convict_offences), 'B') ||
+            setweight(public.f_immutable_tsvector(base_acquit_offences), 'B') ||
+            setweight(public.f_immutable_tsvector(base_appeal_ground), 'B') ||
+            setweight(public.f_immutable_tsvector(base_conv_court_names), 'C') ||
+            setweight(public.f_immutable_tsvector(base_sent_court_name), 'C') ||
+            setweight(public.f_immutable_tsvector(base_agg_fact_sent), 'C') ||
+            setweight(public.f_immutable_tsvector(base_mit_fact_sent), 'C') ||
+            setweight(public.f_immutable_tsvector(base_sentences_received), 'D') ||
+            setweight(public.f_immutable_tsvector(base_what_ancilliary_orders), 'D') ||
+            setweight(public.f_immutable_tsvector(base_offender_mental_offence), 'D') ||
+            setweight(public.f_immutable_tsvector(base_victim_mental_offence), 'D') ||
+            setweight(public.f_immutable_tsvector(base_offender_job_offence), 'D') ||
+            setweight(public.f_immutable_tsvector(base_offender_home_offence), 'D') ||
+            setweight(public.f_immutable_tsvector(base_victim_job_offence), 'D') ||
+            setweight(public.f_immutable_tsvector(base_victim_home_offence), 'D')
         ) STORED;
 
 CREATE INDEX IF NOT EXISTS idx_judgments_base_search_tsv
