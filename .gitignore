@@ -9,6 +9,8 @@
 .env.production
 .env.secrets
 .env.rls-verify
+.env.bak*
+.env.*.bak*
 
 # Local git worktrees (created by superpowers:using-git-worktrees skill)
 .worktrees/
@@ -17,6 +19,7 @@
 **/.env
 **/.env.local
 **/.env.secrets
+**/.env.bak*
 
 # Dependencies
 node_modules/
