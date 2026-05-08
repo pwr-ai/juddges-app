@@ -65,12 +65,40 @@ Router-per-domain (`documents.py`, `collections.py`, `analytics.py`, `feedback.p
 - React Query (`@tanstack/react-query`) for server state, fetching, caching
 - Radix UI primitives + custom components; TipTap for rich-text annotations
 
+### Frontend design system — *Editorial Jurisprudence*
+
+Full spec: [`docs/reference/DESIGN.md`](docs/reference/DESIGN.md). Use the
+shared primitives in `frontend/components/editorial/` (barrel re-export at
+`@/components/editorial`) for all new surfaces — do not introduce new
+glassmorphism cards, purple gradients, or `bg-{indigo,purple,violet}-100`
+icon-pill motifs.
+
+Canonical raw colour tokens live in `frontend/app/globals.css`:
+
+| Token | Hex | Use |
+|---|---|---|
+| `--parchment` | `#F5F1E8` | Page surface |
+| `--parchment-deep` | `#EFE9D8` | Tonal section bands |
+| `--ink` | `#1A1A2E` | Primary text, strong rules |
+| `--ink-soft` | `#5A5A75` | Secondary text |
+| `--rule` | `#C9C2B0` | Hairline borders |
+| `--rule-strong` | `#A89F88` | Medium dividers |
+| `--oxblood` | `#8B1E3F` | Authority — primary action, italic emphasis |
+| `--oxblood-deep` | `#6F1230` | Hover state for oxblood |
+| `--gold` | `#B8954A` | Citation gold — markers, highlights |
+| `--gold-soft` | `#E8DCB8` | Tinted accent backgrounds |
+
+Typography: `Instrument Serif` (display) · `Geist Sans` (body) · `Geist Mono`
+(citations / eyebrows / tabular numerals).
+
 ### Database
 PostgreSQL via Supabase. Main schema: `supabase/migrations/20260209000001_create_judgments_table.sql` and follow-on migrations. The `judgments` table has full-text (GIN) and semantic (pgvector HNSW) indexes — combine for hybrid search.
 
 ## Branching & Release Flow
 
-Two-branch model:
+> ⚠️ **TEMPORARY OVERRIDE (active 2026-05-07):** `develop` is being skipped. All work currently goes **directly to `main` via PRs** — feature branches start from `main` and PR back into `main`. Default to `main` as the base branch when helping with branching commands. The two-branch model below describes the steady state and will be reinstated when this override is lifted; until then, ignore the `develop` references.
+
+Two-branch model (steady state — currently overridden, see banner above):
 
 - **`main`** is production. Only release PRs (from `develop`) and `hotfix/*` PRs land here. Production images are built **manually** from a clean `main` via `scripts/build_and_push_prod.sh`.
 - **`develop`** is the integration branch. Feature/fix branches start from `develop` and PR back into `develop`.
