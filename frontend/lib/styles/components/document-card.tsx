@@ -35,7 +35,6 @@ function buildDocumentHref(documentId: string, from?: string, chatId?: string): 
 function formatDocumentType(type?: string | null): string {
   if (!type) return "Document";
   if (type === "judgment" || type === "judgement") return "Judgment";
-  if (type === "tax_interpretation") return "Document";
   return type.replace(/_/g, " ");
 }
 

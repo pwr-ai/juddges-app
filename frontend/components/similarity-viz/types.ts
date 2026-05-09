@@ -2,12 +2,10 @@
  * Type definitions for Document Similarity Visualization
  */
 
-import { DocumentType } from '@/types/search';
-
 export interface GraphNode {
   id: string;
   title: string;
-  documentType: DocumentType;
+  documentType: string;
   documentId: string;
   fullText: string;
   summary?: string;
@@ -52,7 +50,6 @@ export interface GraphData {
 }
 
 export interface SimilarityFilters {
-  documentTypes: DocumentType[];
   languages: string[];
   dateRange: {
     start: Date;
@@ -94,7 +91,7 @@ export interface SimilarityAPIResponse {
   documents: Array<{
     document_id: string;
     title: string | null;
-    document_type: DocumentType;
+    document_type: string;
     full_text: string;
     summary?: string | null;
     created_at: string;
@@ -109,22 +106,17 @@ export interface SimilarityAPIResponse {
 
 export interface GraphColors {
   judgment: string;
-  tax_interpretation: string;
   regulation: string;
-  error: string;
   default: string;
 }
 
 export const GRAPH_COLORS: GraphColors = {
   judgment: '#6366f1',           // Indigo
-  tax_interpretation: '#10B981', // Emerald
   regulation: '#F59E0B',         // Amber
-  error: '#EF4444',              // Red
   default: '#8B5CF6',            // Purple
 };
 
 export const DEFAULT_FILTERS: SimilarityFilters = {
-  documentTypes: [],
   languages: [],
   dateRange: null,
   similarityThreshold: 50,

@@ -848,15 +848,6 @@ class SearchDocumentsRequest(BaseModel):
         description="Language codes to filter by. Accepts 'pl', 'en', or 'uk' (normalized to 'en'). Note: 'uk' = United Kingdom (English), not Ukraine.",
         examples=[["pl"], ["en"], ["uk"], ["pl", "en"]],
     )
-    document_types: list[str] | None = Field(
-        default=None,
-        description="Document types to filter by. Accepts 'judgment' or 'tax_interpretation'",
-        examples=[
-            ["tax_interpretation"],
-            ["judgment"],
-            ["tax_interpretation", "judgment"],
-        ],
-    )
 
     @field_validator("languages")
     @classmethod
@@ -864,13 +855,6 @@ class SearchDocumentsRequest(BaseModel):
         from app.utils.validators import validate_languages
 
         return validate_languages(v)
-
-    @field_validator("document_types")
-    @classmethod
-    def validate_document_types_field(cls, v: list[str] | None) -> list[str] | None:
-        from app.utils.validators import validate_document_types
-
-        return validate_document_types(v)
 
     @field_validator("mode")
     @classmethod
@@ -939,15 +923,6 @@ class SearchChunksRequest(BaseModel):
         description="Language codes to filter by. Accepts 'pl', 'en', or 'uk' (normalized to 'en'). Note: 'uk' = United Kingdom (English), not Ukraine.",
         examples=[["pl"], ["en"], ["uk"], ["pl", "en"]],
     )
-    document_types: list[str] | None = Field(
-        default=None,
-        description="Document types to filter by. Accepts 'judgment' or 'tax_interpretation'",
-        examples=[
-            ["tax_interpretation"],
-            ["judgment"],
-            ["tax_interpretation", "judgment"],
-        ],
-    )
     segment_types: list[str] | None = Field(
         default=None,
         description="Segment types to filter by (e.g., 'uzasadnienie', 'sentencja').",
@@ -983,6 +958,12 @@ class SearchChunksRequest(BaseModel):
     include_count: bool = Field(
         default=True,
         description="Whether to include estimated total count on first request. Set to False for subsequent load-more requests.",
+    )
+    result_view: Literal["card", "full"] = Field(
+        default="card",
+        description="Payload size selector: 'card' returns a trimmed ~10-field "
+        "card-friendly document (default, fastest), 'full' returns the legacy "
+        "complete LegalDocument payload.",
     )
 
     # NEW FILTER FIELDS FOR ENHANCED FILTERING
@@ -1038,13 +1019,6 @@ class SearchChunksRequest(BaseModel):
         from app.utils.validators import validate_languages
 
         return validate_languages(v)
-
-    @field_validator("document_types")
-    @classmethod
-    def validate_document_types_field(cls, v: list[str] | None) -> list[str] | None:
-        from app.utils.validators import validate_document_types
-
-        return validate_document_types(v)
 
     @field_validator("segment_types")
     @classmethod

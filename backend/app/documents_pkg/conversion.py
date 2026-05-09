@@ -1,7 +1,7 @@
 """Document type conversion functions."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from juddges_search.models import DocumentType, IssuingBody, LegalDocument
 
@@ -11,12 +11,17 @@ from app.utils.date_utils import parse_date
 def _convert_judgment_to_legal_document(
     judgment_data: dict[str, Any],
     include_vectors: bool = False,
+    result_view: Literal["card", "full"] = "full",
 ) -> LegalDocument:
     """Convert judgment table data to LegalDocument model.
 
     Args:
         judgment_data: Dictionary from judgments table query
         include_vectors: Whether to include vector embeddings
+        result_view: ``"card"`` returns only the small set of fields the search
+            cards render (~10 fields, all other optional fields are left at
+            their None/empty defaults, ``full_text`` is dropped); ``"full"``
+            preserves the historical fully-populated payload.
 
     Returns:
         LegalDocument model instance
@@ -24,13 +29,40 @@ def _convert_judgment_to_legal_document(
     # Map jurisdiction to country code
     country = judgment_data.get("jurisdiction", "PL")
 
-    # Parse dates
+    # Parse dates (always cheap; needed for both views)
     date_issued = parse_date(judgment_data.get("decision_date"))
     publication_date = parse_date(judgment_data.get("publication_date"))
+    court_name = judgment_data.get("court_name")
 
+    # Get metadata from JSONB field for language detection. We avoid mutating
+    # the shared dict in card view because we don't need to attach case_type /
+    # decision_type to a payload we won't ship.
+    metadata = judgment_data.get("metadata", {}) or {}
+
+    if result_view == "card":
+        # Card view: minimal payload — only the fields the SearchResultCard
+        # renders. ``country`` and ``full_text`` are required by the
+        # ``LegalDocument`` model, so we keep ``country`` (cheap, 2-3 bytes)
+        # and pass an empty ``full_text``.
+        return LegalDocument(
+            document_id=str(judgment_data.get("id", "")),
+            document_type=DocumentType.JUDGMENT,
+            title=judgment_data.get("title"),
+            date_issued=date_issued,
+            language=metadata.get("language", "pl" if country == "PL" else "en")
+            if isinstance(metadata, dict)
+            else ("pl" if country == "PL" else "en"),
+            document_number=judgment_data.get("case_number"),
+            country=country,
+            full_text="",
+            summary=judgment_data.get("summary"),
+            publication_date=publication_date,
+            court_name=court_name,
+        )
+
+    # Full view: keep the historical, fully-populated payload.
     # Build issuing body from court information
     issuing_body = None
-    court_name = judgment_data.get("court_name")
     if court_name:
         issuing_body = IssuingBody(
             name=court_name,
@@ -43,10 +75,8 @@ def _convert_judgment_to_legal_document(
     if include_vectors and judgment_data.get("embedding"):
         vectors["default"] = judgment_data["embedding"]
 
-    # Get metadata from JSONB field and merge with judgment fields
-    metadata = judgment_data.get("metadata", {}) or {}
+    # Add judgment-specific fields to metadata for the full payload
     if isinstance(metadata, dict):
-        # Add judgment-specific fields to metadata
         if judgment_data.get("case_type"):
             metadata["case_type"] = judgment_data["case_type"]
         if judgment_data.get("decision_type"):

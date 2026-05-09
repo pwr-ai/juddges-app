@@ -43,7 +43,6 @@ export function SaveSearchDialog({ trigger }: SaveSearchDialogProps) {
  filters: {
  keywords: Array.from(searchStore.filters.keywords),
  legalConcepts: Array.from(searchStore.filters.legalConcepts),
- documentTypes: Array.from(searchStore.filters.documentTypes),
  issuingBodies: Array.from(searchStore.filters.issuingBodies),
  languages: Array.from(searchStore.filters.languages),
  dateFrom: searchStore.filters.dateFrom?.toISOString()?.split('T')[0],
@@ -54,7 +53,6 @@ export function SaveSearchDialog({ trigger }: SaveSearchDialogProps) {
  customMetadata: searchStore.filters.customMetadata,
  },
  pageSize: searchStore.pageSize,
- ignoreUnknownType: searchStore.ignoreUnknownType,
  };
 
  const result = await createSearch({
@@ -63,7 +61,6 @@ export function SaveSearchDialog({ trigger }: SaveSearchDialogProps) {
  folder: folder.trim() || undefined,
  query: searchStore.query,
  search_config: config,
- document_types: searchStore.documentTypes,
  languages: Array.from(searchStore.selectedLanguages),
  search_mode: searchStore.searchType,
  is_shared: isShared,
@@ -176,9 +173,6 @@ export function SaveSearchDialog({ trigger }: SaveSearchDialogProps) {
  <p>Mode: {searchStore.searchType === 'thinking' ? 'AI Enhanced' : 'Fast'}</p>
  {searchStore.selectedLanguages.size > 0 && (
  <p>Languages: {Array.from(searchStore.selectedLanguages).map(l => l.toUpperCase()).join(', ')}</p>
- )}
- {searchStore.documentTypes.length > 0 && (
- <p>Types: {searchStore.documentTypes.join(', ')}</p>
  )}
  {searchStore.getActiveFilterCount() > 0 && (
  <p>{searchStore.getActiveFilterCount()} active filter(s)</p>

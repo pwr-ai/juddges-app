@@ -81,14 +81,13 @@ test.describe('Dashboard API', () => {
     const response = await request.get('/dashboard/stats');
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data).toHaveProperty('total_documents');
-    expect(data).toHaveProperty('judgments');
-    expect(data).toHaveProperty('tax_interpretations');
-    expect(data).toHaveProperty('added_this_week');
-    expect(typeof data.total_documents).toBe('number');
-    expect(typeof data.judgments).toBe('number');
-    expect(typeof data.tax_interpretations).toBe('number');
-    expect(typeof data.added_this_week).toBe('number');
+    // Search collapsed to judgment-only — DashboardStats now exposes
+    // `total_judgments` plus jurisdiction breakdowns; the legacy
+    // `tax_interpretations` / `total_documents` / `added_this_week` keys
+    // were removed.
+    expect(data).toHaveProperty('total_judgments');
+    expect(typeof data.total_judgments).toBe('number');
+    expect(data).toHaveProperty('jurisdictions');
   });
 
   test('GET /dashboard/trending-topics returns topic list', async ({ request }) => {

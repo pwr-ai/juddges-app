@@ -644,7 +644,7 @@ async def get_featured_examples(
                 "judgment_date, country, language, issuing_body, "
                 "full_text, docket_number, court_name, judgment_id"
             )
-            .in_("document_type", ["judgment", "tax_interpretation"])
+            .eq("document_type", "judgment")
             .not_.is_("title", "null")
             .limit(limit * 3)
             .execute()
@@ -765,7 +765,6 @@ async def test_document_counts(
         logger.info("Fetching document counts by type...")
         document_types = [
             "judgment",
-            "tax_interpretation",
             "ruling",
             "opinion",
             "legislation",

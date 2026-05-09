@@ -9,19 +9,16 @@
 import React from "react";
 import { Badge, Button, Calendar, AdvancedFilterPanel } from "@/lib/styles/components";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { X, CalendarIcon, Filter, Scale, Calculator } from "lucide-react";
+import { X, CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { cn, formatSnakeCaseToHumanReadable } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
-import { getActiveButtonStyle } from "@/lib/styles/components/buttons";
 import { AccentButton } from "@/lib/styles/components";
-import { DocumentType } from "@/types/search";
 
 
 interface FiltersState {
  keywords: Set<string>;
  legalConcepts: Set<string>;
- documentTypes: Set<string>;
  issuingBodies: Set<string>;
  languages: Set<string>;
  dateFrom: Date | undefined;
@@ -35,7 +32,6 @@ interface FiltersState {
 interface AvailableFilters {
  keywords: string[];
  legalConcepts: string[];
- documentTypes: string[];
  issuingBodies: string[];
  languages: string[];
  jurisdictions: string[];
@@ -53,7 +49,6 @@ export interface SearchFiltersProps {
  activeFilterCount: number;
  searchResults?: { documents: Array<{
  keywords?: string[] | null;
- document_type?: string | null;
  language?: string | null;
  jurisdiction?: string | null;
  court_level?: string | null;
@@ -66,21 +61,6 @@ export interface SearchFiltersProps {
  /** Custom metadata values available for each key */
  customMetadataValues?: Record<string, string[]>;
 }
-
-
-
-// Helper function to get icon for document type
-const getDocumentTypeIcon = (type: string): React.ComponentType<{ className?: string }> | null => {
- const normalizedType = type.toLowerCase();
- if (normalizedType === 'judgment' || normalizedType === 'court_judgment') {
- return Scale;
- }
- if (normalizedType === 'tax_interpretation' || normalizedType === 'interpretation') {
- return Calculator;
- }
- // Intentionally no icon for error/undefined document type
- return null;
-};
 
 // Date range input component
 const DateRangeInput = ({ label, date, onSelect, minDate, maxDate }: {
@@ -164,20 +144,6 @@ export function SearchFilters({
  .sort((a, b) => b.count - a.count) // Sort by count descending
  .map(({ keyword }) => keyword)
  : availableFilters.keywords;
-
- // Calculate document type counts and filter/sort
- const documentTypeCounts = searchResults?.documents
- ? availableFilters.documentTypes
- .map(type => {
- const count = searchResults.documents.filter(doc =>
- doc.document_type === type
- ).length;
- return { type, count };
- })
- .filter(({ count }) => count > 1) // Filter out document types with only 1 result
- .sort((a, b) => b.count - a.count) // Sort by count descending
- .map(({ type }) => type)
- : availableFilters.documentTypes;
 
  // Calculate language counts and filter/sort
  const languageCounts = searchResults?.documents
@@ -298,65 +264,6 @@ export function SearchFilters({
  {lang === 'pl' ? '🇵🇱' : lang === 'uk' || lang === 'en' ? '🇬🇧' : ''} {lang.toUpperCase()}
  </button>
  ))}
- </div>
- </div>
- )}
-
- {/* Document types filter - Only show if there are document types */}
- {documentTypeCounts.length > 0 && (
- <div className="space-y-3">
- <h3 className="text-sm font-bold text-slate-900">
- Document Types
- </h3>
- <div className="flex flex-wrap gap-3">
- {documentTypeCounts.map((type) => {
- const Icon = getDocumentTypeIcon(type);
- const label =
- type === DocumentType.ERROR
- ? "? Undefined"
- : formatSnakeCaseToHumanReadable(type);
- return (
- <button
- key={type}
- type="button"
- className={cn(
- // Technical Chip Architecture
-"inline-flex items-center",
-"px-4 py-2",
-"rounded-lg", // 0.5rem - Squarer
-"gap-2",
-"bg-white/40",
-"border border-white/80",
-"text-slate-500",
-"text-sm",
-"font-medium",
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
-"flex items-center gap-1.5",
- filters.documentTypes.has(type)
- ? cn(
-"bg-blue-500/8",
-"border-blue-500",
-"text-blue-700",
-"shadow-sm"
- )
- : cn(
-"hover:bg-white",
-"hover:text-slate-900",
-"hover:-translate-y-0.5",
-"hover:shadow-sm"
- )
- )}
- onClick={(e) => {
- e.stopPropagation();
- onFilterToggle('documentTypes', type);
- }}
- >
- {Icon && <Icon className="h-3 w-3"/>}
- {label}
- </button>
- );
- })}
  </div>
  </div>
  )}

@@ -6,7 +6,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SearchResultsSection } from '@/lib/styles/components/search/SearchResultsSection';
-import { DocumentType } from '@/types/search';
 
 jest.mock('@/lib/styles/components', () => ({
   SearchDocumentCard: ({ doc, isSelected, onToggleSelection, resultPosition }: any) => (
@@ -45,13 +44,13 @@ describe('SearchResultsSection', () => {
     {
       document_id: 'doc-1',
       title: 'First judgment',
-      document_type: DocumentType.JUDGMENT,
+      document_type: 'judgment',
       language: 'en',
     },
     {
       document_id: 'doc-2',
       title: 'Second judgment',
-      document_type: DocumentType.JUDGMENT,
+      document_type: 'judgment',
       language: 'pl',
     },
   ];

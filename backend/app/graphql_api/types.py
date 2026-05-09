@@ -16,7 +16,6 @@ import strawberry
 @strawberry.enum
 class DocumentTypeEnum(enum.Enum):
     JUDGMENT = "judgment"
-    TAX_INTERPRETATION = "tax_interpretation"
 
 
 @strawberry.enum

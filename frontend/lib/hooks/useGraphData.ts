@@ -11,12 +11,11 @@ import {
   DocumentSimilarity,
   GRAPH_COLORS,
 } from '@/components/similarity-viz/types';
-import { DocumentType } from '@/types/search';
 
 interface Document {
   document_id: string;
   title: string | null;
-  document_type: DocumentType;
+  document_type: string;
   full_text: string;
   summary?: string | null;
   created_at: string | null | undefined;
@@ -93,14 +92,6 @@ const findSharedConcepts = (
  * Check if a document matches the current filters
  */
 const matchesFilters = (doc: Document, filters: SimilarityFilters): boolean => {
-  // Document type filter
-  if (
-    filters.documentTypes.length > 0 &&
-    !filters.documentTypes.includes(doc.document_type)
-  ) {
-    return false;
-  }
-
   // Language filter
   if (
     filters.languages.length > 0 &&
@@ -256,7 +247,10 @@ export const useGraphData = (
  * Get node color based on document type
  */
 export const getNodeColor = (node: GraphNode): string => {
-  return GRAPH_COLORS[node.documentType] || GRAPH_COLORS.default;
+  // The graph today only renders judgments, but keep the lookup defensive in
+  // case other document types ever flow through.
+  const key = node.documentType as keyof typeof GRAPH_COLORS;
+  return GRAPH_COLORS[key] ?? GRAPH_COLORS.default;
 };
 
 /**

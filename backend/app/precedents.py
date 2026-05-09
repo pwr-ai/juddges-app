@@ -68,7 +68,7 @@ class PrecedentFilters(BaseModel):
 
     document_types: list[str] | None = Field(
         default=None,
-        description="Filter by document types (e.g., 'judgment', 'tax_interpretation')",
+        description="Filter by document types (e.g., 'judgment')",
     )
     court_names: list[str] | None = Field(
         default=None,

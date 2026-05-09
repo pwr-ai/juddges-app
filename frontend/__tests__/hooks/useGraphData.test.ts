@@ -14,7 +14,6 @@ import {
   formatDate,
   truncateText,
 } from '@/lib/hooks/useGraphData';
-import { DocumentType } from '@/types/search';
 import type {
   SimilarityFilters,
   DocumentSimilarity,
@@ -28,7 +27,7 @@ function createDocument(overrides: Partial<any> = {}) {
   return {
     document_id: 'doc-1',
     title: 'Test Judgment',
-    document_type: DocumentType.JUDGMENT,
+    document_type: 'judgment',
     full_text: 'Full text content.',
     summary: 'Summary text.',
     created_at: '2024-01-15T00:00:00Z',
@@ -42,7 +41,6 @@ function createDocument(overrides: Partial<any> = {}) {
 
 function createFilters(overrides: Partial<SimilarityFilters> = {}): SimilarityFilters {
   return {
-    documentTypes: [],
     languages: [],
     dateRange: null,
     similarityThreshold: 0, // low threshold to include everything
@@ -91,7 +89,7 @@ describe('useGraphData', () => {
       const node = result.current.nodes[0];
       expect(node.id).toBe('doc-1');
       expect(node.title).toBe('Test Judgment');
-      expect(node.documentType).toBe(DocumentType.JUDGMENT);
+      expect(node.documentType).toBe('judgment');
       expect(node.language).toBe('en');
       expect(node.keywords).toEqual(['contract']);
     });
@@ -186,25 +184,6 @@ describe('useGraphData', () => {
       expect(result.current.links).toHaveLength(0);
     });
 
-    it('excludes links where one document is filtered out', () => {
-      const docs = [
-        createDocument({ document_id: 'a', document_type: DocumentType.JUDGMENT }),
-        createDocument({ document_id: 'b', document_type: DocumentType.TAX_INTERPRETATION }),
-      ];
-      const sims = [createSimilarity('a', 'b', 0.9)];
-      // Filter to only JUDGMENT type
-      const filters = createFilters({
-        documentTypes: [DocumentType.JUDGMENT],
-        similarityThreshold: 0,
-      });
-
-      const { result } = renderHook(() =>
-        useGraphData(docs, sims, filters)
-      );
-
-      // Only 'a' passes the filter, so no link can be formed
-      expect(result.current.links).toHaveLength(0);
-    });
   });
 
   describe('shared concepts', () => {
@@ -266,26 +245,6 @@ describe('useGraphData', () => {
       const nodeA = result.current.nodes.find((n) => n.id === 'a');
       expect(nodeA?.clusterSize).toBe(2);
       expect(nodeA?.avgSimilarity).toBeCloseTo(0.7, 5);
-    });
-  });
-
-  describe('document type filtering', () => {
-    it('filters documents by type', () => {
-      const docs = [
-        createDocument({ document_id: 'a', document_type: DocumentType.JUDGMENT }),
-        createDocument({ document_id: 'b', document_type: DocumentType.TAX_INTERPRETATION }),
-      ];
-      const filters = createFilters({
-        documentTypes: [DocumentType.JUDGMENT],
-        similarityThreshold: 0,
-      });
-
-      const { result } = renderHook(() =>
-        useGraphData(docs, [], filters)
-      );
-
-      expect(result.current.nodes).toHaveLength(1);
-      expect(result.current.nodes[0].id).toBe('a');
     });
   });
 
@@ -484,13 +443,8 @@ describe('useGraphData', () => {
 
 describe('getNodeColor', () => {
   it('returns the correct color for a judgment node', () => {
-    const node = { documentType: DocumentType.JUDGMENT } as GraphNode;
+    const node = { documentType: 'judgment' } as GraphNode;
     expect(getNodeColor(node)).toBe('#6366f1');
-  });
-
-  it('returns the correct color for a tax_interpretation node', () => {
-    const node = { documentType: DocumentType.TAX_INTERPRETATION } as GraphNode;
-    expect(getNodeColor(node)).toBe('#10B981');
   });
 
   it('returns default color for unknown document type', () => {

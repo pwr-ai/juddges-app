@@ -98,13 +98,6 @@ export const DOCUMENT_TYPE_CONFIGS: Record<string, DocumentTypeConfig> = {
     bgColor: 'bg-judgment/10',
     emoji: '⚖️',
   },
-  tax_interpretation: {
-    icon: 'FileText',
-    label: 'Document',
-    color: 'text-document',
-    bgColor: 'bg-document/10',
-    emoji: '📄',
-  },
   regulation: {
     icon: 'BookOpen',
     label: 'Legal Regulation',

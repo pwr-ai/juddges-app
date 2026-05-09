@@ -22,7 +22,6 @@ function makeSavedSearch(overrides: Partial<SavedSearch> = {}): SavedSearch {
     folder: null,
     query: 'contract law',
     search_config: {},
-    document_types: ['judgment'],
     languages: ['en'],
     search_mode: 'thinking',
     is_shared: false,

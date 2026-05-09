@@ -68,7 +68,6 @@ class SearchDocumentsInput:
     mode: str = "rabbit"
     alpha: float = 0.5
     languages: list[str] | None = None
-    document_types: list[str] | None = None
     return_properties: list[str] | None = None
 
 
@@ -80,7 +79,6 @@ class SearchChunksInput:
     limit_docs: int = 20
     alpha: float = 0.7
     languages: list[str] | None = None
-    document_types: list[str] | None = None
     segment_types: list[str] | None = None
     fetch_full_documents: bool = False
     mode: str = "rabbit"
@@ -180,7 +178,6 @@ class Query:
             mode=input.mode,
             alpha=input.alpha,
             languages=input.languages,
-            document_types=input.document_types,
             limit_docs=input.limit_docs if hasattr(input, "limit_docs") else 20,
             offset=0,
         )
@@ -228,7 +225,6 @@ class Query:
             limit_docs=input.limit_docs,
             alpha=input.alpha,
             languages=input.languages,
-            document_types=input.document_types,
             segment_types=input.segment_types,
             fetch_full_documents=input.fetch_full_documents,
             mode=input.mode,

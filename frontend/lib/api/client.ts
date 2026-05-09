@@ -1,4 +1,3 @@
-import { DocumentType } from "@/types/search";
 export type { SearchResult } from "@/types/search";
 import logger from "@/lib/logger";
 
@@ -6,7 +5,7 @@ export const apiLogger = logger.child('api');
 
 export interface DocumentRetrievalInput {
   question: string;
-  document_types?: DocumentType[] | null;
+  document_types?: string[] | null;
   languages?: string[] | null;
   max_documents?: number | null;
   score_threshold?: number | null;
@@ -46,7 +45,7 @@ export interface StreamData {
 export interface SearchDocumentsInput {
   question: string;
   maxDocuments: number;
-  documentTypes?: DocumentType[];
+  documentTypes?: string[];
   languages?: string[];
   mode?: "rabbit" | "thinking";
 }

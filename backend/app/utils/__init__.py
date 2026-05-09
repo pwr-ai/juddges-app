@@ -9,7 +9,6 @@ from app.utils.similarity_graph import (
 )
 from app.utils.validators import (
     validate_array_size,
-    validate_document_types,
     validate_languages,
     validate_string_length,
 )
@@ -21,7 +20,6 @@ __all__ = [
     "serialize_date",
     "serialize_document_for_similarity",
     "validate_array_size",
-    "validate_document_types",
     "validate_languages",
     "validate_string_length",
 ]

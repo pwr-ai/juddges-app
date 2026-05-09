@@ -5275,7 +5275,7 @@ export interface paths {
          *         {
          *             "message": "I need to extract drug information from court documents",
          *             "collection_id": "drug-cases",
-         *             "document_type": "tax_interpretation",
+         *             "document_type": "judgment",
          *             "mode": "rabbit"
          *         }
          *         ```
@@ -8525,7 +8525,7 @@ export interface components {
             chat_history?: (components["schemas"]["HumanMessage"] | components["schemas"]["AIMessage"])[] | null;
             /**
              * Document Types
-             * @description List of document types to filter (e.g., ['judgment', 'tax_interpretation'])
+             * @description List of document types to filter (e.g., ['judgment'])
              */
             document_types?: string[] | null;
             /**
@@ -8683,9 +8683,14 @@ export interface components {
         /**
          * DocumentType
          * @description Enumeration of supported legal document types.
+         *
+         *     Search is judgment-only as of 2026-05-09; the enum is retained as a
+         *     one-value placeholder so existing imports keep compiling. See
+         *     ``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``
+         *     for the migration that collapsed the enum.
          * @enum {string}
          */
-        DocumentType: "judgment" | "tax_interpretation";
+        DocumentType: "judgment";
         /**
          * DocumentVersion
          * @description A single version entry for a document.
@@ -10843,7 +10848,7 @@ export interface components {
             date_to?: string | null;
             /**
              * Document Types
-             * @description Filter by document types (e.g., 'judgment', 'tax_interpretation')
+             * @description Filter by document types (e.g., 'judgment')
              */
             document_types?: string[] | null;
             /**
@@ -12082,7 +12087,7 @@ export interface components {
             /**
              * Document Type
              * @description Document type for schema generation
-             * @default tax_interpretation
+             * @default judgment
              */
             document_type: string;
             /**
@@ -12483,21 +12488,6 @@ export interface components {
              */
             decision_types?: string[] | null;
             /**
-             * Document Types
-             * @description Document types to filter by. Accepts 'judgment' or 'tax_interpretation'
-             * @example [
-             *       "tax_interpretation"
-             *     ]
-             * @example [
-             *       "judgment"
-             *     ]
-             * @example [
-             *       "tax_interpretation",
-             *       "judgment"
-             *     ]
-             */
-            document_types?: string[] | null;
-            /**
              * Fetch Full Documents
              * @description Whether to fetch full document objects in addition to chunks
              * @default false
@@ -12604,6 +12594,13 @@ export interface components {
              * @example interpretacja podatkowa
              */
             query: string;
+            /**
+             * Result View
+             * @description Payload size selector: 'card' returns a trimmed ~10-field card-friendly document (default, fastest), 'full' returns the legacy complete LegalDocument payload.
+             * @default card
+             * @enum {string}
+             */
+            result_view: "card" | "full";
             /**
              * Segment Types
              * @description Segment types to filter by (e.g., 'uzasadnienie', 'sentencja').
@@ -17941,8 +17938,6 @@ export interface operations {
                 sample_size?: number;
                 /** @description Minimum shared references for an edge */
                 min_shared_refs?: number;
-                /** @description Comma-separated document types to filter */
-                document_types?: string | null;
             };
             header?: never;
             path?: never;

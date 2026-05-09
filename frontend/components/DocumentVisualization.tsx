@@ -56,7 +56,6 @@ const DOCUMENT_TYPE_COLORS: Record<string, string> = {
  'tax_ruling': '#ff7f0e',
  'legislation': '#2ca02c',
  'administrative_decision': '#d62728',
- 'tax_interpretation': '#9467bd',
  'legal_opinion': '#8c564b',
  'regulation': '#e377c2',
  'guideline': '#7f7f7f',
