@@ -1546,7 +1546,7 @@ async def search_documents(request: SearchChunksRequest):
 
     logger.info(
         f"Search request: query='{query[:100]}...', limit={limit}, "
-        f"languages={request.languages}, document_types={request.document_types}, "
+        f"languages={request.languages}, "
         f"jurisdictions={request.jurisdictions}, case_types={request.case_types}"
     )
 
