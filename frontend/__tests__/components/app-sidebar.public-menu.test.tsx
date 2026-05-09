@@ -38,6 +38,8 @@ jest.mock('@/contexts/LanguageContext', () => ({
         'navigation.search': 'Search',
         'navigation.extractStructureData': 'Extract Structured Data',
         'navigation.extractions': 'Extractions',
+        'navigation.dashboard': 'Dashboard',
+        'navigation.searchJudgments': 'Search Judgments',
       };
 
       return map[key] ?? key;
@@ -83,5 +85,36 @@ describe('AppSidebar public navigation', () => {
     expect(container.querySelector('a[href="/extractions"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/collections"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/dataset-comparison"]')).not.toBeInTheDocument();
+  });
+
+  it('shows the Dashboard link as the first item for authenticated users', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
+
+    const { container, debug } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    // Find all navigation links in sidebar content
+    const allLinks = container.querySelectorAll('a');
+    const mainNavigationLinks = Array.from(allLinks).filter(link =>
+      link.getAttribute('href') &&
+      !link.closest('[class*="header"]') // Exclude header links
+    );
+
+    expect(mainNavigationLinks.length).toBeGreaterThan(0);
+
+    // Get the dashboard and search links
+    const dashboardLink = mainNavigationLinks.find(link => link.getAttribute('href') === '/');
+    const searchLink = mainNavigationLinks.find(link => link.getAttribute('href') === '/search');
+
+    expect(dashboardLink).toBeInTheDocument();
+    expect(searchLink).toBeInTheDocument();
+
+    // Check DOM order: Dashboard should appear before Search in the main navigation
+    const dashboardIndex = mainNavigationLinks.indexOf(dashboardLink);
+    const searchIndex = mainNavigationLinks.indexOf(searchLink);
+    expect(dashboardIndex).toBeLessThan(searchIndex);
   });
 });

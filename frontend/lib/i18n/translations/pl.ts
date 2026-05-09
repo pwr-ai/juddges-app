@@ -66,7 +66,7 @@ export const pl: Translations = {
   navigation: {
     // Main navigation
     home: 'Strona główna',
-    dashboard: 'Panel główny',
+    dashboard: 'Pulpit',
     search: 'Szukaj',
     chat: 'Czat',
     aiAssistant: 'Asystent AI',
@@ -89,6 +89,7 @@ export const pl: Translations = {
     // Resources
     resources: 'Zasoby',
     publications: 'Publikacje',
+    managePublications: 'Zarządzaj publikacjami',
     researchBlog: 'Blog badawczy',
     useCases: 'Przypadki użycia',
     settings: 'Ustawienia',
