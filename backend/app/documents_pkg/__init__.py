@@ -413,6 +413,25 @@ async def search_documents(request: SearchChunksRequest):
     limit = request.limit_docs or 20
     offset = request.offset or 0
 
+    # Full-response Redis cache (rabbit mode only). A hit here skips embedding,
+    # RPC, rerank, payload build, estimated_total — the entire pipeline. Any
+    # cache failure is swallowed so search continues to work without Redis.
+    if request.mode != "thinking":
+        try:
+            from app.search_cache import get_cached_search
+
+            cached_response = await get_cached_search(request)
+            if cached_response is not None:
+                logger.debug(
+                    "search_cache hit: query='{}...' offset={} limit={}",
+                    query[:60],
+                    offset,
+                    limit,
+                )
+                return cached_response
+        except Exception as cache_err:
+            logger.warning("search_cache lookup failed (non-fatal): {}", cache_err)
+
     try:
         import sentry_sdk
 
@@ -596,7 +615,7 @@ async def search_documents(request: SearchChunksRequest):
         except Exception as telem_err:
             logger.debug(f"Search telemetry skipped: {telem_err}")
 
-        return SearchChunksResponse(
+        response = SearchChunksResponse(
             chunks=chunks,
             documents=documents,
             total_chunks=len(chunks),
@@ -611,6 +630,19 @@ async def search_documents(request: SearchChunksRequest):
             inferred_filters=inferred_filters if request.mode == "thinking" else None,
             query_analysis_source=query_analysis_source,
         )
+
+        # Populate the full-response cache for subsequent identical requests.
+        # Skipped for thinking mode (non-deterministic) and for any error path
+        # (we never reach here on exception).
+        if request.mode != "thinking":
+            try:
+                from app.search_cache import set_cached_search
+
+                await set_cached_search(request, response)
+            except Exception as cache_err:
+                logger.warning("search_cache write failed (non-fatal): {}", cache_err)
+
+        return response
 
     except HTTPException:
         raise
