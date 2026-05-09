@@ -241,7 +241,11 @@ async def _compute_fallback_stats() -> DashboardStats:
 
 @router.get("/stats", response_model=DashboardStats)
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
-async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_api_key)):
+async def get_dashboard_stats(
+    request: Request,
+    response: Response,
+    api_key: str = Depends(verify_api_key),
+):
     """Get precomputed dashboard statistics."""
     cache_key = "dashboard:stats"
     now = datetime.now(UTC)
@@ -250,20 +254,22 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
         return cached_stats
 
     try:
-        response = (
+        stats_response = (
             supabase.table("dashboard_precomputed_stats")
             .select("stat_key, stat_value, computed_at")
             .execute()
         )
 
-        if not response.data:
+        if not stats_response.data:
             # Fallback: try to compute basic stats directly from judgments
             return await _compute_fallback_stats()
 
         # Build stats from precomputed values
-        stats_map = {row["stat_key"]: row["stat_value"] for row in response.data}
+        stats_map = {row["stat_key"]: row["stat_value"] for row in stats_response.data}
         # Get computed_at from the first row's column value
-        row_computed_at = response.data[0].get("computed_at") if response.data else None
+        row_computed_at = (
+            stats_response.data[0].get("computed_at") if stats_response.data else None
+        )
 
         stats = DashboardStats(
             total_judgments=stats_map.get("total_judgments", 0),
