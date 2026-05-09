@@ -43,12 +43,21 @@ export async function updateSession(request: NextRequest) {
       error,
     } = await supabase.auth.getUser();
 
-    // Only set user if no error occurred
     if (!error) {
       user = authUser;
+    } else if (
+      error.message !== "Auth session missing!" &&
+      !error.message.includes("refresh_token_not_found")
+    ) {
+      // Surface unexpected auth failures (expired tokens that won't refresh,
+      // project-ref mismatches, network errors). Benign anonymous-user errors
+      // are still ignored to avoid console spam.
+      logger.warn("Auth session lookup failed in middleware", {
+        path: request.nextUrl.pathname,
+        message: error.message,
+        status: error.status,
+      });
     }
-    // Silently ignore "refresh_token_not_found" and other auth errors
-    // This allows unauthenticated users to access public pages without console spam
   } catch (error) {
     // Catch any unexpected errors and continue without user
     logger.error("Unexpected error in auth middleware: ", error);

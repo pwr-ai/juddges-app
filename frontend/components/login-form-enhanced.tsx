@@ -166,6 +166,12 @@ export function LoginFormEnhanced({
         sessionId: data.session?.access_token ? 'present' : 'missing',
       })
 
+      // Required for App Router + @supabase/ssr: refresh() invalidates the
+      // RSC cache so Server Components and middleware see the new auth
+      // cookies on the next navigation. Without it, router.push() can be
+      // served from a pre-login cache and middleware will bounce the user
+      // back to /auth/login on the first protected route.
+      router.refresh()
       router.push('/')
     } catch (error: unknown) {
       const errorMessage =
