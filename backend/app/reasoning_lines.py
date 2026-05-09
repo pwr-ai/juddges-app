@@ -2115,7 +2115,7 @@ async def search_reasoning_lines(
     query_embedding: np.ndarray | None = None
 
     try:
-        from app.documents_pkg.utils import generate_embedding
+        from app.judgments_pkg.utils import generate_embedding
 
         embedding_list = await generate_embedding(body.query)
         query_embedding = np.array(embedding_list, dtype=np.float32)

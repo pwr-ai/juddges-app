@@ -115,7 +115,7 @@ class Query:
     async def document(self, document_id: str) -> LegalDocumentType | None:
         from juddges_search.db.supabase_db import get_vector_db
 
-        from app.documents_pkg import _convert_supabase_to_legal_document
+        from app.judgments_pkg import _convert_supabase_to_legal_document
         from app.models import validate_id_format
 
         try:
@@ -155,7 +155,7 @@ class Query:
     async def documents(self, document_ids: list[str]) -> list[LegalDocumentType]:
         from juddges_search.db.supabase_db import get_vector_db
 
-        from app.documents_pkg import _convert_supabase_to_legal_document
+        from app.judgments_pkg import _convert_supabase_to_legal_document
 
         if not document_ids or len(document_ids) > 100:
             return []
@@ -172,7 +172,7 @@ class Query:
     async def search_documents(
         self, input: SearchDocumentsInput
     ) -> SearchDocumentsResultType:
-        from app.documents_pkg import search_documents as rest_search
+        from app.judgments_pkg import search_documents as rest_search
         from app.models import SearchChunksRequest
 
         request = SearchChunksRequest(
@@ -220,7 +220,7 @@ class Query:
         description="Search document chunks with hybrid search and pagination"
     )
     async def search_chunks(self, input: SearchChunksInput) -> SearchChunksResultType:
-        from app.documents_pkg import search_documents as rest_search
+        from app.judgments_pkg import search_documents as rest_search
         from app.models import SearchChunksRequest
 
         request = SearchChunksRequest(
@@ -242,7 +242,7 @@ class Query:
     async def similar_documents(
         self, document_ids: list[str], top_k: int = 10
     ) -> list[SimilarDocumentsResultType]:
-        from app.documents_pkg import find_similar_documents_batch
+        from app.judgments_pkg import find_similar_documents_batch
         from app.models import SimilarDocumentsRequest
 
         request = SimilarDocumentsRequest(document_ids=document_ids, top_k=top_k)

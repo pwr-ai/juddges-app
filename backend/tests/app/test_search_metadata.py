@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.documents_pkg import search_documents
+from app.judgments_pkg import search_documents
 from app.models import SearchChunksRequest
 
 
