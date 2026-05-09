@@ -85,9 +85,20 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      logger.error(`Backend API returned error status: ${response.status}`);
+      const errorBody = await response.text();
+      logger.error(`Backend API returned error status: ${response.status}`, errorBody);
+      let message = "Failed to create collection";
+      try {
+        const parsed = JSON.parse(errorBody);
+        const detail = parsed?.detail ?? parsed?.error ?? parsed?.message;
+        if (typeof detail === "string" && detail.length > 0) {
+          message = detail;
+        }
+      } catch {
+        if (errorBody) message = errorBody;
+      }
       return NextResponse.json(
-        { error: "Failed to create collection" },
+        { error: message },
         { status: response.status }
       );
     }

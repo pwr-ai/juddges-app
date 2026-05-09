@@ -1,355 +1,321 @@
-import { test, expect } from '@playwright/test';
-import { CollectionPage } from '../page-objects/CollectionPage';
-
 /**
- * Complete Collection Management E2E Tests
+ * Collection management E2E tests.
  *
- * Tests all collection functionality:
- * - Create collection
- * - Add/remove documents
- * - Rename collection
- * - Share collection
- * - Delete collection
+ * Covers the four CRUD flows on the collections UI:
+ *   1. Create — index page dialog.
+ *   2. Edit  — detail page, Pencil button → form → Save Changes.
+ *   3. Add judgments (documents) — detail page, "Add Documents" dialog.
+ *   4. Delete — index page card delete button → confirm dialog → "Collection deleted" toast.
+ *
+ * Strategy:
+ *   - Real Supabase login via `authenticatedPage` fixture so server-side
+ *     `/api/collections*` routes pass auth on the Next.js side.
+ *   - The FastAPI backend is mocked at the Next.js API-route boundary using
+ *     `page.route('**\/api/collections*')` so tests do not require a running
+ *     backend or applied Supabase migrations.
+ *   - Each test asserts the request body sent to the API route AND a visible
+ *     UI outcome (toast, list update, navigation), so a regression on either
+ *     side fails the test.
+ *
+ * Why mock at the Next.js route boundary (not the FastAPI URL)? Browser-side
+ * fetches from the React client go to `/api/collections*` (the Next API
+ * route). The route then proxies to FastAPI server-side, but Playwright can
+ * only intercept requests originating in the browser. Mocking `/api/...` is
+ * deterministic and matches what the React code actually calls.
  */
 
-test.describe('Complete Collection Flow', () => {
-  let collectionPage: CollectionPage;
+import { test, expect } from '../helpers/auth-fixture';
+import type { Route } from '@playwright/test';
 
-  test.beforeEach(async ({ page }) => {
-    collectionPage = new CollectionPage(page);
+const COLLECTION_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const USER_ID = 'a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5';
 
-    // Mock Supabase auth
-    await page.addInitScript(() => {
-      const mockSupabaseClient = {
-        auth: {
-          getUser: () => Promise.resolve({
-            data: {
-              user: {
-                id: 'test-user-id',
-                email: 'test@example.com'
-              }
-            },
-            error: null
-          }),
-          getSession: () => Promise.resolve({
-            data: {
-              session: {
-                user: {
-                  id: 'test-user-id',
-                  email: 'test@example.com'
-                }
-              }
-            },
-            error: null
-          })
-        }
-      };
-      window.mockSupabaseClient = mockSupabaseClient;
+interface MockCollection {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  documents?: string[];
+  document_count?: number;
+}
+
+function makeCollection(overrides: Partial<MockCollection> = {}): MockCollection {
+  const now = '2026-05-09T12:00:00Z';
+  return {
+    id: COLLECTION_ID,
+    user_id: USER_ID,
+    name: 'Crime',
+    description: 'Important contract law cases',
+    created_at: now,
+    updated_at: now,
+    documents: [],
+    document_count: 0,
+    ...overrides,
+  };
+}
+
+test.describe('Collections — create', () => {
+  test('user can create a new collection from the index page', async ({ authenticatedPage: page }) => {
+    let postBody: { name?: string; description?: string } | null = null;
+    const initialList: MockCollection[] = [];
+    let listAfterCreate: MockCollection[] | null = null;
+
+    await page.route('**/api/collections', async (route: Route) => {
+      const method = route.request().method();
+      if (method === 'POST') {
+        postBody = JSON.parse(route.request().postData() || '{}');
+        const created = makeCollection({
+          name: postBody?.name ?? '',
+          description: postBody?.description ?? null,
+        });
+        listAfterCreate = [{ ...created, documents: [], document_count: 0 }];
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(created),
+        });
+        return;
+      }
+      // GET — return current list (empty until POST has been processed).
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(listAfterCreate ?? initialList),
+      });
     });
 
-    await collectionPage.goto();
+    await page.goto('/collections');
+    await page.getByRole('button', { name: /new collection/i }).click();
+
+    const nameInput = page.getByLabel(/collection name/i);
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('Crime');
+    await page.getByLabel(/description/i).fill('Important contract law cases');
+
+    await page.getByRole('button', { name: /^create collection$/i }).click();
+
+    await expect.poll(() => postBody).not.toBeNull();
+    const captured = postBody as { name?: string; description?: string } | null;
+    expect(captured).toEqual({
+      name: 'Crime',
+      description: 'Important contract law cases',
+    });
+
+    // Dialog closes and the new collection appears in the list.
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.getByText('Crime')).toBeVisible();
   });
 
-  test('user can create a new collection', async ({ page }) => {
-    // Mock collections API
-    await page.route('**/api/collections', route => {
+  test('shows toast with backend error message when create fails', async ({ authenticatedPage: page }) => {
+    const detail =
+      "Database error: Could not find the table 'public.collections' in the schema cache";
+
+    await page.route('**/api/collections', async (route: Route) => {
       if (route.request().method() === 'POST') {
-        route.fulfill({
-          status: 201,
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: detail }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.goto('/collections');
+    await page.getByRole('button', { name: /new collection/i }).click();
+    await page.getByLabel(/collection name/i).fill('Crime');
+    await page.getByRole('button', { name: /^create collection$/i }).click();
+
+    // Sonner renders toasts in a region; we just check the message text shows up.
+    await expect(page.getByText(detail)).toBeVisible({ timeout: 10_000 });
+  });
+});
+
+test.describe('Collections — edit', () => {
+  test('user can edit a collection name and description', async ({ authenticatedPage: page }) => {
+    let putBody: { name?: string; description?: string } | null = null;
+    const collection = makeCollection({ name: 'Old Name', description: 'Old description' });
+
+    await page.route(`**/api/collections/${COLLECTION_ID}*`, async (route: Route) => {
+      const method = route.request().method();
+      if (method === 'PUT') {
+        putBody = JSON.parse(route.request().postData() || '{}');
+        await route.fulfill({
+          status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            id: 'collection-1',
-            name: 'Contract Cases',
-            description: 'Important contract law cases',
-            created_at: new Date().toISOString()
-          })
+            ...collection,
+            name: putBody?.name ?? collection.name,
+            description: putBody?.description ?? collection.description,
+          }),
         });
-      } else {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify([])
-        });
+        return;
       }
+      // GET
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(collection),
+      });
     });
 
-    // Create collection
-    await collectionPage.createCollection('Contract Cases', 'Important contract law cases');
+    await page.goto(`/collections/${COLLECTION_ID}`);
 
-    // Verify success
-    await page.waitForTimeout(1000);
-    await expect(page.getByText(/created|success/i)).toBeVisible({ timeout: 5000 }).catch(() => true);
+    await page.getByRole('button', { name: /edit collection/i }).click();
+    const nameField = page.getByLabel(/collection name/i);
+    await expect(nameField).toHaveValue('Old Name');
+
+    await nameField.fill('New Name');
+    await page.getByLabel(/description/i).fill('New description');
+    await page.getByRole('button', { name: /save changes/i }).click();
+
+    await expect.poll(() => putBody).not.toBeNull();
+    const capturedPut = putBody as { name?: string; description?: string } | null;
+    expect(capturedPut?.name).toBe('New Name');
+    expect(capturedPut?.description).toBe('New description');
+
+    await expect(page.getByText(/collection updated successfully/i)).toBeVisible();
+  });
+});
+
+test.describe('Collections — add judgments', () => {
+  test('user can add a single judgment to a collection', async ({ authenticatedPage: page }) => {
+    const collection = makeCollection({ name: 'Crime', documents: [], document_count: 0 });
+    let addBody: { document_id?: string; document_ids?: string[] } | null = null;
+
+    await page.route(`**/api/collections/${COLLECTION_ID}/documents`, async (route: Route) => {
+      addBody = JSON.parse(route.request().postData() || '{}');
+      collection.documents = [addBody?.document_id ?? ''];
+      collection.document_count = 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    await page.route(`**/api/collections/${COLLECTION_ID}*`, async (route: Route) => {
+      if (route.request().url().includes('/documents')) return; // handled above
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(collection),
+      });
+    });
+
+    await page.goto(`/collections/${COLLECTION_ID}`);
+
+    await page.getByRole('button', { name: /add documents/i }).first().click();
+    const idsField = page.getByLabel(/document ids/i);
+    await idsField.fill('II FSK 1234/21');
+
+    await page.getByRole('button', { name: /^add documents$/i }).last().click();
+
+    await expect.poll(() => addBody).not.toBeNull();
+    const capturedAdd = addBody as { document_id?: string } | null;
+    expect(capturedAdd?.document_id).toBe('II FSK 1234/21');
+    await expect(page.getByText(/document added to collection successfully/i)).toBeVisible();
   });
 
-  test('user can add documents to collection', async ({ page }) => {
-    // Mock collections list
-    await page.route('**/api/collections', route => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify([
-          {
-            id: 'collection-1',
-            name: 'My Collection',
-            document_count: 0
-          }
-        ])
-      });
-    });
+  test('user can batch-add multiple judgments', async ({ authenticatedPage: page }) => {
+    const collection = makeCollection({ name: 'Crime', documents: [], document_count: 0 });
+    let batchBody: { document_ids?: string[] } | null = null;
 
-    // Mock collection details
-    await page.route('**/api/collections/collection-1', route => {
-      route.fulfill({
+    await page.route(`**/api/collections/${COLLECTION_ID}/documents`, async (route: Route) => {
+      batchBody = JSON.parse(route.request().postData() || '{}');
+      const ids = batchBody?.document_ids ?? [];
+      collection.documents = ids;
+      collection.document_count = ids.length;
+      await route.fulfill({
         status: 200,
+        contentType: 'application/json',
         body: JSON.stringify({
-          id: 'collection-1',
-          name: 'My Collection',
-          documents: []
-        })
+          message: 'ok',
+          added: ids,
+          failed: [],
+          total_requested: ids.length,
+        }),
       });
     });
 
-    // Mock add document
-    await page.route('**/api/collections/collection-1/documents', route => {
-      route.fulfill({
+    await page.route(`**/api/collections/${COLLECTION_ID}*`, async (route: Route) => {
+      if (route.request().url().includes('/documents')) return;
+      await route.fulfill({
         status: 200,
-        body: JSON.stringify({
-          success: true,
-          document_id: 'doc-1'
-        })
+        contentType: 'application/json',
+        body: JSON.stringify(collection),
       });
     });
 
-    // Open collection
-    await page.waitForTimeout(1000);
-    const collectionLink = page.getByText('My Collection');
-    if (await collectionLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await collectionLink.click();
-      await page.waitForTimeout(500);
+    await page.goto(`/collections/${COLLECTION_ID}`);
+    await page.getByRole('button', { name: /add documents/i }).first().click();
+    await page.getByLabel(/document ids/i).fill('II FSK 1234/21\nII FSK 5678/22\nII FSK 9012/23');
+    await page.getByRole('button', { name: /^add documents$/i }).last().click();
 
-      // Try to add document
-      const addButton = page.getByRole('button', { name: /add.*document/i });
-      if (await addButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await addButton.click();
-        await page.waitForTimeout(500);
-      }
-    }
+    await expect.poll(() => batchBody).not.toBeNull();
+    const capturedBatch = batchBody as { document_ids?: string[] } | null;
+    expect(capturedBatch?.document_ids).toHaveLength(3);
+    expect(capturedBatch?.document_ids).toEqual(
+      expect.arrayContaining(['II FSK 1234/21', 'II FSK 5678/22', 'II FSK 9012/23']),
+    );
+    await expect(page.getByText(/added 3 documents to collection/i)).toBeVisible();
   });
+});
 
-  test('user can remove documents from collection', async ({ page }) => {
-    // Mock collection with documents
-    await page.route('**/api/collections', route => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify([
-          {
-            id: 'collection-1',
-            name: 'My Collection',
-            document_count: 2
-          }
-        ])
-      });
-    });
+test.describe('Collections — delete', () => {
+  test('user can delete a collection from the index page', async ({ authenticatedPage: page }) => {
+    const collection = makeCollection({ name: 'Delete Me' });
+    let deleteRequested = false;
+    const list: MockCollection[] = [{ ...collection, documents: [], document_count: 0 }];
 
-    await page.route('**/api/collections/collection-1', route => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          id: 'collection-1',
-          name: 'My Collection',
-          documents: [
-            {
-              document_id: 'doc-1',
-              title: 'First Document'
-            },
-            {
-              document_id: 'doc-2',
-              title: 'Second Document'
-            }
-          ]
-        })
-      });
-    });
-
-    await page.route('**/api/collections/collection-1/documents/doc-1', route => {
+    await page.route(`**/api/collections/${COLLECTION_ID}*`, async (route: Route) => {
       if (route.request().method() === 'DELETE') {
-        route.fulfill({
+        deleteRequested = true;
+        await route.fulfill({
           status: 200,
-          body: JSON.stringify({ success: true })
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Collection deleted successfully' }),
         });
+        return;
       }
-    });
-
-    // Navigate to collection
-    await page.waitForTimeout(1000);
-    const collectionLink = page.getByText('My Collection');
-    if (await collectionLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await collectionLink.click();
-      await page.waitForTimeout(1000);
-
-      // Try to remove document
-      const documentItem = page.getByText('First Document');
-      if (await documentItem.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await documentItem.hover();
-        const removeButton = page.getByRole('button', { name: /remove/i }).first();
-        if (await removeButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await removeButton.click();
-        }
-      }
-    }
-  });
-
-  test('user can rename collection', async ({ page }) => {
-    // Mock collections
-    await page.route('**/api/collections', route => {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
-        body: JSON.stringify([
-          {
-            id: 'collection-1',
-            name: 'Old Name',
-            document_count: 0
-          }
-        ])
+        contentType: 'application/json',
+        body: JSON.stringify(collection),
       });
     });
 
-    await page.route('**/api/collections/collection-1', route => {
-      if (route.request().method() === 'PATCH') {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify({
-            id: 'collection-1',
-            name: 'New Name'
-          })
-        });
-      } else {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify({
-            id: 'collection-1',
-            name: 'Old Name',
-            documents: []
-          })
-        });
-      }
-    });
-
-    // Open collection
-    await page.waitForTimeout(1000);
-    const collectionLink = page.getByText('Old Name');
-    if (await collectionLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await collectionLink.click();
-      await page.waitForTimeout(500);
-
-      // Try to rename
-      const renameButton = page.getByRole('button', { name: /rename|edit/i });
-      if (await renameButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await renameButton.click();
-        const nameInput = page.getByLabel(/name/i);
-        if (await nameInput.isVisible({ timeout: 1000 }).catch(() => false)) {
-          await nameInput.clear();
-          await nameInput.fill('New Name');
-          await page.getByRole('button', { name: /save/i }).click();
-        }
-      }
-    }
-  });
-
-  test('user can share collection', async ({ page }) => {
-    // Mock collections
-    await page.route('**/api/collections', route => {
-      route.fulfill({
+    await page.route('**/api/collections', async (route: Route) => {
+      await route.fulfill({
         status: 200,
-        body: JSON.stringify([
-          {
-            id: 'collection-1',
-            name: 'Shared Collection',
-            document_count: 5
-          }
-        ])
+        contentType: 'application/json',
+        body: JSON.stringify(list),
       });
     });
 
-    await page.route('**/api/collections/collection-1/share', route => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          share_link: 'https://app.juddges.com/shared/abc123'
-        })
-      });
-    });
+    await page.goto('/collections');
+    const card = page.getByText('Delete Me');
+    await expect(card).toBeVisible();
 
-    // Open collection
-    await page.waitForTimeout(1000);
-    const collectionLink = page.getByText('Shared Collection');
-    if (await collectionLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await collectionLink.click();
-      await page.waitForTimeout(500);
+    // The action buttons reveal on hover (opacity transition); hover the card first.
+    await card.hover();
+    await page.getByRole('button', { name: /delete collection/i }).click();
 
-      // Try to share
-      const shareButton = page.getByRole('button', { name: /share/i });
-      if (await shareButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await shareButton.click();
-        await page.waitForTimeout(1000);
+    // Confirm in the DeleteConfirmationDialog.
+    const confirmDialog = page.getByRole('dialog');
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: /^delete$/i }).click();
 
-        // Verify share dialog/link appears
-        const hasShareContent = await page.locator('text=/share|link|copy/i').isVisible({ timeout: 2000 }).catch(() => false);
-        expect(hasShareContent).toBeTruthy();
-      }
-    }
-  });
+    await expect(page.getByText(/collection deleted/i)).toBeVisible();
 
-  test('user can delete collection', async ({ page }) => {
-    // Mock collections
-    await page.route('**/api/collections', route => {
-      route.fulfill({
-        status: 200,
-        body: JSON.stringify([
-          {
-            id: 'collection-to-delete',
-            name: 'Delete Me',
-            document_count: 0
-          }
-        ])
-      });
-    });
-
-    await page.route('**/api/collections/collection-to-delete', route => {
-      if (route.request().method() === 'DELETE') {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify({ success: true })
-        });
-      } else {
-        route.fulfill({
-          status: 200,
-          body: JSON.stringify({
-            id: 'collection-to-delete',
-            name: 'Delete Me',
-            documents: []
-          })
-        });
-      }
-    });
-
-    // Open collection
-    await page.waitForTimeout(1000);
-    const collectionLink = page.getByText('Delete Me');
-    if (await collectionLink.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await collectionLink.click();
-      await page.waitForTimeout(500);
-
-      // Try to delete
-      const deleteButton = page.getByRole('button', { name: /delete/i });
-      if (await deleteButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await deleteButton.click();
-
-        // Confirm deletion
-        await page.waitForTimeout(500);
-        const confirmButton = page.getByRole('button', { name: /confirm|yes|delete/i });
-        if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await confirmButton.click();
-        }
-      }
-    }
+    // The actual DELETE call fires when the toast is dismissed (5s). Wait for it.
+    await expect.poll(() => deleteRequested, { timeout: 8_000 }).toBe(true);
   });
 });
