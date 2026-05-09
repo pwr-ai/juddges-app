@@ -90,31 +90,22 @@ describe('AppSidebar public navigation', () => {
   it('shows the Dashboard link as the first item for authenticated users', () => {
     mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
 
-    const { container, debug } = render(
+    const { container } = render(
       <SidebarProvider>
         <AppSidebar />
       </SidebarProvider>
     );
 
-    // Find all navigation links in sidebar content
-    const allLinks = container.querySelectorAll('a');
-    const mainNavigationLinks = Array.from(allLinks).filter(link =>
-      link.getAttribute('href') &&
-      !link.closest('[class*="header"]') // Exclude header links
+    // Scope to the sidebar menu list so the logo's href="/" in the header
+    // doesn't masquerade as the Dashboard menu item.
+    const menuLinks = Array.from(
+      container.querySelectorAll<HTMLAnchorElement>('[data-sidebar="menu"] a[href]')
     );
 
-    expect(mainNavigationLinks.length).toBeGreaterThan(0);
+    const dashboardIndex = menuLinks.findIndex(link => link.getAttribute('href') === '/');
+    const searchIndex = menuLinks.findIndex(link => link.getAttribute('href') === '/search');
 
-    // Get the dashboard and search links
-    const dashboardLink = mainNavigationLinks.find(link => link.getAttribute('href') === '/');
-    const searchLink = mainNavigationLinks.find(link => link.getAttribute('href') === '/search');
-
-    expect(dashboardLink).toBeInTheDocument();
-    expect(searchLink).toBeInTheDocument();
-
-    // Check DOM order: Dashboard should appear before Search in the main navigation
-    const dashboardIndex = mainNavigationLinks.indexOf(dashboardLink);
-    const searchIndex = mainNavigationLinks.indexOf(searchLink);
-    expect(dashboardIndex).toBeLessThan(searchIndex);
+    expect(dashboardIndex).toBeGreaterThanOrEqual(0);
+    expect(searchIndex).toBeGreaterThan(dashboardIndex);
   });
 });
