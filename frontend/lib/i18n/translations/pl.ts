@@ -347,7 +347,7 @@ export const pl: Translations = {
   },
 
   dashboard: {
-    title: 'Panel główny',
+    title: 'Pulpit',
     databaseOverview: 'Przegląd bazy danych',
     recentConversations: 'Ostatnie rozmowy',
     extractionTemplates: 'Schematy kodowania',
