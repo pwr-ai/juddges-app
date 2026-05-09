@@ -16,7 +16,6 @@ from app.schemas_pkg.compilation import (
     validate_schema_compatibility,
 )
 
-
 # ----------------------------------------------------------------------
 # compile_field_to_json_schema
 # ----------------------------------------------------------------------

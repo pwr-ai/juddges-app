@@ -41,7 +41,6 @@ from app.clustering import router as clustering_router
 from app.collections import router as collections_router
 from app.dashboard import router as dashboard_router
 from app.deduplication import router as deduplication_router
-from app.judgments_pkg import router as documents_router
 from app.embeddings_api import router as embeddings_router
 from app.evaluations import router as evaluations_router
 from app.example_questions import router as example_questions_router
@@ -56,6 +55,7 @@ from app.guest_sessions import router as guest_sessions_router
 # Import health check router
 from app.health import router as health_router
 from app.judge_fingerprint import router as judge_fingerprint_router
+from app.judgments_pkg import router as documents_router
 
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
