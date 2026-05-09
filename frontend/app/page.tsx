@@ -150,27 +150,50 @@ function ViewAllAction({ href, label }: { href: string; label: string }): React.
 }
 
 function CopyButton(): React.JSX.Element {
-  const [copied, setCopied] = React.useState(false);
+  const [state, setState] = React.useState<"idle" | "copied" | "failed">("idle");
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const handleCopy = React.useCallback(async () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
     try {
       await navigator.clipboard.writeText(BIBTEX);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setState("copied");
     } catch {
-      // best-effort; clipboard might not be available
+      setState("failed");
     }
+    timerRef.current = setTimeout(() => setState("idle"), 2000);
   }, []);
+
+  const label =
+    state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy";
+  const ariaLabel =
+    state === "copied"
+      ? "BibTeX copied to clipboard"
+      : state === "failed"
+        ? "Copy to clipboard failed — select the BibTeX text and copy manually"
+        : "Copy BibTeX to clipboard";
+  const icon =
+    state === "copied" ? <Check className="size-3" /> : <Copy className="size-3" />;
+  const stateClass = state === "failed" ? "text-oxblood" : "text-ink-soft";
 
   return (
     <button
       type="button"
       onClick={handleCopy}
-      className="absolute top-2 right-2 inline-flex items-center gap-1.5 border border-rule bg-parchment px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      aria-label={copied ? "BibTeX copied to clipboard" : "Copy BibTeX to clipboard"}
+      className={cn(
+        "absolute top-2 right-2 inline-flex items-center gap-1.5 border border-rule bg-parchment px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        stateClass,
+      )}
+      aria-label={ariaLabel}
     >
-      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-      {copied ? "Copied" : "Copy"}
+      {icon}
+      {label}
     </button>
   );
 }
@@ -676,7 +699,7 @@ export default function HomePage(): React.JSX.Element {
                 href="/search"
                 className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
                   <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
@@ -687,7 +710,7 @@ export default function HomePage(): React.JSX.Element {
                 href="/collections"
                 className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
                   <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
@@ -698,7 +721,7 @@ export default function HomePage(): React.JSX.Element {
                 href="/schema-chat"
                 className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
                   <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
