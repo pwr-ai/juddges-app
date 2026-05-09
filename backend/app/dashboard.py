@@ -534,55 +534,49 @@ def _extract_court_name(text_preview: str) -> str:
 
 
 def _derive_featured_title(doc: dict[str, Any]) -> str:
-    """Generate a robust fallback title when source title is missing."""
+    """Build a fallback title for a judgment row when `title` is missing."""
     title = doc.get("title")
     if title:
         return title
 
     full_text = doc.get("full_text", "")
-    docket_number = doc.get("docket_number", "")
+    case_number = doc.get("case_number", "")
     court_name = doc.get("court_name", "")
-    judgment_date = doc.get("judgment_date", "")
-    judgment_id = doc.get("judgment_id", "")
+    decision_date = doc.get("decision_date", "")
 
-    if full_text and not docket_number:
+    if full_text and not case_number:
         text_preview = full_text[:500]
-        docket_number = _extract_docket_number(text_preview)
+        case_number = _extract_docket_number(text_preview)
         if not court_name:
             court_name = _extract_court_name(text_preview)
 
-    if docket_number:
+    if case_number:
         if court_name:
-            return f"{_truncate_with_ellipsis(court_name, 40)}: {docket_number}"
-        return f"Case {docket_number}"
+            return f"{_truncate_with_ellipsis(court_name, 40)}: {case_number}"
+        return f"Case {case_number}"
 
-    if court_name and judgment_date and judgment_date != "None":
-        return f"{_truncate_with_ellipsis(court_name, 40)} - {judgment_date[:10]}"
+    if court_name and decision_date:
+        return f"{_truncate_with_ellipsis(court_name, 40)} - {str(decision_date)[:10]}"
 
-    if judgment_id:
-        if "_" in judgment_id:
-            parts = judgment_id.split("_")
-            preferred_id = parts[0] if len(parts[0]) > 5 else judgment_id[:20]
-            return f"Judgment {preferred_id}"
-        return f"Judgment {judgment_id[:20]}"
-
-    return f"Document {doc.get('id', 'N/A')[:8]}"
+    return f"Judgment {doc.get('id', 'N/A')[:8]}"
 
 
 def _to_document_summary(doc: dict[str, Any]) -> DocumentSummary:
-    """Convert raw document row to dashboard DocumentSummary."""
+    """Convert a raw judgments row to a dashboard DocumentSummary."""
+    jurisdiction = doc.get("jurisdiction")
+    language = "en" if jurisdiction == "UK" else "pl"
+    court_name = doc.get("court_name")
     return DocumentSummary(
         id=doc.get("id", ""),
         title=_derive_featured_title(doc),
-        document_type=doc.get("document_type") or "unknown",
-        publication_date=doc.get("date_issued")
-        or doc.get("publication_date")
-        or doc.get("judgment_date"),
+        document_type="judgment",
+        publication_date=str(doc.get("decision_date") or doc.get("publication_date") or "")
+        or None,
         ai_summary=None,
         key_topics=None,
-        jurisdiction=doc.get("country"),
-        language=doc.get("language", "pl"),
-        issuing_body=doc.get("issuing_body"),
+        jurisdiction=jurisdiction,
+        language=language,
+        issuing_body={"name": court_name} if court_name else None,
     )
 
 
@@ -590,46 +584,32 @@ def _to_document_summary(doc: dict[str, Any]) -> DocumentSummary:
 @limiter.limit(DASHBOARD_READ_RATE_LIMIT)
 async def get_featured_examples(
     request: Request,
+    response: Response,
     limit: int = Query(default=5, ge=1, le=10),
     api_key: str = Depends(verify_api_key),
 ):
-    """
-    Get curated featured example documents for new users.
-
-    Returns interesting, representative documents to showcase platform capabilities.
+    """Curated featured-example judgments for new users.
 
     Args:
         limit: Number of examples to return (1-10)
 
     Returns:
-        List of featured documents
+        List of featured judgments rendered as DocumentSummary.
     """
     try:
         response = (
-            supabase.table("documents")
+            supabase.table("judgments")
             .select(
-                "id, title, document_type, date_issued, publication_date, "
-                "judgment_date, country, language, issuing_body, "
-                "full_text, docket_number, court_name, judgment_id"
+                "id, title, case_number, court_name, "
+                "decision_date, publication_date, jurisdiction, full_text"
             )
-            .in_("document_type", ["judgment", "tax_interpretation"])
             .not_.is_("title", "null")
+            .order("decision_date", desc=True, nullsfirst=False)
             .limit(limit * 3)
             .execute()
         )
 
-        featured: list[DocumentSummary] = []
-        seen_types: set[str | None] = set()
-        for doc in response.data or []:
-            doc_type = doc.get("document_type")
-            if doc_type not in seen_types or len(featured) < limit:
-                featured.append(_to_document_summary(doc))
-                seen_types.add(doc_type)
-
-                if len(featured) >= limit:
-                    break
-
-        return featured[:limit]
+        return [_to_document_summary(doc) for doc in (response.data or [])[:limit]]
 
     except (PostgrestAPIError, StorageException) as e:
         logger.error(f"Error fetching featured examples: {e}", exc_info=True)
