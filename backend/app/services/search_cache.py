@@ -84,13 +84,19 @@ def _result_key(
     alpha: float | None,
     limit: int | None,
     offset: int | None,
+    user_id: str | None = None,
 ) -> str:
-    """Deterministic cache key for a search result set."""
-    payload = json.dumps(
-        {"q": query, "f": filters, "a": alpha, "l": limit, "o": offset},
-        sort_keys=True,
-        default=str,
-    )
+    """Deterministic cache key for a search result set.
+
+    ``user_id`` is an optional discriminator. When ``None`` (current default)
+    the key is request-only, preserving today's public-read behaviour.
+    Once RLS tightens, callers MUST pass a stable user/role identifier so
+    cache entries are partitioned per user. See module docstring.
+    """
+    blob = {"q": query, "f": filters, "a": alpha, "l": limit, "o": offset}
+    if user_id is not None:
+        blob["u"] = user_id
+    payload = json.dumps(blob, sort_keys=True, default=str)
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
     return f"{_RES_PREFIX}{digest}"
 
@@ -136,13 +142,20 @@ async def get_cached_results(
     alpha: float | None = None,
     limit: int | None = None,
     offset: int | None = None,
+    user_id: str | None = None,
 ) -> dict | list | None:
-    """Return cached search results, or ``None`` on miss/error."""
+    """Return cached search results, or ``None`` on miss/error.
+
+    ``user_id`` is forward-compatible: when ``None`` (current default) the
+    key is request-only — safe today because RLS exposes public-read on
+    every cached field. See module docstring for the contract you accept
+    by relying on the default.
+    """
     if not _cache_enabled():
         return None
     try:
         raw = await _redis_client.get(  # type: ignore[union-attr]
-            _result_key(query, filters, alpha, limit, offset)
+            _result_key(query, filters, alpha, limit, offset, user_id)
         )
         if raw is not None:
             return json.loads(raw)
@@ -158,12 +171,16 @@ async def set_cached_results(
     alpha: float | None = None,
     limit: int | None = None,
     offset: int | None = None,
+    user_id: str | None = None,
 ) -> None:
-    """Store search results in the cache."""
+    """Store search results in the cache.
+
+    See :func:`get_cached_results` for the ``user_id`` semantics.
+    """
     if not _cache_enabled():
         return
     try:
-        key = _result_key(query, filters, alpha, limit, offset)
+        key = _result_key(query, filters, alpha, limit, offset, user_id)
         value = json.dumps(results, default=str)
         await _redis_client.setex(key, settings.SEARCH_RESULT_CACHE_TTL, value)  # type: ignore[union-attr]
     except Exception as exc:

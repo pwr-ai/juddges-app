@@ -18,6 +18,14 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/lib/
 import { SaveToCollectionPopover } from "@/lib/styles/components/save-to-collection-popover";
 import { logger } from "@/lib/logger";
 
+function NavbarHeading({ children }: { children: React.ReactNode }): React.ReactElement {
+  return (
+    <h1 className="font-serif text-2xl font-normal tracking-tight leading-tight text-ink">
+      {children}
+    </h1>
+  );
+}
+
 export function Navbar(): React.ReactElement {
   const { user } = useAuth();
   const router = useRouter();
@@ -305,48 +313,34 @@ export function Navbar(): React.ReactElement {
           );
         })()}
         {isDashboard && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Dashboard
-          </h1>
+          <NavbarHeading>Dashboard</NavbarHeading>
         )}
         {isChat && user && (
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">
-              Assistant
-            </h1>
+            <NavbarHeading>Assistant</NavbarHeading>
             <AIBadge text="AI" size="sm" className="scale-150" />
           </div>
         )}
         {isSearch && user && (
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">
-              Search
-            </h1>
+            <NavbarHeading>Search</NavbarHeading>
             {searchType === 'thinking' && (
               <AIBadge text="AI-powered" size="sm" />
             )}
           </div>
         )}
         {isCollections && user && !isCollectionDetail && (
-          <h1 className="text-xl font-bold text-foreground">
-            Collections
-          </h1>
+          <NavbarHeading>Collections</NavbarHeading>
         )}
         {isCollectionDetail && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Collection Viewer
-          </h1>
+          <NavbarHeading>Collection Viewer</NavbarHeading>
         )}
         {isSchemas && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Schemas
-          </h1>
+          <NavbarHeading>Schemas</NavbarHeading>
         )}
         {isPrecedents && user && (
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">
-              Precedent Finder
-            </h1>
+            <NavbarHeading>Precedent Finder</NavbarHeading>
             <AIBadge text="AI" size="sm" />
           </div>
         )}
@@ -426,30 +420,20 @@ export function Navbar(): React.ReactElement {
 
       <div className="flex items-center gap-2 md:gap-3">
         {isSchemaChat && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Schema Studio
-          </h1>
+          <NavbarHeading>Schema Studio</NavbarHeading>
         )}
         {isExtract && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Configure extraction
-          </h1>
+          <NavbarHeading>Configure extraction</NavbarHeading>
         )}
         {isExtractions && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Extractions
-          </h1>
+          <NavbarHeading>Extractions</NavbarHeading>
         )}
         {isExtractionResults && user && (
-          <h1 className="text-xl font-bold text-foreground">
-            Extractions Results
-          </h1>
+          <NavbarHeading>Extractions Results</NavbarHeading>
         )}
         {isDocumentPage && user && (
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-foreground">
-              Document Viewer
-            </h1>
+            <NavbarHeading>Document Viewer</NavbarHeading>
             {documentMetadata && (
               <div className="flex items-center gap-2 pl-3 border-l border-border/50">
                 <span className="text-sm text-muted-foreground">Docket:</span>

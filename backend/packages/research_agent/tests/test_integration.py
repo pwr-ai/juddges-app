@@ -103,7 +103,7 @@ async def test_full_agent_loop_completes():
 
     # Mock the lazy imports inside tool functions.
     # semantic_search uses: from juddges_search.retrieval.supabase_search import search_chunks
-    # find_precedents uses: from app.documents_pkg.utils import generate_embedding
+    # find_precedents uses: from app.judgments_pkg.utils import generate_embedding
     #                       from juddges_search.db.supabase_db import get_vector_db
 
     mock_search_chunks = AsyncMock(return_value=[])
@@ -120,7 +120,7 @@ async def test_full_agent_loop_completes():
             create=True,
         ),
         patch(
-            "app.documents_pkg.utils.generate_embedding",
+            "app.judgments_pkg.utils.generate_embedding",
             mock_generate_embedding,
             create=True,
         ),

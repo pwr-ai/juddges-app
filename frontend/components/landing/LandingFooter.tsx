@@ -69,6 +69,14 @@ export function LandingFooter() {
                   Use Cases
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/ecosystem"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Open Source Ecosystem
+                </Link>
+              </li>
             </ul>
           </div>
 

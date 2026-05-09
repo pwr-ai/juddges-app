@@ -6,69 +6,86 @@
 
 
 :root {
-  /* Core Colors - Premium warm neutrals */
-  --background: oklch(0.985 0.004 90);
-  --foreground: oklch(0.25 0.005 60);
+  /* ─────────────────────────────────────────────
+     EDITORIAL JURISPRUDENCE PALETTE
+     See docs/reference/DESIGN.md for the full system.
+     parchment / ink / oxblood / gold / paper-rule
+     ───────────────────────────────────────────── */
 
-  --card: oklch(0.995 0.002 90);
-  --card-foreground: oklch(0.25 0.005 60);
+  /* Raw editorial tokens (canonical) */
+  --parchment:        oklch(0.96 0.012 85);    /* #F5F1E8 page surface */
+  --parchment-deep:   oklch(0.93 0.018 82);    /* slightly toned card */
+  --ink:              oklch(0.18 0.020 280);   /* #1A1A2E deep ink */
+  --ink-soft:         oklch(0.36 0.018 275);   /* secondary text */
+  --rule:             oklch(0.82 0.018 80);    /* #C9C2B0 paper rule */
+  --rule-strong:      oklch(0.70 0.020 78);    /* hairline divider */
+  --oxblood:          oklch(0.42 0.135 12);    /* #8B1E3F authority */
+  --oxblood-deep:     oklch(0.34 0.135 14);    /* hover state */
+  --gold:             oklch(0.68 0.105 80);    /* #B8954A citation gold */
+  --gold-soft:        oklch(0.86 0.055 85);    /* tinted background */
 
-  --popover: oklch(0.995 0.002 90);
-  --popover-foreground: oklch(0.25 0.005 60);
+  /* Mapped to the existing token API (do not rename — many components
+     consume these variables. We change the values, not the names.) */
+  --background: var(--parchment);
+  --foreground: var(--ink);
 
-  /* Primary - More authoritative */
-  --primary: oklch(0.58 0.24 265.00);
-  --primary-foreground: oklch(1.00 0 0);
+  --card: oklch(0.985 0.010 85);
+  --card-foreground: var(--ink);
 
-  --secondary: oklch(0.97 0.00 264.54);
-  --secondary-foreground: oklch(0.45 0.03 256.80);
+  --popover: oklch(0.985 0.010 85);
+  --popover-foreground: var(--ink);
 
-  --muted: oklch(0.98 0.00 247.84);
-  /* Enhanced Muted - Better contrast */
-  --muted-foreground: oklch(0.60 0.02 264.36);
+  --primary: var(--oxblood);
+  --primary-foreground: oklch(0.98 0.008 85);
 
-  --accent: oklch(0.95 0.03 236.82);
-  --accent-foreground: oklch(0.38 0.14 265.52);
+  --secondary: oklch(0.92 0.020 82);
+  --secondary-foreground: var(--ink);
 
-  /* Functional Colors - Better contrast */
-  --destructive: oklch(0.64 0.21 25.33);
-  --destructive-foreground: oklch(1.00 0 0);
+  --muted: oklch(0.93 0.015 82);
+  --muted-foreground: var(--ink-soft);
 
-  --success: oklch(0.65 0.18 145.00);
-  --warning: oklch(0.75 0.15 85.00);
-  --error: oklch(0.62 0.23 25.00);
-  --info: oklch(0.60 0.20 230.00);
+  --accent: var(--gold-soft);
+  --accent-foreground: oklch(0.40 0.110 80);
 
-  --border: oklch(0.93 0.01 264.53);
-  --input: oklch(0.93 0.01 264.53);
-  --ring: oklch(0.62 0.19 259.81);
+  --destructive: oklch(0.55 0.20 25);
+  --destructive-foreground: oklch(0.98 0.008 85);
 
-  /* Document Type Colors */
-  --judgment: oklch(0.55 0.20 260.00);
-  --interpretation: oklch(0.58 0.18 45.00);
-  --document: oklch(0.52 0.12 180.00);
+  --success: oklch(0.50 0.13 150);
+  --warning: var(--gold);
+  --error: oklch(0.55 0.20 25);
+  --info: oklch(0.45 0.12 230);
 
-  /* Chart Colors - More distinct */
-  --chart-1: oklch(0.62 0.19 259.81);
-  --chart-2: oklch(0.65 0.22 150.00);
-  --chart-3: oklch(0.70 0.20 45.00);
-  --chart-4: oklch(0.55 0.22 25.00);
-  --chart-5: oklch(0.60 0.15 200.00);
-  --chart-6: oklch(0.68 0.18 320.00);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--oxblood);
 
-  --sidebar: oklch(0.98 0.00 247.84);
-  --sidebar-foreground: oklch(0.32 0 0);
-  --sidebar-primary: oklch(0.62 0.19 259.81);
-  --sidebar-primary-foreground: oklch(1.00 0 0);
-  --sidebar-accent: oklch(0.95 0.03 236.82);
-  --sidebar-accent-foreground: oklch(0.38 0.14 265.52);
-  --sidebar-border: oklch(0.93 0.01 264.53);
-  --sidebar-ring: oklch(0.62 0.19 259.81);
+  /* Document Type Colors — re-tuned to the editorial palette */
+  --judgment: var(--oxblood);
+  --interpretation: var(--gold);
+  --document: oklch(0.42 0.07 240);
+
+  /* Chart Colors — earthy, not rainbow-saas */
+  --chart-1: var(--oxblood);
+  --chart-2: var(--gold);
+  --chart-3: oklch(0.42 0.07 240);
+  --chart-4: oklch(0.50 0.08 150);
+  --chart-5: oklch(0.55 0.11 35);
+  --chart-6: oklch(0.40 0.09 285);
+
+  --sidebar: oklch(0.94 0.014 82);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--oxblood);
+  --sidebar-primary-foreground: oklch(0.98 0.008 85);
+  --sidebar-accent: var(--gold-soft);
+  --sidebar-accent-foreground: oklch(0.40 0.110 80);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--oxblood);
 
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-serif: var(--font-instrument-serif), Georgia, serif;
-  --font-mono: var(--font-geist-mono), monospace;
-  --radius: 0.375rem;
+  --font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
+  /* Sharp, paper-like radii — editorial, not SaaS-rounded */
+  --radius: 0.125rem;
   --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
   --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
@@ -87,41 +104,25 @@
    applied via data-brand attribute on <html>.
    ============================================ */
 
-/* Juddges Brand - Teal Theme */
+/* Juddges brand inherits the editorial palette from :root.
+   Kept as a hook for future per-brand overrides; intentionally empty. */
 [data-brand="juddges"] {
-  --primary: oklch(0.55 0.22 200.00);
-  --ring: oklch(0.55 0.22 200.00);
-  --accent: oklch(0.90 0.05 200.00);
-  --accent-foreground: oklch(0.35 0.15 200.00);
-  --sidebar-primary: oklch(0.55 0.22 200.00);
-  --sidebar-ring: oklch(0.55 0.22 200.00);
-  --chart-1: oklch(0.55 0.22 200.00);
-}
-
-/* Juddges Brand - Purple Theme (Default) */
-/* Already the default in :root, but explicit for clarity */
-[data-brand="juddges"] {
-  --primary: oklch(0.58 0.24 265.00);
-  --ring: oklch(0.62 0.19 259.81);
-  --accent: oklch(0.95 0.03 236.82);
-  --accent-foreground: oklch(0.38 0.14 265.52);
-  --sidebar-primary: oklch(0.62 0.19 259.81);
-  --sidebar-ring: oklch(0.62 0.19 259.81);
-  --chart-1: oklch(0.62 0.19 259.81);
-}
-
-/* Juddges Alternative Brand - Deep Blue Theme */
-[data-brand="juddges"] {
-  --primary: oklch(0.60 0.20 240.00);
-  --ring: oklch(0.60 0.20 240.00);
-  --accent: oklch(0.92 0.04 240.00);
-  --accent-foreground: oklch(0.38 0.14 240.00);
-  --sidebar-primary: oklch(0.60 0.20 240.00);
-  --sidebar-ring: oklch(0.60 0.20 240.00);
-  --chart-1: oklch(0.60 0.20 240.00);
+  /* Editorial palette — see :root */
 }
 
 @theme inline {
+  /* Editorial tokens exposed as Tailwind colors */
+  --color-parchment: var(--parchment);
+  --color-parchment-deep: var(--parchment-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-oxblood: var(--oxblood);
+  --color-oxblood-deep: var(--oxblood-deep);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -315,6 +316,194 @@
   [role="button"]:focus-visible,
   [tabindex]:focus-visible {
     @apply ring-2 ring-ring ring-offset-2 rounded-lg;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   EDITORIAL UTILITIES
+   See docs/reference/DESIGN.md for usage.
+   ───────────────────────────────────────────── */
+
+@layer components {
+  /* Display headlines — Instrument Serif, tight leading, italic accents */
+  .editorial-display {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: -0.025em;
+    line-height: 0.95;
+    color: var(--ink);
+  }
+
+  .editorial-display em,
+  .editorial-display i {
+    font-style: italic;
+    color: var(--oxblood);
+  }
+
+  /* Eyebrow — small caps tag with horizontal rule */
+  .editorial-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .editorial-eyebrow::before {
+    content: "";
+    width: 1.75rem;
+    height: 1px;
+    background: var(--rule-strong);
+  }
+
+  /* Drop cap — large initial that floats next to the first paragraph */
+  .editorial-dropcap::first-letter {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    float: left;
+    font-size: 4.5em;
+    line-height: 0.85;
+    margin: 0.05em 0.08em -0.05em 0;
+    color: var(--oxblood);
+  }
+
+  /* Hairline rules */
+  .editorial-rule {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 0;
+  }
+
+  .editorial-rule-strong {
+    border: 0;
+    border-top: 1px solid var(--ink);
+    margin: 0;
+  }
+
+  /* Tabular numerals for stat figures */
+  .editorial-numeral {
+    font-family: var(--font-serif);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  /* Citation marker (¹ ² ³) */
+  .editorial-citation {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--gold);
+    vertical-align: super;
+    line-height: 0;
+  }
+
+  /* Subtle paper grain — for hero / atmospheric surfaces only */
+  .editorial-paper {
+    position: relative;
+    background-color: var(--parchment);
+    background-image:
+      radial-gradient(circle at 20% 30%, oklch(0.92 0.02 80 / 0.4) 0, transparent 40%),
+      radial-gradient(circle at 80% 70%, oklch(0.92 0.02 80 / 0.3) 0, transparent 45%);
+  }
+
+  .editorial-paper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* Editorial card — sharp paper edges, rule above, no glassmorphism */
+  .editorial-card {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--ink);
+    border-radius: 0;
+    transition: border-color 180ms ease, transform 180ms ease;
+  }
+
+  .editorial-card:hover {
+    border-top-color: var(--oxblood);
+  }
+
+  .editorial-card[data-clickable="true"]:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Query pill — newsprint-style, no rounded blobs */
+  .editorial-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    background: transparent;
+    font-size: 0.8125rem;
+    color: var(--ink);
+    transition: all 180ms ease;
+  }
+
+  .editorial-pill:hover {
+    border-color: var(--oxblood);
+    color: var(--oxblood);
+    background: oklch(from var(--oxblood) l c h / 0.04);
+  }
+
+  /* Oxblood primary action — sharp, confident */
+  .editorial-button-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: var(--ink);
+    color: var(--parchment);
+    border: 1px solid var(--ink);
+    border-radius: 0;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: background 180ms ease, transform 180ms ease;
+  }
+
+  .editorial-button-primary:hover {
+    background: var(--oxblood);
+    border-color: var(--oxblood);
+    transform: translateY(-1px);
+  }
+
+  .editorial-button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: 0;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: all 180ms ease;
+  }
+
+  .editorial-button-secondary:hover {
+    background: var(--ink);
+    color: var(--parchment);
   }
 }
 
@@ -1159,10 +1348,10 @@ html[dir="rtl"] [data-slot="command-input"] {
   stroke-width: 2.5 !important; /* Active: Bold/Emphasized */
 }
 
-/* Light mode active state colors */
+/* Active state icon color — editorial oxblood (matches text-oxblood on the button) */
 [data-sidebar="menu-button"][data-active="true"] svg,
 [data-sidebar="menu-button"][data-active="true"] > a svg {
-  stroke: #1E40AF !important; /* Royal Blue */
+  stroke: var(--oxblood) !important;
 }
 
 /* ============================================

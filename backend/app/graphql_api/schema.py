@@ -68,7 +68,6 @@ class SearchDocumentsInput:
     mode: str = "rabbit"
     alpha: float = 0.5
     languages: list[str] | None = None
-    document_types: list[str] | None = None
     return_properties: list[str] | None = None
 
 
@@ -80,7 +79,6 @@ class SearchChunksInput:
     limit_docs: int = 20
     alpha: float = 0.7
     languages: list[str] | None = None
-    document_types: list[str] | None = None
     segment_types: list[str] | None = None
     fetch_full_documents: bool = False
     mode: str = "rabbit"
@@ -115,7 +113,7 @@ class Query:
     async def document(self, document_id: str) -> LegalDocumentType | None:
         from juddges_search.db.supabase_db import get_vector_db
 
-        from app.documents_pkg import _convert_supabase_to_legal_document
+        from app.judgments_pkg import _convert_supabase_to_legal_document
         from app.models import validate_id_format
 
         try:
@@ -155,7 +153,7 @@ class Query:
     async def documents(self, document_ids: list[str]) -> list[LegalDocumentType]:
         from juddges_search.db.supabase_db import get_vector_db
 
-        from app.documents_pkg import _convert_supabase_to_legal_document
+        from app.judgments_pkg import _convert_supabase_to_legal_document
 
         if not document_ids or len(document_ids) > 100:
             return []
@@ -172,7 +170,7 @@ class Query:
     async def search_documents(
         self, input: SearchDocumentsInput
     ) -> SearchDocumentsResultType:
-        from app.documents_pkg import search_documents as rest_search
+        from app.judgments_pkg import search_documents as rest_search
         from app.models import SearchChunksRequest
 
         request = SearchChunksRequest(
@@ -180,7 +178,6 @@ class Query:
             mode=input.mode,
             alpha=input.alpha,
             languages=input.languages,
-            document_types=input.document_types,
             limit_docs=input.limit_docs if hasattr(input, "limit_docs") else 20,
             offset=0,
         )
@@ -220,7 +217,7 @@ class Query:
         description="Search document chunks with hybrid search and pagination"
     )
     async def search_chunks(self, input: SearchChunksInput) -> SearchChunksResultType:
-        from app.documents_pkg import search_documents as rest_search
+        from app.judgments_pkg import search_documents as rest_search
         from app.models import SearchChunksRequest
 
         request = SearchChunksRequest(
@@ -228,7 +225,6 @@ class Query:
             limit_docs=input.limit_docs,
             alpha=input.alpha,
             languages=input.languages,
-            document_types=input.document_types,
             segment_types=input.segment_types,
             fetch_full_documents=input.fetch_full_documents,
             mode=input.mode,
@@ -242,7 +238,7 @@ class Query:
     async def similar_documents(
         self, document_ids: list[str], top_k: int = 10
     ) -> list[SimilarDocumentsResultType]:
-        from app.documents_pkg import find_similar_documents_batch
+        from app.judgments_pkg import find_similar_documents_batch
         from app.models import SimilarDocumentsRequest
 
         request = SimilarDocumentsRequest(document_ids=document_ids, top_k=top_k)

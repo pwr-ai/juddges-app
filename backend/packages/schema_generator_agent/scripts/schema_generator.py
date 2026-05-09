@@ -39,10 +39,11 @@ def load_prompts(system_type: str) -> dict[str, str]:
 
 
 def main() -> None:
-    assert SYSTEM_TYPE in ["law", "tax"], "Invalid system type"
-    document_type = (
-        DocumentType.JUDGMENT if SYSTEM_TYPE == "law" else DocumentType.TAX_INTERPRETATION
-    )
+    # Search is judgment-only as of 2026-05-09 (see docs/superpowers/specs/
+    # 2026-05-09-search-judgment-only-blazing-fast.md); the legacy tax branch
+    # was removed alongside the corresponding DocumentType enum member.
+    assert SYSTEM_TYPE == "law", "Invalid system type (only 'law' is supported)"
+    document_type = DocumentType.JUDGMENT
     prompts = load_prompts(SYSTEM_TYPE)
 
     llm = ChatOpenAI(

@@ -11,8 +11,8 @@ Chunking strategy:
 - Language is derived from jurisdiction: PL → "pl", UK → "en"
 
 Usage:
-    python -m app.ingestion.chunk_documents --batch-size 50 --limit 1000
-    python -m app.ingestion.chunk_documents --dry-run
+    python -m app.ingestion.chunk_judgments --batch-size 50 --limit 1000
+    python -m app.ingestion.chunk_judgments --dry-run
 """
 
 import argparse

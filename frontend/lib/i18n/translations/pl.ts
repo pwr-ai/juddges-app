@@ -66,7 +66,7 @@ export const pl: Translations = {
   navigation: {
     // Main navigation
     home: 'Strona główna',
-    dashboard: 'Panel główny',
+    dashboard: 'Pulpit',
     search: 'Szukaj',
     chat: 'Czat',
     aiAssistant: 'Asystent AI',
@@ -119,7 +119,7 @@ export const pl: Translations = {
     savedSearches: 'Zapisane wyszukiwania',
     dataExtraction: 'Ekstrakcja danych',
     extractionResults: 'Wyniki ekstrakcji',
-    baseTemplate: 'Szablon bazowy',
+    baseTemplate: 'Bazowy schemat kodowania',
     compareDatasets: 'Porównaj zbiory danych',
   },
 
@@ -347,17 +347,17 @@ export const pl: Translations = {
   },
 
   dashboard: {
-    title: 'Panel główny',
+    title: 'Pulpit',
     databaseOverview: 'Przegląd bazy danych',
     recentConversations: 'Ostatnie rozmowy',
-    extractionTemplates: 'Szablony ekstrakcji',
+    extractionTemplates: 'Schematy kodowania',
     recentJudgments: 'Ostatnie orzeczenia',
     popularLegalTopics: 'Popularne tematy prawne',
     researchCollections: 'Kolekcje badawcze',
     recentExtractions: 'Ostatnie ekstrakcje',
     viewAll: 'Zobacz wszystko',
     startChat: 'Rozpocznij rozmowę',
-    generateTemplate: 'Generuj szablon',
+    generateTemplate: 'Generuj schemat kodowania',
     browseJudgments: 'Przeglądaj orzeczenia',
     startExtraction: 'Rozpocznij ekstrakcję',
     noChats: 'Brak rozmów. Zadaj Juddges pytanie prawne, aby rozpocząć.',

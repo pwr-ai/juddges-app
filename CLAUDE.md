@@ -65,18 +65,44 @@ Router-per-domain (`documents.py`, `collections.py`, `analytics.py`, `feedback.p
 - React Query (`@tanstack/react-query`) for server state, fetching, caching
 - Radix UI primitives + custom components; TipTap for rich-text annotations
 
+### Frontend design system — *Editorial Jurisprudence*
+
+Full spec: [`docs/reference/DESIGN.md`](docs/reference/DESIGN.md). Use the
+shared primitives in `frontend/components/editorial/` (barrel re-export at
+`@/components/editorial`) for all new surfaces — do not introduce new
+glassmorphism cards, purple gradients, or `bg-{indigo,purple,violet}-100`
+icon-pill motifs.
+
+Canonical raw colour tokens live in `frontend/app/globals.css`:
+
+| Token | Hex | Use |
+|---|---|---|
+| `--parchment` | `#F5F1E8` | Page surface |
+| `--parchment-deep` | `#EFE9D8` | Tonal section bands |
+| `--ink` | `#1A1A2E` | Primary text, strong rules |
+| `--ink-soft` | `#5A5A75` | Secondary text |
+| `--rule` | `#C9C2B0` | Hairline borders |
+| `--rule-strong` | `#A89F88` | Medium dividers |
+| `--oxblood` | `#8B1E3F` | Authority — primary action, italic emphasis |
+| `--oxblood-deep` | `#6F1230` | Hover state for oxblood |
+| `--gold` | `#B8954A` | Citation gold — markers, highlights |
+| `--gold-soft` | `#E8DCB8` | Tinted accent backgrounds |
+
+Typography: `Instrument Serif` (display) · `Geist Sans` (body) · `Geist Mono`
+(citations / eyebrows / tabular numerals).
+
 ### Database
 PostgreSQL via Supabase. Main schema: `supabase/migrations/20260209000001_create_judgments_table.sql` and follow-on migrations. The `judgments` table has full-text (GIN) and semantic (pgvector HNSW) indexes — combine for hybrid search.
 
 ## Branching & Release Flow
 
-Two-branch model:
+**Current mode: main-only (solo developer).** `develop` is paused; all work targets `main` directly until further notice.
 
-- **`main`** is production. Only release PRs (from `develop`) and `hotfix/*` PRs land here. Production images are built **manually** from a clean `main` via `scripts/build_and_push_prod.sh`.
-- **`develop`** is the integration branch. Feature/fix branches start from `develop` and PR back into `develop`.
-- Releasing: open a `release: vX.Y.Z` PR from `develop` → `main`, merge, then run `./scripts/build_and_push_prod.sh` from `main`. The script bumps the version, builds + pushes images, and tags `prod-vX.Y.Z`.
-- Hotfixes branch from `main`, PR back to `main`, then back-merge `main` → `develop`.
-- **Never open a feature PR directly against `main`.** When helping the user with branching commands, default to creating new branches from `develop`.
+- **`main`** is the only active branch. Feature/fix branches start from `main` and PR back into `main`. Production images are built **manually** from a clean `main` via `scripts/build_and_push_prod.sh`.
+- When helping with branching commands, default to creating new branches from `main` (e.g. `git switch -c feat/foo origin/main`).
+- Branch protection on `main` requires CI green on the 4 required checks (`Backend Lint`, `Backend Unit Tests`, `Frontend Lint & Typecheck`, `Frontend Unit Tests`). The "1 approving review" requirement was lifted while solo — re-add it before adding contributors. PRs can be merged via standard `gh pr merge --squash` once CI is green; `gh pr merge --admin` is only needed when an unrelated/non-required check is red (e.g. transient infra).
+- Releasing: tag a clean `main` and run `./scripts/build_and_push_prod.sh` (or pass `minor` / explicit version). The script bumps version, builds + pushes images, tags `prod-vX.Y.Z`. No release PR is needed in main-only mode.
+- `develop` branch still exists but is dormant. Do **not** open new PRs against it; if you find one, repoint to `main`. Re-enable two-branch flow only when more contributors join.
 
 ## Production Deploy
 

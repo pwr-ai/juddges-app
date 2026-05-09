@@ -220,13 +220,6 @@ def convert_obj_to_legal_document(obj, include_vectors: bool = False, include_sc
         # Normalize common variations
         doc_type_str = doc_type_str.replace("judgement", "judgment")
 
-        # Handle "tax interpretation" (with space) -> "tax_interpretation"
-        if "tax interpretation" in doc_type_str:
-            doc_type_str = doc_type_str.replace("tax interpretation", "tax_interpretation")
-        # Only replace standalone "interpretation" if it's not already "tax_interpretation"
-        elif doc_type_str == "interpretation":
-            doc_type_str = "tax_interpretation"
-
         try:
             document_type = DocumentType(doc_type_str)
         except (ValueError, KeyError):
@@ -408,13 +401,6 @@ def convert_obj_to_legal_document_metadata(obj, score: Optional[float] = None) -
     else:
         # Normalize common variations
         doc_type_str = doc_type_str.replace("judgement", "judgment")
-
-        # Handle "tax interpretation" (with space) -> "tax_interpretation"
-        if "tax interpretation" in doc_type_str:
-            doc_type_str = doc_type_str.replace("tax interpretation", "tax_interpretation")
-        # Only replace standalone "interpretation" if it's not already "tax_interpretation"
-        elif doc_type_str == "interpretation":
-            doc_type_str = "tax_interpretation"
 
         try:
             document_type = DocumentType(doc_type_str)

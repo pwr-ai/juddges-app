@@ -173,9 +173,7 @@ class TestGetOrCreateAgent:
 
         from juddges_search.models import DocumentType
 
-        result = get_or_create_agent(
-            "session-1", DocumentType.TAX_INTERPRETATION, mock_request
-        )
+        result = get_or_create_agent("session-1", DocumentType.JUDGMENT, mock_request)
         assert result is mock_agent
 
     @patch("app.api.schema_generator._generation_sessions")
@@ -193,7 +191,7 @@ class TestGetOrCreateAgent:
         from juddges_search.models import DocumentType
 
         result = get_or_create_agent(
-            "existing-session", DocumentType.TAX_INTERPRETATION, mock_request
+            "existing-session", DocumentType.JUDGMENT, mock_request
         )
         assert result is mock_agent
 

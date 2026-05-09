@@ -4,6 +4,8 @@ import { GraduationCap, Lock, Shield, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
+
 export function CompactFooter({ className }: { className?: string }) {
  return (
  <footer
@@ -26,6 +28,12 @@ export function CompactFooter({ className }: { className?: string }) {
  </div>
  <span className="hidden sm:inline">•</span>
  <span className="hidden sm:inline">© {new Date().getFullYear()} Wrocław University of Science and Technology</span>
+ {APP_VERSION && (
+ <>
+ <span className="hidden sm:inline">•</span>
+ <span aria-label="Application version" className="hidden sm:inline text-slate-600">v{APP_VERSION}</span>
+ </>
+ )}
  </div>
 
  {/* Center: Navigation Links */}

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SearchResult, SearchDocument, SearchChunk, DocumentType, LegalDocumentMetadata } from '@/types/search';
+import { SearchResult, SearchDocument, SearchChunk, LegalDocumentMetadata } from '@/types/search';
 import { PaginationMetadata } from '@/lib/api';
 import { parseISO, isValid } from 'date-fns';
 import logger from '@/lib/logger';
@@ -11,7 +11,6 @@ type DateRange = { from?: Date; to?: Date } | null;
 interface SearchFilters {
   keywords: Set<string>;
   legalConcepts: Set<string>;
-  documentTypes: Set<string>;
   issuingBodies: Set<string>;
   languages: Set<string>;
   dateFrom: Date | undefined;
@@ -26,7 +25,6 @@ interface SearchFilters {
 interface AvailableFilters {
   keywords: string[];
   legalConcepts: string[];
-  documentTypes: string[];
   issuingBodies: string[];
   languages: string[];
   // Advanced filters
@@ -39,10 +37,8 @@ interface AvailableFilters {
 interface SearchState {
   // Search params
   query: string;
-  documentTypes: DocumentType[];
   selectedLanguages: Set<string>;
   searchType: "rabbit" | "thinking";
-  ignoreUnknownType: boolean; // Filter out documents with unknown/null/error document_type
 
   // Pagination
   currentPage: number;
@@ -84,9 +80,7 @@ interface SearchState {
 
   // Actions
   setQuery: (query: string) => void;
-  setDocumentTypes: (documentTypes: DocumentType[]) => void;
   setSelectedLanguages: (selectedLanguages: Set<string>) => void;
-  setIgnoreUnknownType: (ignore: boolean) => void;
   setSearchResults: (results: SearchResult | null) => void;
   setIsSearching: (isSearching: boolean) => void;
   setError: (error: string | null) => void;
@@ -159,16 +153,6 @@ interface SearchState {
 const setToArray = (set: Set<string>): string[] => Array.from(set);
 const arrayToSet = (array: string[] | undefined): Set<string> => new Set(array || []);
 
-// Helper function to check if a document_type is unknown/error
-// Only tax_interpretation and judgment are valid document types
-// Export this so it can be used in other modules
-export const isUnknownDocumentType = (documentType: string | DocumentType | null | undefined): boolean => {
-  if (!documentType) return true;
-
-  // Only check against DocumentType enum values - no string comparisons
-  return documentType !== DocumentType.JUDGMENT && documentType !== DocumentType.TAX_INTERPRETATION;
-};
-
 // Normalize language codes to avoid duplicates (en -> uk)
 // Database stores English as "uk", so we normalize "en" to "uk"
 const DEFAULT_LANGUAGE = "pl";
@@ -195,10 +179,8 @@ const normalizeLanguages = (languages: Set<string>): Set<string> => {
 export const useSearchStore = create<SearchState>()((set, get) => ({
   // Search params
   query: "",
-  documentTypes: [],
   selectedLanguages: new Set(["uk", "pl"]),
   searchType: "thinking",
-  ignoreUnknownType: true, // Default to ignoring unknown_type documents
 
   // Pagination
   currentPage: 1,
@@ -227,7 +209,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
   filters: {
     keywords: new Set<string>(),
     legalConcepts: new Set<string>(),
-    documentTypes: new Set<string>(),
     issuingBodies: new Set<string>(),
     languages: new Set<string>(),
     dateFrom: undefined,
@@ -255,7 +236,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
   // Actions
   setQuery: (query: string) => set({ query }),
-  setDocumentTypes: (documentTypes: DocumentType[]) => set({ documentTypes }),
   setSelectedLanguages: (selectedLanguages: Set<string>) => {
     const normalized = normalizeLanguages(new Set(selectedLanguages));
     if (normalized.size === 0) {
@@ -264,7 +244,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
     }
     set({ selectedLanguages: normalized });
   },
-  setIgnoreUnknownType: (ignore: boolean) => set({ ignoreUnknownType: ignore }),
   setSearchResults: (results: SearchResult | null) => {
     set({
       searchResults: results,
@@ -425,7 +404,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
         filters: {
           keywords: new Set<string>(),
           legalConcepts: new Set<string>(),
-          documentTypes: new Set<string>(),
           issuingBodies: new Set<string>(),
           languages: new Set<string>(),
           dateFrom: undefined,
@@ -491,7 +469,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
         const loadedFilters = {
           keywords: arrayToSet(parsedState.filters?.keywords),
           legalConcepts: arrayToSet(parsedState.filters?.legalConcepts),
-          documentTypes: arrayToSet(parsedState.filters?.documentTypes),
           issuingBodies: arrayToSet(parsedState.filters?.issuingBodies),
           languages: arrayToSet(parsedState.filters?.languages),
           dateFrom: parsedState.filters?.dateFrom ? new Date(parsedState.filters.dateFrom) : undefined,
@@ -527,8 +504,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
           filters: mergedFilters,
           selectedLanguages,
           selectedDocumentIds,
-          // Default ignoreUnknownType to true if not present (for backward compatibility)
-          ignoreUnknownType: parsedState.ignoreUnknownType !== undefined ? parsedState.ignoreUnknownType : true,
           // Don't restore these states
           isSearching: false,
           error: null,
@@ -538,7 +513,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
         storeLogger.debug('State loaded from localStorage', {
           query: parsedState.query,
-          documentTypes: parsedState.documentTypes,
           selectedLanguages: Array.from(selectedLanguages),
           dateFrom: mergedFilters.dateFrom?.toISOString(),
           dateTo: mergedFilters.dateTo?.toISOString(),
@@ -562,7 +536,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
           ...state.filters,
           keywords: setToArray(state.filters.keywords),
           legalConcepts: setToArray(state.filters.legalConcepts),
-          documentTypes: setToArray(state.filters.documentTypes),
           issuingBodies: setToArray(state.filters.issuingBodies),
           languages: setToArray(state.filters.languages),
           dateFrom: state.filters.dateFrom?.toISOString() || undefined,
@@ -600,9 +573,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
       if (filters.legalConcepts.size > 0 &&
           !doc.legal_concepts?.some(concept => filters.legalConcepts.has(concept.concept_name))) return false;
-
-      if (filters.documentTypes.size > 0 &&
-          !filters.documentTypes.has(doc.document_type ?? '')) return false;
 
       if (filters.issuingBodies.size > 0 &&
           !filters.issuingBodies.has(doc.issuing_body?.name || '')) return false;
@@ -722,9 +692,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       if (filters.legalConcepts.size > 0 &&
           !doc.legal_concepts?.some(concept => filters.legalConcepts.has(concept.concept_name))) return false;
 
-      if (filters.documentTypes.size > 0 &&
-          !filters.documentTypes.has(doc.document_type ?? '')) return false;
-
       if (filters.issuingBodies.size > 0 &&
           !filters.issuingBodies.has(doc.issuing_body?.name || '')) return false;
 
@@ -825,21 +792,12 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
     // Use filtered metadata for new optimized flow, fallback to old flow
     const filteredMetadata = get().getFilteredMetadata();
     if (filteredMetadata.length > 0) {
-      // Skip undefined/error document types when selecting all
-      const allIds = new Set(
-        filteredMetadata
-          .filter(m => m.document_type !== DocumentType.ERROR)
-          .map(m => m.document_id)
-      );
+      const allIds = new Set(filteredMetadata.map(m => m.document_id));
       set({ selectedDocumentIds: allIds });
     } else {
       // Fallback to old flow
       const filteredDocs = get().getFilteredDocuments();
-      const allIds = new Set(
-        filteredDocs
-          .filter(doc => doc.document_type !== DocumentType.ERROR)
-          .map(doc => doc.document_id)
-      );
+      const allIds = new Set(filteredDocs.map(doc => doc.document_id));
       set({ selectedDocumentIds: allIds });
     }
   },
@@ -862,7 +820,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       // Convert metadata to SearchDocument (minimal conversion for compatibility)
       return selectedMetadata.map(m => ({
         document_id: m.document_id,
-        document_type: m.document_type,
         language: m.language,
         keywords: m.keywords || [],
         date_issued: m.date_issued?.toString() || null,
@@ -994,12 +951,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       // Keywords filter
       if (filters.keywords.size > 0 &&
           !metadata.keywords?.some(keyword => filters.keywords.has(keyword))) {
-        return false;
-      }
-
-      // Document types filter
-      if (filters.documentTypes.size > 0 &&
-          !filters.documentTypes.has(metadata.document_type)) {
         return false;
       }
 
@@ -1137,7 +1088,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       return {
         keywords: [],
         legalConcepts: [],
-        documentTypes: [],
         issuingBodies: [],
         languages: [],
         jurisdictions: [],
@@ -1149,7 +1099,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
     // Extract unique values from filtered metadata
     const keywordsSet = new Set<string>();
-    const documentTypesSet = new Set<string>();
     const issuingBodiesSet = new Set<string>();
     const languagesSet = new Set<string>();
     const jurisdictionsSet = new Set<string>();
@@ -1166,11 +1115,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       // Language
       if (metadata.language) {
         languagesSet.add(metadata.language);
-      }
-
-      // Document types - already filtered by getFilteredMetadata(), so just add all
-      if (metadata.document_type) {
-        documentTypesSet.add(metadata.document_type);
       }
 
       // Court names (using as issuing bodies)
@@ -1202,7 +1146,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
     return {
       keywords: Array.from(keywordsSet),
       legalConcepts: [],
-      documentTypes: Array.from(documentTypesSet),
       issuingBodies: Array.from(issuingBodiesSet),
       languages: Array.from(languagesSet),
       jurisdictions: Array.from(jurisdictionsSet),

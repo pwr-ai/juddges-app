@@ -78,7 +78,7 @@ describe('LandingPage', () => {
   describe('hero section', () => {
     it('displays the JuDDGES branding', () => {
       render(<LandingPage />);
-      expect(screen.getByText('JuDDGES')).toBeInTheDocument();
+      expect(screen.getAllByText('JuDDGES').length).toBeGreaterThan(0);
     });
 
     it('shows the university name', () => {

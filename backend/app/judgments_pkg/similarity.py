@@ -30,17 +30,26 @@ async def get_similar_to_document(
     try:
         db = get_vector_db()
 
-        # Fetch the source document to get its embedding
-        doc_data = await db.get_document_by_id(document_id)
+        # Fetch the source row WITH its stored embedding so we don't have to
+        # round-trip the text through the TEI service when `judgments.embedding`
+        # is already populated (which it is for ~100% of rows).
+        doc_data = await db.get_document_by_id(document_id, return_vectors=True)
         if not doc_data:
             raise HTTPException(
                 status_code=404, detail=f"Document {document_id} not found"
             )
 
-        # Get the embedding - first try from document, then generate
         embedding = doc_data.get("embedding")
+        if isinstance(embedding, str):
+            # pgvector sometimes serialises as "[0.1, 0.2, ...]" rather than a list.
+            import json
+
+            try:
+                embedding = json.loads(embedding)
+            except (json.JSONDecodeError, ValueError):
+                embedding = None
         if not embedding:
-            # Generate embedding from summary or title
+            # Fallback: regenerate from text (e.g. row missing its embedding).
             text = (
                 doc_data.get("summary")
                 or doc_data.get("title")

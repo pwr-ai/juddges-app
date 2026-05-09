@@ -22,7 +22,6 @@ import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
-import { DocumentType } from '@/types/search';
 
 /**
  * Typing animation component for header text
@@ -103,8 +102,6 @@ function SearchPageContent(): React.JSX.Element | null {
  const {
  query,
  setQuery,
- documentTypes,
- setDocumentTypes,
  selectedLanguages,
  setSelectedLanguages,
  isSearching,
@@ -212,7 +209,6 @@ function SearchPageContent(): React.JSX.Element | null {
  const hasNoFilters =
  currentFilters.keywords.size === 0 &&
  currentFilters.legalConcepts.size === 0 &&
- currentFilters.documentTypes.size === 0 &&
  currentFilters.issuingBodies.size === 0 &&
  !currentFilters.dateFrom &&
  !currentFilters.dateTo;
@@ -267,7 +263,7 @@ function SearchPageContent(): React.JSX.Element | null {
  useEffect(() => {
  if (!mounted || !urlParamsProcessed || updatingUrlRef.current || isSearching) return;
  updateUrlParams();
- }, [query, documentTypes, selectedLanguages, searchType, updateUrlParams, mounted, urlParamsProcessed, isSearching, updatingUrlRef]);
+ }, [query, selectedLanguages, searchType, updateUrlParams, mounted, urlParamsProcessed, isSearching, updatingUrlRef]);
 
  // Update URL when pagination changes
  useEffect(() => {
@@ -293,22 +289,6 @@ function SearchPageContent(): React.JSX.Element | null {
  }
 
  setSelectedLanguages(newSet);
- };
-
-  const toggleDocumentType = (docType: DocumentType): void => {
-  if (docType !== DocumentType.JUDGMENT) {
-  return;
-  }
-  const newTypes = [...documentTypes];
-  const index = newTypes.indexOf(docType);
- if (index > -1) {
- if (newTypes.length > 1) {
- newTypes.splice(index, 1);
- }
- } else {
- newTypes.push(docType);
- }
- setDocumentTypes(newTypes);
  };
 
  // Reset hasPerformedSearch when query is cleared
@@ -343,7 +323,6 @@ function SearchPageContent(): React.JSX.Element | null {
  const handleSearch = async (
  overrideMode?: "thinking" | "rabbit",
  overrideQuery?: string,
- overrideDocumentTypes?: DocumentType[],
  overrideLanguages?: string[]
  ): Promise<void> => {
  const queryToUse = overrideQuery || query;
@@ -362,7 +341,6 @@ function SearchPageContent(): React.JSX.Element | null {
 
  await search(queryToUse, {
  overrideMode: modeToUse,
- overrideDocumentTypes: overrideDocumentTypes || documentTypes,
  overrideLanguages: overrideLanguages || Array.from(selectedLanguages),
  onComplete: () => {
  updateUrlParams(false, true);
@@ -392,7 +370,6 @@ function SearchPageContent(): React.JSX.Element | null {
  courts: Array.from(filters.issuingBodies || []),
  date_from: filters.dateFrom ? filters.dateFrom.toISOString().split('T')[0] : null,
  date_to: filters.dateTo ? filters.dateTo.toISOString().split('T')[0] : null,
- document_types: documentTypes,
  languages: Array.from(selectedLanguages),
  keywords: Array.from(filters.keywords || []),
  legal_concepts: Array.from(filters.legalConcepts || []),
@@ -400,7 +377,7 @@ function SearchPageContent(): React.JSX.Element | null {
  },
  totalResults: searchMetadata.length,
  searchTimestamp: searchTimestamp,
- }), [query, lastSearchMode, searchType, filters, documentTypes, selectedLanguages, searchMetadata.length, searchTimestamp]);
+ }), [query, lastSearchMode, searchType, filters, selectedLanguages, searchMetadata.length, searchTimestamp]);
 
  const handleAutocompleteSelection = useCallback(
  (value: string): void => {
@@ -515,11 +492,8 @@ function SearchPageContent(): React.JSX.Element | null {
  setQuery={setQuery}
  searchType={searchType}
  setSearchType={setSearchType}
- documentTypes={documentTypes}
- toggleDocumentType={toggleDocumentType}
  selectedLanguages={selectedLanguages}
  toggleLanguage={toggleLanguage}
- setDocumentTypes={setDocumentTypes}
  setSelectedLanguages={setSelectedLanguages}
  isSearching={isSearching}
  hasResults={searchMetadata.length > 0}
@@ -546,11 +520,8 @@ function SearchPageContent(): React.JSX.Element | null {
  setQuery={setQuery}
  searchType={searchType}
  setSearchType={setSearchType}
- documentTypes={documentTypes}
- toggleDocumentType={toggleDocumentType}
  selectedLanguages={selectedLanguages}
  toggleLanguage={toggleLanguage}
- setDocumentTypes={setDocumentTypes}
  setSelectedLanguages={setSelectedLanguages}
  isSearching={isSearching}
  hasResults={searchMetadata.length > 0}
@@ -601,7 +572,6 @@ function SearchPageContent(): React.JSX.Element | null {
   ...(filters.dateTo ? [{ label: `To: ${filters.dateTo.toLocaleDateString()}`, onClear: () => setDateFilter('dateTo', undefined) }] : []),
   ...Array.from(filters.keywords).map(kw => ({ label: `Keyword: ${kw}`, onClear: () => toggleFilter('keywords', kw) })),
   ...Array.from(filters.issuingBodies).map(body => ({ label: `Court: ${body}`, onClear: () => toggleFilter('issuingBodies', body) })),
-  ...Array.from(filters.documentTypes).map(dt => ({ label: `Type: ${dt}`, onClear: () => toggleFilter('documentTypes', dt) })),
  ]}
  onClearAllFilters={activeFilterCount > 0 ? resetFilters : undefined}
  onSampleQuery={(q) => {
@@ -656,7 +626,6 @@ function SearchPageContent(): React.JSX.Element | null {
  activeFilterCount={activeFilterCount}
  searchResults={{ documents: searchMetadata.map(m => ({
  keywords: m.keywords,
- document_type: m.document_type,
  language: m.language,
  jurisdiction: m.jurisdiction,
  court_level: m.court_level,

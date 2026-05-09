@@ -2392,50 +2392,6 @@
         "title": "CollectionWithDocuments",
         "type": "object"
       },
-      "ComplexityMetrics": {
-        "properties": {
-          "avg_complexity": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Complexity"
-          },
-          "avg_reasoning_quality": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avg Reasoning Quality"
-          },
-          "precedential_value_distribution": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "default": {},
-            "title": "Precedential Value Distribution",
-            "type": "object"
-          },
-          "research_value_distribution": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "default": {},
-            "title": "Research Value Distribution",
-            "type": "object"
-          }
-        },
-        "title": "ComplexityMetrics",
-        "type": "object"
-      },
       "ConsentHistoryEntry": {
         "description": "Single entry in consent history.",
         "properties": {
@@ -3660,13 +3616,6 @@
             "title": "Case Types",
             "type": "array"
           },
-          "complexity_metrics": {
-            "$ref": "#/components/schemas/ComplexityMetrics",
-            "default": {
-              "precedential_value_distribution": {},
-              "research_value_distribution": {}
-            }
-          },
           "computed_at": {
             "anyOf": [
               {
@@ -3700,36 +3649,48 @@
             }
           },
           "date_range": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "default": {},
-            "title": "Date Range",
-            "type": "object"
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Range"
           },
-          "decisions_per_year": {
-            "default": [],
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Decisions Per Year",
-            "type": "array"
-          },
-          "judicial_tones": {
+          "decision_types": {
             "default": [],
             "items": {
               "$ref": "#/components/schemas/DistributionItem"
             },
-            "title": "Judicial Tones",
+            "title": "Decision Types",
             "type": "array"
+          },
+          "decisions_per_year": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decisions Per Year"
           },
           "jurisdictions": {
             "$ref": "#/components/schemas/JurisdictionCounts",
@@ -3737,14 +3698,6 @@
               "PL": 0,
               "UK": 0
             }
-          },
-          "top_cited_legislation": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/DistributionItem"
-            },
-            "title": "Top Cited Legislation",
-            "type": "array"
           },
           "top_courts": {
             "default": [],
@@ -3763,12 +3716,18 @@
             "type": "array"
           },
           "top_legal_domains": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/DistributionItem"
-            },
-            "title": "Top Legal Domains",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DistributionItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Legal Domains"
           },
           "total_judgments": {
             "default": 0,
@@ -4916,7 +4875,7 @@
                 "type": "null"
               }
             ],
-            "description": "List of document types to filter (e.g., ['judgment', 'tax_interpretation'])",
+            "description": "List of document types to filter (e.g., ['judgment'])",
             "title": "Document Types"
           },
           "languages": {
@@ -5261,10 +5220,9 @@
         "type": "object"
       },
       "DocumentType": {
-        "description": "Enumeration of supported legal document types.",
+        "description": "Enumeration of supported legal document types.\n\nSearch is judgment-only as of 2026-05-09; the enum is retained as a\none-value placeholder so existing imports keep compiling. See\n``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``\nfor the migration that collapsed the enum.",
         "enum": [
-          "judgment",
-          "tax_interpretation"
+          "judgment"
         ],
         "title": "DocumentType",
         "type": "string"
@@ -9599,7 +9557,7 @@
                 "type": "null"
               }
             ],
-            "description": "Filter by document types (e.g., 'judgment', 'tax_interpretation')",
+            "description": "Filter by document types (e.g., 'judgment')",
             "title": "Document Types"
           },
           "language": {
@@ -12294,7 +12252,7 @@
             "title": "Current Schema"
           },
           "document_type": {
-            "default": "tax_interpretation",
+            "default": "judgment",
             "description": "Document type for schema generation",
             "title": "Document Type",
             "type": "string"
@@ -13061,33 +13019,6 @@
             ],
             "title": "Decision Types"
           },
-          "document_types": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Document types to filter by. Accepts 'judgment' or 'tax_interpretation'",
-            "examples": [
-              [
-                "tax_interpretation"
-              ],
-              [
-                "judgment"
-              ],
-              [
-                "tax_interpretation",
-                "judgment"
-              ]
-            ],
-            "title": "Document Types"
-          },
           "fetch_full_documents": {
             "default": false,
             "description": "Whether to fetch full document objects in addition to chunks",
@@ -13266,6 +13197,16 @@
               "interpretacja podatkowa"
             ],
             "title": "Query",
+            "type": "string"
+          },
+          "result_view": {
+            "default": "card",
+            "description": "Payload size selector: 'card' returns a trimmed ~10-field card-friendly document (default, fastest), 'full' returns the legacy complete LegalDocument payload.",
+            "enum": [
+              "card",
+              "full"
+            ],
+            "title": "Result View",
             "type": "string"
           },
           "segment_types": {
@@ -22771,7 +22712,7 @@
     },
     "/dashboard/featured-examples": {
       "get": {
-        "description": "Get curated featured example documents for new users.\n\nReturns interesting, representative documents to showcase platform capabilities.\n\nArgs:\n    limit: Number of examples to return (1-10)\n\nReturns:\n    List of featured documents",
+        "description": "Curated featured-example judgments for new users.\n\nArgs:\n    limit: Number of examples to return (1-10)\n\nReturns:\n    List of featured judgments rendered as DocumentSummary.",
         "operationId": "get_featured_examples_dashboard_featured_examples_get",
         "parameters": [
           {
@@ -23429,24 +23370,6 @@
               "minimum": 1,
               "title": "Min Shared Refs",
               "type": "integer"
-            }
-          },
-          {
-            "description": "Comma-separated document types to filter",
-            "in": "query",
-            "name": "document_types",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Comma-separated document types to filter",
-              "title": "Document Types"
             }
           }
         ],
@@ -31447,7 +31370,7 @@
     },
     "/schema-generator/chat": {
       "post": {
-        "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"tax_interpretation\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
+        "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"judgment\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
         "operationId": "schema_chat_schema_generator_chat_post",
         "requestBody": {
           "content": {

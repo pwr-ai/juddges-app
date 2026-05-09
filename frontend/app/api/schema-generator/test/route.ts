@@ -15,15 +15,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch documents from the collection
+    // Fetch judgments from the collection
     const { error: docError } = await supabase
-      .from("documents")
+      .from("judgments")
       .select("*")
       .in("id", document_ids)
       .limit(10);
 
     if (docError) {
-      throw new Error("Failed to fetch documents");
+      throw new Error("Failed to fetch judgments");
     }
 
     // Mock test results for now (in production, this would call the extraction service)

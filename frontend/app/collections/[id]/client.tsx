@@ -277,6 +277,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  });
  setCollection(data);
  setEditName(data.name);
+ setEditDescription(data.description ?? "");
 
  // Load document details for each document in the collection
  data.documents.forEach((docId) => {
@@ -580,6 +581,18 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  Return to Collections
  </TextButton>
  {!isEditing && (
+ <div className="flex items-center gap-2">
+ <IconButton
+ icon={Pencil}
+ onClick={() => {
+ setEditName(collection.name);
+ setEditDescription(collection.description ?? "");
+ setIsEditing(true);
+ }}
+ variant="muted"
+ size="md"
+ aria-label="Edit collection"
+ />
  <Dialog
  open={isAddDocumentDialogOpen}
  onOpenChange={(open) => {
@@ -656,6 +669,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  </div>
  </DialogContent>
  </Dialog>
+ </div>
  )}
  </div>
 

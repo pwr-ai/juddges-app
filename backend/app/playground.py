@@ -18,7 +18,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.core.supabase import get_supabase_client
-from app.utils.document_fetcher import get_documents_by_id
+from app.utils.judgment_fetcher import get_documents_by_id
 
 router = APIRouter(prefix="/playground", tags=["playground"])
 

@@ -2,11 +2,13 @@
  * Tests for the searchStore Zustand store.
  *
  * Exercises: initial state, setters, filter toggling, document selection,
- * computed getters, and the isUnknownDocumentType helper.
+ * and computed getters. The legacy multi-document-type plumbing
+ * (`documentTypes`, `setDocumentTypes`, `isUnknownDocumentType`) was
+ * removed when search collapsed to judgment-only — see
+ * `docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md`.
  */
 
-import { useSearchStore, isUnknownDocumentType } from '@/lib/store/searchStore';
-import { DocumentType } from '@/types/search';
+import { useSearchStore } from '@/lib/store/searchStore';
 import type { SearchDocument, SearchChunk } from '@/types/search';
 
 // Factory helpers
@@ -26,10 +28,8 @@ describe('searchStore', () => {
     // Reset all store state before each test
     useSearchStore.setState({
       query: '',
-      documentTypes: [],
       selectedLanguages: new Set(['uk', 'pl']),
       searchType: 'thinking',
-      ignoreUnknownType: true,
       currentPage: 1,
       pageSize: 20,
       totalResults: 0,
@@ -48,7 +48,6 @@ describe('searchStore', () => {
       filters: {
         keywords: new Set(),
         legalConcepts: new Set(),
-        documentTypes: new Set(),
         issuingBodies: new Set(),
         languages: new Set(),
         dateFrom: undefined,
@@ -90,11 +89,6 @@ describe('searchStore', () => {
     it('setQuery updates query', () => {
       useSearchStore.getState().setQuery('tax law');
       expect(useSearchStore.getState().query).toBe('tax law');
-    });
-
-    it('setDocumentTypes updates documentTypes', () => {
-      useSearchStore.getState().setDocumentTypes([DocumentType.JUDGMENT]);
-      expect(useSearchStore.getState().documentTypes).toEqual([DocumentType.JUDGMENT]);
     });
 
     it('setIsSearching updates searching state', () => {
@@ -262,31 +256,5 @@ describe('searchStore', () => {
       useSearchStore.getState().setPaginationMetadata(meta);
       expect(useSearchStore.getState().paginationMetadata).toEqual(meta);
     });
-  });
-});
-
-// ── isUnknownDocumentType helper ────────────────────────────────────────
-
-describe('isUnknownDocumentType', () => {
-  it('returns true for null/undefined', () => {
-    expect(isUnknownDocumentType(null)).toBe(true);
-    expect(isUnknownDocumentType(undefined)).toBe(true);
-  });
-
-  it('returns false for JUDGMENT', () => {
-    expect(isUnknownDocumentType(DocumentType.JUDGMENT)).toBe(false);
-  });
-
-  it('returns false for TAX_INTERPRETATION', () => {
-    expect(isUnknownDocumentType(DocumentType.TAX_INTERPRETATION)).toBe(false);
-  });
-
-  it('returns true for ERROR type', () => {
-    expect(isUnknownDocumentType(DocumentType.ERROR)).toBe(true);
-  });
-
-  it('returns true for arbitrary strings', () => {
-    expect(isUnknownDocumentType('unknown')).toBe(true);
-    expect(isUnknownDocumentType('random_type')).toBe(true);
   });
 });

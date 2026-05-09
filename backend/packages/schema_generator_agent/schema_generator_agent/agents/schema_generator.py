@@ -244,10 +244,10 @@ def route_after_data_assessment_merger(state: AgentState) -> str:
 
 
 def load_prompts(document_type: DocumentType) -> dict[str, str]:
-    if document_type == DocumentType.TAX_INTERPRETATION:
-        system_type = "tax"
-    else:
-        system_type = "law"
+    # Search is judgment-only as of 2026-05-09 (see docs/superpowers/specs/
+    # 2026-05-09-search-judgment-only-blazing-fast.md); the legacy tax branch
+    # was removed alongside the corresponding DocumentType enum member.
+    system_type = "law"
 
     prompt_names = [
         "problem_definer_helper",

@@ -165,6 +165,8 @@ function EmbeddingModelsSection() {
  );
  }
 
+ const isAllowed = (model: EmbeddingModel) => model.model_name === "BAAI/bge-m3";
+
  return (
  <div className="space-y-4">
  {error && (
@@ -173,6 +175,15 @@ function EmbeddingModelsSection() {
  {error}
  </div>
  )}
+
+ <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 text-amber-800 text-sm border border-amber-200">
+ <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
+ <span>
+ Only <strong>BAAI/bge-m3</strong> can be activated at the moment. Other models are listed
+ for reference — in the future we plan to investigate how different embeddings perform on
+ Polish legal texts and re-enable selection.
+ </span>
+ </div>
 
  {models.map((model) => (
  <div
@@ -238,7 +249,8 @@ function EmbeddingModelsSection() {
  variant="default"
  size="sm"
  onClick={() => handleSetActive(model.id)}
- disabled={switching === model.id || !model.api_key_configured}
+ disabled={switching === model.id || !model.api_key_configured || !isAllowed(model)}
+ title={!isAllowed(model) ? "Only BAAI/bge-m3 can be activated right now": undefined}
  >
  {switching === model.id ? (
  <Loader2 className="h-3 w-3 animate-spin mr-1"/>
@@ -739,9 +751,10 @@ export default function SettingsPage() {
  Switching models affects how new searches are performed but does not re-embed existing documents.
  </p>
  <p className="text-sm text-blue-800">
- <strong>OpenAI</strong> models offer high quality and are the default. <strong>Cohere</strong> models
- provide excellent multilingual support. <strong>Local</strong> models run without API costs and are
- optimized for Polish legal texts.
+ The platform currently uses <strong>BAAI/bge-m3</strong> — a multilingual model that performs
+ well on Polish legal texts. Other providers (<strong>OpenAI</strong>, <strong>Cohere</strong>,
+ alternative <strong>local</strong> models) are listed for reference and will be evaluated in
+ future experiments comparing embedding quality on our corpus.
  </p>
  </CardContent>
  </Card>

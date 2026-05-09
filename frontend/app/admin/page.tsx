@@ -8,12 +8,14 @@ import {
  CheckCircle2,
  AlertCircle,
  MinusCircle,
+ ShieldCheck,
 } from "lucide-react";
 import {
  useAdminStats,
  useAdminActivity,
  useAdminSystemHealth,
 } from "@/lib/api/admin";
+import { useDashboardStats } from "@/lib/api/dashboard";
 
 function formatDate(iso: string): string {
  return new Date(iso).toLocaleString(undefined, {
@@ -22,6 +24,11 @@ function formatDate(iso: string): string {
  hour: "2-digit",
  minute: "2-digit",
  });
+}
+
+function formatPct(value: number | undefined | null): string {
+ if (value === undefined || value === null || Number.isNaN(value)) return "—";
+ return `${value.toFixed(1)}%`;
 }
 
 function StatCardSkeleton() {
@@ -41,12 +48,21 @@ function StatCardSkeleton() {
 
 export default function AdminDashboardPage() {
  const statsQuery = useAdminStats();
+ const dashboardStatsQuery = useDashboardStats();
  const activityQuery = useAdminActivity(8);
  const healthQuery = useAdminSystemHealth();
 
  const stats = statsQuery.data;
+ const dashboardStats = dashboardStatsQuery.data;
  const activity = activityQuery.data ?? [];
  const health = healthQuery.data;
+
+ const totalDocsValue = dashboardStats
+ ? dashboardStats.total_judgments.toLocaleString()
+ : stats?.total_documents.toLocaleString() ?? "—";
+
+ const embeddingsPct = dashboardStats?.data_completeness?.embeddings_pct;
+ const summaryPct = dashboardStats?.data_completeness?.with_summary_pct;
 
  const statCards = stats
  ? [
@@ -57,7 +73,7 @@ export default function AdminDashboardPage() {
  },
  {
  label: "Total Documents",
- value: stats.total_documents.toLocaleString(),
+ value: totalDocsValue,
  icon: FileText,
  },
  {
@@ -91,7 +107,7 @@ export default function AdminDashboardPage() {
  )}
 
  {/* Stat cards */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
  {statsQuery.isLoading
  ? Array.from({ length: 4 }).map((_, i) => (
  <StatCardSkeleton key={i} />
@@ -117,6 +133,42 @@ export default function AdminDashboardPage() {
  </div>
  );
  })}
+ </div>
+
+ {/* Data Quality tile (sub-metric for corpus) */}
+ <div className="mb-10">
+ {dashboardStatsQuery.isLoading ? (
+ <StatCardSkeleton />
+ ) : dashboardStats ? (
+ <div className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4">
+ <div className="flex items-start justify-between">
+ <div className="rounded-lg bg-primary/8 p-2">
+ <ShieldCheck className="size-5 text-primary"/>
+ </div>
+ <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground/70">
+ Corpus data quality
+ </span>
+ </div>
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+ <div>
+ <p className="text-3xl font-semibold text-foreground tabular-nums">
+ {formatPct(embeddingsPct)}
+ </p>
+ <p className="mt-0.5 text-sm text-muted-foreground">
+ Documents with embeddings
+ </p>
+ </div>
+ <div>
+ <p className="text-3xl font-semibold text-foreground tabular-nums">
+ {formatPct(summaryPct)}
+ </p>
+ <p className="mt-0.5 text-sm text-muted-foreground">
+ Documents with AI summary
+ </p>
+ </div>
+ </div>
+ </div>
+ ) : null}
  </div>
 
  {/* Two-column lower section */}

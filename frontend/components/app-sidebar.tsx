@@ -23,6 +23,7 @@ import {
  BarChart3,
  LogIn,
  UserPlus,
+ LayoutDashboard,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -208,6 +209,7 @@ export function AppSidebar(): React.JSX.Element {
  showGlow={true}
  className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
  />
+ <span className="ml-3 font-serif text-lg text-ink tracking-tight group-data-[collapsible=icon]:hidden">JuDDGES</span>
  </Link>
  </SidebarHeader>
  <SidebarContent className="gap-3 px-2">
@@ -215,6 +217,17 @@ export function AppSidebar(): React.JSX.Element {
  <SidebarGroup className="p-0">
  <SidebarGroupContent className="px-0">
  <SidebarMenu className="space-y-1">
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.dashboard')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/"}>
+ <Link href="/">
+ <LayoutDashboard />
+ <span>{t('navigation.dashboard')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
  <SidebarMenuItem>
  <ConditionalTooltip content={t('navigation.searchJudgments')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/search"}>

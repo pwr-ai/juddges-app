@@ -1,4 +1,4 @@
-"""Unit tests for app.ingestion.chunk_documents — DocumentChunker."""
+"""Unit tests for app.ingestion.chunk_judgments — DocumentChunker."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.ingestion.chunk_documents import (
+from app.ingestion.chunk_judgments import (
     JURISDICTION_TO_LANGUAGE,
     POLISH_SECTION_PATTERNS,
     UK_SECTION_PATTERNS,
@@ -17,7 +17,7 @@ from app.ingestion.chunk_documents import (
 def _make_chunker(*, batch_size: int = 10, dry_run: bool = False) -> DocumentChunker:
     """Create a DocumentChunker with mocked external dependencies."""
     mock_supabase = MagicMock()
-    with patch("app.ingestion.chunk_documents.get_embedding_provider") as mock_prov:
+    with patch("app.ingestion.chunk_judgments.get_embedding_provider") as mock_prov:
         mock_provider = AsyncMock()
         mock_prov.return_value = mock_provider
         return DocumentChunker(

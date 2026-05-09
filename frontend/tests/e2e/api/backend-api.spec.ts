@@ -120,7 +120,6 @@ test.describe('Backend API Integration', () => {
         data: {
           query: "Swiss franc loans consumer protection",
           max_documents: 10,
-          document_types: ["judgment"],
           languages: ["pl"],
           mode: "rabbit"
         }
@@ -155,7 +154,6 @@ test.describe('Backend API Integration', () => {
         data: {
           query: "copyright infringement legal precedent",
           max_documents: 5,
-          document_types: ["judgment", "tax_interpretation"],
           languages: ["pl", "uk"],
           mode: "thinking"
         }

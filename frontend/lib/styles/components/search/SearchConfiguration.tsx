@@ -1,16 +1,15 @@
 /**
  * Search Configuration Component
- * Configuration card for search query settings (document type, mode, language)
+ * Configuration card for search query settings (mode, language)
  * Separate from SearchFilters which is for filtering results
- * Provides toggles for document types, search mode, and language selection
+ * Provides toggles for search mode and language selection
  */
 
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { Zap, Brain, Scale, Calculator, Rabbit } from 'lucide-react';
-import { DocumentType } from '@/types/search';
-import { FilterToggleGroup, AIBadge } from '@/lib/styles/components';
+import { Brain, Rabbit } from 'lucide-react';
+import { AIBadge } from '@/lib/styles/components';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/lib/styles/components/tooltip';
 import { cn } from '@/lib/utils';
@@ -22,8 +21,6 @@ interface Language {
 }
 
 export interface SearchConfigurationProps {
- documentTypes: DocumentType[];
- onDocumentTypeToggle: (type: DocumentType) => void;
  searchType: 'rabbit' | 'thinking';
  onSearchTypeChange: (type: 'rabbit' | 'thinking') => void;
  selectedLanguages: Set<string>;
@@ -31,19 +28,12 @@ export interface SearchConfigurationProps {
  isSearching?: boolean;
 }
 
-const availableDocumentTypes = [
- { value: DocumentType.JUDGMENT, label: 'Judgment', icon: Scale },
- { value: DocumentType.TAX_INTERPRETATION, label: 'Tax Interpretation', icon: Calculator },
-];
-
 const availableLanguages: Language[] = [
  { code: 'pl', name: 'Polish', flag: '🇵🇱' },
  { code: 'uk', name: 'English', flag: '🇬🇧' },
 ];
 
 export function SearchConfiguration({
- documentTypes,
- onDocumentTypeToggle,
  searchType,
  onSearchTypeChange,
  selectedLanguages,
@@ -87,36 +77,7 @@ export function SearchConfiguration({
  <h3 className="text-sm font-medium text-slate-900 mb-1">Search Configuration</h3>
 
  <div className="grid grid-cols-2 gap-4">
- {/* Row 1: Search In - Spans full width */}
- <div className="flex flex-row items-center gap-1 col-span-2">
- <label className="text-xs font-medium text-slate-900 w-20 shrink-0">Search In:</label>
- <div className="relative flex h-12 rounded-lg p-2 flex-1 gap-2.5">
- {availableDocumentTypes.map((type) => {
- const isSelected = documentTypes.includes(type.value);
- const Icon = type.icon;
- const displayLabel = type.label === 'Tax Interpretation' ? 'Tax Interpretations' : type.label;
-
- return (
- <button
- key={type.value}
- type="button"
- onClick={() => !isSearching && onDocumentTypeToggle(type.value)}
- disabled={isSearching}
- className={cn(
-"neo-chip flex-1",
- isSelected &&"neo-chip--active",
- isSearching &&"opacity-50 cursor-not-allowed"
- )}
- >
- <Icon className="h-5 w-5 shrink-0"/>
- <span className="whitespace-nowrap text-sm font-medium">{displayLabel}</span>
- </button>
- );
- })}
- </div>
- </div>
-
- {/* Row 2, Col 1: Mode */}
+ {/* Mode */}
  <div className="flex flex-row items-center gap-1">
  <label className="text-xs font-medium text-slate-900 w-20 shrink-0">Mode:</label>
  <Popover open={searchType === 'rabbit' ? isFastPopoverOpen : searchType === 'thinking' ? isThinkingPopoverOpen : false} onOpenChange={(open) => {
@@ -207,32 +168,27 @@ export function SearchConfiguration({
  </Popover>
  </div>
 
- {/* Row 2, Col 2: Language */}
+ {/* Language */}
  <div className="flex flex-row items-center gap-1">
  <label className="text-xs font-medium text-slate-900 w-20 shrink-0">Language:</label>
  <div className="relative flex h-12 rounded-lg p-2 flex-1 gap-2.5">
  {availableLanguages.map((lang) => {
- const hasOnlyTaxInterpretation =
- documentTypes.length === 1 && documentTypes.includes(DocumentType.TAX_INTERPRETATION);
- const isEnglish = lang.code === 'en' || lang.code === 'uk';
- const isTaxInterpretationDisabled = hasOnlyTaxInterpretation && isEnglish;
  const isSelected = selectedLanguages.has(lang.code);
- const isDisabled = isTaxInterpretationDisabled;
 
  return (
  <button
  key={lang.code}
  type="button"
  onClick={() => {
- if (!isDisabled && !isSearching) {
+ if (!isSearching) {
  onLanguageToggle(lang.code);
  }
  }}
- disabled={isSearching || isDisabled}
+ disabled={isSearching}
  className={cn(
 "neo-chip flex-1",
  isSelected &&"neo-chip--active",
- (isSearching || isDisabled) &&"opacity-50 cursor-not-allowed"
+ isSearching &&"opacity-50 cursor-not-allowed"
  )}
  >
  <span className="text-lg shrink-0">{lang.flag}</span>

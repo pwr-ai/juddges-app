@@ -81,7 +81,7 @@ class SchemaChatRequest(BaseModel):
         default=None, description="Legacy agent ID (backward compatibility)"
     )
     document_type: str = Field(
-        default="tax_interpretation", description="Document type for schema generation"
+        default="judgment", description="Document type for schema generation"
     )
     mode: str = Field(
         default="rabbit", description="Agent mode: 'rabbit' or 'thinking'"
@@ -328,7 +328,7 @@ async def schema_chat(
         {
             "message": "I need to extract drug information from court documents",
             "collection_id": "drug-cases",
-            "document_type": "tax_interpretation",
+            "document_type": "judgment",
             "mode": "rabbit"
         }
         ```
@@ -532,7 +532,7 @@ async def test_schema(
         total_time = 0.0
 
         # Import document fetcher
-        from app.utils.document_fetcher import get_documents_by_id
+        from app.utils.judgment_fetcher import get_documents_by_id
 
         for doc_id in params.document_ids:
             start_time = datetime.now(UTC)

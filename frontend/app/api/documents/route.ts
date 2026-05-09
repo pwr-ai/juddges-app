@@ -2,49 +2,6 @@ import { NextResponse, NextRequest } from "next/server";
 import { createClient } from '@/lib/supabase/server';
 import { logger } from "@/lib/logger";
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  try {
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    const supabase = await createClient();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData?.user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    // Fetch sample documents from Supabase
-    const { data: documents, error: documentsError } = await supabase
-      .from('documents')
-      .select('id, judgment_date, volume_number')
-      .order('judgment_date', { ascending: false })
-      .limit(limit);
-
-    if (documentsError) {
-      logger.error("Error fetching documents: ", documentsError);
-      return NextResponse.json(
-        { error: "Failed to fetch documents" },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      documents: documents || [],
-      total: documents?.length || 0
-    });
-  } catch (error) {
-    logger.error("Error in documents route: ", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const supabase = await createClient();

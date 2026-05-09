@@ -56,6 +56,7 @@ from .search import (
     _build_search_rpc_params,
     _build_search_timing_breakdown,
     _generate_search_embedding,
+    _get_estimated_total,
     _get_search_client,
     _prepare_search_queries,
     _rerank_if_enabled,
@@ -179,9 +180,6 @@ async def get_citation_network(
     min_shared_refs: int = Query(
         1, ge=1, le=10, description="Minimum shared references for an edge"
     ),
-    document_types: str | None = Query(
-        None, description="Comma-separated document types to filter"
-    ),
 ) -> CitationNetworkResponse:
     """Build citation network from shared legal references between documents."""
     try:
@@ -190,13 +188,6 @@ async def get_citation_network(
         query = db.client.table("legal_documents").select(
             'document_id, title, document_type, date_issued, x, y, "references", court_name, document_number, language'
         )
-
-        if document_types:
-            types_list = [t.strip() for t in document_types.split(",")]
-            if len(types_list) == 1:
-                query = query.eq("document_type", types_list[0])
-            else:
-                query = query.in_("document_type", types_list)
 
         response = query.not_.is_("references", "null").limit(sample_size).execute()
         docs = response.data or []
@@ -412,6 +403,28 @@ async def search_documents(request: SearchChunksRequest):
     limit = request.limit_docs or 20
     offset = request.offset or 0
 
+    # Full-response Redis cache (rabbit mode only). A hit here skips embedding,
+    # RPC, rerank, payload build, estimated_total — the entire pipeline. Any
+    # cache failure is swallowed so search continues to work without Redis.
+    if request.mode != "thinking":
+        try:
+            from app.search_cache import get_cached_search
+
+            # user_id=None: RLS is currently public-read so the cache key
+            # stays request-only. Pass a stable user/role identifier here
+            # once any non-public field or per-user filter ships.
+            cached_response = await get_cached_search(request, user_id=None)
+            if cached_response is not None:
+                logger.debug(
+                    "search_cache hit: query='{}...' offset={} limit={}",
+                    query[:60],
+                    offset,
+                    limit,
+                )
+                return cached_response
+        except Exception as cache_err:
+            logger.warning("search_cache lookup failed (non-fatal): {}", cache_err)
+
     try:
         import sentry_sdk
 
@@ -426,7 +439,7 @@ async def search_documents(request: SearchChunksRequest):
 
     logger.info(
         f"Search request: query='{query[:100]}...', limit={limit}, "
-        f"languages={request.languages}, document_types={request.document_types}, "
+        f"languages={request.languages}, "
         f"jurisdictions={request.jurisdictions}, case_types={request.case_types}"
     )
 
@@ -524,7 +537,24 @@ async def search_documents(request: SearchChunksRequest):
             )
 
         results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
-        chunks, documents = _build_search_result_payload(results)
+        chunks, documents = _build_search_result_payload(
+            results, result_view=request.result_view
+        )
+
+        # First-page estimated_total. Only paid on offset==0 + include_count, so
+        # load-more requests stay free. Errors return None and never block search.
+        estimated_total: int | None = None
+        if request.include_count and offset == 0:
+            try:
+                count_supabase = await _get_search_client()
+                estimated_total = await _get_estimated_total(
+                    count_supabase, effective_filters
+                )
+            except Exception as count_err:
+                logger.warning(
+                    "Skipping estimated_total (client/setup failed): {}", count_err
+                )
+                estimated_total = None
 
         total_time_ms = (time.perf_counter() - start_time) * 1000
         timing_breakdown = _build_search_timing_breakdown(
@@ -548,7 +578,9 @@ async def search_documents(request: SearchChunksRequest):
             f"(embedding: {embedding_time_ms:.0f}ms, search: {search_time_ms:.0f}ms)"
         )
 
-        pagination = _build_search_pagination(offset, limit, len(results))
+        pagination = _build_search_pagination(
+            offset, limit, len(results), estimated_total=estimated_total
+        )
 
         try:
             from app.search_telemetry import record_search
@@ -576,7 +608,7 @@ async def search_documents(request: SearchChunksRequest):
         except Exception as telem_err:
             logger.debug(f"Search telemetry skipped: {telem_err}")
 
-        return SearchChunksResponse(
+        response = SearchChunksResponse(
             chunks=chunks,
             documents=documents,
             total_chunks=len(chunks),
@@ -591,6 +623,20 @@ async def search_documents(request: SearchChunksRequest):
             inferred_filters=inferred_filters if request.mode == "thinking" else None,
             query_analysis_source=query_analysis_source,
         )
+
+        # Populate the full-response cache for subsequent identical requests.
+        # Skipped for thinking mode (non-deterministic) and for any error path
+        # (we never reach here on exception).
+        if request.mode != "thinking":
+            try:
+                from app.search_cache import set_cached_search
+
+                # user_id=None: see matching note on get_cached_search above.
+                await set_cached_search(request, response, user_id=None)
+            except Exception as cache_err:
+                logger.warning("search_cache write failed (non-fatal): {}", cache_err)
+
+        return response
 
     except HTTPException:
         raise

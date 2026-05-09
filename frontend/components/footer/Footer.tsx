@@ -7,6 +7,8 @@ import { FooterLink } from "./FooterLink";
 import { SocialLinks } from "./SocialLinks";
 import { cn } from "@/lib/utils";
 
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
+
 export function Footer({ className }: { className?: string }) {
  return (
  <footer
@@ -51,8 +53,10 @@ export function Footer({ className }: { className?: string }) {
  <FooterSection title="The Project">
  <li><FooterLink href="/about">About Us</FooterLink></li>
  <li><FooterLink href="/about#research">Our Research</FooterLink></li>
+ <li><FooterLink href="/ecosystem">Ecosystem</FooterLink></li>
  <li><FooterLink href="/team">Team</FooterLink></li>
  <li><FooterLink href="/publications">Publications</FooterLink></li>
+ <li><FooterLink href="https://juddges.org"external>juddges.org</FooterLink></li>
  <li><FooterLink href="https://pwr.edu.pl"external>University</FooterLink></li>
  </FooterSection>
 
@@ -124,8 +128,14 @@ export function Footer({ className }: { className?: string }) {
  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
 
  {/* Copyright */}
- <div className="text-xs text-slate-600 text-center md:text-left">
+ <div className="text-xs text-slate-600 text-center md:text-left flex items-center gap-2 flex-wrap justify-center md:justify-start">
  <p>© {new Date().getFullYear()} Wrocław University of Science and Technology. All rights reserved.</p>
+ {APP_VERSION && (
+ <>
+ <span aria-hidden="true">•</span>
+ <span aria-label="Application version" className="text-slate-600">v{APP_VERSION}</span>
+ </>
+ )}
  </div>
 
  {/* Social Links */}

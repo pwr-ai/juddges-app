@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from app.documents import search_documents
+from app.judgments_pkg import search_documents
 from app.models import SearchChunksRequest
 from app.query_analysis import QueryAnalysisResult
 
@@ -17,8 +17,15 @@ class _FakeSupabase:
         self.capture = capture
 
     def rpc(self, fn_name: str, params: dict[str, Any]):
-        self.capture["rpc_name"] = fn_name
-        self.capture["rpc_params"] = params
+        # Skip the count_judgments_filtered helper invoked after the search
+        # for first-page estimated_total — capture only the search rpc so the
+        # assertions remain stable when Task 6's count helper runs.
+        if fn_name != "count_judgments_filtered":
+            self.capture["rpc_name"] = fn_name
+            self.capture["rpc_params"] = params
+
+        if fn_name == "count_judgments_filtered":
+            return SimpleNamespace(execute=lambda: SimpleNamespace(data=0))
 
         row = {
             "id": "11111111-1111-1111-1111-111111111111",
@@ -62,6 +69,12 @@ class _FakeSupabaseSequenced:
         self.calls: list[dict[str, Any]] = []
 
     def rpc(self, fn_name: str, params: dict[str, Any]):
+        # Task 6 added a `count_judgments_filtered` rpc invoked after the
+        # search; isolate it from the search response sequence so the test
+        # fixtures stay focused on the hybrid-search branch.
+        if fn_name == "count_judgments_filtered":
+            return SimpleNamespace(execute=lambda: SimpleNamespace(data=0))
+
         self.capture["rpc_name"] = fn_name
         self.capture["rpc_params"] = params
         self.calls.append({"fn_name": fn_name, "params": params})
@@ -92,7 +105,9 @@ async def test_thinking_mode_uses_separate_semantic_and_keyword_queries(monkeypa
             None,
         )
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr(
+        "app.judgments_pkg.search.generate_embedding", fake_generate_embedding
+    )
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_with_fallback",
         fake_analyze_query_with_fallback,
@@ -148,7 +163,9 @@ async def test_explicit_filters_override_inferred_filters(monkeypatch):
             None,
         )
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr(
+        "app.judgments_pkg.search.generate_embedding", fake_generate_embedding
+    )
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_with_fallback",
         fake_analyze_query_with_fallback,
@@ -195,7 +212,9 @@ async def test_thinking_mode_heuristic_fallback_source(monkeypatch):
             "invalid_api_key",
         )
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr(
+        "app.judgments_pkg.search.generate_embedding", fake_generate_embedding
+    )
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_with_fallback",
         fake_analyze_query_with_fallback,
@@ -270,7 +289,9 @@ async def test_thinking_mode_zero_results_triggers_relaxed_fallback(monkeypatch)
     # First call returns no results, second call returns data.
     fake_supabase = _FakeSupabaseSequenced(capture, responses=[[], [row]])
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr(
+        "app.judgments_pkg.search.generate_embedding", fake_generate_embedding
+    )
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_heuristic",
         fake_analyze_query_heuristic,

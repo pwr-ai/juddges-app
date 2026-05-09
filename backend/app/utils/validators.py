@@ -71,29 +71,3 @@ def validate_languages(v: list[str] | None) -> list[str] | None:
             normalized.append(lang_lower)
 
     return normalized
-
-
-def validate_document_types(v: list[str] | None) -> list[str] | None:
-    """Validate document types - accept both 'judgment' and 'judgement' (normalize to 'judgment')."""
-    if not v:
-        return v
-
-    valid_types = {"judgment", "tax_interpretation"}
-    # Also accept British spelling "judgement" and normalize to "judgment"
-    valid_types_with_alt = valid_types | {"judgement"}
-    normalized = []
-
-    for doc_type in v:
-        doc_type_lower = doc_type.strip().lower()
-        if doc_type_lower not in valid_types_with_alt:
-            raise ValueError(
-                f"Invalid document_type: '{doc_type}'. "
-                f"Must be one of: 'judgment' (or 'judgement'), 'tax_interpretation'"
-            )
-        # Normalize "judgement" to "judgment"
-        if doc_type_lower == "judgement":
-            normalized.append("judgment")
-        else:
-            normalized.append(doc_type_lower)
-
-    return normalized
