@@ -38,6 +38,8 @@ jest.mock('@/contexts/LanguageContext', () => ({
         'navigation.search': 'Search',
         'navigation.extractStructureData': 'Extract Structured Data',
         'navigation.extractions': 'Extractions',
+        'navigation.dashboard': 'Dashboard',
+        'navigation.searchJudgments': 'Search Judgments',
       };
 
       return map[key] ?? key;
@@ -83,5 +85,27 @@ describe('AppSidebar public navigation', () => {
     expect(container.querySelector('a[href="/extractions"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/collections"]')).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/dataset-comparison"]')).not.toBeInTheDocument();
+  });
+
+  it('shows the Dashboard link as the first item for authenticated users', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
+
+    const { container } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    // Scope to the sidebar menu list so the logo's href="/" in the header
+    // doesn't masquerade as the Dashboard menu item.
+    const menuLinks = Array.from(
+      container.querySelectorAll<HTMLAnchorElement>('[data-sidebar="menu"] a[href]')
+    );
+
+    const dashboardIndex = menuLinks.findIndex(link => link.getAttribute('href') === '/');
+    const searchIndex = menuLinks.findIndex(link => link.getAttribute('href') === '/search');
+
+    expect(dashboardIndex).toBeGreaterThanOrEqual(0);
+    expect(searchIndex).toBeGreaterThan(dashboardIndex);
   });
 });

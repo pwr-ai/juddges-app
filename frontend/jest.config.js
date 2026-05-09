@@ -115,7 +115,8 @@ const customJestConfig = {
     '/tests/',
     '/__tests__/',
   ],
-  // Coverage thresholds — start low, increase as coverage improves
+  // Coverage thresholds — ratcheted to current state (see lcov.info 2026-05-05).
+  // Raise these whenever real coverage moves up; never lower them.
   coverageThreshold: {
     global: {
       statements: 21,

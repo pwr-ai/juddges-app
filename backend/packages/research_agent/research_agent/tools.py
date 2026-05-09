@@ -110,7 +110,7 @@ async def find_precedents(
     fact pattern and searches for the most similar judgments in the database.
     """
     try:
-        from app.documents_pkg.utils import generate_embedding
+        from app.judgments_pkg.utils import generate_embedding
         from juddges_search.db.supabase_db import get_vector_db
 
         embedding = await generate_embedding(fact_pattern)

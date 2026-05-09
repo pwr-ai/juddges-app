@@ -43,7 +43,7 @@ class SupabaseClientMixin:
 
     def _handle_error(self, operation: str, error: Exception) -> None:
         """Translate Supabase exceptions into FastAPI HTTP exceptions."""
-        logger.error(f"Supabase error during {operation}: {error}", exc_info=True)
+        logger.exception(f"Supabase error during {operation}: {error}")
 
         error_msg = str(error).lower()
         if "duplicate key" in error_msg or "already exists" in error_msg:

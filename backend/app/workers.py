@@ -26,7 +26,7 @@ from app.models import (
     DocumentProcessingStatus,
 )
 from app.schemas_pkg import _fetch_schema_from_db
-from app.utils.document_fetcher import get_documents_by_id
+from app.utils.judgment_fetcher import get_documents_by_id
 
 load_dotenv()
 # Safe defaults so `import app.workers` succeeds in environments without Celery

@@ -7,13 +7,24 @@ from types import SimpleNamespace
 
 import pytest
 
-MODULE_PATH = (
-    Path(__file__).resolve().parents[2] / "scripts" / "generate_release_notes.py"
-)
+
+def _resolve_module_path() -> Path | None:
+    here = Path(__file__).resolve()
+    for parent in [here, *here.parents]:
+        candidate = parent / "scripts" / "generate_release_notes.py"
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("generate_release_notes", MODULE_PATH)
+    module_path = _resolve_module_path()
+    if module_path is None:
+        pytest.skip(
+            "scripts/generate_release_notes.py not in repo tree "
+            "(running outside the full repo, e.g. backend-only container)"
+        )
+    spec = importlib.util.spec_from_file_location("generate_release_notes", module_path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     sys.modules[spec.name] = module

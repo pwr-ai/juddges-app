@@ -66,6 +66,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (userData.user.app_metadata?.is_admin !== true) {
+      return NextResponse.json(
+        { error: "Admin permission required" },
+        { status: 403 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/publications`, {
       method: 'POST',

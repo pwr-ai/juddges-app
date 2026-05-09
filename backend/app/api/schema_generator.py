@@ -532,7 +532,7 @@ async def test_schema(
         total_time = 0.0
 
         # Import document fetcher
-        from app.utils.document_fetcher import get_documents_by_id
+        from app.utils.judgment_fetcher import get_documents_by_id
 
         for doc_id in params.document_ids:
             start_time = datetime.now(UTC)

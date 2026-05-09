@@ -65,6 +65,13 @@ export async function PUT(
       );
     }
 
+    if (userData.user.app_metadata?.is_admin !== true) {
+      return NextResponse.json(
+        { error: "Admin permission required" },
+        { status: 403 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'PUT',
@@ -117,6 +124,13 @@ export async function DELETE(
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
+      );
+    }
+
+    if (userData.user.app_metadata?.is_admin !== true) {
+      return NextResponse.json(
+        { error: "Admin permission required" },
+        { status: 403 }
       );
     }
 

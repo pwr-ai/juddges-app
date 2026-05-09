@@ -1,616 +1,777 @@
 "use client";
 
 import Link from "next/link";
-import { SkeletonTrendingTopic, SkeletonChatCard, SkeletonDocumentCard, SkeletonExtractionCard } from "@/components/ui/skeleton-card";
+import {
+  SkeletonTrendingTopic,
+  SkeletonChatCard,
+  SkeletonDocumentCard,
+  SkeletonExtractionCard,
+} from "@/components/ui/skeleton-card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import {
- useDashboardStats,
- useRecentDocuments,
- useTrendingTopics,
- useRecentChats,
- useUserSchemas,
- useCollectionsDocumentCount,
- useRecentExtractions,
+  useDashboardStats,
+  useRecentDocuments,
+  useTrendingTopics,
+  useUserSchemas,
+  useCollectionsDocumentCount,
+  useRecentExtractions,
 } from "@/lib/api/dashboard";
 import {
- MessageSquare,
- Search,
- FileText,
- Scale,
- TrendingUp,
- TrendingDown,
- Minus,
- Clock,
- ChevronRight,
- Database,
- Zap,
- FileJson,
+  FileText,
+  Scale,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  FileJson,
+  Zap,
+  Database,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
- BaseCard,
- PrimaryButton,
- PageContainer,
- SchemaStatusBadge,
- VerifiedBadge,
+  PageContainer,
+  SchemaStatusBadge,
+  VerifiedBadge,
 } from "@/lib/styles/components";
-import { StatsCardV1 } from "@/components/dashboard/stats-card-v1";
 import { formatStatNumber } from "@/lib/format-stats";
 import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import { LandingPage } from "@/components/landing/LandingPage";
+import {
+  EditorialCard,
+  EditorialButton,
+  Rule,
+  Stat,
+  Citation,
+} from "@/components/editorial";
 import React from "react";
 
+const BIBTEX = `@misc{juddges2024,
+  title  = {JuDDGES: Judicial Decision Data Gathering, Encoding and Sharing},
+  author = {Kajdanowicz, Tomasz and others},
+  year   = {2024},
+  url    = {https://huggingface.co/JuDDGES},
+  note   = {Wrocław University of Science and Technology}
+}`;
+
 function formatLastUpdated(dateString: string | null): { value: string; label: string } {
- if (!dateString) {
- // Temporary fix: return current date if no data
- const now = new Date();
- const day = String(now.getDate()).padStart(2, '0');
- const month = String(now.getMonth() + 1).padStart(2, '0');
- const year = now.getFullYear();
- return { value: `${day}/${month}/${year}`, label: "Last Updated"};
- }
+  if (!dateString) {
+    // Temporary fix: return current date if no data
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    return { value: `${day}/${month}/${year}`, label: "Last Updated" };
+  }
 
- const date = new Date(dateString);
+  const date = new Date(dateString);
 
- // Check if date is valid
- if (isNaN(date.getTime())) {
- // Temporary fix: return current date if invalid
- const now = new Date();
- const day = String(now.getDate()).padStart(2, '0');
- const month = String(now.getMonth() + 1).padStart(2, '0');
- const year = now.getFullYear();
- return { value: `${day}/${month}/${year}`, label: "Last Updated"};
- }
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    // Temporary fix: return current date if invalid
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    return { value: `${day}/${month}/${year}`, label: "Last Updated" };
+  }
 
- const now = new Date();
- const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+  const now = new Date();
+  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
 
- if (diffInHours < 1) return { value: "Just now", label: ""};
- if (diffInHours < 24) return { value: `${diffInHours}hrs`, label: "ago"};
- const diffInDays = Math.floor(diffInHours / 24);
- if (diffInDays === 1) return { value: "Yesterday", label: ""};
- if (diffInDays < 7) return { value: `${diffInDays} days`, label: "ago"};
+  if (diffInHours < 1) return { value: "Just now", label: "" };
+  if (diffInHours < 24) return { value: `${diffInHours}hrs`, label: "ago" };
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return { value: "Yesterday", label: "" };
+  if (diffInDays < 7) return { value: `${diffInDays} days`, label: "ago" };
 
- // Format date as DD/MM/YYYY
- const day = String(date.getDate()).padStart(2, '0');
- const month = String(date.getMonth() + 1).padStart(2, '0');
- const year = date.getFullYear();
- return { value: `${day}/${month}/${year}`, label: ""};
+  // Format date as DD/MM/YYYY
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return { value: `${day}/${month}/${year}`, label: "" };
 }
 
 function formatChatTimestamp(dateString: string): string {
- const date = new Date(dateString);
- const now = new Date();
- const diffMs = now.getTime() - date.getTime();
- const diffMins = Math.floor(diffMs / 60000);
- const diffHours = Math.floor(diffMs / 3600000);
- const diffDays = Math.floor(diffMs / 86400000);
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
- if (diffMins < 1) return 'Just now';
- if (diffMins < 60) return `${diffMins}m ago`;
- if (diffHours < 24) return `${diffHours}h ago`;
- if (diffDays === 1) return 'Yesterday';
- if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
 
- // Format date as DD/MM/YYYY
- const day = String(date.getDate()).padStart(2, '0');
- const month = String(date.getMonth() + 1).padStart(2, '0');
- const year = date.getFullYear();
- return `${day}/${month}/${year}`;
+  // Format date as DD/MM/YYYY
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// ---------- Editorial-styled empty state -----------------------------------
+
+interface EditorialEmptyStateProps {
+  message: string;
+  actionHref: string;
+  actionLabel: string;
+}
+
+function EditorialEmptyState({
+  message,
+  actionHref,
+  actionLabel,
+}: EditorialEmptyStateProps): React.JSX.Element {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 border border-rule px-4 py-8 text-center">
+      <p className="font-serif text-base italic leading-snug text-ink-soft">
+        {message}
+      </p>
+      <EditorialButton variant="secondary" size="sm" href={actionHref}>
+        {actionLabel}
+      </EditorialButton>
+    </div>
+  );
+}
+
+// ---------- "View all" header action ----------------------------------------
+
+function ViewAllAction({ href, label }: { href: string; label: string }): React.JSX.Element {
+  return (
+    <EditorialButton variant="ghost" size="sm" href={href} arrow>
+      {label}
+    </EditorialButton>
+  );
+}
+
+function CopyButton(): React.JSX.Element {
+  const [state, setState] = React.useState<"idle" | "copied" | "failed">("idle");
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleCopy = React.useCallback(async () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    try {
+      await navigator.clipboard.writeText(BIBTEX);
+      setState("copied");
+    } catch {
+      setState("failed");
+    }
+    timerRef.current = setTimeout(() => setState("idle"), 2000);
+  }, []);
+
+  const label =
+    state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy";
+  const ariaLabel =
+    state === "copied"
+      ? "BibTeX copied to clipboard"
+      : state === "failed"
+        ? "Copy to clipboard failed — select the BibTeX text and copy manually"
+        : "Copy BibTeX to clipboard";
+  const icon =
+    state === "copied" ? <Check className="size-3" /> : <Copy className="size-3" />;
+  const stateClass = state === "failed" ? "text-oxblood" : "text-ink-soft";
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={cn(
+        "absolute top-2 right-2 inline-flex items-center gap-1.5 border border-rule bg-parchment px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        stateClass,
+      )}
+      aria-label={ariaLabel}
+    >
+      {icon}
+      {label}
+    </button>
+  );
 }
 
 export default function HomePage(): React.JSX.Element {
- const { user, loading: authLoading } = useAuth();
- const { t } = useTranslation();
+  const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
 
- // Use React Query hooks for data fetching with automatic caching
- const {
- data: stats,
- isLoading: statsLoading,
- isError: statsError,
- error: statsErrorDetails,
- } = useDashboardStats();
+  // Use React Query hooks for data fetching with automatic caching
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+    error: statsErrorDetails,
+  } = useDashboardStats();
 
- const {
- data: recentDocs = [],
- isLoading: docsLoading,
- } = useRecentDocuments(2);
+  const { data: recentDocs = [], isLoading: docsLoading } = useRecentDocuments(2);
 
- const {
- data: trendingTopics = [],
- isLoading: trendsLoading,
- } = useTrendingTopics(3);
+  const { data: trendingTopics = [], isLoading: trendsLoading } = useTrendingTopics(3);
 
- const {
- data: recentChats = [],
- isLoading: chatsLoading,
- } = useRecentChats(3);
 
- const {
- data: userSchemas = [],
- isLoading: schemasLoading,
- } = useUserSchemas(3);
+  const { data: userSchemas = [], isLoading: schemasLoading } = useUserSchemas(3);
 
- const {
- data: collectionsInfo,
- isLoading: collectionsLoading,
- } = useCollectionsDocumentCount();
+  const { data: collectionsInfo, isLoading: collectionsLoading } =
+    useCollectionsDocumentCount();
 
- const collectionsDocCount = collectionsInfo?.documentCount || 0;
- const collectionsCount = collectionsInfo?.collectionCount || 0;
+  const collectionsDocCount = collectionsInfo?.documentCount || 0;
+  const collectionsCount = collectionsInfo?.collectionCount || 0;
 
- const {
- data: recentExtractions = [],
- isLoading: extractionsLoading,
- } = useRecentExtractions(3);
- const recentJudgmentDocs = recentDocs.filter((doc) => doc.document_type === 'judgment').slice(0, 2);
+  const { data: recentExtractions = [], isLoading: extractionsLoading } =
+    useRecentExtractions(3);
+  const recentJudgmentDocs = recentDocs
+    .filter((doc) => doc.document_type === "judgment")
+    .slice(0, 2);
 
- // Individual loading states - each card loads separately
+  // Individual loading states - each card loads separately
 
- // For unauthenticated users, show the premium landing page
- if (!authLoading && !user) {
- // Map DashboardStats to LandingStats interface
- const landingStats = stats ? {
- total_documents: stats.total_judgments,
- judgments: stats.total_judgments,
- judgments_pl: stats.jurisdictions?.PL ?? 0,
- judgments_uk: stats.jurisdictions?.UK ?? 0,
- last_updated: stats.computed_at,
- } : null;
+  // For unauthenticated users, show the premium landing page
+  if (!authLoading && !user) {
+    // Map DashboardStats to LandingStats interface
+    const landingStats = stats
+      ? {
+          total_documents: stats.total_judgments,
+          judgments: stats.total_judgments,
+          judgments_pl: stats.jurisdictions?.PL ?? 0,
+          judgments_uk: stats.jurisdictions?.UK ?? 0,
+          last_updated: stats.computed_at,
+        }
+      : null;
 
- return (
- <LandingPage
- stats={landingStats}
- statsLoading={statsLoading}
- />
- );
- }
+    return <LandingPage stats={landingStats} statsLoading={statsLoading} />;
+  }
 
- // For authenticated users, show the redesigned dashboard
- return (
- <PageContainer width="standard"className="py-6 space-y-0">
- {/* All Cards in Single Grid - Legal Glassmorphism 2.0: Responsive Grid Gap */}
- <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6 items-stretch">
- {/* Current Statistics Section Card */}
- <BaseCard className="rounded-xl sm:rounded-2xl !p-4 sm:!p-5 md:!p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.databaseOverview')}</h2>
- <Link
- href="/statistics"
- className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
- >
- {t('dashboard.viewAll')}
- <ChevronRight className="size-3.5"/>
- </Link>
- </div>
- <div className="flex-1 flex flex-col">
- {statsLoading ? (
- <div className="space-y-3">
- {[...Array(4)].map((_, i) => (
- <div key={i} className="h-[72px] rounded-xl bg-muted/30 animate-pulse"/>
- ))}
- </div>
- ) : statsError ? (
- <div className="p-4 rounded-xl border border-destructive/50 bg-destructive/10 text-destructive">
- <p className="text-sm font-medium">{t('dashboard.failedToLoadStats')}</p>
- <p className="text-xs mt-1 text-destructive/80">
- {statsErrorDetails instanceof Error ? statsErrorDetails.message : "Unknown error"}
- </p>
- </div>
- ) : stats ? (
- <StatsCardV1
- stats={stats}
- formatLastUpdated={formatLastUpdated}
- />
- ) : null}
- </div>
- </BaseCard>
+  // -- Derived figures for the featured stats card ---------------------------
+  const totalJudgments = stats?.total_judgments ?? 0;
+  const plCount = stats?.jurisdictions?.PL ?? 0;
+  const ukCount = stats?.jurisdictions?.UK ?? 0;
+  const jurisdictionCount = [plCount, ukCount].filter((n) => n > 0).length;
+  const lastUpdated = stats ? formatLastUpdated(stats.computed_at) : null;
 
- {/* Your Last Chats Section Card */}
- <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.recentConversations')}</h2>
- <Link
- href="/chat"
- className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
- >
- {t('dashboard.viewAll')}
- <ChevronRight className="size-3.5"/>
- </Link>
- </div>
- <div className="flex-1 flex flex-col">
- {chatsLoading ? (
- <div className="space-y-2 sm:space-y-3">
- {[...Array(3)].map((_, i) => (
- <SkeletonChatCard key={i} />
- ))}
- </div>
- ) : recentChats.length > 0 ? (
- <div className="space-y-2 sm:space-y-3">
- {recentChats.slice(0, 3).map((chat) => {
- const chatTitle = chat.title || chat.firstMessage || "New Chat";
- const truncatedTitle = chatTitle.length > 50 ? chatTitle.substring(0, 47) +"...": chatTitle;
- return (
- <Link
- key={chat.id}
- href={`/chat/${chat.id}`}
- className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-lg focus-visible:shadow-primary/20"
- >
- <BaseCard variant="default"className="p-2.5 sm:p-3 rounded-xl"clickable={true}>
- <div className="flex items-start gap-2 sm:gap-2.5">
- <div className="p-1 sm:p-1.5 rounded-lg bg-indigo-100 shrink-0">
- <MessageSquare className="size-3 sm:size-3.5 text-indigo-600"/>
- </div>
- <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
- <h3 className="font-semibold text-xs sm:text-sm text-foreground line-clamp-2">
- {truncatedTitle}
- </h3>
- <div className="flex items-center gap-1 text-xs text-muted-foreground">
- <Clock className="size-2 sm:size-2.5"/>
- <span>{formatChatTimestamp(chat.updated_at)}</span>
- </div>
- </div>
- </div>
- </BaseCard>
- </Link>
- );
- })}
- </div>
- ) : (
- <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
- <div className="p-4 rounded-full w-fit mx-auto mb-3">
- <MessageSquare className="size-8 text-[rgba(71,85,105,0.2)]"/>
- </div>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">{t('dashboard.noChats')}</p>
- <Link href="/chat">
- <PrimaryButton size="sm"icon={MessageSquare}>
- {t('dashboard.startChat')}
- </PrimaryButton>
- </Link>
- </div>
- )}
- </div>
- </BaseCard>
+  // Conditional trending display logic
+  const showTrending = trendsLoading || trendingTopics.length > 0;
 
- {/* Your Generated Schemas Section Card */}
- <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.extractionTemplates')}</h2>
- {userSchemas.length > 0 && (
- <Link
- href="/schema-chat"
- className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
- >
- {t('dashboard.viewAll')}
- <ChevronRight className="size-3.5"/>
- </Link>
- )}
- </div>
- <div className="flex-1 flex flex-col">
- {schemasLoading ? (
- <div className="space-y-2 sm:space-y-2.5">
- {[...Array(3)].map((_, i) => (
- <SkeletonChatCard key={i} />
- ))}
- </div>
- ) : userSchemas.length > 0 ? (
- <div className="space-y-2 sm:space-y-2.5">
- {userSchemas.map((schema) => (
- <Link
- key={schema.id}
- href={`/schema-chat?schemaId=${schema.id}`}
- className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-lg focus-visible:shadow-primary/20"
- >
- <BaseCard variant="default"className="p-2.5 sm:p-3 rounded-xl"clickable={true}>
- <div className="flex items-start gap-2 sm:gap-2.5">
- <div className="p-1 sm:p-1.5 rounded-lg bg-purple-100 shrink-0">
- <FileJson className="size-3 sm:size-3.5 text-purple-600"/>
- </div>
- <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
- <div className="flex items-center gap-1.5 flex-wrap">
- <h3 className="font-semibold text-xs sm:text-sm text-foreground line-clamp-1">
- {schema.name}
- </h3>
- {schema.status && <SchemaStatusBadge status={schema.status} size="sm"/>}
- {schema.is_verified && <VerifiedBadge size="sm"/>}
- </div>
- {schema.description && (
- <p className="text-xs text-muted-foreground line-clamp-1">
- {schema.description}
- </p>
- )}
- <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-muted-foreground">
- <span className="capitalize">{schema.category}</span>
- <span>•</span>
- <span>{formatChatTimestamp(schema.updated_at)}</span>
- </div>
- </div>
- </div>
- </BaseCard>
- </Link>
- ))}
- </div>
- ) : (
- // Legal Glassmorphism 2.0 - Zero State
- <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
- <div className="p-4 rounded-full w-fit mx-auto mb-3">
- <FileJson className="size-8 text-[rgba(71,85,105,0.2)]"/>
- </div>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">{t('dashboard.noSchemas')}</p>
- <Link href="/schema-chat">
- <PrimaryButton size="sm"icon={Zap}>
- {t('dashboard.generateTemplate')}
- </PrimaryButton>
- </Link>
- </div>
- )}
- </div>
- </BaseCard>
+  // For authenticated users, show the redesigned editorial dashboard
+  return (
+    <PageContainer width="standard" className="py-6">
+      {/* 12-col asymmetric grid; mobile collapses to a single column. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* ============ ROW 1 ============ */}
 
- {/* Highlighted Documents Section Card - List Format */}
- <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-2 sm:mb-3">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.recentJudgments')}</h2>
- <Link
- href="/search"
- className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
- >
- {t('dashboard.viewAll')}
- <ChevronRight className="size-3.5"/>
- </Link>
- </div>
- <div className="flex-1 flex flex-col">
- {docsLoading ? (
- <div className="space-y-1.5 sm:space-y-2">
- {[...Array(3)].map((_, i) => (
- <SkeletonDocumentCard key={i} />
- ))}
- </div>
- ) : recentJudgmentDocs.length > 0 ? (
- <div className="space-y-1.5 sm:space-y-2">
- {recentJudgmentDocs.map((doc) => {
- const getDocIcon = () => {
- if (doc.document_type === 'judgment') return <Scale className="size-3.5 text-primary"/>;
- return <FileText className="size-3.5 text-primary"/>;
- };
- const docTypeLabel = doc.document_type === 'judgment' ? 'JUDGMENT' :
- doc.document_type?.toUpperCase() || 'DOCUMENT';
- const displayTitle = doc.title || doc.document_number || doc.document_id || 'Untitled Document';
- const displayDate = doc.publication_date ? new Date(doc.publication_date).toLocaleDateString('en-US', {
- month: 'short',
- day: 'numeric',
- year: 'numeric'
- }) : null;
+        {/* Featured: Database overview (8 or 12 cols depending on trending visibility) */}
+        <div className={showTrending ? "lg:col-span-8" : "lg:col-span-12"}>
+          <EditorialCard
+            featured
+            eyebrow={t("dashboard.databaseOverview")}
+            title={t("dashboard.databaseOverview")}
+            action={<ViewAllAction href="/statistics" label={t("dashboard.viewAll")} />}
+            className="h-full"
+          >
+            {statsLoading ? (
+              <div className="flex flex-1 flex-col gap-4">
+                <div className="grid grid-cols-3 gap-6">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-10 w-24 animate-pulse bg-rule/60" />
+                      <div className="h-3 w-16 animate-pulse bg-rule/40" />
+                    </div>
+                  ))}
+                </div>
+                <Rule weight="ink" />
+                <div className="h-4 w-48 animate-pulse bg-rule/40" />
+              </div>
+            ) : statsError ? (
+              <div className="border border-oxblood/40 bg-oxblood/5 p-4 text-oxblood">
+                <p className="text-sm font-medium">{t("dashboard.failedToLoadStats")}</p>
+                <p className="mt-1 text-xs text-oxblood/80">
+                  {statsErrorDetails instanceof Error
+                    ? statsErrorDetails.message
+                    : "Unknown error"}
+                </p>
+              </div>
+            ) : stats ? (
+              <div className="flex flex-1 flex-col gap-5">
+                {/* Three headline figures */}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                  <Stat
+                    size="sm"
+                    value={totalJudgments}
+                    label={t("dashboard.recentJudgments") || "Judgments"}
+                    marker="¹"
+                  />
+                  <Stat
+                    size="sm"
+                    static
+                    value={jurisdictionCount}
+                    label="Jurisdictions"
+                  />
+                  <Stat size="sm" value={plCount + ukCount} label="Indexed" />
+                </div>
 
- const documentId = cleanDocumentIdForUrl(doc.document_id || doc.id);
- return (
- <Link
- key={doc.id}
- href={`/documents/${documentId}`}
- className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-lg focus-visible:shadow-primary/20"
- >
- <BaseCard variant="default"className="p-3 rounded-lg"clickable={true}>
- <div className="flex items-start gap-3">
- <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
- {getDocIcon()}
- </div>
- <div className="flex-1 min-w-0 space-y-1">
- <div className="flex items-center justify-between gap-2">
- <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
- {docTypeLabel}
- </span>
- {displayDate && (
- <span className="text-xs text-muted-foreground shrink-0">
- {displayDate}
- </span>
- )}
- </div>
- <h3 className="font-semibold text-sm text-foreground line-clamp-1">
- {displayTitle}
- </h3>
- {doc.document_number && (
- <p className="text-xs text-muted-foreground font-mono">
- {doc.document_number}
- </p>
- )}
- </div>
- <ChevronRight className="size-4 text-muted-foreground shrink-0 mt-0.5"/>
- </div>
- </BaseCard>
- </Link>
- );
- })}
- </div>
- ) : (
- // Legal Glassmorphism 2.0 - Zero State
- <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
- <FileText className="size-6 text-[rgba(71,85,105,0.2)] mx-auto mb-2"/>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-3">{t('dashboard.noDocuments')}</p>
- <Link href="/search">
- <PrimaryButton size="sm"icon={Search}>
- {t('dashboard.browseJudgments')}
- </PrimaryButton>
- </Link>
- </div>
- )}
- </div>
- </BaseCard>
+                <Rule weight="ink" />
 
- {/* Trending Topics Section Card */}
- <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-2 sm:mb-3">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.popularLegalTopics')}</h2>
- </div>
- <div className="flex-1 flex flex-col">
- {trendsLoading ? (
- <div className="space-y-2 sm:space-y-2.5">
- {[...Array(2)].map((_, i) => (
- <SkeletonTrendingTopic key={i} />
- ))}
- </div>
- ) : trendingTopics.length > 0 ? (
- <div className="space-y-2 sm:space-y-2.5">
- {trendingTopics.map((topic, index) => (
- <BaseCard key={index} variant="light"className="p-2.5 rounded-lg">
- <div className="flex items-center justify-between gap-3">
- <div className="flex-1 min-w-0">
- <div className="font-semibold text-sm text-foreground truncate">{topic.topic}</div>
- <div className="text-xs text-muted-foreground mt-0.5 font-medium">{topic.category}</div>
- </div>
- <div className="flex items-center gap-2 ml-2 shrink-0">
- {topic.trend === "up"&& (
- <TrendingUp className="size-4 text-emerald-600"/>
- )}
- {topic.trend === "down"&& (
- <TrendingDown className="size-4 text-red-600"/>
- )}
- {topic.trend === "stable"&& (
- <Minus className="size-4 text-muted-foreground"/>
- )}
- <span className={cn(
-"text-xs font-semibold",
- topic.trend === "up"? "text-emerald-600":
- topic.trend === "down"? "text-red-600":
-"text-muted-foreground"
- )}>
- {topic.change}
- </span>
- </div>
- </div>
- </BaseCard>
- ))}
- </div>
- ) : (
- // Legal Glassmorphism 2.0 - Zero State
- <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
- <TrendingUp className="size-6 text-[rgba(71,85,105,0.2)] mx-auto mb-2"/>
- <p className="text-xs text-[rgba(71,85,105,0.6)]">{t('dashboard.noTrending')}</p>
- </div>
- )}
- </div>
- </BaseCard>
+                {/* Jurisdiction breakdown + last-updated meta line */}
+                <div className="flex flex-col gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    PL <span className="text-ink">{formatStatNumber(plCount)}</span>
+                    <span className="mx-2 text-rule-strong">/</span>
+                    UK <span className="text-ink">{formatStatNumber(ukCount)}</span>
+                  </span>
+                  {lastUpdated && (
+                    <span>
+                      {lastUpdated.label || "Updated"}{" "}
+                      <span className="text-ink">{lastUpdated.value}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </EditorialCard>
+        </div>
 
- {/* Documents in Collections Card */}
- <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.researchCollections')}</h2>
- <Link
- href="/collections"
- className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
- >
- {t('dashboard.viewAll')}
- <ChevronRight className="size-3.5"/>
- </Link>
- </div>
- <div className="flex-1 flex flex-col">
- {collectionsLoading ? (
- <div className="flex items-center justify-center py-4">
- <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
- </div>
- ) : (
- <div className="grid grid-cols-2 gap-3">
- <div className="flex items-center gap-2">
- <div className="p-1.5 rounded-lg bg-primary/10">
- <Database className="size-3.5 text-primary"/>
- </div>
- <div>
- <div className="text-xl font-bold text-foreground">
- {formatStatNumber(collectionsCount)}
- </div>
- <div className="text-xs text-muted-foreground">Collections</div>
- </div>
- </div>
- <div className="flex items-center gap-2">
- <div className="p-1.5 rounded-lg bg-primary/10">
- <FileText className="size-3.5 text-primary"/>
- </div>
- <div>
- <div className="text-xl font-bold text-foreground">
- {formatStatNumber(collectionsDocCount)}
- </div>
- <div className="text-xs text-muted-foreground">Documents</div>
- </div>
- </div>
- </div>
- )}
- </div>
- </BaseCard>
+        {/* Popular legal topics (4 cols) - only show when loading or has content */}
+        {showTrending && (
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="Trending"
+            title={t("dashboard.popularLegalTopics")}
+            className="h-full"
+          >
+            {trendsLoading ? (
+              <ul className="divide-y divide-rule">
+                {[0, 1].map((i) => (
+                  <li key={i} className="py-3">
+                    <SkeletonTrendingTopic />
+                  </li>
+                ))}
+              </ul>
+            ) : trendingTopics.length > 0 ? (
+              <ul className="divide-y divide-rule">
+                {trendingTopics.map((topic, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink">
+                        {topic.topic}
+                      </p>
+                      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                        {topic.category}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {topic.trend === "up" && (
+                        <TrendingUp className="size-3.5 text-oxblood" />
+                      )}
+                      {topic.trend === "down" && (
+                        <TrendingDown className="size-3.5 text-ink-soft" />
+                      )}
+                      {topic.trend === "stable" && (
+                        <Minus className="size-3.5 text-ink-soft" />
+                      )}
+                      <span
+                        className={cn(
+                          "font-mono text-[11px] font-medium tabular-nums",
+                          topic.trend === "up"
+                            ? "text-oxblood"
+                            : "text-ink-soft",
+                        )}
+                      >
+                        {topic.change}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="font-serif text-sm italic text-ink-soft">
+                {t("dashboard.noTrending")}
+              </p>
+            )}
+          </EditorialCard>
+        </div>
+        )}
 
- {/* Last Extractions Card */}
- <BaseCard className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 h-full flex flex-col min-h-0"variant="light">
- <div className="flex items-center justify-between mb-3 sm:mb-4">
- <h2 className="text-base sm:text-lg font-semibold text-[#0F172A]">{t('dashboard.recentExtractions')}</h2>
- <Link
- href="/extract"
- className="text-sm text-black font-semibold flex items-center gap-1.5 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-full px-3 py-1.5 -mx-3 -my-1.5 backdrop-blur-sm bg-white/50 border border-white/60 hover:bg-white/80 hover:border-white/80 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),0_0_24px_rgba(0,0,0,0.08)] hover:scale-105 hover:-translate-y-0.5"
- >
- {t('dashboard.viewAll')}
- <ChevronRight className="size-3.5"/>
- </Link>
- </div>
- <div className="flex-1 flex flex-col">
- {extractionsLoading ? (
- <div className="space-y-1.5 sm:space-y-2">
- {[...Array(3)].map((_, i) => (
- <SkeletonExtractionCard key={i} />
- ))}
- </div>
- ) : recentExtractions.length > 0 ? (
- <div className="space-y-1.5 sm:space-y-2">
- {recentExtractions.map((job) => {
- const statusColor =
- job.status === 'SUCCESS' ? 'text-emerald-600' :
- job.status === 'FAILURE' ? 'text-red-600' :
- 'text-amber-600';
- return (
- <Link
- key={job.job_id}
- href={`/extract?jobId=${job.job_id}`}
- className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-lg focus-visible:shadow-primary/20"
- >
- <BaseCard variant="default"className="p-2.5 sm:p-3 rounded-lg"clickable={true}>
- <div className="flex items-start gap-2 sm:gap-2.5">
- <div className="p-1 sm:p-1.5 rounded-lg bg-primary/10 shrink-0">
- <Zap className="size-3 sm:size-3.5 text-primary"/>
- </div>
- <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
- <div className="flex items-center justify-between">
- <h3 className="font-semibold text-xs sm:text-sm text-foreground line-clamp-1">
- {job.collection_name || 'Extraction Job'}
- </h3>
- <span className={cn("text-xs font-medium", statusColor)}>
- {job.status}
- </span>
- </div>
- <div className="flex items-center gap-1 text-xs text-muted-foreground">
- <Clock className="size-2 sm:size-2.5"/>
- <span>{formatChatTimestamp(job.created_at)}</span>
- </div>
- </div>
- </div>
- </BaseCard>
- </Link>
- );
- })}
- </div>
- ) : (
- <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
- <div className="p-4 rounded-full w-fit mx-auto mb-3">
- <Zap className="size-8 text-[rgba(71,85,105,0.2)]"/>
- </div>
- <p className="text-xs text-[rgba(71,85,105,0.6)] mb-4">{t('dashboard.noExtractions')}</p>
- <Link href="/extract">
- <PrimaryButton size="sm"icon={Zap}>
- {t('dashboard.startExtraction')}
- </PrimaryButton>
- </Link>
- </div>
- )}
- </div>
- </BaseCard>
- </div>
- </PageContainer>
- );
+        {/* ============ ROW 2 (3 cards × 4 cols) ============ */}
+
+        {/* About JUDDGES */}
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="About"
+            title="JUDDGES"
+            className="h-full"
+          >
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="font-serif italic text-ink-soft text-sm leading-snug">
+                Judicial Decision Data Gathering, Encoding &amp; Sharing
+              </p>
+              <p className="text-sm text-ink leading-relaxed">
+                An end-to-end platform for hybrid search, retrieval-augmented chat, structured information extraction, and analytics over Polish and England &amp; Wales court judgments — built for legal experts, NLP researchers, and dataset annotators.
+              </p>
+              <Rule weight="hairline" />
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                <span className="text-ink">PI</span>
+                <span className="mx-1.5 text-rule-strong">·</span>
+                Tomasz Kajdanowicz
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft mt-1">
+                <span className="text-ink">15.01.2024 – 30.06.2026</span>
+                <span className="mx-1.5 text-rule-strong">·</span>
+                529,384 EUR
+              </p>
+              <div className="flex flex-col gap-2 mt-auto">
+                <EditorialButton variant="primary" size="sm" href="https://huggingface.co/JuDDGES" external arrow>
+                  Hugging Face datasets
+                </EditorialButton>
+                <EditorialButton variant="ghost" size="sm" href="/about" arrow>
+                  About the project
+                </EditorialButton>
+              </div>
+            </div>
+          </EditorialCard>
+        </div>
+
+        {/* Coding schemas */}
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="Coding Schemas"
+            title={t("dashboard.extractionTemplates")}
+            action={
+              userSchemas.length > 0 ? (
+                <ViewAllAction href="/schema-chat" label={t("dashboard.viewAll")} />
+              ) : undefined
+            }
+            className="h-full"
+          >
+            {schemasLoading ? (
+              <ul className="divide-y divide-rule">
+                {[0, 1, 2].map((i) => (
+                  <li key={i} className="py-3">
+                    <SkeletonChatCard />
+                  </li>
+                ))}
+              </ul>
+            ) : userSchemas.length > 0 ? (
+              <ul className="divide-y divide-rule">
+                {userSchemas.map((schema) => (
+                  <li key={schema.id} className="first:pt-0 last:pb-0">
+                    <Link
+                      href={`/schema-chat?schemaId=${schema.id}`}
+                      className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <div className="flex items-start gap-3">
+                        <FileJson className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
+                              {schema.name}
+                            </p>
+                            {schema.status && (
+                              <SchemaStatusBadge status={schema.status} size="sm" />
+                            )}
+                            {schema.is_verified && <VerifiedBadge size="sm" />}
+                          </div>
+                          {schema.description && (
+                            <p className="mt-1 line-clamp-1 text-xs text-ink-soft">
+                              {schema.description}
+                            </p>
+                          )}
+                          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                            <span className="capitalize">{schema.category}</span>
+                            <span className="mx-1.5 text-rule-strong">·</span>
+                            {formatChatTimestamp(schema.updated_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EditorialEmptyState
+                message={t("dashboard.noSchemas")}
+                actionHref="/schema-chat"
+                actionLabel={t("dashboard.generateTemplate")}
+              />
+            )}
+          </EditorialCard>
+        </div>
+
+        {/* Recent extractions */}
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="Extractions"
+            title={t("dashboard.recentExtractions")}
+            action={<ViewAllAction href="/extract" label={t("dashboard.viewAll")} />}
+            className="h-full"
+          >
+            {extractionsLoading ? (
+              <ul className="divide-y divide-rule">
+                {[0, 1, 2].map((i) => (
+                  <li key={i} className="py-3">
+                    <SkeletonExtractionCard />
+                  </li>
+                ))}
+              </ul>
+            ) : recentExtractions.length > 0 ? (
+              <ul className="divide-y divide-rule">
+                {recentExtractions.map((job) => {
+                  // Map backend status -> editorial citation marker for visual rhythm.
+                  const statusMarker =
+                    job.status === "SUCCESS"
+                      ? "*"
+                      : job.status === "FAILURE"
+                        ? "†"
+                        : "·";
+                  return (
+                    <li key={job.job_id} className="first:pt-0 last:pb-0">
+                      <Link
+                        href={`/extract?jobId=${job.job_id}`}
+                        className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Zap className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
+                              {job.collection_name || "Extraction Job"}
+                              <Citation marker={statusMarker} />
+                            </p>
+                            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                              {job.status}
+                              <span className="mx-1.5 text-rule-strong">·</span>
+                              {formatChatTimestamp(job.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EditorialEmptyState
+                message={t("dashboard.noExtractions")}
+                actionHref="/extract"
+                actionLabel={t("dashboard.startExtraction")}
+              />
+            )}
+          </EditorialCard>
+        </div>
+
+        {/* ============ ROW 3 ============ */}
+
+        {/* Recent judgments (8 cols) */}
+        <div className="lg:col-span-8">
+          <EditorialCard
+            eyebrow="Case law"
+            title={t("dashboard.recentJudgments")}
+            action={<ViewAllAction href="/search" label={t("dashboard.viewAll")} />}
+            className="h-full"
+          >
+            {docsLoading ? (
+              <ul className="divide-y divide-rule">
+                {[0, 1].map((i) => (
+                  <li key={i} className="py-3">
+                    <SkeletonDocumentCard />
+                  </li>
+                ))}
+              </ul>
+            ) : recentJudgmentDocs.length > 0 ? (
+              <ul className="divide-y divide-rule">
+                {recentJudgmentDocs.map((doc) => {
+                  const docTypeLabel =
+                    doc.document_type === "judgment"
+                      ? "JUDGMENT"
+                      : doc.document_type?.toUpperCase() || "DOCUMENT";
+                  const displayTitle =
+                    doc.title || doc.document_number || doc.document_id || "Untitled Document";
+                  const displayDate = doc.publication_date
+                    ? new Date(doc.publication_date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : null;
+
+                  const documentId = cleanDocumentIdForUrl(doc.document_id || doc.id);
+                  const Icon = doc.document_type === "judgment" ? Scale : FileText;
+                  return (
+                    <li key={doc.id} className="first:pt-0 last:pb-0">
+                      <Link
+                        href={`/documents/${documentId}`}
+                        className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Icon className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                                {docTypeLabel}
+                              </span>
+                              {displayDate && (
+                                <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                                  {displayDate}
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
+                              {displayTitle}
+                            </p>
+                            {doc.document_number && (
+                              <p className="mt-0.5 font-mono text-[11px] text-ink-soft">
+                                {doc.document_number}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EditorialEmptyState
+                message={t("dashboard.noDocuments")}
+                actionHref="/search"
+                actionLabel={t("dashboard.browseJudgments")}
+              />
+            )}
+          </EditorialCard>
+        </div>
+
+        {/* Research collections (4 cols) */}
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="Library"
+            title={t("dashboard.researchCollections")}
+            action={<ViewAllAction href="/collections" label={t("dashboard.viewAll")} />}
+            className="h-full"
+          >
+            {collectionsLoading ? (
+              <div className="flex flex-1 items-center gap-6">
+                <div className="h-10 w-20 animate-pulse bg-rule/60" />
+                <div className="h-10 w-20 animate-pulse bg-rule/60" />
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col gap-4">
+                <div className="grid grid-cols-2 gap-6">
+                  <Stat
+                    size="sm"
+                    static
+                    value={collectionsCount}
+                    label="Collections"
+                  />
+                  <Stat
+                    size="sm"
+                    static
+                    value={collectionsDocCount}
+                    label="Documents"
+                  />
+                </div>
+                <Rule weight="hairline" />
+                <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                  <Database className="size-3.5 text-ink-soft" />
+                  Curated research sets
+                </p>
+              </div>
+            )}
+          </EditorialCard>
+        </div>
+
+        {/* ============ ROW 4 ============ */}
+
+        {/* Quick-start strip (full width) */}
+        <div className="lg:col-span-12">
+          <EditorialCard
+            eyebrow="Get started"
+            title="Three steps to legal-AI research"
+            className="h-full"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Link
+                href="/search"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
+                  <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/collections"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
+                  <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/schema-chat"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
+                  <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+            </div>
+          </EditorialCard>
+        </div>
+
+        {/* Cite JUDDGES (8 cols) */}
+        <div className="lg:col-span-8">
+          <EditorialCard
+            eyebrow="Cite"
+            title="How to cite JUDDGES"
+            className="h-full"
+          >
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="text-sm text-ink leading-relaxed">
+                If JUDDGES contributed to your research, please cite the project using the BibTeX entry below.
+              </p>
+              <div className="relative border border-rule bg-parchment-deep/40 p-4">
+                <pre className="font-mono text-[11px] leading-relaxed text-ink overflow-x-auto whitespace-pre">{BIBTEX}</pre>
+                <CopyButton />
+              </div>
+            </div>
+          </EditorialCard>
+        </div>
+
+        {/* What's new (4 cols) */}
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="Releases"
+            title="What's new"
+            className="h-full"
+          >
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="text-sm text-ink leading-relaxed">
+                Editorial Jurisprudence design system, decision-type analytics, and improved search ranking.
+              </p>
+              <div className="mt-auto">
+                <EditorialButton variant="ghost" size="sm" href="/changelog" arrow>
+                  Read the changelog
+                </EditorialButton>
+              </div>
+            </div>
+          </EditorialCard>
+        </div>
+      </div>
+
+    </PageContainer>
+  );
 }
-

@@ -2112,15 +2112,13 @@ export interface paths {
         };
         /**
          * Get Featured Examples
-         * @description Get curated featured example documents for new users.
-         *
-         *     Returns interesting, representative documents to showcase platform capabilities.
+         * @description Curated featured-example judgments for new users.
          *
          *     Args:
          *         limit: Number of examples to return (1-10)
          *
          *     Returns:
-         *         List of featured documents
+         *         List of featured judgments rendered as DocumentSummary.
          */
         get: operations["get_featured_examples_dashboard_featured_examples_get"];
         put?: never;
@@ -7267,27 +7265,6 @@ export interface components {
             /** User Id */
             user_id: string;
         };
-        /** ComplexityMetrics */
-        ComplexityMetrics: {
-            /** Avg Complexity */
-            avg_complexity?: number | null;
-            /** Avg Reasoning Quality */
-            avg_reasoning_quality?: number | null;
-            /**
-             * Precedential Value Distribution
-             * @default {}
-             */
-            precedential_value_distribution: {
-                [key: string]: number;
-            };
-            /**
-             * Research Value Distribution
-             * @default {}
-             */
-            research_value_distribution: {
-                [key: string]: number;
-            };
-        };
         /**
          * ConsentHistoryEntry
          * @description Single entry in consent history.
@@ -7837,13 +7814,6 @@ export interface components {
              * @default []
              */
             case_types: components["schemas"]["DistributionItem"][];
-            /**
-             * @default {
-             *       "precedential_value_distribution": {},
-             *       "research_value_distribution": {}
-             *     }
-             */
-            complexity_metrics: components["schemas"]["ComplexityMetrics"];
             /** Computed At */
             computed_at?: string | null;
             /**
@@ -7864,25 +7834,19 @@ export interface components {
              *     }
              */
             data_completeness: components["schemas"]["DataCompleteness"];
-            /**
-             * Date Range
-             * @default {}
-             */
-            date_range: {
+            /** Date Range */
+            date_range?: {
                 [key: string]: string | null;
-            };
+            } | null;
             /**
-             * Decisions Per Year
+             * Decision Types
              * @default []
              */
-            decisions_per_year: {
+            decision_types: components["schemas"]["DistributionItem"][];
+            /** Decisions Per Year */
+            decisions_per_year?: {
                 [key: string]: unknown;
-            }[];
-            /**
-             * Judicial Tones
-             * @default []
-             */
-            judicial_tones: components["schemas"]["DistributionItem"][];
+            }[] | null;
             /**
              * @default {
              *       "PL": 0,
@@ -7890,11 +7854,6 @@ export interface components {
              *     }
              */
             jurisdictions: components["schemas"]["JurisdictionCounts"];
-            /**
-             * Top Cited Legislation
-             * @default []
-             */
-            top_cited_legislation: components["schemas"]["DistributionItem"][];
             /**
              * Top Courts
              * @default []
@@ -7905,11 +7864,8 @@ export interface components {
              * @default []
              */
             top_keywords: components["schemas"]["DistributionItem"][];
-            /**
-             * Top Legal Domains
-             * @default []
-             */
-            top_legal_domains: components["schemas"]["DistributionItem"][];
+            /** Top Legal Domains */
+            top_legal_domains?: components["schemas"]["DistributionItem"][] | null;
             /**
              * Total Judgments
              * @default 0

@@ -18,7 +18,8 @@ export async function createCollection(collection: CreateCollection): Promise<Co
   });
 
   if (!response.ok) {
-    throw new Error('Failed to create collection');
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.error || 'Failed to create collection');
   }
 
   return await response.json();

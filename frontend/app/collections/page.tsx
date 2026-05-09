@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, PrimaryButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, IconButton, PageContainer, GlassButton, Badge } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Helper function to format date compactly
 function formatDateCompact(dateString: string): string {
@@ -210,6 +211,8 @@ export default function CollectionsPage() {
  name: newCollectionName,
  context: 'handleCreateCollection'
  });
+ const message = error instanceof Error ? error.message : 'Failed to create collection';
+ toast.error(message);
  } finally {
  setIsCreating(false);
  }

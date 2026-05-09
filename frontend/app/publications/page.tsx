@@ -17,6 +17,7 @@ type SortOption ="date"|"title";
 
 export default function PublicationsPage() {
  const { user } = useAuth();
+ const isAdmin = user?.app_metadata?.is_admin === true;
  const [publications, setPublications] = useState<PublicationWithResources[]>([]);
  const [loading, setLoading] = useState(true);
  const [filterYear, setFilterYear] = useState<FilterYear>("all");
@@ -90,7 +91,7 @@ export default function PublicationsPage() {
  <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-600 to-slate-800 bg-clip-text text-transparent">
  Publications
  </h1>
- {user && (
+ {isAdmin && (
  <Link
  href="/publications/admin"
  className="ml-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"

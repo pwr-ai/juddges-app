@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import app.documents as documents_module
+import app.judgments_pkg.utils as documents_module
 
 if TYPE_CHECKING:
     from httpx import AsyncClient

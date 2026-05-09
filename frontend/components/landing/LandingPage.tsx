@@ -2,28 +2,34 @@
 
 import React from "react";
 import Link from "next/link";
-import { motion, useInView } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   MessageSquare,
   Search,
   Zap,
-  ArrowRight,
   GraduationCap,
-  Scale,
-  FileText,
-  Database,
-  Shield,
-  Globe,
-  Lock,
-  BookOpen,
   Landmark,
+  BookOpen,
   Users,
   FlaskConical,
-  ExternalLink,
+  Network,
+  Github,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import {
+  DropCap,
+  EditorialButton,
+  EditorialCard,
+  Eyebrow,
+  Headline,
+  Masthead,
+  PaperBackground,
+  QueryPill,
+  Rule,
+  SectionHeader,
+  Stat,
+} from "@/components/editorial";
 
 // ─────────────────────────────────────────────
 // Types
@@ -42,80 +48,36 @@ interface LandingPageProps {
   statsLoading?: boolean;
 }
 
-const demoQueries = [
+// Demo queries — language is derived from the `lang` URL param in each href.
+const demoQueries: ReadonlyArray<{
+  label: string;
+  href: string;
+  lang: "PL" | "EN";
+}> = [
   {
     label: "Frankowicze i abuzywne klauzule",
     href: "/search?q=frankowicze%20i%20abuzywne%20klauzule&lang=pl&mode=thinking&type=judgment",
+    lang: "PL",
   },
   {
     label: "Murder conviction appeal",
     href: "/search?q=murder%20conviction%20appeal&lang=en&mode=thinking&type=judgment",
+    lang: "EN",
   },
   {
     label: "Skarga do sądu administracyjnego",
     href: "/search?q=skarga%20do%20s%C4%85du%20administracyjnego&lang=pl&mode=thinking&type=judgment",
+    lang: "PL",
   },
   {
     label: "Consumer protection in financial services",
     href: "/search?q=consumer%20protection%20in%20financial%20services&lang=en&mode=thinking&type=judgment",
+    lang: "EN",
   },
-] as const;
+];
 
 // ─────────────────────────────────────────────
-// Animated number counter (simplified)
-// ─────────────────────────────────────────────
-
-function formatStatValue(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.floor(n / 1_000).toLocaleString()}K`;
-  return n.toLocaleString();
-}
-
-function AnimatedStat({ value, suffix = "" }: { value: number; suffix?: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const [display, setDisplay] = useState(() => formatStatValue(value));
-
-  useEffect(() => {
-    if (value === 0) {
-      setDisplay("0");
-      return;
-    }
-
-    if (!isInView) {
-      // Show final value immediately even before in-view animation triggers
-      setDisplay(formatStatValue(value));
-      return;
-    }
-
-    let cancelled = false;
-    const duration = 2000;
-    const startTime = performance.now();
-
-    function tick(now: number) {
-      if (cancelled) return;
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(eased * value);
-      setDisplay(formatStatValue(current));
-      if (progress < 1) requestAnimationFrame(tick);
-    }
-
-    requestAnimationFrame(tick);
-    return () => { cancelled = true; };
-  }, [isInView, value]);
-
-  return (
-    <span ref={ref}>
-      {display}
-      {suffix}
-    </span>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Section wrapper with fade-in
+// Section wrapper with editorial fade-in
 // ─────────────────────────────────────────────
 
 function Section({
@@ -142,124 +104,142 @@ function Section({
 }
 
 // ─────────────────────────────────────────────
-// Section 1: Hero
+// Section 1: Hero — editorial nameplate
 // ─────────────────────────────────────────────
 
 function HeroSection({ stats, statsLoading }: LandingPageProps) {
   const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
 
   return (
-    <section className="relative min-h-[85vh] flex items-center overflow-hidden">
-      {/* Warm subtle background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-primary/[0.03]" />
+    <section className="relative overflow-hidden">
+      <div className="relative w-full max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12 pt-10 pb-20 md:pt-14 md:pb-28">
+        {/* Masthead — periodical nameplate */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Masthead badge="EST. 2024 · WROCLAW" meta="VOL I · NO 1" ruled />
+        </motion.div>
 
-      {/* Content */}
-      <div className="relative w-full max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
-        <div className="max-w-3xl">
-          {/* University badge */}
+        <div className="max-w-3xl mt-12 md:mt-16">
+          {/* Institution byline */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex items-center gap-2.5 text-sm text-muted-foreground mb-10"
+            transition={{ duration: 0.5, delay: 0.05 }}
+            className="mb-8"
           >
-            <div className="p-1.5 rounded-lg bg-primary/8">
-              <GraduationCap className="size-4 text-primary" />
-            </div>
-            <span className="font-medium tracking-wide">
+            <Eyebrow as="p" tone="default" noRule>
+              <GraduationCap className="size-3.5" aria-hidden />
               Wroclaw University of Science and Technology
-            </span>
+            </Eyebrow>
           </motion.div>
 
-          {/* Headline - Instrument Serif */}
-          <motion.h1
+          {/* Hero headline */}
+          <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="font-serif text-5xl sm:text-6xl lg:text-7xl font-normal leading-[0.95] tracking-[-0.02em] text-foreground mb-6"
+            className="mb-8"
           >
-            <span className="text-primary">JuDDGES</span>
-            <br />
-            <span className="text-3xl sm:text-4xl lg:text-5xl text-muted-foreground/80">Judicial Decision Data</span>
-            <br />
-            <span className="text-3xl sm:text-4xl lg:text-5xl text-muted-foreground/80">Gathering, Encoding &amp; Sharing</span>
-          </motion.h1>
+            <Headline as="h1" size="lg">
+              JuDDGES — <em>Judicial Decision</em> Data Gathering, Encoding &amp;{" "}
+              <em>Sharing</em>
+            </Headline>
+          </motion.div>
 
-          {/* Subheadline */}
-          <motion.p
+          {/* Drop-cap subheadline */}
+          <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mb-10"
+            className="max-w-2xl mb-10"
           >
-            An open-source research platform for searching and analyzing court judgments from Poland and England &amp; Wales with AI-powered semantic search and structured data extraction.
-          </motion.p>
+            <DropCap>
+              An open-source research platform for searching and analyzing
+              court judgments from Poland and England &amp; Wales with
+              AI-powered semantic search and structured data extraction.
+            </DropCap>
+          </motion.div>
 
           {/* CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap gap-4 mb-16"
+            className="flex flex-wrap gap-3 mb-14"
           >
-            <Button size="lg" asChild className="h-13 px-8 text-base group shadow-md hover:shadow-lg transition-shadow duration-200">
-              <Link href="/search">
-                Try search
-                <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="h-13 px-8 text-base hover:shadow-md transition-shadow duration-200">
-              <Link href="/auth/sign-up">Create free account</Link>
-            </Button>
+            <EditorialButton href="/search" size="lg" arrow>
+              Try search
+            </EditorialButton>
+            <EditorialButton
+              href="/auth/sign-up"
+              variant="secondary"
+              size="lg"
+            >
+              Create free account
+            </EditorialButton>
           </motion.div>
 
+          {/* Demo queries */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="mb-12"
+            className="mb-16"
           >
-            <p className="text-sm font-medium uppercase tracking-[0.08em] text-muted-foreground mb-4">
+            <Eyebrow as="p" className="mb-5">
               Popular demo queries
-            </p>
+            </Eyebrow>
             <div className="flex flex-wrap gap-3">
               {demoQueries.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="inline-flex items-center rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                >
+                <QueryPill key={item.label} href={item.href} lang={item.lang}>
                   {item.label}
-                </Link>
+                </QueryPill>
               ))}
             </div>
           </motion.div>
 
-          {/* Inline stat strip */}
+          {/* Stat strip — separated by hairline rules */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="flex flex-wrap gap-8 md:gap-12 text-sm text-muted-foreground"
           >
-            <div>
-              <span className="block text-2xl font-semibold text-foreground tabular-nums">
-                {statsLoading ? (
-                  <span className="inline-block w-16 h-7 bg-muted/40 rounded animate-pulse" />
-                ) : (
-                  <AnimatedStat value={totalJudgments} suffix="+" />
-                )}
-              </span>
-              <span>Judgments indexed</span>
+            <Rule weight="medium" className="mb-8" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[color:var(--rule)]">
+              <div className="pb-6 sm:pb-0 sm:pr-8">
+                <Stat
+                  value={totalJudgments}
+                  suffix="+"
+                  label="Judgments indexed"
+                  marker="¹"
+                  size="md"
+                  loading={statsLoading}
+                />
+              </div>
+              <div className="py-6 sm:py-0 sm:px-8">
+                <Stat
+                  value={2}
+                  static
+                  label="Jurisdictions"
+                  detail="Poland · United Kingdom"
+                  size="md"
+                />
+              </div>
+              <div className="pt-6 sm:pt-0 sm:pl-8">
+                <div className="flex flex-col gap-1.5">
+                  <span className="editorial-numeral text-4xl sm:text-5xl lg:text-6xl leading-[0.95]">
+                    Free
+                  </span>
+                  <span className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+                    Academic access
+                  </span>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="block text-2xl font-semibold text-foreground">2</span>
-              <span>Jurisdictions</span>
-            </div>
-            <div>
-              <span className="block text-2xl font-semibold text-foreground">Free</span>
-              <span>Academic access</span>
-            </div>
+            <Rule weight="medium" className="mt-8" />
           </motion.div>
         </div>
       </div>
@@ -268,211 +248,14 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
 }
 
 // ─────────────────────────────────────────────
-// Section 2: Capabilities Showcase
+// Section 2: About the JuDDGES Project
 // ─────────────────────────────────────────────
 
-const capabilities = [
-  {
-    icon: Search,
-    title: "Semantic Search",
-    description:
-      "Find relevant cases by meaning, not just keywords. Our AI understands legal concepts and retrieves judgments based on semantic similarity across millions of documents.",
-    features: ["Full-text & vector search", "Cross-jurisdiction results", "Advanced filters by court, date, topic"],
-    href: "/search",
-    cta: "Try search",
-  },
-  {
-    icon: MessageSquare,
-    title: "AI Legal Assistant",
-    description:
-      "Ask questions in natural language and get answers grounded in actual court decisions. Every response includes citations to specific judgments.",
-    features: ["Citation-backed answers", "Multi-turn conversations", "Case law reasoning"],
-    href: "/chat",
-    cta: "Start a conversation",
-  },
-  {
-    icon: Zap,
-    title: "Schema Extraction",
-    description:
-      "Define custom data schemas and let AI agents extract structured information from legal documents at scale. Build datasets from raw judgments.",
-    features: ["Custom field definitions", "Batch processing", "Export structured data"],
-    href: "/schema-chat",
-    cta: "Create a schema",
-  },
-] as const;
-
-function CapabilitiesSection() {
-  return (
-    <Section>
-      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
-        {/* Section header */}
-        <div className="max-w-2xl mb-16">
-          <p className="text-sm font-medium text-primary uppercase tracking-[0.1em] mb-3">
-            Capabilities
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight mb-4">
-            Three ways to work
-            <br />
-            with legal data
-          </h2>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            Search, analyze, and extract structured information from court judgments across jurisdictions.
-          </p>
-        </div>
-
-        {/* Capability cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {capabilities.map((cap, i) => (
-            <motion.div
-              key={cap.title}
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-            >
-              <div className="group h-full flex flex-col rounded-2xl border border-border bg-card p-8 transition-all duration-200 ease-out hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
-                {/* Icon */}
-                <div className="mb-6 p-3 w-fit rounded-xl bg-primary/8">
-                  <cap.icon className="size-6 text-primary" />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-xl font-semibold text-foreground mb-3 tracking-[-0.01em]">
-                  {cap.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-[15px] text-muted-foreground leading-relaxed mb-6">
-                  {cap.description}
-                </p>
-
-                {/* Feature list */}
-                <ul className="space-y-2.5 mb-8 flex-1">
-                  {cap.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/80">
-                      <div className="mt-1.5 size-1.5 rounded-full bg-primary/60 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                <Link
-                  href={cap.href}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary group-hover:gap-2.5 transition-all duration-200"
-                >
-                  {cap.cta}
-                  <ArrowRight className="size-3.5" />
-                </Link>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Section 3: Data Authority
-// ─────────────────────────────────────────────
-
-function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
-  const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
-  const statItems = [
-    {
-      icon: Database,
-      value: totalJudgments,
-      label: "Total judgments",
-      detail: "Cross-jurisdiction judgment corpus",
-    },
-    {
-      icon: Scale,
-      value: stats?.judgments ?? 0,
-      label: "Court judgments",
-      detail: `${formatStat(stats?.judgments_pl ?? 0)} Polish, ${formatStat(stats?.judgments_uk ?? 0)} UK`,
-    },
-    {
-      icon: FileText,
-      value: stats?.judgments_pl ?? 0,
-      label: "Polish judgments",
-      detail: "Appellate and court decision coverage",
-    },
-    {
-      icon: BookOpen,
-      value: stats?.judgments_uk ?? 0,
-      label: "UK judgments",
-      detail: "England & Wales coverage",
-    },
-    {
-      icon: Globe,
-      value: 2,
-      label: "Jurisdictions",
-      detail: "Poland and United Kingdom",
-      noAnimate: true,
-    },
-  ];
-
-  return (
-    <Section className="bg-gradient-to-b from-primary/[0.02] to-background">
-      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
-        {/* Section header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="text-sm font-medium text-primary uppercase tracking-[0.1em] mb-3">
-            Database
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight mb-4">
-            Comprehensive legal coverage
-          </h2>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            Continuously updated database of court decisions from Polish and UK jurisdictions, processed and indexed for semantic retrieval.
-          </p>
-        </div>
-
-        {/* Stats grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          {statItems.map((item, i) => (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="text-center p-8 rounded-2xl border border-border bg-card"
-            >
-              <div className="mx-auto mb-4 p-3 w-fit rounded-xl bg-primary/8">
-                <item.icon className="size-5 text-primary" />
-              </div>
-              <div className="text-3xl sm:text-4xl font-semibold text-foreground tabular-nums mb-1">
-                {statsLoading ? (
-                  <span className="inline-block w-20 h-9 bg-muted/40 rounded animate-pulse" />
-                ) : item.noAnimate ? (
-                  item.value
-                ) : (
-                  <AnimatedStat value={item.value} suffix="+" />
-                )}
-              </div>
-              <div className="text-sm font-medium text-foreground mb-1">{item.label}</div>
-              <div className="text-xs text-muted-foreground">{item.detail}</div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function formatStat(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.floor(n / 1_000)}K`;
-  return n.toLocaleString();
-}
-
-// ─────────────────────────────────────────────
-// Section: About the JuDDGES Project
-// ─────────────────────────────────────────────
-
-const projectHighlights = [
+const projectHighlights: ReadonlyArray<{
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}> = [
   {
     icon: Landmark,
     title: "Cross-Jurisdictional Research",
@@ -497,49 +280,57 @@ const projectHighlights = [
     description:
       "Building the most comprehensive legal research repository in Europe, enabling flexible meta-annotation of legal texts at scale.",
   },
-] as const;
+];
 
 function AboutProjectSection() {
   return (
-    <Section className="bg-gradient-to-b from-background to-primary/[0.02]">
+    <Section>
       <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
         {/* Section header */}
-        <div className="max-w-3xl mb-16">
-          <p className="text-sm font-medium text-primary uppercase tracking-[0.1em] mb-3">
-            About the Project
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight mb-4">
-            The JuDDGES Initiative
-          </h2>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            The JuDDGES project aims to revolutionize the accessibility and analysis of judicial decisions across varied legal systems. By overcoming barriers related to resources, language, data, and format inhomogeneity, the project facilitates the development and testing of theories on judicial decision-making and informs judicial policy and practice.
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="About the Project"
+          numeral="01"
+          title={
+            <>
+              The <em>JuDDGES</em> Initiative
+            </>
+          }
+          description="The JuDDGES project aims to revolutionize the accessibility and analysis of judicial decisions across varied legal systems. By overcoming barriers related to resources, language, data, and format inhomogeneity, the project facilitates the development and testing of theories on judicial decision-making and informs judicial policy and practice."
+          className="mb-16"
+        />
 
-        {/* Highlight cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-16">
-          {projectHighlights.map((item, i) => (
-            <motion.div
-              key={item.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="flex gap-5 p-6 rounded-2xl border border-border bg-card transition-colors duration-200 hover:border-primary/20"
-            >
-              <div className="shrink-0 p-3 h-fit rounded-xl bg-primary/8">
-                <item.icon className="size-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-foreground mb-2 tracking-[-0.01em]">
-                  {item.title}
-                </h3>
-                <p className="text-[15px] text-muted-foreground leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+        {/* Highlight cards — first one is featured */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-[color:var(--rule)] mb-12">
+          {projectHighlights.map((item, i) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+                className="bg-[color:var(--parchment)]"
+              >
+                <EditorialCard
+                  featured={i === 0}
+                  title={item.title}
+                  flat
+                  className="h-full border-0"
+                >
+                  <div className="flex gap-4">
+                    <Icon
+                      className="mt-1 size-5 shrink-0 text-[color:var(--ink-soft)]"
+                      aria-hidden
+                    />
+                    <p className="text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+                      {item.description}
+                    </p>
+                  </div>
+                </EditorialCard>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Project details bar */}
@@ -548,43 +339,90 @@ function AboutProjectSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.5 }}
-          className="rounded-2xl border border-border bg-card p-8 md:p-10"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center sm:text-left">
-            <div>
-              <p className="text-xs font-medium text-primary uppercase tracking-[0.1em] mb-2">
+          <Rule weight="ink" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[color:var(--rule)]">
+            <div className="py-8 sm:py-10 sm:pr-8">
+              <Eyebrow as="p" tone="oxblood" className="mb-3">
                 Duration
-              </p>
-              <p className="text-lg font-semibold text-foreground">
+              </Eyebrow>
+              <p className="font-serif text-2xl sm:text-3xl leading-[1.1] text-[color:var(--ink)]">
                 Jan 2024 &ndash; Jan 2026
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-2 text-sm text-[color:var(--ink-soft)]">
                 Two-year research programme
               </p>
             </div>
-            <div>
-              <p className="text-xs font-medium text-primary uppercase tracking-[0.1em] mb-2">
+            <div className="py-8 sm:py-10 sm:px-8">
+              <Eyebrow as="p" tone="oxblood" className="mb-3">
                 Funding
-              </p>
-              <p className="text-lg font-semibold text-foreground tabular-nums">
+              </Eyebrow>
+              <p className="editorial-numeral font-serif text-2xl sm:text-3xl leading-[1.1] text-[color:var(--ink)]">
                 &euro;529,384.67
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-2 text-sm text-[color:var(--ink-soft)]">
                 European research grant
               </p>
             </div>
-            <div>
-              <p className="text-xs font-medium text-primary uppercase tracking-[0.1em] mb-2">
+            <div className="py-8 sm:py-10 sm:pl-8">
+              <Eyebrow as="p" tone="oxblood" className="mb-3">
                 Institution
-              </p>
-              <p className="text-lg font-semibold text-foreground">
+              </Eyebrow>
+              <p className="font-serif text-2xl sm:text-3xl leading-[1.1] text-[color:var(--ink)]">
                 Wroclaw University
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-2 text-sm text-[color:var(--ink-soft)]">
                 of Science and Technology
               </p>
             </div>
           </div>
+          <Rule weight="ink" />
+        </motion.div>
+
+        {/* Ecosystem callout */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mt-12"
+        >
+          <EditorialCard
+            featured
+            eyebrow="Ecosystem"
+            title="Part of an open-source research ecosystem"
+            action={
+              <EditorialButton href="/ecosystem" variant="ghost" arrow>
+                Explore the ecosystem
+              </EditorialButton>
+            }
+          >
+            <div className="flex gap-4">
+              <Network
+                className="mt-1 size-5 shrink-0 text-[color:var(--ink-soft)]"
+                aria-hidden
+              />
+              <p className="text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+                This platform works alongside a dedicated human-in-the-loop
+                annotation workbench and the parent JuDDGES research
+                repository, maintained across collaborating teams. Together
+                they form an end-to-end open pipeline from raw judgment text to
+                verified research data.
+              </p>
+            </div>
+            <Rule weight="hairline" className="mt-6" />
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+              <span className="inline-flex items-center gap-1.5">
+                <Github className="size-3.5" aria-hidden /> pwr-ai/JuDDGES
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Github className="size-3.5" aria-hidden /> tsantosh7/hitl-tool
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Github className="size-3.5" aria-hidden /> pwr-ai/juddges-app
+              </span>
+            </div>
+          </EditorialCard>
         </motion.div>
       </div>
     </Section>
@@ -592,10 +430,244 @@ function AboutProjectSection() {
 }
 
 // ─────────────────────────────────────────────
-// Section 4: How It Works
+// Section 3: Capabilities Showcase
 // ─────────────────────────────────────────────
 
-const steps = [
+const capabilities: ReadonlyArray<{
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  features: ReadonlyArray<string>;
+  href: string;
+  cta: string;
+}> = [
+  {
+    icon: Search,
+    title: "Semantic Search",
+    description:
+      "Find relevant cases by meaning, not just keywords. Our AI understands legal concepts and retrieves judgments based on semantic similarity across millions of documents.",
+    features: [
+      "Full-text & vector search",
+      "Cross-jurisdiction results",
+      "Advanced filters by court, date, topic",
+    ],
+    href: "/search",
+    cta: "Try search",
+  },
+  {
+    icon: MessageSquare,
+    title: "AI Legal Assistant",
+    description:
+      "Ask questions in natural language and get answers grounded in actual court decisions. Every response includes citations to specific judgments.",
+    features: [
+      "Citation-backed answers",
+      "Multi-turn conversations",
+      "Case law reasoning",
+    ],
+    href: "/chat",
+    cta: "Start a conversation",
+  },
+  {
+    icon: Zap,
+    title: "Schema Extraction",
+    description:
+      "Define custom data schemas and let AI agents extract structured information from legal documents at scale. Build datasets from raw judgments.",
+    features: [
+      "Custom field definitions",
+      "Batch processing",
+      "Export structured data",
+    ],
+    href: "/schema-chat",
+    cta: "Create a schema",
+  },
+];
+
+function CapabilitiesSection() {
+  return (
+    <Section>
+      <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <SectionHeader
+          eyebrow="Capabilities"
+          numeral="02"
+          title={
+            <>
+              Three ways to <em>work</em> with legal data
+            </>
+          }
+          description="Search, analyze, and extract structured information from court judgments across jurisdictions."
+          className="mb-16"
+        />
+
+        {/* Capability cards — first is featured */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-[color:var(--rule)]">
+          {capabilities.map((cap, i) => {
+            const Icon = cap.icon;
+            return (
+              <motion.div
+                key={cap.title}
+                initial={{ opacity: 0, y: 32 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="bg-[color:var(--parchment)]"
+              >
+                <EditorialCard
+                  featured={i === 0}
+                  eyebrow={`Capability ${String(i + 1).padStart(2, "0")}`}
+                  title={cap.title}
+                  flat
+                  className="h-full border-0"
+                >
+                  <div className="flex items-start gap-3 mb-5">
+                    <Icon
+                      className="mt-1 size-5 shrink-0 text-[color:var(--ink-soft)]"
+                      aria-hidden
+                    />
+                    <p className="text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+                      {cap.description}
+                    </p>
+                  </div>
+
+                  <ul className="flex-1 mb-6">
+                    {cap.features.map((f) => (
+                      <li
+                        key={f}
+                        className="border-t border-[color:var(--rule)] py-2.5 text-sm text-[color:var(--ink)]"
+                      >
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-auto">
+                    <EditorialButton
+                      href={cap.href}
+                      variant="ghost"
+                      size="sm"
+                      arrow
+                      className="px-0"
+                    >
+                      {cap.cta}
+                    </EditorialButton>
+                  </div>
+                </EditorialCard>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Section 4: Data Authority
+// ─────────────────────────────────────────────
+
+function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
+  const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
+
+  const statItems: ReadonlyArray<{
+    value: number;
+    label: string;
+    detail: string;
+    static?: boolean;
+    suffix?: string;
+    marker?: string;
+  }> = [
+    {
+      value: totalJudgments,
+      label: "Total judgments",
+      detail: "Cross-jurisdiction judgment corpus",
+      suffix: "+",
+      marker: "¹",
+    },
+    {
+      value: stats?.judgments ?? 0,
+      label: "Court judgments",
+      detail: `${formatStat(stats?.judgments_pl ?? 0)} Polish, ${formatStat(stats?.judgments_uk ?? 0)} UK`,
+      suffix: "+",
+    },
+    {
+      value: stats?.judgments_pl ?? 0,
+      label: "Polish judgments",
+      detail: "Appellate and court decision coverage",
+      suffix: "+",
+    },
+    {
+      value: stats?.judgments_uk ?? 0,
+      label: "UK judgments",
+      detail: "England & Wales coverage",
+      suffix: "+",
+    },
+    {
+      value: 2,
+      label: "Jurisdictions",
+      detail: "Poland and United Kingdom",
+      static: true,
+    },
+  ];
+
+  return (
+    <Section>
+      <PaperBackground deep className="py-20 md:py-28 -my-20 md:-my-28">
+        <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+          <SectionHeader
+            eyebrow="Database"
+            numeral="03"
+            title={
+              <>
+                Comprehensive <em>legal coverage</em>
+              </>
+            }
+            description="Continuously updated database of court decisions from Polish and UK jurisdictions, processed and indexed for semantic retrieval."
+            className="mb-16"
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-[color:var(--rule)]">
+            {statItems.map((item, i) => (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+                className="bg-[color:var(--parchment-deep)] p-6 sm:p-7"
+              >
+                <Stat
+                  value={item.value}
+                  suffix={item.suffix}
+                  label={item.label}
+                  detail={item.detail}
+                  static={item.static}
+                  loading={statsLoading}
+                  marker={item.marker}
+                  size="sm"
+                />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </PaperBackground>
+    </Section>
+  );
+}
+
+function formatStat(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.floor(n / 1_000)}K`;
+  return n.toLocaleString();
+}
+
+// ─────────────────────────────────────────────
+// Section 5: How It Works
+// ─────────────────────────────────────────────
+
+const steps: ReadonlyArray<{
+  number: string;
+  title: string;
+  description: string;
+}> = [
   {
     number: "01",
     title: "Search or ask",
@@ -614,26 +686,24 @@ const steps = [
     description:
       "Dig deeper with AI chat, save documents to collections, or define schemas to extract structured data from judgments at scale.",
   },
-] as const;
+];
 
 function HowItWorksSection() {
   return (
     <Section>
       <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
-        {/* Section header */}
-        <div className="max-w-2xl mb-16">
-          <p className="text-sm font-medium text-primary uppercase tracking-[0.1em] mb-3">
-            How it works
-          </p>
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight">
-            From question to insight
-            <br />
-            in three steps
-          </h2>
-        </div>
+        <SectionHeader
+          eyebrow="How it works"
+          numeral="04"
+          title={
+            <>
+              From <em>question</em> to insight in three steps
+            </>
+          }
+          className="mb-16"
+        />
 
-        {/* Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-[color:var(--rule)]">
           {steps.map((step, i) => (
             <motion.div
               key={step.number}
@@ -641,17 +711,25 @@ function HowItWorksSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="bg-[color:var(--parchment)] p-8 lg:p-10"
             >
-              {/* Step number */}
-              <div className="text-5xl font-light text-primary/20 mb-4 tabular-nums">
-                {step.number}
+              <div className="flex items-start gap-5">
+                {/* Marginalia numeral */}
+                <span
+                  aria-hidden
+                  className="text-7xl font-serif italic text-[color:var(--oxblood)]/30 leading-[0.85] tabular-nums select-none"
+                >
+                  {step.number}
+                </span>
+                <div className="flex-1 pt-2">
+                  <Headline as="h3" size="xs" className="mb-3">
+                    {step.title}
+                  </Headline>
+                  <p className="text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+                    {step.description}
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2 tracking-[-0.01em]">
-                {step.title}
-              </h3>
-              <p className="text-[15px] text-muted-foreground leading-relaxed">
-                {step.description}
-              </p>
             </motion.div>
           ))}
         </div>
@@ -661,55 +739,58 @@ function HowItWorksSection() {
 }
 
 // ─────────────────────────────────────────────
-// Section 5: Trust & CTA
+// Section 6: Trust & CTA
 // ─────────────────────────────────────────────
 
 function TrustCTASection() {
   return (
-    <Section className="border-t border-border">
+    <Section>
       <div className="max-w-[75rem] mx-auto px-6 md:px-8 lg:px-12">
+        <Rule weight="ink" className="mb-16" />
         <div className="max-w-2xl mx-auto text-center">
-          {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-6 mb-12 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Lock className="size-4" />
-              <span>GDPR Compliant</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Globe className="size-4" />
-              <span>EU Hosted</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="size-4" />
-              <span>Open Source</span>
-            </div>
-          </div>
-
-          {/* CTA */}
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-[-0.02em] text-foreground leading-tight mb-4">
-            Start using JuDDGES for free
-          </h2>
-          <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-            No credit card required. JuDDGES is an academic research project
-            at Wroclaw University of Science and Technology, open to researchers and institutions.
+          {/* Trust badges — inline mono-caps separated by middle dots */}
+          <p className="mb-12 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+            <span>GDPR Compliant</span>
+            <span aria-hidden className="mx-3 text-[color:var(--rule-strong)]">
+              ·
+            </span>
+            <span>EU Hosted</span>
+            <span aria-hidden className="mx-3 text-[color:var(--rule-strong)]">
+              ·
+            </span>
+            <span>Open Source</span>
           </p>
 
-          <div className="flex flex-wrap gap-4 justify-center mb-8">
-            <Button size="lg" asChild className="h-13 px-10 text-base group shadow-md hover:shadow-lg transition-shadow duration-200">
-              <Link href="/search">
-                Open search
-                <ArrowRight className="ml-2 size-4 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="h-13 px-10 text-base hover:shadow-md transition-shadow duration-200">
-              <Link href="/auth/sign-up">Create free account</Link>
-            </Button>
+          <Headline as="h2" size="md" className="mb-6">
+            Start using <em>JuDDGES</em> for free
+          </Headline>
+          <p className="text-[17px] leading-[1.65] text-[color:var(--ink-soft)] mb-10">
+            No credit card required. JuDDGES is an academic research project at
+            Wroclaw University of Science and Technology, open to researchers
+            and institutions.
+          </p>
+
+          <div className="flex flex-wrap gap-3 justify-center mb-10">
+            <EditorialButton href="/search" size="lg" arrow>
+              Open search
+            </EditorialButton>
+            <EditorialButton
+              href="/auth/sign-up"
+              variant="secondary"
+              size="lg"
+            >
+              Create free account
+            </EditorialButton>
           </div>
 
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <GraduationCap className="size-4" />
-            <span>JuDDGES &mdash; A research project by Wroclaw University of Science and Technology</span>
-          </div>
+          <Rule weight="hairline" className="mb-6" />
+          <p className="inline-flex items-center justify-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+            <GraduationCap className="size-3.5" aria-hidden />
+            <span>
+              JuDDGES &mdash; A research project by Wroclaw University of
+              Science and Technology
+            </span>
+          </p>
         </div>
       </div>
     </Section>
@@ -722,13 +803,13 @@ function TrustCTASection() {
 
 export function LandingPage({ stats, statsLoading }: LandingPageProps) {
   return (
-    <div className="min-h-screen">
+    <PaperBackground grain className="min-h-screen">
       <HeroSection stats={stats} statsLoading={statsLoading} />
       <AboutProjectSection />
       <CapabilitiesSection />
       <DataAuthoritySection stats={stats} statsLoading={statsLoading} />
       <HowItWorksSection />
       <TrustCTASection />
-    </div>
+    </PaperBackground>
   );
 }
