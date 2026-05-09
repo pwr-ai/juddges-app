@@ -1,5 +1,6 @@
 """Database operations for legal document retrieval and vector search."""
 
+import re
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
@@ -10,13 +11,21 @@ from ._base import SupabaseClientMixin
 
 # ---------------------------------------------------------------------------
 # Column projection constants
-# legal_documents columns -- embedding deliberately excluded here.
-# Callers that need the vector use the get_document_chunks RPC path.
+# Real columns from public.judgments. The `embedding` column is deliberately
+# excluded here — it's ~6KB per row and callers that need the vector use the
+# chunk-search RPC path instead.
 # ---------------------------------------------------------------------------
-_LEGAL_DOCUMENT_COLS = (
-    "supabase_document_id, document_id, title, document_type, court_name, "
-    "date_issued, language, summary, full_text, country, document_number, "
-    "issuing_body, ingestion_date, extracted_data, current_version, content_hash"
+_JUDGMENT_COLS = (
+    "id, case_number, jurisdiction, court_name, court_level, "
+    "decision_date, publication_date, title, summary, full_text, "
+    "judges, case_type, decision_type, outcome, keywords, legal_topics, "
+    "cited_legislation, metadata, source_dataset, source_id, source_url, "
+    "created_at, updated_at"
+)
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
 )
 
 
@@ -189,56 +198,65 @@ class SupabaseVectorDB(SupabaseClientMixin):
         self,
         document_id: str,
     ) -> Optional[Dict[str, Any]]:
-        """
-        Fetch a single document by its document_id.
+        """Fetch a single judgment by its UUID `id` or text `source_id`.
 
-        Args:
-            document_id: The document ID
-
-        Returns:
-            Document data or None if not found
+        Returns the raw row dict (judgment column shape). Downstream callers
+        translate via `_convert_judgment_to_legal_document`.
         """
         try:
+            column = "id" if _UUID_RE.match(document_id) else "source_id"
             response = (
-                self.client.table("legal_documents")
-                .select(_LEGAL_DOCUMENT_COLS)
-                .eq("document_id", document_id)
+                self.client.table("judgments")
+                .select(_JUDGMENT_COLS)
+                .eq(column, document_id)
                 .limit(1)
                 .execute()
             )
-
             return response.data[0] if response.data else None
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Failed to fetch document {document_id}: {e}")
+            logger.error(f"Failed to fetch judgment {document_id}: {e}")
             return None
 
     async def get_documents_by_ids(
         self,
         document_ids: List[str],
     ) -> List[Dict[str, Any]]:
-        """
-        Fetch multiple documents by their document_ids.
+        """Fetch multiple judgments by their UUIDs or source_ids.
 
-        Args:
-            document_ids: List of document IDs
-
-        Returns:
-            List of document data
+        Callers may mix UUID `id` and text `source_id` values in one batch;
+        each input is routed to the matching column. Returned rows are
+        deduplicated by `judgments.id` (so a caller passing both forms for the
+        same row gets it once).
         """
         if not document_ids:
             return []
 
-        try:
-            response = (
-                self.client.table("legal_documents")
-                .select(_LEGAL_DOCUMENT_COLS)
-                .in_("document_id", document_ids)
-                .execute()
-            )
+        uuid_ids = [i for i in document_ids if _UUID_RE.match(i)]
+        text_ids = [i for i in document_ids if not _UUID_RE.match(i)]
 
-            return response.data or []
+        try:
+            rows_by_id: Dict[str, Dict[str, Any]] = {}
+            if uuid_ids:
+                r = (
+                    self.client.table("judgments")
+                    .select(_JUDGMENT_COLS)
+                    .in_("id", uuid_ids)
+                    .execute()
+                )
+                for row in r.data or []:
+                    rows_by_id[row["id"]] = row
+            if text_ids:
+                r = (
+                    self.client.table("judgments")
+                    .select(_JUDGMENT_COLS)
+                    .in_("source_id", text_ids)
+                    .execute()
+                )
+                for row in r.data or []:
+                    rows_by_id[row["id"]] = row
+            return list(rows_by_id.values())
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Failed to fetch documents: {e}")
+            logger.error(f"Failed to fetch judgments: {e}")
             return []
 
     async def get_embedding_stats(self) -> Dict[str, Any]:
@@ -254,49 +272,6 @@ class SupabaseVectorDB(SupabaseClientMixin):
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to get embedding stats: {e}")
             return {}
-
-    async def full_text_search(
-        self,
-        query: str,
-        document_type: Optional[str] = None,
-        language: Optional[str] = None,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> List[Dict[str, Any]]:
-        """
-        Full-text search without vector similarity (fallback when no embeddings).
-
-        Args:
-            query: Search query text
-            document_type: Filter by document type
-            language: Filter by language
-            limit: Maximum results
-            offset: Pagination offset
-
-        Returns:
-            List of matching documents
-        """
-        try:
-            # Build query with FTS
-            query_builder = (
-                self.client.table("legal_documents")
-                .select(
-                    "supabase_document_id, document_id, title, document_type, court_name, date_issued, language, summary"
-                )
-                .text_search("full_text", query, config="simple")
-            )
-
-            if document_type:
-                query_builder = query_builder.eq("document_type", document_type)
-            if language:
-                query_builder = query_builder.eq("language", language)
-
-            response = query_builder.range(offset, offset + limit - 1).execute()
-
-            return response.data or []
-        except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Full-text search failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 # ---------------------------------------------------------------------------
