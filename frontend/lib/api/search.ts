@@ -1,4 +1,4 @@
-import { DocumentType, SearchDocumentsDirectResponse, SearchChunk, SearchDocument } from "@/types/search";
+import { SearchDocumentsDirectResponse, SearchChunk, SearchDocument } from "@/types/search";
 import { apiLogger } from './client';
 import { logger } from "@/lib/logger";
 
@@ -6,7 +6,6 @@ export interface SearchDocumentsDirectInput {
   query: string;
   mode: "rabbit" | "thinking";
   languages?: string[];
-  document_types?: string[];
   return_properties?: string[];
 }
 
@@ -15,7 +14,6 @@ export interface SearchChunksInput {
   limit_docs?: number;
   alpha?: number;
   languages?: string[];
-  document_types?: string[];
   segment_types?: string[];
   fetch_full_documents?: boolean;
   limit_chunks?: number;
@@ -57,7 +55,6 @@ export async function searchDocuments(
   query: string,
   maxDocuments: number,
   options?: {
-    documentTypes?: DocumentType[];
     languages?: string[];
     mode?: "rabbit" | "thinking";
     page?: number;
@@ -69,8 +66,6 @@ export async function searchDocuments(
     question: query,
     maxDocuments: maxDocuments,
     maxThreshold: options?.maxThreshold || null,
-    documentTypes: options?.documentTypes || null,
-    documentType: options?.documentTypes?.[0] || null, // For backward compatibility
     languages: options?.languages || null,
     mode: options?.mode || "rabbit",
     page: options?.page || 1,
@@ -102,7 +97,6 @@ export async function searchDocumentsDirect(
     query: input.query,
     mode: input.mode,
     languages: input.languages,
-    document_types: input.document_types,
     return_properties: input.return_properties,
   });
 
@@ -138,7 +132,6 @@ export async function searchChunks(
     limit_docs: input.limit_docs,
     alpha: input.alpha,
     languages: input.languages,
-    document_types: input.document_types,
     segment_types: input.segment_types,
     fetch_full_documents: input.fetch_full_documents,
     limit_chunks: input.limit_chunks,

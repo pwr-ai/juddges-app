@@ -1,9 +1,3 @@
-export enum DocumentType {
-  JUDGMENT = "judgment",
-  TAX_INTERPRETATION = "tax_interpretation",
-  ERROR = "error"
-}
-
 export interface SearchChunk {
   document_id: string;
   chunk_id: string | number;
@@ -17,7 +11,6 @@ export interface SearchChunk {
   parent_segment_id?: string;
   score?: number;
   // Additional fields that may come from backend DocumentChunk
-  document_type?: string;
   language?: string;
   [key: string]: unknown;
 }
@@ -33,7 +26,6 @@ export enum DocumentProcessingStatus {
 // Raw Weaviate document structure (matches the schema exactly)
 export interface WeaviateDocument {
   document_id: string;
-  document_type: string;
   title: string | null;
   date_issued: string | null;
   document_number: string | null;
@@ -71,7 +63,6 @@ export interface WeaviateDocument {
 // Frontend-friendly SearchDocument interface (for UI components)
 export interface SearchDocument {
   document_id: string;
-  document_type?: string;
   title?: string | null;
   date_issued: string | null;
   issuing_body: {
@@ -137,7 +128,6 @@ export interface SearchResult {
 export interface LegalDocumentMetadata {
   uuid: string;
   document_id: string;
-  document_type: DocumentType;
   language: string;
   keywords: string[];
   date_issued: string | null;
