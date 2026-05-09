@@ -89,7 +89,6 @@ export const pl: Translations = {
     // Resources
     resources: 'Zasoby',
     publications: 'Publikacje',
-    managePublications: 'Zarządzaj publikacjami',
     researchBlog: 'Blog badawczy',
     useCases: 'Przypadki użycia',
     settings: 'Ustawienia',

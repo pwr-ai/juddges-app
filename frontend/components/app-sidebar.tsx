@@ -21,8 +21,6 @@ import {
  FileInput,
  FileSearch,
  BarChart3,
- BookOpen,
- Settings,
  LogIn,
  UserPlus,
  LayoutDashboard,
@@ -151,15 +149,6 @@ export function AppSidebar(): React.JSX.Element {
  <Link href="/search">
  <Search />
  <span>{t('navigation.searchJudgments')}</span>
- </Link>
- </SidebarMenuButton>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <SidebarMenuButton asChild isActive={pathname === "/publications"}>
- <Link href="/publications">
- <BookOpen />
- <span>{t('navigation.publications')}</span>
  </Link>
  </SidebarMenuButton>
  </SidebarMenuItem>
@@ -317,30 +306,6 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.publications')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/publications"}>
- <Link href="/publications">
- <BookOpen />
- <span>{t('navigation.publications')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- {isAdmin && (
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.managePublications')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname.startsWith("/publications/admin")}>
- <Link href="/publications/admin">
- <Settings />
- <span>{t('navigation.managePublications')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
- )}
 
  </SidebarMenu>
  </SidebarGroupContent>
