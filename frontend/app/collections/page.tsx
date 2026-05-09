@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -114,10 +114,6 @@ export default function CollectionsPage() {
  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
  const [collectionToDelete, setCollectionToDelete] = useState<string | null>(null);
  const [isDeleting, setIsDeleting] = useState(false);
- // Track pending deletions (collections that will be actually deleted when toast expires)
- const [pendingDeletions, setPendingDeletions] = useState<Map<string, { collection: CollectionWithDocuments }>>(new Map());
- // Track cancelled deletions (persists across renders)
- const cancelledDeletionsRef = useRef<Set<string>>(new Set());
 
  // Search and sort state
  const [searchQuery, setSearchQuery] = useState('');
@@ -155,15 +151,14 @@ export default function CollectionsPage() {
 
  // Filter collections by search query
  const filteredCollections = useMemo(() => {
- const visibleCollections = collections.filter(c => !pendingDeletions.has(c.id));
- if (!searchQuery.trim()) return visibleCollections;
+ if (!searchQuery.trim()) return collections;
  const query = searchQuery.toLowerCase().trim();
- return visibleCollections.filter(
+ return collections.filter(
  (collection) =>
  collection.name.toLowerCase().includes(query) ||
  (collection.description?.toLowerCase().includes(query) ?? false)
  );
- }, [collections, searchQuery, pendingDeletions]);
+ }, [collections, searchQuery]);
 
  // Sort collections
  const sortedCollections = useMemo(() => {
@@ -228,111 +223,44 @@ export default function CollectionsPage() {
  return;
  }
 
- setIsDeleting(true);
- try {
- // Store collection data for undo
- const collectionToRestore = collections.find(c => c.id === collectionToDelete);
+ const id = collectionToDelete;
+ const collectionToRestore = collections.find(c => c.id === id);
 
- if (!collectionToRestore) {
- setIsDeleting(false);
  setDeleteDialogOpen(false);
  setCollectionToDelete(null);
+
+ if (!collectionToRestore) {
  return;
  }
 
- // Close dialog immediately
- setDeleteDialogOpen(false);
- const collectionIdToDelete = collectionToDelete;
- setCollectionToDelete(null);
- setIsDeleting(false);
-
- // Remove from UI immediately (add to pending deletions)
- setPendingDeletions(prev => {
- const next = new Map(prev);
- next.set(collectionIdToDelete, { collection: collectionToRestore });
- return next;
- });
-
- // Function to actually delete from database
- const performActualDeletion = async (): Promise<void> => {
- // Check if this specific deletion was cancelled
- if (cancelledDeletionsRef.current.has(collectionIdToDelete)) {
- // Remove from cancelled set
- cancelledDeletionsRef.current.delete(collectionIdToDelete);
- // Remove from pending deletions (it was restored)
- setPendingDeletions(prev => {
- const next = new Map(prev);
- next.delete(collectionIdToDelete);
- return next;
- });
- return; // Don't delete if undo was clicked
- }
+ setIsDeleting(true);
+ // Optimistic remove; rollback on error.
+ const snapshot = collections;
+ setCollections(prev => prev.filter(c => c.id !== id));
 
  try {
- // Actually delete from database
- await deleteCollection(collectionIdToDelete);
- // Remove from pending deletions AND from collections state
- setPendingDeletions(prev => {
- const next = new Map(prev);
- if (next.has(collectionIdToDelete)) {
- next.delete(collectionIdToDelete);
- }
- return next;
- });
- // Also remove from collections state to ensure consistency
- setCollections(prev => prev.filter(c => c.id !== collectionIdToDelete));
- pageLogger.info('Collection deleted successfully', {
- deletedId: collectionIdToDelete
- });
- } catch (error) {
- pageLogger.error('Failed to delete collection', error, {
- id: collectionIdToDelete,
- context: 'performActualDeletion'
- });
- // If deletion fails, restore the collection in UI
- setPendingDeletions(prev => {
- const next = new Map(prev);
- next.delete(collectionIdToDelete);
- return next;
- });
- }
- };
-
- // Show toast with undo option
- const toastDuration = 5000; // 5 seconds
- const collectionName = collectionToRestore.name;
+ await deleteCollection(id);
+ pageLogger.info('Collection deleted successfully', { deletedId: id });
  showSuccessToast({
  title: "Collection deleted",
  description: (
  <>
  The collection has been deleted.
  <br />
- <span className="font-semibold text-foreground">&quot;{collectionName}&quot;</span>
+ <span className="font-semibold text-foreground">&quot;{collectionToRestore.name}&quot;</span>
  </>
  ),
- secondaryAction: {
- label: "Undo",
- onClick: async () => {
- // Mark this specific deletion as cancelled
- cancelledDeletionsRef.current.add(collectionIdToDelete);
-
- // Restore collection in UI
- setPendingDeletions(prev => {
- const next = new Map(prev);
- next.delete(collectionIdToDelete);
- return next;
- });
- },
- },
- icon: null, // No icon for delete toast
- duration: toastDuration,
- onDismiss: performActualDeletion, // Trigger actual deletion when toast is dismissed
+ icon: null,
  });
  } catch (error) {
+ pageLogger.error('Failed to delete collection', error, {
+ id,
+ context: 'confirmDeleteCollection',
+ });
+ setCollections(snapshot);
+ toast.error('Failed to delete collection');
+ } finally {
  setIsDeleting(false);
- setDeleteDialogOpen(false);
- setCollectionToDelete(null);
- pageLogger.error('Error in confirmDeleteCollection', error);
  }
  };
 
@@ -386,7 +314,7 @@ export default function CollectionsPage() {
  );
  }
 
- const visibleCollections = collections.filter(collection => !pendingDeletions.has(collection.id));
+ const visibleCollections = collections;
 
  return (
  <PageContainer width="standard"fillViewport className="py-6">

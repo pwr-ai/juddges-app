@@ -313,9 +313,52 @@ test.describe('Collections — delete', () => {
     await expect(confirmDialog).toBeVisible();
     await confirmDialog.getByRole('button', { name: /^delete$/i }).click();
 
+    // DELETE fires immediately on confirm (not on toast dismissal). The
+    // toast appears after the API call resolves.
+    await expect.poll(() => deleteRequested, { timeout: 5_000 }).toBe(true);
     await expect(page.getByText(/collection deleted/i)).toBeVisible();
+  });
 
-    // The actual DELETE call fires when the toast is dismissed (5s). Wait for it.
-    await expect.poll(() => deleteRequested, { timeout: 8_000 }).toBe(true);
+  test('list-page delete commits to the server before navigation', async ({ authenticatedPage: page }) => {
+    const collection = makeCollection({ name: 'Strand Test' });
+    let deleteRequested = false;
+    const list: MockCollection[] = [{ ...collection, documents: [], document_count: 0 }];
+
+    await page.route(`**/api/collections/${COLLECTION_ID}*`, async (route: Route) => {
+      if (route.request().method() === 'DELETE') {
+        deleteRequested = true;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Collection deleted successfully' }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(collection),
+      });
+    });
+
+    await page.route('**/api/collections', async (route: Route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(list),
+      });
+    });
+
+    await page.goto('/collections');
+    const card = page.getByText('Strand Test');
+    await expect(card).toBeVisible();
+    await card.hover();
+    await page.getByRole('button', { name: /delete collection/i }).click();
+    const confirmDialog = page.getByRole('dialog');
+    await confirmDialog.getByRole('button', { name: /^delete$/i }).click();
+
+    // Navigate away immediately. Pre-fix this stranded the row because
+    // the actual DELETE was deferred to toast onDismiss (which never fired).
+    await expect.poll(() => deleteRequested, { timeout: 3_000 }).toBe(true);
   });
 });
