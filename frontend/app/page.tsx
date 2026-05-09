@@ -13,13 +13,11 @@ import {
   useDashboardStats,
   useRecentDocuments,
   useTrendingTopics,
-  useRecentChats,
   useUserSchemas,
   useCollectionsDocumentCount,
   useRecentExtractions,
 } from "@/lib/api/dashboard";
 import {
-  MessageSquare,
   FileText,
   Scale,
   TrendingUp,
@@ -157,7 +155,6 @@ export default function HomePage(): React.JSX.Element {
 
   const { data: trendingTopics = [], isLoading: trendsLoading } = useTrendingTopics(3);
 
-  const { data: recentChats = [], isLoading: chatsLoading } = useRecentChats(3);
 
   const { data: userSchemas = [], isLoading: schemasLoading } = useUserSchemas(3);
 
@@ -198,6 +195,9 @@ export default function HomePage(): React.JSX.Element {
   const jurisdictionCount = [plCount, ukCount].filter((n) => n > 0).length;
   const lastUpdated = stats ? formatLastUpdated(stats.computed_at) : null;
 
+  // Conditional trending display logic
+  const showTrending = trendsLoading || trendingTopics.length > 0;
+
   // For authenticated users, show the redesigned editorial dashboard
   return (
     <PageContainer width="standard" className="py-6">
@@ -205,8 +205,8 @@ export default function HomePage(): React.JSX.Element {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* ============ ROW 1 ============ */}
 
-        {/* Featured: Database overview (8 cols) */}
-        <div className="lg:col-span-8">
+        {/* Featured: Database overview (8 or 12 cols depending on trending visibility) */}
+        <div className={showTrending ? "lg:col-span-8" : "lg:col-span-12"}>
           <EditorialCard
             featured
             eyebrow={t("dashboard.databaseOverview")}
@@ -276,7 +276,8 @@ export default function HomePage(): React.JSX.Element {
           </EditorialCard>
         </div>
 
-        {/* Popular legal topics (4 cols) */}
+        {/* Popular legal topics (4 cols) - only show when loading or has content */}
+        {showTrending && (
         <div className="lg:col-span-4">
           <EditorialCard
             eyebrow="Trending"
@@ -337,62 +338,44 @@ export default function HomePage(): React.JSX.Element {
             )}
           </EditorialCard>
         </div>
+        )}
 
         {/* ============ ROW 2 (3 cards × 4 cols) ============ */}
 
-        {/* Recent conversations */}
+        {/* About JUDDGES */}
         <div className="lg:col-span-4">
           <EditorialCard
-            eyebrow="Conversations"
-            title={t("dashboard.recentConversations")}
-            action={<ViewAllAction href="/chat" label={t("dashboard.viewAll")} />}
+            eyebrow="About"
+            title="JUDDGES"
             className="h-full"
           >
-            {chatsLoading ? (
-              <ul className="divide-y divide-rule">
-                {[0, 1, 2].map((i) => (
-                  <li key={i} className="py-3">
-                    <SkeletonChatCard />
-                  </li>
-                ))}
-              </ul>
-            ) : recentChats.length > 0 ? (
-              <ul className="divide-y divide-rule">
-                {recentChats.slice(0, 3).map((chat) => {
-                  const chatTitle = chat.title || chat.firstMessage || "New Chat";
-                  const truncatedTitle =
-                    chatTitle.length > 60
-                      ? chatTitle.substring(0, 57) + "..."
-                      : chatTitle;
-                  return (
-                    <li key={chat.id} className="first:pt-0 last:pb-0">
-                      <Link
-                        href={`/chat/${chat.id}`}
-                        className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        <div className="flex items-start gap-3">
-                          <MessageSquare className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
-                          <div className="min-w-0 flex-1">
-                            <p className="line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
-                              {truncatedTitle}
-                            </p>
-                            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
-                              {formatChatTimestamp(chat.updated_at)}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EditorialEmptyState
-                message={t("dashboard.noChats")}
-                actionHref="/chat"
-                actionLabel={t("dashboard.startChat")}
-              />
-            )}
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="font-serif italic text-ink-soft text-sm leading-snug">
+                Judicial Decision Data Gathering, Encoding &amp; Sharing
+              </p>
+              <p className="text-sm text-ink leading-relaxed">
+                An end-to-end platform for hybrid search, retrieval-augmented chat, structured information extraction, and analytics over Polish and England &amp; Wales court judgments — built for legal experts, NLP researchers, and dataset annotators.
+              </p>
+              <Rule weight="hairline" />
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
+                <span className="text-ink">PI</span>
+                <span className="mx-1.5 text-rule-strong">·</span>
+                Tomasz Kajdanowicz
+              </p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft mt-1">
+                <span className="text-ink">15.01.2024 – 30.06.2026</span>
+                <span className="mx-1.5 text-rule-strong">·</span>
+                529,384 EUR
+              </p>
+              <div className="flex flex-col gap-2 mt-auto">
+                <EditorialButton variant="primary" size="sm" href="https://huggingface.co/JuDDGES" external arrow>
+                  Hugging Face datasets
+                </EditorialButton>
+                <EditorialButton variant="ghost" size="sm" href="/about" arrow>
+                  About the project
+                </EditorialButton>
+              </div>
+            </div>
           </EditorialCard>
         </div>
 
