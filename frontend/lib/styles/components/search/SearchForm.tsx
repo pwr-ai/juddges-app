@@ -7,7 +7,6 @@ import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AutocompleteSuggestion } from "@/hooks/useSearchAutocomplete";
-import { DocumentType } from "@/types/search";
 
 type SearchMode = "thinking" | "rabbit";
 
@@ -27,11 +26,8 @@ export interface SearchFormProps {
   setQuery: (value: string) => void;
   searchType: SearchMode;
   setSearchType: (value: SearchMode) => void;
-  documentTypes: DocumentType[];
-  toggleDocumentType: (type: DocumentType) => void;
   selectedLanguages: Set<string>;
   toggleLanguage: (language: string) => void;
-  setDocumentTypes: (types: DocumentType[]) => void;
   setSelectedLanguages: (languages: Set<string>) => void;
   isSearching: boolean;
   hasResults: boolean;
@@ -46,7 +42,6 @@ export interface SearchFormProps {
 type PopularSearch = {
   label: string;
   mode: SearchMode;
-  documentTypes: DocumentType[];
   languages: Set<string>;
 };
 
@@ -54,19 +49,16 @@ const POPULAR_SEARCHES: PopularSearch[] = [
   {
     label: "Kredyty frankowe",
     mode: "thinking",
-    documentTypes: [DocumentType.JUDGMENT],
     languages: new Set(["pl"]),
   },
   {
     label: "Intellectual property",
     mode: "thinking",
-    documentTypes: [DocumentType.JUDGMENT],
     languages: new Set(["uk"]),
   },
   {
     label: "Prawo pracy",
     mode: "thinking",
-    documentTypes: [DocumentType.JUDGMENT],
     languages: new Set(["pl"]),
   },
 ];
@@ -76,7 +68,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     query,
     setQuery,
     setSearchType,
-    setDocumentTypes,
     setSelectedLanguages,
     isSearching,
     hasResults,
@@ -116,7 +107,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   const handlePopularSearch = (item: PopularSearch): void => {
     setQuery(item.label);
     setSearchType(item.mode);
-    setDocumentTypes(item.documentTypes);
     setSelectedLanguages(item.languages);
     internalRef.current?.focus();
   };

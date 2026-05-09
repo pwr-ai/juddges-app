@@ -504,8 +504,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
           filters: mergedFilters,
           selectedLanguages,
           selectedDocumentIds,
-          // Default ignoreUnknownType to true if not present (for backward compatibility)
-          ignoreUnknownType: parsedState.ignoreUnknownType !== undefined ? parsedState.ignoreUnknownType : true,
           // Don't restore these states
           isSearching: false,
           error: null,
