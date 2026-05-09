@@ -10,6 +10,7 @@
 export { ChartFigure } from "./ChartFigure";
 export { Citation } from "./Citation";
 export { DropCap } from "./DropCap";
+export { DualStatCard } from "./DualStatCard";
 export { EditorialButton } from "./EditorialButton";
 export { EditorialCard } from "./EditorialCard";
 export { Eyebrow } from "./Eyebrow";
@@ -18,5 +19,6 @@ export { Masthead } from "./Masthead";
 export { PaperBackground } from "./PaperBackground";
 export { QueryPill } from "./QueryPill";
 export { Rule } from "./Rule";
+export { Section } from "./Section";
 export { SectionHeader } from "./SectionHeader";
 export { Stat } from "./Stat";

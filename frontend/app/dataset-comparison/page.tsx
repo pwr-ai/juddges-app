@@ -4,10 +4,11 @@ import dynamic from 'next/dynamic';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import {
   ChartFigure,
+  DualStatCard,
   Headline,
   Masthead,
   PaperBackground,
-  SectionHeader,
+  Section,
 } from '@/components/editorial';
 import {
   editorialCategorical,
@@ -16,6 +17,8 @@ import {
   editorialSeries,
 } from '@/lib/charts/editorial-plot';
 import stats from '@/lib/stats/dataset-comparison-stats.json';
+import { BivariateBarChart } from './_components/BivariateBarChart';
+import { HorizontalBarChart } from './_components/HorizontalBarChart';
 
 const Plot = dynamic(
   async () => {
@@ -30,38 +33,6 @@ const UK = editorialSeries.uk;
 const PL = editorialSeries.pl;
 const UK_SOFT = editorialSeries.ukSoft;
 const PL_SOFT = editorialSeries.plSoft;
-
-function StatCard({ label, ukValue, plValue, format }: {
-  label: string;
-  ukValue: string | number;
-  plValue: string | number;
-  format?: string;
-}) {
-  const fmt = (v: string | number) =>
-    typeof v === 'number' ? v.toLocaleString() : v;
-  return (
-    <div className="editorial-card flex flex-col p-4">
-      <p className="font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-[color:var(--ink-soft)]">
-        {label}
-      </p>
-      <div className="mt-3 flex items-baseline justify-between gap-3">
-        <div className="flex flex-col">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">UK</span>
-          <span className="editorial-numeral text-2xl text-[color:var(--ink)] leading-none">
-            {fmt(ukValue)}{format}
-          </span>
-        </div>
-        <span aria-hidden className="self-stretch w-px bg-[color:var(--rule)]" />
-        <div className="flex flex-col items-end text-right">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--oxblood)]">PL</span>
-          <span className="editorial-numeral text-2xl text-[color:var(--oxblood)] leading-none">
-            {fmt(plValue)}{format}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Ranked editorial list — replaces a horizontal-bar Plot for top-N rankings.
@@ -106,31 +77,6 @@ function RankedList({ items, color }: {
   );
 }
 
-function Section({ numeral, eyebrow, title, description, children }: {
-  numeral?: string;
-  eyebrow?: string;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-16 relative">
-      <SectionHeader
-        numeral={numeral}
-        eyebrow={eyebrow}
-        title={title}
-        className={description ? 'mb-3' : 'mb-6'}
-      />
-      {description && (
-        <p className="relative z-10 mb-7 max-w-3xl text-[17px] leading-[1.65] text-[color:var(--ink)]">
-          {description}
-        </p>
-      )}
-      <div className="relative z-10">{children}</div>
-    </section>
-  );
-}
-
 export default function DatasetComparisonPage() {
   // Year distribution (aligned across both corpora)
   const allYears = Array.from(new Set([
@@ -157,10 +103,15 @@ export default function DatasetComparisonPage() {
   ])).sort((a, b) => parseInt(a) - parseInt(b));
   const ukPanels = allPanelSizes.map(s => (stats.uk.panel_size_distribution as Record<string, number>)[s] || 0);
   const plPanels = allPanelSizes.map(s => (stats.pl.panel_size_distribution as Record<string, number>)[s] || 0);
+  const panelLabels = allPanelSizes.map(s => `${s} judge${parseInt(s) !== 1 ? 's' : ''}`);
 
   // Court distribution — sorted by count.
   const ukCourts = Object.entries(stats.uk.court_distribution)
-    .sort((a, b) => b[1] - a[1]);
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({
+      name: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      count,
+    }));
 
   // Polish court names in the source data appear with two spellings of the
   // city stem ("Apelacyjnyw Warszawie" vs "Apelacyjny w Warszawie"). Normalize
@@ -176,7 +127,8 @@ export default function DatasetComparisonPage() {
   }
   const plCourts = Array.from(plCourtsMap.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 11);
+    .slice(0, 11)
+    .map(([name, count]) => ({ name, count }));
 
   // Top judges
   const ukJudges = stats.uk.judges.top_10;
@@ -187,13 +139,17 @@ export default function DatasetComparisonPage() {
     'w','k','z','i','na','1','nie','do','o','się','2','a','p','r','to','co','od','tym','jest','3','4','po','jak','s','m','za','zw','przez','jego','tego']);
   const ukDomainWords = stats.uk.vocabulary.top_50_words
     .filter(w => !stopWords.has(w.word))
-    .slice(0, 15);
+    .slice(0, 15)
+    .map(w => ({ name: w.word, count: w.count }));
   const plDomainWords = stats.pl.vocabulary.top_50_words
     .filter(w => !stopWords.has(w.word))
-    .slice(0, 15);
+    .slice(0, 15)
+    .map(w => ({ name: w.word, count: w.count }));
 
   // Polish keywords (crime types)
-  const plKeywords = stats.pl.keyword_distribution.slice(0, 15);
+  const plKeywords = stats.pl.keyword_distribution
+    .slice(0, 15)
+    .map(k => ({ name: k.keyword, count: k.count }));
 
   // Judgment type distribution (PL) — top 5 + "Other" rollup so 13/6/4/2-case
   // slivers don't fragment the donut.
@@ -205,6 +161,11 @@ export default function DatasetComparisonPage() {
         ...(judgmentTypesAll.slice(0, 5) as Array<[string, number]>),
         ['Other', judgmentTypesAll.slice(5).reduce((s, [, c]) => s + c, 0)] as [string, number],
       ];
+
+  // Decade distribution
+  const decadeKeys = Object.keys(stats.uk.decade_distribution);
+  const ukDecades = Object.values(stats.uk.decade_distribution);
+  const plDecades = Object.values(stats.pl.decade_distribution);
 
   return (
     <PaperBackground grain className="min-h-screen">
@@ -244,14 +205,14 @@ export default function DatasetComparisonPage() {
       {/* ── Overview Stats ── */}
       <Section numeral="01" eyebrow="Overview" title="Overview" description="Key statistics at a glance.">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="Total Judgments" ukValue={stats.uk.total} plValue={stats.pl.total} />
-          <StatCard label="Avg. Characters" ukValue={Math.round(stats.uk.text_length_chars.mean)} plValue={Math.round(stats.pl.text_length_chars.mean)} />
-          <StatCard label="Avg. Words" ukValue={Math.round(stats.uk.text_length_words.mean)} plValue={Math.round(stats.pl.text_length_words.mean)} />
-          <StatCard label="Avg. Sentences" ukValue={Math.round(stats.uk.text_length_sentences.mean)} plValue={Math.round(stats.pl.text_length_sentences.mean)} />
-          <StatCard label="Unique Judges" ukValue={stats.uk.judges.total_unique} plValue={stats.pl.judges.total_unique} />
-          <StatCard label="Avg. Panel Size" ukValue={stats.uk.judges.avg_per_case} plValue={stats.pl.judges.avg_per_case} />
-          <StatCard label="Unique Vocabulary" ukValue={stats.uk.vocabulary.unique_tokens_sample} plValue={stats.pl.vocabulary.unique_tokens_sample} />
-          <StatCard label="Avg. Sentence Length" ukValue={stats.uk.avg_sentence_length} plValue={stats.pl.avg_sentence_length} format=" words" />
+          <DualStatCard label="Total Judgments" ukValue={stats.uk.total} plValue={stats.pl.total} />
+          <DualStatCard label="Avg. Characters" ukValue={Math.round(stats.uk.text_length_chars.mean)} plValue={Math.round(stats.pl.text_length_chars.mean)} />
+          <DualStatCard label="Avg. Words" ukValue={Math.round(stats.uk.text_length_words.mean)} plValue={Math.round(stats.pl.text_length_words.mean)} />
+          <DualStatCard label="Avg. Sentences" ukValue={Math.round(stats.uk.text_length_sentences.mean)} plValue={Math.round(stats.pl.text_length_sentences.mean)} />
+          <DualStatCard label="Unique Judges" ukValue={stats.uk.judges.total_unique} plValue={stats.pl.judges.total_unique} />
+          <DualStatCard label="Avg. Panel Size" ukValue={stats.uk.judges.avg_per_case} plValue={stats.pl.judges.avg_per_case} />
+          <DualStatCard label="Unique Vocabulary" ukValue={stats.uk.vocabulary.unique_tokens_sample} plValue={stats.pl.vocabulary.unique_tokens_sample} />
+          <DualStatCard label="Avg. Sentence Length" ukValue={stats.uk.avg_sentence_length} plValue={stats.pl.avg_sentence_length} format=" words" />
         </div>
       </Section>
 
@@ -265,22 +226,15 @@ export default function DatasetComparisonPage() {
           source="6,050 UK + 6,050 PL · 2003–2024"
           featured
         >
-          <Plot
-            data={[
-              { x: allYears, y: ukYearCounts, type: 'bar', name: 'UK', marker: { color: UK } },
-              { x: allYears, y: plYearCounts, type: 'bar', name: 'Poland', marker: { color: PL } },
-            ]}
-            layout={{
-              ...editorialPlotLayout,
-              barmode: 'group',
-              xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Year' }, dtick: 2, tickangle: -45 },
-              yaxis: { ...editorialPlotLayout.yaxis, title: { text: 'Number of judgments' } },
-              height: 420,
-            }}
-            config={editorialPlotConfig}
-            className="w-full"
-            useResizeHandler
-            style={{ width: '100%' }}
+          <BivariateBarChart
+            categories={allYears}
+            ukData={ukYearCounts}
+            plData={plYearCounts}
+            xAxisTitle="Year"
+            yAxisTitle="Number of judgments"
+            tickAngle={-45}
+            dtick={2}
+            height={420}
           />
         </ChartFigure>
       </Section>
@@ -295,22 +249,11 @@ export default function DatasetComparisonPage() {
             caption="A right-skewed distribution typical of court rulings: most judgments fall in the 10–30 K-character range, with a long tail beyond 100 K. Polish judgments sit slightly more polarized — heavier short-document mass and a longer tail (max 737 K vs UK 436 K)."
             source="6,050 UK + 6,050 PL"
           >
-            <Plot
-              data={[
-                { x: lengthBuckets, y: ukLengths, type: 'bar', name: 'UK', marker: { color: UK } },
-                { x: lengthBuckets, y: plLengths, type: 'bar', name: 'Poland', marker: { color: PL } },
-              ]}
-              layout={{
-                ...editorialPlotLayout,
-                barmode: 'group',
-                xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Characters' } },
-                yaxis: { ...editorialPlotLayout.yaxis, title: { text: 'Cases' } },
-                height: 360,
-              }}
-              config={editorialPlotConfig}
-              className="w-full"
-              useResizeHandler
-              style={{ width: '100%' }}
+            <BivariateBarChart
+              categories={lengthBuckets}
+              ukData={ukLengths}
+              plData={plLengths}
+              xAxisTitle="Characters"
             />
           </ChartFigure>
           <ChartFigure
@@ -373,22 +316,11 @@ export default function DatasetComparisonPage() {
           caption="Both corpora cluster in the 2–5 K word band, but a meaningful slice on each side exceeds 10 K words — useful for sizing context-window requirements when feeding rulings to an LLM."
           source="6,050 UK + 6,050 PL"
         >
-          <Plot
-            data={[
-              { x: wordBuckets, y: ukWords, type: 'bar', name: 'UK', marker: { color: UK } },
-              { x: wordBuckets, y: plWords, type: 'bar', name: 'Poland', marker: { color: PL } },
-            ]}
-            layout={{
-              ...editorialPlotLayout,
-              barmode: 'group',
-              xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Words' } },
-              yaxis: { ...editorialPlotLayout.yaxis, title: { text: 'Cases' } },
-              height: 360,
-            }}
-            config={editorialPlotConfig}
-            className="w-full"
-            useResizeHandler
-            style={{ width: '100%' }}
+          <BivariateBarChart
+            categories={wordBuckets}
+            ukData={ukWords}
+            plData={plWords}
+            xAxisTitle="Words"
           />
         </ChartFigure>
       </Section>
@@ -402,22 +334,10 @@ export default function DatasetComparisonPage() {
           caption="UK panels are usually 2–3 judges (≈86 % of cases), with single-judge listings still common. Polish appeals are dominated by 3-judge panels (4,694 / 6,050 ≈ 78 %), matching the Kodeks postępowania karnego default for Sąd Apelacyjny. The PL zero-judge bucket flags 461 cases where no judge was extracted — a metadata-quality signal worth noting."
           source="6,050 UK + 6,050 PL"
         >
-          <Plot
-            data={[
-              { x: allPanelSizes.map(s => `${s} judge${parseInt(s) !== 1 ? 's' : ''}`), y: ukPanels, type: 'bar', name: 'UK', marker: { color: UK } },
-              { x: allPanelSizes.map(s => `${s} judge${parseInt(s) !== 1 ? 's' : ''}`), y: plPanels, type: 'bar', name: 'Poland', marker: { color: PL } },
-            ]}
-            layout={{
-              ...editorialPlotLayout,
-              barmode: 'group',
-              xaxis: { ...editorialPlotLayout.xaxis },
-              yaxis: { ...editorialPlotLayout.yaxis, title: { text: 'Cases' } },
-              height: 360,
-            }}
-            config={editorialPlotConfig}
-            className="w-full"
-            useResizeHandler
-            style={{ width: '100%' }}
+          <BivariateBarChart
+            categories={panelLabels}
+            ukData={ukPanels}
+            plData={plPanels}
           />
         </ChartFigure>
       </Section>
@@ -432,27 +352,7 @@ export default function DatasetComparisonPage() {
             caption="Crown Court provides 5,369 of 6,050 UK cases (89 %), as expected for the Court of Appeal (Criminal Division), with Supreme Court referrals contributing most of the remainder."
             source="6,050 UK · Court of Appeal, Criminal Division"
           >
-            <Plot
-              data={[{
-                y: ukCourts.map(([name]) => name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())),
-                x: ukCourts.map(([, count]) => count),
-                type: 'bar',
-                orientation: 'h',
-                marker: { color: UK },
-              }]}
-              layout={{
-                ...editorialPlotLayout,
-                xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Cases' } },
-                yaxis: { ...editorialPlotLayout.yaxis, automargin: true },
-                margin: { ...editorialPlotLayout.margin, l: 200 },
-                height: 320,
-                showlegend: false,
-              }}
-              config={editorialPlotConfig}
-              className="w-full"
-              useResizeHandler
-              style={{ width: '100%' }}
-            />
+            <HorizontalBarChart items={ukCourts} color={UK} />
           </ChartFigure>
           <ChartFigure
             figure="07"
@@ -461,26 +361,11 @@ export default function DatasetComparisonPage() {
             caption="Warsaw, Katowice and Wrocław together produce nearly half the Polish sample. The two Wrocław spellings in the source data have been normalized and merged here."
             source="6,050 PL · Sąd Apelacyjny"
           >
-            <Plot
-              data={[{
-                y: plCourts.map(([name]) => name),
-                x: plCourts.map(([, count]) => count),
-                type: 'bar',
-                orientation: 'h',
-                marker: { color: PL },
-              }]}
-              layout={{
-                ...editorialPlotLayout,
-                xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Cases' } },
-                yaxis: { ...editorialPlotLayout.yaxis, automargin: true },
-                margin: { ...editorialPlotLayout.margin, l: 250 },
-                height: Math.max(320, plCourts.length * 28),
-                showlegend: false,
-              }}
-              config={editorialPlotConfig}
-              className="w-full"
-              useResizeHandler
-              style={{ width: '100%' }}
+            <HorizontalBarChart
+              items={plCourts}
+              color={PL}
+              leftMargin={250}
+              height={Math.max(320, plCourts.length * 28)}
             />
           </ChartFigure>
         </div>
@@ -513,10 +398,10 @@ export default function DatasetComparisonPage() {
       {/* ── Vocabulary & Language ── */}
       <Section numeral="08" eyebrow="Vocabulary" title="Vocabulary Analysis" description="Lexical diversity and most frequent domain terms after stop-word filtering.">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <StatCard label="Total Tokens (sample)" ukValue={stats.uk.vocabulary.total_tokens_sample} plValue={stats.pl.vocabulary.total_tokens_sample} />
-          <StatCard label="Unique Tokens" ukValue={stats.uk.vocabulary.unique_tokens_sample} plValue={stats.pl.vocabulary.unique_tokens_sample} />
-          <StatCard label="Type-Token Ratio" ukValue={stats.uk.vocabulary.type_token_ratio} plValue={stats.pl.vocabulary.type_token_ratio} />
-          <StatCard label="Avg. Sentence Length" ukValue={stats.uk.avg_sentence_length} plValue={stats.pl.avg_sentence_length} format=" words" />
+          <DualStatCard label="Total Tokens (sample)" ukValue={stats.uk.vocabulary.total_tokens_sample} plValue={stats.pl.vocabulary.total_tokens_sample} />
+          <DualStatCard label="Unique Tokens" ukValue={stats.uk.vocabulary.unique_tokens_sample} plValue={stats.pl.vocabulary.unique_tokens_sample} />
+          <DualStatCard label="Type-Token Ratio" ukValue={stats.uk.vocabulary.type_token_ratio} plValue={stats.pl.vocabulary.type_token_ratio} />
+          <DualStatCard label="Avg. Sentence Length" ukValue={stats.uk.avg_sentence_length} plValue={stats.pl.avg_sentence_length} format=" words" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ChartFigure
@@ -526,29 +411,14 @@ export default function DatasetComparisonPage() {
             caption="Most frequent English domain terms after stop-word filtering — the everyday legal lexicon (court, appeal, evidence, sentence) that dominates criminal-appeal prose."
             source="Top 50 sample tokens · UK"
           >
-            <Plot
-              data={[{
-                y: [...ukDomainWords].reverse().map(w => w.word),
-                x: [...ukDomainWords].reverse().map(w => w.count),
-                type: 'bar',
-                orientation: 'h',
-                marker: { color: UK_SOFT },
-                text: [...ukDomainWords].reverse().map(w => w.count.toLocaleString()),
-                textposition: 'outside',
-                textfont: { family: 'Geist Mono, ui-monospace, monospace', size: 11, color: UK },
-              }]}
-              layout={{
-                ...editorialPlotLayout,
-                xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Frequency' } },
-                yaxis: { ...editorialPlotLayout.yaxis, automargin: true },
-                margin: { ...editorialPlotLayout.margin, l: 120 },
-                height: 460,
-                showlegend: false,
-              }}
-              config={editorialPlotConfig}
-              className="w-full"
-              useResizeHandler
-              style={{ width: '100%' }}
+            <HorizontalBarChart
+              items={ukDomainWords}
+              color={UK_SOFT}
+              countColor={UK}
+              leftMargin={120}
+              height={460}
+              xAxisTitle="Frequency"
+              showCounts
             />
           </ChartFigure>
           <ChartFigure
@@ -558,29 +428,14 @@ export default function DatasetComparisonPage() {
             caption="Polish counterparts of the same vocabulary stratum — useful for tuning embeddings, building synonym lists, or verifying corpus coverage of everyday legal prose."
             source="Top 50 sample tokens · PL"
           >
-            <Plot
-              data={[{
-                y: [...plDomainWords].reverse().map(w => w.word),
-                x: [...plDomainWords].reverse().map(w => w.count),
-                type: 'bar',
-                orientation: 'h',
-                marker: { color: PL_SOFT },
-                text: [...plDomainWords].reverse().map(w => w.count.toLocaleString()),
-                textposition: 'outside',
-                textfont: { family: 'Geist Mono, ui-monospace, monospace', size: 11, color: PL },
-              }]}
-              layout={{
-                ...editorialPlotLayout,
-                xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Frequency' } },
-                yaxis: { ...editorialPlotLayout.yaxis, automargin: true },
-                margin: { ...editorialPlotLayout.margin, l: 140 },
-                height: 460,
-                showlegend: false,
-              }}
-              config={editorialPlotConfig}
-              className="w-full"
-              useResizeHandler
-              style={{ width: '100%' }}
+            <HorizontalBarChart
+              items={plDomainWords}
+              color={PL_SOFT}
+              countColor={PL}
+              leftMargin={140}
+              height={460}
+              xAxisTitle="Frequency"
+              showCounts
             />
           </ChartFigure>
         </div>
@@ -595,29 +450,12 @@ export default function DatasetComparisonPage() {
           caption="Offence mix of Polish criminal appeals — fraud (Oszustwo), drug crimes (Narkomania), homicide (Zabójstwo) and robbery (Rozbój) lead. The UK side has no comparable structured tagging, which is why this chart is jurisdiction-specific."
           source="4,639 / 6,050 PL cases tagged"
         >
-          <Plot
-            data={[{
-              y: [...plKeywords].reverse().map(k => k.keyword),
-              x: [...plKeywords].reverse().map(k => k.count),
-              type: 'bar',
-              orientation: 'h',
-              marker: { color: PL },
-              text: [...plKeywords].reverse().map(k => k.count.toString()),
-              textposition: 'outside',
-              textfont: { family: 'Geist Mono, ui-monospace, monospace', size: 11, color: PL },
-            }]}
-            layout={{
-              ...editorialPlotLayout,
-              xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Cases' } },
-              yaxis: { ...editorialPlotLayout.yaxis, automargin: true },
-              margin: { ...editorialPlotLayout.margin, l: 350 },
-              height: 520,
-              showlegend: false,
-            }}
-            config={editorialPlotConfig}
-            className="w-full"
-            useResizeHandler
-            style={{ width: '100%' }}
+          <HorizontalBarChart
+            items={plKeywords}
+            color={PL}
+            leftMargin={350}
+            height={520}
+            showCounts
           />
         </ChartFigure>
       </Section>
@@ -668,40 +506,12 @@ export default function DatasetComparisonPage() {
           caption="Aggregates the year chart into decade bands. The UK corpus has meaningful 2000s coverage (2,192 cases); the Polish corpus is concentrated post-2010 — a constraint for any longitudinal cross-jurisdictional comparison earlier than 2012."
           source="6,050 UK + 6,050 PL · decade aggregation"
         >
-          <Plot
-            data={[
-              {
-                x: Object.keys(stats.uk.decade_distribution),
-                y: Object.values(stats.uk.decade_distribution),
-                type: 'bar',
-                name: 'UK',
-                marker: { color: UK },
-                text: Object.values(stats.uk.decade_distribution).map(v => v.toLocaleString()),
-                textposition: 'outside',
-                textfont: { family: 'Geist Mono, ui-monospace, monospace', size: 11, color: UK },
-              },
-              {
-                x: Object.keys(stats.pl.decade_distribution),
-                y: Object.values(stats.pl.decade_distribution),
-                type: 'bar',
-                name: 'Poland',
-                marker: { color: PL },
-                text: Object.values(stats.pl.decade_distribution).map(v => v.toLocaleString()),
-                textposition: 'outside',
-                textfont: { family: 'Geist Mono, ui-monospace, monospace', size: 11, color: PL },
-              },
-            ]}
-            layout={{
-              ...editorialPlotLayout,
-              barmode: 'group',
-              xaxis: { ...editorialPlotLayout.xaxis, title: { text: 'Decade' } },
-              yaxis: { ...editorialPlotLayout.yaxis, title: { text: 'Cases' } },
-              height: 360,
-            }}
-            config={editorialPlotConfig}
-            className="w-full"
-            useResizeHandler
-            style={{ width: '100%' }}
+          <BivariateBarChart
+            categories={decadeKeys}
+            ukData={ukDecades}
+            plData={plDecades}
+            xAxisTitle="Decade"
+            showCounts
           />
         </ChartFigure>
       </Section>
