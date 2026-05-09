@@ -8,6 +8,7 @@ export interface DashboardStats {
   decisions_per_year: { year: number; count: number }[] | null;
   date_range: { oldest: string | null; newest: string | null } | null;
   case_types: { name: string; count: number }[];
+  decision_types: { name: string; count: number }[];
   data_completeness: {
     embeddings_pct: number;
     structure_extraction_pct: number;

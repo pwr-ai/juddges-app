@@ -108,6 +108,7 @@ class DashboardStats(BaseModel):
     decisions_per_year: list[dict] | None = None
     date_range: dict[str, str | None] | None = None
     case_types: list[DistributionItem] = []
+    decision_types: list[DistributionItem] = []
     data_completeness: DataCompleteness = DataCompleteness()
     # Retained for UI back-compat (stats-card-v1.tsx); always None until
     # legal-domain extraction coverage improves.
@@ -300,6 +301,13 @@ async def get_dashboard_stats(
                     count=x.get("count", 0),
                 )
                 for x in stats_map.get("case_type_distribution", [])
+            ],
+            decision_types=[
+                DistributionItem(
+                    name=x.get("type", ""),
+                    count=x.get("count", 0),
+                )
+                for x in stats_map.get("decision_type_distribution", [])
             ],
             data_completeness=DataCompleteness(
                 **stats_map.get("data_completeness", {})

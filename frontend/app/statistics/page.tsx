@@ -183,6 +183,13 @@ export default function StatisticsPage(): React.JSX.Element {
       .slice(0, 10);
   }, [stats?.case_types]);
 
+  const decisionTypeData = useMemo(() => {
+    if (!stats?.decision_types) return [];
+    return [...stats.decision_types]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }, [stats?.decision_types]);
+
   const courtLevelData = useMemo(() => {
     if (!stats?.court_levels) return [];
     return [...stats.court_levels].sort((a, b) => b.count - a.count);
@@ -427,6 +434,53 @@ export default function StatisticsPage(): React.JSX.Element {
           )}
         </EditorialCard>
       </div>
+
+      <EditorialCard eyebrow="Disposition" title="Decision type">
+        {isLoading || !stats ? (
+          <ChartSkeleton height={320} />
+        ) : decisionTypeData.length === 0 ? (
+          <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+            No decision-type data available.
+          </p>
+        ) : (
+          <div style={{ width: "100%", height: 32 + decisionTypeData.length * 28 }}>
+            <ResponsiveContainer>
+              <BarChart
+                data={decisionTypeData}
+                layout="vertical"
+                margin={{ top: 4, right: 24, bottom: 4, left: 16 }}
+              >
+                <CartesianGrid stroke={COLOR_RULE} strokeDasharray="2 4" horizontal={false} />
+                <XAxis
+                  type="number"
+                  tick={{ fill: COLOR_INK_SOFT, fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: COLOR_RULE_STRONG }}
+                  tickFormatter={(v: number) => formatStatNumber(v)}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={210}
+                  tick={{ fill: COLOR_INK, fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={{ stroke: COLOR_RULE_STRONG }}
+                />
+                <Tooltip
+                  cursor={{ fill: COLOR_PARCHMENT, opacity: 0.4 }}
+                  content={tooltipDefault}
+                />
+                <Bar
+                  dataKey="count"
+                  name="Judgments"
+                  fill={COLOR_INK}
+                  radius={[0, 1, 1, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </EditorialCard>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-7">

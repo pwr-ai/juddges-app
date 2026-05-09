@@ -42,6 +42,7 @@ export async function GET() {
       decisions_per_year: [],
       date_range: { oldest: null, newest: null },
       case_types: [],
+      decision_types: [],
       data_completeness: {
         embeddings_pct: 0,
         structure_extraction_pct: 0,
