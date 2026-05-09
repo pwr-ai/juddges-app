@@ -100,27 +100,19 @@ class DataCompleteness(BaseModel):
     avg_text_length_chars: float = 0.0
 
 
-class ComplexityMetrics(BaseModel):
-    avg_complexity: float | None = None
-    avg_reasoning_quality: float | None = None
-    precedential_value_distribution: dict[str, int] = {}
-    research_value_distribution: dict[str, int] = {}
-
-
 class DashboardStats(BaseModel):
     total_judgments: int = 0
     jurisdictions: JurisdictionCounts = JurisdictionCounts()
     court_levels: list[DistributionItem] = []
     top_courts: list[DistributionItem] = []
-    decisions_per_year: list[dict] = []
-    date_range: dict[str, str | None] = {"oldest": None, "newest": None}
+    decisions_per_year: list[dict] | None = None
+    date_range: dict[str, str | None] | None = None
     case_types: list[DistributionItem] = []
     data_completeness: DataCompleteness = DataCompleteness()
-    top_legal_domains: list[DistributionItem] = []
+    # Retained for UI back-compat (stats-card-v1.tsx); always None until
+    # legal-domain extraction coverage improves.
+    top_legal_domains: list[DistributionItem] | None = None
     top_keywords: list[DistributionItem] = []
-    top_cited_legislation: list[DistributionItem] = []
-    complexity_metrics: ComplexityMetrics = ComplexityMetrics()
-    judicial_tones: list[DistributionItem] = []
     computed_at: str | None = None
 
 
@@ -294,8 +286,8 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
                 )
                 for x in stats_map.get("top_courts", [])
             ],
-            decisions_per_year=stats_map.get("decisions_per_year", []),
-            date_range=stats_map.get("date_range", {"oldest": None, "newest": None}),
+            decisions_per_year=stats_map.get("decisions_per_year"),
+            date_range=stats_map.get("date_range"),
             case_types=[
                 DistributionItem(
                     name=x.get("type", ""),
@@ -306,36 +298,12 @@ async def get_dashboard_stats(request: Request, api_key: str = Depends(verify_ap
             data_completeness=DataCompleteness(
                 **stats_map.get("data_completeness", {})
             ),
-            top_legal_domains=[
-                DistributionItem(
-                    name=x.get("name", ""),
-                    count=x.get("count", 0),
-                )
-                for x in stats_map.get("top_legal_domains", [])
-            ],
             top_keywords=[
                 DistributionItem(
                     name=x.get("name", ""),
                     count=x.get("count", 0),
                 )
                 for x in stats_map.get("top_keywords", [])
-            ],
-            top_cited_legislation=[
-                DistributionItem(
-                    name=x.get("name", ""),
-                    count=x.get("count", 0),
-                )
-                for x in stats_map.get("top_cited_legislation", [])
-            ],
-            complexity_metrics=ComplexityMetrics(
-                **stats_map.get("complexity_metrics", {})
-            ),
-            judicial_tones=[
-                DistributionItem(
-                    name=x.get("tone", ""),
-                    count=x.get("count", 0),
-                )
-                for x in stats_map.get("judicial_tone_distribution", [])
             ],
             computed_at=row_computed_at,
         )

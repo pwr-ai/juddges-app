@@ -1,703 +1,563 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { FileText, Database, Globe, Calendar, RefreshCw, Eye } from 'lucide-react';
-import { DocumentDialog } from '@/lib/styles/components';
-import { SearchDocument } from '@/types/search';
-import { logger } from "@/lib/logger";
+import React, { useMemo } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type { ContentType, TooltipContentProps } from "recharts/types/component/Tooltip";
+import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
+import { useDashboardStats } from "@/lib/api/dashboard";
+import { PageContainer } from "@/lib/styles/components";
+import {
+  EditorialCard,
+  Eyebrow,
+  Headline,
+  Rule,
+  Stat,
+} from "@/components/editorial";
+import { formatStatNumber } from "@/lib/format-stats";
+import { cn } from "@/lib/utils";
 
-interface ExtendedSearchDocument extends Omit<SearchDocument, 'issuing_body' | 'legal_references' | 'legal_concepts' | 'thesis'> {
-  full_text_preview?: string;
-  issuing_body?: {
-    name: string;
-    jurisdiction?: string;
-    type?: string;
-  } | string | null;
-  legal_references?: Array<{ text: string; ref_type?: string }> | string[];
-  legal_concepts?: Array<{ concept_name: string; concept_type?: string }> | string[];
-  thesis?: string;
-}
+// Editorial palette references for chart fills.
+const COLOR_INK = "#1A1A2E";
+const COLOR_INK_SOFT = "#5A5A75";
+const COLOR_RULE = "#C9C2B0";
+const COLOR_RULE_STRONG = "#A89F88";
+const COLOR_OXBLOOD = "#8B1E3F";
+const COLOR_GOLD = "#B8954A";
+const COLOR_GOLD_SOFT = "#E8DCB8";
+const COLOR_PARCHMENT = "#F5F1E8";
 
-interface Statistics {
-  totalDocuments: number | null;
-  totalChunks: number | null;
-  documentTypes: Array<{ type: string; count: number }> | null;
-  countries: Array<{ country: string; count: number }> | null;
-  sampleDocument?: ExtendedSearchDocument | null;
-  errors?: string[];
-}
+// 2025 is a partial-year tail in the source dataset; flag it so users don't
+// read the artificially-low bar as a real decline.
+const PARTIAL_YEAR_THRESHOLD = 2025;
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
-
-export default function StatisticsPage() {
-  const [statistics, setStatistics] = useState<Statistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sampleDocumentLoading, setSampleDocumentLoading] = useState(false);
-  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
-  const [precomputeLoading, setPrecomputeLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchStatistics = async () => {
-      try {
-        const response = await fetch('/api/statistics');
-        if (!response.ok) {
-          throw new Error('Failed to fetch statistics');
-        }
-        const data = await response.json();
-        setStatistics(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStatistics();
-  }, []);
-
-  const fetchNewSampleDocument = async () => {
-    if (!statistics) return;
-
-    setSampleDocumentLoading(true);
-    try {
-      const response = await fetch('/api/statistics/sample-document');
-      if (!response.ok) {
-        throw new Error('Failed to fetch sample document');
-      }
-      const data = await response.json();
-      setStatistics({
-        ...statistics,
-        sampleDocument: data.sampleDocument
-      });
-    } catch (err) {
-      logger.error('Error fetching sample document:', err);
-    } finally {
-      setSampleDocumentLoading(false);
-    }
-  };
-
-  const precomputeStatistics = async () => {
-    setPrecomputeLoading(true);
-    try {
-      const response = await fetch('/api/statistics/precompute?clearCache=true', {
-        method: 'POST'
-      });
-      if (!response.ok) {
-        throw new Error('Failed to precompute statistics');
-      }
-      // Refresh the statistics after precomputation
-      const statsResponse = await fetch('/api/statistics');
-      if (statsResponse.ok) {
-        const data = await statsResponse.json();
-        setStatistics(data);
-      }
-    } catch (err) {
-      logger.error('Error precomputing statistics:', err);
-    } finally {
-      setPrecomputeLoading(false);
-    }
-  };
-
-  if (loading) {
+function makeTooltipRenderer(opts?: {
+  valueLabel?: string;
+  formatLabel?: (label: string | number) => string;
+}): ContentType<ValueType, NameType> {
+  const valueLabel = opts?.valueLabel ?? "Judgments";
+  const formatLabel = opts?.formatLabel;
+  return function EditorialTooltipRender(
+    props: TooltipContentProps<ValueType, NameType>,
+  ): React.ReactElement | null {
+    const { active, payload, label } = props;
+    if (!active || !payload || payload.length === 0) return null;
+    const displayLabel =
+      label !== undefined && formatLabel
+        ? formatLabel(label as string | number)
+        : label;
     return (
-      <div className="container mx-auto px-6 py-8 md:px-8 lg:px-12 max-w-[1800px]">
-        <div className="mb-8">
-          <div className="h-8 bg-gray-200 rounded-lg animate-pulse mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded-lg animate-pulse w-3/4"></div>
-        </div>
-
-        {/* Animated Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-4 w-4 bg-gray-200 rounded"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-24"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Animated Chart Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {[...Array(2)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-6 bg-gray-200 rounded w-48 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-32"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-72 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-16 bg-gray-300 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-16 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-16 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-16 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-
-        {/* Loading message with animated dots */}
-        <div className="flex items-center justify-center mt-8">
-          <div className="flex items-center space-x-2 text-lg text-gray-600">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            </div>
-            <span className="ml-2">Loading statistics</span>
+      <div className="border border-[color:var(--ink)] bg-[color:var(--parchment)] px-3 py-2 text-xs shadow-sm">
+        {displayLabel !== undefined && displayLabel !== "" && (
+          <div className="font-mono uppercase tracking-[0.18em] text-[10px] text-[color:var(--ink-soft)]">
+            {displayLabel}
           </div>
-        </div>
+        )}
+        {payload.map((entry, idx) => {
+          const v = entry.value;
+          const display =
+            typeof v === "number"
+              ? v.toLocaleString()
+              : Array.isArray(v)
+                ? v.join(", ")
+                : (v ?? "");
+          return (
+            <div
+              key={idx}
+              className="mt-1 flex items-baseline gap-3 font-mono tabular-nums text-[color:var(--ink)]"
+            >
+              <span>{entry.name ?? valueLabel}</span>
+              <span className="font-semibold">{display}</span>
+            </div>
+          );
+        })}
       </div>
     );
-  }
+  };
+}
 
-  if (error) {
+function ChartSkeleton({ height = 280 }: { height?: number }) {
+  return (
+    <div
+      className="flex w-full items-end gap-2 border border-[color:var(--rule)] bg-[color:var(--parchment-deep)]/40 p-4"
+      style={{ height }}
+    >
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex-1 animate-pulse bg-[color:var(--rule)]/70"
+          style={{ height: `${30 + ((i * 53) % 70)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StatStripSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="space-y-2">
+          <div className="h-10 w-24 animate-pulse bg-[color:var(--rule)]/60" />
+          <div className="h-3 w-20 animate-pulse bg-[color:var(--rule)]/40" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function spanInYears(oldest: string | null, newest: string | null): number | null {
+  if (!oldest || !newest) return null;
+  const a = new Date(oldest).getTime();
+  const b = new Date(newest).getTime();
+  if (isNaN(a) || isNaN(b)) return null;
+  const years = Math.max(1, Math.round((b - a) / (1000 * 60 * 60 * 24 * 365.25)));
+  return years;
+}
+
+const COMPLETENESS_FIELDS: Array<{
+  key:
+    | "embeddings_pct"
+    | "with_summary_pct"
+    | "structure_extraction_pct"
+    | "with_keywords_pct"
+    | "with_legal_topics_pct"
+    | "with_cited_legislation_pct"
+    | "deep_analysis_pct";
+  label: string;
+}> = [
+  { key: "embeddings_pct", label: "Vector embeddings" },
+  { key: "with_summary_pct", label: "AI summaries" },
+  { key: "structure_extraction_pct", label: "Structure extracted" },
+  { key: "with_keywords_pct", label: "Keywords assigned" },
+  { key: "with_legal_topics_pct", label: "Legal topics tagged" },
+  { key: "with_cited_legislation_pct", label: "Cited legislation parsed" },
+  { key: "deep_analysis_pct", label: "Deep analysis" },
+];
+
+const tooltipDefault = makeTooltipRenderer();
+const tooltipYearly = makeTooltipRenderer({
+  formatLabel: (label) =>
+    typeof label === "number" && label >= PARTIAL_YEAR_THRESHOLD
+      ? `${label}  (partial)`
+      : String(label),
+});
+
+export default function StatisticsPage(): React.JSX.Element {
+  const { data: stats, isLoading, isError, error } = useDashboardStats();
+
+  const yearlyData = useMemo(() => {
+    if (!stats?.decisions_per_year) return [];
+    return [...stats.decisions_per_year]
+      .sort((a, b) => a.year - b.year)
+      .map((row) => ({
+        year: row.year,
+        count: row.count,
+        partial: row.year >= PARTIAL_YEAR_THRESHOLD,
+      }));
+  }, [stats?.decisions_per_year]);
+
+  const caseTypeData = useMemo(() => {
+    if (!stats?.case_types) return [];
+    return [...stats.case_types]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [stats?.case_types]);
+
+  const courtLevelData = useMemo(() => {
+    if (!stats?.court_levels) return [];
+    return [...stats.court_levels].sort((a, b) => b.count - a.count);
+  }, [stats?.court_levels]);
+
+  const topCourts = useMemo(() => {
+    if (!stats?.top_courts) return [];
+    return [...stats.top_courts].sort((a, b) => b.count - a.count).slice(0, 15);
+  }, [stats?.top_courts]);
+
+  if (isError) {
     return (
-      <div className="container mx-auto px-6 py-8 md:px-8 lg:px-12 max-w-[1800px]">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-red-600">Error: {error}</div>
-        </div>
-      </div>
+      <PageContainer width="wide">
+        <EditorialCard
+          eyebrow="Statistics"
+          title="Unable to load database statistics"
+          flat
+        >
+          <p className="font-serif text-base italic text-[color:var(--ink-soft)]">
+            {error instanceof Error
+              ? error.message
+              : "An unknown error occurred while loading dashboard statistics."}
+          </p>
+        </EditorialCard>
+      </PageContainer>
     );
   }
 
-  if (!statistics) {
-    return null;
-  }
+  const totalJudgments = stats?.total_judgments ?? 0;
+  const plCount = stats?.jurisdictions?.PL ?? 0;
+  const ukCount = stats?.jurisdictions?.UK ?? 0;
+  const dateRange = stats?.date_range;
+  const oldestLabel = formatDate(dateRange?.oldest ?? null);
+  const newestLabel = formatDate(dateRange?.newest ?? null);
+  const span = spanInYears(dateRange?.oldest ?? null, dateRange?.newest ?? null);
 
   return (
-    <div className="container mx-auto px-6 py-8 md:px-8 lg:px-12 max-w-[1800px]">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Database Statistics</h1>
-            <p className="text-gray-600">
-              Overview of indexed documents and chunks in the legal database
-              {' '}&middot;{' '}
-              <a href="/dataset-comparison" className="text-blue-600 hover:underline">
-                Dataset Comparison Dashboard
-              </a>
-            </p>
-          </div>
-          <Button
-            onClick={precomputeStatistics}
-            disabled={precomputeLoading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${precomputeLoading ? 'animate-spin' : ''}`} />
-            {precomputeLoading ? 'Precomputing...' : 'Refresh Statistics'}
-          </Button>
-        </div>
+    <PageContainer width="wide">
+      <header className="flex flex-col gap-3">
+        <Eyebrow tone="oxblood">Database Statistics</Eyebrow>
+        <Headline as="h1" size="md">
+          The <em>archive</em>, in figures
+        </Headline>
+        <p className="max-w-2xl text-[15px] leading-[1.65] text-[color:var(--ink-soft)]">
+          A precomputed snapshot of indexed judgments across Polish and UK
+          jurisdictions, refreshed on a 4-hour cadence.
+        </p>
+      </header>
 
-        {/* Error Notice */}
-        {statistics.errors && statistics.errors.length > 0 && (
-          <div className={`mt-4 p-4 rounded-lg ${statistics.errors.includes('database_connection')
-              ? 'bg-red-50 border border-red-200'
-              : 'bg-yellow-50 border border-yellow-200'
-            }`}>
-            <h3 className={`text-sm font-medium mb-2 ${statistics.errors.includes('database_connection')
-                ? 'text-red-800'
-                : 'text-yellow-800'
-              }`}>
-              {statistics.errors.includes('database_connection')
-                ? 'Database connection unavailable'
-                : 'Some statistics are temporarily unavailable'}
-            </h3>
-            <p className={`text-sm ${statistics.errors.includes('database_connection')
-                ? 'text-red-700'
-                : 'text-yellow-700'
-              }`}>
-              {statistics.errors.includes('database_connection')
-                ? 'Unable to connect to the database. Please ensure the database is running and accessible.'
-                : `The following data couldn't be loaded: ${statistics.errors.map(error =>
-                  error.replace('_', ' ')).join(', ')}. Available data is shown below.`}
-            </p>
-          </div>
-        )}
-      </div>
+      <Rule weight="ink" />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 mb-8">
-        {statistics.totalDocuments !== null && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.totalDocuments.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Legal documents indexed</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {statistics.totalChunks !== null && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Chunks</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.totalChunks.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Document chunks for search</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {statistics.documentTypes !== null && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Document Types</CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.documentTypes.length}</div>
-              <p className="text-xs text-muted-foreground">Different document types</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {statistics.countries !== null && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Countries</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics.countries.length}</div>
-              <p className="text-xs text-muted-foreground">Countries represented</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Charts */}
-      {(statistics.documentTypes !== null || statistics.countries !== null) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-          {/* Document Types Chart */}
-          {statistics.documentTypes !== null && statistics.documentTypes.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Document Types Distribution</CardTitle>
-                <CardDescription>Breakdown of documents by type</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={statistics.documentTypes}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(props: any) => {
-                        const payload = props.payload as { type: string; count: number } | undefined;
-                        return payload ? `${payload.type}: ${payload.count}` : '';
-                      }}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {statistics.documentTypes.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Countries Chart */}
-          {statistics.countries !== null && statistics.countries.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Countries Distribution</CardTitle>
-                <CardDescription>Documents by country</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={statistics.countries.slice(0, 10)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="country" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* No Data Available Message */}
-      {statistics.totalDocuments === null &&
-        statistics.totalChunks === null &&
-        statistics.documentTypes === null &&
-        statistics.countries === null &&
-        !statistics.sampleDocument && (
-          <Card className="mb-8">
-            <CardContent className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Statistics Temporarily Unavailable
-                </h3>
-                <p className="text-gray-600">
-                  We&apos;re having trouble connecting to the database. Please try refreshing the page.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-
-      {/* Sample Document - All Properties */}
-      {statistics.sampleDocument && (
-        <Card className="mt-8">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Sample Document - All Properties</CardTitle>
-              <CardDescription>Complete view of all document properties and their values</CardDescription>
-            </div>
-            <Button
-              onClick={fetchNewSampleDocument}
-              disabled={sampleDocumentLoading}
-              variant="outline"
+      <section>
+        {isLoading || !stats ? (
+          <StatStripSkeleton />
+        ) : (
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+            <Stat
               size="sm"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${sampleDocumentLoading ? 'animate-spin' : ''}`} />
-              {sampleDocumentLoading ? 'Loading...' : 'New Sample'}
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Basic Information Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Basic Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Document ID</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.document_id || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Document Type</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.document_type || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Country</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.country || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Language</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.language || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Date Issued</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.date_issued || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Document Number</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.document_number || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
+              value={totalJudgments}
+              label="Total Judgments"
+              marker="¹"
+            />
+            <Stat size="sm" value={plCount} label="Poland" />
+            <Stat size="sm" value={ukCount} label="United Kingdom" />
+            {span !== null ? (
+              <Stat
+                size="sm"
+                static
+                value={span}
+                suffix="y"
+                label="Coverage Span"
+                detail={
+                  oldestLabel && newestLabel
+                    ? `${oldestLabel} – ${newestLabel}`
+                    : undefined
+                }
+              />
+            ) : (
+              <Stat
+                size="sm"
+                static
+                value={yearlyData.length}
+                label="Years Covered"
+              />
+            )}
+          </div>
+        )}
+      </section>
 
-              {/* Title Section */}
-              {statistics.sampleDocument.title && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Title</h3>
-                  <p className="text-sm text-gray-800 font-medium">{statistics.sampleDocument.title}</p>
-                </div>
-              )}
+      <EditorialCard
+        eyebrow="Timeline"
+        title="Decisions per year"
+        action={
+          yearlyData.some((d) => d.partial) ? (
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+              <span
+                aria-hidden
+                className="mr-2 inline-block h-2 w-3 align-middle"
+                style={{ backgroundColor: COLOR_GOLD_SOFT, border: `1px dashed ${COLOR_GOLD}` }}
+              />
+              Partial year
+            </span>
+          ) : undefined
+        }
+      >
+        {isLoading || !stats ? (
+          <ChartSkeleton height={300} />
+        ) : (
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer>
+              <BarChart
+                data={yearlyData}
+                margin={{ top: 8, right: 8, bottom: 4, left: 0 }}
+              >
+                <CartesianGrid stroke={COLOR_RULE} strokeDasharray="2 4" vertical={false} />
+                <XAxis
+                  dataKey="year"
+                  tick={{ fill: COLOR_INK_SOFT, fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: COLOR_RULE_STRONG }}
+                />
+                <YAxis
+                  tick={{ fill: COLOR_INK_SOFT, fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: COLOR_RULE_STRONG }}
+                  tickFormatter={(v: number) => formatStatNumber(v)}
+                />
+                <Tooltip
+                  cursor={{ fill: COLOR_PARCHMENT, opacity: 0.4 }}
+                  content={tooltipYearly}
+                />
+                <Bar dataKey="count" name="Judgments" radius={[1, 1, 0, 0]}>
+                  {yearlyData.map((d, i) => (
+                    <Cell
+                      key={i}
+                      fill={d.partial ? COLOR_GOLD_SOFT : COLOR_OXBLOOD}
+                      stroke={d.partial ? COLOR_GOLD : undefined}
+                      strokeDasharray={d.partial ? "3 2" : undefined}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </EditorialCard>
 
-              {/* Issuing Authority Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Issuing Authority</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Issuing Body</h4>
-                    <p className="text-sm text-gray-800">
-                      {statistics.sampleDocument.issuing_body
-                        ? (typeof statistics.sampleDocument.issuing_body === 'string'
-                          ? statistics.sampleDocument.issuing_body
-                          : `${statistics.sampleDocument.issuing_body?.name}${statistics.sampleDocument.issuing_body?.jurisdiction ? ` (${statistics.sampleDocument.issuing_body.jurisdiction})` : ''}`)
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Court Name</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.court_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Department</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.department_name || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Judicial Information Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Judicial Information</h3>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Presiding Judge</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.presiding_judge || 'N/A'}</p>
-                  </div>
-                  {statistics.sampleDocument.judges && statistics.sampleDocument.judges.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Judges ({statistics.sampleDocument.judges.length})</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.judges.map((judge: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-amber-100 text-amber-800 rounded-md text-xs">
-                            {judge}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Parties</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.parties || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Outcome</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.outcome || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Content</h3>
-                <div className="space-y-3">
-                  {statistics.sampleDocument.summary && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Summary</h4>
-                      <p className="text-sm text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">{statistics.sampleDocument.summary}</p>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.thesis && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Thesis</h4>
-                      <p className="text-sm text-gray-700 mt-1 p-3 bg-gray-50 rounded-lg">{statistics.sampleDocument.thesis}</p>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.factual_state && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Factual State (Stan Faktyczny)</h4>
-                      <p className="text-sm text-gray-700 mt-1 p-3 bg-blue-50 rounded-lg border border-blue-200">{statistics.sampleDocument.factual_state}</p>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.legal_state && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Legal State (Stan Prawny)</h4>
-                      <p className="text-sm text-gray-700 mt-1 p-3 bg-green-50 rounded-lg border border-green-200">{statistics.sampleDocument.legal_state}</p>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.full_text && (
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-sm text-gray-600">Full Text (Preview)</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                          onClick={() => setDocumentDialogOpen(true)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Full Text
-                        </Button>
-                      </div>
-                      <div className="text-sm text-gray-700 mt-1 p-4 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
-                        {statistics.sampleDocument.full_text_preview ||
-                          (statistics.sampleDocument.full_text?.length > 300
-                            ? statistics.sampleDocument.full_text.substring(0, 300) + '...'
-                            : statistics.sampleDocument.full_text)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Legal References Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Legal References & Bases</h3>
-                <div className="space-y-3">
-                  {statistics.sampleDocument.legal_references && Array.isArray(statistics.sampleDocument.legal_references) && statistics.sampleDocument.legal_references.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Legal References ({statistics.sampleDocument.legal_references.length})</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.legal_references.map((ref: { text?: string } | string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
-                            {typeof ref === 'string' ? ref : ref.text}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.legal_bases && statistics.sampleDocument.legal_bases.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Legal Bases ({statistics.sampleDocument.legal_bases.length})</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.legal_bases.map((base: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
-                            {base}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.extracted_legal_bases && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Extracted Legal Bases</h4>
-                      <p className="text-sm text-gray-800">{statistics.sampleDocument.extracted_legal_bases}</p>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.references && statistics.sampleDocument.references.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">References ({statistics.sampleDocument.references.length})</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.references.map((ref: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-md text-xs">
-                            {ref}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Keywords & Concepts Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Keywords & Concepts</h3>
-                <div className="space-y-3">
-                  {statistics.sampleDocument.keywords && statistics.sampleDocument.keywords.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Keywords ({statistics.sampleDocument.keywords.length})</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.keywords.map((keyword: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.legal_concepts && Array.isArray(statistics.sampleDocument.legal_concepts) && statistics.sampleDocument.legal_concepts.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Legal Concepts ({statistics.sampleDocument.legal_concepts.length})</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {statistics.sampleDocument.legal_concepts.map((concept: { concept_name?: string; concept_type?: string } | string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs">
-                            {typeof concept === 'string' ? concept : `${concept.concept_name}${concept.concept_type ? ` (${concept.concept_type})` : ''}`}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Metadata Section */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Metadata & Processing</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Processing Status</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata?.processing_status || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Publication Date</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata?.publication_date || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Ingestion Date</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata?.ingestion_date || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Last Updated</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata?.last_updated || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Source</h4>
-                    <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata?.source || 'N/A'}</p>
-                  </div>
-                  {statistics.sampleDocument.metadata?.source_url && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Source URL</h4>
-                      <a
-                        href={statistics.sampleDocument.metadata.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline break-all"
-                      >
-                        Link
-                      </a>
-                    </div>
-                  )}
-                  {(statistics.sampleDocument.metadata?.x !== undefined && statistics.sampleDocument.metadata?.x !== null) && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">X Coordinate</h4>
-                      <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata.x}</p>
-                    </div>
-                  )}
-                  {(statistics.sampleDocument.metadata?.y !== undefined && statistics.sampleDocument.metadata?.y !== null) && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Y Coordinate</h4>
-                      <p className="text-sm text-gray-800">{statistics.sampleDocument.metadata.y}</p>
-                    </div>
-                  )}
-                  {statistics.sampleDocument.score !== null && statistics.sampleDocument.score !== undefined && (
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-600">Score</h4>
-                      <p className="text-sm text-gray-800">{statistics.sampleDocument.score}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Raw Content Section (if available) */}
-              {statistics.sampleDocument.metadata?.raw_content && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Raw Content (Preview)</h3>
-                  <div className="text-sm text-gray-700 mt-1 p-4 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
-                    {statistics.sampleDocument.metadata.raw_content.length > 500
-                      ? statistics.sampleDocument.metadata.raw_content.substring(0, 500) + '...'
-                      : statistics.sampleDocument.metadata.raw_content}
-                  </div>
-                </div>
-              )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <EditorialCard eyebrow="Composition" title="Case type">
+          {isLoading || !stats ? (
+            <ChartSkeleton height={260} />
+          ) : caseTypeData.length === 0 ? (
+            <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+              No case-type data available.
+            </p>
+          ) : (
+            <div style={{ width: "100%", height: 280 }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={caseTypeData}
+                  layout="vertical"
+                  margin={{ top: 4, right: 24, bottom: 4, left: 16 }}
+                >
+                  <CartesianGrid stroke={COLOR_RULE} strokeDasharray="2 4" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fill: COLOR_INK_SOFT, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: COLOR_RULE_STRONG }}
+                    tickFormatter={(v: number) => formatStatNumber(v)}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={120}
+                    tick={{ fill: COLOR_INK, fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={{ stroke: COLOR_RULE_STRONG }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: COLOR_PARCHMENT, opacity: 0.4 }}
+                    content={tooltipDefault}
+                  />
+                  <Bar
+                    dataKey="count"
+                    name="Judgments"
+                    fill={COLOR_INK}
+                    radius={[0, 1, 1, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </EditorialCard>
 
-      {/* Document Dialog */}
-      {statistics.sampleDocument && (
-        <DocumentDialog
-          isOpen={documentDialogOpen}
-          onClose={setDocumentDialogOpen}
-          document={statistics.sampleDocument as SearchDocument}
-          chunks={[]}
-        />
+        <EditorialCard eyebrow="Hierarchy" title="Court level">
+          {isLoading || !stats ? (
+            <ChartSkeleton height={260} />
+          ) : courtLevelData.length === 0 ? (
+            <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+              No court-level data available.
+            </p>
+          ) : (
+            <div style={{ width: "100%", height: 280 }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={courtLevelData}
+                  margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+                >
+                  <CartesianGrid stroke={COLOR_RULE} strokeDasharray="2 4" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: COLOR_INK_SOFT, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: COLOR_RULE_STRONG }}
+                    interval={0}
+                    angle={courtLevelData.length > 4 ? -15 : 0}
+                    textAnchor={courtLevelData.length > 4 ? "end" : "middle"}
+                    height={courtLevelData.length > 4 ? 60 : 30}
+                  />
+                  <YAxis
+                    tick={{ fill: COLOR_INK_SOFT, fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={{ stroke: COLOR_RULE_STRONG }}
+                    tickFormatter={(v: number) => formatStatNumber(v)}
+                  />
+                  <Tooltip
+                    cursor={{ fill: COLOR_PARCHMENT, opacity: 0.4 }}
+                    content={tooltipDefault}
+                  />
+                  <Bar dataKey="count" name="Judgments" radius={[1, 1, 0, 0]}>
+                    {courtLevelData.map((d, i) => (
+                      <Cell
+                        key={i}
+                        fill={d.jurisdiction === "UK" ? COLOR_GOLD : COLOR_OXBLOOD}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </EditorialCard>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <EditorialCard eyebrow="Leaderboard" title="Top issuing courts">
+            {isLoading || !stats ? (
+              <ul className="divide-y divide-[color:var(--rule)]">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <li key={i} className="flex items-center gap-3 py-3">
+                    <div className="h-4 w-4 animate-pulse bg-[color:var(--rule)]/60" />
+                    <div className="h-4 flex-1 animate-pulse bg-[color:var(--rule)]/40" />
+                    <div className="h-4 w-16 animate-pulse bg-[color:var(--rule)]/60" />
+                  </li>
+                ))}
+              </ul>
+            ) : topCourts.length === 0 ? (
+              <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+                No top-court data available.
+              </p>
+            ) : (
+              <ol className="divide-y divide-[color:var(--rule)]">
+                {topCourts.map((court, idx) => {
+                  const pct =
+                    totalJudgments > 0
+                      ? Math.min(100, (court.count / topCourts[0].count) * 100)
+                      : 0;
+                  return (
+                    <li
+                      key={`${court.name}-${idx}`}
+                      className="grid grid-cols-[2.5rem_1fr_auto] items-center gap-3 py-3 first:pt-0 last:pb-0"
+                    >
+                      <span className="editorial-citation font-mono text-xs text-[color:var(--ink-soft)] tabular-nums">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[color:var(--ink)]">
+                          {court.name}
+                        </p>
+                        <div className="mt-1.5 h-[2px] w-full bg-[color:var(--rule)]">
+                          <div
+                            className={cn(
+                              "h-full",
+                              court.jurisdiction === "UK"
+                                ? "bg-[color:var(--gold)]"
+                                : "bg-[color:var(--oxblood)]",
+                            )}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-2 text-right">
+                        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+                          {court.jurisdiction ?? ""}
+                        </span>
+                        <span className="font-mono text-sm tabular-nums text-[color:var(--ink)]">
+                          {court.count.toLocaleString()}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </EditorialCard>
+        </div>
+
+        <div className="lg:col-span-5">
+          <EditorialCard eyebrow="Quality" title="Data completeness">
+            {isLoading || !stats ? (
+              <ul className="space-y-3">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <li key={i} className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-32 animate-pulse bg-[color:var(--rule)]/40" />
+                      <div className="h-3 w-10 animate-pulse bg-[color:var(--rule)]/60" />
+                    </div>
+                    <div className="h-[2px] w-full bg-[color:var(--rule)]/60" />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <>
+                <ul className="space-y-3">
+                  {COMPLETENESS_FIELDS.map(({ key, label }) => {
+                    const pct = stats.data_completeness?.[key] ?? 0;
+                    return (
+                      <li key={key} className="space-y-1.5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm text-[color:var(--ink)]">
+                            {label}
+                          </span>
+                          <span className="font-mono text-xs tabular-nums text-[color:var(--ink-soft)]">
+                            {pct.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="h-[2px] w-full bg-[color:var(--rule)]">
+                          <div
+                            className="h-full bg-[color:var(--ink)]"
+                            style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Rule weight="hairline" className="mt-5" />
+                <div className="mt-4 flex items-baseline justify-between gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+                    Avg. text length
+                  </span>
+                  <span className="font-mono text-sm tabular-nums text-[color:var(--ink)]">
+                    {Math.round(
+                      stats.data_completeness?.avg_text_length_chars ?? 0,
+                    ).toLocaleString()}{" "}
+                    <span className="text-[color:var(--ink-soft)]">chars</span>
+                  </span>
+                </div>
+              </>
+            )}
+          </EditorialCard>
+        </div>
+      </div>
+
+      {stats?.computed_at && (
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
+          ¹ Snapshot computed{" "}
+          <span className="text-[color:var(--ink)]">
+            {new Date(stats.computed_at).toLocaleString()}
+          </span>{" "}
+          · cached for 4 hours
+        </p>
       )}
-    </div>
+    </PageContainer>
   );
 }

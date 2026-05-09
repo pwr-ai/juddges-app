@@ -5,8 +5,8 @@ export interface DashboardStats {
   jurisdictions: { PL: number; UK: number };
   court_levels: { name: string; count: number; jurisdiction?: string }[];
   top_courts: { name: string; count: number; jurisdiction?: string }[];
-  decisions_per_year: { year: number; count: number }[];
-  date_range: { oldest: string | null; newest: string | null };
+  decisions_per_year: { year: number; count: number }[] | null;
+  date_range: { oldest: string | null; newest: string | null } | null;
   case_types: { name: string; count: number }[];
   data_completeness: {
     embeddings_pct: number;
@@ -18,16 +18,10 @@ export interface DashboardStats {
     with_cited_legislation_pct: number;
     avg_text_length_chars: number;
   };
-  top_legal_domains: { name: string; count: number }[];
+  // Retained for UI back-compat (stats-card-v1.tsx); always null until
+  // legal-domain extraction coverage improves.
+  top_legal_domains: { name: string; count: number }[] | null;
   top_keywords: { name: string; count: number }[];
-  top_cited_legislation: { name: string; count: number }[];
-  complexity_metrics: {
-    avg_complexity: number | null;
-    avg_reasoning_quality: number | null;
-    precedential_value_distribution: Record<string, number>;
-    research_value_distribution: Record<string, number>;
-  };
-  judicial_tones: { name: string; count: number }[];
   computed_at: string | null;
 }
 

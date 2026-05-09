@@ -54,14 +54,6 @@ export async function GET() {
       },
       top_legal_domains: [],
       top_keywords: [],
-      top_cited_legislation: [],
-      complexity_metrics: {
-        avg_complexity: null,
-        avg_reasoning_quality: null,
-        precedential_value_distribution: {},
-        research_value_distribution: {},
-      },
-      judicial_tones: [],
       computed_at: null,
     };
     return NextResponse.json(defaultData);
