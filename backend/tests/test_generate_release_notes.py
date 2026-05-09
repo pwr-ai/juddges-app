@@ -24,9 +24,7 @@ def load_module():
             "scripts/generate_release_notes.py not in repo tree "
             "(running outside the full repo, e.g. backend-only container)"
         )
-    spec = importlib.util.spec_from_file_location(
-        "generate_release_notes", module_path
-    )
+    spec = importlib.util.spec_from_file_location("generate_release_notes", module_path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     sys.modules[spec.name] = module

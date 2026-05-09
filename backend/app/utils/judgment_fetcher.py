@@ -145,11 +145,7 @@ async def get_documents_by_id(
                 f"Retrieved {len(documents)} of {len(document_ids)} requested judgments. "
                 f"{len(missing)} not found. "
                 f"Missing IDs: {missing[:10]}"
-                + (
-                    f"... and {len(missing) - 10} more"
-                    if len(missing) > 10
-                    else ""
-                )
+                + (f"... and {len(missing) - 10} more" if len(missing) > 10 else "")
             )
 
     return documents

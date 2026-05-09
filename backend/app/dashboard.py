@@ -584,7 +584,9 @@ def _to_document_summary(doc: dict[str, Any]) -> DocumentSummary:
         id=doc.get("id", ""),
         title=_derive_featured_title(doc),
         document_type="judgment",
-        publication_date=str(doc.get("decision_date") or doc.get("publication_date") or "")
+        publication_date=str(
+            doc.get("decision_date") or doc.get("publication_date") or ""
+        )
         or None,
         ai_summary=None,
         key_topics=None,

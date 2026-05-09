@@ -55,9 +55,7 @@ def transform_collection(data) -> CollectionWithDocuments:
     # Translate join-table rows (`collection_judgments` / `judgment_id`) into the
     # API's `documents: list[str]` shape.
     if "collection_judgments" in data:
-        documents = [
-            str(cj["judgment_id"]) for cj in data["collection_judgments"]
-        ]
+        documents = [str(cj["judgment_id"]) for cj in data["collection_judgments"]]
 
     # Use document_count if available, otherwise count from documents list
     document_count = data.get("document_count", len(documents))

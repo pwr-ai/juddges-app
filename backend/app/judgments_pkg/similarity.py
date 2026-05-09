@@ -43,6 +43,7 @@ async def get_similar_to_document(
         if isinstance(embedding, str):
             # pgvector sometimes serialises as "[0.1, 0.2, ...]" rather than a list.
             import json
+
             try:
                 embedding = json.loads(embedding)
             except (json.JSONDecodeError, ValueError):

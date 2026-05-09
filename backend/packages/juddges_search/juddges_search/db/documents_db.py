@@ -224,13 +224,7 @@ class SupabaseVectorDB(SupabaseClientMixin):
         try:
             column = "id" if _UUID_RE.match(document_id) else "source_id"
             cols = _JUDGMENT_COLS + (", embedding" if return_vectors else "")
-            response = (
-                self.client.table("judgments")
-                .select(cols)
-                .eq(column, document_id)
-                .limit(1)
-                .execute()
-            )
+            response = self.client.table("judgments").select(cols).eq(column, document_id).limit(1).execute()
             return response.data[0] if response.data else None
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch judgment {document_id}: {e}")
@@ -256,21 +250,11 @@ class SupabaseVectorDB(SupabaseClientMixin):
         try:
             rows_by_id: Dict[str, Dict[str, Any]] = {}
             if uuid_ids:
-                r = (
-                    self.client.table("judgments")
-                    .select(_JUDGMENT_COLS)
-                    .in_("id", uuid_ids)
-                    .execute()
-                )
+                r = self.client.table("judgments").select(_JUDGMENT_COLS).in_("id", uuid_ids).execute()
                 for row in r.data or []:
                     rows_by_id[row["id"]] = row
             if text_ids:
-                r = (
-                    self.client.table("judgments")
-                    .select(_JUDGMENT_COLS)
-                    .in_("source_id", text_ids)
-                    .execute()
-                )
+                r = self.client.table("judgments").select(_JUDGMENT_COLS).in_("source_id", text_ids).execute()
                 for row in r.data or []:
                     rows_by_id[row["id"]] = row
             return list(rows_by_id.values())
@@ -285,16 +269,9 @@ class SupabaseVectorDB(SupabaseClientMixin):
         exists in this project's schema).
         """
         try:
-            total = (
-                self.client.table("judgments")
-                .select("id", count="exact")
-                .execute()
-            )
+            total = self.client.table("judgments").select("id", count="exact").execute()
             with_embedding = (
-                self.client.table("judgments")
-                .select("id", count="exact")
-                .not_.is_("embedding", "null")
-                .execute()
+                self.client.table("judgments").select("id", count="exact").not_.is_("embedding", "null").execute()
             )
             total_count = total.count or 0
             covered = with_embedding.count or 0
