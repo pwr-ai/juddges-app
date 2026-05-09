@@ -56,6 +56,7 @@ from .search import (
     _build_search_rpc_params,
     _build_search_timing_breakdown,
     _generate_search_embedding,
+    _get_estimated_total,
     _get_search_client,
     _prepare_search_queries,
     _rerank_if_enabled,
@@ -524,7 +525,24 @@ async def search_documents(request: SearchChunksRequest):
             )
 
         results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
-        chunks, documents = _build_search_result_payload(results)
+        chunks, documents = _build_search_result_payload(
+            results, result_view=request.result_view
+        )
+
+        # First-page estimated_total. Only paid on offset==0 + include_count, so
+        # load-more requests stay free. Errors return None and never block search.
+        estimated_total: int | None = None
+        if request.include_count and offset == 0:
+            try:
+                count_supabase = await _get_search_client()
+                estimated_total = await _get_estimated_total(
+                    count_supabase, effective_filters
+                )
+            except Exception as count_err:
+                logger.warning(
+                    "Skipping estimated_total (client/setup failed): {}", count_err
+                )
+                estimated_total = None
 
         total_time_ms = (time.perf_counter() - start_time) * 1000
         timing_breakdown = _build_search_timing_breakdown(
@@ -548,7 +566,9 @@ async def search_documents(request: SearchChunksRequest):
             f"(embedding: {embedding_time_ms:.0f}ms, search: {search_time_ms:.0f}ms)"
         )
 
-        pagination = _build_search_pagination(offset, limit, len(results))
+        pagination = _build_search_pagination(
+            offset, limit, len(results), estimated_total=estimated_total
+        )
 
         try:
             from app.search_telemetry import record_search

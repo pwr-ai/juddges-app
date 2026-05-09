@@ -15,7 +15,7 @@ import random
 import re
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Query, Response
 from juddges_search.db.supabase_db import get_vector_db
@@ -188,12 +188,17 @@ def _detect_search_language(
 def _convert_judgment_to_legal_document(
     judgment_data: dict[str, Any],
     include_vectors: bool = False,
+    result_view: Literal["card", "full"] = "full",
 ) -> LegalDocument:
     """Convert judgment table data to LegalDocument model.
 
     Args:
         judgment_data: Dictionary from judgments table query
         include_vectors: Whether to include vector embeddings
+        result_view: ``"card"`` returns only the small set of fields the search
+            cards render (~10 fields, all other optional fields are left at
+            their None/empty defaults, ``full_text`` is dropped); ``"full"``
+            preserves the historical fully-populated payload.
 
     Returns:
         LegalDocument model instance
@@ -201,13 +206,40 @@ def _convert_judgment_to_legal_document(
     # Map jurisdiction to country code
     country = judgment_data.get("jurisdiction", "PL")
 
-    # Parse dates
+    # Parse dates (always cheap; needed for both views)
     date_issued = parse_date(judgment_data.get("decision_date"))
     publication_date = parse_date(judgment_data.get("publication_date"))
+    court_name = judgment_data.get("court_name")
 
+    # Get metadata from JSONB field for language detection. We avoid mutating
+    # the shared dict in card view because we don't need to attach case_type /
+    # decision_type to a payload we won't ship.
+    metadata = judgment_data.get("metadata", {}) or {}
+
+    if result_view == "card":
+        # Card view: minimal payload — only the fields the SearchResultCard
+        # renders. ``country`` and ``full_text`` are required by the
+        # ``LegalDocument`` model, so we keep ``country`` (cheap, 2-3 bytes)
+        # and pass an empty ``full_text``.
+        return LegalDocument(
+            document_id=str(judgment_data.get("id", "")),
+            document_type=DocumentType.JUDGMENT,
+            title=judgment_data.get("title"),
+            date_issued=date_issued,
+            language=metadata.get("language", "pl" if country == "PL" else "en")
+            if isinstance(metadata, dict)
+            else ("pl" if country == "PL" else "en"),
+            document_number=judgment_data.get("case_number"),
+            country=country,
+            full_text="",
+            summary=judgment_data.get("summary"),
+            publication_date=publication_date,
+            court_name=court_name,
+        )
+
+    # Full view: keep the historical, fully-populated payload.
     # Build issuing body from court information
     issuing_body = None
-    court_name = judgment_data.get("court_name")
     if court_name:
         issuing_body = IssuingBody(
             name=court_name,
@@ -220,10 +252,8 @@ def _convert_judgment_to_legal_document(
     if include_vectors and judgment_data.get("embedding"):
         vectors["default"] = judgment_data["embedding"]
 
-    # Get metadata from JSONB field and merge with judgment fields
-    metadata = judgment_data.get("metadata", {}) or {}
+    # Add judgment-specific fields to metadata for the full payload
     if isinstance(metadata, dict):
-        # Add judgment-specific fields to metadata
         if judgment_data.get("case_type"):
             metadata["case_type"] = judgment_data["case_type"]
         if judgment_data.get("decision_type"):
@@ -1430,6 +1460,64 @@ async def _run_hybrid_search(
     return response.data or [], search_time_ms
 
 
+async def _get_estimated_total(
+    supabase: Any,
+    effective_filters: dict[str, Any],
+) -> int | None:
+    """Return COUNT(*) of judgments matching filters, or None on any error.
+
+    Mirrors the helper in ``documents_pkg/search.py``; this duplicate exists
+    because ``backend/app/documents.py`` is the legacy near-duplicate router.
+    Both copies must stay in sync.
+    """
+    try:
+        rpc_query = supabase.rpc(
+            "count_judgments_filtered",
+            {
+                "filter_jurisdictions": effective_filters.get("jurisdictions"),
+                "filter_court_names": effective_filters.get("court_names"),
+                "filter_court_levels": effective_filters.get("court_levels"),
+                "filter_case_types": effective_filters.get("case_types"),
+                "filter_decision_types": effective_filters.get("decision_types"),
+                "filter_outcomes": effective_filters.get("outcomes"),
+                "filter_keywords": effective_filters.get("keywords"),
+                "filter_legal_topics": effective_filters.get("legal_topics"),
+                "filter_cited_legislation": effective_filters.get("cited_legislation"),
+                "filter_date_from": effective_filters.get("date_from"),
+                "filter_date_to": effective_filters.get("date_to"),
+            },
+        )
+        execute = rpc_query.execute
+        if asyncio.iscoroutinefunction(execute):
+            response = await execute()
+        else:
+            response = await asyncio.to_thread(execute)
+
+        data = response.data
+        if data is None:
+            return None
+        if isinstance(data, int):
+            return data
+        if isinstance(data, list):
+            if not data:
+                return None
+            first = data[0]
+            if isinstance(first, dict):
+                value = next(iter(first.values()), None)
+                return int(value) if value is not None else None
+            if isinstance(first, int):
+                return first
+        if isinstance(data, dict):
+            value = next(iter(data.values()), None)
+            return int(value) if value is not None else None
+        return None
+    except Exception as exc:
+        logger.warning(
+            "count_judgments_filtered failed; estimated_total stays None: {}", exc
+        )
+        return None
+
+
 async def _rerank_if_enabled(
     query: str,
     results: list[dict[str, Any]],
@@ -1448,6 +1536,7 @@ async def _rerank_if_enabled(
 
 def _build_search_result_payload(
     results: list[dict[str, Any]],
+    result_view: Literal["card", "full"] = "full",
 ) -> tuple[list[dict[str, Any]], list[LegalDocument]]:
     chunks: list[dict[str, Any]] = []
     documents: list[LegalDocument] = []
@@ -1470,7 +1559,9 @@ def _build_search_result_payload(
                 "combined_score": result.get("combined_score"),
             }
         )
-        documents.append(_convert_judgment_to_legal_document(result))
+        documents.append(
+            _convert_judgment_to_legal_document(result, result_view=result_view)
+        )
 
     return chunks, documents
 
@@ -1510,6 +1601,7 @@ def _build_search_pagination(
     offset: int,
     limit: int,
     result_count: int,
+    estimated_total: int | None = None,
 ) -> PaginationMetadata:
     has_more = result_count >= limit
     next_offset = offset + result_count if has_more else None
@@ -1517,7 +1609,7 @@ def _build_search_pagination(
         offset=offset,
         limit=limit,
         loaded_count=result_count,
-        estimated_total=None,
+        estimated_total=estimated_total,
         has_more=has_more,
         next_offset=next_offset,
     )
@@ -1614,7 +1706,23 @@ async def search_documents(request: SearchChunksRequest):
                 enhanced_query_text = fallback_query
 
         results, rerank_time_ms = await _rerank_if_enabled(query, results, top_k=limit)
-        chunks, documents = _build_search_result_payload(results)
+        chunks, documents = _build_search_result_payload(
+            results, result_view=request.result_view
+        )
+
+        # First-page estimated_total. Only paid on offset==0 + include_count, so
+        # load-more requests stay free. Errors return None and never block search.
+        estimated_total: int | None = None
+        if request.include_count and offset == 0:
+            try:
+                estimated_total = await _get_estimated_total(
+                    supabase, effective_filters
+                )
+            except Exception as count_err:
+                logger.warning(
+                    "Skipping estimated_total (helper failed): {}", count_err
+                )
+                estimated_total = None
 
         total_time_ms = (time.perf_counter() - start_time) * 1000
         timing_breakdown = _build_search_timing_breakdown(
@@ -1638,7 +1746,9 @@ async def search_documents(request: SearchChunksRequest):
             f"(embedding: {embedding_time_ms:.0f}ms, search: {search_time_ms:.0f}ms)"
         )
 
-        pagination = _build_search_pagination(offset, limit, len(results))
+        pagination = _build_search_pagination(
+            offset, limit, len(results), estimated_total=estimated_total
+        )
 
         return SearchChunksResponse(
             chunks=chunks,

@@ -959,6 +959,12 @@ class SearchChunksRequest(BaseModel):
         default=True,
         description="Whether to include estimated total count on first request. Set to False for subsequent load-more requests.",
     )
+    result_view: Literal["card", "full"] = Field(
+        default="card",
+        description="Payload size selector: 'card' returns a trimmed ~10-field "
+        "card-friendly document (default, fastest), 'full' returns the legacy "
+        "complete LegalDocument payload.",
+    )
 
     # NEW FILTER FIELDS FOR ENHANCED FILTERING
     jurisdictions: list[str] | None = Field(
