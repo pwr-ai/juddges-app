@@ -185,16 +185,17 @@ class CollectionsDB(SupabaseClientMixin):
             return {}
 
     async def delete_collection(self, collection_id: str, user_id: str) -> bool:
-        """Delete a collection and all its judgments."""
-        try:
-            # ON DELETE CASCADE on collection_judgments handles the join rows;
-            # the explicit delete remains as a defensive no-op for older schemas.
-            self.client.table("collection_judgments").delete().eq("collection_id", collection_id).execute()
+        """Delete a collection. Join rows on `collection_judgments` cascade.
 
+        The ON DELETE CASCADE FK on `collection_judgments.collection_id` handles
+        join-row removal — a manual unscoped pre-delete would let a non-owner
+        wipe another user's join rows even when the owner-scoped collections
+        delete then no-ops.
+        """
+        try:
             response = (
                 self.client.table("collections").delete().eq("id", collection_id).eq("user_id", user_id).execute()
             )
-
             return bool(response.data)
         except (PostgrestAPIError, StorageException) as e:
             logger.exception(f"Error deleting collection: {e}")
@@ -255,15 +256,17 @@ class CollectionsDB(SupabaseClientMixin):
             logger.exception(f"Error removing judgment from collection: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to remove judgment: {str(e)}")
 
-    async def get_collection_documents(self, collection_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get all judgments in a collection.
+    async def get_collection_documents(self, collection_id: str, user_id: str) -> List[Dict[str, Any]]:
+        """Get all judgments in a collection owned by `user_id`.
 
-        Note: user_id is kept for API compatibility but not used for filtering.
-        Any user can retrieve judgments from any collection.
+        Returns 404 (collection-not-found) for any caller who is not the owner —
+        we treat existence and ownership identically so non-owners can't probe
+        for collection IDs.
         """
-        # Check if collection exists (without user_id filtering)
         try:
-            collection_check = self.client.table("collections").select("id").eq("id", collection_id).execute()
+            collection_check = (
+                self.client.table("collections").select("id").eq("id", collection_id).eq("user_id", user_id).execute()
+            )
 
             if not collection_check.data:
                 raise HTTPException(status_code=404, detail="Collection not found")
