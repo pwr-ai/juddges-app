@@ -200,8 +200,8 @@ class CollectionsDB(SupabaseClientMixin):
             logger.exception(f"Error deleting collection: {e}")
             return False
 
-    async def add_document(self, collection_id: str, document_id: str, user_id: str) -> bool:
-        """Add a judgment to a collection. `document_id` is the API-level name for the judgment identifier."""
+    async def add_document(self, collection_id: str, judgment_id: str, user_id: str) -> bool:
+        """Add a judgment to a collection."""
         collection = await self.find_collection(collection_id, user_id)
         if not collection:
             raise HTTPException(status_code=404, detail="Collection not found")
@@ -211,19 +211,19 @@ class CollectionsDB(SupabaseClientMixin):
                 self.client.table("collection_judgments")
                 .select(_COLLECTION_JUDGMENT_EXISTS_COLS)
                 .eq("collection_id", collection_id)
-                .eq("judgment_id", document_id)
+                .eq("judgment_id", judgment_id)
                 .execute()
             )
 
             if existing.data:
-                logger.info(f"Judgment {document_id} already in collection {collection_id}")
+                logger.info(f"Judgment {judgment_id} already in collection {collection_id}")
                 return True
 
             self.client.table("collection_judgments").insert(
-                {"collection_id": collection_id, "judgment_id": document_id}
+                {"collection_id": collection_id, "judgment_id": judgment_id}
             ).execute()
 
-            logger.info(f"Added judgment {document_id} to collection {collection_id}")
+            logger.info(f"Added judgment {judgment_id} to collection {collection_id}")
             return True
 
         except (PostgrestAPIError, StorageException) as e:
@@ -232,9 +232,9 @@ class CollectionsDB(SupabaseClientMixin):
                 return True
 
             logger.exception(f"Error adding judgment to collection: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to add document: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to add judgment: {str(e)}")
 
-    async def remove_document(self, collection_id: str, document_id: str, user_id: str) -> bool:
+    async def remove_document(self, collection_id: str, judgment_id: str, user_id: str) -> bool:
         collection = await self.find_collection(collection_id, user_id)
         if not collection:
             raise HTTPException(status_code=404, detail="Collection not found")
@@ -244,16 +244,16 @@ class CollectionsDB(SupabaseClientMixin):
                 self.client.table("collection_judgments")
                 .delete()
                 .eq("collection_id", collection_id)
-                .eq("judgment_id", document_id)
+                .eq("judgment_id", judgment_id)
                 .execute()
             )
 
-            logger.info(f"Removed judgment {document_id} from collection {collection_id}")
+            logger.info(f"Removed judgment {judgment_id} from collection {collection_id}")
             return True
 
         except (PostgrestAPIError, StorageException) as e:
             logger.exception(f"Error removing judgment from collection: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to remove document: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to remove judgment: {str(e)}")
 
     async def get_collection_documents(self, collection_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get all judgments in a collection.
@@ -287,12 +287,12 @@ class CollectionsDB(SupabaseClientMixin):
             # Frontend expects `document_id` keys on the response — translate at the boundary.
             documents = []
             for item in response.data:
-                doc_id = item.get("judgment_id")
-                if doc_id:
+                judgment_id = item.get("judgment_id")
+                if judgment_id:
                     documents.append(
                         {
-                            "id": doc_id,
-                            "document_id": doc_id,
+                            "id": judgment_id,
+                            "document_id": judgment_id,
                         }
                     )
 
