@@ -52,11 +52,11 @@ def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:
 
 def transform_collection(data) -> CollectionWithDocuments:
     documents = []
-    # Use collection_supabase_documents for document IDs (text type)
-    if "collection_supabase_documents" in data:
-        # Keep document IDs as strings (they are string identifiers)
+    # Translate join-table rows (`collection_judgments` / `judgment_id`) into the
+    # API's `documents: list[str]` shape.
+    if "collection_judgments" in data:
         documents = [
-            str(cd["document_id"]) for cd in data["collection_supabase_documents"]
+            str(cj["judgment_id"]) for cj in data["collection_judgments"]
         ]
 
     # Use document_count if available, otherwise count from documents list

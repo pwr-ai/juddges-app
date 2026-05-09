@@ -12,7 +12,7 @@ from ._base import SupabaseClientMixin
 # Column projection constants
 # ---------------------------------------------------------------------------
 _COLLECTIONS_COLS = "id, user_id, name, description, created_at, updated_at"
-_COLLECTION_DOC_EXISTS_COLS = "collection_id, document_id"
+_COLLECTION_JUDGMENT_EXISTS_COLS = "collection_id, judgment_id"
 
 
 class CollectionsDB(SupabaseClientMixin):
@@ -38,15 +38,15 @@ class CollectionsDB(SupabaseClientMixin):
             collections = response.data
             collection_ids = [c["id"] for c in collections]
 
-            # Batch-fetch all documents for all collections in a single query
+            # Batch-fetch all judgments for all collections in a single query
             all_docs: List[Dict[str, Any]] = []
             page_size = 1000
             offset = 0
 
             while True:
                 docs_response = (
-                    self.client.table("collection_supabase_documents")
-                    .select("collection_id, document_id")
+                    self.client.table("collection_judgments")
+                    .select("collection_id, judgment_id")
                     .in_("collection_id", collection_ids)
                     .range(offset, offset + page_size - 1)
                     .execute()
@@ -62,21 +62,21 @@ class CollectionsDB(SupabaseClientMixin):
 
                 offset += page_size
 
-            # Group documents by collection_id in Python
+            # Group judgments by collection_id in Python
             docs_by_collection: Dict[str, List[Dict[str, Any]]] = {c["id"]: [] for c in collections}
             for doc in all_docs:
                 cid = doc["collection_id"]
                 if cid in docs_by_collection:
-                    docs_by_collection[cid].append({"document_id": doc["document_id"]})
+                    docs_by_collection[cid].append({"judgment_id": doc["judgment_id"]})
 
             for collection in collections:
                 docs = docs_by_collection[collection["id"]]
-                collection["collection_supabase_documents"] = docs
+                collection["collection_judgments"] = docs
                 collection["document_count"] = len(docs)
 
             return collections
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting user collections: {e}", exc_info=True)
+            logger.exception(f"Error getting user collections: {e}")
             return []
 
     async def find_collection(
@@ -97,22 +97,22 @@ class CollectionsDB(SupabaseClientMixin):
 
             collection = response.data[0]
 
-            # Get total document count first
+            # Get total judgment count first
             count_response = (
-                self.client.table("collection_supabase_documents")
-                .select("document_id", count="exact")
+                self.client.table("collection_judgments")
+                .select("judgment_id", count="exact")
                 .eq("collection_id", collection_id)
                 .execute()
             )
             total_count = count_response.count if count_response.count is not None else len(count_response.data or [])
             collection["document_count"] = total_count
 
-            # Fetch document IDs with pagination and sorting (newest first)
+            # Fetch judgment IDs with pagination and sorting (newest first)
             if limit is not None:
                 # Paginated fetch
                 docs_response = (
-                    self.client.table("collection_supabase_documents")
-                    .select("document_id, created_at")
+                    self.client.table("collection_judgments")
+                    .select("judgment_id, created_at")
                     .eq("collection_id", collection_id)
                     .order("created_at", desc=True)
                     .range(offset, offset + limit - 1)
@@ -120,15 +120,15 @@ class CollectionsDB(SupabaseClientMixin):
                 )
                 all_documents = docs_response.data or []
             else:
-                # Fetch all documents with pagination (for large collections)
+                # Fetch all judgments with pagination (for large collections)
                 all_documents = []
                 page_size = 1000
                 current_offset = 0
 
                 while True:
                     docs_response = (
-                        self.client.table("collection_supabase_documents")
-                        .select("document_id, created_at")
+                        self.client.table("collection_judgments")
+                        .select("judgment_id, created_at")
                         .eq("collection_id", collection_id)
                         .order("created_at", desc=True)
                         .range(current_offset, current_offset + page_size - 1)
@@ -145,10 +145,10 @@ class CollectionsDB(SupabaseClientMixin):
 
                     current_offset += page_size
 
-            collection["collection_supabase_documents"] = all_documents
+            collection["collection_judgments"] = all_documents
             return collection
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error finding collection: {e}", exc_info=True)
+            logger.exception(f"Error finding collection: {e}")
             return None
 
     async def create_collection(self, user_id: str, name: str, description: Optional[str] = None) -> Dict[str, Any]:
@@ -185,10 +185,11 @@ class CollectionsDB(SupabaseClientMixin):
             return {}
 
     async def delete_collection(self, collection_id: str, user_id: str) -> bool:
-        """Delete a collection and all its documents."""
+        """Delete a collection and all its judgments."""
         try:
-            # Delete from collection_supabase_documents table
-            self.client.table("collection_supabase_documents").delete().eq("collection_id", collection_id).execute()
+            # ON DELETE CASCADE on collection_judgments handles the join rows;
+            # the explicit delete remains as a defensive no-op for older schemas.
+            self.client.table("collection_judgments").delete().eq("collection_id", collection_id).execute()
 
             response = (
                 self.client.table("collections").delete().eq("id", collection_id).eq("user_id", user_id).execute()
@@ -196,34 +197,33 @@ class CollectionsDB(SupabaseClientMixin):
 
             return bool(response.data)
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error deleting collection: {e}", exc_info=True)
+            logger.exception(f"Error deleting collection: {e}")
             return False
 
     async def add_document(self, collection_id: str, document_id: str, user_id: str) -> bool:
-        """Add a document to a collection."""
+        """Add a judgment to a collection. `document_id` is the API-level name for the judgment identifier."""
         collection = await self.find_collection(collection_id, user_id)
         if not collection:
             raise HTTPException(status_code=404, detail="Collection not found")
 
         try:
-            # Use collection_supabase_documents table for document IDs (text type)
             existing = (
-                self.client.table("collection_supabase_documents")
-                .select(_COLLECTION_DOC_EXISTS_COLS)
+                self.client.table("collection_judgments")
+                .select(_COLLECTION_JUDGMENT_EXISTS_COLS)
                 .eq("collection_id", collection_id)
-                .eq("document_id", document_id)
+                .eq("judgment_id", document_id)
                 .execute()
             )
 
             if existing.data:
-                logger.info(f"Document {document_id} already in collection {collection_id}")
+                logger.info(f"Judgment {document_id} already in collection {collection_id}")
                 return True
 
-            self.client.table("collection_supabase_documents").insert(
-                {"collection_id": collection_id, "document_id": document_id}
+            self.client.table("collection_judgments").insert(
+                {"collection_id": collection_id, "judgment_id": document_id}
             ).execute()
 
-            logger.info(f"Added document {document_id} to collection {collection_id}")
+            logger.info(f"Added judgment {document_id} to collection {collection_id}")
             return True
 
         except (PostgrestAPIError, StorageException) as e:
@@ -231,7 +231,7 @@ class CollectionsDB(SupabaseClientMixin):
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
 
-            logger.error(f"Error adding document to collection: {e}", exc_info=True)
+            logger.exception(f"Error adding judgment to collection: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to add document: {str(e)}")
 
     async def remove_document(self, collection_id: str, document_id: str, user_id: str) -> bool:
@@ -240,27 +240,26 @@ class CollectionsDB(SupabaseClientMixin):
             raise HTTPException(status_code=404, detail="Collection not found")
 
         try:
-            # Use collection_supabase_documents table for document IDs
             (
-                self.client.table("collection_supabase_documents")
+                self.client.table("collection_judgments")
                 .delete()
                 .eq("collection_id", collection_id)
-                .eq("document_id", document_id)
+                .eq("judgment_id", document_id)
                 .execute()
             )
 
-            logger.info(f"Removed document {document_id} from collection {collection_id}")
+            logger.info(f"Removed judgment {document_id} from collection {collection_id}")
             return True
 
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error removing document from collection: {e}", exc_info=True)
+            logger.exception(f"Error removing judgment from collection: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to remove document: {str(e)}")
 
     async def get_collection_documents(self, collection_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Get all documents in a collection with their full metadata.
+        """Get all judgments in a collection.
 
         Note: user_id is kept for API compatibility but not used for filtering.
-        Any user can retrieve documents from any collection.
+        Any user can retrieve judgments from any collection.
         """
         # Check if collection exists (without user_id filtering)
         try:
@@ -271,14 +270,13 @@ class CollectionsDB(SupabaseClientMixin):
         except HTTPException:
             raise
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error checking collection existence: {e}", exc_info=True)
+            logger.exception(f"Error checking collection existence: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to check collection: {str(e)}")
 
         try:
-            # Get document IDs from collection_supabase_documents
             response = (
-                self.client.table("collection_supabase_documents")
-                .select("document_id")
+                self.client.table("collection_judgments")
+                .select("judgment_id")
                 .eq("collection_id", collection_id)
                 .execute()
             )
@@ -286,23 +284,23 @@ class CollectionsDB(SupabaseClientMixin):
             if not response.data:
                 return []
 
-            # Return simple document list with just IDs
+            # Frontend expects `document_id` keys on the response — translate at the boundary.
             documents = []
             for item in response.data:
-                doc_id = item.get("document_id")
+                doc_id = item.get("judgment_id")
                 if doc_id:
                     documents.append(
                         {
                             "id": doc_id,
-                            "document_id": doc_id,  # For compatibility with frontend
+                            "document_id": doc_id,
                         }
                     )
 
-            logger.info(f"Retrieved {len(documents)} documents from collection {collection_id}")
+            logger.info(f"Retrieved {len(documents)} judgments from collection {collection_id}")
             return documents
 
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting collection documents: {e}", exc_info=True)
+            logger.exception(f"Error getting collection judgments: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to get documents: {str(e)}")
 
 

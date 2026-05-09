@@ -51,7 +51,7 @@ class PublicationsDB(SupabaseClientMixin):
 
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting publications: {e}", exc_info=True)
+            logger.exception(f"Error getting publications: {e}")
             return []
 
     async def get_publication(self, publication_id: str) -> Optional[Dict[str, Any]]:
@@ -70,7 +70,7 @@ class PublicationsDB(SupabaseClientMixin):
 
             return response.data[0] if response.data else None
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting publication: {e}", exc_info=True)
+            logger.exception(f"Error getting publication: {e}")
             return None
 
     async def create_publication(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -136,7 +136,7 @@ class PublicationsDB(SupabaseClientMixin):
             response = self.client.table("publications").delete().eq("id", publication_id).execute()
             return bool(response.data)
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error deleting publication: {e}", exc_info=True)
+            logger.exception(f"Error deleting publication: {e}")
             return False
 
     async def add_schema_link(self, publication_id: str, schema_id: str, description: Optional[str] = None) -> bool:
@@ -153,7 +153,7 @@ class PublicationsDB(SupabaseClientMixin):
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
-            logger.error(f"Error linking schema: {e}", exc_info=True)
+            logger.exception(f"Error linking schema: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to link schema: {str(e)}")
 
     async def remove_schema_link(self, publication_id: str, schema_id: str) -> bool:
@@ -165,7 +165,7 @@ class PublicationsDB(SupabaseClientMixin):
             logger.info(f"Removed schema {schema_id} from publication {publication_id}")
             return True
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error removing schema link: {e}", exc_info=True)
+            logger.exception(f"Error removing schema link: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to remove schema link: {str(e)}")
 
     async def add_collection_link(
@@ -184,7 +184,7 @@ class PublicationsDB(SupabaseClientMixin):
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
-            logger.error(f"Error linking collection: {e}", exc_info=True)
+            logger.exception(f"Error linking collection: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to link collection: {str(e)}")
 
     async def remove_collection_link(self, publication_id: str, collection_id: str) -> bool:
@@ -196,7 +196,7 @@ class PublicationsDB(SupabaseClientMixin):
             logger.info(f"Removed collection {collection_id} from publication {publication_id}")
             return True
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error removing collection link: {e}", exc_info=True)
+            logger.exception(f"Error removing collection link: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to remove collection link: {str(e)}")
 
     async def get_publication_schemas(self, publication_id: str) -> List[Dict[str, Any]]:
@@ -210,7 +210,7 @@ class PublicationsDB(SupabaseClientMixin):
             )
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting publication schemas: {e}", exc_info=True)
+            logger.exception(f"Error getting publication schemas: {e}")
             return []
 
     async def get_publication_collections(self, publication_id: str) -> List[Dict[str, Any]]:
@@ -224,7 +224,7 @@ class PublicationsDB(SupabaseClientMixin):
             )
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting publication collections: {e}", exc_info=True)
+            logger.exception(f"Error getting publication collections: {e}")
             return []
 
     async def add_extraction_job_link(
@@ -243,7 +243,7 @@ class PublicationsDB(SupabaseClientMixin):
             error_msg = str(e).lower()
             if "duplicate" in error_msg or "already exists" in error_msg:
                 return True
-            logger.error(f"Error linking extraction job: {e}", exc_info=True)
+            logger.exception(f"Error linking extraction job: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to link extraction job: {str(e)}")
 
     async def remove_extraction_job_link(self, publication_id: str, job_id: str) -> bool:
@@ -255,7 +255,7 @@ class PublicationsDB(SupabaseClientMixin):
             logger.info(f"Removed extraction job {job_id} from publication {publication_id}")
             return True
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error removing extraction job link: {e}", exc_info=True)
+            logger.exception(f"Error removing extraction job link: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to remove extraction job link: {str(e)}")
 
     async def get_publication_extraction_jobs(self, publication_id: str) -> List[Dict[str, Any]]:
@@ -269,7 +269,7 @@ class PublicationsDB(SupabaseClientMixin):
             )
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Error getting publication extraction jobs: {e}", exc_info=True)
+            logger.exception(f"Error getting publication extraction jobs: {e}")
             return []
 
 

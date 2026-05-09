@@ -23,6 +23,19 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- -----------------------------------------------------------------------------
+-- IMMUTABLE wrapper around array_to_string(text[], text).
+-- Required because Postgres marks the built-in array_to_string as STABLE, and
+-- STABLE functions cannot appear in `GENERATED ALWAYS AS ... STORED`
+-- expressions (see Tier 2 below).
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public._immutable_array_to_string(arr text[], sep text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$ SELECT array_to_string(arr, sep); $$;
+
+-- -----------------------------------------------------------------------------
 -- Tier 1: filter indexes for previously-unindexed base_* columns
 -- -----------------------------------------------------------------------------
 
@@ -84,19 +97,19 @@ ALTER TABLE public.judgments
         GENERATED ALWAYS AS (
             setweight(to_tsvector('simple'::regconfig, coalesce(base_case_name, '')), 'A') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_neutral_citation_number, '')), 'A') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_keywords, ARRAY[]::TEXT[]), ' ')), 'A') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_keywords, ARRAY[]::TEXT[]), ' ')), 'A') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_appeal_court_judges_names, '')), 'B') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_representative_name, '')), 'B') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_crown_attorney_general_representative_name, '')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_convict_offences, ARRAY[]::TEXT[]), ' ')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_acquit_offences, ARRAY[]::TEXT[]), ' ')), 'B') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_appeal_ground, ARRAY[]::TEXT[]), ' ')), 'B') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_convict_offences, ARRAY[]::TEXT[]), ' ')), 'B') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_acquit_offences, ARRAY[]::TEXT[]), ' ')), 'B') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_appeal_ground, ARRAY[]::TEXT[]), ' ')), 'B') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_conv_court_names, '')), 'C') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_sent_court_name, '')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_agg_fact_sent, ARRAY[]::TEXT[]), ' ')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_mit_fact_sent, ARRAY[]::TEXT[]), ' ')), 'C') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_sentences_received, ARRAY[]::TEXT[]), ' ')), 'D') ||
-            setweight(to_tsvector('simple'::regconfig, array_to_string(coalesce(base_what_ancilliary_orders, ARRAY[]::TEXT[]), ' ')), 'D') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_agg_fact_sent, ARRAY[]::TEXT[]), ' ')), 'C') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_mit_fact_sent, ARRAY[]::TEXT[]), ' ')), 'C') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_sentences_received, ARRAY[]::TEXT[]), ' ')), 'D') ||
+            setweight(to_tsvector('simple'::regconfig, public._immutable_array_to_string(coalesce(base_what_ancilliary_orders, ARRAY[]::TEXT[]), ' ')), 'D') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_mental_offence, '')), 'D') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_victim_mental_offence, '')), 'D') ||
             setweight(to_tsvector('simple'::regconfig, coalesce(base_offender_job_offence, '')), 'D') ||

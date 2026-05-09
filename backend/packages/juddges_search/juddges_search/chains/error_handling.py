@@ -137,7 +137,7 @@ def retry_with_exponential_backoff(
                         logger.error(f"All {max_retries + 1} attempts failed for {func.__name__}: {e}")
                 except Exception as e:
                     # Non-retriable error - fail immediately
-                    logger.error(f"Non-retriable error in {func.__name__}: {e}", exc_info=True)
+                    logger.exception(f"Non-retriable error in {func.__name__}: {e}")
                     raise
 
             # All retries exhausted
@@ -170,7 +170,7 @@ def retry_with_exponential_backoff(
                         logger.error(f"All {max_retries + 1} attempts failed for {func.__name__}: {e}")
                 except Exception as e:
                     # Non-retriable error - fail immediately
-                    logger.error(f"Non-retriable error in {func.__name__}: {e}", exc_info=True)
+                    logger.exception(f"Non-retriable error in {func.__name__}: {e}")
                     raise
 
             # All retries exhausted
@@ -247,7 +247,7 @@ def create_fallback_response(error: Exception, question: str = "", response_type
     Returns:
         Fallback response dictionary
     """
-    logger.error(f"Creating fallback response for {response_type}: {error}", exc_info=True)
+    logger.exception(f"Creating fallback response for {response_type}: {error}")
 
     if response_type == "chat":
         return {
@@ -301,7 +301,7 @@ def wrap_with_error_handling(
         try:
             return runnable.invoke(inputs)
         except Exception as e:
-            logger.error(f"{log_prefix} execution failed: {e}", exc_info=True)
+            logger.exception(f"{log_prefix} execution failed: {e}")
 
             if fallback_fn:
                 return fallback_fn(e, inputs)
@@ -314,7 +314,7 @@ def wrap_with_error_handling(
         try:
             return await runnable.ainvoke(inputs)
         except Exception as e:
-            logger.error(f"{log_prefix} execution failed: {e}", exc_info=True)
+            logger.exception(f"{log_prefix} execution failed: {e}")
 
             if fallback_fn:
                 return fallback_fn(e, inputs)
@@ -350,7 +350,7 @@ def log_chain_execution(chain_name: str):
                 return result
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.error(f"{chain_name} failed after {elapsed:.2f}s: {e}", exc_info=True)
+                logger.exception(f"{chain_name} failed after {elapsed:.2f}s: {e}")
                 raise
 
         @functools.wraps(func)
@@ -365,7 +365,7 @@ def log_chain_execution(chain_name: str):
                 return result
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.error(f"{chain_name} failed after {elapsed:.2f}s: {e}", exc_info=True)
+                logger.exception(f"{chain_name} failed after {elapsed:.2f}s: {e}")
                 raise
 
         if functools.iscoroutinefunction(func):
