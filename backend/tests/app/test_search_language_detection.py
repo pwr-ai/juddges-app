@@ -1,6 +1,6 @@
 """Unit tests for search language detection, query classification, and expanded heuristics."""
 
-from app.documents import _detect_search_language
+from app.documents_pkg.utils import _detect_search_language
 from app.query_analysis import _heuristic_query_analysis, classify_and_route_query
 
 # ============================================================================

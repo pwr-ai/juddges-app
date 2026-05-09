@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from app.documents import search_documents
+from app.documents_pkg import search_documents
 from app.models import SearchChunksRequest
 from app.query_analysis import QueryAnalysisResult
 
@@ -92,7 +92,7 @@ async def test_thinking_mode_uses_separate_semantic_and_keyword_queries(monkeypa
             None,
         )
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr("app.documents_pkg.search.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_with_fallback",
         fake_analyze_query_with_fallback,
@@ -148,7 +148,7 @@ async def test_explicit_filters_override_inferred_filters(monkeypatch):
             None,
         )
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr("app.documents_pkg.search.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_with_fallback",
         fake_analyze_query_with_fallback,
@@ -195,7 +195,7 @@ async def test_thinking_mode_heuristic_fallback_source(monkeypatch):
             "invalid_api_key",
         )
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr("app.documents_pkg.search.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_with_fallback",
         fake_analyze_query_with_fallback,
@@ -270,7 +270,7 @@ async def test_thinking_mode_zero_results_triggers_relaxed_fallback(monkeypatch)
     # First call returns no results, second call returns data.
     fake_supabase = _FakeSupabaseSequenced(capture, responses=[[], [row]])
 
-    monkeypatch.setattr("app.documents.generate_embedding", fake_generate_embedding)
+    monkeypatch.setattr("app.documents_pkg.search.generate_embedding", fake_generate_embedding)
     monkeypatch.setattr(
         "app.query_analysis.analyze_query_heuristic",
         fake_analyze_query_heuristic,
