@@ -6,7 +6,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SourceCard } from '@/components/chat/SourceCard';
-import { DocumentType } from '@/types/search';
 
 jest.mock('next/link', () => {
   return ({ children, ...props }: any) => <a {...props}>{children}</a>;
@@ -15,7 +14,7 @@ jest.mock('next/link', () => {
 describe('SourceCard', () => {
   const baseDocument = {
     document_id: 'doc-123',
-    document_type: DocumentType.JUDGMENT,
+    document_type: 'judgment',
     title: 'Contract Law Case 2024',
     document_number: 'XII C 123/24',
     date_issued: '2024-01-15',
@@ -53,27 +52,14 @@ describe('SourceCard', () => {
     expect(screen.getByRole('link')).toHaveAttribute('target', '_blank');
   });
 
-  it('falls back to the generic document label for tax interpretations', () => {
-    render(
-      <SourceCard
-        document={{
-          ...baseDocument,
-          document_type: DocumentType.TAX_INTERPRETATION,
-          document_number: 'INT-2024-001',
-        } as any}
-      />
-    );
-
-    expect(screen.getByText('Document')).toBeInTheDocument();
-    expect(screen.getByText('INT-2024-001')).toBeInTheDocument();
-  });
-
   it('renders the database warning for flagged error documents', () => {
     render(
       <SourceCard
         document={{
           ...baseDocument,
-          document_type: DocumentType.ERROR,
+          // Database errors are signalled by the `_isWeaviateError` /
+          // `_isDatabaseError` flags, not via a separate document_type.
+          _isWeaviateError: true,
           _isDatabaseError: true,
         } as any}
       />

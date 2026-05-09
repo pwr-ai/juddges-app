@@ -37,8 +37,6 @@ function createDefaultSearchStore(): Record<string, any> {
   return {
     query: '',
     setQuery: jest.fn(),
-    documentTypes: ['judgment'],
-    setDocumentTypes: jest.fn(),
     selectedLanguages: new Set(['pl']),
     setSelectedLanguages: jest.fn(),
     isSearching: false,
@@ -55,7 +53,6 @@ function createDefaultSearchStore(): Record<string, any> {
     filters: {
       keywords: new Set(),
       legalConcepts: new Set(),
-      documentTypes: new Set(),
       issuingBodies: new Set(),
       languages: new Set(),
       jurisdictions: new Set(),
@@ -93,7 +90,6 @@ function createDefaultSearchStore(): Record<string, any> {
     getAvailableFiltersFromMetadata: jest.fn(() => ({
       keywords: [],
       legalConcepts: [],
-      documentTypes: [],
       issuingBodies: [],
       languages: [],
       jurisdictions: [],
@@ -135,10 +131,10 @@ const mockSearchResults = {
     {
       document_id: 'doc-2',
       uuid: 'uuid-2',
-      title: 'Tax Interpretation 2023',
-      court_name: 'Tax Chamber',
+      title: 'Civil Procedure Ruling 2023',
+      court_name: 'Supreme Court',
       date_issued: '2023-12-10',
-      document_type: 'tax_interpretation',
+      document_type: 'judgment',
       language: 'pl',
       score: 0.88,
     },
@@ -390,7 +386,8 @@ describe('Complete Search Flow Integration', () => {
       const ipBoxSearch = screen.getByText('Intellectual property');
       await user.click(ipBoxSearch);
 
-      expect(mockSearchStore.setDocumentTypes).toHaveBeenCalled();
+      // Search collapsed to judgment-only — popular searches no longer
+      // configure document_types; verify the language preset still applies.
       expect(mockSearchStore.setSelectedLanguages).toHaveBeenCalled();
     });
   });
@@ -406,32 +403,6 @@ describe('Complete Search Flow Integration', () => {
       });
 
       // Mode switch would be tested here via SearchConfiguration component
-    });
-  });
-
-  describe('Document Type Selection', () => {
-    it('should allow selecting document types', async () => {
-      const user = userEvent.setup();
-
-      renderWithProviders(<SearchPage />);
-
-      await waitFor(() => {
-        expect(screen.getByRole('textbox')).toBeInTheDocument();
-      });
-
-      // Document type selection would be tested here
-    });
-
-    it('should update search when document types change', async () => {
-      const user = userEvent.setup();
-
-      renderWithProviders(<SearchPage />);
-
-      await waitFor(() => {
-        expect(screen.getByRole('textbox')).toBeInTheDocument();
-      });
-
-      // Verify that changing document types triggers appropriate updates
     });
   });
 

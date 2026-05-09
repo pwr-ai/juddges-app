@@ -111,7 +111,7 @@ test.describe('Search Functionality', () => {
           documents: Array.from({length: 5}, (_, i) => ({
             document_id: `doc${i}`,
             title: `Document ${i}`,
-            document_type: i % 2 === 0 ? 'judgment' : 'tax_interpretation',
+            document_type: 'judgment',
             date: `2023-0${i + 1}-01`,
             content: `Content for document ${i}`
           })),

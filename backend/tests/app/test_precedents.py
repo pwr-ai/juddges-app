@@ -219,7 +219,7 @@ class TestApplyFilters:
             },
             {
                 "document_id": "doc-2",
-                "document_type": "tax_interpretation",
+                "document_type": "judgment",
                 "court_name": "Administrative Court",
                 "language": "en",
                 "date_issued": "2023-06-01",
@@ -244,7 +244,9 @@ class TestApplyFilters:
         results = self._make_results()
         filters = PrecedentFilters(document_types=["judgment"])
         filtered = _apply_filters(results, filters)
-        assert len(filtered) == 2
+        # All fixture rows are judgments now (TI removed); the in-memory
+        # document_types filter still exercises the in-list code path.
+        assert len(filtered) == 3
         assert all(r["document_type"] == "judgment" for r in filtered)
 
     def test_filter_by_court_name_case_insensitive(self):

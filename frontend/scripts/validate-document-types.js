@@ -28,6 +28,7 @@ const SEARCH_PATTERNS = {
     /documentType[\s]*:\s*DocumentType\b/, // Single document/example values are OK
     /documentType[\s]*\??:\s*string(?:\s*\|\s*null)?\b/, // DTO fields for one document are OK
     /documentType[\s]*:\s*documentType\b/, // Object literals forwarding one document field are OK
+    /documentType[\s]*:\s*['"][a-z_]+['"]/, // String-literal singular values for a single node/document are OK
     /\/\/ For backward compatibility/, // Explicit backward compatibility comments are OK
   ]
 };
@@ -136,39 +137,13 @@ function validateDocumentTypes() {
   }
 }
 
-// Additional check: Verify DocumentType enum is properly defined
-function validateDocumentTypeEnum() {
-  const enumFile = path.join(FRONTEND_ROOT, 'types', 'search.ts');
-  
-  try {
-    const content = fs.readFileSync(enumFile, 'utf8');
-    
-    const requiredEnumValues = [
-      'JUDGMENT',
-      'TAX_INTERPRETATION',
-      'ERROR'
-    ];
-    
-    let foundValues = 0;
-    requiredEnumValues.forEach(value => {
-      if (content.includes(`${value} =`)) {
-        foundValues++;
-      }
-    });
-    
-    if (foundValues === requiredEnumValues.length) {
-      console.log('✅ DocumentType enum is properly defined');
-    } else {
-      console.log(`❌ DocumentType enum missing some values. Found ${foundValues}/${requiredEnumValues.length}`);
-      process.exit(1);
-    }
-  } catch (error) {
-    console.log(`❌ Could not validate DocumentType enum: ${error.message}`);
-    process.exit(1);
-  }
-}
+// NOTE: The legacy `validateDocumentTypeEnum` check enforced existence of
+// `JUDGMENT`, `TAX_INTERPRETATION`, `ERROR` members on a `DocumentType` enum.
+// As of the 2026-05-09 search-judgment-only refactor (see
+// `docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md`)
+// search is judgment-only and the enum was removed entirely, so the check is
+// no longer applicable.
 
 if (require.main === module) {
-  validateDocumentTypeEnum();
   validateDocumentTypes();
 }
