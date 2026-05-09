@@ -26,6 +26,8 @@ import {
   FileJson,
   Zap,
   Database,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +46,14 @@ import {
   Citation,
 } from "@/components/editorial";
 import React from "react";
+
+const BIBTEX = `@misc{juddges2024,
+  title  = {JuDDGES: Judicial Decision Data Gathering, Encoding and Sharing},
+  author = {Kajdanowicz, Tomasz and others},
+  year   = {2024},
+  url    = {https://huggingface.co/JuDDGES},
+  note   = {Wrocław University of Science and Technology}
+}`;
 
 function formatLastUpdated(dateString: string | null): { value: string; label: string } {
   if (!dateString) {
@@ -136,6 +146,32 @@ function ViewAllAction({ href, label }: { href: string; label: string }): React.
     <EditorialButton variant="ghost" size="sm" href={href} arrow>
       {label}
     </EditorialButton>
+  );
+}
+
+function CopyButton(): React.JSX.Element {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = React.useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(BIBTEX);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // best-effort; clipboard might not be available
+    }
+  }, []);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="absolute top-2 right-2 inline-flex items-center gap-1.5 border border-rule bg-parchment px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={copied ? "BibTeX copied to clipboard" : "Copy BibTeX to clipboard"}
+    >
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
   );
 }
 
@@ -623,6 +659,92 @@ export default function HomePage(): React.JSX.Element {
                 </p>
               </div>
             )}
+          </EditorialCard>
+        </div>
+
+        {/* ============ ROW 4 ============ */}
+
+        {/* Quick-start strip (full width) */}
+        <div className="lg:col-span-12">
+          <EditorialCard
+            eyebrow="Get started"
+            title="Three steps to legal-AI research"
+            className="h-full"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Link
+                href="/search"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
+                  <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/collections"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
+                  <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/schema-chat"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
+                  <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+            </div>
+          </EditorialCard>
+        </div>
+
+        {/* Cite JUDDGES (8 cols) */}
+        <div className="lg:col-span-8">
+          <EditorialCard
+            eyebrow="Cite"
+            title="How to cite JUDDGES"
+            className="h-full"
+          >
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="text-sm text-ink leading-relaxed">
+                If JUDDGES contributed to your research, please cite the project using the BibTeX entry below.
+              </p>
+              <div className="relative border border-rule bg-parchment-deep/40 p-4">
+                <pre className="font-mono text-[11px] leading-relaxed text-ink overflow-x-auto whitespace-pre">{BIBTEX}</pre>
+                <CopyButton />
+              </div>
+            </div>
+          </EditorialCard>
+        </div>
+
+        {/* What's new (4 cols) */}
+        <div className="lg:col-span-4">
+          <EditorialCard
+            eyebrow="Releases"
+            title="What's new"
+            className="h-full"
+          >
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="text-sm text-ink leading-relaxed">
+                Editorial Jurisprudence design system, decision-type analytics, and improved search ranking.
+              </p>
+              <div className="mt-auto">
+                <EditorialButton variant="ghost" size="sm" href="/changelog" arrow>
+                  Read the changelog
+                </EditorialButton>
+              </div>
+            </div>
           </EditorialCard>
         </div>
       </div>
