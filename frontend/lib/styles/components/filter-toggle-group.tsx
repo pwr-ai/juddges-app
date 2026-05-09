@@ -75,13 +75,13 @@ export interface FilterToggleGroupProps<T = string> {
  * @example
  * ```tsx
  * <FilterToggleGroup
- * label="Document Type: "
+ * label="Mode: "
  * options={[
- * { value: 'judgment', label: 'Judgment' },
- * { value: 'tax_interpretation', label: 'Tax Interpretation' }
+ * { value: 'rabbit', label: 'Fast' },
+ * { value: 'thinking', label: 'Deep' }
  * ]}
- * value={selectedType}
- * onChange={setSelectedType}
+ * value={selectedMode}
+ * onChange={setSelectedMode}
  * />
  * ```
  */

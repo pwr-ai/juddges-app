@@ -1,17 +1,11 @@
 """Unit tests for app.utils.serializers module."""
 
 from datetime import datetime
-from enum import Enum
 
 import pytest
 from juddges_search.models import LegalDocument
 
 from app.utils.serializers import serialize_document_for_similarity
-
-
-class MockDocType(str, Enum):
-    JUDGMENT = "judgment"
-    RULING = "ruling"
 
 
 def _make_doc(**overrides) -> LegalDocument:
@@ -60,13 +54,7 @@ class TestSerializeDocumentForSimilarity:
     def test_document_type_string(self):
         doc = _make_doc(document_type="judgment")
         result = serialize_document_for_similarity(doc)
-        assert result["document_type"] is not None
-
-    def test_document_type_enum_value(self):
-        doc = _make_doc(document_type="tax_interpretation")
-        result = serialize_document_for_similarity(doc)
-        # Enum .value should be extracted
-        assert result["document_type"] == "tax_interpretation"
+        assert result["document_type"] == "judgment"
 
     def test_returns_expected_keys(self):
         doc = _make_doc()

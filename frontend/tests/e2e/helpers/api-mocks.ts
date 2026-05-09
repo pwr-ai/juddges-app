@@ -9,7 +9,7 @@ export interface MockDocument {
   document_id: string;
   title: string;
   content: string;
-  document_type: 'judgment' | 'tax_interpretation' | 'ruling';
+  document_type: 'judgment';
   language?: string;
   date?: string;
   court_name?: string;

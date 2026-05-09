@@ -290,14 +290,6 @@ const getDocumentTypeBadge = (type?: string | null) => {
  };
  }
 
- // Collapse legacy tax interpretation documents into a generic label in the UI.
- if (normalized === "tax_interpretation"|| normalized === "tax interpretation"|| normalized.includes("tax_interpretation") || normalized.includes("tax interpretation")) {
- return {
- label: "Legal Document",
- className: documentTypeBadgeStyles.default,
- };
- }
-
  // Fallback to formatted label
  return {
  label: formatDocumentTypeLabel(type),

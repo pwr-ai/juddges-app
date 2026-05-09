@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { searchChunks, fetchDocumentsByIds, PaginationMetadata } from '@/lib/api';
-import { SearchChunk, SearchDocument, DocumentType, LegalDocumentMetadata } from '@/types/search';
-import { useSearchStore, isUnknownDocumentType } from '@/lib/store/searchStore';
+import { SearchChunk, SearchDocument, LegalDocumentMetadata } from '@/types/search';
+import { useSearchStore } from '@/lib/store/searchStore';
 import logger from '@/lib/logger';
 
 const searchLogger = logger.child('useSearchResults');
@@ -10,9 +10,25 @@ const searchLogger = logger.child('useSearchResults');
 const PAGE_SIZE = 10; // Documents per load (user preference)
 const DEFAULT_LIMIT_CHUNKS = 150; // Chunks to fetch per request
 
+// Card-view fields requested in the rare fallback case where the search response
+// did not embed the documents (Tasks 6/7 trim this further on the backend).
+const CARD_RETURN_PROPERTIES = [
+  'title',
+  'document_number',
+  'summary',
+  'keywords',
+  'court_name',
+  'presiding_judge',
+  'date_issued',
+  'language',
+  'country',
+  'publication_date',
+  'source_url',
+];
+
 /**
  * Hook for managing search results fetching and conversion
- * Encapsulates the two-phase search process (chunks → documents)
+ * Encapsulates the search process (chunks + embedded documents → metadata)
  */
 export function useSearchResults() {
   const fullDocumentsMapRef = useRef<Map<string, SearchDocument>>(new Map());
@@ -21,15 +37,11 @@ export function useSearchResults() {
   const lastSearchParamsRef = useRef<string>(''); // Track search parameters to detect new searches
 
   const {
-    query,
     searchType,
-    documentTypes,
     selectedLanguages,
-    ignoreUnknownType,
     setIsSearching,
     setError,
     clearChunksCache,
-    setChunksForDocuments,
     setSearchMetadata,
     setPageSize,
     clearSelection,
@@ -40,7 +52,6 @@ export function useSearchResults() {
     setPaginationMetadata,
     setIsLoadingMore,
     appendSearchMetadata,
-    resetSearch,
   } = useSearchStore();
 
   /**
@@ -57,6 +68,7 @@ export function useSearchResults() {
         // Backend returns fields like publication_date, source_url as top-level fields on LegalDocument
         // but SearchDocument expects them in metadata object for the UI component
         // Access fields from the JSON response (they're top-level in the backend response)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const docAny = fullDoc as any;
 
         const metadataObj: SearchDocument['metadata'] = {
@@ -77,7 +89,6 @@ export function useSearchResults() {
 
         return {
           document_id: fullDoc.document_id,
-          document_type: fullDoc.document_type,
           title: fullDoc.title,
           date_issued: fullDoc.date_issued,
           issuing_body: fullDoc.issuing_body,
@@ -109,7 +120,6 @@ export function useSearchResults() {
       // Fallback to metadata-only (shouldn't happen if fetch was successful)
       return {
         document_id: metadata.document_id,
-        document_type: metadata.document_type,
         title: metadata.title || null,
         date_issued: metadata.date_issued,
         language: metadata.language,
@@ -143,16 +153,59 @@ export function useSearchResults() {
   );
 
   /**
-   * Performs a two-phase search:
-   * 1. Search chunks to find relevant documents
-   * 2. Fetch full document data for those documents
+   * Builds metadata for a chunk + (optional) full document. Centralised so the
+   * date-fallback logic stays consistent between initial search and loadMore.
+   */
+  const buildMetadataForChunk = useCallback(
+    (chunk: SearchChunk, fullDoc: SearchDocument | undefined): LegalDocumentMetadata => {
+      const score = chunk.confidence_score ?? chunk.score ?? null;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const docAny = fullDoc as any;
+      const meta = (fullDoc?.metadata as Record<string, unknown> | undefined) || {};
+
+      const dateIssued = fullDoc
+        ? (fullDoc.date_issued ||
+            (typeof docAny.publication_date === 'string' ? docAny.publication_date : null) ||
+            (typeof meta.publication_date === 'string' ? (meta.publication_date as string) : null) ||
+            null)
+        : null;
+
+      return {
+        uuid: `${chunk.document_id}_chunk_${chunk.chunk_id}`,
+        document_id: chunk.document_id,
+        language: fullDoc ? fullDoc.language || '' : chunk.language || '',
+        keywords: fullDoc
+          ? fullDoc.keywords || []
+          : chunk.tags
+            ? Array.isArray(chunk.tags)
+              ? chunk.tags
+              : [chunk.tags]
+            : [],
+        date_issued: dateIssued,
+        score,
+        title: fullDoc?.title || null,
+        summary: fullDoc?.summary || null,
+        court_name: fullDoc?.court_name || null,
+        document_number: fullDoc?.document_number || null,
+        thesis: fullDoc?.thesis || null,
+      };
+    },
+    []
+  );
+
+  /**
+   * Performs a search:
+   * 1. Search chunks (the response now includes the matching documents).
+   * 2. Build per-chunk metadata using the embedded documents.
+   * 3. Only fall back to a follow-up document fetch when chunks reference docs
+   *    not present in `result.documents`.
    */
   const search = useCallback(
     async (
       searchQuery: string,
       options?: {
         overrideMode?: "thinking" | "rabbit";
-        overrideDocumentTypes?: DocumentType[];
         overrideLanguages?: string[];
         onComplete?: () => void;
       }
@@ -168,7 +221,7 @@ export function useSearchResults() {
         searchLogger.debug('Search already in progress, skipping duplicate request');
         return Promise.resolve();
       }
-      
+
       // If there was a previous error, reset the ref to allow retry
       if (currentError && searchInProgressRef.current) {
         searchLogger.debug('Previous search had error, resetting ref to allow retry');
@@ -176,25 +229,21 @@ export function useSearchResults() {
       }
 
       const modeToUse = options?.overrideMode || searchType;
-      const requestedDocumentTypes = options?.overrideDocumentTypes || documentTypes;
-      const documentTypesToUse =
-        requestedDocumentTypes.length > 0 ? requestedDocumentTypes : [DocumentType.JUDGMENT];
       const languagesToUse =
         options?.overrideLanguages && options.overrideLanguages.length > 0
           ? options.overrideLanguages
           : Array.from(selectedLanguages);
 
-      searchLogger.info('Search initiated (new optimized flow)', {
+      searchLogger.info('search start', {
         query: searchQuery,
-        documentTypes: documentTypesToUse,
-        selectedLanguages: languagesToUse,
-        searchType: modeToUse,
+        mode: modeToUse,
+        languages: languagesToUse,
+        paging: { offset: 0, limit: PAGE_SIZE },
       });
 
       // Create a unique key for this search based on parameters
       const searchParamsKey = JSON.stringify({
         query: searchQuery,
-        documentTypes: documentTypesToUse,
         languages: languagesToUse,
         mode: modeToUse,
       });
@@ -208,52 +257,38 @@ export function useSearchResults() {
         searchIdRef.current += 1;
       }
       const currentSearchId = searchIdRef.current;
-      
-      searchLogger.debug('Starting search', { 
-        searchId: currentSearchId,
-        isNewSearch,
-        params: searchParamsKey,
-      });
 
       // STEP 1: ALWAYS clear state when starting search (even for React Strict Mode duplicates)
       // This prevents cache corruption from parallel search calls
       setError(null);
-      
-      // Log before clearing to see what we're losing
-      const storeBeforeClear = useSearchStore.getState();
-      searchLogger.info('Clearing search state before new search', {
-        chunksCacheSize: Object.keys(storeBeforeClear.chunksCache).length,
-        searchMetadataCount: storeBeforeClear.searchMetadata.length,
-        searchId: currentSearchId,
-      });
-      
       clearChunksCache(); // Clear previous chunks cache
       fullDocumentsMapRef.current.clear(); // Clear previous documents
       setSearchMetadata([], 0, false); // Clear previous search metadata
       clearSelection(); // Clear document selection
-      
+
       // STEP 2: Mark search as in progress (triggers loading state)
       searchInProgressRef.current = true;
       setIsSearching(true);
-      
-      // STEP 3: Now start the actual search (async)
 
+      // STEP 3: Now start the actual search (async)
       try {
-        // Phase 1: Search documents via chunks (chunk-based endpoint) - returns chunks only
-        // Use pagination for infinite scroll - first request gets estimated total count
         const result = await searchChunks({
           query: searchQuery,
-          limit_docs: PAGE_SIZE, // 10 docs per load for fast initial render
-          alpha: modeToUse === 'thinking' ? 0.5 : 0.0, // Pure term search (BM25) for rabbit, hybrid for thinking
+          limit_docs: PAGE_SIZE,
+          alpha: modeToUse === 'thinking' ? 0.5 : 0.0,
           languages: languagesToUse.length > 0 ? languagesToUse : undefined,
-          document_types:
-            documentTypesToUse.length > 0 ? documentTypesToUse.map((dt) => dt.toString()) : undefined,
-          fetch_full_documents: false, // Don't fetch full documents - we'll fetch them in parallel
+          fetch_full_documents: false,
           limit_chunks: DEFAULT_LIMIT_CHUNKS,
-          mode: modeToUse, // Pass mode parameter for thinking mode support
-          offset: 0, // First request starts at 0
-          include_count: true, // Get estimated total count on first request
+          mode: modeToUse,
+          offset: 0,
+          include_count: true,
         });
+
+        // Discard if a newer search has been initiated.
+        if (searchIdRef.current !== currentSearchId) {
+          searchLogger.warn('Search ID mismatch after chunk fetch, discarding stale chunks');
+          return;
+        }
 
         // Store chunks in cache for immediate display
         const chunksByDoc: Record<string, SearchChunk[]> = {};
@@ -264,353 +299,99 @@ export function useSearchResults() {
           chunksByDoc[chunk.document_id].push(chunk);
         });
 
-        searchLogger.info('Storing chunks in cache', {
-          totalChunks: result.chunks.length,
-          documentsWithChunks: Object.keys(chunksByDoc).length,
-          documentIds: Object.keys(chunksByDoc),
-          searchId: currentSearchId,
-        });
-
-        // Check if a new search has been initiated (different parameters)
-        // Don't check for React Strict Mode duplicates (same searchId is OK)
-        if (searchIdRef.current !== currentSearchId) {
-          searchLogger.warn('Search ID mismatch, a new search was initiated, discarding stale chunks', {
-            currentSearchId,
-            latestSearchId: searchIdRef.current,
-          });
-          return; // Discard chunks from old search
-        }
-
-        // Update chunks cache immediately - batch all updates in a single state update
-        // This ensures Zustand detects the change and triggers re-renders for all documents
+        // Single state update for all chunks
         const store = useSearchStore.getState();
         const newCache = { ...store.chunksCache };
         const newLoading = new Set(store.loadingChunks);
-
         Object.entries(chunksByDoc).forEach(([docId, chunks]) => {
           newCache[docId] = chunks;
           newLoading.delete(docId);
         });
-
-        // Single state update for all chunks
         useSearchStore.setState({
           chunksCache: newCache,
-          loadingChunks: Array.from(newLoading)
+          loadingChunks: Array.from(newLoading),
         });
 
-        // Verify chunks were stored correctly
-        const storeAfterSet = useSearchStore.getState();
-        const storedDocIds = Object.keys(storeAfterSet.chunksCache);
-        const expectedDocIds = Object.keys(chunksByDoc);
-        const missingInStore = expectedDocIds.filter(id => !storedDocIds.includes(id));
-        
-        searchLogger.info('Chunks stored in cache', {
-          expectedDocumentIds: expectedDocIds.length,
-          storedDocumentIds: storedDocIds.length,
-          missingInStore: missingInStore.length > 0 ? missingInStore.slice(0, 10) : [],
-          sampleStoredDocIds: storedDocIds.slice(0, 10),
-          searchId: currentSearchId,
-        });
-
-        if (missingInStore.length > 0) {
-          searchLogger.error(
-            `CRITICAL: ${missingInStore.length} document IDs were NOT stored in chunksCache! ` +
-            `Expected: ${expectedDocIds.length}, Stored: ${storedDocIds.length}. ` +
-            `Missing IDs: ${missingInStore.slice(0, 20).join(', ')}`
-          );
+        // Prefer documents embedded in the search response. Only call the
+        // documents endpoint as a fallback when chunks reference IDs the
+        // backend did not include in `result.documents`.
+        const allDocumentIds = Array.from(new Set(result.chunks.map((c) => c.document_id)));
+        let docs: SearchDocument[] = [];
+        if (result.documents && result.documents.length > 0) {
+          docs = result.documents as SearchDocument[];
+          const embeddedIds = new Set(docs.map((d) => d.document_id));
+          const missingIds = allDocumentIds.filter((id) => !embeddedIds.has(id));
+          if (missingIds.length > 0) {
+            const fallback = await fetchDocumentsByIds({
+              document_ids: missingIds,
+              return_properties: CARD_RETURN_PROPERTIES,
+            });
+            docs = docs.concat(fallback.documents as SearchDocument[]);
+          }
+        } else if (allDocumentIds.length > 0) {
+          const fallback = await fetchDocumentsByIds({
+            document_ids: allDocumentIds,
+            return_properties: CARD_RETURN_PROPERTIES,
+          });
+          docs = fallback.documents as SearchDocument[];
         }
 
-        searchLogger.info('Chunk search completed, now fetching full documents', {
+        // Discard if a newer search has been initiated.
+        if (searchIdRef.current !== currentSearchId) {
+          searchLogger.warn('Search ID mismatch after document fetch, discarding stale data');
+          return;
+        }
+
+        searchLogger.info('results received', {
           chunkCount: result.chunks.length,
-          uniqueDocuments: result.unique_documents,
+          docCount: docs.length,
           queryTimeMs: result.query_time_ms,
         });
 
-        // Phase 2: Fetch ALL documents in ONE batch (optimized with return_properties) - AWAIT IT!
-        const allDocumentIds = Array.from(new Set(result.chunks.map((chunk) => chunk.document_id)));
-
-        searchLogger.info('Fetching full documents for chunks', {
-          uniqueDocumentIds: allDocumentIds.length,
-          totalChunks: result.chunks.length,
-          sampleDocumentIds: allDocumentIds.slice(0, 10),
-          searchId: currentSearchId,
-        });
-
-        // Fetch all documents with only needed properties - WAIT for them before rendering
-        const docResponse = await fetchDocumentsByIds({
-          document_ids: allDocumentIds,
-          return_properties: [
-            'title',
-            'document_number',
-            'document_type',
-            'summary',
-            'keywords',
-            'court_name',
-            'presiding_judge',
-            'date_issued',
-            'language',
-            'country',
-            'judges',
-            'parties',
-            'outcome',
-            'legal_bases',
-            'extracted_legal_bases',
-            'references',
-            'factual_state',
-            'legal_state',
-            'department_name',
-            'issuing_body',
-            'publication_date',
-            'source',
-            'source_url',
-            'ingestion_date',
-            'last_updated',
-            'processing_status',
-            'x',
-            'y',
-          ],
-        });
-
-        const fetchedDocumentIds = new Set(docResponse.documents.map(doc => doc.document_id));
-        const missingDocumentIds = allDocumentIds.filter(id => !fetchedDocumentIds.has(id));
-        
-        searchLogger.info('All documents fetched in one batch', {
-          documentCount: docResponse.documents.length,
-          requestedCount: allDocumentIds.length,
-          missingCount: missingDocumentIds.length,
-          missingDocumentIds: missingDocumentIds.slice(0, 20), // Log first 20 missing IDs
-          searchId: currentSearchId,
-        });
-
-        if (missingDocumentIds.length > 0) {
-          searchLogger.warn(
-            `Only ${docResponse.documents.length} out of ${allDocumentIds.length} documents were found. ` +
-            `${missingDocumentIds.length} documents referenced by chunks do not exist in the database. ` +
-            `This indicates a data consistency issue - chunks exist for documents that were deleted or never ingested. ` +
-            `Missing document IDs (first 20): ${missingDocumentIds.slice(0, 20).join(', ')}`
-          );
-        }
-
-        // Check if a new search has been initiated (different parameters)
-        if (searchIdRef.current !== currentSearchId) {
-          searchLogger.warn('Search ID mismatch after fetching documents, a new search was initiated, discarding stale data', {
-            currentSearchId,
-            latestSearchId: searchIdRef.current,
-          });
-          return; // Discard documents from old search
-        }
-
         // Create document map for fast lookup
-        const docMap = new Map(docResponse.documents.map((doc) => [doc.document_id, doc]));
+        const docMap = new Map(docs.map((doc) => [doc.document_id, doc]));
 
         // Store full documents in ref for use in convertMetadataToSearchDocument
         fullDocumentsMapRef.current.clear();
-        docResponse.documents.forEach((doc) => {
-          fullDocumentsMapRef.current.set(doc.document_id, doc as SearchDocument);
+        docs.forEach((doc) => {
+          fullDocumentsMapRef.current.set(doc.document_id, doc);
         });
 
-        // Convert chunks to metadata format WITH full document data
-        // IMPORTANT: Include ALL chunks, even if the parent document doesn't exist
-        // This handles data consistency issues where chunks exist but documents don't
-        // CRITICAL: We create metadata for ALL chunks to ensure documents with missing IDs are still displayed
+        // Convert chunks to metadata WITH full document data when available.
+        // Include ALL chunks even if their parent document is missing — the UI
+        // copes with that via the metadata-only fallback path.
         const metadata: LegalDocumentMetadata[] = result.chunks.map((chunk) => {
-          const score = chunk.confidence_score ?? chunk.score ?? null;
           const fullDoc = docMap.get(chunk.document_id);
-          const hasFullDoc = !!fullDoc;
-
-          // Log warning if chunk references a missing document
-          if (!hasFullDoc) {
+          if (!fullDoc) {
             searchLogger.warn(
-              `Chunk ${chunk.chunk_id} references document ${chunk.document_id} which does not exist in database. ` +
-              `Using chunk data as fallback.`
+              `Chunk ${chunk.chunk_id} references missing document ${chunk.document_id}; using chunk fallback.`
             );
           }
-
-          // CRITICAL: All chunks are guaranteed to have document_type - use ONLY chunk.document_type
-          // ONLY TWO VALID TYPES: JUDGMENT and TAX_INTERPRETATION - throw exception if invalid or missing
-          if (!chunk.document_type) {
-            throw new Error(
-              `Missing document_type in chunk for document ${chunk.document_id}, chunk ${chunk.chunk_id}. ` +
-              `All chunks are guaranteed to have document_type.`
-            );
-          }
-          
-          // Parse document_type from chunk - only JUDGMENT and TAX_INTERPRETATION are valid
-          const normalized = String(chunk.document_type).toLowerCase().trim();
-          let docType: DocumentType;
-          
-          if (normalized === 'judgment' || normalized === 'judgement') {
-            docType = DocumentType.JUDGMENT;
-          } else if (normalized === 'tax_interpretation' || normalized === 'tax interpretation') {
-            docType = DocumentType.TAX_INTERPRETATION;
-          } else {
-            throw new Error(
-              `Invalid document_type in chunk: "${chunk.document_type}" for document ${chunk.document_id}, chunk ${chunk.chunk_id}. ` +
-              `Only JUDGMENT and TAX_INTERPRETATION are valid. Got: "${chunk.document_type}"`
-            );
-          }
-
-          return {
-            uuid: `${chunk.document_id}_chunk_${chunk.chunk_id}`, // Generate UUID from document_id and chunk_id
-            document_id: chunk.document_id,
-            document_type: docType, // Always one of the two valid types: JUDGMENT or TAX_INTERPRETATION
-            language: fullDoc ? fullDoc.language || '' : chunk.language || '', // Use empty string as default since language is required
-            keywords: fullDoc
-              ? fullDoc.keywords || []
-              : chunk.tags
-                ? Array.isArray(chunk.tags)
-                  ? chunk.tags
-                  : [chunk.tags]
-                : [],
-            // IMPORTANT: On main, date filtering falls back to publication_date
-            // when date_issued is missing. For tax interpretations we also have
-            // ETL-specific fields like issue_date. To keep behaviour consistent
-            // across document types, we store a unified "effective date" in
-            // date_issued, drawing from all known sources.
-            date_issued: fullDoc
-              ? (() => {
-                  const docAny = fullDoc as any;
-                  const meta = (fullDoc as any).metadata || {};
-                  return (
-                    // Canonical issued date (judgments, some interpretations)
-                    fullDoc.date_issued ||
-                    // Publication date (often set for court judgments)
-                    docAny.publication_date ||
-                    meta.publication_date ||
-                    // Tax interpretation specific: original "issue_date" field
-                    docAny.issue_date ||
-                    meta.issue_date ||
-                    // Historical/legacy naming used in some extraction configs
-                    meta.interpretation_date ||
-                    null
-                  );
-                })()
-              : null,
-            score: score,
-            title: fullDoc ? fullDoc.title : null,
-            summary: fullDoc ? fullDoc.summary : null,
-            court_name: fullDoc ? fullDoc.court_name : null,
-            document_number: fullDoc ? fullDoc.document_number : null,
-            thesis: fullDoc ? fullDoc.thesis : null,
-          };
+          return buildMetadataForChunk(chunk, fullDoc);
         });
 
-        // CRITICAL: Do NOT filter out any documents - display ALL chunks including unknown types and missing IDs
-        // All documents should be displayed regardless of document_type or whether full document exists
-        const filteredMetadata = metadata;
-
-        // Log how many metadata entries we have for documents with/without full docs
-        const metadataWithFullDoc = filteredMetadata.filter(m => {
-          const fullDoc = docMap.get(m.document_id);
-          return !!fullDoc;
-        });
-        const metadataWithoutFullDoc = filteredMetadata.filter(m => {
-          const fullDoc = docMap.get(m.document_id);
-          return !fullDoc;
-        });
-        
-        searchLogger.info('Metadata created from chunks', {
-          totalMetadata: filteredMetadata.length,
-          metadataWithFullDoc: metadataWithFullDoc.length,
-          metadataWithoutFullDoc: metadataWithoutFullDoc.length,
-          uniqueDocIdsWithFullDoc: new Set(metadataWithFullDoc.map(m => m.document_id)).size,
-          uniqueDocIdsWithoutFullDoc: new Set(metadataWithoutFullDoc.map(m => m.document_id)).size,
-          sampleDocIdsWithoutFullDoc: Array.from(new Set(metadataWithoutFullDoc.map(m => m.document_id))).slice(0, 10),
-          searchId: currentSearchId,
-        });
-
-        // CRITICAL: Log chunks cache state after filtering to diagnose missing chunks
-        const storeAfterFilter = useSearchStore.getState();
-        const uniqueDocIdsInMetadata = new Set(filteredMetadata.map(m => m.document_id));
-        const chunksInCache = Object.keys(storeAfterFilter.chunksCache);
-        const missingChunksForMetadata = Array.from(uniqueDocIdsInMetadata).filter(
-          docId => !chunksInCache.includes(docId)
-        );
-        
-        searchLogger.info('Metadata filtering and chunks cache check', {
-          totalMetadata: metadata.length,
-          filteredMetadata: filteredMetadata.length,
-          uniqueDocumentsInMetadata: uniqueDocIdsInMetadata.size,
-          chunksInCacheCount: chunksInCache.length,
-          missingChunksForMetadata: missingChunksForMetadata.slice(0, 10),
-          sampleMetadataDocIds: Array.from(uniqueDocIdsInMetadata).slice(0, 10),
-          sampleChunksCacheDocIds: chunksInCache.slice(0, 10),
-          searchId: currentSearchId,
-        });
-
-        if (missingChunksForMetadata.length > 0) {
-          searchLogger.error(
-            `CRITICAL: ${missingChunksForMetadata.length} documents in metadata have NO chunks in cache! ` +
-            `This means chunks were not stored or were cleared. Missing document IDs: ${missingChunksForMetadata.slice(0, 20).join(', ')}`
-          );
-        }
-
-        // Sort metadata by score (descending - highest score first)
-        // Chunks from backend are already sorted, but ensure we maintain that order
-        filteredMetadata.sort((a, b) => {
+        // Sort by score descending; chunks come pre-sorted but defensive sort is cheap.
+        metadata.sort((a, b) => {
           const scoreA = a.score ?? -Infinity;
           const scoreB = b.score ?? -Infinity;
-          return scoreB - scoreA; // Descending order (highest score first)
+          return scoreB - scoreA;
         });
 
-        // No longer limiting to 50 - we use pagination from backend now
-        const finalMetadata = filteredMetadata;
-
-        // CRITICAL: Verify chunks are still in cache before storing metadata
-        const storeBeforeMetadata = useSearchStore.getState();
-        const finalMetadataDocIds = new Set(finalMetadata.map(m => m.document_id));
-        const chunksCacheDocIds = new Set(Object.keys(storeBeforeMetadata.chunksCache));
-        const missingChunksBeforeMetadata = Array.from(finalMetadataDocIds).filter(
-          docId => !chunksCacheDocIds.has(docId)
-        );
-        
-        if (missingChunksBeforeMetadata.length > 0) {
-          searchLogger.error(
-            `CRITICAL: ${missingChunksBeforeMetadata.length} documents in finalMetadata have NO chunks in cache BEFORE storing metadata! ` +
-            `This means chunks were lost between storing and metadata creation. ` +
-            `Missing document IDs: ${missingChunksBeforeMetadata.slice(0, 20).join(', ')}`
-          );
-        }
-
-        // Store metadata with full document data and pagination info
-        // Ensure error is cleared on successful search
+        // Store metadata + pagination, clear loading flag.
         setError(null);
-        setSearchMetadata(finalMetadata, finalMetadata.length, false);
-
-        // Store pagination metadata for infinite scroll
+        setSearchMetadata(metadata, metadata.length, false);
         if (result.pagination) {
           setPaginationMetadata(result.pagination);
-          searchLogger.info('Pagination metadata stored', {
-            offset: result.pagination.offset,
-            loaded_count: result.pagination.loaded_count,
-            estimated_total: result.pagination.estimated_total,
-            has_more: result.pagination.has_more,
-            next_offset: result.pagination.next_offset,
-          });
         }
-
         setPageSize(10);
         clearSelection();
-        setIsSearching(false); // Stop loading spinner - now render with FULL data!
-        
-        // Final verification after metadata is stored
-        const storeAfterMetadata = useSearchStore.getState();
-        const chunksAfterMetadata = Object.keys(storeAfterMetadata.chunksCache);
-        searchLogger.info('Final state after search completion', {
-          metadataCount: finalMetadata.length,
-          uniqueMetadataDocIds: finalMetadataDocIds.size,
-          chunksCacheSize: chunksAfterMetadata.length,
-          chunksCacheDocIds: chunksAfterMetadata.slice(0, 10),
-          searchId: currentSearchId,
+        setIsSearching(false);
+
+        searchLogger.info('render ready', {
+          metadataCount: metadata.length,
+          hasMore: result.pagination?.has_more ?? false,
         });
 
-        searchLogger.info('Search completed with full document metadata', {
-          chunkCount: result.chunks.length,
-          uniqueDocuments: result.unique_documents,
-          documentsWithFullData: metadata.filter((m) => m.title !== null).length,
-        });
-
-        // Call onComplete callback if provided
         if (options?.onComplete) {
           options.onComplete();
         }
@@ -619,18 +400,15 @@ export function useSearchResults() {
           query: searchQuery,
           errorMessage: err instanceof Error ? err.message : String(err),
         });
-        // Clear metadata and set error state
-        setSearchMetadata([], 0, false); // Clear results
+        setSearchMetadata([], 0, false);
         setError('search_error');
         setIsSearching(false);
       } finally {
-        // Always reset the flag to allow new searches
         searchInProgressRef.current = false;
       }
     },
     [
       searchType,
-      documentTypes,
       selectedLanguages,
       setIsSearching,
       setError,
@@ -639,6 +417,7 @@ export function useSearchResults() {
       setPageSize,
       clearSelection,
       setPaginationMetadata,
+      buildMetadataForChunk,
     ]
   );
 
@@ -663,13 +442,6 @@ export function useSearchResults() {
       return;
     }
 
-    searchLogger.info('Loading more results', {
-      currentOffset: currentPagination.offset,
-      nextOffset: currentPagination.next_offset,
-      loadedCount: currentPagination.loaded_count,
-      estimatedTotal: state.cachedEstimatedTotal,
-    });
-
     setIsLoadingMore(true);
 
     try {
@@ -679,10 +451,6 @@ export function useSearchResults() {
         limit_docs: PAGE_SIZE,
         alpha: state.searchType === 'thinking' ? 0.5 : 0.0,
         languages: Array.from(state.selectedLanguages),
-        document_types:
-          state.documentTypes.length > 0
-            ? state.documentTypes.map((dt) => dt.toString())
-            : undefined,
         fetch_full_documents: false,
         limit_chunks: DEFAULT_LIMIT_CHUNKS,
         mode: state.searchType,
@@ -707,118 +475,45 @@ export function useSearchResults() {
       });
       useSearchStore.setState({ chunksCache: newCache });
 
-      // Fetch full documents for the new chunks
+      // Prefer documents embedded in the search response.
       const newDocumentIds = Array.from(new Set(result.chunks.map((c) => c.document_id)));
-
-      searchLogger.info('Fetching full documents for loadMore', {
-        documentIds: newDocumentIds,
-        count: newDocumentIds.length,
-      });
-
-      const docResponse = await fetchDocumentsByIds({
-        document_ids: newDocumentIds,
-        return_properties: [
-          'title',
-          'document_number',
-          'document_type',
-          'summary',
-          'keywords',
-          'court_name',
-          'presiding_judge',
-          'date_issued',
-          'language',
-          'country',
-          'judges',
-          'parties',
-          'outcome',
-          'legal_bases',
-          'extracted_legal_bases',
-          'references',
-          'factual_state',
-          'legal_state',
-          'department_name',
-          'issuing_body',
-          'publication_date',
-          'source',
-          'source_url',
-          'ingestion_date',
-          'last_updated',
-          'processing_status',
-          'x',
-          'y',
-        ],
-      });
-
-      searchLogger.info('Full documents fetched for loadMore', {
-        fetched: docResponse.documents.length,
-        requested: newDocumentIds.length,
-      });
+      let docs: SearchDocument[] = [];
+      if (result.documents && result.documents.length > 0) {
+        docs = result.documents as SearchDocument[];
+        const embeddedIds = new Set(docs.map((d) => d.document_id));
+        const missingIds = newDocumentIds.filter((id) => !embeddedIds.has(id));
+        if (missingIds.length > 0) {
+          const fallback = await fetchDocumentsByIds({
+            document_ids: missingIds,
+            return_properties: CARD_RETURN_PROPERTIES,
+          });
+          docs = docs.concat(fallback.documents as SearchDocument[]);
+        }
+      } else if (newDocumentIds.length > 0) {
+        const fallback = await fetchDocumentsByIds({
+          document_ids: newDocumentIds,
+          return_properties: CARD_RETURN_PROPERTIES,
+        });
+        docs = fallback.documents as SearchDocument[];
+      }
 
       // Store full documents in ref
-      docResponse.documents.forEach((doc) => {
-        fullDocumentsMapRef.current.set(doc.document_id, doc as SearchDocument);
+      docs.forEach((doc) => {
+        fullDocumentsMapRef.current.set(doc.document_id, doc);
       });
 
       // Create document map
-      const docMap = new Map(docResponse.documents.map((doc) => [doc.document_id, doc]));
+      const docMap = new Map(docs.map((doc) => [doc.document_id, doc]));
 
-      // Convert chunks to metadata - matching initial search logic
+      // Convert chunks to metadata
       const newMetadata: LegalDocumentMetadata[] = result.chunks.map((chunk) => {
-        const score = chunk.confidence_score ?? chunk.score ?? null;
         const fullDoc = docMap.get(chunk.document_id);
-
-        // Log if document is missing
         if (!fullDoc) {
           searchLogger.warn(
-            `loadMore: Chunk ${chunk.chunk_id} references document ${chunk.document_id} which does not exist in database. ` +
-            `Using chunk data as fallback.`
+            `loadMore: Chunk ${chunk.chunk_id} references missing document ${chunk.document_id}.`
           );
         }
-
-        // Parse document_type from chunk - only JUDGMENT and TAX_INTERPRETATION are valid
-        const normalized = String(chunk.document_type).toLowerCase().trim();
-        let docType: DocumentType;
-        if (normalized === 'judgment' || normalized === 'judgement') {
-          docType = DocumentType.JUDGMENT;
-        } else if (normalized === 'tax_interpretation' || normalized === 'tax interpretation') {
-          docType = DocumentType.TAX_INTERPRETATION;
-        } else {
-          docType = DocumentType.ERROR; // Fallback for unknown types
-        }
-
-        return {
-          uuid: `${chunk.document_id}_chunk_${chunk.chunk_id}`,
-          document_id: chunk.document_id,
-          document_type: docType,
-          language: fullDoc?.language || chunk.language || '',
-          keywords: fullDoc?.keywords || (chunk.tags ? (Array.isArray(chunk.tags) ? chunk.tags : [chunk.tags]) : []),
-          // Match initial search date handling - check all possible date sources
-          date_issued: fullDoc
-            ? (() => {
-                const docAny = fullDoc as any;
-                const meta = (fullDoc as any).metadata || {};
-                return (
-                  // Canonical issued date (judgments, some interpretations)
-                  fullDoc.date_issued ||
-                  // Publication date (often set for court judgments)
-                  docAny.publication_date ||
-                  meta.publication_date ||
-                  // Tax interpretation specific: original "issue_date" field
-                  docAny.issue_date ||
-                  meta.issue_date ||
-                  // Historical/legacy naming
-                  meta.interpretation_date ||
-                  null
-                );
-              })()
-            : null,
-          score,
-          title: fullDoc?.title || null,
-          summary: fullDoc?.summary || null,
-          court_name: fullDoc?.court_name || null,
-          document_number: fullDoc?.document_number || null,
-          thesis: fullDoc?.thesis || null,
-        };
+        return buildMetadataForChunk(chunk, fullDoc);
       });
 
       // Append new metadata to existing
@@ -835,20 +530,13 @@ export function useSearchResults() {
         };
         setPaginationMetadata(updatedPagination);
       }
-
-      searchLogger.info('Load more completed', {
-        newChunks: result.chunks.length,
-        newDocuments: uniqueNewDocCount,
-        totalLoaded: (currentPagination.loaded_count || 0) + uniqueNewDocCount,
-        hasMore: result.pagination?.has_more,
-      });
     } catch (err) {
       searchLogger.error('Load more failed', err);
       setError('load_more_error');
     } finally {
       setIsLoadingMore(false);
     }
-  }, [setIsLoadingMore, appendSearchMetadata, setPaginationMetadata, setError]);
+  }, [setIsLoadingMore, appendSearchMetadata, setPaginationMetadata, setError, buildMetadataForChunk]);
 
   return {
     search,

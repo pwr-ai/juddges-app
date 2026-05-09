@@ -785,6 +785,10 @@ async def test_case_07_array_overlap_filters(
             "legal_topics": ["criminal law"],
             "cited_legislation": ["Penal Code"],
             "limit_docs": 10,
+            # Card view (default) trims keywords/legal_topics out of the
+            # response payload — request the full view so we can assert the
+            # filter actually matched.
+            "result_view": "full",
         },
     )
     assert response.status_code == 200

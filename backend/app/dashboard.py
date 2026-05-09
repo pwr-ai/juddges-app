@@ -727,7 +727,6 @@ async def test_document_counts(
         logger.info("Fetching document counts by type...")
         document_types = [
             "judgment",
-            "tax_interpretation",
             "ruling",
             "opinion",
             "legislation",

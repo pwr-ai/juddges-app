@@ -2509,6 +2509,248 @@ def _find_shared_recent_judgments(
     return sorted(recent_a & recent_b)
 
 
+def _collect_internal_branch_events(
+    line_members: dict[str, list[dict[str, Any]]],
+    line_by_id: dict[str, dict[str, Any]],
+    now: str,
+) -> tuple[list[dict[str, Any]], int]:
+    """Detect internal branches within each line. Returns (event_rows, branches_detected)."""
+    events: list[dict[str, Any]] = []
+    branches = 0
+    for line_id, members in line_members.items():
+        if len(members) < 5:
+            continue
+        is_branch, sim, outcome_div = _detect_internal_branch(members)
+        if not is_branch:
+            continue
+        events.append(
+            {
+                "id": str(uuid.uuid4()),
+                "event_type": "branch",
+                "source_line_id": line_id,
+                "target_line_id": None,
+                "trigger_judgment_id": None,
+                "event_date": None,
+                "description": (
+                    f"Internal split detected in line '{line_by_id[line_id].get('label', '')}': "
+                    f"first/second half centroid similarity={sim}, "
+                    f"outcome divergence={outcome_div}"
+                ),
+                "confidence": round(min((1.0 - sim) + outcome_div, 1.0), 4),
+                "drift_score": round(1.0 - sim, 4),
+                "metadata": {
+                    "detection_type": "internal_split",
+                    "centroid_similarity": sim,
+                    "outcome_divergence": outcome_div,
+                },
+                "created_at": now,
+            }
+        )
+        branches += 1
+        logger.info(
+            f"Internal branch detected in line {line_id}: "
+            f"sim={sim}, outcome_div={outcome_div}"
+        )
+    return events, branches
+
+
+def _pair_centroid_similarity(
+    line_a: dict[str, Any], line_b: dict[str, Any]
+) -> float | None:
+    """Compute cosine similarity between two lines' avg embeddings, or None if missing."""
+    emb_a = line_a.get("avg_embedding")
+    emb_b = line_b.get("avg_embedding")
+    if not (
+        emb_a
+        and isinstance(emb_a, list)
+        and len(emb_a) > 0
+        and emb_b
+        and isinstance(emb_b, list)
+        and len(emb_b) > 0
+    ):
+        return None
+    vec_a = np.array(emb_a, dtype=np.float32)
+    vec_b = np.array(emb_b, dtype=np.float32)
+    return _compute_cosine_similarity(vec_a, vec_b)
+
+
+def _build_cross_branch_event(
+    lid_a: str,
+    lid_b: str,
+    line_a: dict[str, Any],
+    line_b: dict[str, Any],
+    centroid_sim: float,
+    overlap_ratio: float,
+    now: str,
+) -> dict[str, Any]:
+    return {
+        "id": str(uuid.uuid4()),
+        "event_type": "branch",
+        "source_line_id": lid_a,
+        "target_line_id": lid_b,
+        "trigger_judgment_id": None,
+        "event_date": None,
+        "description": (
+            f"Branch detected: lines '{line_a.get('label', '')}' and "
+            f"'{line_b.get('label', '')}' share {overlap_ratio:.0%} of legal bases "
+            f"but centroid similarity is only {centroid_sim:.3f}"
+        ),
+        "confidence": round(min((1.0 - centroid_sim) * overlap_ratio * 2, 1.0), 4),
+        "drift_score": round(1.0 - centroid_sim, 4),
+        "metadata": {
+            "detection_type": "cross_line_divergence",
+            "centroid_similarity": round(centroid_sim, 4),
+            "legal_base_overlap_ratio": round(overlap_ratio, 4),
+        },
+        "created_at": now,
+    }
+
+
+def _build_merge_event(
+    lid_a: str,
+    lid_b: str,
+    line_a: dict[str, Any],
+    line_b: dict[str, Any],
+    centroid_sim: float,
+    shared_recent: list[str],
+    now: str,
+) -> dict[str, Any]:
+    return {
+        "id": str(uuid.uuid4()),
+        "event_type": "merge",
+        "source_line_id": lid_a,
+        "target_line_id": lid_b,
+        "trigger_judgment_id": shared_recent[0],
+        "event_date": None,
+        "description": (
+            f"Merge detected: lines '{line_a.get('label', '')}' and "
+            f"'{line_b.get('label', '')}' have centroid similarity "
+            f"{centroid_sim:.3f} and share {len(shared_recent)} recent judgment(s)"
+        ),
+        "confidence": round(centroid_sim * min(len(shared_recent) / 3.0, 1.0), 4),
+        "drift_score": None,
+        "metadata": {
+            "detection_type": "convergence",
+            "centroid_similarity": round(centroid_sim, 4),
+            "shared_recent_judgment_ids": shared_recent[:10],
+            "shared_recent_count": len(shared_recent),
+        },
+        "created_at": now,
+    }
+
+
+def _build_influence_event(
+    lid_a: str,
+    lid_b: str,
+    line_a: dict[str, Any],
+    line_b: dict[str, Any],
+    centroid_sim: float,
+    shared_ids: set[str],
+    overlap_ratio: float,
+    now: str,
+) -> dict[str, Any]:
+    return {
+        "id": str(uuid.uuid4()),
+        "event_type": "influence",
+        "source_line_id": lid_a,
+        "target_line_id": lid_b,
+        "trigger_judgment_id": sorted(shared_ids)[0] if shared_ids else None,
+        "event_date": None,
+        "description": (
+            f"Influence detected: lines '{line_a.get('label', '')}' and "
+            f"'{line_b.get('label', '')}' share {len(shared_ids)} judgment(s) "
+            f"with moderate centroid similarity {centroid_sim:.3f}"
+        ),
+        "confidence": round(overlap_ratio * min(len(shared_ids) / 5.0, 1.0), 4),
+        "drift_score": None,
+        "metadata": {
+            "detection_type": "cross_citation",
+            "centroid_similarity": round(centroid_sim, 4),
+            "shared_judgment_ids": sorted(shared_ids)[:10],
+            "shared_judgment_count": len(shared_ids),
+        },
+        "created_at": now,
+    }
+
+
+def _collect_cross_line_pair_events(
+    line_a: dict[str, Any],
+    line_b: dict[str, Any],
+    lid_a: str,
+    lid_b: str,
+    members_a: list[dict[str, Any]],
+    members_b: list[dict[str, Any]],
+    now: str,
+) -> tuple[list[dict[str, Any]], int, int, int]:
+    """Detect cross-line branch/merge/influence for a single pair.
+
+    Returns (event_rows, branches, merges, influences).
+    """
+    events: list[dict[str, Any]] = []
+    branches = merges = influences = 0
+
+    shares, overlap_ratio = _lines_share_legal_bases(line_a, line_b, min_overlap=1)
+    if not shares:
+        return events, branches, merges, influences
+
+    centroid_sim = _pair_centroid_similarity(line_a, line_b)
+    if centroid_sim is None:
+        return events, branches, merges, influences
+
+    # Branch: dissimilar centroids but significant legal-base overlap
+    if centroid_sim < 0.7 and overlap_ratio > 0.3:
+        events.append(
+            _build_cross_branch_event(
+                lid_a, lid_b, line_a, line_b, centroid_sim, overlap_ratio, now
+            )
+        )
+        branches += 1
+        logger.info(
+            f"Cross-line branch: {lid_a} <-> {lid_b}, "
+            f"sim={centroid_sim:.3f}, overlap={overlap_ratio:.2f}"
+        )
+
+    # Merge: high centroid similarity AND shared recent judgments
+    if centroid_sim > 0.85:
+        shared_recent = _find_shared_recent_judgments(members_a, members_b)
+        if shared_recent:
+            events.append(
+                _build_merge_event(
+                    lid_a, lid_b, line_a, line_b, centroid_sim, shared_recent, now
+                )
+            )
+            merges += 1
+            logger.info(
+                f"Merge detected: {lid_a} <-> {lid_b}, "
+                f"sim={centroid_sim:.3f}, shared_recent={len(shared_recent)}"
+            )
+
+    # Influence: shared judgment IDs at moderate similarity
+    ids_a = {str(m.get("id") or m.get("judgment_id")) for m in members_a}
+    ids_b = {str(m.get("id") or m.get("judgment_id")) for m in members_b}
+    shared_ids = ids_a & ids_b
+    if 0.5 <= centroid_sim <= 0.85 and shared_ids:
+        events.append(
+            _build_influence_event(
+                lid_a,
+                lid_b,
+                line_a,
+                line_b,
+                centroid_sim,
+                shared_ids,
+                overlap_ratio,
+                now,
+            )
+        )
+        influences += 1
+        logger.info(
+            f"Influence detected: {lid_a} <-> {lid_b}, "
+            f"sim={centroid_sim:.3f}, shared={len(shared_ids)}"
+        )
+
+    return events, branches, merges, influences
+
+
 # ===== M4 Endpoints =====
 
 
@@ -2619,40 +2861,11 @@ async def detect_events(request: Request) -> EventDetectionResult:
     now = datetime.now(UTC).isoformat()
     event_rows: list[dict[str, Any]] = []
 
-    for line_id, members in line_members.items():
-        if len(members) < 5:
-            continue
-
-        is_branch, sim, outcome_div = _detect_internal_branch(members)
-        if is_branch:
-            event_rows.append(
-                {
-                    "id": str(uuid.uuid4()),
-                    "event_type": "branch",
-                    "source_line_id": line_id,
-                    "target_line_id": None,
-                    "trigger_judgment_id": None,
-                    "event_date": None,
-                    "description": (
-                        f"Internal split detected in line '{line_by_id[line_id].get('label', '')}': "
-                        f"first/second half centroid similarity={sim}, "
-                        f"outcome divergence={outcome_div}"
-                    ),
-                    "confidence": round(min((1.0 - sim) + outcome_div, 1.0), 4),
-                    "drift_score": round(1.0 - sim, 4),
-                    "metadata": {
-                        "detection_type": "internal_split",
-                        "centroid_similarity": sim,
-                        "outcome_divergence": outcome_div,
-                    },
-                    "created_at": now,
-                }
-            )
-            branches_detected += 1
-            logger.info(
-                f"Internal branch detected in line {line_id}: "
-                f"sim={sim}, outcome_div={outcome_div}"
-            )
+    internal_events, internal_branches = _collect_internal_branch_events(
+        line_members, line_by_id, now
+    )
+    event_rows.extend(internal_events)
+    branches_detected += internal_branches
 
     # Step 4: Cross-line detection (branch, merge, influence)
     line_ids = list(line_by_id.keys())
@@ -2661,153 +2874,19 @@ async def detect_events(request: Request) -> EventDetectionResult:
         for j in range(i + 1, len(line_ids)):
             lid_a = line_ids[i]
             lid_b = line_ids[j]
-            line_a = line_by_id[lid_a]
-            line_b = line_by_id[lid_b]
-
-            # Only compare lines that share at least 1 legal base
-            shares, overlap_ratio = _lines_share_legal_bases(
-                line_a, line_b, min_overlap=1
+            pair_events, b_count, m_count, inf_count = _collect_cross_line_pair_events(
+                line_by_id[lid_a],
+                line_by_id[lid_b],
+                lid_a,
+                lid_b,
+                line_members.get(lid_a, []),
+                line_members.get(lid_b, []),
+                now,
             )
-            if not shares:
-                continue
-
-            # Parse avg_embedding from each line
-            emb_a = line_a.get("avg_embedding")
-            emb_b = line_b.get("avg_embedding")
-
-            if (
-                emb_a
-                and isinstance(emb_a, list)
-                and len(emb_a) > 0
-                and emb_b
-                and isinstance(emb_b, list)
-                and len(emb_b) > 0
-            ):
-                vec_a = np.array(emb_a, dtype=np.float32)
-                vec_b = np.array(emb_b, dtype=np.float32)
-                centroid_sim = _compute_cosine_similarity(vec_a, vec_b)
-            else:
-                centroid_sim = None
-
-            # --- Branch detection (cross-line) ---
-            # Dissimilar centroids but significant legal base overlap
-            if centroid_sim is not None and centroid_sim < 0.7 and overlap_ratio > 0.3:
-                event_rows.append(
-                    {
-                        "id": str(uuid.uuid4()),
-                        "event_type": "branch",
-                        "source_line_id": lid_a,
-                        "target_line_id": lid_b,
-                        "trigger_judgment_id": None,
-                        "event_date": None,
-                        "description": (
-                            f"Branch detected: lines '{line_a.get('label', '')}' and "
-                            f"'{line_b.get('label', '')}' share {overlap_ratio:.0%} of legal bases "
-                            f"but centroid similarity is only {centroid_sim:.3f}"
-                        ),
-                        "confidence": round(
-                            min((1.0 - centroid_sim) * overlap_ratio * 2, 1.0), 4
-                        ),
-                        "drift_score": round(1.0 - centroid_sim, 4),
-                        "metadata": {
-                            "detection_type": "cross_line_divergence",
-                            "centroid_similarity": round(centroid_sim, 4),
-                            "legal_base_overlap_ratio": round(overlap_ratio, 4),
-                        },
-                        "created_at": now,
-                    }
-                )
-                branches_detected += 1
-                logger.info(
-                    f"Cross-line branch: {lid_a} <-> {lid_b}, "
-                    f"sim={centroid_sim:.3f}, overlap={overlap_ratio:.2f}"
-                )
-
-            # --- Merge detection ---
-            # High centroid similarity AND shared recent judgments
-            members_a = line_members.get(lid_a, [])
-            members_b = line_members.get(lid_b, [])
-
-            if centroid_sim is not None and centroid_sim > 0.85:
-                shared_recent = _find_shared_recent_judgments(members_a, members_b)
-                if shared_recent:
-                    # Use the first shared judgment as the trigger
-                    trigger_id = shared_recent[0]
-                    event_rows.append(
-                        {
-                            "id": str(uuid.uuid4()),
-                            "event_type": "merge",
-                            "source_line_id": lid_a,
-                            "target_line_id": lid_b,
-                            "trigger_judgment_id": trigger_id,
-                            "event_date": None,
-                            "description": (
-                                f"Merge detected: lines '{line_a.get('label', '')}' and "
-                                f"'{line_b.get('label', '')}' have centroid similarity "
-                                f"{centroid_sim:.3f} and share {len(shared_recent)} recent judgment(s)"
-                            ),
-                            "confidence": round(
-                                centroid_sim * min(len(shared_recent) / 3.0, 1.0), 4
-                            ),
-                            "drift_score": None,
-                            "metadata": {
-                                "detection_type": "convergence",
-                                "centroid_similarity": round(centroid_sim, 4),
-                                "shared_recent_judgment_ids": shared_recent[:10],
-                                "shared_recent_count": len(shared_recent),
-                            },
-                            "created_at": now,
-                        }
-                    )
-                    merges_detected += 1
-                    logger.info(
-                        f"Merge detected: {lid_a} <-> {lid_b}, "
-                        f"sim={centroid_sim:.3f}, shared_recent={len(shared_recent)}"
-                    )
-
-            # --- Influence detection ---
-            # Check if recent members of one line cite judgments from the other line
-            ids_a = {str(m.get("id") or m.get("judgment_id")) for m in members_a}
-            ids_b = {str(m.get("id") or m.get("judgment_id")) for m in members_b}
-
-            # Influence from A to B: B's recent members reference A's judgment IDs
-            shared_ids = ids_a & ids_b
-            # If there are shared judgment IDs but centroids are moderately similar
-            # (not high enough for merge, not low enough for branch)
-            if centroid_sim is not None and 0.5 <= centroid_sim <= 0.85 and shared_ids:
-                event_rows.append(
-                    {
-                        "id": str(uuid.uuid4()),
-                        "event_type": "influence",
-                        "source_line_id": lid_a,
-                        "target_line_id": lid_b,
-                        "trigger_judgment_id": sorted(shared_ids)[0]
-                        if shared_ids
-                        else None,
-                        "event_date": None,
-                        "description": (
-                            f"Influence detected: lines '{line_a.get('label', '')}' and "
-                            f"'{line_b.get('label', '')}' share {len(shared_ids)} judgment(s) "
-                            f"with moderate centroid similarity {centroid_sim:.3f}"
-                        ),
-                        "confidence": round(
-                            overlap_ratio * min(len(shared_ids) / 5.0, 1.0), 4
-                        ),
-                        "drift_score": None,
-                        "metadata": {
-                            "detection_type": "cross_citation",
-                            "centroid_similarity": round(centroid_sim, 4),
-                            "shared_judgment_ids": sorted(shared_ids)[:10],
-                            "shared_judgment_count": len(shared_ids),
-                        },
-                        "created_at": now,
-                    }
-                )
-                influences_detected += 1
-                logger.info(
-                    f"Influence detected: {lid_a} <-> {lid_b}, "
-                    f"sim={centroid_sim:.3f}, shared={len(shared_ids)}"
-                )
+            event_rows.extend(pair_events)
+            branches_detected += b_count
+            merges_detected += m_count
+            influences_detected += inf_count
 
     # Step 5: Persist all detected events to reasoning_line_events
     if event_rows:

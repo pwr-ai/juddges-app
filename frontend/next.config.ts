@@ -1,4 +1,9 @@
 import path from 'path';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(
+  readFileSync(path.join(__dirname, 'package.json'), 'utf8')
+) as { version: string };
 
 /** @type {import('next').NextConfig} */
 const baseConfig = {
@@ -12,6 +17,9 @@ const baseConfig = {
     '/changelog': ['release-notes/**/*.md'],
     '/changelog/[version]': ['release-notes/**/*.md'],
     '/changelog/feed.xml': ['release-notes/**/*.md'],
+  },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
   },
   eslint: {
     ignoreDuringBuilds: false,

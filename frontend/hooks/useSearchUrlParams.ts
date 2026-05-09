@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { DocumentType } from '@/types/search';
 import { useSearchStore } from '@/lib/store/searchStore';
 import logger from '@/lib/logger';
 
@@ -36,14 +35,12 @@ export function useSearchUrlParams({
 
   const {
     query,
-    documentTypes,
     selectedLanguages,
     searchType,
     currentPage,
     pageSize,
     filters,
     setQuery,
-    setDocumentTypes,
     setSelectedLanguages,
     setSearchType,
     setCurrentPage,
@@ -84,15 +81,6 @@ export function useSearchUrlParams({
           params.set('q', encodeURIComponent(query.trim()));
         }
 
-        // Add document types
-        if (documentTypes.length > 0) {
-          if (documentTypes.length === 1) {
-            params.set('type', documentTypes[0]);
-          } else {
-            params.set('type', documentTypes.join(','));
-          }
-        }
-
         // Add languages
         if (selectedLanguages.size > 0) {
           params.set('lang', Array.from(selectedLanguages).join(','));
@@ -118,9 +106,6 @@ export function useSearchUrlParams({
         }
         if (filters.legalConcepts.size > 0) {
           params.set('legalConcepts', Array.from(filters.legalConcepts).join(','));
-        }
-        if (filters.documentTypes.size > 0) {
-          params.set('filterTypes', Array.from(filters.documentTypes).join(','));
         }
         if (filters.issuingBodies.size > 0) {
           params.set('issuingBodies', Array.from(filters.issuingBodies).join(','));
@@ -182,7 +167,6 @@ export function useSearchUrlParams({
       hasPerformedSearch,
       isSearching,
       query,
-      documentTypes,
       selectedLanguages,
       searchType,
       currentPage,
@@ -203,14 +187,12 @@ export function useSearchUrlParams({
     updatingUrlRef.current = true;
 
     const queryParam = searchParams.get('q');
-    const typeParam = searchParams.get('type');
     const langParam = searchParams.get('lang');
     const modeParam = searchParams.get('mode');
     const pageParam = searchParams.get('page');
     const pageSizeParam = searchParams.get('pageSize');
     const keywordsParam = searchParams.get('keywords');
     const legalConceptsParam = searchParams.get('legalConcepts');
-    const filterTypesParam = searchParams.get('filterTypes');
     const issuingBodiesParam = searchParams.get('issuingBodies');
     const dateFromParam = searchParams.get('dateFrom');
     const dateToParam = searchParams.get('dateTo');
@@ -222,14 +204,12 @@ export function useSearchUrlParams({
     // If no parameters are present, clear everything
     if (
       !queryParam &&
-      !typeParam &&
       !langParam &&
       !modeParam &&
       !pageParam &&
       !pageSizeParam &&
       !keywordsParam &&
       !legalConceptsParam &&
-      !filterTypesParam &&
       !issuingBodiesParam &&
       !dateFromParam &&
       !dateToParam &&
@@ -240,7 +220,6 @@ export function useSearchUrlParams({
       ) {
         // Clear all search state
         setQuery('');
-        setDocumentTypes([DocumentType.JUDGMENT]);
         setSearchMetadata([], 0, false);
         clearChunksCache();
         setError(null);
@@ -256,21 +235,6 @@ export function useSearchUrlParams({
     if (queryParam) {
       setQuery(decodeURIComponent(queryParam));
       shouldSearch = true;
-    }
-
-    // Set document types from URL parameter (supports single or comma-separated)
-    if (typeParam) {
-      const types = typeParam
-        .split(',')
-        .filter((t) => t.trim() === DocumentType.JUDGMENT)
-        .map((t) => t.trim() as DocumentType);
-      if (types.length > 0) {
-        setDocumentTypes(types);
-      } else {
-        setDocumentTypes([DocumentType.JUDGMENT]);
-      }
-    } else {
-      setDocumentTypes([DocumentType.JUDGMENT]);
     }
 
     // Set language from URL parameter
@@ -309,7 +273,6 @@ export function useSearchUrlParams({
     const newFilters = {
       keywords: new Set<string>(),
       legalConcepts: new Set<string>(),
-      documentTypes: new Set<string>(),
       issuingBodies: new Set<string>(),
       languages: currentState.filters.languages, // Preserve existing languages filter
       dateFrom: undefined as Date | undefined,
@@ -327,10 +290,6 @@ export function useSearchUrlParams({
     if (legalConceptsParam) {
       const concepts = legalConceptsParam.split(',').filter((c) => c.trim());
       newFilters.legalConcepts = new Set(concepts);
-    }
-    if (filterTypesParam) {
-      const types = filterTypesParam.split(',').filter((t) => t.trim());
-      newFilters.documentTypes = new Set(types);
     }
     if (issuingBodiesParam) {
       const bodies = issuingBodiesParam.split(',').filter((b) => b.trim());
@@ -375,7 +334,6 @@ export function useSearchUrlParams({
     if (
       keywordsParam ||
       legalConceptsParam ||
-      filterTypesParam ||
       issuingBodiesParam ||
       dateFromParam ||
       dateToParam ||

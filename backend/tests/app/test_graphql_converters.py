@@ -27,7 +27,6 @@ from app.graphql_api.converters import (
 
 class MockDocType(Enum):
     JUDGMENT = "judgment"
-    TAX_INTERPRETATION = "tax_interpretation"
 
 
 class MockSegmentType(Enum):
@@ -107,9 +106,9 @@ class TestConvertLegalDocument:
         assert result.court_name == "Supreme Court"
 
     def test_document_type_enum_value(self):
-        doc = _make_doc(document_type=MockDocType.TAX_INTERPRETATION)
+        doc = _make_doc(document_type=MockDocType.JUDGMENT)
         result = convert_legal_document(doc)
-        assert result.document_type == "tax_interpretation"
+        assert result.document_type == "judgment"
 
     def test_document_type_string(self):
         doc = _make_doc(document_type="custom_type")
@@ -162,9 +161,9 @@ class TestConvertLegalDocumentMetadata:
         assert result.score == 0.95
 
     def test_enum_document_type(self):
-        meta = _make_metadata(document_type=MockDocType.TAX_INTERPRETATION)
+        meta = _make_metadata(document_type=MockDocType.JUDGMENT)
         result = convert_legal_document_metadata(meta)
-        assert result.document_type == "tax_interpretation"
+        assert result.document_type == "judgment"
 
     def test_string_document_type(self):
         meta = _make_metadata(document_type="custom")

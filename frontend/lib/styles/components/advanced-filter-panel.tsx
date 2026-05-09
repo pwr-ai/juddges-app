@@ -30,7 +30,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface FiltersState {
  keywords: Set<string>;
  legalConcepts: Set<string>;
- documentTypes: Set<string>;
  issuingBodies: Set<string>;
  languages: Set<string>;
  dateFrom: Date | undefined;
@@ -44,7 +43,6 @@ interface FiltersState {
 interface AvailableFilters {
  keywords: string[];
  legalConcepts: string[];
- documentTypes: string[];
  issuingBodies: string[];
  languages: string[];
  jurisdictions: string[];

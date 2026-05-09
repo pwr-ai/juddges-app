@@ -8,7 +8,6 @@
  */
 
 import '@testing-library/jest-dom';
-import { DocumentType } from '@/types/search';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -51,7 +50,6 @@ describe('API Client', () => {
         body: JSON.stringify({
           query: 'contract law',
           filters: {
-            documentTypes: [DocumentType.JUDGMENT],
             languages: ['en'],
           },
         }),
@@ -83,7 +81,6 @@ describe('API Client', () => {
       const searchParams = {
         query: 'test query',
         filters: {
-          documentTypes: [DocumentType.JUDGMENT, DocumentType.TAX_INTERPRETATION],
           languages: ['en', 'pl'],
           dateFrom: '2024-01-01',
           dateTo: '2024-12-31',

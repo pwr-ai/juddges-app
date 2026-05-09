@@ -132,7 +132,7 @@ test.describe('Complete Search Flow', () => {
             document_id: `doc${i}`,
             title: `Document ${i}`,
             content: `Content for document ${i}`,
-            document_type: i % 2 === 0 ? 'judgment' : 'tax_interpretation',
+            document_type: 'judgment',
             language: 'pl',
             date: `2023-0${(i % 9) + 1}-01`,
             court_name: i % 2 === 0 ? 'Supreme Court' : 'Administrative Court',

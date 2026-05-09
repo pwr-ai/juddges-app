@@ -12,7 +12,6 @@ import {
   getNodeSize,
   getNodeOpacity,
 } from '@/lib/hooks/useNodeInteractions';
-import { DocumentType } from '@/types/search';
 import type { GraphNode } from '@/components/similarity-viz/types';
 
 // --- Test Data Factory ---
@@ -21,7 +20,7 @@ function createNode(overrides: Partial<GraphNode> = {}): GraphNode {
   return {
     id: 'node-1',
     title: 'Test Node',
-    documentType: DocumentType.JUDGMENT,
+    documentType: 'judgment',
     documentId: 'doc-1',
     fullText: 'text',
     date: new Date('2024-01-01'),

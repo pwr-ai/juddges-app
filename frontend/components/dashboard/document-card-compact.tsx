@@ -14,7 +14,6 @@ import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 function formatDocumentType(type: string): string {
  const typeMap: Record<string, string> = {
  judgment: "Judgment",
- tax_interpretation: "Legal Document",
  legal_act: "Legal Act",
  regulation: "Regulation",
  };
@@ -71,14 +70,11 @@ export function DocumentCardCompact({
  };
  // Determine document type
  const docType = type?.toLowerCase().replace(/[_\s]/g, '') || '';
- const isTaxInterpretation = docType.includes('taxinterpretation');
  const isJudgment = docType.includes('judgment');
 
  // Determine background color based on document type
  const getCardBackground = () => {
- if (isTaxInterpretation) {
- return 'bg-gradient-to-br from-amber-50/60 via-amber-50/40 to-orange-50/30';
- } else if (isJudgment) {
+ if (isJudgment) {
  return 'bg-gradient-to-br from-blue-50/60 via-blue-50/40 to-indigo-50/30';
  }
  return 'bg-gradient-to-br from-slate-50/70 via-slate-50/50 to-slate-100/40';
@@ -86,9 +82,7 @@ export function DocumentCardCompact({
 
  // Get metadata box background
  const getMetadataBackground = () => {
- if (isTaxInterpretation) {
- return 'bg-gradient-to-br from-amber-50 via-amber-100/80 to-orange-100/60 border-amber-200/50';
- } else if (isJudgment) {
+ if (isJudgment) {
  return 'bg-gradient-to-br from-blue-50 via-blue-100/80 to-indigo-100/60 border-blue-200/50';
  }
  return 'bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200/90 border-slate-200/80';
@@ -96,19 +90,12 @@ export function DocumentCardCompact({
 
  // Get icon background
  const getIconBackground = () => {
- if (isTaxInterpretation) {
- return 'bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 shadow-md shadow-amber-500/20';
- } else if (isJudgment) {
- return 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 shadow-md shadow-blue-500/20';
- }
  return 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 shadow-md shadow-blue-500/20';
  };
 
  // Get keyword badge background
  const getKeywordBadgeBackground = () => {
- if (isTaxInterpretation) {
- return 'bg-gradient-to-r from-amber-50/90 to-orange-50/70 border-amber-200/60 text-amber-800 hover:from-amber-100/90 hover:to-amber-50/80 shadow-sm hover:shadow-md';
- } else if (isJudgment) {
+ if (isJudgment) {
  return 'bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border-blue-200/60 text-blue-800 hover:from-blue-100/90 hover:to-blue-50/80 shadow-sm hover:shadow-md';
  }
  return 'bg-gradient-to-r from-slate-50/90 to-slate-100/70 border-slate-200/60 text-slate-800 hover:from-slate-100/90 hover:to-slate-50/80 shadow-sm hover:shadow-md';
@@ -116,9 +103,7 @@ export function DocumentCardCompact({
 
  // Get date badge background
  const getDateBadgeBackground = () => {
- if (isTaxInterpretation) {
- return 'bg-gradient-to-r from-amber-50/90 to-orange-50/70 border-amber-200/60 text-amber-800 shadow-sm hover:shadow-md';
- } else if (isJudgment) {
+ if (isJudgment) {
  return 'bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border-blue-200/60 text-blue-800 shadow-sm hover:shadow-md';
  }
  return 'bg-gradient-to-r from-slate-50/90 to-slate-100/70 border-slate-200/60 text-slate-800 shadow-sm hover:shadow-md';
@@ -126,22 +111,12 @@ export function DocumentCardCompact({
 
  // Get hover border color
  const getHoverBorderColor = () => {
- if (isTaxInterpretation) {
- return 'hover:border-amber-500/50';
- } else if (isJudgment) {
- return 'hover:border-blue-500/50';
- }
  return 'hover:border-blue-500/50';
  };
 
  // Get button colors
  const getButtonColors = () => {
- if (isTaxInterpretation) {
- return {
- primary: 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700',
- outline: 'border-amber-300 hover:border-amber-500 hover:bg-amber-50'
- };
- } else if (isJudgment) {
+ if (isJudgment) {
  return {
  primary: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700',
  outline: 'border-blue-300 hover:border-blue-500 hover:bg-blue-50'
@@ -155,9 +130,7 @@ export function DocumentCardCompact({
 
  // Get footer background
  const getFooterBackground = () => {
- if (isTaxInterpretation) {
- return 'bg-gradient-to-r from-amber-50/90 via-amber-100/70 to-orange-100/50 border-amber-200/30';
- } else if (isJudgment) {
+ if (isJudgment) {
  return 'bg-gradient-to-r from-blue-50/90 via-blue-100/70 to-indigo-100/50 border-blue-200/30';
  }
  return 'bg-gradient-to-r from-slate-50 via-slate-100 to-slate-200/80 border-slate-200/50';

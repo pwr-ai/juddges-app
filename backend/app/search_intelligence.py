@@ -166,7 +166,6 @@ class IntelligentRanker:
     # Document type scores (based on query context)
     TYPE_SCORES = {
         "judgment": 0.9,
-        "tax_interpretation": 0.8,
         "legislation": 0.7,
         "regulation": 0.6,
         "article": 0.5,
@@ -409,7 +408,6 @@ class IntelligentRanker:
 
         type_explanations = {
             "judgment": "Court judgment - primary legal authority",
-            "tax_interpretation": "Tax authority interpretation - official guidance",
             "legislation": "Legislative text - statutory law",
             "regulation": "Administrative regulation - binding rules",
             "article": "Academic article - scholarly analysis",

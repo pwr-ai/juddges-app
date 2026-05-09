@@ -6,7 +6,6 @@ export interface SavedSearch {
   folder: string | null;
   query: string;
   search_config: SavedSearchConfig;
-  document_types: string[];
   languages: string[];
   search_mode: 'rabbit' | 'thinking';
   is_shared: boolean;
@@ -21,7 +20,6 @@ export interface SavedSearchConfig {
   filters?: {
     keywords?: string[];
     legalConcepts?: string[];
-    documentTypes?: string[];
     issuingBodies?: string[];
     languages?: string[];
     dateFrom?: string;
@@ -32,7 +30,6 @@ export interface SavedSearchConfig {
     customMetadata?: Record<string, string[]>;
   };
   pageSize?: number;
-  ignoreUnknownType?: boolean;
 }
 
 export interface CreateSavedSearchInput {
@@ -41,7 +38,6 @@ export interface CreateSavedSearchInput {
   folder?: string;
   query: string;
   search_config: SavedSearchConfig;
-  document_types?: string[];
   languages?: string[];
   search_mode?: 'rabbit' | 'thinking';
   is_shared?: boolean;
@@ -53,7 +49,6 @@ export interface UpdateSavedSearchInput {
   folder?: string | null;
   query?: string;
   search_config?: SavedSearchConfig;
-  document_types?: string[];
   languages?: string[];
   search_mode?: 'rabbit' | 'thinking';
   is_shared?: boolean;

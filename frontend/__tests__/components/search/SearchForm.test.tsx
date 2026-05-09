@@ -6,7 +6,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SearchForm } from '@/lib/styles/components/search/SearchForm';
-import { DocumentType } from '@/types/search';
 
 describe('SearchForm', () => {
   const defaultProps = {
@@ -14,11 +13,8 @@ describe('SearchForm', () => {
     setQuery: jest.fn(),
     searchType: 'thinking' as const,
     setSearchType: jest.fn(),
-    documentTypes: [DocumentType.JUDGMENT],
-    toggleDocumentType: jest.fn(),
     selectedLanguages: new Set(['pl']),
     toggleLanguage: jest.fn(),
-    setDocumentTypes: jest.fn(),
     setSelectedLanguages: jest.fn(),
     isSearching: false,
     hasResults: false,
@@ -84,7 +80,6 @@ describe('SearchForm', () => {
     const user = userEvent.setup();
     const setQuery = jest.fn();
     const setSearchType = jest.fn();
-    const setDocumentTypes = jest.fn();
     const setSelectedLanguages = jest.fn();
 
     render(
@@ -92,7 +87,6 @@ describe('SearchForm', () => {
         {...defaultProps}
         setQuery={setQuery}
         setSearchType={setSearchType}
-        setDocumentTypes={setDocumentTypes}
         setSelectedLanguages={setSelectedLanguages}
       />
     );
@@ -101,7 +95,6 @@ describe('SearchForm', () => {
 
     expect(setQuery).toHaveBeenCalledWith('Intellectual property');
     expect(setSearchType).toHaveBeenCalledWith('thinking');
-    expect(setDocumentTypes).toHaveBeenCalledWith([DocumentType.JUDGMENT]);
     expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
   });
 

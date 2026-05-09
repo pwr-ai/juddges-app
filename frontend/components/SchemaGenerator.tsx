@@ -43,7 +43,6 @@ interface DocumentSample {
 function formatSampleDocumentType(type: string | null | undefined): string {
  if (!type) return "Legal document";
  if (type === "judgment" || type === "judgement") return "Judgment";
- if (type === "tax_interpretation") return "Legal document";
  return type.replace(/_/g, " ");
 }
 

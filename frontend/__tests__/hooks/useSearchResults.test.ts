@@ -5,11 +5,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { useSearchResults } from '@/hooks/useSearchResults';
 import { useSearchStore } from '@/lib/store/searchStore';
-import { DocumentType } from '@/types/search';
 
 jest.mock('@/lib/store/searchStore', () => ({
   useSearchStore: jest.fn(),
-  isUnknownDocumentType: jest.fn(() => false),
 }));
 
 jest.mock('@/lib/api', () => ({
@@ -42,7 +40,7 @@ describe('useSearchResults', () => {
 
   const createDocument = (documentId: string) => ({
     document_id: documentId,
-    document_type: DocumentType.JUDGMENT,
+    document_type: 'judgment',
     title: `Title ${documentId}`,
     date_issued: '2024-01-15',
     issuing_body: null,
@@ -76,9 +74,7 @@ describe('useSearchResults', () => {
     storeState = {
       query: 'contract law',
       searchType: 'thinking',
-      documentTypes: [DocumentType.JUDGMENT],
       selectedLanguages: new Set(['en']),
-      ignoreUnknownType: false,
       chunksCache: {},
       loadingChunks: new Set<string>(),
       searchMetadata: [],
@@ -144,7 +140,6 @@ describe('useSearchResults', () => {
         query: 'contract law',
         mode: 'thinking',
         languages: ['en'],
-        document_types: [DocumentType.JUDGMENT],
       })
     );
     expect(mockFetchDocumentsByIds).toHaveBeenCalledWith(
@@ -152,11 +147,14 @@ describe('useSearchResults', () => {
         document_ids: ['doc-1'],
       })
     );
+    // After the search-judgment-only refactor the metadata coerces every
+    // result to a judgment in the UI, so the per-row payload no longer
+    // carries a redundant `document_type` field — assert only on the
+    // identifying fields that are still present.
     expect(storeState.setSearchMetadata).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           document_id: 'doc-1',
-          document_type: DocumentType.JUDGMENT,
         }),
       ]),
       1,

@@ -105,7 +105,7 @@ class SupabaseVectorDB(SupabaseClientMixin):
         Args:
             query_text: Text query for full-text search
             query_embedding: 1024-dimensional embedding vector
-            document_type: Filter by document type (e.g., "judgment", "tax_interpretation")
+            document_type: Filter by document type (e.g., "judgment")
             court_name: Filter by court name (partial match)
             language: Filter by language code (e.g., "pl", "en")
             start_date: Filter documents issued after this date (ISO format)

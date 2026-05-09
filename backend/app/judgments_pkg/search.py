@@ -4,7 +4,7 @@ import asyncio
 import os
 import re
 import time
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import HTTPException
 from juddges_search.models import LegalDocument
@@ -552,6 +552,70 @@ async def _run_hybrid_search(
     return response.data or [], search_time_ms
 
 
+async def _get_estimated_total(
+    supabase: Any,
+    effective_filters: dict[str, Any],
+) -> int | None:
+    """Return COUNT(*) of judgments matching filters, or None on any error.
+
+    This is a best-effort companion to ``search_judgments_hybrid``: it ignores
+    text/vector relevance and just counts rows that satisfy the same filter
+    predicates. The backend invokes it only on the first page; the value
+    populates ``PaginationMetadata.estimated_total``. Failures are swallowed
+    so a count blip never breaks search.
+    """
+    try:
+        rpc_query = supabase.rpc(
+            "count_judgments_filtered",
+            {
+                "filter_jurisdictions": effective_filters.get("jurisdictions"),
+                "filter_court_names": effective_filters.get("court_names"),
+                "filter_court_levels": effective_filters.get("court_levels"),
+                "filter_case_types": effective_filters.get("case_types"),
+                "filter_decision_types": effective_filters.get("decision_types"),
+                "filter_outcomes": effective_filters.get("outcomes"),
+                "filter_keywords": effective_filters.get("keywords"),
+                "filter_legal_topics": effective_filters.get("legal_topics"),
+                "filter_cited_legislation": effective_filters.get("cited_legislation"),
+                "filter_date_from": effective_filters.get("date_from"),
+                "filter_date_to": effective_filters.get("date_to"),
+            },
+        )
+        execute = rpc_query.execute
+        if asyncio.iscoroutinefunction(execute):
+            response = await execute()
+        else:
+            response = await asyncio.to_thread(execute)
+
+        # Supabase returns the scalar bigint as response.data — most clients
+        # surface it as ``int`` directly, but defensive handling: it may also
+        # arrive wrapped (e.g. ``[{"count_judgments_filtered": 1234}]``).
+        data = response.data
+        if data is None:
+            return None
+        if isinstance(data, int):
+            return data
+        if isinstance(data, list):
+            if not data:
+                return None
+            first = data[0]
+            if isinstance(first, dict):
+                # Pick the only/first value, regardless of column key.
+                value = next(iter(first.values()), None)
+                return int(value) if value is not None else None
+            if isinstance(first, int):
+                return first
+        if isinstance(data, dict):
+            value = next(iter(data.values()), None)
+            return int(value) if value is not None else None
+        return None
+    except Exception as exc:
+        logger.warning(
+            "count_judgments_filtered failed; estimated_total stays None: {}", exc
+        )
+        return None
+
+
 async def _rerank_if_enabled(
     query: str,
     results: list[dict[str, Any]],
@@ -584,6 +648,7 @@ async def _rerank_if_enabled(
 
 def _build_search_result_payload(
     results: list[dict[str, Any]],
+    result_view: Literal["card", "full"] = "full",
 ) -> tuple[list[dict[str, Any]], list[LegalDocument]]:
     chunks: list[dict[str, Any]] = []
     documents: list[LegalDocument] = []
@@ -606,7 +671,9 @@ def _build_search_result_payload(
                 "combined_score": result.get("combined_score"),
             }
         )
-        documents.append(_convert_judgment_to_legal_document(result))
+        documents.append(
+            _convert_judgment_to_legal_document(result, result_view=result_view)
+        )
 
     return chunks, documents
 
@@ -646,6 +713,7 @@ def _build_search_pagination(
     offset: int,
     limit: int,
     result_count: int,
+    estimated_total: int | None = None,
 ) -> PaginationMetadata:
     has_more = result_count >= limit
     next_offset = offset + result_count if has_more else None
@@ -653,7 +721,7 @@ def _build_search_pagination(
         offset=offset,
         limit=limit,
         loaded_count=result_count,
-        estimated_total=None,
+        estimated_total=estimated_total,
         has_more=has_more,
         next_offset=next_offset,
     )

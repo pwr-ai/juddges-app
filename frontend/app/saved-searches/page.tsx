@@ -38,7 +38,6 @@ import {
   Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DocumentType } from '@/types/search';
 import type { SavedSearch, SavedSearchConfig } from '@/types/saved-search';
 
 function SavedSearchCard({
@@ -83,11 +82,6 @@ function SavedSearchCard({
             {search.search_mode && (
               <Badge variant="outline" className="text-xs">
                 {search.search_mode === 'thinking' ? 'AI Enhanced' : 'Fast'}
-              </Badge>
-            )}
-            {search.document_types.length > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {search.document_types.map(t => t === 'judgment' ? 'Judgments' : 'Documents').join(', ')}
               </Badge>
             )}
             {search.languages.length > 0 && (
@@ -166,7 +160,6 @@ function countFilters(config: SavedSearchConfig): number {
   let count = 0;
   if (f.keywords?.length) count++;
   if (f.legalConcepts?.length) count++;
-  if (f.documentTypes?.length) count++;
   if (f.issuingBodies?.length) count++;
   if (f.dateFrom || f.dateTo) count++;
   if (f.jurisdictions?.length) count++;
@@ -234,13 +227,6 @@ export default function SavedSearchesPage() {
     if (search.languages.length > 0) {
       searchStore.setSelectedLanguages(new Set(search.languages));
     }
-    if (search.document_types.length > 0) {
-      const types = search.document_types
-        .filter((t): t is DocumentType => Object.values(DocumentType).includes(t as DocumentType));
-      if (types.length > 0) {
-        searchStore.setDocumentTypes(types);
-      }
-    }
 
     // Navigate to search page - the URL params hook will trigger the search
     // Filters are passed via URL params below so the search page can restore them
@@ -248,14 +234,12 @@ export default function SavedSearchesPage() {
     if (search.query) params.set('q', encodeURIComponent(search.query));
     if (search.search_mode) params.set('mode', search.search_mode);
     if (search.languages.length > 0) params.set('lang', search.languages.join(','));
-    if (search.document_types.length > 0) params.set('type', search.document_types.join(','));
 
     // Add filter params
     if (config.filters) {
       const f = config.filters;
       if (f.keywords?.length) params.set('keywords', f.keywords.join(','));
       if (f.legalConcepts?.length) params.set('legalConcepts', f.legalConcepts.join(','));
-      if (f.documentTypes?.length) params.set('filterTypes', f.documentTypes.join(','));
       if (f.issuingBodies?.length) params.set('issuingBodies', f.issuingBodies.join(','));
       if (f.dateFrom) params.set('dateFrom', f.dateFrom);
       if (f.dateTo) params.set('dateTo', f.dateTo);

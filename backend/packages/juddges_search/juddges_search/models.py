@@ -5,10 +5,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentType(str, Enum):
-    """Enumeration of supported legal document types."""
+    """Enumeration of supported legal document types.
+
+    Search is judgment-only as of 2026-05-09; the enum is retained as a
+    one-value placeholder so existing imports keep compiling. See
+    ``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``
+    for the migration that collapsed the enum.
+    """
 
     JUDGMENT = "judgment"
-    TAX_INTERPRETATION = "tax_interpretation"
 
 
 class SegmentType(str, Enum):
