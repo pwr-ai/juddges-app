@@ -48,28 +48,39 @@ class SupabaseVectorDB(SupabaseClientMixin):
         match_count: int = 10,
         match_threshold: float = 0.5,
     ) -> List[Dict[str, Any]]:
-        """
-        Pure vector similarity search.
+        """Pure vector similarity search via `search_judgments_by_embedding` RPC.
 
-        Args:
-            query_embedding: 1024-dimensional embedding vector
-            match_count: Maximum number of results
-            match_threshold: Minimum similarity score (0-1)
-
-        Returns:
-            List of documents with similarity scores
+        Translates the RPC's slim shape (`id, case_number, title, summary,
+        jurisdiction, decision_date, similarity`) into the legacy `document_*`
+        keys callers expect, so the API contract above this layer is unchanged.
         """
         try:
             response = self.client.rpc(
-                "search_documents_by_vector",
+                "search_judgments_by_embedding",
                 {
                     "query_embedding": query_embedding,
-                    "match_count": match_count,
                     "match_threshold": match_threshold,
+                    "match_count": match_count,
                 },
             ).execute()
 
-            return response.data or []
+            return [
+                {
+                    # Legacy keys callers read; mapped from the real RPC columns.
+                    "document_id": row.get("id"),
+                    "supabase_document_id": row.get("id"),
+                    "title": row.get("title"),
+                    "summary": row.get("summary"),
+                    "document_type": "judgment",
+                    "date_issued": row.get("decision_date"),
+                    "publication_date": row.get("decision_date"),
+                    "country": row.get("jurisdiction"),
+                    "language": "en" if row.get("jurisdiction") == "UK" else "pl",
+                    "document_number": row.get("case_number"),
+                    "similarity": row.get("similarity"),
+                }
+                for row in (response.data or [])
+            ]
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Vector search failed: {e}")
             raise HTTPException(status_code=500, detail=f"Vector search failed: {str(e)}")
@@ -260,15 +271,31 @@ class SupabaseVectorDB(SupabaseClientMixin):
             return []
 
     async def get_embedding_stats(self) -> Dict[str, Any]:
-        """
-        Get statistics about embedding coverage.
+        """Statistics about embedding coverage on `judgments`.
 
-        Returns:
-            Dictionary with embedding statistics
+        Computed directly via two count queries (no `get_embedding_stats` RPC
+        exists in this project's schema).
         """
         try:
-            response = self.client.rpc("get_embedding_stats").execute()
-            return response.data[0] if response.data else {}
+            total = (
+                self.client.table("judgments")
+                .select("id", count="exact")
+                .execute()
+            )
+            with_embedding = (
+                self.client.table("judgments")
+                .select("id", count="exact")
+                .not_.is_("embedding", "null")
+                .execute()
+            )
+            total_count = total.count or 0
+            covered = with_embedding.count or 0
+            return {
+                "total_documents": total_count,
+                "with_embedding": covered,
+                "without_embedding": total_count - covered,
+                "coverage_pct": (covered / total_count * 100) if total_count else 0.0,
+            }
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to get embedding stats: {e}")
             return {}
