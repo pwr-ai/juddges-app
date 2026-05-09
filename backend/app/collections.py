@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, Path
+from juddges_search.db.collections_db import UNSET
 from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
@@ -29,6 +30,7 @@ class CreateCollectionRequest(BaseModel):
 
 class UpdateCollectionRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=1000)
 
 
 class AddDocumentRequest(BaseModel):
@@ -134,7 +136,12 @@ async def update_collection(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    collection = await db.update_collection(collection_id, user_id, request.name)
+    description_arg = (
+        request.description if "description" in request.model_fields_set else UNSET
+    )
+    collection = await db.update_collection(
+        collection_id, user_id, request.name, description_arg
+    )
     return Collection(**collection)
 
 

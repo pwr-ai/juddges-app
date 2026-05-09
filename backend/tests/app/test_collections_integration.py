@@ -186,6 +186,58 @@ async def test_update_collection(authenticated_client: AsyncClient):
 @pytest.mark.api
 @pytest.mark.collections
 @pytest.mark.integration
+async def test_update_collection_omitting_description_preserves_it(
+    authenticated_client: AsyncClient,
+):
+    """PUT without `description` must NOT clobber the existing value."""
+    create_resp = await authenticated_client.post(
+        "/collections",
+        json={
+            "name": f"Preserve Test {uuid.uuid4().hex[:8]}",
+            "description": "keep me",
+        },
+    )
+    assert create_resp.status_code in [200, 201]
+    collection_id = create_resp.json()["id"]
+
+    rename_resp = await authenticated_client.put(
+        f"/collections/{collection_id}",
+        json={"name": f"Renamed {uuid.uuid4().hex[:8]}"},
+    )
+    assert rename_resp.status_code == 200
+    assert rename_resp.json()["description"] == "keep me"
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.collections
+@pytest.mark.integration
+async def test_update_collection_explicit_null_clears_description(
+    authenticated_client: AsyncClient,
+):
+    """PUT with `description: null` must clear the existing value."""
+    create_resp = await authenticated_client.post(
+        "/collections",
+        json={
+            "name": f"Clear Test {uuid.uuid4().hex[:8]}",
+            "description": "will be cleared",
+        },
+    )
+    assert create_resp.status_code in [200, 201]
+    collection_id = create_resp.json()["id"]
+
+    clear_resp = await authenticated_client.put(
+        f"/collections/{collection_id}",
+        json={"name": f"Cleared {uuid.uuid4().hex[:8]}", "description": None},
+    )
+    assert clear_resp.status_code == 200
+    assert clear_resp.json()["description"] is None
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.collections
+@pytest.mark.integration
 async def test_delete_collection(authenticated_client: AsyncClient):
     """Test deleting a collection."""
     # Create a collection

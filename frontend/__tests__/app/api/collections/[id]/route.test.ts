@@ -225,6 +225,57 @@ describe("PUT /api/collections/[id]", () => {
     );
   });
 
+  it("forwards description to backend when provided", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: COLLECTION_ID,
+        name: "Renamed",
+        description: "New description",
+      }),
+    });
+
+    const response = await PUT(
+      makePutRequest(COLLECTION_ID, {
+        name: "Renamed",
+        description: "New description",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledWith(
+      `http://localhost:8004/collections/${COLLECTION_ID}`,
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ name: "Renamed", description: "New description" }),
+      })
+    );
+  });
+
+  it("forwards explicit null description to clear the field", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: COLLECTION_ID, name: "Renamed", description: null }),
+    });
+
+    await PUT(
+      makePutRequest(COLLECTION_ID, { name: "Renamed", description: null })
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: JSON.stringify({ name: "Renamed", description: null }),
+      })
+    );
+  });
+
   it("returns 404 when collection is not found", async () => {
     mockSupabaseAuth(USER_ID);
 
