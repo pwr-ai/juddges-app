@@ -104,9 +104,18 @@ def _get_client():
     return _client
 
 
-def _make_key(request: SearchChunksRequest) -> str:
-    """SHA-256 of a stable JSON projection of the request payload."""
+def _make_key(request: SearchChunksRequest, user_id: str | None = None) -> str:
+    """SHA-256 of a stable JSON projection of the request payload.
+
+    ``user_id`` is an optional discriminator. When ``None`` (current default)
+    the key is derived purely from the request shape, preserving today's
+    public-read behaviour. Callers should pass a stable user/role identifier
+    once RLS tightens (see module docstring) so two users with different
+    access levels can never share a cache entry.
+    """
     payload = {field: getattr(request, field, None) for field in _KEY_FIELDS}
+    if user_id is not None:
+        payload["__user__"] = user_id
     blob = json.dumps(payload, sort_keys=True, default=str)
     digest = hashlib.sha256(blob.encode("utf-8")).hexdigest()
     return f"{_CACHE_PREFIX}{digest}"
@@ -114,12 +123,18 @@ def _make_key(request: SearchChunksRequest) -> str:
 
 async def get_cached_search(
     request: SearchChunksRequest,
+    user_id: str | None = None,
 ) -> SearchChunksResponse | None:
     """Return a cached :class:`SearchChunksResponse` for *request* or ``None``.
 
     Bypasses the cache entirely for ``mode="thinking"`` (LLM-driven query
     rewriting is non-deterministic — caching would freeze a stale rewrite).
     Any Redis or deserialisation error is logged and treated as a miss.
+
+    ``user_id`` is forward-compatible: when provided it is folded into the
+    cache key so cached entries are partitioned per user. When omitted
+    (current behaviour) the key is request-only — safe today because every
+    field returned is public-read. See module docstring.
     """
     if request.mode == "thinking":
         return None
@@ -127,7 +142,7 @@ async def get_cached_search(
     if client is None:
         return None
     try:
-        raw = await client.get(_make_key(request))
+        raw = await client.get(_make_key(request, user_id))
     except Exception as exc:
         logger.warning(f"Search cache GET failed (treating as miss): {exc}")
         return None
@@ -145,8 +160,12 @@ async def get_cached_search(
 async def set_cached_search(
     request: SearchChunksRequest,
     response: SearchChunksResponse,
+    user_id: str | None = None,
 ) -> None:
-    """Store *response* under the request's cache key. Best-effort, never raises."""
+    """Store *response* under the request's cache key. Best-effort, never raises.
+
+    See :func:`get_cached_search` for the ``user_id`` semantics.
+    """
     if request.mode == "thinking":
         return
     client = _get_client()
@@ -154,7 +173,7 @@ async def set_cached_search(
         return
     try:
         await client.set(
-            _make_key(request),
+            _make_key(request, user_id),
             response.model_dump_json(),
             ex=_CACHE_TTL,
         )

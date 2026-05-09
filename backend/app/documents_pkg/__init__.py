@@ -180,9 +180,6 @@ async def get_citation_network(
     min_shared_refs: int = Query(
         1, ge=1, le=10, description="Minimum shared references for an edge"
     ),
-    document_types: str | None = Query(
-        None, description="Comma-separated document types to filter"
-    ),
 ) -> CitationNetworkResponse:
     """Build citation network from shared legal references between documents."""
     try:
@@ -191,13 +188,6 @@ async def get_citation_network(
         query = db.client.table("legal_documents").select(
             'document_id, title, document_type, date_issued, x, y, "references", court_name, document_number, language'
         )
-
-        if document_types:
-            types_list = [t.strip() for t in document_types.split(",")]
-            if len(types_list) == 1:
-                query = query.eq("document_type", types_list[0])
-            else:
-                query = query.in_("document_type", types_list)
 
         response = query.not_.is_("references", "null").limit(sample_size).execute()
         docs = response.data or []
@@ -420,7 +410,10 @@ async def search_documents(request: SearchChunksRequest):
         try:
             from app.search_cache import get_cached_search
 
-            cached_response = await get_cached_search(request)
+            # user_id=None: RLS is currently public-read so the cache key
+            # stays request-only. Pass a stable user/role identifier here
+            # once any non-public field or per-user filter ships.
+            cached_response = await get_cached_search(request, user_id=None)
             if cached_response is not None:
                 logger.debug(
                     "search_cache hit: query='{}...' offset={} limit={}",
@@ -638,7 +631,8 @@ async def search_documents(request: SearchChunksRequest):
             try:
                 from app.search_cache import set_cached_search
 
-                await set_cached_search(request, response)
+                # user_id=None: see matching note on get_cached_search above.
+                await set_cached_search(request, response, user_id=None)
             except Exception as cache_err:
                 logger.warning("search_cache write failed (non-fatal): {}", cache_err)
 

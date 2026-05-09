@@ -4916,7 +4916,7 @@
                 "type": "null"
               }
             ],
-            "description": "List of document types to filter (e.g., ['judgment', 'tax_interpretation'])",
+            "description": "List of document types to filter (e.g., ['judgment'])",
             "title": "Document Types"
           },
           "languages": {
@@ -5261,10 +5261,9 @@
         "type": "object"
       },
       "DocumentType": {
-        "description": "Enumeration of supported legal document types.",
+        "description": "Enumeration of supported legal document types.\n\nSearch is judgment-only as of 2026-05-09; the enum is retained as a\none-value placeholder so existing imports keep compiling. See\n``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``\nfor the migration that collapsed the enum.",
         "enum": [
-          "judgment",
-          "tax_interpretation"
+          "judgment"
         ],
         "title": "DocumentType",
         "type": "string"
@@ -9599,7 +9598,7 @@
                 "type": "null"
               }
             ],
-            "description": "Filter by document types (e.g., 'judgment', 'tax_interpretation')",
+            "description": "Filter by document types (e.g., 'judgment')",
             "title": "Document Types"
           },
           "language": {
@@ -12294,7 +12293,7 @@
             "title": "Current Schema"
           },
           "document_type": {
-            "default": "tax_interpretation",
+            "default": "judgment",
             "description": "Document type for schema generation",
             "title": "Document Type",
             "type": "string"
@@ -13061,33 +13060,6 @@
             ],
             "title": "Decision Types"
           },
-          "document_types": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Document types to filter by. Accepts 'judgment' or 'tax_interpretation'",
-            "examples": [
-              [
-                "tax_interpretation"
-              ],
-              [
-                "judgment"
-              ],
-              [
-                "tax_interpretation",
-                "judgment"
-              ]
-            ],
-            "title": "Document Types"
-          },
           "fetch_full_documents": {
             "default": false,
             "description": "Whether to fetch full document objects in addition to chunks",
@@ -13266,6 +13238,16 @@
               "interpretacja podatkowa"
             ],
             "title": "Query",
+            "type": "string"
+          },
+          "result_view": {
+            "default": "card",
+            "description": "Payload size selector: 'card' returns a trimmed ~10-field card-friendly document (default, fastest), 'full' returns the legacy complete LegalDocument payload.",
+            "enum": [
+              "card",
+              "full"
+            ],
+            "title": "Result View",
             "type": "string"
           },
           "segment_types": {
@@ -23430,24 +23412,6 @@
               "title": "Min Shared Refs",
               "type": "integer"
             }
-          },
-          {
-            "description": "Comma-separated document types to filter",
-            "in": "query",
-            "name": "document_types",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Comma-separated document types to filter",
-              "title": "Document Types"
-            }
           }
         ],
         "responses": {
@@ -31447,7 +31411,7 @@
     },
     "/schema-generator/chat": {
       "post": {
-        "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"tax_interpretation\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
+        "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"judgment\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
         "operationId": "schema_chat_schema_generator_chat_post",
         "requestBody": {
           "content": {

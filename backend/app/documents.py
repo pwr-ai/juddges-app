@@ -727,9 +727,6 @@ async def get_citation_network(
     min_shared_refs: int = Query(
         1, ge=1, le=10, description="Minimum shared references for an edge"
     ),
-    document_types: str | None = Query(
-        None, description="Comma-separated document types to filter"
-    ),
 ) -> CitationNetworkResponse:
     """Build citation network from shared legal references between documents."""
     try:
@@ -738,13 +735,6 @@ async def get_citation_network(
         query = db.client.table("legal_documents").select(
             'document_id, title, document_type, date_issued, x, y, "references", court_name, document_number, language'
         )
-
-        if document_types:
-            types_list = [t.strip() for t in document_types.split(",")]
-            if len(types_list) == 1:
-                query = query.eq("document_type", types_list[0])
-            else:
-                query = query.in_("document_type", types_list)
 
         response = query.not_.is_("references", "null").limit(sample_size).execute()
         docs = response.data or []
