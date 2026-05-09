@@ -1,10 +1,10 @@
-"""Unit tests for app.utils.document_fetcher module."""
+"""Unit tests for app.utils.judgment_fetcher module."""
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.utils.document_fetcher import get_document_by_id, get_documents_by_id
+from app.utils.judgment_fetcher import get_document_by_id, get_documents_by_id
 
 
 def _row(**overrides):
@@ -65,7 +65,7 @@ class TestGetDocumentsById:
         mock_client = _supabase_mock([_row(source_id="doc-1")])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_documents_by_id(["doc-1"])
@@ -82,7 +82,7 @@ class TestGetDocumentsById:
         mock_client = _supabase_mock([_row(id=uuid, source_id=None)])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_documents_by_id([uuid])
@@ -96,7 +96,7 @@ class TestGetDocumentsById:
         mock_client = _supabase_mock([_row(jurisdiction="UK")])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_documents_by_id(["doc-1"])
@@ -109,7 +109,7 @@ class TestGetDocumentsById:
         mock_client = _supabase_mock([])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_documents_by_id(["nonexistent"])
@@ -120,7 +120,7 @@ class TestGetDocumentsById:
     async def test_database_error_raises_runtime(self):
         with (
             patch(
-                "app.utils.document_fetcher.get_supabase_client",
+                "app.utils.judgment_fetcher.get_supabase_client",
                 side_effect=Exception("db connection failed"),
             ),
             pytest.raises(RuntimeError, match="Database query failed"),
@@ -133,7 +133,7 @@ class TestGetDocumentsById:
         mock_client = _supabase_mock([_row(source_id="doc-1")])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_documents_by_id(["doc-1", "doc-2"])
@@ -158,7 +158,7 @@ class TestGetDocumentsById:
         )
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_documents_by_id(["doc-1", "doc-bad"])
@@ -181,7 +181,7 @@ class TestGetDocumentById:
         mock_client = _supabase_mock([_row(source_id="doc-1")])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_document_by_id("doc-1")
@@ -194,7 +194,7 @@ class TestGetDocumentById:
         mock_client = _supabase_mock([])
 
         with patch(
-            "app.utils.document_fetcher.get_supabase_client",
+            "app.utils.judgment_fetcher.get_supabase_client",
             return_value=mock_client,
         ):
             result = await get_document_by_id("nonexistent")

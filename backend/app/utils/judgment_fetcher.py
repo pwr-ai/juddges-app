@@ -1,9 +1,9 @@
 """Utility functions for fetching judgments from Supabase.
 
-Despite the legacy `document_*` naming this module operates on the canonical
-`judgments` table. The function names stay (`get_documents_by_id`,
-`get_document_by_id`) because they're imported widely; only the SELECT and
-row-mapping align with the real schema.
+Function names (`get_documents_by_id`, `get_document_by_id`) deliberately keep
+the `document_*` shape because they sit at the API boundary and many callers
+still use that vocabulary; only the SELECT and row-mapping align with the
+canonical `judgments` table.
 
 Callers may pass either UUID `judgments.id` values or text `source_id` values
 (produced by `cleanDocumentIdForUrl` from frontend). Both lookup paths run.
