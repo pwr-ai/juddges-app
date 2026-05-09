@@ -87,8 +87,8 @@ def get_sync_status() -> dict[str, Any]:
                 raw = r.get(REDIS_SYNC_KEY)
                 if raw:
                     status = json.loads(raw)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to update sync status: {e}")
 
     if status is None:
         return {"status": "unknown", "message": "No sync has been recorded yet"}

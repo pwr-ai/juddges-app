@@ -206,8 +206,8 @@ class EmbeddingGenerator:
                 },
                 level="info",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to record ingestion telemetry breadcrumb: {e}")
 
         logger.info(f"Starting embedding generation for {total_to_process} judgments")
         logger.info(f"Batch size: {self.batch_size}")

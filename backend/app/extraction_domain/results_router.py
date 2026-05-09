@@ -140,8 +140,8 @@ async def export_extraction_results(
                 )
                 if col_response.data:
                     collection_name = col_response.data.get("name", "extraction")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed during extraction result processing: {e}")
 
         if job_data.get("schema_id"):
             try:
@@ -154,8 +154,8 @@ async def export_extraction_results(
                 )
                 if schema_response.data:
                     schema_name = schema_response.data.get("name", "")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed during extraction result post-processing: {e}")
 
         # Filter completed results and flatten data
         rows = []
