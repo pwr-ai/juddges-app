@@ -1348,10 +1348,10 @@ html[dir="rtl"] [data-slot="command-input"] {
   stroke-width: 2.5 !important; /* Active: Bold/Emphasized */
 }
 
-/* Light mode active state colors */
+/* Active state icon color — editorial oxblood (matches text-oxblood on the button) */
 [data-sidebar="menu-button"][data-active="true"] svg,
 [data-sidebar="menu-button"][data-active="true"] > a svg {
-  stroke: #1E40AF !important; /* Royal Blue */
+  stroke: var(--oxblood) !important;
 }
 
 /* ============================================
