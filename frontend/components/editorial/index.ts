@@ -7,6 +7,7 @@
  * See docs/reference/DESIGN.md for the full design system.
  */
 
+export { ChartFigure } from "./ChartFigure";
 export { Citation } from "./Citation";
 export { DropCap } from "./DropCap";
 export { EditorialButton } from "./EditorialButton";
