@@ -208,17 +208,25 @@ class SupabaseVectorDB(SupabaseClientMixin):
     async def get_document_by_id(
         self,
         document_id: str,
+        return_vectors: bool = False,
     ) -> Optional[Dict[str, Any]]:
         """Fetch a single judgment by its UUID `id` or text `source_id`.
 
         Returns the raw row dict (judgment column shape). Downstream callers
         translate via `_convert_judgment_to_legal_document`.
+
+        Args:
+            document_id: UUID `judgments.id` or text `source_id`.
+            return_vectors: When True, includes the `embedding` column
+                (~6KB/row). Use only when the caller actually needs the vector
+                — e.g. similarity search seeded by an existing row.
         """
         try:
             column = "id" if _UUID_RE.match(document_id) else "source_id"
+            cols = _JUDGMENT_COLS + (", embedding" if return_vectors else "")
             response = (
                 self.client.table("judgments")
-                .select(_JUDGMENT_COLS)
+                .select(cols)
                 .eq(column, document_id)
                 .limit(1)
                 .execute()
