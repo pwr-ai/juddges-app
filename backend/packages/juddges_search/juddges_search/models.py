@@ -8,10 +8,9 @@ class DocumentType(str, Enum):
     """Enumeration of supported legal document types.
 
     Search is judgment-only as of 2026-05-09; the enum is retained as a
-    one-value placeholder so existing imports keep compiling. Consumers
-    that still reference removed members (e.g. ``TAX_INTERPRETATION``)
-    will fail at attribute-access time and are cleaned up in follow-up
-    tasks per ``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``.
+    one-value placeholder so existing imports keep compiling. See
+    ``docs/superpowers/specs/2026-05-09-search-judgment-only-blazing-fast.md``
+    for the migration that collapsed the enum.
     """
 
     JUDGMENT = "judgment"

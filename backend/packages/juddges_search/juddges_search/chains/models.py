@@ -36,7 +36,7 @@ class DocumentRetrievalInput(BaseModel):
         default=None,
     )
     document_types: list[str] | None = Field(
-        description="List of document types to filter (e.g., ['judgment', 'tax_interpretation'])",
+        description="List of document types to filter (e.g., ['judgment'])",
         default=None,
     )
 
@@ -62,7 +62,7 @@ class DocumentRetrieval(BaseModel):
         default=None,
     )
     document_types: list[str] | None = Field(
-        description="List of document types to filter (e.g., ['judgment', 'tax_interpretation'])",
+        description="List of document types to filter (e.g., ['judgment'])",
         default=None,
     )
     response_format: str | None = Field(
