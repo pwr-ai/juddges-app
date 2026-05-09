@@ -399,7 +399,7 @@ export default function HomePage(): React.JSX.Element {
         {/* Extraction templates */}
         <div className="lg:col-span-4">
           <EditorialCard
-            eyebrow="Templates"
+            eyebrow="Coding schemas"
             title={t("dashboard.extractionTemplates")}
             action={
               userSchemas.length > 0 ? (
