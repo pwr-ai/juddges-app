@@ -87,6 +87,7 @@ services:
         tty: true
         volumes:
             - ./backend:/app
+            - ./scripts:/app/scripts  # expose repo-root scripts/ as a Python package inside the container
             - hf-cache-dev:/tmp/hf
         labels:
             - "com.juddges.service=application"
@@ -180,6 +181,7 @@ services:
         # All other environment variables (Supabase, OpenAI, Redis, Langfuse, etc.) loaded from env_file
         volumes:
             - ./backend:/app
+            - ./scripts:/app/scripts  # expose repo-root scripts/ as a Python package inside the container
             - hf-cache-dev:/tmp/hf
         labels:
             - "com.juddges.service=application"

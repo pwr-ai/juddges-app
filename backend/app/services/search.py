@@ -577,6 +577,78 @@ class MeiliSearchService:
             response.raise_for_status()
             return response.json()
 
+    async def get_documents(
+        self,
+        *,
+        limit: int = 1000,
+        offset: int = 0,
+        fields: list[str] | None = None,
+        filter_expr: str | None = None,
+    ) -> dict[str, Any]:
+        """Fetch documents from the index (GET /indexes/{uid}/documents).
+
+        Useful for diffing before an atomic swap — retrieves all stored docs
+        without a search query.
+        """
+        url = f"{self.base_url}/indexes/{self.index_name}/documents"
+        params: dict[str, Any] = {"limit": limit, "offset": offset}
+        if fields:
+            params["fields"] = ",".join(fields)
+        if filter_expr:
+            params["filter"] = filter_expr
+
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.get(
+                url, params=params, headers=self._admin_headers()
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def swap_indexes(self, index_a: str, index_b: str) -> dict[str, Any]:
+        """Atomically swap two Meilisearch indexes (POST /swap-indexes).
+
+        After the swap, ``index_a`` contains what was in ``index_b`` and vice
+        versa.  The swap is atomic — zero-downtime — and returns a task UID
+        that should be awaited with ``wait_for_task``.
+
+        Args:
+            index_a: First index UID (e.g. ``"topics"``).
+            index_b: Second index UID (e.g. ``"topics_new"``).
+        """
+        if not self.admin_configured:
+            raise SearchServiceError("Meilisearch admin key is not configured")
+
+        url = f"{self.base_url}/swap-indexes"
+        payload = [{"indexes": [index_a, index_b]}]
+
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.post(
+                url, json=payload, headers=self._admin_headers()
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def delete_index(self, index_uid: str | None = None) -> dict[str, Any]:
+        """Delete the specified index (DELETE /indexes/{uid}).
+
+        If ``index_uid`` is omitted, deletes the service's own ``index_name``.
+        Returns the Meilisearch task envelope.
+        """
+        if not self.admin_configured:
+            raise SearchServiceError("Meilisearch admin key is not configured")
+
+        uid = index_uid if index_uid is not None else self.index_name
+        url = f"{self.base_url}/indexes/{uid}"
+
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.delete(url, headers=self._admin_headers())
+            # 202 = task enqueued; 404 = already gone (treat as success)
+            if response.status_code not in (200, 202, 404):
+                response.raise_for_status()
+            if response.status_code == 404:
+                return {"status": "not_found", "indexUid": uid}
+            return response.json()
+
     async def topics_stats(self) -> dict[str, Any]:
         """Return metadata about the topics index for the /topics/meta endpoint.
 
