@@ -298,7 +298,7 @@ MEILISEARCH_TOPICS_INDEX_SETTINGS: dict[str, Any] = {
     # Topics are short canonical phrases; stop-word removal would harm recall.
     "stopWords": [],
     "pagination": {
-        "maxTotalHits": 500,
+        "maxTotalHits": 500,  # matches the 500-concept cap in scripts/generate_search_topics.py
     },
 }
 

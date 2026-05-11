@@ -63,6 +63,29 @@ class MeiliSearchService:
             timeout_seconds=float(os.getenv("MEILISEARCH_TIMEOUT_SECONDS", "5")),
         )
 
+    @classmethod
+    def topics_from_env(cls) -> MeiliSearchService:
+        """Construct a MeiliSearchService scoped to the topics index.
+
+        Reads the same connection env vars as ``from_env()``; only the index
+        name comes from ``MEILISEARCH_TOPICS_INDEX_NAME`` (default ``"topics"``).
+        """
+        base_url = os.getenv("MEILISEARCH_INTERNAL_URL") or os.getenv("MEILISEARCH_URL")
+        base_url = _normalize_meilisearch_url_for_runtime(base_url)
+        return cls(
+            base_url=base_url,
+            api_key=(
+                os.getenv("MEILISEARCH_SEARCH_KEY")
+                or os.getenv("MEILISEARCH_API_KEY")
+                or os.getenv("MEILISEARCH_ADMIN_KEY")
+                or os.getenv("MEILI_MASTER_KEY")
+            ),
+            admin_key=os.getenv("MEILISEARCH_ADMIN_KEY")
+            or os.getenv("MEILI_MASTER_KEY"),
+            index_name=os.getenv("MEILISEARCH_TOPICS_INDEX_NAME", "topics"),
+            timeout_seconds=float(os.getenv("MEILISEARCH_TIMEOUT_SECONDS", "5")),
+        )
+
     # ── helpers ──────────────────────────────────────────────────────────
 
     def _search_headers(self) -> dict[str, str]:

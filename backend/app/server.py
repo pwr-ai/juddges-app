@@ -250,14 +250,7 @@ async def lifespan(app: FastAPI):
             logger.info("Setting up Meilisearch judgments index...")
             await setup_meilisearch_index(meili_service)
 
-            topics_index_name = os.getenv("MEILISEARCH_TOPICS_INDEX_NAME", "topics")
-            topics_service = MeiliSearchService(
-                base_url=meili_service.base_url or None,
-                api_key=meili_service.api_key or None,
-                admin_key=meili_service.admin_key or None,
-                index_name=topics_index_name,
-                timeout_seconds=meili_service.timeout_seconds,
-            )
+            topics_service = MeiliSearchService.topics_from_env()
             logger.info("Setting up Meilisearch topics index...")
             await setup_topics_meilisearch_index(topics_service)
         else:

@@ -69,6 +69,30 @@ class TestConfiguredProperties:
         assert svc.configured is True
         assert svc.admin_configured is True
 
+    def test_topics_from_env_reads_topics_index_env_var(self, monkeypatch):
+        monkeypatch.setenv("MEILISEARCH_URL", "http://meili:7700")
+        monkeypatch.setenv("MEILI_MASTER_KEY", "master-key")
+        monkeypatch.delenv("MEILISEARCH_SEARCH_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_API_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_ADMIN_KEY", raising=False)
+        monkeypatch.setenv("MEILISEARCH_TOPICS_INDEX_NAME", "my-topics")
+
+        svc = MeiliSearchService.topics_from_env()
+        assert svc.index_name == "my-topics"
+        assert svc.configured is True
+        assert svc.admin_configured is True
+
+    def test_topics_from_env_defaults_to_topics(self, monkeypatch):
+        monkeypatch.setenv("MEILISEARCH_URL", "http://meili:7700")
+        monkeypatch.setenv("MEILI_MASTER_KEY", "master-key")
+        monkeypatch.delenv("MEILISEARCH_SEARCH_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_API_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_ADMIN_KEY", raising=False)
+        monkeypatch.delenv("MEILISEARCH_TOPICS_INDEX_NAME", raising=False)
+
+        svc = MeiliSearchService.topics_from_env()
+        assert svc.index_name == "topics"
+
     def test_normalize_url_rewrites_localhost_in_docker(self, monkeypatch):
         monkeypatch.setattr("app.services.search.Path.exists", lambda _: True)
         normalized = _normalize_meilisearch_url_for_runtime("http://localhost:7700")
