@@ -143,7 +143,6 @@ export interface NavigationTranslations {
   contact: string;
 
   // Chat specific
-  recentChats: string;
   newChat: string;
   quickSearch: string;
 
@@ -386,7 +385,6 @@ export interface ErrorTranslations {
 export interface DashboardTranslations {
   title: string;
   databaseOverview: string;
-  recentConversations: string;
   extractionTemplates: string;
   recentJudgments: string;
   popularLegalTopics: string;
@@ -395,11 +393,8 @@ export interface DashboardTranslations {
   viewAll: string;
   startChat: string;
   generateTemplate: string;
-  browseJudgments: string;
   startExtraction: string;
-  noChats: string;
   noSchemas: string;
-  noDocuments: string;
   noExtractions: string;
   noTrending: string;
   failedToLoadStats: string;

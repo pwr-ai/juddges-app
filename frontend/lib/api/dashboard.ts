@@ -26,33 +26,12 @@ export interface DashboardStats {
   computed_at: string | null;
 }
 
-interface Document {
-  id: string;
-  document_id?: string;
-  title?: string;
-  document_number?: string;
-  document_type: string;
-  publication_date?: string | null;
-  ai_summary?: string | null;
-  key_topics?: string[] | null;
-  jurisdiction?: string | null;
-  language: string;
-}
-
 interface TrendingTopic {
   topic: string;
   change: string;
   trend: "up" | "down" | "stable";
   query_count: number;
   category: string;
-}
-
-interface Chat {
-  id: string;
-  title: string | null;
-  created_at: string;
-  updated_at: string;
-  firstMessage?: string | null;
 }
 
 /**
@@ -73,29 +52,6 @@ export function useDashboardStats(): ReturnType<typeof useQuery<DashboardStats>>
 }
 
 /**
- * Hook to fetch recent documents with React Query caching
- *
- * Minimal caching to ensure fresh data from backend
- */
-export function useRecentDocuments(limit: number = 5): ReturnType<typeof useQuery<Document[]>> {
-  return useQuery({
-    queryKey: ["dashboard", "recent-documents", limit],
-    queryFn: async (): Promise<Document[]> => {
-      const response = await fetch(
-        `/api/dashboard/recent-documents?limit=${limit}`,
-        {
-          cache: 'no-store', // Disable fetch cache
-        }
-      );
-      if (!response.ok) throw new Error("Failed to fetch documents");
-      return response.json();
-    },
-    staleTime: 0, // No caching - always fetch fresh data
-    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes after unmount
-  });
-}
-
-/**
  * Hook to fetch trending topics with React Query caching
  *
  * Caches for 1 hour - trending data doesn't need to be real-time
@@ -111,29 +67,6 @@ export function useTrendingTopics(limit: number = 3) {
       return response.json();
     },
     staleTime: 1 * 60 * 60 * 1000, // 1 hour
-  });
-}
-
-/**
- * Hook to fetch recent chats with React Query caching
- *
- * Caches for 5 minutes to ensure relatively fresh data
- */
-export function useRecentChats(limit: number = 5) {
-  return useQuery({
-    queryKey: ["dashboard", "recent-chats", limit],
-    queryFn: async (): Promise<Chat[]> => {
-      const response = await fetch(
-        `/api/chats?limit=${limit}`,
-        {
-          cache: 'no-store', // Disable fetch cache
-        }
-      );
-      if (!response.ok) throw new Error("Failed to fetch chats");
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes after unmount
   });
 }
 

@@ -4,22 +4,18 @@ import Link from "next/link";
 import {
   SkeletonTrendingTopic,
   SkeletonChatCard,
-  SkeletonDocumentCard,
   SkeletonExtractionCard,
 } from "@/components/ui/skeleton-card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import {
   useDashboardStats,
-  useRecentDocuments,
   useTrendingTopics,
   useUserSchemas,
   useCollectionsDocumentCount,
   useRecentExtractions,
 } from "@/lib/api/dashboard";
 import {
-  FileText,
-  Scale,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -36,7 +32,6 @@ import {
   VerifiedBadge,
 } from "@/lib/styles/components";
 import { formatStatNumber } from "@/lib/format-stats";
-import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import { LandingPage } from "@/components/landing/LandingPage";
 import {
   EditorialCard,
@@ -210,8 +205,6 @@ export default function HomePage(): React.JSX.Element {
     error: statsErrorDetails,
   } = useDashboardStats();
 
-  const { data: recentDocs = [], isLoading: docsLoading } = useRecentDocuments(2);
-
   const { data: trendingTopics = [], isLoading: trendsLoading } = useTrendingTopics(3);
 
 
@@ -225,9 +218,6 @@ export default function HomePage(): React.JSX.Element {
 
   const { data: recentExtractions = [], isLoading: extractionsLoading } =
     useRecentExtractions(3);
-  const recentJudgmentDocs = recentDocs
-    .filter((doc) => doc.document_type === "judgment")
-    .slice(0, 2);
 
   // Individual loading states - each card loads separately
 
@@ -567,82 +557,48 @@ export default function HomePage(): React.JSX.Element {
 
         {/* ============ ROW 3 ============ */}
 
-        {/* Recent judgments (8 cols) */}
+        {/* Quick-start strip (8 cols) */}
         <div className="lg:col-span-8">
           <EditorialCard
-            eyebrow="Case law"
-            title={t("dashboard.recentJudgments")}
-            action={<ViewAllAction href="/search" label={t("dashboard.viewAll")} />}
+            eyebrow="Get started"
+            title="Three steps to legal-AI research"
             className="h-full"
           >
-            {docsLoading ? (
-              <ul className="divide-y divide-rule">
-                {[0, 1].map((i) => (
-                  <li key={i} className="py-3">
-                    <SkeletonDocumentCard />
-                  </li>
-                ))}
-              </ul>
-            ) : recentJudgmentDocs.length > 0 ? (
-              <ul className="divide-y divide-rule">
-                {recentJudgmentDocs.map((doc) => {
-                  const docTypeLabel =
-                    doc.document_type === "judgment"
-                      ? "JUDGMENT"
-                      : doc.document_type?.toUpperCase() || "DOCUMENT";
-                  const displayTitle =
-                    doc.title || doc.document_number || doc.document_id || "Untitled Document";
-                  const displayDate = doc.publication_date
-                    ? new Date(doc.publication_date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : null;
-
-                  const documentId = cleanDocumentIdForUrl(doc.document_id || doc.id);
-                  const Icon = doc.document_type === "judgment" ? Scale : FileText;
-                  return (
-                    <li key={doc.id} className="first:pt-0 last:pb-0">
-                      <Link
-                        href={`/documents/${documentId}`}
-                        className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        <div className="flex items-start gap-3">
-                          <Icon className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline justify-between gap-3">
-                              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
-                                {docTypeLabel}
-                              </span>
-                              {displayDate && (
-                                <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
-                                  {displayDate}
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-1 line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
-                              {displayTitle}
-                            </p>
-                            {doc.document_number && (
-                              <p className="mt-0.5 font-mono text-[11px] text-ink-soft">
-                                {doc.document_number}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EditorialEmptyState
-                message={t("dashboard.noDocuments")}
-                actionHref="/search"
-                actionLabel={t("dashboard.browseJudgments")}
-              />
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Link
+                href="/search"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
+                  <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/collections"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
+                  <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/schema-chat"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
+                  <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+            </div>
           </EditorialCard>
         </div>
 
@@ -686,51 +642,6 @@ export default function HomePage(): React.JSX.Element {
         </div>
 
         {/* ============ ROW 4 ============ */}
-
-        {/* Quick-start strip (full width) */}
-        <div className="lg:col-span-12">
-          <EditorialCard
-            eyebrow="Get started"
-            title="Three steps to legal-AI research"
-            className="h-full"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <Link
-                href="/search"
-                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
-                  <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
-                </div>
-                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
-              </Link>
-              <Link
-                href="/collections"
-                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
-                  <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
-                </div>
-                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
-              </Link>
-              <Link
-                href="/schema-chat"
-                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
-                  <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
-                </div>
-                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
-              </Link>
-            </div>
-          </EditorialCard>
-        </div>
 
         {/* Cite JUDDGES (8 cols) */}
         <div className="lg:col-span-8">

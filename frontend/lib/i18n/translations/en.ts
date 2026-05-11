@@ -99,7 +99,6 @@ export const en: Translations = {
     contact: 'Contact',
 
     // Chat specific
-    recentChats: 'Recent Chats',
     newChat: 'New Chat',
     quickSearch: 'Quick search',
 
@@ -349,7 +348,6 @@ export const en: Translations = {
   dashboard: {
     title: 'Dashboard',
     databaseOverview: 'Database Overview',
-    recentConversations: 'Recent Conversations',
     extractionTemplates: 'Coding Schemas',
     recentJudgments: 'Recent Judgments',
     popularLegalTopics: 'Popular Legal Topics',
@@ -358,11 +356,8 @@ export const en: Translations = {
     viewAll: 'View all',
     startChat: 'Start Chat',
     generateTemplate: 'Generate Coding Schema',
-    browseJudgments: 'Browse Judgments',
     startExtraction: 'Start Extraction',
-    noChats: 'No conversations yet. Ask Juddges a legal question to get started.',
     noSchemas: 'No templates yet. Let Juddges generate your first extraction template.',
-    noDocuments: 'No judgments found yet. Browse the database to discover court decisions.',
     noExtractions: 'No extractions yet. Use Juddges to extract structured data from judgments.',
     noTrending: 'No trending topics available',
     failedToLoadStats: 'Failed to load statistics',

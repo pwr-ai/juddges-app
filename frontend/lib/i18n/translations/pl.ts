@@ -99,7 +99,6 @@ export const pl: Translations = {
     contact: 'Kontakt',
 
     // Chat specific
-    recentChats: 'Ostatnie rozmowy',
     newChat: 'Nowa rozmowa',
     quickSearch: 'Szybkie wyszukiwanie',
 
@@ -349,7 +348,6 @@ export const pl: Translations = {
   dashboard: {
     title: 'Pulpit',
     databaseOverview: 'Przegląd bazy danych',
-    recentConversations: 'Ostatnie rozmowy',
     extractionTemplates: 'Schematy kodowania',
     recentJudgments: 'Ostatnie orzeczenia',
     popularLegalTopics: 'Popularne tematy prawne',
@@ -358,11 +356,8 @@ export const pl: Translations = {
     viewAll: 'Zobacz wszystko',
     startChat: 'Rozpocznij rozmowę',
     generateTemplate: 'Generuj schemat kodowania',
-    browseJudgments: 'Przeglądaj orzeczenia',
     startExtraction: 'Rozpocznij ekstrakcję',
-    noChats: 'Brak rozmów. Zadaj Juddges pytanie prawne, aby rozpocząć.',
     noSchemas: 'Brak szablonów. Pozwól Juddges wygenerować pierwszy szablon ekstrakcji.',
-    noDocuments: 'Brak orzeczeń. Przeszukaj bazę danych, aby odkryć orzeczenia sądowe.',
     noExtractions: 'Brak ekstrakcji. Użyj Juddges do wyodrębnienia ustrukturyzowanych danych z orzeczeń.',
     noTrending: 'Brak popularnych tematów',
     failedToLoadStats: 'Nie udało się załadować statystyk',
