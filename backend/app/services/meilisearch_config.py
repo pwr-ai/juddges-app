@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -38,6 +39,12 @@ MEILISEARCH_INDEX_SETTINGS: dict[str, Any] = {
         "decision_type",
         "outcome",
         "decision_date",
+        "base_extraction_status",
+        "base_num_victims",
+        "base_victim_age_offence",
+        "base_case_number",
+        "base_co_def_acc_num",
+        "base_date_of_appeal_court_judgment_ts",
     ],
     "sortableAttributes": [
         "decision_date",
@@ -159,6 +166,39 @@ def transform_judgment_for_meilisearch(row: dict[str, Any]) -> dict[str, Any]:
         doc["judges_flat"] = ", ".join(parts)
     else:
         doc["judges_flat"] = str(judges) if judges else ""
+
+    # Base-schema extraction status (used to filter to fully-extracted docs)
+    doc["base_extraction_status"] = row.get("base_extraction_status")
+
+    # Numeric base-schema fields — kept native so Meilisearch can do range filters.
+    for num_field in (
+        "base_num_victims",
+        "base_victim_age_offence",
+        "base_case_number",
+        "base_co_def_acc_num",
+    ):
+        doc[num_field] = row.get(num_field)
+
+    # Appeal-court judgment date: keep ISO string for display, expose an epoch
+    # seconds field for numeric range filtering.
+    appeal_date_val = row.get("base_date_of_appeal_court_judgment")
+    appeal_date: date | None = None
+    if isinstance(appeal_date_val, str) and appeal_date_val:
+        try:
+            appeal_date = date.fromisoformat(appeal_date_val)
+        except ValueError:
+            appeal_date = None
+    elif isinstance(appeal_date_val, date):
+        appeal_date = appeal_date_val
+
+    doc["base_date_of_appeal_court_judgment"] = (
+        appeal_date.isoformat() if appeal_date is not None else None
+    )
+    doc["base_date_of_appeal_court_judgment_ts"] = (
+        int(datetime.combine(appeal_date, datetime.min.time()).timestamp())
+        if appeal_date is not None
+        else None
+    )
 
     # Explicitly skip embedding — it's useless in Meilisearch and huge
     return doc

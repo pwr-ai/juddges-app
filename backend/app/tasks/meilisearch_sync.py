@@ -31,7 +31,11 @@ _JUDGMENT_SYNC_COLS = (
     "id, case_number, jurisdiction, court_name, court_level, decision_date, "
     "publication_date, title, summary, full_text, judges, case_type, "
     "decision_type, outcome, keywords, legal_topics, cited_legislation, "
-    "source_url, created_at, updated_at"
+    "source_url, created_at, updated_at, "
+    "base_extraction_status, "
+    "base_num_victims, base_victim_age_offence, "
+    "base_case_number, base_co_def_acc_num, "
+    "base_date_of_appeal_court_judgment"
 )
 
 
