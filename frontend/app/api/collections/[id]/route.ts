@@ -107,7 +107,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { name } = body;
+    const { name, description } = body;
 
     if (!name) {
       apiLogger.error("Missing name in PUT request for collection: ", id);
@@ -117,7 +117,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const backendRequestBody = JSON.stringify({ name });
+    const backendRequestBody = JSON.stringify({ name, description });
 
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/collections/${id}`, {

@@ -13818,6 +13818,8 @@ export interface components {
         };
         /** UpdateCollectionRequest */
         UpdateCollectionRequest: {
+            /** Description */
+            description?: string | null;
             /** Name */
             name: string;
         };

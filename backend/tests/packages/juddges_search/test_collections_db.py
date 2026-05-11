@@ -279,3 +279,93 @@ class TestDeleteCollectionOwnership:
         )
         assert ("user_id", "user-a") in _filters(delete_chain)
         assert ("id", "col-1") in _filters(delete_chain)
+
+
+# ---------------------------------------------------------------------------
+# update_collection — partial-update semantics for `description`
+# ---------------------------------------------------------------------------
+
+
+def _update_payload(chain) -> dict[str, Any]:
+    """Extract the dict passed to `.update(...)` in a Supabase chain."""
+    for op, args, _ in chain:
+        if op == "update":
+            return args[0]
+    raise AssertionError(f"no update() in chain: {chain}")
+
+
+@pytest.mark.unit
+class TestUpdateCollectionDescriptionSemantics:
+    async def test_omitted_description_is_not_in_update_payload(
+        self, collections_db: CollectionsDB, fake_client: FakeSupabaseClient
+    ):
+        """When the caller omits description (UNSET sentinel), the update
+        payload must contain only `name` — preserving the existing value."""
+
+        def respond(table: str, chain) -> SimpleNamespace:
+            if table == "collections":
+                return SimpleNamespace(data=[{"id": "col-1", "name": "x"}], count=1)
+            return SimpleNamespace(data=[], count=0)
+
+        fake_client.set_responder(respond)
+
+        await collections_db.update_collection("col-1", "user-a", "renamed")
+
+        update_chain = next(
+            chain for table, chain in fake_client.operations if table == "collections"
+        )
+        payload = _update_payload(update_chain)
+        assert payload == {"name": "renamed"}, (
+            "Omitting description must NOT clobber existing value; observed "
+            f"payload: {payload}"
+        )
+
+    async def test_explicit_none_description_is_written(
+        self, collections_db: CollectionsDB, fake_client: FakeSupabaseClient
+    ):
+        """When the caller passes description=None, the update must include
+        `description: None` so the DB clears the field."""
+
+        def respond(table: str, chain) -> SimpleNamespace:
+            if table == "collections":
+                return SimpleNamespace(
+                    data=[{"id": "col-1", "name": "x", "description": None}], count=1
+                )
+            return SimpleNamespace(data=[], count=0)
+
+        fake_client.set_responder(respond)
+
+        await collections_db.update_collection(
+            "col-1", "user-a", "renamed", description=None
+        )
+
+        update_chain = next(
+            chain for table, chain in fake_client.operations if table == "collections"
+        )
+        payload = _update_payload(update_chain)
+        assert payload == {"name": "renamed", "description": None}
+
+    async def test_string_description_is_written(
+        self, collections_db: CollectionsDB, fake_client: FakeSupabaseClient
+    ):
+        """Happy path: a string description is forwarded verbatim."""
+
+        def respond(table: str, chain) -> SimpleNamespace:
+            if table == "collections":
+                return SimpleNamespace(
+                    data=[{"id": "col-1", "name": "x", "description": "new"}],
+                    count=1,
+                )
+            return SimpleNamespace(data=[], count=0)
+
+        fake_client.set_responder(respond)
+
+        await collections_db.update_collection(
+            "col-1", "user-a", "renamed", description="new"
+        )
+
+        update_chain = next(
+            chain for table, chain in fake_client.operations if table == "collections"
+        )
+        payload = _update_payload(update_chain)
+        assert payload == {"name": "renamed", "description": "new"}
