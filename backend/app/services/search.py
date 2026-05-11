@@ -163,11 +163,18 @@ class MeiliSearchService:
         limit: int = 10,
         offset: int = 0,
         filters: str | None = None,
+        semantic_ratio: float = 0.0,
     ) -> dict[str, Any]:
         """Paginated document search used by /api/search/documents.
 
         Wider ``attributesToRetrieve`` than autocomplete so the results page can
         render full cards without an extra Supabase round-trip.
+
+        ``semantic_ratio`` enables Meilisearch hybrid search when > 0 — the
+        query is embedded via TEI and combined with keyword matching at the
+        requested mix (0 = pure keyword, 1 = pure semantic). Caller controls
+        the ratio so the keyword-only ``text`` mode stays cheap and the
+        ``hybrid`` mode opts in explicitly.
         """
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")
@@ -217,6 +224,19 @@ class MeiliSearchService:
         }
         if filters:
             payload["filter"] = filters
+
+        if semantic_ratio > 0 and query.strip():
+            try:
+                query_vec = await asyncio.to_thread(embed_texts, query)
+                payload["hybrid"] = {
+                    "embedder": "bge-m3",
+                    "semanticRatio": semantic_ratio,
+                }
+                payload["vector"] = query_vec
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "TEI embedding failed for documents_search — falling back to keyword"
+                )
 
         url = f"{self.base_url}/indexes/{self.index_name}/search"
 

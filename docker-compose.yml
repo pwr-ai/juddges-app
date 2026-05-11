@@ -141,6 +141,13 @@ services:
       - MEILI_ENV=production
       - MEILI_MAX_INDEXING_MEMORY=1536MiB
       - MEILI_LOG_LEVEL=WARN
+    # HNSW indexing of large vector corpora opens many mmap files. Without this,
+    # the container inherits Docker's default soft limit and trips EMFILE
+    # ("too_many_open_files") during embedder/settings apply.
+    ulimits:
+      nofile:
+        soft: 524288
+        hard: 524288
     volumes:
       - meilisearch-data:/meili_data
     labels:
