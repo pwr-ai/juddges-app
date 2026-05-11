@@ -6,6 +6,15 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SearchForm } from '@/lib/styles/components/search/SearchForm';
+import type { TopicHit } from '@/hooks/useSearchAutocomplete';
+
+// DOMPurify is a DOM-dependent library; return the input unchanged in tests.
+jest.mock('dompurify', () => ({
+  __esModule: true,
+  default: {
+    sanitize: (value: string) => value,
+  },
+}));
 
 describe('SearchForm', () => {
   const defaultProps = {
@@ -202,6 +211,239 @@ describe('SearchForm', () => {
       expect(setSelectedLanguages).toHaveBeenCalledTimes(1);
       const arg = setSelectedLanguages.mock.calls[0][0] as Set<string>;
       expect(Array.from(arg).sort()).toEqual(['pl', 'uk']);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // TOPICS section
+  // ---------------------------------------------------------------------------
+
+  const sampleTopicHits: TopicHit[] = [
+    {
+      id: 'drug_trafficking',
+      label_pl: 'Handel narkotykami',
+      label_en: 'Drug trafficking',
+      aliases_pl: ['narkomania'],
+      aliases_en: ['narcotics'],
+      category: 'drug_offences',
+      doc_count: 247,
+      jurisdictions: ['pl', 'uk'],
+      _formatted: null,
+    },
+    {
+      id: 'fraud',
+      label_pl: 'Oszustwo',
+      label_en: 'Fraud',
+      aliases_pl: [],
+      aliases_en: [],
+      category: 'economic_offences',
+      doc_count: 299,
+      jurisdictions: ['pl', 'uk'],
+      _formatted: null,
+    },
+  ];
+
+  describe('TOPICS section', () => {
+    it('renders TOPICS section eyebrow when topic hits are present', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+        />
+      );
+
+      expect(screen.getByText(/topics/i)).toBeInTheDocument();
+    });
+
+    it('renders topic primary labels for en locale (label_en first)', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          currentLocale="en"
+        />
+      );
+
+      expect(screen.getByText('Drug trafficking')).toBeInTheDocument();
+      expect(screen.getByText('Fraud')).toBeInTheDocument();
+    });
+
+    it('renders topic primary labels for pl locale (label_pl first)', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          currentLocale="pl"
+        />
+      );
+
+      expect(screen.getByText('Handel narkotykami')).toBeInTheDocument();
+      expect(screen.getByText('Oszustwo')).toBeInTheDocument();
+    });
+
+    it('shows secondary label for pl locale (label_en as secondary)', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          currentLocale="pl"
+        />
+      );
+
+      // secondary labels are the English ones
+      expect(screen.getByText('Drug trafficking')).toBeInTheDocument();
+    });
+
+    it('renders doc_count for each topic', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          currentLocale="en"
+        />
+      );
+
+      expect(screen.getByText('(247)')).toBeInTheDocument();
+      expect(screen.getByText('(299)')).toBeInTheDocument();
+    });
+
+    it('hides TOPICS section when autocompleteTopicHits is empty', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={[]}
+          autocompleteSuggestions={[
+            { id: '1', title: 'Contract liability' },
+          ]}
+        />
+      );
+
+      // TOPICS eyebrow must not appear
+      expect(screen.queryByText(/^topics$/i)).not.toBeInTheDocument();
+      // JUDGMENTS section should still render
+      expect(screen.getByText(/judgments/i)).toBeInTheDocument();
+    });
+
+    it('hides JUDGMENTS section when autocompleteSuggestions is empty but topics present', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          autocompleteSuggestions={[]}
+        />
+      );
+
+      expect(screen.getByText(/topics/i)).toBeInTheDocument();
+      expect(screen.queryByText(/^judgments$/i)).not.toBeInTheDocument();
+    });
+
+    it('renders both TOPICS and JUDGMENTS when both have data', () => {
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          autocompleteSuggestions={[
+            { id: '1', title: 'Contract liability' },
+          ]}
+        />
+      );
+
+      expect(screen.getByText(/topics/i)).toBeInTheDocument();
+      expect(screen.getByText(/judgments/i)).toBeInTheDocument();
+    });
+
+    it('clicking a topic chip calls router.push with /search?q=...&topic=... (en locale)', async () => {
+      const pushMock = jest.fn();
+      jest.mock('next/navigation', () => ({
+        ...jest.requireActual('next/navigation'),
+        useRouter: () => ({ push: pushMock }),
+      }));
+
+      // Re-mock specifically for this test using spyOn approach on the module
+      const navigation = jest.requireMock('next/navigation') as {
+        useRouter: jest.Mock;
+      };
+      navigation.useRouter = jest.fn().mockReturnValue({ push: pushMock });
+
+      const user = userEvent.setup();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={[sampleTopicHits[0]]}
+          currentLocale="en"
+        />
+      );
+
+      await user.click(screen.getByRole('option', { name: /Topic: Drug trafficking/i }));
+
+      expect(pushMock).toHaveBeenCalledWith(
+        expect.stringContaining('/search?')
+      );
+      const url = pushMock.mock.calls[0][0] as string;
+      expect(url).toContain('q=Drug+trafficking');
+      expect(url).toContain('topic=drug_trafficking');
+    });
+
+    it('clicking a topic chip calls router.push with pl primary label for pl locale', async () => {
+      const pushMock = jest.fn();
+      const navigation = jest.requireMock('next/navigation') as {
+        useRouter: jest.Mock;
+      };
+      navigation.useRouter = jest.fn().mockReturnValue({ push: pushMock });
+
+      const user = userEvent.setup();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={[sampleTopicHits[0]]}
+          currentLocale="pl"
+        />
+      );
+
+      await user.click(screen.getByRole('option', { name: /Topic: Handel narkotykami/i }));
+
+      expect(pushMock).toHaveBeenCalledWith(expect.stringContaining('topic=drug_trafficking'));
+      const url = pushMock.mock.calls[0][0] as string;
+      expect(url).toContain('Handel');
+    });
+
+    it('fires postTopicClick when a topic chip is clicked', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+      global.fetch = fetchMock;
+
+      const user = userEvent.setup();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={[sampleTopicHits[0]]}
+          currentLocale="en"
+        />
+      );
+
+      await user.click(screen.getByRole('option', { name: /Topic: Drug trafficking/i }));
+
+      // Fire-and-forget, so we check fetch was called
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/search/topic-click',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('drug_trafficking'),
+        })
+      );
     });
   });
 });

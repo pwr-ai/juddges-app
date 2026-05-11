@@ -22,6 +22,7 @@ import { useSearchResults } from '@/hooks/useSearchResults';
 import { PreSearchFilters } from '@/components/search/PreSearchFilters';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Typing animation component for header text
@@ -89,6 +90,7 @@ function TypingHeader({
 function SearchPageContent(): React.JSX.Element | null {
  const router = useRouter();
  const pathname = usePathname();
+ const { locale } = useLanguage();
  const [mounted, setMounted] = useState(false);
  const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
  const searchInputRef = useRef<HTMLInputElement>(null);
@@ -166,6 +168,7 @@ function SearchPageContent(): React.JSX.Element | null {
  const selectedCount = getSelectedDocumentCount();
  const {
  suggestions: autocompleteSuggestions,
+ topicHits: autocompleteTopicHits,
  isLoading: isAutocompleteLoading,
  clearSuggestions,
  } = useSearchAutocomplete(query, {
@@ -486,8 +489,10 @@ function SearchPageContent(): React.JSX.Element | null {
  hasPerformedSearch={hasPerformedSearch}
  onSearch={handleSearch}
  autocompleteSuggestions={autocompleteSuggestions}
+ autocompleteTopicHits={autocompleteTopicHits}
  isAutocompleteLoading={isAutocompleteLoading}
  onSelectAutocompleteSuggestion={handleAutocompleteSelection}
+ currentLocale={locale}
  />
 
  <PreSearchFilters
@@ -536,8 +541,10 @@ function SearchPageContent(): React.JSX.Element | null {
  hasPerformedSearch={hasPerformedSearch}
  onSearch={handleSearch}
  autocompleteSuggestions={autocompleteSuggestions}
+ autocompleteTopicHits={autocompleteTopicHits}
  isAutocompleteLoading={isAutocompleteLoading}
  onSelectAutocompleteSuggestion={handleAutocompleteSelection}
+ currentLocale={locale}
  />
 
  <PreSearchFilters
