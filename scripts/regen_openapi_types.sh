@@ -26,6 +26,7 @@ import json
 from app.server import app
 with open('$SNAPSHOT', 'w') as f:
     json.dump(app.openapi(), f, indent=2, sort_keys=True)
+    f.write('\n')
 print('OpenAPI snapshot written to $SNAPSHOT')
 "
 
