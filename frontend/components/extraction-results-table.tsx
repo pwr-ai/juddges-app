@@ -21,13 +21,13 @@ import {
  FileJson,
  Loader2,
 } from "lucide-react";
-import ExcelJS from "exceljs";
+import { exportToCSV, exportToJSON, exportToXLSX, type ExportFormat } from "@/lib/file-export";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ExportFormat ="xlsx"|"csv"|"json";
+export type { ExportFormat };
 
 export interface ExportOptions {
  /** Whether to show the export button */
@@ -241,106 +241,6 @@ function prepareExportData(
 
  return exportRow;
  });
-}
-
-/**
- * Downloads a blob as a file
- */
-function downloadBlob(blob: Blob, filename: string): void {
- const url = URL.createObjectURL(blob);
- const link = document.createElement("a");
- link.href = url;
- link.download = filename;
- link.style.display ="none";
- document.body.appendChild(link);
- link.click();
- setTimeout(() => {
- document.body.removeChild(link);
- URL.revokeObjectURL(url);
- }, 100);
-}
-
-/**
- * Exports data to XLSX format
- */
-async function exportToXLSX(
- data: Record<string, unknown>[],
- filename: string,
- sheetName ="Data"
-): Promise<void> {
- const workbook = new ExcelJS.Workbook();
- const worksheet = workbook.addWorksheet(sheetName.slice(0, 31));
-
- const keys = Object.keys(data[0] || {});
- worksheet.columns = keys.map((key) => {
- const maxLength = Math.max(
- key.length,
- ...data.map((row) => String(row[key] || "").length)
- );
- return {
- header: key,
- key,
- width: Math.min(maxLength + 2, 60),
- };
- });
-
- data.forEach((row) => {
- const exportRow = Object.fromEntries(
- keys.map((key) => [key, row[key] ?? ""])
- );
- worksheet.addRow(exportRow);
- });
-
- const excelBuffer = await workbook.xlsx.writeBuffer();
- const blob = new Blob([excelBuffer], {
- type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
- });
-
- downloadBlob(blob, `${filename}.xlsx`);
-}
-
-/**
- * Exports data to CSV format
- */
-function exportToCSV(data: Record<string, unknown>[], filename: string): void {
- if (data.length === 0) return;
-
- const headers = Object.keys(data[0]);
- const csvRows: string[] = [];
-
- // Header row
- csvRows.push(headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(","));
-
- // Data rows
- data.forEach((row) => {
- const values = headers.map((header) => {
- const value = row[header];
- if (value === null || value === undefined) return '""';
- const strValue = String(value).replace(/"/g, '""');
- return `"${strValue}"`;
- });
- csvRows.push(values.join(","));
- });
-
- const csvContent = csvRows.join("\n");
- // Add UTF-8 BOM for Excel compatibility
- const blob = new Blob(["\ufeff"+ csvContent], {
- type: "text/csv;charset=utf-8;",
- });
-
- downloadBlob(blob, `${filename}.csv`);
-}
-
-/**
- * Exports data to JSON format
- */
-function exportToJSON(data: Record<string, unknown>[], filename: string): void {
- const jsonContent = JSON.stringify(data, null, 2);
- const blob = new Blob([jsonContent], {
- type: "application/json;charset=utf-8;",
- });
-
- downloadBlob(blob, `${filename}.json`);
 }
 
 // ============================================================================
