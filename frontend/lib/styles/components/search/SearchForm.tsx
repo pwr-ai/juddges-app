@@ -254,14 +254,14 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
           {isAutocompleteLoading ? (
             <p className="px-1 text-sm text-muted-foreground">Loading suggestions...</p>
           ) : (
-            <>
+            <div role="listbox" aria-label="Search suggestions">
               {/* TOPICS section */}
               {autocompleteTopicHits.length > 0 && (
                 <div className="mb-1">
                   <div className="px-1 pt-1 pb-0.5">
                     <Eyebrow noRule as="div">Topics</Eyebrow>
                   </div>
-                  <div role="listbox" aria-label="Topic suggestions">
+                  <div role="group" aria-label="Topics">
                     {autocompleteTopicHits.map((hit, index) => {
                       const { primary, secondary } = pickTopicLabel(hit, currentLocale);
                       const lang = currentLocale.split("-")[0].toLowerCase();
@@ -278,7 +278,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                           role="option"
                           aria-selected={isActive}
                           className={[
-                            "group w-full flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm",
+                            "w-full flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm",
                             "hover:bg-[color:var(--gold-soft)] hover:text-[color:var(--oxblood)]",
                             "[&_mark]:bg-[color:var(--gold)] [&_mark]:text-[color:var(--ink)]",
                             isActive ? "bg-[color:var(--gold-soft)] text-[color:var(--oxblood)]" : "",
@@ -326,7 +326,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                   <div className="px-1 pt-1 pb-0.5">
                     <Eyebrow noRule as="div">Judgments</Eyebrow>
                   </div>
-                  <div role="listbox" aria-label="Autocomplete suggestions" className="space-y-1">
+                  <div role="group" aria-label="Judgments" className="space-y-1">
                     {autocompleteSuggestions.map((item, index) => {
                       const flatIndex = autocompleteTopicHits.length + index;
                       const isActive = flatIndex === activeSuggestionIndex;
@@ -366,7 +366,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       )}

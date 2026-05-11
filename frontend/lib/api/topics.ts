@@ -16,7 +16,6 @@ export function postTopicClick(payload: TopicClickPayload): void {
   fetch("/api/search/topic-click", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(payload),
   }).catch((error: unknown) => {
     topicsLogger.warn("topic-click analytics failed", {
