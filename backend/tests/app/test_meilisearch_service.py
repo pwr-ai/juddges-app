@@ -84,25 +84,38 @@ class TestConfiguredProperties:
 
 class TestAutocomplete:
     @pytest.mark.asyncio
-    async def test_autocomplete_sends_correct_payload(self, service):
-        mock_resp = _mock_response(
-            200, {"hits": [{"id": "1", "title": "Test"}], "query": "test"}
-        )
+    async def test_autocomplete_issues_facet_search_per_facet(self, service):
+        """Autocomplete fans out to one facet-search request per configured facet."""
+        calls: list[tuple[str, dict]] = []
 
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = mock_resp
-            result = await service.autocomplete("test", limit=5)
+        async def fake_post(self_, url, json, headers):
+            calls.append((url, json))
+            return _mock_response(
+                200,
+                {
+                    "facetHits": [
+                        {"value": "Contract law", "count": 5},
+                    ],
+                    "processingTimeMs": 2,
+                },
+            )
 
-        assert result["query"] == "test"
-        call_kwargs = mock_post.call_args
-        payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
-        assert payload["q"] == "test"
-        assert payload["limit"] == 5
-        assert "case_number" in payload["attributesToHighlight"]
-        assert "attributesToRetrieve" in payload
-        assert payload["matchingStrategy"] == "last"
-        assert payload["attributesToSearchOn"][0] == "title"
-        assert payload["attributesToCrop"] == ["summary"]
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.autocomplete("contract", limit=5)
+
+        assert {url for url, _ in calls} == {
+            "http://meili:7700/indexes/judgments/facet-search"
+        }
+        facets_called = {payload["facetName"] for _, payload in calls}
+        assert facets_called == set(service.AUTOCOMPLETE_FACETS)
+        for _, payload in calls:
+            assert payload["facetQuery"] == "contract"
+        assert result["query"] == "contract"
+        # 3 facets each returned the same value — merged to one hit summing counts
+        assert len(result["hits"]) == 1
+        assert result["hits"][0]["value"] == "Contract law"
+        assert result["hits"][0]["count"] == 15
+        assert set(result["hits"][0]["sources"]) == set(service.AUTOCOMPLETE_FACETS)
 
     @pytest.mark.asyncio
     async def test_autocomplete_raises_when_not_configured(self):
@@ -111,17 +124,43 @@ class TestAutocomplete:
             await svc.autocomplete("test")
 
     @pytest.mark.asyncio
-    async def test_autocomplete_with_filters(self, service):
-        mock_resp = _mock_response(200, {"hits": [], "query": "test"})
+    async def test_autocomplete_forwards_filters_to_each_facet(self, service):
+        calls: list[dict] = []
 
-        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = mock_resp
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            return _mock_response(200, {"facetHits": [], "processingTimeMs": 1})
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
             await service.autocomplete("test", filters="jurisdiction = 'PL'")
 
-        payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get(
-            "json"
-        )
-        assert payload["filter"] == "jurisdiction = 'PL'"
+        assert len(calls) == len(service.AUTOCOMPLETE_FACETS)
+        for payload in calls:
+            assert payload["filter"] == "jurisdiction = 'PL'"
+
+    @pytest.mark.asyncio
+    async def test_autocomplete_skips_failed_facets(self, service):
+        """A single facet failing must not abort the whole autocomplete."""
+
+        async def fake_post(self_, url, json, headers):
+            if json.get("facetName") == "keywords":
+                return _mock_response(
+                    400, {"message": "attribute not filterable: keywords"}
+                )
+            return _mock_response(
+                200,
+                {
+                    "facetHits": [{"value": "Topic A", "count": 3}],
+                    "processingTimeMs": 1,
+                },
+            )
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.autocomplete("topic", limit=5)
+
+        # 2 facets succeeded, 1 failed — merged value still surfaces
+        assert result["hits"][0]["value"] == "Topic A"
+        assert "keywords" not in result["hits"][0]["sources"]
 
 
 class TestAdminMethods:
@@ -223,14 +262,30 @@ class TestAdminMethods:
         assert result["numberOfDocuments"] == 42
 
 
-class TestAutocompleteHybrid:
+class TestDocumentsSearch:
     @pytest.mark.asyncio
-    async def test_payload_includes_hybrid_and_vector_when_ratio_positive(
-        self, service
-    ):
-        fake_vec = [0.2] * 1024
-
+    async def test_documents_search_pure_keyword(self, service):
         captured = {}
+
+        async def fake_post(self_, url, json, headers):
+            captured["payload"] = json
+            return _mock_response(
+                200, {"hits": [{"id": "doc-1"}], "estimatedTotalHits": 1}
+            )
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.documents_search("drugs", limit=5, offset=0)
+
+        assert captured["payload"]["q"] == "drugs"
+        assert "hybrid" not in captured["payload"]
+        assert "vector" not in captured["payload"]
+        assert "full_text" in captured["payload"]["attributesToSearchOn"]
+        assert result["hits"][0]["id"] == "doc-1"
+
+    @pytest.mark.asyncio
+    async def test_documents_search_hybrid_includes_vector(self, service):
+        captured = {}
+        fake_vec = [0.1] * 1024
 
         async def fake_post(self_, url, json, headers):
             captured["payload"] = json
@@ -240,60 +295,81 @@ class TestAutocompleteHybrid:
             patch("app.services.search.embed_texts", return_value=fake_vec),
             patch("httpx.AsyncClient.post", new=fake_post),
         ):
-            await service.autocomplete("contract breach", semantic_ratio=0.3)
+            await service.documents_search("drugs", semantic_ratio=0.5)
 
         assert captured["payload"]["hybrid"] == {
             "embedder": "bge-m3",
-            "semanticRatio": 0.3,
+            "semanticRatio": 0.5,
         }
         assert captured["payload"]["vector"] == fake_vec
 
     @pytest.mark.asyncio
-    async def test_payload_omits_hybrid_when_ratio_zero(self, service):
-        captured = {}
+    async def test_hybrid_400_falls_back_to_keyword_retry(self, service):
+        """When Meili 400s on a hybrid request (missing embedder, etc.),
+        retry once with the hybrid/vector keys stripped instead of erroring out."""
+        calls: list[dict] = []
+        fake_vec = [0.2] * 1024
 
         async def fake_post(self_, url, json, headers):
-            captured["payload"] = json
-            return _mock_response(200, {"hits": []})
-
-        with patch("httpx.AsyncClient.post", new=fake_post):
-            await service.autocomplete("contract", semantic_ratio=0.0)
-
-        assert "hybrid" not in captured["payload"]
-        assert "vector" not in captured["payload"]
-
-    @pytest.mark.asyncio
-    async def test_default_is_pure_keyword(self, service):
-        """Default autocomplete is pure keyword — hybrid is opt-in via semantic_ratio>0."""
-        captured = {}
-
-        async def fake_post(self_, url, json, headers):
-            captured["payload"] = json
-            return _mock_response(200, {"hits": []})
-
-        with patch("httpx.AsyncClient.post", new=fake_post):
-            await service.autocomplete("contract")
-
-        assert "hybrid" not in captured["payload"]
-        assert "vector" not in captured["payload"]
-
-    @pytest.mark.asyncio
-    async def test_tei_failure_falls_back_to_keyword_search(self, service):
-        captured = {}
-
-        async def fake_post(self_, url, json, headers):
-            captured["payload"] = json
-            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+            calls.append(json)
+            if "hybrid" in json:
+                return _mock_response(
+                    400,
+                    {
+                        "message": "Cannot find embedder with name `bge-m3`.",
+                        "code": "invalid_search_embedder",
+                    },
+                )
+            return _mock_response(
+                200,
+                {"hits": [{"id": "doc-after-retry"}], "estimatedTotalHits": 1},
+            )
 
         with (
-            patch(
-                "app.services.search.embed_texts",
-                side_effect=RuntimeError("TEI unreachable"),
-            ),
+            patch("app.services.search.embed_texts", return_value=fake_vec),
             patch("httpx.AsyncClient.post", new=fake_post),
         ):
-            result = await service.autocomplete("contract", semantic_ratio=0.5)
+            result = await service.documents_search("drugs", semantic_ratio=0.5)
 
-        assert "hybrid" not in captured["payload"]
-        assert "vector" not in captured["payload"]
-        assert result == {"hits": [], "estimatedTotalHits": 0}
+        assert len(calls) == 2
+        assert "hybrid" in calls[0] and "vector" in calls[0]
+        assert "hybrid" not in calls[1] and "vector" not in calls[1]
+        assert result["hits"][0]["id"] == "doc-after-retry"
+
+    @pytest.mark.asyncio
+    async def test_keyword_400_does_not_retry(self, service):
+        """A 400 on a pure-keyword request has no hybrid to strip — surface it."""
+        calls: list[dict] = []
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            return _mock_response(
+                400, {"message": "Invalid filter syntax", "code": "invalid_filter"}
+            )
+
+        with (
+            patch("httpx.AsyncClient.post", new=fake_post),
+            pytest.raises(SearchServiceError),
+        ):
+            await service.documents_search("drugs", filters="bogus :: filter")
+
+        assert len(calls) == 1
+
+    @pytest.mark.asyncio
+    async def test_hybrid_500_does_not_retry(self, service):
+        """Server errors signal a Meili outage the keyword path can't paper over."""
+        calls: list[dict] = []
+        fake_vec = [0.3] * 1024
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            return _mock_response(503, {"message": "Service Unavailable"})
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+            pytest.raises(SearchServiceError),
+        ):
+            await service.documents_search("drugs", semantic_ratio=0.5)
+
+        assert len(calls) == 1

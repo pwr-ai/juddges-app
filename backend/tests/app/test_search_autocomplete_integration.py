@@ -33,7 +33,7 @@ async def test_autocomplete_returns_503_when_meilisearch_not_configured(
     assert "not configured" in payload["detail"].lower()
 
 
-async def test_autocomplete_returns_hits_from_search_service(
+async def test_autocomplete_returns_topic_hits_from_search_service(
     authenticated_client,
 ):
     from app.api.search import get_search_service
@@ -44,46 +44,43 @@ async def test_autocomplete_returns_hits_from_search_service(
         async def autocomplete(
             self, query: str, limit: int = 10, filters: str | None = None
         ) -> dict[str, Any]:
-            assert query == "contract"
+            assert query == "kred"
             assert limit == 5
             assert filters == "jurisdiction = 'PL'"
             return {
                 "hits": [
                     {
-                        "id": "doc-1",
-                        "title": "Contract law overview",
-                        "case_number": "II CSK 123/25",
-                        "jurisdiction": "PL",
-                        "court_name": "Supreme Court",
-                        "decision_date": "2025-06-01",
-                        "_formatted": {
-                            "title": "<mark>Contract</mark> law overview",
-                            "summary": "A case about <mark>contract</mark> disputes",
-                            "case_number": "II CSK 123/25",
-                            "court_name": "Supreme Court",
-                        },
-                    }
+                        "value": "Kredyty frankowe",
+                        "count": 142,
+                        "sources": ["legal_topics", "keywords"],
+                    },
+                    {
+                        "value": "Kredyt mieszkaniowy",
+                        "count": 37,
+                        "sources": ["keywords"],
+                    },
                 ],
                 "query": query,
-                "processingTimeMs": 7,
-                "estimatedTotalHits": 1,
+                "processingTimeMs": 4,
+                "estimatedTotalHits": 2,
             }
 
     app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
 
     response = await authenticated_client.get(
         "/api/search/autocomplete",
-        params={"q": "contract", "limit": 5, "filters": "jurisdiction = 'PL'"},
+        params={"q": "kred", "limit": 5, "filters": "jurisdiction = 'PL'"},
     )
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["query"] == "contract"
-    assert payload["processingTimeMs"] == 7
-    assert payload["estimatedTotalHits"] == 1
-    assert len(payload["hits"]) == 1
-    assert payload["hits"][0]["id"] == "doc-1"
-    assert payload["hits"][0]["case_number"] == "II CSK 123/25"
+    assert payload["query"] == "kred"
+    assert payload["processingTimeMs"] == 4
+    assert payload["estimatedTotalHits"] == 2
+    assert len(payload["hits"]) == 2
+    assert payload["hits"][0]["value"] == "Kredyty frankowe"
+    assert payload["hits"][0]["count"] == 142
+    assert payload["hits"][0]["sources"] == ["legal_topics", "keywords"]
 
 
 async def test_autocomplete_returns_502_when_search_backend_fails(

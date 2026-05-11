@@ -6,14 +6,12 @@ import logger from "@/lib/logger";
 
 const autocompleteLogger = logger.child("useSearchAutocomplete");
 
+export type AutocompleteSource = "legal_topics" | "keywords" | "cited_legislation";
+
 export interface AutocompleteSuggestion {
-  id: string;
-  title: string;
-  summary?: string;
-  caseNumber?: string;
-  jurisdiction?: string;
-  courtName?: string;
-  decisionDate?: string;
+  value: string;
+  count: number;
+  sources: AutocompleteSource[];
 }
 
 interface UseSearchAutocompleteOptions {
@@ -30,42 +28,33 @@ interface UseSearchAutocompleteResult {
 }
 
 interface AutocompleteHit {
-  id?: string;
-  document_id?: string;
-  title?: string;
-  summary?: string;
-  case_number?: string;
-  jurisdiction?: string;
-  court_name?: string;
-  decision_date?: string;
-  _formatted?: {
-    title?: string;
-    summary?: string;
-    case_number?: string;
-    court_name?: string;
-  };
+  value?: string;
+  count?: number;
+  sources?: string[];
 }
 
 interface AutocompleteResponse {
   hits?: AutocompleteHit[];
 }
 
+const KNOWN_SOURCES: ReadonlySet<AutocompleteSource> = new Set([
+  "legal_topics",
+  "keywords",
+  "cited_legislation",
+]);
+
 function mapHitToSuggestion(hit: AutocompleteHit): AutocompleteSuggestion | null {
-  // Prefer _formatted (highlighted) fields when available
-  const formatted = hit._formatted;
-  const title = (formatted?.title || hit.title || "").trim();
-  if (!title) {
+  const value = (hit.value || "").trim();
+  if (!value) {
     return null;
   }
-
+  const sources = (hit.sources || []).filter((s): s is AutocompleteSource =>
+    KNOWN_SOURCES.has(s as AutocompleteSource)
+  );
   return {
-    id: String(hit.id || hit.document_id || title),
-    title,
-    summary: (formatted?.summary || hit.summary || "").trim() || undefined,
-    caseNumber: (hit.case_number || "").trim() || undefined,
-    jurisdiction: hit.jurisdiction || undefined,
-    courtName: (formatted?.court_name || hit.court_name || "").trim() || undefined,
-    decisionDate: hit.decision_date || undefined,
+    value,
+    count: typeof hit.count === "number" ? hit.count : 0,
+    sources,
   };
 }
 

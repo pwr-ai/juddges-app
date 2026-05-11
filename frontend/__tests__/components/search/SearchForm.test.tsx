@@ -98,31 +98,40 @@ describe('SearchForm', () => {
     expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
   });
 
-  it('renders autocomplete suggestions and selects one', async () => {
+  it('renders topic suggestions with count + source labels and selects one', async () => {
     const user = userEvent.setup();
     const onSelectAutocompleteSuggestion = jest.fn();
 
     render(
       <SearchForm
         {...defaultProps}
-        query="con"
+        query="kred"
         autocompleteSuggestions={[
           {
-            id: '1',
-            title: 'Contract liability',
-            summary: 'Example summary',
-            caseNumber: 'I ACa 1/24',
-            courtName: 'Court of Appeal',
-            decisionDate: '2024-01-15',
+            value: 'Kredyty frankowe',
+            count: 142,
+            sources: ['legal_topics', 'keywords'],
+          },
+          {
+            value: 'art. 720 k.c.',
+            count: 12,
+            sources: ['cited_legislation'],
           },
         ]}
         onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
       />
     );
 
-    await user.click(screen.getByRole('option', { name: /Use suggestion: Contract liability/i }));
+    expect(screen.getByText(/Topics & keywords/i)).toBeInTheDocument();
+    expect(screen.getByText('Topic, Keyword')).toBeInTheDocument();
+    expect(screen.getByText('Citation')).toBeInTheDocument();
+    expect(screen.getByText('142 cases')).toBeInTheDocument();
 
-    expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('Contract liability');
+    await user.click(
+      screen.getByRole('option', { name: /Use suggestion: Kredyty frankowe \(142 cases\)/i })
+    );
+
+    expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('Kredyty frankowe');
   });
 
 });

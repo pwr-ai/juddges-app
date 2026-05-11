@@ -5,8 +5,43 @@ import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { sanitizeHighlightHtml } from "@/lib/highlight";
-import type { AutocompleteSuggestion } from "@/hooks/useSearchAutocomplete";
+import type {
+  AutocompleteSource,
+  AutocompleteSuggestion,
+} from "@/hooks/useSearchAutocomplete";
+
+const SOURCE_LABELS: Record<AutocompleteSource, string> = {
+  legal_topics: "Topic",
+  keywords: "Keyword",
+  cited_legislation: "Citation",
+};
+
+function formatCount(n: number): string {
+  if (n >= 1000) {
+    return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+  }
+  return String(n);
+}
+
+function highlightMatch(value: string, query: string): React.ReactNode {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return value;
+  }
+  const idx = value.toLocaleLowerCase().indexOf(trimmed.toLocaleLowerCase());
+  if (idx < 0) {
+    return value;
+  }
+  return (
+    <>
+      {value.slice(0, idx)}
+      <mark className="bg-transparent font-semibold text-foreground">
+        {value.slice(idx, idx + trimmed.length)}
+      </mark>
+      {value.slice(idx + trimmed.length)}
+    </>
+  );
+}
 
 type SearchMode = "thinking" | "rabbit";
 
@@ -140,7 +175,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
       event.preventDefault();
       const selected = autocompleteSuggestions[activeSuggestionIndex];
       if (selected) {
-        handleSuggestionSelect(selected.title);
+        handleSuggestionSelect(selected.value);
       }
       return;
     }
@@ -195,35 +230,40 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
 
       {showSuggestions && (
         <div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-background/60 p-2">
-          <div className="px-1 text-xs text-muted-foreground">Suggestions</div>
+          <div className="px-1 text-xs text-muted-foreground">Topics &amp; keywords</div>
           {isAutocompleteLoading ? (
             <p className="px-1 text-sm text-muted-foreground">Loading suggestions...</p>
           ) : (
-            <div role="listbox" aria-label="Autocomplete suggestions" className="space-y-1">
-              {autocompleteSuggestions.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="option"
-                  aria-selected={index === activeSuggestionIndex}
-                  className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted ${
-                    index === activeSuggestionIndex ? "bg-muted" : ""
-                  }`}
-                  onMouseEnter={() => setActiveSuggestionIndex(index)}
-                  onClick={() => handleSuggestionSelect(item.title)}
-                  aria-label={`Use suggestion: ${item.title}`}
-                >
-                  <div className="font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.title) }} />
-                  {(item.caseNumber || item.courtName) ? (
-                    <div className="text-xs text-muted-foreground">
-                      {[item.caseNumber, item.courtName, item.decisionDate].filter(Boolean).join(" · ")}
-                    </div>
-                  ) : null}
-                  {item.summary ? (
-                    <div className="text-xs text-muted-foreground line-clamp-1" dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.summary) }} />
-                  ) : null}
-                </button>
-              ))}
+            <div role="listbox" aria-label="Topic suggestions" className="space-y-1">
+              {autocompleteSuggestions.map((item, index) => {
+                const sourceLabels = item.sources.map((s) => SOURCE_LABELS[s]).join(", ");
+                return (
+                  <button
+                    key={`${item.value}-${item.sources.join("-")}`}
+                    type="button"
+                    role="option"
+                    aria-selected={index === activeSuggestionIndex}
+                    className={`flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted ${
+                      index === activeSuggestionIndex ? "bg-muted" : ""
+                    }`}
+                    onMouseEnter={() => setActiveSuggestionIndex(index)}
+                    onClick={() => handleSuggestionSelect(item.value)}
+                    aria-label={`Use suggestion: ${item.value} (${item.count} cases)`}
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {highlightMatch(item.value, query)}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-mono">{formatCount(item.count)} cases</span>
+                      {sourceLabels ? (
+                        <span className="rounded-full border border-border/60 px-1.5 py-0.5">
+                          {sourceLabels}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
