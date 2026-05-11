@@ -13,6 +13,7 @@ from app.services.meilisearch_config import (
     setup_meilisearch_index,
     transform_judgment_for_meilisearch,
 )
+from app.services.meilisearch_embeddings import attach_embedding
 from app.services.search import MeiliSearchService
 from app.services.sync_status import record_sync_completed, record_sync_failed
 from app.workers import celery_app
@@ -72,7 +73,9 @@ def sync_judgment_to_meilisearch(
         logger.warning(f"Judgment {judgment_id} not found in Supabase")
         return {"status": "skipped", "reason": "not_found"}
 
-    doc = transform_judgment_for_meilisearch(resp.data[0])
+    row = resp.data[0]
+    doc = transform_judgment_for_meilisearch(row)
+    doc = asyncio.run(attach_embedding(doc, row))
     result = asyncio.run(service.upsert_documents([doc]))
     logger.info(f"Upserted judgment {judgment_id} to Meilisearch")
     return {"status": "upserted", "task": result}

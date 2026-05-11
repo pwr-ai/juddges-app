@@ -1,6 +1,7 @@
 """Unit tests for Meilisearch sync: transform function and config setup."""
 
 from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from app.services.meilisearch_config import (
@@ -163,3 +164,77 @@ class TestSyncColumnProjection:
         # Regression: don't lose any field already required by the sync path
         for col in ("id", "title", "summary", "full_text", "base_extraction_status"):
             assert col in JUDGMENT_SYNC_COLUMNS
+
+
+def _run_coro(coro):
+    import asyncio
+
+    return asyncio.new_event_loop().run_until_complete(coro)
+
+
+class TestIncrementalSyncEmbeds:
+    def _make_row(self, **overrides):
+        row = {
+            "id": uuid4(),
+            "case_number": "II CSK 1/25",
+            "jurisdiction": "PL",
+            "court_name": "X",
+            "court_level": "S",
+            "decision_date": None,
+            "publication_date": None,
+            "title": "t",
+            "summary": "s",
+            "full_text": None,
+            "judges": None,
+            "case_type": None,
+            "decision_type": None,
+            "outcome": None,
+            "keywords": None,
+            "legal_topics": None,
+            "cited_legislation": None,
+            "source_url": None,
+            "created_at": None,
+            "updated_at": None,
+            "base_extraction_status": "completed",
+            "base_num_victims": None,
+            "base_victim_age_offence": None,
+            "base_case_number": None,
+            "base_co_def_acc_num": None,
+            "base_date_of_appeal_court_judgment": None,
+            "base_case_name": "Smith v. Jones",
+            "base_keywords": ["contract"],
+            "structure_case_identification_summary": None,
+            "structure_facts_summary": None,
+            "structure_operative_part_summary": None,
+        }
+        row.update(overrides)
+        return row
+
+    def test_upsert_payload_includes_vectors(self):
+        from app.tasks.meilisearch_sync import sync_judgment_to_meilisearch
+
+        row = self._make_row()
+        row_id = str(row["id"])
+        fake_vec = [0.5] * 1024
+
+        sb = MagicMock()
+        sb.table().select().eq().execute.return_value = MagicMock(data=[row])
+
+        service = MagicMock()
+        service.admin_configured = True
+        service.upsert_documents = AsyncMock(return_value={"taskUid": 1})
+
+        with (
+            patch("app.tasks.meilisearch_sync.supabase_client", sb),
+            patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+            patch(
+                "app.services.meilisearch_embeddings.embed_texts",
+                return_value=fake_vec,
+            ),
+            patch("asyncio.run", side_effect=lambda c: _run_coro(c)),
+        ):
+            sync_judgment_to_meilisearch.run(row_id, "upsert")
+
+        sent_docs = service.upsert_documents.call_args.args[0]
+        assert len(sent_docs) == 1
+        assert sent_docs[0]["_vectors"] == {"bge-m3": fake_vec}
