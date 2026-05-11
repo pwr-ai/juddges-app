@@ -155,6 +155,11 @@ export interface SearchDocumentsMeiliInput {
   limit?: number;
   offset?: number;
   filters?: string;
+  /**
+   * Hybrid mix for Meilisearch hybrid search. 0 = pure keyword (default,
+   * used by the "text" mode). The "hybrid" mode in the UI sets this to ~0.5.
+   */
+  semanticRatio?: number;
 }
 
 export interface SearchDocumentsResponse {
@@ -179,12 +184,16 @@ export async function searchDocumentsMeili(
   if (input.filters) {
     params.set("filters", input.filters);
   }
+  if (typeof input.semanticRatio === "number" && input.semanticRatio > 0) {
+    params.set("semantic_ratio", String(input.semanticRatio));
+  }
 
   apiLogger.info("searchDocumentsMeili called", {
     query: input.query,
     limit: input.limit,
     offset: input.offset,
     hasFilters: Boolean(input.filters),
+    semanticRatio: input.semanticRatio,
   });
 
   const response = await fetch(`/api/search/documents?${params.toString()}`, {

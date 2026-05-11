@@ -28,6 +28,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       params.set("filters", filters);
     }
 
+    const semanticRatio = searchParams.get("semantic_ratio");
+    if (semanticRatio) {
+      params.set("semantic_ratio", semanticRatio);
+    }
+
     const backendUrl = getBackendUrl();
     const apiKey = process.env.BACKEND_API_KEY || "";
 

@@ -233,11 +233,20 @@ async def setup_meilisearch_index(service: MeiliSearchService) -> bool:
                 await service.wait_for_task(task_uid)
             logger.info(f"Meilisearch index '{service.index_name}' created")
 
-        # 2. Apply settings
+        # 2. Apply settings — and surface failure. ``wait_for_task`` only WARNs
+        # on failed/canceled, so we must inspect the terminal status here or a
+        # rejected embedder block silently leaves the index half-configured.
         settings_resp = await service.configure_index(MEILISEARCH_INDEX_SETTINGS)
         task_uid = settings_resp.get("taskUid")
         if task_uid is not None:
-            await service.wait_for_task(task_uid, max_wait=120.0)
+            task = await service.wait_for_task(task_uid, max_wait=120.0)
+            status = task.get("status")
+            if status != "succeeded":
+                logger.error(
+                    f"Meilisearch settings task {task_uid} did not succeed "
+                    f"(status={status}): {task.get('error')}"
+                )
+                return False
         logger.info(f"Meilisearch index '{service.index_name}' settings applied")
 
         return True

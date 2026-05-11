@@ -115,6 +115,13 @@ services:
             - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-dev-master-key}
             - MEILI_ENV=development
             - MEILI_LOG_LEVEL=INFO
+        # HNSW indexing of large vector corpora opens many mmap files; default 1024 fd
+        # soft limit triggers "too_many_open_files" during embedder registration.
+        # Soft raised to match hard after observing EMFILE at 65536 during apply-settings.
+        ulimits:
+            nofile:
+                soft: 524288
+                hard: 524288
         volumes:
             - meilisearch-data-dev:/meili_data
         labels:

@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { submitSearchFeedback } from '@/lib/api/feedback';
 import logger from '@/lib/logger';
 
 /**
@@ -165,11 +165,6 @@ export function SearchResultFeedback({
  setFeedbackState(rating);
 
  try {
- const supabase = createClient();
- const {
- data: { user },
- } = await supabase.auth.getUser();
-
  // Prepare enriched search context with timestamps
  const now = new Date();
  const enrichedContext: SearchFeedbackContext = {
@@ -183,26 +178,15 @@ export function SearchResultFeedback({
  },
  };
 
- // Prepare feedback data
- const feedbackData = {
+ await submitSearchFeedback({
  document_id: documentId,
  search_query: searchQuery,
  rating: rating,
- user_id: user?.id || null,
  session_id: typeof window !== 'undefined' ? sessionStorage.getItem('session_id') : null,
  result_position: resultPosition,
- reason: null, // Could add optional comment dialog later
+ reason: null,
  search_context: enrichedContext,
- created_at: now.toISOString(),
- };
-
- const { error } = await supabase
- .from('search_feedback')
- .insert(feedbackData);
-
- if (error) {
- throw error;
- }
+ });
 
  feedbackLogger.info('Search feedback submitted', {
  documentId,

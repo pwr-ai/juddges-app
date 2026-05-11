@@ -107,6 +107,15 @@ async def documents_search(
     filters: str | None = Query(
         None, description="Optional Meilisearch filter expression"
     ),
+    semantic_ratio: float = Query(
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Hybrid mix between keyword and semantic search. 0 = pure keyword "
+            "(default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5."
+        ),
+    ),
     search_service: MeiliSearchService = Depends(get_search_service),
 ) -> DocumentSearchResponse:
     """Paginated Meilisearch-backed document search for the /search results page."""
@@ -117,7 +126,11 @@ async def documents_search(
 
     try:
         result = await search_service.documents_search(
-            query=query, limit=limit, offset=offset, filters=filters
+            query=query,
+            limit=limit,
+            offset=offset,
+            filters=filters,
+            semantic_ratio=semantic_ratio,
         )
     except Exception as exc:
         raise HTTPException(
