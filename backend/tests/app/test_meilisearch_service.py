@@ -253,6 +253,141 @@ class TestAdminMethods:
         assert result["numberOfDocuments"] == 42
 
 
+class TestGetDocumentsSwapDelete:
+    """HTTP-level tests for get_documents, swap_indexes, and delete_index."""
+
+    @pytest.mark.asyncio
+    async def test_get_documents_happy_path_with_filter(self, service):
+        mock_resp = _mock_response(
+            200,
+            {
+                "results": [{"id": "drug_trafficking", "doc_count": 247}],
+                "total": 1,
+                "limit": 1000,
+                "offset": 0,
+            },
+        )
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+            result = await service.get_documents(
+                limit=1000,
+                fields=["id", "doc_count"],
+                filter_expr="category = 'drug_offences'",
+            )
+
+        assert result["total"] == 1
+        assert result["results"][0]["id"] == "drug_trafficking"
+        # Verify the URL and params were constructed correctly.
+        call_url = (
+            mock_get.call_args.args[0]
+            if mock_get.call_args.args
+            else mock_get.call_args[0][0]
+        )
+        assert "/indexes/judgments/documents" in call_url
+        params = mock_get.call_args.kwargs.get("params") or {}
+        assert params.get("filter") == "category = 'drug_offences'"
+        assert params.get("fields") == "id,doc_count"
+
+    @pytest.mark.asyncio
+    async def test_get_documents_raises_when_admin_not_configured(
+        self, search_only_service
+    ):
+        with pytest.raises(SearchServiceError, match="admin key"):
+            await search_only_service.get_documents()
+
+    @pytest.mark.asyncio
+    async def test_swap_indexes_posts_correct_payload(self, service):
+        mock_resp = _mock_response(202, {"taskUid": 10, "status": "enqueued"})
+
+        with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+            mock_post.return_value = mock_resp
+            result = await service.swap_indexes("topics", "topics_new")
+
+        assert result["taskUid"] == 10
+        call_url = (
+            mock_post.call_args.args[0]
+            if mock_post.call_args.args
+            else mock_post.call_args[0][0]
+        )
+        assert call_url.endswith("/swap-indexes")
+        payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get(
+            "json"
+        )
+        assert payload == [{"indexes": ["topics", "topics_new"]}]
+
+    @pytest.mark.asyncio
+    async def test_swap_indexes_raises_when_admin_not_configured(
+        self, search_only_service
+    ):
+        with pytest.raises(SearchServiceError, match="admin key"):
+            await search_only_service.swap_indexes("topics", "topics_new")
+
+    @pytest.mark.asyncio
+    async def test_delete_index_calls_correct_url(self, service):
+        mock_resp = _mock_response(202, {"taskUid": 20, "status": "enqueued"})
+        # Override request to have the correct method for raise_for_status.
+        mock_resp = httpx.Response(
+            202,
+            json={"taskUid": 20, "status": "enqueued"},
+            request=httpx.Request("DELETE", "http://meili:7700/indexes/judgments"),
+        )
+
+        with patch("httpx.AsyncClient.delete", new_callable=AsyncMock) as mock_del:
+            mock_del.return_value = mock_resp
+            result = await service.delete_index()
+
+        assert result["taskUid"] == 20
+        call_url = (
+            mock_del.call_args.args[0]
+            if mock_del.call_args.args
+            else mock_del.call_args[0][0]
+        )
+        assert "/indexes/judgments" in call_url
+
+    @pytest.mark.asyncio
+    async def test_delete_index_treats_404_as_success(self, service):
+        mock_404 = httpx.Response(
+            404,
+            json={"message": "Index not found"},
+            request=httpx.Request("DELETE", "http://meili:7700/indexes/judgments"),
+        )
+
+        with patch("httpx.AsyncClient.delete", new_callable=AsyncMock) as mock_del:
+            mock_del.return_value = mock_404
+            result = await service.delete_index()
+
+        assert result["status"] == "not_found"
+        assert result["indexUid"] == "judgments"
+
+    @pytest.mark.asyncio
+    async def test_delete_index_raises_when_admin_not_configured(
+        self, search_only_service
+    ):
+        with pytest.raises(SearchServiceError, match="admin key"):
+            await search_only_service.delete_index()
+
+    @pytest.mark.asyncio
+    async def test_delete_index_custom_uid(self, service):
+        mock_resp = httpx.Response(
+            202,
+            json={"taskUid": 21, "status": "enqueued"},
+            request=httpx.Request("DELETE", "http://meili:7700/indexes/topics_old"),
+        )
+
+        with patch("httpx.AsyncClient.delete", new_callable=AsyncMock) as mock_del:
+            mock_del.return_value = mock_resp
+            result = await service.delete_index("topics_old")
+
+        assert result["taskUid"] == 21
+        call_url = (
+            mock_del.call_args.args[0]
+            if mock_del.call_args.args
+            else mock_del.call_args[0][0]
+        )
+        assert "/indexes/topics_old" in call_url
+
+
 class TestAutocompleteHybrid:
     @pytest.mark.asyncio
     async def test_payload_includes_hybrid_and_vector_when_ratio_positive(

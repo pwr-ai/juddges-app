@@ -590,6 +590,9 @@ class MeiliSearchService:
         Useful for diffing before an atomic swap — retrieves all stored docs
         without a search query.
         """
+        if not self.admin_configured:
+            raise SearchServiceError("Meilisearch admin key is not configured")
+
         url = f"{self.base_url}/indexes/{self.index_name}/documents"
         params: dict[str, Any] = {"limit": limit, "offset": offset}
         if fields:

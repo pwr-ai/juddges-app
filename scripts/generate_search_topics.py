@@ -38,7 +38,7 @@ import sys
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 # ---------------------------------------------------------------------------
 # sys.path: ensure backend package is importable when running from repo root
@@ -158,6 +158,25 @@ _CATEGORY_TAXONOMY = [
     "other",
 ]
 
+_Category = Literal[
+    "drug_offences",
+    "fraud",
+    "violence",
+    "sex_offences",
+    "traffic",
+    "white_collar",
+    "procedural",
+    "sentencing",
+    "property_crime",
+    "public_order",
+    "organised_crime",
+    "terrorism",
+    "human_trafficking",
+    "juvenile",
+    "other",
+]
+_Jurisdiction = Literal["pl", "uk"]
+
 # ---------------------------------------------------------------------------
 # Pydantic schemas for structured LLM output
 # ---------------------------------------------------------------------------
@@ -179,9 +198,9 @@ class UnifiedConcept(PydanticBaseModel):
     label_en: str
     aliases_pl: list[str]
     aliases_en: list[str]
-    category: str
+    category: _Category
     doc_count: int
-    jurisdictions: list[str]
+    jurisdictions: list[_Jurisdiction]
 
 
 class AlignmentOutput(PydanticBaseModel):
@@ -611,6 +630,15 @@ def align_concepts(
     label, keywords, description, doc_count) and produces a deduplicated,
     cross-lingual concept map.
     """
+    _ALIGNMENT_MAX_TOKENS = 16_000
+    _TOKENS_PER_CONCEPT = 120
+    if max_concepts * _TOKENS_PER_CONCEPT > _ALIGNMENT_MAX_TOKENS:
+        logger.warning(
+            "max_concepts ({}) may exceed alignment token budget ({}). "
+            "Output may be truncated. Consider lowering max_concepts.",
+            max_concepts,
+            _ALIGNMENT_MAX_TOKENS,
+        )
 
     def _fmt_cluster(c: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -1059,6 +1087,13 @@ def _parse_args() -> dict[str, Any]:
     i = 0
     while i < len(args):
         a = args[i]
+        # Support both --flag value and --flag=value forms.
+        # For --flag=value, split on the first '=' and inject the value into
+        # args so the rest of the loop sees the same --flag / value pattern.
+        if "=" in a and a.startswith("--"):
+            flag, eq_value = a.split("=", 1)
+            args = args[:i] + [flag, eq_value] + args[i + 1 :]
+            a = flag
         if a in ("--jurisdictions",) and i + 1 < len(args):
             parsed["jurisdictions"] = args[i + 1]
             i += 2
