@@ -278,3 +278,24 @@ class TestAutocompleteHybrid:
             await service.autocomplete("contract")
 
         assert captured["payload"]["hybrid"]["semanticRatio"] == 0.3
+
+    @pytest.mark.asyncio
+    async def test_tei_failure_falls_back_to_keyword_search(self, service):
+        captured = {}
+
+        async def fake_post(self_, url, json, headers):
+            captured["payload"] = json
+            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+
+        with (
+            patch(
+                "app.services.search.embed_texts",
+                side_effect=RuntimeError("TEI unreachable"),
+            ),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            result = await service.autocomplete("contract")
+
+        assert "hybrid" not in captured["payload"]
+        assert "vector" not in captured["payload"]
+        assert result == {"hits": [], "estimatedTotalHits": 0}
