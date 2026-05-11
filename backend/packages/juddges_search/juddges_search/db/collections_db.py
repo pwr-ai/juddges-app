@@ -8,6 +8,10 @@ from supabase import PostgrestAPIError, StorageException
 
 from ._base import SupabaseClientMixin
 
+# Sentinel for partial-update fields the caller chose not to touch.
+# `None` means "explicitly clear"; UNSET means "leave the field alone".
+UNSET: Any = object()
+
 # ---------------------------------------------------------------------------
 # Column projection constants
 # ---------------------------------------------------------------------------
@@ -164,11 +168,20 @@ class CollectionsDB(SupabaseClientMixin):
             self._handle_error("create_collection", e)
             return {}
 
-    async def update_collection(self, collection_id: str, user_id: str, name: str) -> Dict[str, Any]:
+    async def update_collection(
+        self,
+        collection_id: str,
+        user_id: str,
+        name: str,
+        description: Any = UNSET,
+    ) -> Dict[str, Any]:
         try:
+            update_payload: Dict[str, Any] = {"name": name}
+            if description is not UNSET:
+                update_payload["description"] = description
             response = (
                 self.client.table("collections")
-                .update({"name": name})
+                .update(update_payload)
                 .eq("id", collection_id)
                 .eq("user_id", user_id)
                 .execute()
