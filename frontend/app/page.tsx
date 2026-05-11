@@ -1,36 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import {
-  SkeletonTrendingTopic,
-  SkeletonChatCard,
-  SkeletonExtractionCard,
-} from "@/components/ui/skeleton-card";
+import { SkeletonTrendingTopic } from "@/components/ui/skeleton-card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import {
   useDashboardStats,
   useTrendingTopics,
-  useUserSchemas,
   useCollectionsDocumentCount,
-  useRecentExtractions,
 } from "@/lib/api/dashboard";
 import {
   TrendingUp,
   TrendingDown,
   Minus,
   FileJson,
-  Zap,
   Database,
   Copy,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  PageContainer,
-  SchemaStatusBadge,
-  VerifiedBadge,
-} from "@/lib/styles/components";
+import { PageContainer } from "@/lib/styles/components";
 import { formatStatNumber } from "@/lib/format-stats";
 import { LandingPage } from "@/components/landing/LandingPage";
 import {
@@ -38,7 +27,6 @@ import {
   EditorialButton,
   Rule,
   Stat,
-  Citation,
 } from "@/components/editorial";
 import React from "react";
 
@@ -86,52 +74,6 @@ function formatLastUpdated(dateString: string | null): { value: string; label: s
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
   return { value: `${day}/${month}/${year}`, label: "" };
-}
-
-function formatChatTimestamp(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-
-  // Format date as DD/MM/YYYY
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-// ---------- Editorial-styled empty state -----------------------------------
-
-interface EditorialEmptyStateProps {
-  message: string;
-  actionHref: string;
-  actionLabel: string;
-}
-
-function EditorialEmptyState({
-  message,
-  actionHref,
-  actionLabel,
-}: EditorialEmptyStateProps): React.JSX.Element {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 border border-rule px-4 py-8 text-center">
-      <p className="font-serif text-base italic leading-snug text-ink-soft">
-        {message}
-      </p>
-      <EditorialButton variant="secondary" size="sm" href={actionHref}>
-        {actionLabel}
-      </EditorialButton>
-    </div>
-  );
 }
 
 // ---------- "View all" header action ----------------------------------------
@@ -207,17 +149,11 @@ export default function HomePage(): React.JSX.Element {
 
   const { data: trendingTopics = [], isLoading: trendsLoading } = useTrendingTopics(3);
 
-
-  const { data: userSchemas = [], isLoading: schemasLoading } = useUserSchemas(3);
-
   const { data: collectionsInfo, isLoading: collectionsLoading } =
     useCollectionsDocumentCount();
 
   const collectionsDocCount = collectionsInfo?.documentCount || 0;
   const collectionsCount = collectionsInfo?.collectionCount || 0;
-
-  const { data: recentExtractions = [], isLoading: extractionsLoading } =
-    useRecentExtractions(3);
 
   // Individual loading states - each card loads separately
 
@@ -428,176 +364,26 @@ export default function HomePage(): React.JSX.Element {
           </EditorialCard>
         </div>
 
-        {/* Coding schemas */}
+        {/* Base coding schema link */}
         <div className="lg:col-span-4">
           <EditorialCard
             eyebrow="Coding Schemas"
-            title={t("dashboard.extractionTemplates")}
-            action={
-              userSchemas.length > 0 ? (
-                <ViewAllAction href="/schema-chat" label={t("dashboard.viewAll")} />
-              ) : undefined
-            }
+            title="Base Coding Schema"
             className="h-full"
           >
-            {schemasLoading ? (
-              <ul className="divide-y divide-rule">
-                {[0, 1, 2].map((i) => (
-                  <li key={i} className="py-3">
-                    <SkeletonChatCard />
-                  </li>
-                ))}
-              </ul>
-            ) : userSchemas.length > 0 ? (
-              <ul className="divide-y divide-rule">
-                {userSchemas.map((schema) => (
-                  <li key={schema.id} className="first:pt-0 last:pb-0">
-                    <Link
-                      href={`/schema-chat?schemaId=${schema.id}`}
-                      className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <div className="flex items-start gap-3">
-                        <FileJson className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <p className="line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
-                              {schema.name}
-                            </p>
-                            {schema.status && (
-                              <SchemaStatusBadge status={schema.status} size="sm" />
-                            )}
-                            {schema.is_verified && <VerifiedBadge size="sm" />}
-                          </div>
-                          {schema.description && (
-                            <p className="mt-1 line-clamp-1 text-xs text-ink-soft">
-                              {schema.description}
-                            </p>
-                          )}
-                          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
-                            <span className="capitalize">{schema.category}</span>
-                            <span className="mx-1.5 text-rule-strong">·</span>
-                            {formatChatTimestamp(schema.updated_at)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EditorialEmptyState
-                message={t("dashboard.noSchemas")}
-                actionHref="/schema-chat"
-                actionLabel={t("dashboard.generateTemplate")}
-              />
-            )}
-          </EditorialCard>
-        </div>
-
-        {/* Recent extractions */}
-        <div className="lg:col-span-4">
-          <EditorialCard
-            eyebrow="Extractions"
-            title={t("dashboard.recentExtractions")}
-            action={<ViewAllAction href="/extract" label={t("dashboard.viewAll")} />}
-            className="h-full"
-          >
-            {extractionsLoading ? (
-              <ul className="divide-y divide-rule">
-                {[0, 1, 2].map((i) => (
-                  <li key={i} className="py-3">
-                    <SkeletonExtractionCard />
-                  </li>
-                ))}
-              </ul>
-            ) : recentExtractions.length > 0 ? (
-              <ul className="divide-y divide-rule">
-                {recentExtractions.map((job) => {
-                  // Map backend status -> editorial citation marker for visual rhythm.
-                  const statusMarker =
-                    job.status === "SUCCESS"
-                      ? "*"
-                      : job.status === "FAILURE"
-                        ? "†"
-                        : "·";
-                  return (
-                    <li key={job.job_id} className="first:pt-0 last:pb-0">
-                      <Link
-                        href={`/extract?jobId=${job.job_id}`}
-                        className="group block py-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        <div className="flex items-start gap-3">
-                          <Zap className="mt-0.5 size-4 shrink-0 text-ink-soft group-hover:text-oxblood" />
-                          <div className="min-w-0 flex-1">
-                            <p className="line-clamp-2 text-sm font-medium text-ink group-hover:text-oxblood">
-                              {job.collection_name || "Extraction Job"}
-                              <Citation marker={statusMarker} />
-                            </p>
-                            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
-                              {job.status}
-                              <span className="mx-1.5 text-rule-strong">·</span>
-                              {formatChatTimestamp(job.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EditorialEmptyState
-                message={t("dashboard.noExtractions")}
-                actionHref="/extract"
-                actionLabel={t("dashboard.startExtraction")}
-              />
-            )}
-          </EditorialCard>
-        </div>
-
-        {/* ============ ROW 3 ============ */}
-
-        {/* Quick-start strip (8 cols) */}
-        <div className="lg:col-span-8">
-          <EditorialCard
-            eyebrow="Get started"
-            title="Three steps to legal-AI research"
-            className="h-full"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <Link
-                href="/search"
-                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
-                  <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
-                </div>
-                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
-              </Link>
-              <Link
-                href="/collections"
-                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
-                  <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
-                </div>
-                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
-              </Link>
-              <Link
-                href="/schema-chat"
-                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
-                  <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
-                </div>
-                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
-              </Link>
+            <div className="flex flex-1 flex-col gap-3">
+              <p className="font-serif italic text-ink-soft text-sm leading-snug">
+                The canonical extraction template
+              </p>
+              <p className="text-sm text-ink leading-relaxed">
+                Shared baseline of fields used across JUDDGES extraction pipelines — review the field definitions, types, and locales in one place.
+              </p>
+              <div className="mt-auto flex items-center gap-2">
+                <FileJson className="size-4 text-ink-soft" aria-hidden />
+                <EditorialButton variant="primary" size="sm" href="/schemas/base" arrow>
+                  Open base schema
+                </EditorialButton>
+              </div>
             </div>
           </EditorialCard>
         </div>
@@ -638,6 +424,53 @@ export default function HomePage(): React.JSX.Element {
                 </p>
               </div>
             )}
+          </EditorialCard>
+        </div>
+
+        {/* ============ ROW 3 ============ */}
+
+        {/* Quick-start strip (full width) */}
+        <div className="lg:col-span-12">
+          <EditorialCard
+            eyebrow="Get started"
+            title="Three steps to legal-AI research"
+            className="h-full"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <Link
+                href="/search"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">01</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Search judgments</p>
+                  <p className="mt-1 text-xs text-ink-soft">Find PL & UK case law with hybrid semantic + full-text search.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/collections"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">02</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Save to a collection</p>
+                  <p className="mt-1 text-xs text-ink-soft">Group judgments into reusable research sets.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+              <Link
+                href="/schema-chat"
+                className="group flex items-start gap-3 transition-colors hover:text-oxblood focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span aria-hidden className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft group-hover:text-oxblood">03</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink group-hover:text-oxblood">Extract structured data</p>
+                  <p className="mt-1 text-xs text-ink-soft">Build a coding schema and run extraction on a slice.</p>
+                </div>
+                <span aria-hidden className="text-ink-soft transition-transform duration-200 ease-out group-hover:translate-x-0.5 group-hover:text-oxblood">→</span>
+              </Link>
+            </div>
           </EditorialCard>
         </div>
 

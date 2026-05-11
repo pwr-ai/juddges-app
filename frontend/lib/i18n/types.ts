@@ -385,22 +385,12 @@ export interface ErrorTranslations {
 export interface DashboardTranslations {
   title: string;
   databaseOverview: string;
-  extractionTemplates: string;
   recentJudgments: string;
   popularLegalTopics: string;
   researchCollections: string;
-  recentExtractions: string;
   viewAll: string;
-  startChat: string;
-  generateTemplate: string;
-  startExtraction: string;
-  noSchemas: string;
-  noExtractions: string;
   noTrending: string;
   failedToLoadStats: string;
-  dataCompleteness: string;
-  legalInsights: string;
-  complexityAnalysis: string;
 }
 
 /**

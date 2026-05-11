@@ -70,51 +70,10 @@ export function useTrendingTopics(limit: number = 3) {
   });
 }
 
-interface Schema {
-  id: string;
-  name: string;
-  description?: string | null;
-  category: string;
-  type: string;
-  status?: 'draft' | 'published' | 'review' | 'archived' | null;
-  is_verified?: boolean | null;
-  created_at: string;
-  updated_at: string;
-}
-
 interface Collection {
   id: string;
   name: string;
   documents: Array<{ id: string }>;
-}
-
-interface ExtractionJob {
-  job_id: string;
-  collection_id?: string | null;
-  collection_name?: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string | null;
-}
-
-/**
- * Hook to fetch user's generated schemas with React Query caching
- */
-export function useUserSchemas(limit: number = 5) {
-  return useQuery({
-    queryKey: ["dashboard", "user-schemas", limit],
-    queryFn: async (): Promise<Schema[]> => {
-      const response = await fetch("/api/schemas", {
-        cache: 'no-store',
-      });
-      if (!response.ok) throw new Error("Failed to fetch schemas");
-      const schemas = await response.json();
-      // Schemas from API should already be filtered by user, but limit the results
-      return (schemas || []).slice(0, limit);
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
 }
 
 interface CollectionsInfo {
@@ -144,23 +103,5 @@ export function useCollectionsDocumentCount() {
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
-
-/**
- * Hook to fetch recent extraction jobs with React Query caching
- */
-export function useRecentExtractions(limit: number = 3) {
-  return useQuery({
-    queryKey: ["dashboard", "recent-extractions", limit],
-    queryFn: async (): Promise<ExtractionJob[]> => {
-      const response = await fetch("/api/jobs", {
-        cache: 'no-store',
-      });
-      if (!response.ok) throw new Error("Failed to fetch extraction jobs");
-      const data = await response.json();
-      return (data.jobs || []).slice(0, limit);
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
