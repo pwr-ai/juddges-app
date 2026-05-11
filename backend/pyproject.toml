@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "juddges"
-version = "1.1.0"
+version = "1.1.1"
 description = "Juddges App - AI-powered judicial decision search for Polish and UK courts"
 authors = ["Lukasz Augustyniak <aisolutions@lukaszaugustyniak.com>"]
 license = "Apache-2.0"
