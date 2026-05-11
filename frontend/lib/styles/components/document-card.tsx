@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import type { SearchDocument } from "@/types/search";
+import { QueryHighlight } from "./query-highlight";
 
 export interface DocumentCardProps {
   document: SearchDocument;
@@ -90,7 +91,13 @@ export function DocumentCard({
     <Card className="h-full overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm leading-5">{title}</CardTitle>
+          <CardTitle className="text-sm leading-5">
+              <QueryHighlight
+                text={title}
+                serverHtml={document.highlighted?.title ?? null}
+                query={query}
+              />
+            </CardTitle>
           <div className="flex items-center gap-1.5 shrink-0">
             {jurisdictionLabel && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -117,9 +124,13 @@ export function DocumentCard({
         {document.date_issued && (
           <p className="text-xs text-muted-foreground">{document.date_issued}</p>
         )}
-        <p className={showExtended ? "text-sm whitespace-pre-wrap" : "text-sm line-clamp-3"}>
-          {summary}
-        </p>
+        <QueryHighlight
+          as="p"
+          className={showExtended ? "text-sm whitespace-pre-wrap" : "text-sm line-clamp-3"}
+          text={summary}
+          serverHtml={document.highlighted?.summary ?? null}
+          query={query}
+        />
       </CardContent>
       <CardFooter className="flex items-center gap-2">
         <Button asChild size="sm" variant="outline" className="flex-1">
