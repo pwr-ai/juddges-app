@@ -435,41 +435,23 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  }
 
  setIsDeleting(true);
- try {
- // Actually delete from database
- await deleteCollection(id);
-
  const collectionName = collection.name;
+ try {
+ await deleteCollection(id);
  pageLogger.info('Collection deleted successfully', {
  collectionId: id,
- collectionName
+ collectionName,
  });
-
- // Show toast with undo option
  showSuccessToast({
  title: "Collection deleted",
- description: `"${collectionName}"has been deleted`,
+ description: `"${collectionName}" has been deleted`,
  icon: null,
- secondaryAction: {
- label: "Undo",
- onClick: async () => {
- // Restore collection - reload from server
- await loadCollection();
- pageLogger.info('Collection deletion cancelled', {
- collectionId: id,
- collectionName
  });
- }
- },
- onDismiss: () => {
- // Navigate back to collections page after toast is dismissed
  router.push('/collections');
- }
- });
  } catch (error) {
  pageLogger.error('Failed to delete collection', error, {
  collectionId: id,
- context: 'handleDeleteCollection'
+ context: 'handleDeleteCollection',
  });
  toast.error("Failed to delete collection");
  setIsDeleting(false);
