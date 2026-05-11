@@ -40,15 +40,9 @@ const PUBLIC_PAGES = [
 
 // Mirrors the allow-list in `frontend/lib/supabase/middleware.ts`.
 // If you add a path there, update this list.
-//
-// Note: `/api/sso/check-domain` requires `?domain=` to return 200; without
-// it the route legitimately returns 400. We test it with a `?domain=` so
-// we exercise the happy-path branch — the assertion below would also
-// accept 4xx since the contract under test is "no auth-bounce".
 const PUBLIC_API = [
   '/api/health',
   '/api/dashboard/stats',
-  '/api/sso/check-domain?domain=example.com',
 ] as const;
 
 // Routes NOT in the middleware allow-list, which therefore require auth.
@@ -147,9 +141,8 @@ test.describe.parallel('middleware allow-list — public API, anonymous', () => 
 
       // Contract: middleware does NOT redirect this URL to /auth/login.
       // The endpoint itself may 200 (happy path), 4xx (legitimate input
-      // error like `/api/sso/check-domain` missing `?domain=`), or 404
-      // (route not implemented in this build). It must NOT be a 3xx
-      // whose Location header points at /auth/login.
+      // error), or 404 (route not implemented in this build). It must
+      // NOT be a 3xx whose Location header points at /auth/login.
       const isAuthBounce =
         status >= 300 && status < 400 && /\/auth\/login/.test(location);
       expect(

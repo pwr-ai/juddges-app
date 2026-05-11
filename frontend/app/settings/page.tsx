@@ -28,7 +28,6 @@ import {
  ArrowRight,
  ExternalLink,
  Settings as SettingsIcon,
- KeyRound,
  Brain,
  Check,
  Loader2,
@@ -846,22 +845,6 @@ export default function SettingsPage() {
  <p className="font-medium">Database Statistics</p>
  <p className="text-sm text-muted-foreground">
  View metrics and analytics
- </p>
- </div>
- </div>
- <ArrowRight className="h-5 w-5 text-muted-foreground"/>
- </Link>
-
- <Link
- href="/settings/sso"
- className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"
- >
- <div className="flex items-center gap-3">
- <KeyRound className="h-5 w-5 text-muted-foreground"/>
- <div>
- <p className="font-medium">SSO Connections</p>
- <p className="text-sm text-muted-foreground">
- Manage SAML 2.0 and OAuth 2.0 enterprise SSO
  </p>
  </div>
  </div>

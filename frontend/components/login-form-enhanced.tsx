@@ -7,10 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Logo } from '@/components/ui/logo'
-import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import logger from '@/lib/logger'
 import {
   Mail,
@@ -24,17 +23,7 @@ import {
   AlertCircle,
   Loader2,
   BookOpen,
-  Building2,
-  KeyRound,
 } from 'lucide-react'
-
-interface SSOInfo {
-  sso_enabled: boolean
-  provider_type?: string
-  connection_id?: string
-  connection_name?: string
-  organization?: string
-}
 
 export function LoginFormEnhanced({
   className,
@@ -47,9 +36,6 @@ export function LoginFormEnhanced({
   const [error, setError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isSSOLoading, setIsSSOLoading] = useState(false)
-  const [ssoInfo, setSSOInfo] = useState<SSOInfo | null>(null)
-  const [ssoCheckDomain, setSSOCheckDomain] = useState<string | null>(null)
   const router = useRouter()
 
   pageLogger.info('LoginFormEnhanced component mounted')
@@ -68,66 +54,9 @@ export function LoginFormEnhanced({
     return true
   }
 
-  const checkDomainSSO = useCallback(async (emailValue: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(emailValue)) return
-
-    const domain = emailValue.split('@')[1]?.toLowerCase()
-    if (!domain || domain === ssoCheckDomain) return
-
-    setSSOCheckDomain(domain)
-
-    try {
-      const response = await fetch(`/api/sso/check-domain?domain=${encodeURIComponent(domain)}`)
-      if (response.ok) {
-        const data: SSOInfo = await response.json()
-        setSSOInfo(data)
-      }
-    } catch {
-      // Silently fail — SSO check is optional
-    }
-  }, [ssoCheckDomain])
-
-  const handleSSOLogin = async (): Promise<void> => {
-    if (!ssoInfo?.sso_enabled || !email) return
-
-    setIsSSOLoading(true)
-    setError(null)
-
-    const domain = email.split('@')[1]?.toLowerCase()
-    pageLogger.info('SSO login initiated', { domain, provider: ssoInfo.provider_type })
-
-    try {
-      const supabase = createClient()
-      const { data, error: ssoError } = await supabase.auth.signInWithSSO({
-        domain,
-      })
-
-      if (ssoError) throw ssoError
-
-      if (data?.url) {
-        try {
-          const url = new URL(data.url, window.location.origin)
-          if (url.protocol === 'https:' || url.protocol === 'http:' || url.origin === window.location.origin) {
-            window.location.href = url.toString()
-          }
-        } catch {
-          pageLogger.error('Invalid SSO redirect URL', { url: data.url })
-        }
-      }
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'SSO authentication failed'
-      pageLogger.error('SSO login failed', error, { domain, errorMessage })
-      setError(errorMessage)
-      setIsSSOLoading(false)
-    }
-  }
-
   const handleEmailBlur = (): void => {
     if (email) {
       validateEmail(email)
-      checkDomainSSO(email)
     }
   }
 
@@ -348,42 +277,6 @@ export function LoginFormEnhanced({
               )}
             </div>
 
-            {/* SSO Login Option */}
-            {ssoInfo?.sso_enabled && (
-              <div className="space-y-4 animate-fade-in-down">
-                <button
-                  type="button"
-                  onClick={handleSSOLogin}
-                  disabled={isSSOLoading || isLoading}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all duration-200 text-sm font-medium text-foreground disabled:opacity-50"
-                  aria-label={`Sign in with ${ssoInfo.organization || 'SSO'}`}
-                >
-                  {isSSOLoading ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Building2 className="size-4 text-primary" />
-                  )}
-                  <span>
-                    {isSSOLoading
-                      ? 'Redirecting to identity provider...'
-                      : `Sign in with ${ssoInfo.organization || 'Enterprise SSO'}`}
-                  </span>
-                  {ssoInfo.provider_type && (
-                    <span className="ml-auto text-xs text-muted-foreground uppercase">
-                      {ssoInfo.provider_type}
-                    </span>
-                  )}
-                </button>
-
-                <div className="relative">
-                  <Separator />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground">
-                    or use password
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Password Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -446,7 +339,7 @@ export function LoginFormEnhanced({
             <PrimaryButton
               type="submit"
               className="w-full group"
-              disabled={isLoading || isSSOLoading}
+              disabled={isLoading}
               icon={isLoading ? undefined : ArrowRight}
               size="md"
               enhancedHover

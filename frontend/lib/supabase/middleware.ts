@@ -73,7 +73,6 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/api/health") &&
     !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
-    !request.nextUrl.pathname.startsWith("/api/sso/check-domain") &&
     !request.nextUrl.pathname.startsWith("/status") &&
     !request.nextUrl.pathname.startsWith("/offline")
   ) {

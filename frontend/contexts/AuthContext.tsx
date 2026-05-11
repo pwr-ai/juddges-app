@@ -12,7 +12,6 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
-  signInWithSSO: (domain: string) => Promise<{ url: string | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,12 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
-  const signInWithSSO = async (domain: string): Promise<{ url: string | null }> => {
-    const { data, error } = await createClient().auth.signInWithSSO({ domain });
-    if (error) throw error;
-    return { url: data?.url ?? null };
-  };
-
   const signOut = async () => {
     const { error } = await createClient().auth.signOut();
     if (error) throw error;
@@ -81,7 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    signInWithSSO,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

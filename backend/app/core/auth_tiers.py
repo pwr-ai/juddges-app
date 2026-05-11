@@ -100,8 +100,6 @@ Quick reference (as registered in server.py):
         audit_router            — JWT enforced per-endpoint
         consent_router          — JWT enforced per-endpoint
         legal_router            — PUBLIC (static legal documents)
-        sso_router              — mixed: check-domain PUBLIC,
-                                  admin endpoints use require_admin
         blog_router             — /blog (public GET routes need no auth,
                                   protected routes use get_current_user)
 """

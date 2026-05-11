@@ -34,7 +34,6 @@ from app.api.legal import router as legal_router
 from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
 from app.api.search import router as search_router
-from app.api.sso import router as sso_router
 from app.argumentation import router as argumentation_router
 from app.auth import verify_api_key
 from app.clustering import router as clustering_router
@@ -564,7 +563,6 @@ async def redirect_root_to_docs():
 #                               get_optional_user per endpoint
 #            audit_router     — JWT enforced per-endpoint
 #            consent_router   — JWT enforced per-endpoint
-#            sso_router       — check-domain PUBLIC, admin endpoints ADMIN
 # ============================================================================
 
 # Add routes with API key protection
@@ -632,10 +630,6 @@ app.include_router(feedback_router)
 app.include_router(audit_router)
 app.include_router(consent_router)
 app.include_router(legal_router)
-
-# SSO management endpoints (JWT authentication with admin checks in endpoints)
-# check-domain is public, admin endpoints require admin role
-app.include_router(sso_router)
 
 # Admin panel endpoints (JWT authentication via require_admin dependency)
 # No verify_api_key - authentication is handled entirely by require_admin
