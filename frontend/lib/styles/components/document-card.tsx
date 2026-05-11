@@ -17,16 +17,25 @@ export interface DocumentCardProps {
   showExtended?: boolean;
   from?: string;
   chatId?: string;
+  query?: string | null;
 }
 
-function buildDocumentHref(documentId: string, from?: string, chatId?: string): string {
+function buildDocumentHref(
+  documentId: string,
+  from?: string,
+  chatId?: string,
+  query?: string | null
+): string {
   const cleanId = cleanDocumentIdForUrl(documentId);
   const params = new URLSearchParams();
   if (from) {
-    params.set("from ", from);
+    params.set("from", from);
   }
   if (chatId) {
     params.set("chatId", chatId);
+  }
+  if (query && query.trim()) {
+    params.set("q", query.trim());
   }
   const suffix = params.toString();
   return suffix ? `/documents/${cleanId}?${suffix}` : `/documents/${cleanId}`;
@@ -69,10 +78,11 @@ export function DocumentCard({
   showExtended = false,
   from,
   chatId,
+  query,
 }: DocumentCardProps): React.JSX.Element {
   const title = document.title || document.document_number || document.document_id;
   const summary = document.summary || document.thesis || "No summary available.";
-  const href = buildDocumentHref(document.document_id, from, chatId);
+  const href = buildDocumentHref(document.document_id, from, chatId, query);
   const jurisdictionLabel = formatJurisdiction(document);
   const languageLabel = formatLanguage(document.language);
 
