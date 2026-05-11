@@ -14,6 +14,7 @@ from app.services.search_analytics import (
     get_popular_queries,
     get_zero_result_queries,
     record_search_query,
+    record_topic_click,
 )
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
@@ -50,6 +51,28 @@ class DocumentSearchResponse(BaseModel):
     query_time_ms: int | None = None
     pagination: DocumentPagination
     total_count: int | None = None
+
+
+class TopicClickEvent(BaseModel):
+    """Request body for the topic-click analytics endpoint."""
+
+    topic_id: str
+    query: str  # the autocomplete query the user had typed
+    jurisdiction: str | None = None  # if a filter was active
+
+
+class TopicsMetaResponse(BaseModel):
+    """Metadata about the Meilisearch topics index.
+
+    Fields are ``None`` until ``scripts/generate_search_topics.py`` has run
+    at least once and written ``generated_at`` / ``corpus_snapshot`` onto index
+    documents.
+    """
+
+    total_concepts: int
+    generated_at: str | None  # ISO timestamp from the most-recent doc
+    corpus_snapshot: int | None  # criminal-judgment count at generation time
+    jurisdictions: list[str]  # distinct jurisdictions in the index
 
 
 def get_search_service() -> MeiliSearchService:
@@ -185,6 +208,56 @@ async def documents_search(
             next_offset=next_offset,
         ),
         total_count=estimated_total,
+    )
+
+
+# ── Topic analytics + metadata endpoints ─────────────────────────────────
+
+
+@router.post("/topic-click", status_code=200)
+async def topic_click(
+    event: TopicClickEvent,
+    background_tasks: BackgroundTasks,
+    search_service: MeiliSearchService = Depends(get_search_service),
+) -> dict[str, str]:
+    """Record a topic-chip click for analytics (fire-and-forget).
+
+    The insert is scheduled as a background task so the response is returned
+    immediately without blocking on the database write.  Failures are logged
+    as warnings only — never surfaced to the caller.
+    """
+    background_tasks.add_task(
+        record_topic_click,
+        topic_id=event.topic_id,
+        query=event.query,
+        jurisdiction=event.jurisdiction,
+    )
+    return {"status": "ok"}
+
+
+@router.get("/topics/meta", response_model=TopicsMetaResponse)
+async def topics_meta(
+    search_service: MeiliSearchService = Depends(get_search_service),
+) -> TopicsMetaResponse:
+    """Return metadata about the Meilisearch topics index.
+
+    Used for debugging and the admin UI.  Returns ``total_concepts=0`` with
+    all other fields ``None`` when the topics index is empty or unavailable.
+    """
+    if not search_service.configured:
+        return TopicsMetaResponse(
+            total_concepts=0,
+            generated_at=None,
+            corpus_snapshot=None,
+            jurisdictions=[],
+        )
+
+    data = await search_service.topics_stats()
+    return TopicsMetaResponse(
+        total_concepts=data["total_concepts"],
+        generated_at=data.get("generated_at"),
+        corpus_snapshot=data.get("corpus_snapshot"),
+        jurisdictions=data.get("jurisdictions", []),
     )
 
 

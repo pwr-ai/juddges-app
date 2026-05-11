@@ -577,6 +577,98 @@ class MeiliSearchService:
             response.raise_for_status()
             return response.json()
 
+    async def topics_stats(self) -> dict[str, Any]:
+        """Return metadata about the topics index for the /topics/meta endpoint.
+
+        Queries the topics-index service (not ``self``, which is scoped to the
+        judgments index) for:
+        - ``numberOfDocuments`` from the index stats endpoint
+        - The top doc_count document for ``generated_at``, ``corpus_snapshot``,
+          and ``jurisdictions`` field values
+
+        Returns a dict with keys:
+        - ``total_concepts`` (int)
+        - ``generated_at`` (str | None)
+        - ``corpus_snapshot`` (int | None)
+        - ``jurisdictions`` (list[str])
+
+        Never raises — on any failure returns zeros/None/empty values.
+        """
+        svc = self._topics_service
+        empty: dict[str, Any] = {
+            "total_concepts": 0,
+            "generated_at": None,
+            "corpus_snapshot": None,
+            "jurisdictions": [],
+        }
+
+        if not svc.configured:
+            logger.debug("Topics service not configured — returning empty topics_stats")
+            return empty
+
+        try:
+            # 1. Fetch document count from index stats
+            stats_url = f"{svc.base_url}/indexes/{svc.index_name}/stats"
+            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                stats_response = await client.get(
+                    stats_url, headers=svc._admin_headers()
+                )
+                stats_response.raise_for_status()
+                stats_data = stats_response.json()
+            total_concepts: int = stats_data.get("numberOfDocuments", 0)
+
+            if total_concepts == 0:
+                return empty
+
+            # 2. Fetch one document (highest doc_count) for metadata fields
+            search_url = f"{svc.base_url}/indexes/{svc.index_name}/search"
+            search_payload: dict[str, Any] = {
+                "q": "",
+                "limit": 1,
+                "sort": ["doc_count:desc"],
+            }
+            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                search_response = await client.post(
+                    search_url, json=search_payload, headers=svc._search_headers()
+                )
+                search_response.raise_for_status()
+                search_data = search_response.json()
+
+            hits = search_data.get("hits", [])
+            top_doc = hits[0] if hits else {}
+
+            # 3. Gather distinct jurisdictions from all documents (up to 500)
+            all_payload: dict[str, Any] = {
+                "q": "",
+                "limit": 500,
+                "attributesToRetrieve": ["jurisdictions"],
+            }
+            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                all_response = await client.post(
+                    search_url, json=all_payload, headers=svc._search_headers()
+                )
+                all_response.raise_for_status()
+                all_data = all_response.json()
+
+            jurisdiction_set: set[str] = set()
+            for hit in all_data.get("hits", []):
+                for j in hit.get("jurisdictions", []):
+                    if isinstance(j, str):
+                        jurisdiction_set.add(j)
+
+            return {
+                "total_concepts": total_concepts,
+                "generated_at": top_doc.get("generated_at"),
+                "corpus_snapshot": top_doc.get("corpus_snapshot"),
+                "jurisdictions": sorted(jurisdiction_set),
+            }
+
+        except Exception as exc:
+            logger.warning(
+                "topics_stats_failed — returning empty metadata: {}", str(exc)
+            )
+            return empty
+
 
 def _normalize_meilisearch_url_for_runtime(base_url: str | None) -> str | None:
     """Normalize Meilisearch URL for common Docker-compose dev topology.

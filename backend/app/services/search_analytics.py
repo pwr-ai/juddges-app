@@ -14,6 +14,28 @@ from loguru import logger
 from app.core.supabase import supabase_client
 
 
+def record_topic_click(
+    topic_id: str,
+    query: str,
+    user_id: str | None = None,
+    jurisdiction: str | None = None,
+) -> None:
+    """Fire-and-forget insert into search_topic_clicks. Never raises."""
+    if not supabase_client:
+        return
+    try:
+        supabase_client.table("search_topic_clicks").insert(
+            {
+                "user_id": user_id,
+                "topic_id": topic_id[:500],
+                "query": query[:500],
+                "jurisdiction": jurisdiction[:100] if jurisdiction else None,
+            }
+        ).execute()
+    except Exception as exc:
+        logger.warning(f"Failed to record topic click analytics: {exc}")
+
+
 def record_search_query(
     query: str,
     hit_count: int,
