@@ -607,43 +607,42 @@ class MeiliSearchService:
             return empty
 
         try:
-            # 1. Fetch document count from index stats
             stats_url = f"{svc.base_url}/indexes/{svc.index_name}/stats"
+            search_url = f"{svc.base_url}/indexes/{svc.index_name}/search"
+
             async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                # 1. Fetch document count from index stats
                 stats_response = await client.get(
                     stats_url, headers=svc._admin_headers()
                 )
                 stats_response.raise_for_status()
                 stats_data = stats_response.json()
-            total_concepts: int = stats_data.get("numberOfDocuments", 0)
+                total_concepts: int = stats_data.get("numberOfDocuments", 0)
 
-            if total_concepts == 0:
-                return empty
+                if total_concepts == 0:
+                    return empty
 
-            # 2. Fetch one document (highest doc_count) for metadata fields
-            search_url = f"{svc.base_url}/indexes/{svc.index_name}/search"
-            search_payload: dict[str, Any] = {
-                "q": "",
-                "limit": 1,
-                "sort": ["doc_count:desc"],
-            }
-            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                # 2. Fetch one document (highest doc_count) for metadata fields
+                search_payload: dict[str, Any] = {
+                    "q": "",
+                    "limit": 1,
+                    "sort": ["doc_count:desc"],
+                }
                 search_response = await client.post(
                     search_url, json=search_payload, headers=svc._search_headers()
                 )
                 search_response.raise_for_status()
                 search_data = search_response.json()
 
-            hits = search_data.get("hits", [])
-            top_doc = hits[0] if hits else {}
+                hits = search_data.get("hits", [])
+                top_doc = hits[0] if hits else {}
 
-            # 3. Gather distinct jurisdictions from all documents (up to 500)
-            all_payload: dict[str, Any] = {
-                "q": "",
-                "limit": 500,
-                "attributesToRetrieve": ["jurisdictions"],
-            }
-            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                # 3. Gather distinct jurisdictions from all documents
+                all_payload: dict[str, Any] = {
+                    "q": "",
+                    "limit": total_concepts,
+                    "attributesToRetrieve": ["jurisdictions"],
+                }
                 all_response = await client.post(
                     search_url, json=all_payload, headers=svc._search_headers()
                 )

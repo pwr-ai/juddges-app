@@ -176,13 +176,6 @@ class TestTopicClickEndpoint:
 class TestTopicsMetaEndpoint:
     """Tests for GET /api/search/topics/meta."""
 
-    def _make_response(self, status_code: int, json_data: dict) -> httpx.Response:
-        return httpx.Response(
-            status_code,
-            json=json_data,
-            request=httpx.Request("GET", "http://test"),
-        )
-
     @pytest.mark.anyio
     async def test_returns_correct_shape_with_data(self, client, valid_api_headers):
         """Returns TopicsMetaResponse shape when topics index has data."""
