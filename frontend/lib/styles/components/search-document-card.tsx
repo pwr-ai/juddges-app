@@ -85,7 +85,11 @@ export function SearchDocumentCard({
           />
         )}
       </div>
-      <DocumentCard document={doc} from="search" />
+      <DocumentCard
+        document={doc}
+        from="search"
+        query={searchContextParams?.searchQuery}
+      />
     </div>
   );
 }
