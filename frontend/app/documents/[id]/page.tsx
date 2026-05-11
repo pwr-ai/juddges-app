@@ -8,6 +8,7 @@ import { ExternalLink, ChevronDown, ChevronUp, Info, Sparkles, Plus, ArrowLeft, 
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
 import { LoadingIndicator, BaseCard, Button, Badge, AIDisclaimerBadge, Breadcrumb, PageContainer, SecondaryButton, ErrorCard } from '@/lib/styles/components';
 import { KeyInformation } from '@/lib/styles/components/key-information';
+import { QueryHighlight } from "@/lib/styles/components/query-highlight";
 import DOMPurify from 'dompurify';
 import { summarizeDocuments, type SummarizeDocumentsResponse, extractKeyPoints, type ExtractKeyPointsResponse } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
@@ -274,6 +275,7 @@ export default function DocumentPage(): React.JSX.Element {
  const params = useParams();
  const router = useRouter();
  const searchParams = useSearchParams();
+ const queryFromSearch = searchParams.get("q");
  const pathname = usePathname();
  const { user, loading: authLoading } = useAuth();
  const documentId = params.id as string;
@@ -724,7 +726,7 @@ export default function DocumentPage(): React.JSX.Element {
  <div className="sticky top-0 z-10 -mx-4 px-4 pb-4 pt-2 bg-background/95 backdrop-blur-sm border-b border-border/50 mb-6">
  {/* Title */}
  <h1 className="text-2xl font-bold text-foreground leading-tight mb-1">
- {headerTitle}
+ <QueryHighlight as="span" text={headerTitle} query={queryFromSearch} />
  </h1>
 
  {/* Document number (secondary) */}
@@ -982,7 +984,7 @@ export default function DocumentPage(): React.JSX.Element {
  >
  <div>
  <p className="text-sm text-slate-700 leading-relaxed text-justify">
- {metadata.summary}
+ <QueryHighlight as="span" text={metadata.summary} query={queryFromSearch} />
  </p>
  <div className="mt-3 pt-3 border-t border-border">
  <AIDisclaimerBadge showBorder={false} linkText="See disclaimer"/>

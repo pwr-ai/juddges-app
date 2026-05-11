@@ -67,18 +67,18 @@ export function buildMeilisearchFilter(
   return clauses.length ? clauses.join(' AND ') : undefined;
 }
 
-function meiliHitToSearchDocument(hit: MeilisearchDocumentHit): SearchDocument {
+export function meiliHitToSearchDocument(hit: MeilisearchDocumentHit): SearchDocument {
   const formatted = hit._formatted;
   return {
     document_id: hit.id,
-    title: (formatted?.title || hit.title || '').trim() || null,
+    title: (hit.title || '').trim() || null,
     date_issued: hit.decision_date || null,
     issuing_body: null,
     language: hit.jurisdiction === 'PL' ? 'pl' : hit.jurisdiction === 'UK' ? 'en' : null,
     document_number: hit.case_number || null,
     country: hit.jurisdiction || null,
     full_text: null,
-    summary: (formatted?.summary || hit.summary || '').trim() || null,
+    summary: (hit.summary || '').trim() || null,
     thesis: null,
     legal_references: null,
     legal_concepts: null,
@@ -104,6 +104,12 @@ function meiliHitToSearchDocument(hit: MeilisearchDocumentHit): SearchDocument {
       source_url: hit.source_url || undefined,
       publication_date: hit.publication_date || undefined,
     },
+    highlighted: formatted
+      ? {
+          title: formatted.title ?? null,
+          summary: formatted.summary ?? null,
+        }
+      : null,
   };
 }
 
@@ -127,6 +133,12 @@ function meiliHitToMetadata(
     thesis: null,
     jurisdiction: hit.jurisdiction || null,
     court_level: hit.court_level || null,
+    highlighted: hit._formatted
+      ? {
+          title: hit._formatted.title ?? null,
+          summary: hit._formatted.summary ?? null,
+        }
+      : null,
   };
 }
 
@@ -236,6 +248,7 @@ export function useSearchResults() {
           factual_state: fullDoc.factual_state,
           legal_state: fullDoc.legal_state,
           metadata: metadataObj,
+          highlighted: metadata.highlighted ?? null,
         };
       }
 
@@ -269,6 +282,7 @@ export function useSearchResults() {
         legal_state: null,
         department_name: null,
         metadata: undefined,
+        highlighted: metadata.highlighted ?? null,
       };
     },
     []

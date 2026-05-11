@@ -2,24 +2,13 @@
 
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
-import DOMPurify from "dompurify";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { sanitizeHighlightHtml } from "@/lib/highlight";
 import type { AutocompleteSuggestion } from "@/hooks/useSearchAutocomplete";
 
 type SearchMode = "thinking" | "rabbit";
-
-/**
- * Sanitize HTML from Meilisearch highlights: allow only {@code <mark>} tags via DOMPurify.
- */
-function sanitizeHighlight(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["mark"],
-    ALLOWED_ATTR: [],
-  });
-}
-
 
 export interface SearchFormProps {
   query: string;
@@ -224,14 +213,14 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                   onClick={() => handleSuggestionSelect(item.title)}
                   aria-label={`Use suggestion: ${item.title}`}
                 >
-                  <div className="font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHighlight(item.title) }} />
+                  <div className="font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.title) }} />
                   {(item.caseNumber || item.courtName) ? (
                     <div className="text-xs text-muted-foreground">
                       {[item.caseNumber, item.courtName, item.decisionDate].filter(Boolean).join(" · ")}
                     </div>
                   ) : null}
                   {item.summary ? (
-                    <div className="text-xs text-muted-foreground line-clamp-1" dangerouslySetInnerHTML={{ __html: sanitizeHighlight(item.summary) }} />
+                    <div className="text-xs text-muted-foreground line-clamp-1" dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.summary) }} />
                   ) : null}
                 </button>
               ))}
