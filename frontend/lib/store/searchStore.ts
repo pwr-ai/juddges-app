@@ -124,6 +124,7 @@ interface SearchState {
   setSearchType: (type: "rabbit" | "thinking") => void;
   setSearchMode: (mode: SearchMode) => void;
   setBaseFilter: (field: keyof BaseFilters, range: BaseNumericRange | undefined) => void;
+  setBaseFilters: (filters: BaseFilters) => void;
   resetBaseFilters: () => void;
   loadState: () => void;
   saveState: () => void;
@@ -812,6 +813,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       }
       return { baseFilters: next };
     }),
+  setBaseFilters: (filters: BaseFilters) => set({ baseFilters: { ...filters } }),
   resetBaseFilters: () => set({ baseFilters: { ...EMPTY_BASE_FILTERS } }),
 
   // Batch selection actions

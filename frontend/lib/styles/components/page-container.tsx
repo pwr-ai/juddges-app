@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
  * Semantic width sizes for page layouts
  * Following 2024/2025 design token best practices
  */
-export type PageWidth = 'narrow' | 'compact' | 'medium' | 'standard' | 'wide' | 'full' | 'xl';
+export type PageWidth = 'narrow' | 'compact' | 'medium' | 'standard' | 'wide' | 'full' | 'xl' | 'screen';
 
 export interface PageContainerProps {
   children: React.ReactNode;
@@ -17,6 +17,7 @@ export interface PageContainerProps {
    * - wide: 1800px (data tables, statistics)
    * - full: 2000px (search results, wide layouts)
    * - xl: 1920px (document visualizations)
+   * - screen: edge-to-edge, no max-width (document viewer, full-bleed layouts)
    */
   width?: PageWidth;
   /** If true, ensures the container fills at least the viewport height minus navbar. The container can grow beyond this to accommodate full page components. */
@@ -61,7 +62,10 @@ export function PageContainer({
     wide: 'max-w-page-wide',           // 1800px
     full: 'max-w-page-full',           // 2000px
     xl: 'max-w-page-xl',               // 1920px
+    screen: 'max-w-none',              // Edge-to-edge, no cap
   };
+
+  const isScreen = width === 'screen';
 
   return (
     <div
@@ -82,9 +86,10 @@ export function PageContainer({
     >
       <div
         className={cn(
-          // Content container with responsive padding and semantic width
-          "container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8",
-          // Semantic width applied to content
+          // Edge-to-edge mode skips the Tailwind `container` cap so layout fills the viewport.
+          isScreen
+            ? "w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8"
+            : "container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8",
           widthClasses[width]
         )}
       >

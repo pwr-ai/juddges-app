@@ -656,7 +656,7 @@ export default function DocumentPage(): React.JSX.Element {
 
  if (loading) {
  return (
- <PageContainer width="xl"fillViewport className="py-8">
+ <PageContainer width="screen" fillViewport className="py-8">
  <div className="flex items-center justify-center h-[600px]">
  <LoadingIndicator
  message="Loading document..."
@@ -670,7 +670,7 @@ export default function DocumentPage(): React.JSX.Element {
 
  if (error || !metadata) {
  return (
- <PageContainer width="xl"fillViewport className="py-8">
+ <PageContainer width="screen" fillViewport className="py-8">
  <div className="w-full min-h-[calc(100vh-8rem)] flex items-center justify-center">
  <div className="w-full max-w-2xl px-6">
  <ErrorCard
@@ -709,7 +709,7 @@ export default function DocumentPage(): React.JSX.Element {
  return (
  <>
  <div className="screen-only">
- <PageContainer width="xl" fillViewport className="py-4">
+ <PageContainer width="screen" fillViewport className="py-4">
  {/* Breadcrumb Navigation */}
  <div className="mb-4">
  <Breadcrumb

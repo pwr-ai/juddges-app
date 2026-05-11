@@ -9,7 +9,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CollectionWithDocuments } from "@/types/collection";
 import { getCollection, updateCollection, addDocumentToCollection, removeDocumentFromCollection, deleteCollection, addDocumentsToCollection, loadAllCollectionDocuments } from "@/lib/api/collections";
 import { SearchDocument } from "@/types/search";
-import { Plus, FileText, Lightbulb, Play, Wand2, Sparkles, Pencil, X, Zap, FolderOpen, ArrowLeft, AlertTriangle, MessageSquare, Search, ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { Plus, FileText, Lightbulb, Play, Wand2, Sparkles, Pencil, X, Zap, FolderOpen, ArrowLeft, AlertTriangle, Search, ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon } from "lucide-react";
 import CollectionDocumentsTable from "@/components/collection-documents-table";
 import { toast } from "sonner";
 import logger from "@/lib/logger";
@@ -1286,32 +1286,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  description="Start building your research collection by adding relevant legal documents."
  tipPosition="below"
  tip={
- <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto text-left">
- <LightCard
- title={
- <div className="flex items-center gap-3">
- <div className="p-2 rounded-lg bg-primary/10">
- <MessageSquare className="h-6 w-6 text-primary"/>
- </div>
- <span className="text-base font-semibold">AI Assistant</span>
- </div>
- }
- padding="lg"
- showBorder={true}
- showShadow={false}
- >
- <div className="mt-3 space-y-4">
- <p className="text-base text-muted-foreground leading-relaxed">Ask the AI assistant to find relevant documents and add them to your collection.</p>
- <PrimaryButton
- size="sm"
- icon={MessageSquare}
- onClick={() => router.push("/chat")}
- className="w-full"
- >
- Open Chat
- </PrimaryButton>
- </div>
- </LightCard>
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
  <LightCard
  title={
  <div className="flex items-center gap-3">

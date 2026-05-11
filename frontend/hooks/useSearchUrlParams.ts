@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useSearchStore } from '@/lib/store/searchStore';
-import logger from '@/lib/logger';
-
-const urlParamsLogger = logger.child('useSearchUrlParams');
 
 interface UseSearchUrlParamsOptions {
   mounted: boolean;
@@ -11,7 +8,6 @@ interface UseSearchUrlParamsOptions {
   setUrlParamsProcessed: (processed: boolean) => void;
   hasPerformedSearch: boolean;
   isSearching: boolean;
-  onSearchFromUrl?: (pageFromUrl: number | null) => Promise<void>;
 }
 
 /**
@@ -24,7 +20,6 @@ export function useSearchUrlParams({
   setUrlParamsProcessed,
   hasPerformedSearch,
   isSearching,
-  onSearchFromUrl,
 }: UseSearchUrlParamsOptions) {
   const router = useRouter();
   const pathname = usePathname();
@@ -37,12 +32,16 @@ export function useSearchUrlParams({
     query,
     selectedLanguages,
     searchType,
+    searchMode,
+    baseFilters,
     currentPage,
     pageSize,
     filters,
     setQuery,
     setSelectedLanguages,
     setSearchType,
+    setSearchMode,
+    setBaseFilters,
     setCurrentPage,
     setPageSize,
     setSearchMetadata,
@@ -55,11 +54,10 @@ export function useSearchUrlParams({
    */
   const updateUrlParams = useCallback(
     (skipUrlUpdate = false, forceUpdate = false, immediate = false) => {
-      // Skip URL update if we're still processing initial URL params or if no search has been performed
-      // forceUpdate bypasses the hasPerformedSearch check (used after search completes)
-      // Also skip if currently searching to prevent loops
+      // Skip URL update if we're still processing initial URL params or actively searching.
+      // We *don't* gate on hasPerformedSearch any more — pre-search filter changes
+      // (language, mode, dates, extracted-field ranges) need to round-trip via URL.
       if (!mounted || !urlParamsProcessed || skipUrlUpdate) return;
-      if (!hasPerformedSearch && !forceUpdate) return;
       if (isSearching && !forceUpdate) return; // Don't update URL while searching
 
       // Clear any pending timeout
@@ -89,6 +87,20 @@ export function useSearchUrlParams({
         // Add search mode
         if (searchType) {
           params.set('mode', searchType);
+        }
+
+        // Add backend search mode (text / vector / hybrid)
+        if (searchMode) {
+          params.set('searchMode', searchMode);
+        }
+
+        // Extracted-field numeric ranges (serialized as compact JSON)
+        const baseFilterKeys = Object.keys(baseFilters) as Array<keyof typeof baseFilters>;
+        const hasBaseFilters = baseFilterKeys.some(
+          (k) => baseFilters[k] && (baseFilters[k]?.min !== undefined || baseFilters[k]?.max !== undefined)
+        );
+        if (hasBaseFilters) {
+          params.set('extracted', JSON.stringify(baseFilters));
         }
 
         // Add pagination
@@ -164,11 +176,12 @@ export function useSearchUrlParams({
     [
       mounted,
       urlParamsProcessed,
-      hasPerformedSearch,
       isSearching,
       query,
       selectedLanguages,
       searchType,
+      searchMode,
+      baseFilters,
       currentPage,
       pageSize,
       filters,
@@ -189,6 +202,8 @@ export function useSearchUrlParams({
     const queryParam = searchParams.get('q');
     const langParam = searchParams.get('lang');
     const modeParam = searchParams.get('mode');
+    const searchModeParam = searchParams.get('searchMode');
+    const extractedParam = searchParams.get('extracted');
     const pageParam = searchParams.get('page');
     const pageSizeParam = searchParams.get('pageSize');
     const keywordsParam = searchParams.get('keywords');
@@ -206,6 +221,8 @@ export function useSearchUrlParams({
       !queryParam &&
       !langParam &&
       !modeParam &&
+      !searchModeParam &&
+      !extractedParam &&
       !pageParam &&
       !pageSizeParam &&
       !keywordsParam &&
@@ -228,13 +245,9 @@ export function useSearchUrlParams({
       return;
     }
 
-    let shouldSearch = false;
-    let pageFromUrl: number | null = null;
-
-    // Set query from URL parameter
+    // Set query from URL parameter (pre-fill only — user must click Search to run it)
     if (queryParam) {
       setQuery(decodeURIComponent(queryParam));
-      shouldSearch = true;
     }
 
     // Set language from URL parameter
@@ -253,11 +266,27 @@ export function useSearchUrlParams({
       setSearchType(modeParam);
     }
 
-    // Set pagination from URL parameters - store page number to restore after search
+    // Backend search mode (text/vector/hybrid)
+    if (searchModeParam && (searchModeParam === 'text' || searchModeParam === 'vector' || searchModeParam === 'hybrid')) {
+      setSearchMode(searchModeParam);
+    }
+
+    // Extracted-field numeric ranges
+    if (extractedParam) {
+      try {
+        const parsed = JSON.parse(extractedParam);
+        if (parsed && typeof parsed === 'object') {
+          setBaseFilters(parsed);
+        }
+      } catch {
+        // Ignore malformed payloads — keep existing baseFilters untouched.
+      }
+    }
+
+    // Set pagination from URL parameters
     if (pageParam) {
       const page = parseInt(pageParam, 10);
       if (!isNaN(page) && page > 0) {
-        pageFromUrl = page;
         setCurrentPage(page);
       }
     }
@@ -351,20 +380,6 @@ export function useSearchUrlParams({
     // Mark as processed and allow URL updates again
     setUrlParamsProcessed(true);
     updatingUrlRef.current = false;
-
-    // Trigger search if query was provided
-    if (shouldSearch && queryParam && onSearchFromUrl) {
-      // Small delay to ensure state is updated
-      setTimeout(async () => {
-        try {
-          await onSearchFromUrl(pageFromUrl);
-        } catch (error) {
-          // Handle search error if needed
-          urlParamsLogger.error('Error during search from URL', error);
-          updatingUrlRef.current = false;
-        }
-      }, 100);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, searchParams, urlParamsProcessed]);
 
@@ -414,6 +429,3 @@ export function useSearchUrlParams({
     updatingUrlRef,
   };
 }
-
-
-

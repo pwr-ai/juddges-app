@@ -301,7 +301,6 @@ describe('Complete Search Flow Integration', () => {
       });
 
       // Search should show loading state
-      // This would test the SearchLoadingModal component
     });
 
     it('should display results after search completes', async () => {
