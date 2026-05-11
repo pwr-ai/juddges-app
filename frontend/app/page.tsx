@@ -30,12 +30,14 @@ import {
 } from "@/components/editorial";
 import React from "react";
 
-const BIBTEX = `@misc{juddges2024,
-  title  = {JuDDGES: Judicial Decision Data Gathering, Encoding and Sharing},
-  author = {Kajdanowicz, Tomasz and others},
-  year   = {2024},
-  url    = {https://huggingface.co/JuDDGES},
-  note   = {Wrocław University of Science and Technology}
+const BIBTEX = `@software{juddges_app_2026,
+  title   = {Juddges App},
+  author  = {Augustyniak, Łukasz and Binkowski, Jakub and Sawczyn, Albert and Tagowski, Kamil and Bernaczyk, Michał and Kamiński, Krzysztof and Kajdanowicz, Tomasz},
+  year    = {2026},
+  version = {0.1.0},
+  doi     = {10.5281/zenodo.19911856},
+  url     = {https://github.com/pwr-ai/juddges-app},
+  license = {Apache-2.0}
 }`;
 
 function formatLastUpdated(dateString: string | null): { value: string; label: string } {
