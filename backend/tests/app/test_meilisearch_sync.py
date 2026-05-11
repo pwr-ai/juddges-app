@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime
 from uuid import uuid4
 
 from app.services.meilisearch_config import (
+    JUDGMENT_SYNC_COLUMNS,
     MEILISEARCH_INDEX_SETTINGS,
     transform_judgment_for_meilisearch,
 )
@@ -145,3 +146,20 @@ class TestEmbedderSettings:
         embedders = MEILISEARCH_INDEX_SETTINGS["embedders"]
         assert embedders["bge-m3"]["source"] == "userProvided"
         assert embedders["bge-m3"]["dimensions"] == 1024
+
+
+class TestSyncColumnProjection:
+    def test_includes_curated_embedding_fields(self):
+        for col in (
+            "base_case_name",
+            "base_keywords",
+            "structure_case_identification_summary",
+            "structure_facts_summary",
+            "structure_operative_part_summary",
+        ):
+            assert col in JUDGMENT_SYNC_COLUMNS, f"missing column: {col}"
+
+    def test_includes_existing_core_fields(self):
+        # Regression: don't lose any field already required by the sync path
+        for col in ("id", "title", "summary", "full_text", "base_extraction_status"):
+            assert col in JUDGMENT_SYNC_COLUMNS

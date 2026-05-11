@@ -246,3 +246,23 @@ async def setup_meilisearch_index(service: MeiliSearchService) -> bool:
             "Failed to set up Meilisearch index — autocomplete will be unavailable"
         )
         return False
+
+
+# Columns fetched from the ``judgments`` table for the Meilisearch sync path.
+# Used by both the Celery sync tasks and the one-shot backfill script.
+# The embedding ``vector`` column is intentionally excluded (~6 KB/row, unused
+# downstream — Meilisearch only stores the BGE-M3 vector we send via _vectors).
+JUDGMENT_SYNC_COLUMNS = (
+    "id, case_number, jurisdiction, court_name, court_level, decision_date, "
+    "publication_date, title, summary, full_text, judges, case_type, "
+    "decision_type, outcome, keywords, legal_topics, cited_legislation, "
+    "source_url, created_at, updated_at, "
+    "base_extraction_status, "
+    "base_num_victims, base_victim_age_offence, "
+    "base_case_number, base_co_def_acc_num, "
+    "base_date_of_appeal_court_judgment, "
+    "base_case_name, base_keywords, "
+    "structure_case_identification_summary, "
+    "structure_facts_summary, "
+    "structure_operative_part_summary"
+)

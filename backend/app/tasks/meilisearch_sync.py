@@ -9,6 +9,7 @@ from loguru import logger
 
 from app.core.supabase import supabase_client
 from app.services.meilisearch_config import (
+    JUDGMENT_SYNC_COLUMNS,
     setup_meilisearch_index,
     transform_judgment_for_meilisearch,
 )
@@ -22,21 +23,6 @@ if TYPE_CHECKING:
 
 def _get_service() -> MeiliSearchService:
     return MeiliSearchService.from_env()
-
-
-# Column projection for judgments — embedding vector (~6KB per row) is excluded
-# because Meilisearch does not use it and transform_judgment_for_meilisearch
-# explicitly drops it anyway. Fetching it wastes bandwidth on every sync.
-_JUDGMENT_SYNC_COLS = (
-    "id, case_number, jurisdiction, court_name, court_level, decision_date, "
-    "publication_date, title, summary, full_text, judges, case_type, "
-    "decision_type, outcome, keywords, legal_topics, cited_legislation, "
-    "source_url, created_at, updated_at, "
-    "base_extraction_status, "
-    "base_num_victims, base_victim_age_offence, "
-    "base_case_number, base_co_def_acc_num, "
-    "base_date_of_appeal_court_judgment"
-)
 
 
 # ── Incremental sync ─────────────────────────────────────────────────────────
@@ -78,7 +64,7 @@ def sync_judgment_to_meilisearch(
 
     resp = (
         supabase_client.table("judgments")
-        .select(_JUDGMENT_SYNC_COLS)
+        .select(JUDGMENT_SYNC_COLUMNS)
         .eq("id", judgment_id)
         .execute()
     )
@@ -127,7 +113,7 @@ def full_sync_judgments_to_meilisearch(
         while True:
             resp = (
                 supabase_client.table("judgments")
-                .select(_JUDGMENT_SYNC_COLS)
+                .select(JUDGMENT_SYNC_COLUMNS)
                 .order("created_at")
                 .range(offset, offset + batch_size - 1)
                 .execute()
