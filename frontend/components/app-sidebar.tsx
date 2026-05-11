@@ -18,8 +18,6 @@ import {
  FolderOpen,
  Bookmark,
  FileJson,
- FileInput,
- FileSearch,
  BarChart3,
  LogIn,
  UserPlus,
@@ -258,28 +256,6 @@ export function AppSidebar(): React.JSX.Element {
  <Link href="/collections">
  <FolderOpen />
  <span>{t('navigation.researchCollections')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.dataExtraction')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/extract"}>
- <Link href="/extract">
- <FileInput />
- <span>{t('navigation.dataExtraction')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.extractionResults')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/extractions"|| pathname?.startsWith("/extractions")}>
- <Link href="/extractions">
- <FileSearch />
- <span>{t('navigation.extractionResults')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
