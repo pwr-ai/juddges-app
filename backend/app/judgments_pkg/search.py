@@ -298,11 +298,24 @@ def _build_search_rpc_params(
 ) -> dict[str, Any]:
     if query_type == "conceptual":
         keyword_query = _relax_keyword_for_conceptual(keyword_query, search_language)
+
+    # Constrain the vector branch by jurisdiction when the user asked for a
+    # specific language. The SQL function's text branches already hard-filter
+    # by jurisdiction via search_language, but vector_results only checks
+    # filter_jurisdictions — without this mapping a query like
+    # languages=["en"] leaked Polish documents into the semantic results.
+    jurisdictions = effective_filters["jurisdictions"]
+    if not jurisdictions:
+        if search_language == "english":
+            jurisdictions = ["UK"]
+        elif search_language == "polish":
+            jurisdictions = ["PL"]
+
     return {
         "query_embedding": query_embedding,
         "search_text": keyword_query if effective_alpha < 1.0 else None,
         "search_language": search_language,
-        "filter_jurisdictions": effective_filters["jurisdictions"],
+        "filter_jurisdictions": jurisdictions,
         "filter_court_names": effective_filters["court_names"],
         "filter_court_levels": effective_filters["court_levels"],
         "filter_case_types": effective_filters["case_types"],
@@ -313,7 +326,10 @@ def _build_search_rpc_params(
         "filter_cited_legislation": effective_filters["cited_legislation"],
         "filter_date_from": effective_filters["date_from"],
         "filter_date_to": effective_filters["date_to"],
-        "similarity_threshold": 0.5,
+        # Lowered from 0.5 — that threshold was dropping legitimate semantic
+        # matches for niche English landmark queries (e.g. "Woollin", "Jogee")
+        # whose 768-dim cosine similarity sits in the 0.2-0.4 band.
+        "similarity_threshold": 0.15,
         "hybrid_alpha": effective_alpha,
         "result_limit": limit,
         "result_offset": offset,
