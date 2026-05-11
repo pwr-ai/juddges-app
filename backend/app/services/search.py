@@ -139,6 +139,84 @@ class MeiliSearchService:
 
         return data
 
+    async def documents_search(
+        self,
+        query: str,
+        limit: int = 10,
+        offset: int = 0,
+        filters: str | None = None,
+    ) -> dict[str, Any]:
+        """Paginated document search used by /api/search/documents.
+
+        Wider ``attributesToRetrieve`` than autocomplete so the results page can
+        render full cards without an extra Supabase round-trip.
+        """
+        if not self.configured:
+            raise SearchServiceError("Meilisearch is not configured")
+
+        payload: dict[str, Any] = {
+            "q": query,
+            "limit": limit,
+            "offset": offset,
+            "attributesToSearchOn": [
+                "title",
+                "case_number",
+                "keywords",
+                "legal_topics",
+                "court_name",
+                "judges_flat",
+                "summary",
+                "full_text",
+            ],
+            "attributesToHighlight": ["title", "summary"],
+            "attributesToCrop": ["summary"],
+            "cropLength": 48,
+            "attributesToRetrieve": [
+                "id",
+                "title",
+                "summary",
+                "case_number",
+                "jurisdiction",
+                "court_name",
+                "court_level",
+                "decision_date",
+                "publication_date",
+                "case_type",
+                "decision_type",
+                "outcome",
+                "keywords",
+                "legal_topics",
+                "cited_legislation",
+                "judges",
+                "judges_flat",
+                "source_url",
+                "created_at",
+                "updated_at",
+            ],
+            "highlightPreTag": "<mark>",
+            "highlightPostTag": "</mark>",
+            "matchingStrategy": "last",
+        }
+        if filters:
+            payload["filter"] = filters
+
+        url = f"{self.base_url}/indexes/{self.index_name}/search"
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.post(
+                    url, json=payload, headers=self._search_headers()
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise SearchServiceError(str(exc)) from exc
+
+        if not isinstance(data, dict):
+            raise SearchServiceError("Unexpected Meilisearch response format")
+
+        return data
+
     # ── admin / index management ─────────────────────────────────────────
 
     async def health(self) -> dict[str, Any]:

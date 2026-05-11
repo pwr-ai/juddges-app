@@ -34,11 +34,33 @@ interface AvailableFilters {
   customMetadataKeys: string[];
 }
 
+export type SearchMode = "text" | "vector" | "hybrid";
+
+export interface BaseNumericRange {
+  min?: number;
+  max?: number;
+}
+
+export interface BaseFilters {
+  numVictims?: BaseNumericRange;
+  victimAgeOffence?: BaseNumericRange;
+  caseNumber?: BaseNumericRange;
+  coDefAccNum?: BaseNumericRange;
+  /** Epoch seconds — base_date_of_appeal_court_judgment_ts */
+  appealJudgmentDate?: BaseNumericRange;
+}
+
+export const EMPTY_BASE_FILTERS: BaseFilters = {};
+
 interface SearchState {
   // Search params
   query: string;
   selectedLanguages: Set<string>;
   searchType: "rabbit" | "thinking";
+  /** Backend selector: "text" → Meilisearch, "vector"/"hybrid" → pgvector. */
+  searchMode: SearchMode;
+  /** Numeric prefilters on base_* extracted columns (text mode only). */
+  baseFilters: BaseFilters;
 
   // Pagination
   currentPage: number;
@@ -100,6 +122,9 @@ interface SearchState {
   setIsDialogOpen: (open: boolean) => void;
   setShowSaveAllPopover: (show: boolean) => void;
   setSearchType: (type: "rabbit" | "thinking") => void;
+  setSearchMode: (mode: SearchMode) => void;
+  setBaseFilter: (field: keyof BaseFilters, range: BaseNumericRange | undefined) => void;
+  resetBaseFilters: () => void;
   loadState: () => void;
   saveState: () => void;
 
@@ -181,6 +206,8 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
   query: "",
   selectedLanguages: new Set(["uk", "pl"]),
   searchType: "thinking",
+  searchMode: "text",
+  baseFilters: { ...EMPTY_BASE_FILTERS },
 
   // Pagination
   currentPage: 1,
@@ -774,6 +801,18 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
   },
 
   setSearchType: (type: "rabbit" | "thinking") => set({ searchType: type }),
+  setSearchMode: (mode: SearchMode) => set({ searchMode: mode }),
+  setBaseFilter: (field: keyof BaseFilters, range: BaseNumericRange | undefined) =>
+    set((state) => {
+      const next: BaseFilters = { ...state.baseFilters };
+      if (!range || (range.min === undefined && range.max === undefined)) {
+        delete next[field];
+      } else {
+        next[field] = range;
+      }
+      return { baseFilters: next };
+    }),
+  resetBaseFilters: () => set({ baseFilters: { ...EMPTY_BASE_FILTERS } }),
 
   // Batch selection actions
   toggleDocumentSelection: (documentId: string) => {

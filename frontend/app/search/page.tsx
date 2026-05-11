@@ -20,6 +20,8 @@ import { ZeroResultsEmptyState } from '@/components/search/ZeroResultsEmptyState
 import { SearchErrorBoundary } from '@/components/errors/SearchErrorBoundary';
 import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
+import { SearchModeToggle } from '@/components/search/SearchModeToggle';
+import { ExtractedFieldsFilter } from '@/components/search/ExtractedFieldsFilter';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
 
@@ -114,6 +116,11 @@ function SearchPageContent(): React.JSX.Element | null {
  selectedChunks,
  searchType,
  setSearchType,
+ searchMode,
+ setSearchMode,
+ baseFilters,
+ setBaseFilter,
+ resetBaseFilters,
  isDialogOpen,
  toggleFilter,
  setDateFilter,
@@ -611,9 +618,42 @@ function SearchPageContent(): React.JSX.Element | null {
  )}
  </div>
 
- {/* Sidebar - Only Filters */}
+ {/* Sidebar - Mode toggle + filters */}
  <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
- <div className="sticky top-4">
+ <div className="sticky top-4 space-y-4">
+ <div>
+ <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
+ Search mode
+ </div>
+ <SearchModeToggle
+ mode={searchMode}
+ onChange={(next) => {
+ setSearchMode(next);
+ if (query.trim()) {
+ void search(query);
+ }
+ }}
+ disabled={isSearching}
+ />
+ </div>
+ {searchMode === 'text' && (
+ <ExtractedFieldsFilter
+ filters={baseFilters}
+ onChange={(field, range) => {
+ setBaseFilter(field, range);
+ if (query.trim()) {
+ void search(query);
+ }
+ }}
+ onReset={() => {
+ resetBaseFilters();
+ if (query.trim()) {
+ void search(query);
+ }
+ }}
+ disabled={isSearching}
+ />
+ )}
  {/* Search Filters - Only show when there are results */}
  {searchMetadata.length > 0 && (
  <SearchFilters

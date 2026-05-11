@@ -1,7 +1,18 @@
 import { useRef, useCallback } from 'react';
-import { searchChunks, fetchDocumentsByIds, PaginationMetadata } from '@/lib/api';
+import {
+  searchChunks,
+  searchDocumentsMeili,
+  fetchDocumentsByIds,
+  PaginationMetadata,
+  MeilisearchDocumentHit,
+} from '@/lib/api';
 import { SearchChunk, SearchDocument, LegalDocumentMetadata } from '@/types/search';
-import { useSearchStore } from '@/lib/store/searchStore';
+import {
+  BaseFilters,
+  BaseNumericRange,
+  SearchMode,
+  useSearchStore,
+} from '@/lib/store/searchStore';
 import logger from '@/lib/logger';
 
 const searchLogger = logger.child('useSearchResults');
@@ -9,6 +20,115 @@ const searchLogger = logger.child('useSearchResults');
 // Pagination configuration for infinite scroll
 const PAGE_SIZE = 10; // Documents per load (user preference)
 const DEFAULT_LIMIT_CHUNKS = 150; // Chunks to fetch per request
+
+const BASE_FILTER_FIELDS: Record<keyof BaseFilters, string> = {
+  numVictims: 'base_num_victims',
+  victimAgeOffence: 'base_victim_age_offence',
+  caseNumber: 'base_case_number',
+  coDefAccNum: 'base_co_def_acc_num',
+  appealJudgmentDate: 'base_date_of_appeal_court_judgment_ts',
+};
+
+function rangeToClause(field: string, range: BaseNumericRange): string | null {
+  const parts: string[] = [];
+  if (typeof range.min === 'number') parts.push(`${field} >= ${range.min}`);
+  if (typeof range.max === 'number') parts.push(`${field} <= ${range.max}`);
+  return parts.length ? parts.join(' AND ') : null;
+}
+
+function languagesToJurisdictionClause(languages: string[]): string | null {
+  const jurisdictions = new Set<string>();
+  for (const lang of languages) {
+    const lc = lang.toLowerCase();
+    if (lc === 'pl') jurisdictions.add('PL');
+    else if (lc === 'uk' || lc === 'en') jurisdictions.add('UK');
+  }
+  if (!jurisdictions.size) return null;
+  return Array.from(jurisdictions)
+    .map((j) => `jurisdiction = "${j}"`)
+    .join(' OR ');
+}
+
+export function buildMeilisearchFilter(
+  baseFilters: BaseFilters,
+  languages: string[]
+): string | undefined {
+  const clauses: string[] = [];
+  const lang = languagesToJurisdictionClause(languages);
+  if (lang) clauses.push(`(${lang})`);
+  for (const [key, fieldName] of Object.entries(BASE_FILTER_FIELDS) as Array<
+    [keyof BaseFilters, string]
+  >) {
+    const range = baseFilters[key];
+    if (!range) continue;
+    const clause = rangeToClause(fieldName, range);
+    if (clause) clauses.push(`(${clause})`);
+  }
+  return clauses.length ? clauses.join(' AND ') : undefined;
+}
+
+function meiliHitToSearchDocument(hit: MeilisearchDocumentHit): SearchDocument {
+  const formatted = hit._formatted;
+  return {
+    document_id: hit.id,
+    title: (formatted?.title || hit.title || '').trim() || null,
+    date_issued: hit.decision_date || null,
+    issuing_body: null,
+    language: hit.jurisdiction === 'PL' ? 'pl' : hit.jurisdiction === 'UK' ? 'en' : null,
+    document_number: hit.case_number || null,
+    country: hit.jurisdiction || null,
+    full_text: null,
+    summary: (formatted?.summary || hit.summary || '').trim() || null,
+    thesis: null,
+    legal_references: null,
+    legal_concepts: null,
+    keywords: hit.keywords || null,
+    score: null,
+    court_name: hit.court_name || null,
+    department_name: null,
+    presiding_judge: null,
+    judges: hit.judges_flat
+      ? hit.judges_flat
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : null,
+    parties: null,
+    outcome: hit.outcome || null,
+    legal_bases: hit.cited_legislation || null,
+    extracted_legal_bases: null,
+    references: null,
+    factual_state: null,
+    legal_state: null,
+    metadata: {
+      source_url: hit.source_url || undefined,
+      publication_date: hit.publication_date || undefined,
+    },
+  };
+}
+
+function meiliHitToMetadata(
+  hit: MeilisearchDocumentHit,
+  rankFromTop: number
+): LegalDocumentMetadata {
+  // Synthesized rank-based score so existing UI sort/badge code keeps working.
+  const score = Math.max(0.0, 1 - rankFromTop * 0.001);
+  return {
+    uuid: `meili_${hit.id}`,
+    document_id: hit.id,
+    language: hit.jurisdiction === 'PL' ? 'pl' : hit.jurisdiction === 'UK' ? 'en' : '',
+    keywords: hit.keywords || [],
+    date_issued: hit.decision_date || null,
+    score,
+    title: hit.title || null,
+    summary: hit.summary || null,
+    court_name: hit.court_name || null,
+    document_number: hit.case_number || null,
+    thesis: null,
+    jurisdiction: hit.jurisdiction || null,
+    court_level: hit.court_level || null,
+  };
+}
 
 // Card-view fields requested in the rare fallback case where the search response
 // did not embed the documents (Tasks 6/7 trim this further on the backend).
@@ -38,6 +158,8 @@ export function useSearchResults() {
 
   const {
     searchType,
+    searchMode,
+    baseFilters,
     selectedLanguages,
     setIsSearching,
     setError,
@@ -270,12 +392,51 @@ export function useSearchResults() {
       searchInProgressRef.current = true;
       setIsSearching(true);
 
-      // STEP 3: Now start the actual search (async)
+      // STEP 3: Text mode → Meilisearch (no chunks, one hit per doc).
+      if (searchMode === 'text') {
+        try {
+          const filterString = buildMeilisearchFilter(baseFilters, languagesToUse);
+          const result = await searchDocumentsMeili({
+            query: searchQuery,
+            limit: PAGE_SIZE,
+            offset: 0,
+            filters: filterString,
+          });
+
+          if (searchIdRef.current !== currentSearchId) return;
+
+          const metadata = result.documents.map((hit, i) => meiliHitToMetadata(hit, i));
+          fullDocumentsMapRef.current.clear();
+          result.documents.forEach((hit) => {
+            fullDocumentsMapRef.current.set(hit.id, meiliHitToSearchDocument(hit));
+          });
+
+          setError(null);
+          setSearchMetadata(metadata, metadata.length, false);
+          setPaginationMetadata(result.pagination);
+          setPageSize(PAGE_SIZE);
+          clearSelection();
+          setIsSearching(false);
+          if (options?.onComplete) options.onComplete();
+          return;
+        } catch (err) {
+          searchLogger.error('Meilisearch search failed', err, { query: searchQuery });
+          setSearchMetadata([], 0, false);
+          setError('search_error');
+          setIsSearching(false);
+          return;
+        } finally {
+          searchInProgressRef.current = false;
+        }
+      }
+
+      // STEP 4: vector / hybrid mode → pgvector chunks
       try {
+        const alpha = searchMode === 'vector' ? 1.0 : 0.5;
         const result = await searchChunks({
           query: searchQuery,
           limit_docs: PAGE_SIZE,
-          alpha: modeToUse === 'thinking' ? 0.5 : 0.0,
+          alpha,
           languages: languagesToUse.length > 0 ? languagesToUse : undefined,
           fetch_full_documents: false,
           limit_chunks: DEFAULT_LIMIT_CHUNKS,
@@ -409,6 +570,8 @@ export function useSearchResults() {
     },
     [
       searchType,
+      searchMode,
+      baseFilters,
       selectedLanguages,
       setIsSearching,
       setError,
@@ -444,12 +607,51 @@ export function useSearchResults() {
 
     setIsLoadingMore(true);
 
+    // Text mode → Meilisearch load-more (no chunks, append docs directly).
+    if (state.searchMode === 'text') {
+      try {
+        const filterString = buildMeilisearchFilter(
+          state.baseFilters,
+          Array.from(state.selectedLanguages)
+        );
+        const result = await searchDocumentsMeili({
+          query: state.query,
+          limit: PAGE_SIZE,
+          offset: currentPagination.next_offset,
+          filters: filterString,
+        });
+
+        const newMetadata = result.documents.map((hit, i) =>
+          meiliHitToMetadata(hit, currentPagination.loaded_count + i)
+        );
+        result.documents.forEach((hit) => {
+          fullDocumentsMapRef.current.set(hit.id, meiliHitToSearchDocument(hit));
+        });
+
+        appendSearchMetadata(newMetadata);
+
+        const updatedPagination: PaginationMetadata = {
+          ...result.pagination,
+          estimated_total: state.cachedEstimatedTotal,
+          loaded_count: currentPagination.loaded_count + result.documents.length,
+        };
+        setPaginationMetadata(updatedPagination);
+      } catch (err) {
+        searchLogger.error('Meilisearch loadMore failed', err);
+        setError('load_more_error');
+      } finally {
+        setIsLoadingMore(false);
+      }
+      return;
+    }
+
     try {
-      // Fetch next batch with offset
+      // Fetch next batch with offset (vector/hybrid → pgvector)
+      const alpha = state.searchMode === 'vector' ? 1.0 : 0.5;
       const result = await searchChunks({
         query: state.query,
         limit_docs: PAGE_SIZE,
-        alpha: state.searchType === 'thinking' ? 0.5 : 0.0,
+        alpha,
         languages: Array.from(state.selectedLanguages),
         fetch_full_documents: false,
         limit_chunks: DEFAULT_LIMIT_CHUNKS,

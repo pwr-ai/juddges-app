@@ -124,4 +124,84 @@ describe('SearchForm', () => {
 
     expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('Contract liability');
   });
+
+  describe('language segmented control', () => {
+    it('renders three options labelled All, Polish, English (UK)', () => {
+      render(<SearchForm {...defaultProps} />);
+
+      const group = screen.getByRole('radiogroup', { name: /filter by language/i });
+      expect(group).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'All' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'Polish' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'English (UK)' })).toBeInTheDocument();
+    });
+
+    it('marks All active when both pl and uk are selected', () => {
+      render(<SearchForm {...defaultProps} selectedLanguages={new Set(['pl', 'uk'])} />);
+
+      expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: 'Polish' })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('radio', { name: 'English (UK)' })).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('marks Polish active when only pl is selected', () => {
+      render(<SearchForm {...defaultProps} selectedLanguages={new Set(['pl'])} />);
+
+      expect(screen.getByRole('radio', { name: 'Polish' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('radio', { name: 'English (UK)' })).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('marks English (UK) active when only uk is selected', () => {
+      render(<SearchForm {...defaultProps} selectedLanguages={new Set(['uk'])} />);
+
+      expect(screen.getByRole('radio', { name: 'English (UK)' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'false');
+      expect(screen.getByRole('radio', { name: 'Polish' })).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('falls back to All when selectedLanguages is empty', () => {
+      render(<SearchForm {...defaultProps} selectedLanguages={new Set()} />);
+
+      expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('selecting Polish calls setSelectedLanguages with a pl-only Set', async () => {
+      const user = userEvent.setup();
+      const setSelectedLanguages = jest.fn();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          selectedLanguages={new Set(['pl', 'uk'])}
+          setSelectedLanguages={setSelectedLanguages}
+        />
+      );
+
+      await user.click(screen.getByRole('radio', { name: 'Polish' }));
+
+      expect(setSelectedLanguages).toHaveBeenCalledTimes(1);
+      const arg = setSelectedLanguages.mock.calls[0][0] as Set<string>;
+      expect(Array.from(arg).sort()).toEqual(['pl']);
+    });
+
+    it('selecting All calls setSelectedLanguages with both pl and uk', async () => {
+      const user = userEvent.setup();
+      const setSelectedLanguages = jest.fn();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          selectedLanguages={new Set(['pl'])}
+          setSelectedLanguages={setSelectedLanguages}
+        />
+      );
+
+      await user.click(screen.getByRole('radio', { name: 'All' }));
+
+      expect(setSelectedLanguages).toHaveBeenCalledTimes(1);
+      const arg = setSelectedLanguages.mock.calls[0][0] as Set<string>;
+      expect(Array.from(arg).sort()).toEqual(['pl', 'uk']);
+    });
+  });
 });

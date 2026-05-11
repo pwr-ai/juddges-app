@@ -124,6 +124,85 @@ export async function searchDocumentsDirect(
   return result;
 }
 
+export interface MeilisearchDocumentHit {
+  id: string;
+  title?: string | null;
+  summary?: string | null;
+  case_number?: string | null;
+  jurisdiction?: string | null;
+  court_name?: string | null;
+  court_level?: string | null;
+  decision_date?: string | null;
+  publication_date?: string | null;
+  case_type?: string | null;
+  decision_type?: string | null;
+  outcome?: string | null;
+  keywords?: string[] | null;
+  legal_topics?: string[] | null;
+  cited_legislation?: string[] | null;
+  judges_flat?: string | null;
+  source_url?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  _formatted?: {
+    title?: string;
+    summary?: string;
+  };
+}
+
+export interface SearchDocumentsMeiliInput {
+  query: string;
+  limit?: number;
+  offset?: number;
+  filters?: string;
+}
+
+export interface SearchDocumentsResponse {
+  documents: MeilisearchDocumentHit[];
+  query: string;
+  query_time_ms: number | null;
+  pagination: PaginationMetadata;
+  total_count: number | null;
+}
+
+export async function searchDocumentsMeili(
+  input: SearchDocumentsMeiliInput
+): Promise<SearchDocumentsResponse> {
+  const params = new URLSearchParams();
+  params.set("q", input.query);
+  if (typeof input.limit === "number") {
+    params.set("limit", String(input.limit));
+  }
+  if (typeof input.offset === "number") {
+    params.set("offset", String(input.offset));
+  }
+  if (input.filters) {
+    params.set("filters", input.filters);
+  }
+
+  apiLogger.info("searchDocumentsMeili called", {
+    query: input.query,
+    limit: input.limit,
+    offset: input.offset,
+    hasFilters: Boolean(input.filters),
+  });
+
+  const response = await fetch(`/api/search/documents?${params.toString()}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: "Failed to fetch search results" }));
+    apiLogger.error("Meilisearch document search failed", response.status, errorData);
+    throw new Error("Document search failed. Please try again.");
+  }
+
+  return (await response.json()) as SearchDocumentsResponse;
+}
+
 export async function searchChunks(
   input: SearchChunksInput
 ): Promise<SearchChunksResponse> {

@@ -27,6 +27,25 @@ class AutocompleteResponse(BaseModel):
     estimatedTotalHits: int | None = None
 
 
+class DocumentPagination(BaseModel):
+    offset: int
+    limit: int
+    loaded_count: int
+    estimated_total: int | None = None
+    has_more: bool
+    next_offset: int | None = None
+
+
+class DocumentSearchResponse(BaseModel):
+    """Paginated document search response (Meilisearch-backed text mode)."""
+
+    documents: list[dict[str, Any]] = Field(default_factory=list)
+    query: str
+    query_time_ms: int | None = None
+    pagination: DocumentPagination
+    total_count: int | None = None
+
+
 def get_search_service() -> MeiliSearchService:
     """Dependency factory for autocomplete search service."""
     return MeiliSearchService.from_env()
@@ -76,6 +95,64 @@ async def autocomplete(
         query=result.get("query", query),
         processingTimeMs=processing_ms,
         estimatedTotalHits=result.get("estimatedTotalHits"),
+    )
+
+
+@router.get("/documents", response_model=DocumentSearchResponse)
+async def documents_search(
+    background_tasks: BackgroundTasks,
+    q: str = Query("", max_length=500, description="Search query (empty = match all)"),
+    limit: int = Query(10, ge=1, le=100, description="Max documents to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    filters: str | None = Query(
+        None, description="Optional Meilisearch filter expression"
+    ),
+    search_service: MeiliSearchService = Depends(get_search_service),
+) -> DocumentSearchResponse:
+    """Paginated Meilisearch-backed document search for the /search results page."""
+    query = q.strip()
+
+    if not search_service.configured:
+        raise HTTPException(status_code=503, detail="Meilisearch is not configured")
+
+    try:
+        result = await search_service.documents_search(
+            query=query, limit=limit, offset=offset, filters=filters
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Document search error: {exc}"
+        ) from exc
+
+    hits = result.get("hits", [])
+    estimated_total = result.get("estimatedTotalHits")
+    processing_ms = result.get("processingTimeMs")
+    loaded_count = offset + len(hits)
+    has_more = bool(estimated_total is not None and loaded_count < estimated_total)
+    next_offset = loaded_count if has_more else None
+
+    if query:
+        background_tasks.add_task(
+            record_search_query,
+            query=query,
+            hit_count=len(hits),
+            processing_ms=processing_ms,
+            filters=filters,
+        )
+
+    return DocumentSearchResponse(
+        documents=hits,
+        query=result.get("query", query),
+        query_time_ms=processing_ms,
+        pagination=DocumentPagination(
+            offset=offset,
+            limit=limit,
+            loaded_count=loaded_count,
+            estimated_total=estimated_total,
+            has_more=has_more,
+            next_offset=next_offset,
+        ),
+        total_count=estimated_total,
     )
 
 
