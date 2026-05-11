@@ -12,10 +12,11 @@ export interface SearchModeToggleProps {
   className?: string;
 }
 
+// Hybrid is hidden while the Meilisearch bge-m3 embedder is unregistered
+// (issue #200). Restore the option once hybrid stops returning 502s.
 const OPTIONS: Array<{ value: SearchMode; label: string; hint: string }> = [
   { value: "text", label: "Text", hint: "Lexical full-text via Meilisearch" },
   { value: "vector", label: "Vector", hint: "Semantic similarity via pgvector" },
-  { value: "hybrid", label: "Hybrid", hint: "Balanced lexical + semantic" },
 ];
 
 export function SearchModeToggle({
