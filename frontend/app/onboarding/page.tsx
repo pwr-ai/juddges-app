@@ -46,15 +46,18 @@ const STEPS: Step[] = [
     index: "02",
     title: "Build a collection",
     summary:
-      "Group judgments into reusable research sets. Collections persist across sessions, support inline description editing, and feed into extraction pipelines later on.",
+      "Group judgments into reusable research sets. Collections persist across sessions, support inline name and description editing, and feed into extraction pipelines later on.",
     bullets: [
-      "Save a result straight from the search list or from a document page.",
-      "Rename, describe, and re-order collections from the Library sidebar.",
-      "Collections become the input for hybrid-search filtering and downstream coding-schema runs.",
+      "Click + New Collection to create one; name and description can be edited inline afterwards.",
+      "Add judgments from the search results list, from the document view, or import a batch of IDs.",
+      "Re-order, rename, and delete from the Collections list; each collection has its own detail page with sortable columns and bulk actions.",
     ],
     cta: { href: "/collections", label: "Open collections" },
     icon: FolderOpen,
-    screenshot: null,
+    screenshot: {
+      src: "/docs/onboarding/step-2-collections.png",
+      alt: "Collections list page with the heading, search box, sort dropdown, an existing collection card, and the + New Collection button.",
+    },
   },
   {
     index: "03",

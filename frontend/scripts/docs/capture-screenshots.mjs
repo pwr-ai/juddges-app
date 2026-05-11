@@ -79,6 +79,17 @@ const STEPS = [
     },
   },
   {
+    name: 'step-2-collections',
+    url: '/collections',
+    prepare: async (page) => {
+      await Promise.race([
+        page.getByText(/Showing .* of .* collections?/i).first().waitFor({ state: 'visible', timeout: 20_000 }),
+        page.getByText(/No collections|Create your first collection/i).waitFor({ state: 'visible', timeout: 20_000 }),
+      ]).catch(() => {});
+      await page.waitForTimeout(1500);
+    },
+  },
+  {
     name: 'step-1-search',
     // Evergreen demo query — short, English, recognisable legal concept that
     // reliably returns UK results and showcases the hybrid ranking signals.

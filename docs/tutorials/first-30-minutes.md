@@ -99,16 +99,53 @@ The screenshot above shows the result of searching for
 
 ## Step 02 — Build a research collection
 
-*Content for this step is captured in Phase 3.*
+A **collection** is a named set of judgments. Use it as a working folder
+for a research question, a comparative-law study, or a batch you intend to
+run extraction over. Collections are persisted server-side and accessible
+from the left sidebar.
 
-### What to try
+![Collections list page showing the heading, search box, sort dropdown, an existing collection card with 0 documents, and the + New Collection button in the top right.](../assets/onboarding/step-2-collections.png)
 
-- Save a search result straight from the list, or from inside a document.
-- Rename, describe, and re-order collections from the Library sidebar.
+### Walk through the example
+
+Open [`/collections`](https://juddges.com/collections). The list shows
+every collection on your account with its document count and creation
+date.
+
+1. **Create a collection.** Click `+ New Collection` (top right) and
+   give it a name. Description is optional and can be edited inline
+   afterwards by clicking the collection name on the detail page.
+2. **Add judgments to it.** Three entry points:
+    - From a search result: hover a result card and use the
+      *Save to collection* affordance.
+    - From an open document: the document toolbar exposes the same action.
+    - From the collection detail page: the *Add documents* button accepts
+      a list of judgment IDs, which is useful for importing curated
+      sets.
+3. **Search and sort collections.** When the list grows, the search box
+   above the cards filters by name and description, and the *Sort by*
+   dropdown switches between Created and Updated timestamps.
+4. **Open a collection.** Clicking the card lands you on its detail page
+   — a sortable, filterable table of the judgments in the set, with bulk
+   actions in the toolbar.
+
+### Workflow patterns
+
+- **Per-question.** One collection per research question. Add anything
+  potentially relevant during exploration; trim down at the end.
+- **Comparative.** One collection per jurisdiction for the same fact
+  pattern. Run identical searches under each filter, save to the
+  matching collection.
+- **Pre-extraction.** Build the collection first, then point an
+  extraction job (see Step 04 on the base schema) at it. Collections
+  are the canonical input unit for extraction pipelines.
 
 ### Where it lives
 
-- Collections: [`/collections`](https://juddges.com/collections)
+- Collections list: [`/collections`](https://juddges.com/collections)
+- Collection detail: `/collections/{id}`
+- API reference (programmatic access):
+  [`docs/api/API_REFERENCE.md`](../api/API_REFERENCE.md)
 
 ---
 
