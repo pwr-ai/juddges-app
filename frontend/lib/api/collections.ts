@@ -1,6 +1,10 @@
 import { Collection, CollectionWithDocuments } from "@/types/collection";
 import { SearchDocument } from "@/types/search";
 import { cleanDocumentIdForUrl } from "../document-utils";
+import { fetchDocumentsByIds } from "./documents";
+
+// Matches backend MAX_BATCH_DOCUMENT_IDS (see backend/app/config.py).
+const DOCUMENT_BATCH_SIZE = 100;
 
 export interface CreateCollection {
   name: string;
@@ -143,6 +147,42 @@ export interface BatchAddResult {
   added: string[];
   failed: { document_id: string; error: string }[];
   total_requested: number;
+}
+
+export interface LoadAllProgress {
+  loaded: number;
+  total: number;
+}
+
+export function chunkDocumentIds(
+  ids: string[],
+  size = DOCUMENT_BATCH_SIZE
+): string[][] {
+  if (size <= 0) throw new Error("chunk size must be positive");
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size));
+  }
+  return chunks;
+}
+
+export async function loadAllCollectionDocuments(
+  documentIds: string[],
+  onProgress?: (progress: LoadAllProgress) => void
+): Promise<SearchDocument[]> {
+  if (documentIds.length === 0) return [];
+
+  const chunks = chunkDocumentIds(documentIds);
+  const all: SearchDocument[] = [];
+  onProgress?.({ loaded: 0, total: documentIds.length });
+
+  for (const chunk of chunks) {
+    const result = await fetchDocumentsByIds({ document_ids: chunk });
+    all.push(...result.documents);
+    onProgress?.({ loaded: all.length, total: documentIds.length });
+  }
+
+  return all;
 }
 
 export async function addDocumentsToCollection(

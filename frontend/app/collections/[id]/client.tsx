@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CollectionWithDocuments } from "@/types/collection";
-import { getCollection, updateCollection, addDocumentToCollection, removeDocumentFromCollection, deleteCollection, addDocumentsToCollection } from "@/lib/api/collections";
+import { getCollection, updateCollection, addDocumentToCollection, removeDocumentFromCollection, deleteCollection, addDocumentsToCollection, loadAllCollectionDocuments } from "@/lib/api/collections";
 import { SearchDocument } from "@/types/search";
-import { Plus, FileText, Lightbulb, Play, Wand2, Sparkles, Pencil, X, Zap, FolderOpen, ArrowLeft, AlertTriangle, MessageSquare, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FileText, Lightbulb, Play, Wand2, Sparkles, Pencil, X, Zap, FolderOpen, ArrowLeft, AlertTriangle, MessageSquare, Search, ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon } from "lucide-react";
+import CollectionDocumentsTable from "@/components/collection-documents-table";
 import { toast } from "sonner";
 import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
@@ -54,6 +55,11 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  const [isLoadingAll, setIsLoadingAll] = useState(false);
  const [totalDocumentCount, setTotalDocumentCount] = useState(0);
 
+ // View toggle: cards (default) vs full-columns table
+ const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+ const [isLoadingFullTable, setIsLoadingFullTable] = useState(false);
+ const [fullTableProgress, setFullTableProgress] = useState<{ loaded: number; total: number } | null>(null);
+
  // Reset tip dismissal state when collection ID changes
  useEffect(() => {
  setIsTipDismissed(false);
@@ -62,6 +68,8 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  setCurrentPage(1);
  setAllDocumentsLoaded(false);
  setTotalDocumentCount(0);
+ setViewMode('cards');
+ setFullTableProgress(null);
  }, [id]);
 
  // Reset page when search changes
@@ -299,6 +307,101 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  setIsLoadingAll(true);
  await loadCollection(true);
  }, [loadCollection]);
+
+ const ensureAllDocumentsFetched = useCallback(async (docIds: string[]): Promise<boolean> => {
+ const missing = docIds.filter((id) => !documents.has(id));
+ if (missing.length === 0) return true;
+
+ setIsLoadingFullTable(true);
+ setFullTableProgress({ loaded: docIds.length - missing.length, total: docIds.length });
+ try {
+ const fetched = await loadAllCollectionDocuments(missing, (progress) => {
+ setFullTableProgress({
+ loaded: docIds.length - missing.length + progress.loaded,
+ total: docIds.length,
+ });
+ });
+
+ setDocuments((prev) => {
+ const next = new Map(prev);
+ for (const doc of fetched) {
+ if (doc?.document_id && !next.has(doc.document_id)) {
+ next.set(doc.document_id, doc);
+ }
+ }
+ return next;
+ });
+
+ // If any IDs came back without a payload, mark them as not-found errors so
+ // the table still renders a row instead of staying blank.
+ const fetchedIds = new Set(fetched.map((d) => d?.document_id).filter(Boolean) as string[]);
+ const notFound = missing.filter((id) => !fetchedIds.has(id));
+ if (notFound.length > 0) {
+ setDocuments((prev) => {
+ const next = new Map(prev);
+ for (const id of notFound) {
+ if (!next.has(id)) {
+ next.set(id, {
+ document_id: id,
+ document_type: 'error',
+ summary: 'Document was not found!',
+ title: null,
+ date_issued: null,
+ issuing_body: null,
+ language: null,
+ document_number: null,
+ country: null,
+ full_text: null,
+ thesis: null,
+ legal_references: null,
+ legal_concepts: null,
+ keywords: null,
+ score: null,
+ court_name: null,
+ department_name: null,
+ presiding_judge: null,
+ judges: null,
+ parties: null,
+ outcome: null,
+ legal_bases: null,
+ extracted_legal_bases: null,
+ references: null,
+ factual_state: null,
+ legal_state: null,
+ } as SearchDocument);
+ }
+ }
+ return next;
+ });
+ }
+ return true;
+ } catch (error) {
+ pageLogger.error('Failed to load all documents for table view', error, {
+ collectionId: id,
+ missingCount: missing.length,
+ });
+ toast.error('Failed to load all documents');
+ return false;
+ } finally {
+ setIsLoadingFullTable(false);
+ setFullTableProgress(null);
+ }
+ }, [documents, id, pageLogger]);
+
+ const handleViewModeChange = useCallback(async (mode: 'cards' | 'table'): Promise<void> => {
+ if (mode === viewMode) return;
+ if (mode === 'cards') {
+ setViewMode('cards');
+ return;
+ }
+ const docIds = (collection?.documents ?? []).map(String);
+ if (docIds.length === 0) {
+ setViewMode('table');
+ return;
+ }
+ const ok = await ensureAllDocumentsFetched(docIds);
+ if (ok) setViewMode('table');
+ }, [collection?.documents, ensureAllDocumentsFetched, viewMode]);
 
  useEffect(() => {
  loadCollection();
@@ -799,7 +902,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  <div className="mt-4">
  {collection.documents.length > 0 && (
  <>
- <div className="flex items-center justify-between mb-4">
+ <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
  <SectionHeader
  title="Documents"
  description={
@@ -809,7 +912,50 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  }
  className="mb-0"
  />
- {!allDocumentsLoaded && totalDocumentCount > INITIAL_LOAD_LIMIT && (
+ <div className="flex items-center gap-2 shrink-0">
+ <div
+ role="tablist"
+ aria-label="View mode"
+ className="inline-flex items-center rounded-lg border border-[var(--rule)] bg-white p-1 shadow-sm"
+ >
+ <button
+ type="button"
+ role="tab"
+ aria-selected={viewMode === 'cards'}
+ onClick={() => handleViewModeChange('cards')}
+ disabled={isLoadingFullTable}
+ className={cn(
+ "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+ viewMode === 'cards'
+ ? "bg-[var(--ink)] text-white"
+ : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+ )}
+ >
+ <LayoutGrid className="h-3.5 w-3.5"/>
+ Cards
+ </button>
+ <button
+ type="button"
+ role="tab"
+ aria-selected={viewMode === 'table'}
+ onClick={() => handleViewModeChange('table')}
+ disabled={isLoadingFullTable}
+ className={cn(
+ "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+ viewMode === 'table'
+ ? "bg-[var(--ink)] text-white"
+ : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+ )}
+ >
+ {isLoadingFullTable ? (
+ <span className="animate-spin">⏳</span>
+ ) : (
+ <TableIcon className="h-3.5 w-3.5"/>
+ )}
+ Table
+ </button>
+ </div>
+ {!allDocumentsLoaded && totalDocumentCount > INITIAL_LOAD_LIMIT && viewMode === 'cards' && (
  <SecondaryButton
  onClick={handleLoadAllDocuments}
  disabled={isLoadingAll}
@@ -827,6 +973,13 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  </SecondaryButton>
  )}
  </div>
+ </div>
+
+ {isLoadingFullTable && fullTableProgress && (
+ <div className="mb-4 text-sm text-[var(--ink-soft)]">
+ Loading documents for table view… {fullTableProgress.loaded} / {fullTableProgress.total}
+ </div>
+ )}
 
  {/* Search Bar */}
  {collection.documents.length > 3 && (
@@ -867,8 +1020,19 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  </>
  )}
 
- {/* Check for database errors */}
- {(() => {
+ {/* Full-columns table view */}
+ {viewMode === 'table' && collection.documents.length > 0 && (
+ <CollectionDocumentsTable
+ documents={collection.documents
+ .map((docId) => documents.get(String(docId)))
+ .filter((d): d is SearchDocument => Boolean(d))}
+ collectionName={collection.name}
+ searchQuery={searchQuery}
+ />
+ )}
+
+ {/* Card grid (existing) */}
+ {viewMode === 'cards' && (() => {
  const loadedDocuments = Array.from(collection.documents)
  .map(docId => documents.get(String(docId)))
  .filter(Boolean) as SearchDocument[];
