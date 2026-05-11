@@ -20,13 +20,6 @@ System design and technical decisions:
 - [System Architecture](architecture/ARCHITECTURE.md) - Detailed system architecture with diagrams
 - [Search Architecture](architecture/SEARCH_ARCHITECTURE.md) - Deep dive into hybrid search pipeline (BM25 + vector + reranking)
 
-### 🎨 [Features](features/)
-Feature-specific documentation:
-- [Chat Sources](features/chat-sources/) - Chat interface with source citations
-- [Filtering](features/filtering/) - Advanced judgment filtering system
-- [Schema Editor](features/schema-editor/) - JSON schema editing features
-- [Search](features/search/) - Search functionality (semantic, full-text, hybrid)
-
 ### 💻 [Frontend](frontend/)
 Frontend-specific documentation:
 - [Styling Guide](frontend/styling-guide/) - Color system, component creation, and UI standards
