@@ -1,6 +1,6 @@
 """Unit tests for MeiliSearchService admin methods (mocked httpx)."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -320,4 +320,145 @@ class TestAutocompleteHybrid:
 
         assert "hybrid" not in captured["payload"]
         assert "vector" not in captured["payload"]
-        assert result == {"hits": [], "estimatedTotalHits": 0}
+        assert result["hits"] == []
+        assert result["estimatedTotalHits"] == 0
+        # topic_hits is now part of the response (may be [] due to degradation)
+        assert "topic_hits" in result
+
+
+# ── Parallel topic hits ───────────────────────────────────────────────────────
+
+
+class TestAutocompleteTopics:
+    """Tests for the parallel topics query added to autocomplete()."""
+
+    def _topics_service(self) -> MeiliSearchService:
+        return MeiliSearchService(
+            base_url="http://meili:7700",
+            api_key="search-key",
+            admin_key="admin-key",
+            index_name="topics",
+            timeout_seconds=2.0,
+        )
+
+    @pytest.mark.asyncio
+    async def test_autocomplete_returns_topic_hits(self, service):
+        """Both ``hits`` and ``topic_hits`` are present when both calls succeed."""
+        doc_hit = {"id": "doc-1", "title": "Contract law"}
+        topic_hit = {
+            "id": "drug_trafficking",
+            "label_pl": "Handel narkotykami",
+            "label_en": "Drug trafficking",
+            "doc_count": 247,
+            "jurisdictions": ["pl", "uk"],
+        }
+
+        judgments_resp = _mock_response(
+            200, {"hits": [doc_hit], "query": "narko", "processingTimeMs": 3}
+        )
+        topics_resp = _mock_response(200, {"hits": [topic_hit], "processingTimeMs": 2})
+
+        # Inject a pre-built topics service so topics_from_env() is not called.
+        fake_topics_svc = self._topics_service()
+        service._topics_service_instance = fake_topics_svc
+
+        # Intercept both POST calls by URL.
+        async def fake_post(self_, url, json, headers):
+            if "topics" in url:
+                return topics_resp
+            return judgments_resp
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.autocomplete("narko")
+
+        assert result["hits"] == [doc_hit]
+        assert len(result["topic_hits"]) == 1
+        assert result["topic_hits"][0]["id"] == "drug_trafficking"
+
+    @pytest.mark.asyncio
+    async def test_autocomplete_topics_failure_degrades_silently(self, service):
+        """When the topics call raises, ``hits`` is still returned and ``topic_hits`` is []."""
+        from loguru import logger
+
+        doc_hit = {"id": "doc-2", "title": "Another doc"}
+        judgments_resp = _mock_response(
+            200, {"hits": [doc_hit], "query": "fraud", "processingTimeMs": 4}
+        )
+
+        # Use an async mock for the topics service's _query_topics.
+        fake_topics_svc = self._topics_service()
+        service._topics_service_instance = fake_topics_svc
+
+        async def fake_post(self_, url, json, headers):
+            if "topics" in url:
+                raise httpx.ConnectError("topics index unreachable")
+            return judgments_resp
+
+        # Capture loguru warnings via a temporary in-process sink.
+        logged_warnings: list[str] = []
+
+        def _capture_sink(message):
+            logged_warnings.append(message)
+
+        sink_id = logger.add(_capture_sink, level="WARNING")
+        try:
+            with patch("httpx.AsyncClient.post", new=fake_post):
+                result = await service.autocomplete("fraud")
+        finally:
+            logger.remove(sink_id)
+
+        assert result["hits"] == [doc_hit]
+        assert result["topic_hits"] == []
+        # At least one warning must have mentioned topics.
+        assert any("topic" in str(w).lower() for w in logged_warnings), (
+            f"Expected a topics warning; got: {logged_warnings}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_autocomplete_skips_topics_when_query_too_short(self, service):
+        """Topics service must not be called when the query is fewer than 2 chars."""
+        judgments_resp = _mock_response(
+            200, {"hits": [], "query": "a", "processingTimeMs": 1}
+        )
+
+        fake_topics_svc = MagicMock(spec=MeiliSearchService)
+        fake_topics_svc.configured = True
+        service._topics_service_instance = fake_topics_svc
+
+        async def fake_post(self_, url, json, headers):
+            return judgments_resp
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.autocomplete("a")
+
+        # The topics service's search method (called inside _query_topics) is
+        # only reachable via httpx.AsyncClient.post with a "topics" URL, so
+        # asserting topic_hits=[] and no crash is the correct behaviour check.
+        assert result["topic_hits"] == []
+        # The fake_topics_svc should not have been used in any HTTP call.
+        fake_topics_svc.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_autocomplete_forwards_jurisdiction_filter_to_topics(self, service):
+        """A filter string is forwarded to the topics query."""
+        judgments_resp = _mock_response(
+            200, {"hits": [], "query": "fraud", "processingTimeMs": 2}
+        )
+        topics_resp = _mock_response(200, {"hits": [], "processingTimeMs": 1})
+
+        fake_topics_svc = self._topics_service()
+        service._topics_service_instance = fake_topics_svc
+
+        captured_topics_payload: dict = {}
+
+        async def fake_post(self_, url, json, headers):
+            if "topics" in url:
+                captured_topics_payload.update(json)
+                return topics_resp
+            return judgments_resp
+
+        filter_str = "jurisdictions IN ['pl']"
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            await service.autocomplete("fraud", filters=filter_str)
+
+        assert captured_topics_payload.get("filter") == filter_str

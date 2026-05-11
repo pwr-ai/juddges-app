@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.services.search import MeiliSearchService
+from app.services.search import MeiliSearchService, TopicHit
 from app.services.search_analytics import (
     export_eval_queries,
     get_popular_queries,
@@ -19,9 +20,14 @@ router = APIRouter(prefix="/api/search", tags=["Search"])
 
 
 class AutocompleteResponse(BaseModel):
-    """Autocomplete response payload."""
+    """Autocomplete response payload.
+
+    ``topic_hits`` is additive — existing ``hits`` field shape is unchanged.
+    If the topics index is unavailable, ``topic_hits`` is an empty list.
+    """
 
     hits: list[dict[str, Any]] = Field(default_factory=list)
+    topic_hits: list[TopicHit] = Field(default_factory=list)
     query: str
     processingTimeMs: int | None = None
     estimatedTotalHits: int | None = None
@@ -79,7 +85,16 @@ async def autocomplete(
         ) from exc
 
     hits = result.get("hits", [])
+    raw_topic_hits = result.get("topic_hits", [])
     processing_ms = result.get("processingTimeMs")
+
+    # Coerce raw topic dicts into TopicHit models (malformed hits are skipped).
+    topic_hits: list[TopicHit] = []
+    for raw in raw_topic_hits:
+        try:
+            topic_hits.append(TopicHit.model_validate(raw))
+        except Exception:
+            logger.debug("Skipping malformed topic hit: {}", raw)
 
     # Record analytics in background (fire-and-forget)
     background_tasks.add_task(
@@ -92,6 +107,7 @@ async def autocomplete(
 
     return AutocompleteResponse(
         hits=hits,
+        topic_hits=topic_hits,
         query=result.get("query", query),
         processingTimeMs=processing_ms,
         estimatedTotalHits=result.get("estimatedTotalHits"),
