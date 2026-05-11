@@ -219,4 +219,14 @@ describe('pickTopicLabel', () => {
     const result = pickTopicLabel(hit, 'de');
     expect(result).toEqual({ primary: 'Homicide', secondary: 'Zabójstwo' });
   });
+
+  it('treats BCP-47 region-qualified "pl-PL" as pl-primary', () => {
+    const result = pickTopicLabel(hit, 'pl-PL');
+    expect(result).toEqual({ primary: 'Zabójstwo', secondary: 'Homicide' });
+  });
+
+  it('treats uppercase "PL" as pl-primary', () => {
+    const result = pickTopicLabel(hit, 'PL');
+    expect(result).toEqual({ primary: 'Zabójstwo', secondary: 'Homicide' });
+  });
 });

@@ -25,7 +25,7 @@ export interface TopicHit {
   category: string | null;
   doc_count: number;
   jurisdictions: string[];
-  _formatted?: Record<string, string> | null;
+  _formatted?: Record<string, string | string[]> | null;
 }
 
 export interface TopicLabel {
@@ -40,7 +40,8 @@ export interface TopicLabel {
  * - locale `"en"` (or anything else) → reversed
  */
 export function pickTopicLabel(hit: TopicHit, locale: string): TopicLabel {
-  if (locale === "pl") {
+  const lang = locale.split("-")[0].toLowerCase();
+  if (lang === "pl") {
     return { primary: hit.label_pl, secondary: hit.label_en };
   }
   return { primary: hit.label_en, secondary: hit.label_pl };
