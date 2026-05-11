@@ -102,16 +102,7 @@ class TestTopicClickEndpoint:
     async def test_schedules_background_task(
         self, mock_record, client, valid_api_headers
     ):
-        """Endpoint returns 200 and schedules the background task."""
-        # Mock Meilisearch service to avoid config requirement
-        from app.api.search import get_search_service
-        from app.server import app
-        from app.services.search import MeiliSearchService
-
-        mock_service = MagicMock(spec=MeiliSearchService)
-        mock_service.configured = True
-        app.dependency_overrides[get_search_service] = lambda: mock_service
-
+        """Endpoint returns 200 and schedules the background task with correct kwargs."""
         response = await client.post(
             "/api/search/topic-click",
             json={
@@ -124,6 +115,30 @@ class TestTopicClickEndpoint:
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
+        mock_record.assert_called_once_with(
+            topic_id="drug_trafficking",
+            query="narko",
+            jurisdiction="pl",
+        )
+
+    @pytest.mark.anyio
+    @patch("app.api.search.record_topic_click")
+    async def test_schedules_background_task_without_jurisdiction(
+        self, mock_record, client, valid_api_headers
+    ):
+        """When jurisdiction is omitted it reaches record_topic_click as None."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "homicide", "query": "zabójstwo"},
+            headers=valid_api_headers,
+        )
+
+        assert response.status_code == 200
+        mock_record.assert_called_once_with(
+            topic_id="homicide",
+            query="zabójstwo",
+            jurisdiction=None,
+        )
 
     @pytest.mark.anyio
     async def test_requires_auth(self, client):
@@ -147,14 +162,6 @@ class TestTopicClickEndpoint:
     @pytest.mark.anyio
     async def test_jurisdiction_is_optional(self, client, valid_api_headers):
         """Endpoint accepts request without jurisdiction field."""
-        from app.api.search import get_search_service
-        from app.server import app
-        from app.services.search import MeiliSearchService
-
-        mock_service = MagicMock(spec=MeiliSearchService)
-        mock_service.configured = True
-        app.dependency_overrides[get_search_service] = lambda: mock_service
-
         response = await client.post(
             "/api/search/topic-click",
             json={"topic_id": "homicide", "query": "zabójstwo"},

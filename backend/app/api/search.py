@@ -218,7 +218,6 @@ async def documents_search(
 async def topic_click(
     event: TopicClickEvent,
     background_tasks: BackgroundTasks,
-    search_service: MeiliSearchService = Depends(get_search_service),
 ) -> dict[str, str]:
     """Record a topic-chip click for analytics (fire-and-forget).
 
