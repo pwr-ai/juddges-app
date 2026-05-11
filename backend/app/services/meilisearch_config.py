@@ -110,6 +110,12 @@ MEILISEARCH_INDEX_SETTINGS: dict[str, Any] = {
     "pagination": {
         "maxTotalHits": 1000,
     },
+    "embedders": {
+        "bge-m3": {
+            "source": "userProvided",
+            "dimensions": 1024,
+        },
+    },
 }
 
 

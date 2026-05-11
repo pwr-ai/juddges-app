@@ -138,3 +138,10 @@ class TestIndexSettings:
     def test_typo_tolerance_disables_roman_numerals(self):
         typo_cfg = MEILISEARCH_INDEX_SETTINGS["typoTolerance"]
         assert "ii" in typo_cfg["disableOnWords"]
+
+
+class TestEmbedderSettings:
+    def test_embedders_block_registers_bge_m3(self):
+        embedders = MEILISEARCH_INDEX_SETTINGS["embedders"]
+        assert embedders["bge-m3"]["source"] == "userProvided"
+        assert embedders["bge-m3"]["dimensions"] == 1024
