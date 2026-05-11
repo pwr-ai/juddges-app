@@ -8,12 +8,19 @@ lives in this module.
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Any
 
 from juddges_search.embeddings import embed_texts
 from loguru import logger
 
 EMBEDDER_NAME = "bge-m3"
+
+# Cap how many texts get shipped to TEI in a single HTTP request. Curated
+# embed-text strings are a few KB each, so 500-row Celery batches blow past
+# proxy `client_max_body_size` (HTTP 413). 32 keeps each POST well under 1 MB
+# while still saturating BGE-M3's GPU batch.
+_TEI_SUB_BATCH_SIZE = max(1, int(os.getenv("TEI_SUB_BATCH_SIZE", "32")))
 
 
 def build_embed_text(row: dict[str, Any]) -> str | None:
@@ -79,10 +86,12 @@ async def attach_embedding(doc: dict[str, Any], row: dict[str, Any]) -> dict[str
 async def attach_embeddings_batch(
     docs: list[dict[str, Any]], rows: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Batch-embed every (doc, row) pair in one TEI call.
+    """Batch-embed every (doc, row) pair via chunked TEI calls.
 
     Rows without curated text get an explicit ``_vectors.bge-m3: null`` opt-out.
-    If the TEI call fails, every doc opts out (keyword search still works).
+    The TEI payload is split into sub-batches of ``TEI_SUB_BATCH_SIZE`` to keep
+    each HTTP request under typical reverse-proxy body limits (HTTP 413). A
+    failed sub-batch only opts out its own slice; other sub-batches still index.
     """
     if len(docs) != len(rows):
         raise ValueError("docs and rows must have the same length")
@@ -96,27 +105,36 @@ async def attach_embeddings_batch(
     if not texts_with_index:
         return [_set_opt_out(doc) for doc in docs]
 
-    payload = [text for _, text in texts_with_index]
-    try:
-        vectors = await asyncio.to_thread(embed_texts, payload)
-    except Exception:
-        logger.opt(exception=True).warning(
-            f"TEI batch embedding failed for {len(payload)} docs — opting all out"
-        )
-        return [_set_opt_out(doc) for doc in docs]
+    embedded_indices: set[int] = set()
+    for start in range(0, len(texts_with_index), _TEI_SUB_BATCH_SIZE):
+        chunk = texts_with_index[start : start + _TEI_SUB_BATCH_SIZE]
+        payload = [text for _, text in chunk]
+        try:
+            vectors = await asyncio.to_thread(embed_texts, payload)
+        except Exception:
+            logger.opt(exception=True).warning(
+                f"TEI sub-batch embedding failed for {len(payload)} docs "
+                f"(offset={start}) — opting this slice out"
+            )
+            for idx, _text in chunk:
+                _set_opt_out(docs[idx])
+            continue
 
-    if not isinstance(vectors, list) or len(vectors) != len(texts_with_index):
-        logger.warning(
-            f"TEI returned {len(vectors) if isinstance(vectors, list) else '?'} "
-            f"vectors for {len(texts_with_index)} inputs — opting all out"
-        )
-        return [_set_opt_out(doc) for doc in docs]
+        if not isinstance(vectors, list) or len(vectors) != len(chunk):
+            logger.warning(
+                f"TEI returned {len(vectors) if isinstance(vectors, list) else '?'} "
+                f"vectors for {len(chunk)} inputs (offset={start}) — opting this slice out"
+            )
+            for idx, _text in chunk:
+                _set_opt_out(docs[idx])
+            continue
 
-    embedded_indices = {idx for idx, _ in texts_with_index}
-    for (idx, _text), vec in zip(texts_with_index, vectors, strict=True):
-        docs[idx]["_vectors"] = {EMBEDDER_NAME: vec}
+        for (idx, _text), vec in zip(chunk, vectors, strict=True):
+            docs[idx]["_vectors"] = {EMBEDDER_NAME: vec}
+            embedded_indices.add(idx)
+
     for idx, doc in enumerate(docs):
-        if idx not in embedded_indices:
+        if idx not in embedded_indices and "_vectors" not in doc:
             _set_opt_out(doc)
 
     return docs
