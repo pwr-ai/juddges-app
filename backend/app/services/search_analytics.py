@@ -19,6 +19,7 @@ def record_search_query(
     hit_count: int,
     processing_ms: int | None = None,
     filters: str | None = None,
+    topic_hits_count: int | None = None,
 ) -> None:
     """Fire-and-forget insert into search_analytics. Never raises."""
     if not supabase_client:
@@ -30,6 +31,7 @@ def record_search_query(
                 "hit_count": hit_count,
                 "processing_ms": processing_ms,
                 "filters": filters[:500] if filters else None,
+                "topic_hits_count": topic_hits_count,
             }
         ).execute()
     except Exception as exc:

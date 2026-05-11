@@ -105,6 +105,7 @@ async def autocomplete(
         hit_count=len(hits),
         processing_ms=processing_ms,
         filters=filters,
+        topic_hits_count=len(topic_hits),
     )
 
     return AutocompleteResponse(
