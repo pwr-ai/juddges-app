@@ -88,6 +88,59 @@ function ViewAllAction({ href, label }: { href: string; label: string }): React.
   );
 }
 
+function OnboardingBanner(): React.JSX.Element | null {
+  const [visible, setVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const dismissed = window.localStorage.getItem("onboarding-dismissed");
+      if (dismissed !== "true") setVisible(true);
+    } catch {
+      // Ignore — storage may be unavailable.
+    }
+  }, []);
+
+  const dismiss = React.useCallback(() => {
+    try {
+      window.localStorage.setItem("onboarding-dismissed", "true");
+    } catch {
+      // Ignore.
+    }
+    setVisible(false);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="mb-6 flex items-center justify-between gap-4 border border-rule bg-parchment-deep/40 px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+          New here?
+        </span>
+        <span className="truncate text-sm text-ink">
+          Take the 30-minute tour for legal researchers.
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <Link
+          href="/onboarding"
+          className="font-mono text-[11px] uppercase tracking-[0.22em] text-oxblood transition-colors hover:text-oxblood-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          Start tour →
+        </Link>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Dismiss onboarding banner"
+          className="text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CopyButton(): React.JSX.Element {
   const [state, setState] = React.useState<"idle" | "copied" | "failed">("idle");
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,6 +241,7 @@ export default function HomePage(): React.JSX.Element {
   // For authenticated users, show the redesigned editorial dashboard
   return (
     <PageContainer width="standard" className="py-6">
+      <OnboardingBanner />
       {/* 12-col asymmetric grid; mobile collapses to a single column. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* ============ ROW 1 ============ */}
