@@ -733,15 +733,16 @@ async def test_case_05_language_filtering(
     response, latency_ms = await _post_with_timing(
         authenticated_client,
         "/documents/search",
-        {"query": "appeal judgment", "languages": ["en"], "limit_docs": 10},
+        # Per #201, languages=["en"] (with no explicit jurisdictions) routes the
+        # vector branch to UK so EN-language queries don't leak PL documents.
+        # Use a query that hits a UK fixture so the assertion is meaningful.
+        {"query": "criminal fraud", "languages": ["en"], "limit_docs": 10},
     )
     assert response.status_code == 200
     assert latency_ms < 1500
     data = response.json()
     assert data["documents"]
-    # Current implementation uses `languages` to select text-search configuration
-    # (e.g., english/simple), not as a hard jurisdiction filter.
-    assert all(doc.get("language") in {"en", "pl"} for doc in data["documents"])
+    assert all(doc["country"] == "UK" for doc in data["documents"])
 
 
 @pytest.mark.anyio
