@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  MessageSquare,
   Search,
   Zap,
   GraduationCap,
@@ -455,19 +454,6 @@ const capabilities: ReadonlyArray<{
     cta: "Try search",
   },
   {
-    icon: MessageSquare,
-    title: "AI Legal Assistant",
-    description:
-      "Ask questions in natural language and get answers grounded in actual court decisions. Every response includes citations to specific judgments.",
-    features: [
-      "Citation-backed answers",
-      "Multi-turn conversations",
-      "Case law reasoning",
-    ],
-    href: "/chat",
-    cta: "Start a conversation",
-  },
-  {
     icon: Zap,
     title: "Schema Extraction",
     description:
@@ -491,7 +477,7 @@ function CapabilitiesSection() {
           numeral="02"
           title={
             <>
-              Three ways to <em>work</em> with legal data
+              Two ways to <em>work</em> with legal data
             </>
           }
           description="Search, analyze, and extract structured information from court judgments across jurisdictions."
@@ -499,7 +485,7 @@ function CapabilitiesSection() {
         />
 
         {/* Capability cards — first is featured */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-[color:var(--rule)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-[color:var(--rule)]">
           {capabilities.map((cap, i) => {
             const Icon = cap.icon;
             return (
@@ -684,7 +670,7 @@ const steps: ReadonlyArray<{
     number: "03",
     title: "Analyze and extract",
     description:
-      "Dig deeper with AI chat, save documents to collections, or define schemas to extract structured data from judgments at scale.",
+      "Save documents to collections, or define schemas to extract structured data from judgments at scale.",
   },
 ];
 
