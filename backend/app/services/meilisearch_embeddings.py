@@ -7,7 +7,13 @@ lives in this module.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
+
+from juddges_search.embeddings import embed_texts
+from loguru import logger
+
+EMBEDDER_NAME = "bge-m3"
 
 
 def build_embed_text(row: dict[str, Any]) -> str | None:
@@ -33,3 +39,27 @@ def build_embed_text(row: dict[str, Any]) -> str | None:
     ]
     cleaned = [p.strip() for p in parts if isinstance(p, str) and p.strip()]
     return "\n\n".join(cleaned) if cleaned else None
+
+
+async def attach_embedding(doc: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    """Compute and attach a ``_vectors`` entry to a Meilisearch document.
+
+    Mutates and returns ``doc``. When ``build_embed_text`` returns None, or
+    when the TEI server fails, the document is returned without ``_vectors``
+    so it can still be indexed (keyword-search continues to work).
+    """
+    text = build_embed_text(row)
+    if text is None:
+        return doc
+
+    try:
+        vec = await asyncio.to_thread(embed_texts, text)
+    except Exception:
+        logger.opt(exception=True).warning(
+            "TEI embedding failed for doc %s — indexing without vector",
+            doc.get("id"),
+        )
+        return doc
+
+    doc["_vectors"] = {EMBEDDER_NAME: vec}
+    return doc
