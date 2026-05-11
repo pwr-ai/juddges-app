@@ -94,10 +94,10 @@ describe('LandingPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('shows "Try search" CTA link pointing to /search', () => {
+    it('shows "Try search" CTA link routing through /auth/login', () => {
       render(<LandingPage />);
       const searchLinks = screen.getAllByRole('link', { name: /try search/i });
-      const heroLink = searchLinks.find((l) => l.getAttribute('href') === '/search');
+      const heroLink = searchLinks.find((l) => l.getAttribute('href') === '/auth/login');
       expect(heroLink).toBeTruthy();
     });
 
@@ -118,11 +118,10 @@ describe('LandingPage', () => {
       expect(screen.getByText(/Consumer protection in financial services/i)).toBeInTheDocument();
     });
 
-    it('demo query links point to /search with query params', () => {
+    it('demo query links route through /auth/login (search is auth-gated)', () => {
       render(<LandingPage />);
       const link = screen.getByRole('link', { name: /Murder conviction appeal/i });
-      expect(link.getAttribute('href')).toContain('/search?');
-      expect(link.getAttribute('href')).toContain('murder');
+      expect(link.getAttribute('href')).toBe('/auth/login');
     });
   });
 

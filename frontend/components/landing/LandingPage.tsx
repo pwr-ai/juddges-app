@@ -56,22 +56,22 @@ const demoQueries: ReadonlyArray<{
 }> = [
   {
     label: "Frankowicze i abuzywne klauzule",
-    href: "/search?q=frankowicze%20i%20abuzywne%20klauzule&lang=pl&mode=thinking&type=judgment",
+    href: "/auth/login",
     lang: "PL",
   },
   {
     label: "Murder conviction appeal",
-    href: "/search?q=murder%20conviction%20appeal&lang=en&mode=thinking&type=judgment",
+    href: "/auth/login",
     lang: "EN",
   },
   {
     label: "Skarga do sądu administracyjnego",
-    href: "/search?q=skarga%20do%20s%C4%85du%20administracyjnego&lang=pl&mode=thinking&type=judgment",
+    href: "/auth/login",
     lang: "PL",
   },
   {
     label: "Consumer protection in financial services",
-    href: "/search?q=consumer%20protection%20in%20financial%20services&lang=en&mode=thinking&type=judgment",
+    href: "/auth/login",
     lang: "EN",
   },
 ];
@@ -170,7 +170,7 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-wrap gap-3 mb-14"
           >
-            <EditorialButton href="/search" size="lg" arrow>
+            <EditorialButton href="/auth/login" size="lg" arrow>
               Try search
             </EditorialButton>
             <EditorialButton
@@ -451,7 +451,7 @@ const capabilities: ReadonlyArray<{
       "Cross-jurisdiction results",
       "Advanced filters by court, date, topic",
     ],
-    href: "/search",
+    href: "/auth/login",
     cta: "Try search",
   },
   {
@@ -771,7 +771,7 @@ function TrustCTASection() {
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center mb-10">
-            <EditorialButton href="/search" size="lg" arrow>
+            <EditorialButton href="/auth/login" size="lg" arrow>
               Open search
             </EditorialButton>
             <EditorialButton
