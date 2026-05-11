@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 import httpx
+from juddges_search.embeddings import embed_texts
 from loguru import logger
 
 
@@ -79,7 +80,11 @@ class MeiliSearchService:
     # ── search ───────────────────────────────────────────────────────────
 
     async def autocomplete(
-        self, query: str, limit: int = 10, filters: str | None = None
+        self,
+        query: str,
+        limit: int = 10,
+        filters: str | None = None,
+        semantic_ratio: float = 0.3,
     ) -> dict[str, Any]:
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")
@@ -121,6 +126,19 @@ class MeiliSearchService:
         }
         if filters:
             payload["filter"] = filters
+
+        if semantic_ratio > 0 and query.strip():
+            try:
+                query_vec = await asyncio.to_thread(embed_texts, query)
+                payload["hybrid"] = {
+                    "embedder": "bge-m3",
+                    "semanticRatio": semantic_ratio,
+                }
+                payload["vector"] = query_vec
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "TEI embedding failed for query — falling back to keyword search"
+                )
 
         url = f"{self.base_url}/indexes/{self.index_name}/search"
 
