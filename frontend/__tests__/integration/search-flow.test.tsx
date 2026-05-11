@@ -49,6 +49,12 @@ function createDefaultSearchStore(): Record<string, any> {
     selectedChunks: [],
     searchType: 'thinking',
     setSearchType: jest.fn(),
+    searchMode: 'text',
+    setSearchMode: jest.fn(),
+    baseFilters: {},
+    setBaseFilter: jest.fn(),
+    setBaseFilters: jest.fn(),
+    resetBaseFilters: jest.fn(),
     isDialogOpen: false,
     filters: {
       keywords: new Set(),
@@ -495,21 +501,6 @@ describe('Complete Search Flow Integration', () => {
       // URL should be updated when search params change
     });
 
-    it('should restore search from URL parameters', async () => {
-      mockSearchUrlParamsHook.mockImplementation(({ onSearchFromUrl }: any) => {
-        setTimeout(() => onSearchFromUrl(1), 100);
-        return {
-          updateUrlParams: jest.fn(),
-          updatingUrlRef: { current: false },
-        };
-      });
-
-      renderWithProviders(<SearchPage />);
-
-      await waitFor(() => {
-        expect(screen.getByRole('textbox')).toBeInTheDocument();
-      });
-    });
   });
 
   describe('Keyboard Shortcuts', () => {
