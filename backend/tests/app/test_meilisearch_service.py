@@ -118,8 +118,14 @@ class TestAutocomplete:
             result = await service.autocomplete("test", limit=5)
 
         assert result["query"] == "test"
-        call_kwargs = mock_post.call_args
-        payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
+        # There may be two POST calls (judgments + topics). Find the judgments call
+        # explicitly so the assertion is stable regardless of async scheduling order.
+        judgments_call = next(
+            c
+            for c in mock_post.call_args_list
+            if "/indexes/judgments/" in (c.args[0] if c.args else "")
+        )
+        payload = judgments_call.kwargs.get("json") or judgments_call[1].get("json")
         assert payload["q"] == "test"
         assert payload["limit"] == 5
         assert "case_number" in payload["attributesToHighlight"]
@@ -462,3 +468,72 @@ class TestAutocompleteTopics:
             await service.autocomplete("fraud", filters=filter_str)
 
         assert captured_topics_payload.get("filter") == filter_str
+
+    @pytest.mark.asyncio
+    async def test_autocomplete_topics_filter_400_retries_without_filter(self, service):
+        """When the topics index returns 400 for a filter, the retry omits the filter."""
+        from loguru import logger
+
+        doc_hit = {"id": "doc-3", "title": "Robbery case"}
+        topic_hit = {
+            "id": "robbery",
+            "label_pl": "Rozbój",
+            "label_en": "Robbery",
+            "doc_count": 100,
+            "jurisdictions": ["pl"],
+        }
+
+        judgments_resp = _mock_response(
+            200, {"hits": [doc_hit], "query": "rob", "processingTimeMs": 2}
+        )
+        topics_400_resp = httpx.Response(
+            400,
+            json={"message": "Attribute `jurisdiction` is not filterable."},
+            request=httpx.Request("POST", "http://meili:7700/indexes/topics/search"),
+        )
+        topics_ok_resp = _mock_response(
+            200, {"hits": [topic_hit], "processingTimeMs": 1}
+        )
+
+        fake_topics_svc = self._topics_service()
+        service._topics_service_instance = fake_topics_svc
+
+        # Track topics POST calls in order to serve 400 on first, 200 on second.
+        topics_post_calls: list[dict] = []
+
+        async def fake_post(self_, url, json, headers):
+            if "topics" in url:
+                topics_post_calls.append(json)
+                if len(topics_post_calls) == 1:
+                    return topics_400_resp
+                return topics_ok_resp
+            return judgments_resp
+
+        logged_debug: list[str] = []
+
+        def _capture_sink(message):
+            logged_debug.append(str(message))
+
+        filter_str = "jurisdiction = 'PL'"
+        sink_id = logger.add(_capture_sink, level="DEBUG")
+        try:
+            with patch("httpx.AsyncClient.post", new=fake_post):
+                result = await service.autocomplete("rob", filters=filter_str)
+        finally:
+            logger.remove(sink_id)
+
+        # topic_hits is non-empty (retry succeeded).
+        assert len(result["topic_hits"]) == 1
+        assert result["topic_hits"][0]["id"] == "robbery"
+
+        # The retry payload must not carry a ``filter`` key.
+        assert len(topics_post_calls) == 2
+        assert "filter" in topics_post_calls[0], "First call should have had a filter"
+        assert "filter" not in topics_post_calls[1], (
+            "Retry call must not include a filter"
+        )
+
+        # A debug message mentioning the unsupported filter must have been emitted.
+        assert any("topics_filter_unsupported" in msg for msg in logged_debug), (
+            f"Expected 'topics_filter_unsupported' debug log; got: {logged_debug}"
+        )

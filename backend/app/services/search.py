@@ -43,9 +43,9 @@ class TopicHit(BaseModel):
     formatted: dict[str, Any] | None = Field(default=None, alias="_formatted")
 
 
-# ── Topics-index searchable fields (used for highlighting) ───────────────────
+# ── Topics-index fields used for highlighting ────────────────────────────────
 
-_TOPICS_SEARCHABLE_ATTRS: list[str] = [
+_TOPICS_HIGHLIGHT_ATTRS: list[str] = [
     "label_pl",
     "label_en",
     "aliases_pl",
@@ -321,7 +321,7 @@ class MeiliSearchService:
         topics_payload: dict[str, Any] = {
             "q": query,
             "limit": _TOPICS_LIMIT,
-            "attributesToHighlight": _TOPICS_SEARCHABLE_ATTRS,
+            "attributesToHighlight": _TOPICS_HIGHLIGHT_ATTRS,
             "highlightPreTag": "<mark>",
             "highlightPostTag": "</mark>",
             "matchingStrategy": "all",
@@ -331,28 +331,31 @@ class MeiliSearchService:
 
         url = f"{svc.base_url}/indexes/{svc.index_name}/search"
 
-        async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
-            response = await client.post(
-                url, json=topics_payload, headers=svc._search_headers()
-            )
-            if response.status_code == 400 and filters:
-                # The filter references a field the topics index does not have;
-                # retry without filter rather than surfacing an error.
-                logger.debug(
-                    "topics filter '{}' rejected by Meilisearch ({}); retrying without filter",
-                    filters,
-                    response.text[:200],
-                )
-                topics_payload_no_filter = {
-                    k: v for k, v in topics_payload.items() if k != "filter"
-                }
+        try:
+            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
                 response = await client.post(
-                    url,
-                    json=topics_payload_no_filter,
-                    headers=svc._search_headers(),
+                    url, json=topics_payload, headers=svc._search_headers()
                 )
-            response.raise_for_status()
-            return response.json()
+                if response.status_code == 400 and filters:
+                    # The filter references a field the topics index does not have;
+                    # retry without filter rather than surfacing an error.
+                    logger.debug(
+                        "topics_filter_unsupported — filter '{}' rejected by Meilisearch ({}); retrying without filter",
+                        filters,
+                        response.text[:200],
+                    )
+                    topics_payload_no_filter = {
+                        k: v for k, v in topics_payload.items() if k != "filter"
+                    }
+                    response = await client.post(
+                        url,
+                        json=topics_payload_no_filter,
+                        headers=svc._search_headers(),
+                    )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError as exc:
+            raise SearchServiceError(str(exc)) from exc
 
     async def documents_search(
         self,

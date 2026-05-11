@@ -93,8 +93,10 @@ async def autocomplete(
     for raw in raw_topic_hits:
         try:
             topic_hits.append(TopicHit.model_validate(raw))
-        except Exception:
-            logger.debug("Skipping malformed topic hit: {}", raw)
+        except Exception as exc:
+            logger.debug(
+                "Skipping malformed topic hit: {} ({})", raw, type(exc).__name__
+            )
 
     # Record analytics in background (fire-and-forget)
     background_tasks.add_task(
