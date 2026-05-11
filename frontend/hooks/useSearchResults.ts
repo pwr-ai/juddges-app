@@ -392,8 +392,10 @@ export function useSearchResults() {
       searchInProgressRef.current = true;
       setIsSearching(true);
 
-      // STEP 3: Text mode → Meilisearch (no chunks, one hit per doc).
-      if (searchMode === 'text') {
+      // STEP 3: Text and hybrid modes → Meilisearch (no chunks, one hit per doc).
+      // 'text' is pure keyword; 'hybrid' sends semantic_ratio=0.5 so Meili
+      // mixes BGE-M3 vector similarity with keyword matching server-side.
+      if (searchMode === 'text' || searchMode === 'hybrid') {
         try {
           const filterString = buildMeilisearchFilter(baseFilters, languagesToUse);
           const result = await searchDocumentsMeili({
@@ -401,6 +403,7 @@ export function useSearchResults() {
             limit: PAGE_SIZE,
             offset: 0,
             filters: filterString,
+            semanticRatio: searchMode === 'hybrid' ? 0.5 : 0,
           });
 
           if (searchIdRef.current !== currentSearchId) return;
@@ -430,9 +433,9 @@ export function useSearchResults() {
         }
       }
 
-      // STEP 4: vector / hybrid mode → pgvector chunks
+      // STEP 4: vector mode → pgvector chunks (pure semantic chunk-level).
       try {
-        const alpha = searchMode === 'vector' ? 1.0 : 0.5;
+        const alpha = 1.0;
         const result = await searchChunks({
           query: searchQuery,
           limit_docs: PAGE_SIZE,
@@ -607,8 +610,8 @@ export function useSearchResults() {
 
     setIsLoadingMore(true);
 
-    // Text mode → Meilisearch load-more (no chunks, append docs directly).
-    if (state.searchMode === 'text') {
+    // Text and hybrid modes → Meilisearch load-more (no chunks, append docs directly).
+    if (state.searchMode === 'text' || state.searchMode === 'hybrid') {
       try {
         const filterString = buildMeilisearchFilter(
           state.baseFilters,
@@ -619,6 +622,7 @@ export function useSearchResults() {
           limit: PAGE_SIZE,
           offset: currentPagination.next_offset,
           filters: filterString,
+          semanticRatio: state.searchMode === 'hybrid' ? 0.5 : 0,
         });
 
         const newMetadata = result.documents.map((hit, i) =>
@@ -646,8 +650,8 @@ export function useSearchResults() {
     }
 
     try {
-      // Fetch next batch with offset (vector/hybrid → pgvector)
-      const alpha = state.searchMode === 'vector' ? 1.0 : 0.5;
+      // Vector mode → pgvector load-more (chunk-level semantic).
+      const alpha = 1.0;
       const result = await searchChunks({
         query: state.query,
         limit_docs: PAGE_SIZE,
