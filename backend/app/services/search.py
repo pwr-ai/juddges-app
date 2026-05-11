@@ -84,7 +84,7 @@ class MeiliSearchService:
         query: str,
         limit: int = 10,
         filters: str | None = None,
-        semantic_ratio: float = 0.3,
+        semantic_ratio: float = 0.0,
     ) -> dict[str, Any]:
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")

@@ -263,21 +263,19 @@ class TestAutocompleteHybrid:
         assert "vector" not in captured["payload"]
 
     @pytest.mark.asyncio
-    async def test_default_semantic_ratio_is_keyword_leaning(self, service):
-        fake_vec = [0.0] * 1024
+    async def test_default_is_pure_keyword(self, service):
+        """Default autocomplete is pure keyword — hybrid is opt-in via semantic_ratio>0."""
         captured = {}
 
         async def fake_post(self_, url, json, headers):
             captured["payload"] = json
             return _mock_response(200, {"hits": []})
 
-        with (
-            patch("app.services.search.embed_texts", return_value=fake_vec),
-            patch("httpx.AsyncClient.post", new=fake_post),
-        ):
+        with patch("httpx.AsyncClient.post", new=fake_post):
             await service.autocomplete("contract")
 
-        assert captured["payload"]["hybrid"]["semanticRatio"] == 0.3
+        assert "hybrid" not in captured["payload"]
+        assert "vector" not in captured["payload"]
 
     @pytest.mark.asyncio
     async def test_tei_failure_falls_back_to_keyword_search(self, service):
@@ -294,7 +292,7 @@ class TestAutocompleteHybrid:
             ),
             patch("httpx.AsyncClient.post", new=fake_post),
         ):
-            result = await service.autocomplete("contract")
+            result = await service.autocomplete("contract", semantic_ratio=0.5)
 
         assert "hybrid" not in captured["payload"]
         assert "vector" not in captured["payload"]
