@@ -281,6 +281,7 @@ class TestFullSyncEmbeds:
             for i in range(3)
         ]
         fake_vec = [0.1] * 1024
+        batch_vectors = [fake_vec, fake_vec, fake_vec]
 
         sb = MagicMock()
         sb.table().select().order().range().execute.side_effect = [
@@ -293,19 +294,20 @@ class TestFullSyncEmbeds:
         service.upsert_documents = AsyncMock(return_value={"taskUid": 7})
         service.wait_for_task = AsyncMock(return_value={"status": "succeeded"})
 
+        embed_mock = MagicMock(return_value=batch_vectors)
+
         with (
             patch("app.tasks.meilisearch_sync.supabase_client", sb),
             patch("app.tasks.meilisearch_sync._get_service", return_value=service),
-            patch(
-                "app.services.meilisearch_embeddings.embed_texts",
-                return_value=fake_vec,
-            ),
+            patch("app.services.meilisearch_embeddings.embed_texts", embed_mock),
             patch("app.tasks.meilisearch_sync.record_sync_completed"),
             patch("asyncio.run", side_effect=lambda c: _run_coro(c)),
             patch.object(full_sync_judgments_to_meilisearch, "update_state"),
         ):
             full_sync_judgments_to_meilisearch.run(batch_size=3)
 
+        # One batched TEI call per page, not one per doc
+        embed_mock.assert_called_once()
         sent_docs = service.upsert_documents.call_args.args[0]
         assert len(sent_docs) == 3
         for doc in sent_docs:

@@ -4,7 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.meilisearch_embeddings import attach_embedding, build_embed_text
+from app.services.meilisearch_embeddings import (
+    attach_embedding,
+    attach_embeddings_batch,
+    build_embed_text,
+)
 
 
 class TestBuildEmbedText:
@@ -95,7 +99,12 @@ class TestAttachEmbedding:
         assert result["_vectors"] == {"bge-m3": fake_vec}
 
     @pytest.mark.asyncio
-    async def test_skips_vectors_when_no_text(self):
+    async def test_opts_out_when_no_text(self):
+        """No curated text → explicit ``_vectors.bge-m3: null`` opt-out.
+
+        The index registers bge-m3 as ``userProvided``, so docs MUST send
+        either a vector or null — omitting the key triggers ``vector_embedding_error``.
+        """
         doc = {"id": "abc", "title": "x"}
         row = {
             "base_case_name": None,
@@ -108,11 +117,11 @@ class TestAttachEmbedding:
             result = await attach_embedding(doc, row)
 
         mock_embed.assert_not_called()
-        assert "_vectors" not in result
+        assert result["_vectors"] == {"bge-m3": None}
 
     @pytest.mark.asyncio
-    async def test_embed_failure_returns_doc_without_vectors(self):
-        """TEI errors must not propagate — doc still gets indexed (keyword-only)."""
+    async def test_embed_failure_opts_doc_out(self):
+        """TEI errors must not propagate — doc opts out so keyword search works."""
         doc = {"id": "abc"}
         row = {"base_case_name": "Smith"}
         with patch(
@@ -121,4 +130,73 @@ class TestAttachEmbedding:
         ):
             result = await attach_embedding(doc, row)
 
-        assert "_vectors" not in result
+        assert result["_vectors"] == {"bge-m3": None}
+
+
+class TestAttachEmbeddingsBatch:
+    @pytest.mark.asyncio
+    async def test_single_batch_call_for_all_rows(self):
+        docs = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
+        rows = [
+            {"base_case_name": "A"},
+            {"base_case_name": "B"},
+            {"base_case_name": "C"},
+        ]
+        vectors = [[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
+        with patch(
+            "app.services.meilisearch_embeddings.embed_texts",
+            return_value=vectors,
+        ) as mock_embed:
+            result = await attach_embeddings_batch(docs, rows)
+
+        mock_embed.assert_called_once_with(["A", "B", "C"])
+        assert result[0]["_vectors"] == {"bge-m3": vectors[0]}
+        assert result[1]["_vectors"] == {"bge-m3": vectors[1]}
+        assert result[2]["_vectors"] == {"bge-m3": vectors[2]}
+
+    @pytest.mark.asyncio
+    async def test_mixed_rows_some_opt_out(self):
+        docs = [{"id": "a"}, {"id": "b"}, {"id": "c"}]
+        rows = [
+            {"base_case_name": "A"},
+            {"base_case_name": None},
+            {"base_case_name": "C"},
+        ]
+        vectors = [[0.1] * 1024, [0.3] * 1024]
+        with patch(
+            "app.services.meilisearch_embeddings.embed_texts",
+            return_value=vectors,
+        ) as mock_embed:
+            result = await attach_embeddings_batch(docs, rows)
+
+        mock_embed.assert_called_once_with(["A", "C"])
+        assert result[0]["_vectors"] == {"bge-m3": vectors[0]}
+        assert result[1]["_vectors"] == {"bge-m3": None}
+        assert result[2]["_vectors"] == {"bge-m3": vectors[1]}
+
+    @pytest.mark.asyncio
+    async def test_all_rows_empty_no_tei_call(self):
+        docs = [{"id": "a"}, {"id": "b"}]
+        rows = [{"base_case_name": None}, {"base_case_name": None}]
+        with patch("app.services.meilisearch_embeddings.embed_texts") as mock_embed:
+            result = await attach_embeddings_batch(docs, rows)
+
+        mock_embed.assert_not_called()
+        assert all(d["_vectors"] == {"bge-m3": None} for d in result)
+
+    @pytest.mark.asyncio
+    async def test_tei_failure_opts_all_out(self):
+        docs = [{"id": "a"}, {"id": "b"}]
+        rows = [{"base_case_name": "A"}, {"base_case_name": "B"}]
+        with patch(
+            "app.services.meilisearch_embeddings.embed_texts",
+            side_effect=RuntimeError("TEI down"),
+        ):
+            result = await attach_embeddings_batch(docs, rows)
+
+        assert all(d["_vectors"] == {"bge-m3": None} for d in result)
+
+    @pytest.mark.asyncio
+    async def test_length_mismatch_raises(self):
+        with pytest.raises(ValueError, match="same length"):
+            await attach_embeddings_batch([{"id": "a"}], [])

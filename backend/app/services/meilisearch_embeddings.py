@@ -41,25 +41,82 @@ def build_embed_text(row: dict[str, Any]) -> str | None:
     return "\n\n".join(cleaned) if cleaned else None
 
 
+def _set_opt_out(doc: dict[str, Any]) -> dict[str, Any]:
+    """Mark a doc as opted out of the bge-m3 user-provided embedder.
+
+    Required because the index registers ``bge-m3`` with ``source: userProvided``
+    — Meilisearch rejects any doc that does not include a vector or an explicit
+    ``_vectors.bge-m3: null`` opt-out.
+    """
+    doc["_vectors"] = {EMBEDDER_NAME: None}
+    return doc
+
+
 async def attach_embedding(doc: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
     """Compute and attach a ``_vectors`` entry to a Meilisearch document.
 
     Mutates and returns ``doc``. When ``build_embed_text`` returns None, or
-    when the TEI server fails, the document is returned without ``_vectors``
-    so it can still be indexed (keyword-search continues to work).
+    when the TEI server fails, the doc is marked with an explicit opt-out
+    (``_vectors.bge-m3: null``) so Meilisearch still accepts it for keyword
+    search.
     """
     text = build_embed_text(row)
     if text is None:
-        return doc
+        return _set_opt_out(doc)
 
     try:
         vec = await asyncio.to_thread(embed_texts, text)
     except Exception:
         logger.opt(exception=True).warning(
-            "TEI embedding failed for doc %s — indexing without vector",
-            doc.get("id"),
+            f"TEI embedding failed for doc {doc.get('id')} — opting out of vector"
         )
-        return doc
+        return _set_opt_out(doc)
 
     doc["_vectors"] = {EMBEDDER_NAME: vec}
     return doc
+
+
+async def attach_embeddings_batch(
+    docs: list[dict[str, Any]], rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Batch-embed every (doc, row) pair in one TEI call.
+
+    Rows without curated text get an explicit ``_vectors.bge-m3: null`` opt-out.
+    If the TEI call fails, every doc opts out (keyword search still works).
+    """
+    if len(docs) != len(rows):
+        raise ValueError("docs and rows must have the same length")
+
+    texts_with_index: list[tuple[int, str]] = []
+    for idx, row in enumerate(rows):
+        text = build_embed_text(row)
+        if text is not None:
+            texts_with_index.append((idx, text))
+
+    if not texts_with_index:
+        return [_set_opt_out(doc) for doc in docs]
+
+    payload = [text for _, text in texts_with_index]
+    try:
+        vectors = await asyncio.to_thread(embed_texts, payload)
+    except Exception:
+        logger.opt(exception=True).warning(
+            f"TEI batch embedding failed for {len(payload)} docs — opting all out"
+        )
+        return [_set_opt_out(doc) for doc in docs]
+
+    if not isinstance(vectors, list) or len(vectors) != len(texts_with_index):
+        logger.warning(
+            f"TEI returned {len(vectors) if isinstance(vectors, list) else '?'} "
+            f"vectors for {len(texts_with_index)} inputs — opting all out"
+        )
+        return [_set_opt_out(doc) for doc in docs]
+
+    embedded_indices = {idx for idx, _ in texts_with_index}
+    for (idx, _text), vec in zip(texts_with_index, vectors, strict=True):
+        docs[idx]["_vectors"] = {EMBEDDER_NAME: vec}
+    for idx, doc in enumerate(docs):
+        if idx not in embedded_indices:
+            _set_opt_out(doc)
+
+    return docs

@@ -13,7 +13,10 @@ from app.services.meilisearch_config import (
     setup_meilisearch_index,
     transform_judgment_for_meilisearch,
 )
-from app.services.meilisearch_embeddings import attach_embedding
+from app.services.meilisearch_embeddings import (
+    attach_embedding,
+    attach_embeddings_batch,
+)
 from app.services.search import MeiliSearchService
 from app.services.sync_status import record_sync_completed, record_sync_failed
 from app.workers import celery_app
@@ -127,10 +130,7 @@ def full_sync_judgments_to_meilisearch(
                 break
 
             documents = [transform_judgment_for_meilisearch(row) for row in rows]
-            documents = [
-                asyncio.run(attach_embedding(doc, row))
-                for doc, row in zip(documents, rows, strict=True)
-            ]
+            documents = asyncio.run(attach_embeddings_batch(documents, rows))
             result = asyncio.run(service.upsert_documents(documents))
 
             # Wait for the indexing task to finish before moving on
