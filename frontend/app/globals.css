@@ -317,6 +317,14 @@
   [tabindex]:focus-visible {
     @apply ring-2 ring-ring ring-offset-2 rounded-lg;
   }
+
+  mark {
+    background: var(--gold-soft);
+    color: var(--ink);
+    padding: 0 0.15em;
+    border-radius: 2px;
+    font-weight: inherit;
+  }
 }
 
 /* ─────────────────────────────────────────────
