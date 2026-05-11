@@ -45,22 +45,55 @@ you'll see the entry points referenced throughout this tutorial.
 
 ## Step 01 — Search the corpus
 
-*Content for this step is captured in Phase 2 of the onboarding plan. Until
-then, see the in-app summary at [`/onboarding`](https://juddges.com/onboarding).*
+JUDDGES runs **hybrid search**: every query is scored against both a
+semantic embedding index and a Postgres full-text index, then the two
+rankings are blended. The practical consequence: you can phrase queries as
+you would ask a colleague (`"liability for breach of an employment
+contract"`) rather than reverse-engineering keyword forms.
 
-### What to try
+![Search results for the query "unfair dismissal", showing a UK Court of Appeal judgment with jurisdiction and document-type badges, and the right-hand filters panel for date, language, and issuing body.](../assets/onboarding/step-1-search.png)
 
-- Phrase a query as you would ask a colleague — semantic ranking surfaces
-  concept matches, not just keyword hits.
-- Combine the query with the **PL / UK** jurisdiction filter, court level,
-  and date range.
-- Open a result to read the full judgment.
+### Walk through the example
+
+The screenshot above shows the result of searching for
+`unfair dismissal` — try it yourself at
+[`/search?q=unfair+dismissal`](https://juddges.com/search?q=unfair+dismissal).
+
+1. **Read the query bar.** Anything you type is run as a hybrid query by
+   default. The `AI-POWERED` badge next to the page title indicates
+   semantic ranking is active.
+2. **Scan the result card.** Each result shows the jurisdiction (`UK`),
+   the document language (`EN`), and the document type (`Document` or
+   `Judgment`) as small badges. The court and the publication date appear
+   below the case identifier.
+3. **Open the filters panel.** On the right you can constrain results by
+   **Date** range, **Language**, and **Issuing Bodies** (Crown Court,
+   Supreme Court, …). Filters compose with the query — the result count
+   in `Showing X of ~N documents` updates as you adjust them.
+4. **Save the search.** The `Save Search` button (top right) persists the
+   query + filters as a *Saved Search*, accessible from the left sidebar.
+5. **Open a judgment.** Click `View` on any card to read the full text
+   with cited legislation and AI-extracted highlights surfaced as a
+   side panel.
+
+### Tips for legal-research queries
+
+- **Concept first, keyword second.** Semantic ranking rewards conceptual
+  phrasing. `"compensation for breach of fiduciary duty"` beats
+  `"breach fiduciary"`.
+- **Mix English and Polish.** The query is matched against both locales —
+  use whichever language your fact pattern lives in.
+- **Use the jurisdiction filter early.** Comparative research benefits
+  from running the same query under PL and UK filters separately, then
+  using collections (Step 02) to assemble the comparison.
 
 ### Where it lives
 
 - Search page: [`/search`](https://juddges.com/search)
-- Search architecture explained: see
-  [`docs/architecture/SEARCH_ARCHITECTURE.md`](../architecture/SEARCH_ARCHITECTURE.md).
+- Search architecture and ranking model:
+  [`docs/architecture/SEARCH_ARCHITECTURE.md`](../architecture/SEARCH_ARCHITECTURE.md)
+- Benchmark methodology:
+  [`docs/explanation/search-benchmark-methodology.md`](../explanation/search-benchmark-methodology.md)
 
 ---
 

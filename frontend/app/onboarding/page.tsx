@@ -32,12 +32,15 @@ const STEPS: Step[] = [
       "Hybrid semantic + full-text search across Polish and England & Wales judgments. Combine natural-language questions with jurisdiction, court, and date filters.",
     bullets: [
       "Phrase queries as you would ask a colleague — semantic ranking surfaces concept matches, not just keyword hits.",
-      "Filter by jurisdiction (PL · UK), court level, and date range; the indicator beside each result shows the ranking signal.",
-      "Open any result to read the full judgment with cited legislation and AI-extracted highlights.",
+      "Filter by jurisdiction (PL · UK), language, date range, and issuing body using the right-hand panel.",
+      "Each result shows jurisdiction and document-type badges; open one to read the full judgment, or save the entire search via the Save Search button.",
     ],
-    cta: { href: "/search", label: "Open search" },
+    cta: { href: "/search?q=unfair+dismissal", label: "Try the example search" },
     icon: Search,
-    screenshot: null,
+    screenshot: {
+      src: "/docs/onboarding/step-1-search.png",
+      alt: "Search page showing results for the query 'unfair dismissal' — a UK Court of Appeal judgment with jurisdiction badges, alongside the filters panel for date, language, and issuing bodies.",
+    },
   },
   {
     index: "02",

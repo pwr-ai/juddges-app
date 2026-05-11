@@ -78,7 +78,24 @@ const STEPS = [
       await page.getByText('Database Overview', { exact: false }).first().waitFor({ state: 'visible' });
     },
   },
-  // Phase 2+: step-1-search, step-2-collections, step-3-chat, step-4-base-schema
+  {
+    name: 'step-1-search',
+    // Evergreen demo query — short, English, recognisable legal concept that
+    // reliably returns UK results and showcases the hybrid ranking signals.
+    url: '/search?q=unfair+dismissal',
+    prepare: async (page) => {
+      // Wait for either a result heading or the no-results panel — both are
+      // valid terminal states for the screenshot.
+      await Promise.race([
+        page.getByText(/Showing/).first().waitFor({ state: 'visible', timeout: 30_000 }),
+        page.getByText(/No matching documents/i).waitFor({ state: 'visible', timeout: 30_000 }),
+      ]).catch(() => {
+        // Fall through to a small settle delay rather than failing the run.
+      });
+      await page.waitForTimeout(1500);
+    },
+  },
+  // Phase 3+: step-2-collections, step-3-chat, step-4-base-schema
 ];
 
 async function login(page) {
