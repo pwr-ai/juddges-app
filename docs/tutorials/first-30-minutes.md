@@ -151,19 +151,55 @@ date.
 
 ## Step 03 — Ask a question with cited sources
 
-*Content for this step is captured in Phase 4.*
+The chat assistant is **retrieval-augmented**: each question is used to
+retrieve the most relevant judgments from the corpus, those judgments are
+fed to the LLM as context, and every sentence in the response is
+grounded in a specific cited document. The cited-sources panel makes
+that grounding inspectable.
 
-### What to try
+![Chat landing page showing the heading 'What legal question can JuDDGES help you with?', the input bar with placeholder text, an Adaptive response-format selector, and four example-question cards across General, Tax Law, and Court Judgments categories.](../assets/onboarding/step-3-chat.png)
 
-- Ask a doctrinal question in Polish or English.
-- Click each citation in the sources panel — it lands you on the cited
-  paragraph in the source judgment.
+### Walk through the example
+
+Open [`/chat`](https://juddges.com/chat). On a fresh visit you'll see the
+landing state pictured above.
+
+1. **Pick or write a question.** Click one of the *Example Questions*
+   cards to drop a doctrinal Polish-language question into the input.
+   Replace it with your own if you have one in mind.
+2. **Choose a response format.** The dropdown below the input
+   (defaulting to *Adaptive*) lets the assistant pick between prose,
+   list, table, or step-by-step answer based on the question. Override
+   it if you want a specific shape.
+3. **Send.** The answer streams in token-by-token. Below the answer, a
+   *Sources* panel appears with the judgments that grounded the
+   response. Each entry shows the case identifier, jurisdiction, and a
+   short snippet.
+4. **Follow a citation.** Click an entry in the *Sources* panel — you
+   land on the corresponding document view with the cited paragraph
+   highlighted. The browser back button returns you to the conversation
+   with state preserved.
+5. **Keep iterating.** Follow-up turns reuse the context. Ask
+   "What's the strongest counterargument?" or "Which of these is
+   most recent?" to drill in.
+
+### What it's good for, and what it isn't
+
+- **Good for**: doctrinal exploration, summarising long fact patterns,
+  comparing how different judgments treat the same issue, generating
+  draft research outlines with anchored citations.
+- **Not a substitute for**: reading the cited judgment in full,
+  professional legal advice, or systematic coverage of every relevant
+  case. The retrieval recall is good but not exhaustive — use Search
+  (Step 01) and Collections (Step 02) for that.
 
 ### Where it lives
 
 - Chat: [`/chat`](https://juddges.com/chat)
-- RAG citations explainer (coming in Phase 4): see
-  `docs/explanation/rag-citations-explained.md`.
+- Chat history: each conversation is persisted; access it from the
+  *Chat history* sub-section of the chat sidebar.
+- Coding-scheme reference for citation-anchored extraction:
+  [`docs/how-to/CODING_SCHEME_USAGE.md`](../how-to/CODING_SCHEME_USAGE.md)
 
 ---
 

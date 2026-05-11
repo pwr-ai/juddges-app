@@ -65,13 +65,16 @@ const STEPS: Step[] = [
     summary:
       "Retrieval-augmented chat over the corpus. Every claim is anchored to a judgment — click a citation to land on the cited paragraph in the source document.",
     bullets: [
-      "Ask doctrinal or fact-pattern questions in Polish or English.",
-      "The cited-sources panel surfaces each judgment used to compose the answer.",
-      "Citations link back to the document view with the cited section highlighted.",
+      "Start from one of the example questions or ask a doctrinal or fact-pattern question in Polish or English.",
+      "Pick a response format from the dropdown — Adaptive lets the assistant choose between prose, list, table, or step-by-step answer.",
+      "Each answer is followed by a cited-sources panel; clicking a citation lands you on the cited paragraph inside the source judgment.",
     ],
     cta: { href: "/chat", label: "Open chat" },
     icon: MessageSquare,
-    screenshot: null,
+    screenshot: {
+      src: "/docs/onboarding/step-3-chat.png",
+      alt: "Chat landing page with the heading 'What legal question can JuDDGES help you with?', the message input, an Adaptive response-format selector, and a grid of four example questions across General, Tax Law, and Court Judgments categories.",
+    },
   },
   {
     index: "04",

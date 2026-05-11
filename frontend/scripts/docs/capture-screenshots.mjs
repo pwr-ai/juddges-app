@@ -79,6 +79,18 @@ const STEPS = [
     },
   },
   {
+    name: 'step-3-chat',
+    url: '/chat',
+    waitUntil: 'load', // chat page keeps a persistent connection open
+    prepare: async (page) => {
+      // Wait for the input box and at least one example-question chip to
+      // render; then a settle so the typing animation in the header has
+      // completed.
+      await page.getByPlaceholder(/Ask JuDDGES|Ask Juddges/i).waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
+      await page.waitForTimeout(2500);
+    },
+  },
+  {
     name: 'step-2-collections',
     url: '/collections',
     prepare: async (page) => {
@@ -121,7 +133,9 @@ async function login(page) {
 async function captureStep(page, step) {
   const target = `${BASE_URL}${step.url}`;
   console.log(`[docs:screens] → ${step.name}: ${target}`);
-  await page.goto(target, { waitUntil: 'networkidle' });
+  // Pages with long-polling / SSE never reach `networkidle`. Steps can
+  // opt out via `waitUntil: 'load'`; default stays strict.
+  await page.goto(target, { waitUntil: step.waitUntil ?? 'networkidle' });
 
   if (step.prepare) {
     await step.prepare(page);
