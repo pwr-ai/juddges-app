@@ -76,29 +76,12 @@ const POPULAR_SEARCHES: PopularSearch[] = [
   },
 ];
 
-/** Derive which language segment is active from the selectedLanguages set. */
-function deriveActiveSegment(selectedLanguages: Set<string>): "all" | "pl" | "uk" {
-  const hasPl = selectedLanguages.has("pl");
-  const hasUk = selectedLanguages.has("uk");
-  if (hasPl && hasUk) return "all";
-  if (hasPl) return "pl";
-  if (hasUk) return "uk";
-  return "all"; // fallback — empty or exotic
-}
-
-const LANGUAGE_SEGMENTS = [
-  { key: "all" as const, label: "All" },
-  { key: "pl" as const, label: "Polish" },
-  { key: "uk" as const, label: "English (UK)" },
-];
-
 export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function SearchForm(
   {
     query,
     setQuery,
     setSearchType,
     setSelectedLanguages,
-    selectedLanguages,
     isSearching,
     hasResults,
     hasError,
@@ -145,16 +128,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     setSearchType(item.mode);
     setSelectedLanguages(item.languages);
     internalRef.current?.focus();
-  };
-
-  const handleLanguageSegment = (segment: "all" | "pl" | "uk"): void => {
-    if (segment === "all") {
-      setSelectedLanguages(new Set(["pl", "uk"]));
-    } else if (segment === "pl") {
-      setSelectedLanguages(new Set(["pl"]));
-    } else {
-      setSelectedLanguages(new Set(["uk"]));
-    }
   };
 
   const showPopularSearches = !hasPerformedSearch && !hasResults && !hasError;
@@ -232,29 +205,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
       setActiveSuggestionIndex(-1);
     }
   };
-
-  /** Keyboard nav for the language radiogroup: Left/Right/Home/End arrows. */
-  const handleLangKeyDown = (
-    event: React.KeyboardEvent<HTMLButtonElement>,
-    currentIndex: number
-  ): void => {
-    const keys = LANGUAGE_SEGMENTS.map((s) => s.key);
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      event.preventDefault();
-      handleLanguageSegment(keys[(currentIndex + 1) % keys.length]);
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      event.preventDefault();
-      handleLanguageSegment(keys[(currentIndex - 1 + keys.length) % keys.length]);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      handleLanguageSegment(keys[0]);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      handleLanguageSegment(keys[keys.length - 1]);
-    }
-  };
-
-  const activeSegment = deriveActiveSegment(selectedLanguages);
 
   return (
     <form
@@ -420,39 +370,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
           )}
         </div>
       )}
-
-      {/* Language segmented control */}
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-xs text-[color:var(--ink-soft)]">Language</span>
-        <div
-          role="radiogroup"
-          aria-label="Filter by language"
-          className="inline-flex items-center gap-1"
-        >
-          {LANGUAGE_SEGMENTS.map((segment) => {
-            const isActive = activeSegment === segment.key;
-            const activeIdx = LANGUAGE_SEGMENTS.findIndex((s) => s.key === activeSegment);
-            return (
-              <button
-                key={segment.key}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                tabIndex={isActive ? 0 : -1}
-                onClick={() => handleLanguageSegment(segment.key)}
-                onKeyDown={(e) => handleLangKeyDown(e, activeIdx)}
-                className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                  isActive
-                    ? "bg-[color:var(--ink)] text-[color:var(--parchment)] border-[color:var(--ink)]"
-                    : "bg-transparent text-[color:var(--ink-soft)] border-[color:var(--rule)] hover:bg-muted"
-                }`}
-              >
-                {segment.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {showPopularSearches && (
         <div className="mt-3 flex flex-wrap items-center gap-2">

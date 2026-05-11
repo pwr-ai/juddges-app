@@ -362,12 +362,8 @@ describe('SearchForm', () => {
 
     it('clicking a topic chip calls router.push with /search?q=...&topic=... (en locale)', async () => {
       const pushMock = jest.fn();
-      jest.mock('next/navigation', () => ({
-        ...jest.requireActual('next/navigation'),
-        useRouter: () => ({ push: pushMock }),
-      }));
-
-      // Re-mock specifically for this test using spyOn approach on the module
+      // The global jest.mock('next/navigation', ...) in tests/setup.ts is the
+      // live mock; mutate useRouter directly on the already-hoisted module mock.
       const navigation = jest.requireMock('next/navigation') as {
         useRouter: jest.Mock;
       };
@@ -444,6 +440,45 @@ describe('SearchForm', () => {
           body: expect.stringContaining('drug_trafficking'),
         })
       );
+    });
+
+    it('ArrowDown focuses topics before judgments when both are populated', async () => {
+      const user = userEvent.setup();
+
+      render(
+        <SearchForm
+          {...defaultProps}
+          query="narko"
+          autocompleteTopicHits={sampleTopicHits}
+          autocompleteSuggestions={[
+            { id: 's1', title: 'Contract liability' },
+            { id: 's2', title: 'Tort law' },
+          ]}
+          currentLocale="en"
+        />
+      );
+
+      const input = screen.getByRole('textbox');
+
+      // Press ArrowDown once — should activate the first topic (index 0)
+      await user.type(input, '{ArrowDown}');
+
+      const firstTopic = screen.getByRole('option', { name: /Topic: Drug trafficking/i });
+      expect(firstTopic).toHaveAttribute('aria-selected', 'true');
+
+      // The second topic should not be active yet
+      const secondTopic = screen.getByRole('option', { name: /Topic: Fraud/i });
+      expect(secondTopic).toHaveAttribute('aria-selected', 'false');
+
+      // Press ArrowDown 3 more times (total 4 presses) — skips second topic (index 1)
+      // and both judgment suggestions (indices 2, 3) → second suggestion at index 3
+      await user.type(input, '{ArrowDown}{ArrowDown}{ArrowDown}');
+
+      const secondSuggestion = screen.getByRole('option', { name: /Use suggestion: Tort law/i });
+      expect(secondSuggestion).toHaveAttribute('aria-selected', 'true');
+
+      // First topic should no longer be active
+      expect(firstTopic).toHaveAttribute('aria-selected', 'false');
     });
   });
 });
