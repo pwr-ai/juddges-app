@@ -43,7 +43,7 @@ export default function HelpPage() {
  questions: [
  {
  q: "I'm new — where should I start? ",
- a: "Take the in-app onboarding tour at /onboarding. It's a four-step walk-through with screenshots covering search, collections, chat with cited sources, and the base coding schema — roughly 30 minutes end to end. The long-form version with extra context lives in the docs site under Tutorials → First 30 minutes.",
+ a: "Take the in-app onboarding tour at /onboarding. It's a three-step walk-through with screenshots covering search, collections, and the base coding schema — about 20 minutes end to end. The long-form version with extra context lives in the docs site under Tutorials → First 30 minutes.",
  },
  {
  q: "What is JuDDGES? ",

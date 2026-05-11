@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Search, FolderOpen, MessageSquare, FileJson } from "lucide-react";
+import { Search, FolderOpen, FileJson } from "lucide-react";
 import {
   EditorialCard,
   EditorialButton,
@@ -11,7 +11,7 @@ import { PageContainer } from "@/lib/styles/components";
 export const metadata: Metadata = {
   title: "Get started — JUDDGES",
   description:
-    "A 30-minute tour of JUDDGES for legal researchers: search the corpus, build a collection, ask a question with cited sources, and read the base coding schema.",
+    "A tour of JUDDGES for legal researchers: search the corpus, build a collection, and read the base coding schema.",
 };
 
 interface Step {
@@ -61,23 +61,6 @@ const STEPS: Step[] = [
   },
   {
     index: "03",
-    title: "Ask a question with cited sources",
-    summary:
-      "Retrieval-augmented chat over the corpus. Every claim is anchored to a judgment — click a citation to land on the cited paragraph in the source document.",
-    bullets: [
-      "Start from one of the example questions or ask a doctrinal or fact-pattern question in Polish or English.",
-      "Pick a response format from the dropdown — Adaptive lets the assistant choose between prose, list, table, or step-by-step answer.",
-      "Each answer is followed by a cited-sources panel; clicking a citation lands you on the cited paragraph inside the source judgment.",
-    ],
-    cta: { href: "/chat", label: "Open chat" },
-    icon: MessageSquare,
-    screenshot: {
-      src: "/docs/onboarding/step-3-chat.png",
-      alt: "Chat landing page with the heading 'What legal question can JuDDGES help you with?', the message input, an Adaptive response-format selector, and a grid of four example questions across General, Tax Law, and Court Judgments categories.",
-    },
-  },
-  {
-    index: "04",
     title: "Read the base coding schema",
     summary:
       "The canonical extraction template used across JUDDGES pipelines — 51 fields covering case identifiers, parties, court hierarchy, dates, legal grounds, and outcomes. Reviewing it before designing your own coding scheme is the fastest way to avoid reinventing fields that already exist.",
@@ -106,9 +89,8 @@ export default function OnboardingPage(): React.JSX.Element {
           Get started with JUDDGES
         </h1>
         <p className="font-serif text-lg italic leading-snug text-ink-soft">
-          A four-step tour for legal researchers — search the corpus, build a
-          collection, ask a question with cited sources, and read the base coding
-          schema.
+          A three-step tour for legal researchers — search the corpus, build a
+          collection, and read the base coding schema.
         </p>
         <Rule weight="ink" className="mt-2" />
       </div>

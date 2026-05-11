@@ -1,9 +1,8 @@
 # First 30 minutes with JUDDGES
 
-A four-step tour for legal researchers logging in for the first time. By the
-end you will have searched the corpus, saved a research collection, asked a
-question with cited sources, and reviewed the base coding schema used across
-JUDDGES extraction pipelines.
+A three-step tour for legal researchers logging in for the first time. By
+the end you will have searched the corpus, saved a research collection, and
+reviewed the base coding schema used across JUDDGES extraction pipelines.
 
 > **In-app version:** the live, clickable equivalent of this tutorial lives at
 > [`/onboarding`](https://juddges.com/onboarding) inside the app. Both surfaces
@@ -16,25 +15,23 @@ flowchart LR
     A[Log in] --> B[Search]
     B --> C[Document]
     C --> D[Collection]
-    D --> E[Chat with citations]
-    E --> F[Base coding schema]
+    D --> E[Base coding schema]
 ```
 
 | Step | Goal | Time |
 |---|---|---|
 | 01 | Search the corpus with hybrid semantic + full-text ranking | ~8 min |
 | 02 | Build a research collection | ~5 min |
-| 03 | Ask a question with cited sources | ~10 min |
-| 04 | Read the base coding schema | ~7 min |
+| 03 | Read the base coding schema | ~7 min |
 
 ## Prerequisites
 
 - A JUDDGES account (request access at
   [lukasz.augustyniak@pwr.edu.pl](mailto:lukasz.augustyniak@pwr.edu.pl)).
 - A modern browser. Firefox, Chrome, Safari, and Edge all work.
-- Optional: a sample question or fact pattern from your research area. The
-  tour works without one, but real research questions make Step 03 much more
-  illustrative.
+- Optional: a sample search query or fact pattern from your research area.
+  The tour works without one, but a real research question makes Step 01
+  much more illustrative.
 
 The dashboard is the home page after login. Below the headline statistics
 you'll see the entry points referenced throughout this tutorial.
@@ -149,61 +146,7 @@ date.
 
 ---
 
-## Step 03 — Ask a question with cited sources
-
-The chat assistant is **retrieval-augmented**: each question is used to
-retrieve the most relevant judgments from the corpus, those judgments are
-fed to the LLM as context, and every sentence in the response is
-grounded in a specific cited document. The cited-sources panel makes
-that grounding inspectable.
-
-![Chat landing page showing the heading 'What legal question can JuDDGES help you with?', the input bar with placeholder text, an Adaptive response-format selector, and four example-question cards across General, Tax Law, and Court Judgments categories.](../assets/onboarding/step-3-chat.png)
-
-### Walk through the example
-
-Open [`/chat`](https://juddges.com/chat). On a fresh visit you'll see the
-landing state pictured above.
-
-1. **Pick or write a question.** Click one of the *Example Questions*
-   cards to drop a doctrinal Polish-language question into the input.
-   Replace it with your own if you have one in mind.
-2. **Choose a response format.** The dropdown below the input
-   (defaulting to *Adaptive*) lets the assistant pick between prose,
-   list, table, or step-by-step answer based on the question. Override
-   it if you want a specific shape.
-3. **Send.** The answer streams in token-by-token. Below the answer, a
-   *Sources* panel appears with the judgments that grounded the
-   response. Each entry shows the case identifier, jurisdiction, and a
-   short snippet.
-4. **Follow a citation.** Click an entry in the *Sources* panel — you
-   land on the corresponding document view with the cited paragraph
-   highlighted. The browser back button returns you to the conversation
-   with state preserved.
-5. **Keep iterating.** Follow-up turns reuse the context. Ask
-   "What's the strongest counterargument?" or "Which of these is
-   most recent?" to drill in.
-
-### What it's good for, and what it isn't
-
-- **Good for**: doctrinal exploration, summarising long fact patterns,
-  comparing how different judgments treat the same issue, generating
-  draft research outlines with anchored citations.
-- **Not a substitute for**: reading the cited judgment in full,
-  professional legal advice, or systematic coverage of every relevant
-  case. The retrieval recall is good but not exhaustive — use Search
-  (Step 01) and Collections (Step 02) for that.
-
-### Where it lives
-
-- Chat: [`/chat`](https://juddges.com/chat)
-- Chat history: each conversation is persisted; access it from the
-  *Chat history* sub-section of the chat sidebar.
-- Coding-scheme reference for citation-anchored extraction:
-  [`docs/how-to/CODING_SCHEME_USAGE.md`](../how-to/CODING_SCHEME_USAGE.md)
-
----
-
-## Step 04 — Read the base coding schema
+## Step 03 — Read the base coding schema
 
 A **coding schema** is the field list an extraction job will produce —
 the columns of the eventual table. The *Base Judgment Extraction

@@ -13,7 +13,7 @@ it.
 | **Search Judgments** | `/search` | Hybrid semantic + full-text search over the corpus, with filters for jurisdiction, language, date, and issuing body. | [Step 01 — Search the corpus](../tutorials/first-30-minutes.md#step-01--search-the-corpus) |
 | **Saved Searches** | `/saved-searches` | Persisted queries and filters. Visible to admin users only at present; will be opened up to all logged-in users as the feature matures. | (referenced under Step 01: *Save the search*) |
 | **Research Collections** | `/collections` | Named sets of judgments — the working folder for a research question. Feeds into extraction pipelines. | [Step 02 — Build a research collection](../tutorials/first-30-minutes.md#step-02--build-a-research-collection) |
-| **Base Coding Schema** | `/schemas/base` | The canonical 51-field extraction template, with EN/PL descriptions, JSON export, and a searchable field table. | [Step 04 — Read the base coding schema](../tutorials/first-30-minutes.md#step-04--read-the-base-coding-schema) |
+| **Base Coding Schema** | `/schemas/base` | The canonical 51-field extraction template, with EN/PL descriptions, JSON export, and a searchable field table. | [Step 03 — Read the base coding schema](../tutorials/first-30-minutes.md#step-03--read-the-base-coding-schema) |
 | **Compare Datasets** | `/dataset-comparison` | Cross-jurisdiction analytics — corpus-level comparisons of PL vs UK judgment populations. | — |
 
 ## Routes reachable by URL but currently hidden from the sidebar
@@ -24,7 +24,7 @@ four-step tour.
 
 | Route | What it does |
 |---|---|
-| `/chat` | Retrieval-augmented chat with cited sources. See [Step 03 — Ask a question with cited sources](../tutorials/first-30-minutes.md#step-03--ask-a-question-with-cited-sources). |
+| `/chat` | Retrieval-augmented chat with cited sources — currently a preview feature not yet covered by the onboarding tour. |
 | `/extract` | Configure and launch an extraction job over a collection using a coding schema. |
 | `/extractions` | Browse extraction job results and inspect the structured output table. |
 | `/statistics` | Corpus-wide statistics: counts, completeness, decision types, date ranges. |
