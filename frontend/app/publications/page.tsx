@@ -29,7 +29,12 @@ export default function PublicationsPage() {
  const fetchPublications = async () => {
  try {
  const data = await getPublications();
- setPublications(data);
+ // Use the static seed list when the DB has not been populated yet.
+ setPublications(
+ data.length > 0
+ ? data
+ : (staticPublications as PublicationWithResources[]),
+ );
  } catch (error) {
  logger.error("Failed to fetch publications from API, using static data: ", error);
  // Fallback to static publications if API fails
