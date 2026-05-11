@@ -54,46 +54,6 @@ const teamMembers: TeamMember[] = [
  image: "/team/jakub-binkowski.jpg",
  linkedin: "https://www.linkedin.com/in/jakub-binkowski/",
  email: "jakub.binkowski@pwr.edu.pl"
- },
- {
- name: "Denis Janiak",
- role: "PhD Student & Developer",
- description: "PhD student and developer at Wrocław University of Science and Technology specializing in natural language processing and machine learning. Contributes to cutting-edge research in AI applications for legal and judicial decision analysis, including work on graph-based methods and knowledge representation.",
- image: "/team/denis-janiak.jpg",
- linkedin: "https://www.linkedin.com/in/denis-janiak-4a7b7a159/",
- email: "denis.janiak@pwr.edu.pl"
- },
- {
- name: "Kamil Tagowski, PhD",
- role: "Postdoctoral Researcher & Developer",
- description: "Postdoctoral Researcher and Developer combining academic rigor with software engineering. Specializes in Graph Representation Learning and Natural Language Processing (NLP) to solve complex data structure problems. Now building advanced AI architectures for legal document analysis and tax compliance systems.",
- image: "/team/kamil-tagowski.jpg",
- linkedin: "https://www.linkedin.com/in/ktagowski/",
- email: "kamil.tagowski@pwr.edu.pl"
- },
- {
- name: "Michał Skibiński",
- role: "Software Developer & Master's Student",
- description: "Software developer and Master's student specializing in AI-powered legal document analysis and resolution summarization. Creator of sejmofil.pl, a grassroots initiative for Polish parliamentary data transparency. Expertise in web development, civic tech, and AI applications for legal domain.",
- image: "/team/michal-skibinski.jpg",
- linkedin: "https://www.linkedin.com/in/michał-skibiński-374455236/",
- email: "michal.skibinski@pwr.edu.pl"
- },
- {
- name: "Mateusz Bystroński",
- role: "Engineer & Researcher",
- description: "Engineer at the Department of Artificial Intelligence, PWR, specializing in Large Language Models and latent space methods. Published researcher in prompt optimization, AI creativity, and novelty discovery. Co-author of LatentPrompt and SMOTExT frameworks. Collaborates with University of Notre Dame on cutting-edge LLM research.",
- image: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=400&h=400&fit=crop",
- linkedin: "https://www.linkedin.com/in/mateusz-bystronski/",
- email: "mateusz.bystronski@pwr.edu.pl"
- },
- {
- name: "Grzegorz Piotrowski",
- role: "Engineer & Software Developer",
- description: "Engineer at the Department of Artificial Intelligence, PWR, and Software Developer at Red Hat. Specializes in graph-based methods for LLM applications and output length forecasting. Published at ACL 2025 Student Research Workshop. Expertise in IoT, environmental monitoring systems, and practical AI implementations.",
- image: "/team/grzegorz-piotrowski.jpg",
- linkedin: "https://www.linkedin.com/in/g-piotrowski/",
- email: "grzegorz.piotrowski@pwr.edu.pl"
  }
 ];
 
