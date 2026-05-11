@@ -238,3 +238,75 @@ class TestIncrementalSyncEmbeds:
         sent_docs = service.upsert_documents.call_args.args[0]
         assert len(sent_docs) == 1
         assert sent_docs[0]["_vectors"] == {"bge-m3": fake_vec}
+
+
+class TestFullSyncEmbeds:
+    def test_each_batch_doc_gets_vectors(self):
+        from app.tasks.meilisearch_sync import full_sync_judgments_to_meilisearch
+
+        rows = [
+            {
+                "id": uuid4(),
+                "case_number": f"C{i}",
+                "jurisdiction": "PL",
+                "court_name": None,
+                "court_level": None,
+                "decision_date": None,
+                "publication_date": None,
+                "title": "t",
+                "summary": "s",
+                "full_text": None,
+                "judges": None,
+                "case_type": None,
+                "decision_type": None,
+                "outcome": None,
+                "keywords": None,
+                "legal_topics": None,
+                "cited_legislation": None,
+                "source_url": None,
+                "created_at": None,
+                "updated_at": None,
+                "base_extraction_status": "completed",
+                "base_num_victims": None,
+                "base_victim_age_offence": None,
+                "base_case_number": None,
+                "base_co_def_acc_num": None,
+                "base_date_of_appeal_court_judgment": None,
+                "base_case_name": f"Case {i}",
+                "base_keywords": ["k"],
+                "structure_case_identification_summary": None,
+                "structure_facts_summary": None,
+                "structure_operative_part_summary": None,
+            }
+            for i in range(3)
+        ]
+        fake_vec = [0.1] * 1024
+
+        sb = MagicMock()
+        sb.table().select().order().range().execute.side_effect = [
+            MagicMock(data=rows),
+            MagicMock(data=[]),  # second page empty → loop exits
+        ]
+
+        service = MagicMock()
+        service.admin_configured = True
+        service.upsert_documents = AsyncMock(return_value={"taskUid": 7})
+        service.wait_for_task = AsyncMock(return_value={"status": "succeeded"})
+
+        with (
+            patch("app.tasks.meilisearch_sync.supabase_client", sb),
+            patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+            patch(
+                "app.services.meilisearch_embeddings.embed_texts",
+                return_value=fake_vec,
+            ),
+            patch("app.tasks.meilisearch_sync.record_sync_completed"),
+            patch("asyncio.run", side_effect=lambda c: _run_coro(c)),
+            patch.object(full_sync_judgments_to_meilisearch, "update_state"),
+        ):
+            full_sync_judgments_to_meilisearch.run(batch_size=3)
+
+        sent_docs = service.upsert_documents.call_args.args[0]
+        assert len(sent_docs) == 3
+        for doc in sent_docs:
+            assert doc["_vectors"] == {"bge-m3": fake_vec}

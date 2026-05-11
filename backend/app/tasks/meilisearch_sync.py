@@ -127,6 +127,10 @@ def full_sync_judgments_to_meilisearch(
                 break
 
             documents = [transform_judgment_for_meilisearch(row) for row in rows]
+            documents = [
+                asyncio.run(attach_embedding(doc, row))
+                for doc, row in zip(documents, rows, strict=True)
+            ]
             result = asyncio.run(service.upsert_documents(documents))
 
             # Wait for the indexing task to finish before moving on
