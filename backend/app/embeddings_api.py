@@ -25,9 +25,7 @@ router = APIRouter(prefix="/embeddings", tags=["embeddings"])
 class SetActiveModelRequest(BaseModel):
     """Request to set the active embedding model."""
 
-    model_id: str = Field(
-        description="Model ID to activate (e.g., 'openai/text-embedding-3-small')"
-    )
+    model_id: str = Field(description="Model ID to activate (e.g., 'tei/bge-m3')")
 
 
 class SetActiveModelResponse(BaseModel):
