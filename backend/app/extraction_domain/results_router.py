@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from juddges_search.info_extraction import BaseSchemaExtractor
 from loguru import logger
 
+from app.extraction_domain.base_schema_promote import promote_to_typed_columns
 from app.extraction_domain.shared import get_current_user, supabase
 from app.models import (
     BaseSchemaDefinitionResponse,
@@ -383,15 +384,17 @@ async def extract_with_base_schema(
             # Store in Supabase
             if supabase:
                 try:
-                    supabase.table("judgments").update(
-                        {
-                            "base_raw_extraction": extracted_data,
-                            "base_extraction_status": "completed",
-                            "base_extraction_model": request.llm_name,
-                            "base_extraction_error": None,
-                            "base_extracted_at": datetime.now(UTC).isoformat(),
-                        }
-                    ).eq("id", doc_id).execute()
+                    update_payload = {
+                        "base_raw_extraction": extracted_data,
+                        "base_extraction_status": "completed",
+                        "base_extraction_model": request.llm_name,
+                        "base_extraction_error": None,
+                        "base_extracted_at": datetime.now(UTC).isoformat(),
+                        **promote_to_typed_columns(extracted_data),
+                    }
+                    supabase.table("judgments").update(update_payload).eq(
+                        "id", doc_id
+                    ).execute()
                 except Exception as e:
                     logger.warning(f"Failed to store extracted data for {doc_id}: {e}")
 
