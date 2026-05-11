@@ -42,6 +42,10 @@ export default function HelpPage() {
  icon: BookOpen,
  questions: [
  {
+ q: "I'm new — where should I start? ",
+ a: "Take the in-app onboarding tour at /onboarding. It's a four-step walk-through with screenshots covering search, collections, chat with cited sources, and the base coding schema — roughly 30 minutes end to end. The long-form version with extra context lives in the docs site under Tutorials → First 30 minutes.",
+ },
+ {
  q: "What is JuDDGES? ",
  a: "JuDDGES (Judicial Decision Data Gathering, Encoding, and Sharing) is an open-source research platform developed by Wroclaw University of Science and Technology that provides AI-powered legal document analysis and research tools for court judgments. It combines advanced natural language processing with a comprehensive database of legal documents from Poland and England & Wales.",
  },

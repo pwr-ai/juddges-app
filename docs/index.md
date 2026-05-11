@@ -11,6 +11,14 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
 <div class="grid cards" markdown>
 
+-   :material-compass:{ .lg .middle } **First 30 minutes (legal researchers)**
+
+    ---
+
+    A four-step tour with screenshots: search the corpus, build a collection, ask a question with cited sources, and read the base coding schema.
+
+    [:octicons-arrow-right-24: First 30 minutes](tutorials/first-30-minutes.md)
+
 -   :material-scale-balance:{ .lg .middle } **Open Science**
 
     ---
@@ -19,7 +27,7 @@ Juddges App is the web application companion to the [JuDDGES research project](h
 
     [:octicons-arrow-right-24: Open-Science & FAIR4RS report](open-science/index.md)
 
--   :material-rocket-launch:{ .lg .middle } **Getting Started**
+-   :material-rocket-launch:{ .lg .middle } **Getting Started (developers)**
 
     ---
 
