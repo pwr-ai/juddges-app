@@ -15635,6 +15635,18 @@
       },
       "UpdateCollectionRequest": {
         "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "name": {
             "maxLength": 255,
             "minLength": 1,
