@@ -205,18 +205,56 @@ landing state pictured above.
 
 ## Step 04 — Read the base coding schema
 
-*Content for this step is captured in Phase 5.*
+A **coding schema** is the field list an extraction job will produce —
+the columns of the eventual table. The *Base Judgment Extraction
+Schema* (`universal_legal_document_base_schema`) is the canonical
+reference: 51 fields covering case identifiers, parties, court
+hierarchy, dates, legal grounds, and outcomes, with parallel English and
+Polish descriptions.
 
-### What to try
+![Base Judgment Extraction Schema page showing the schema key, the English/Polish language switcher, the '51 fields · 51 required' summary, Table/JSON view tabs, the fields search bar, and the first five rows: Keywords (list), Neutral citation number (text), Case number (number), Date of appeal court judgment (text), Appeal court judges names (text).](../assets/onboarding/step-4-base-schema.png)
 
-- Browse the field list with descriptions and example values.
-- Switch between English and Polish locale variants.
+### Walk through the example
+
+Open [`/schemas/base`](https://juddges.com/schemas/base).
+
+1. **Read the header.** The `universal_legal_document_base_schema`
+   identifier is the canonical name used everywhere — JSON exports,
+   API responses, indexing in Meilisearch. The `51 fields · 51 required`
+   badge tells you every field is mandatory in the base profile.
+2. **Switch the language.** The *Schema language* toggle swaps every
+   description between English and Polish. Field keys themselves stay
+   stable; only the human-facing strings change.
+3. **Search the fields.** The *Search all fields…* box filters the
+   table by field name, type, or description. Try `"date"` to see every
+   date-typed field, or `"judge"` to find judge-related fields across
+   the appellate, lower, and panel levels.
+4. **Inspect a row.** Each row shows the field name, its type
+   (`text`, `number`, `list`, `boolean`, `enum`), and its description.
+   `enum` fields enumerate their allowed values when expanded.
+5. **Switch to JSON.** The *JSON* tab shows the same schema in its raw
+   JSON-Schema form. Use the *Copy JSON* or *Download JSON* buttons
+   (top right) to take a copy with you when designing a derivative
+   schema.
+
+### When to extend versus reuse
+
+- **Reuse the base schema** if your research question is well-covered
+  by the existing fields. Doing so makes your extracted data joinable
+  with everyone else's — the whole point of having a canonical schema.
+- **Extend it** (add fields on top) when your question needs
+  domain-specific fields the base doesn't have. Keep the base fields
+  unchanged so your output remains forward-compatible.
+- **Avoid forking from scratch** unless you have a reason that
+  doesn't fit either of the above. A clean fork severs the join.
 
 ### Where it lives
 
-- Base schema: [`/schemas/base`](https://juddges.com/schemas/base)
-- Coding scheme usage: see
-  [`docs/how-to/CODING_SCHEME_USAGE.md`](../how-to/CODING_SCHEME_USAGE.md).
+- Base schema page: [`/schemas/base`](https://juddges.com/schemas/base)
+- Coding-scheme usage guide:
+  [`docs/how-to/CODING_SCHEME_USAGE.md`](../how-to/CODING_SCHEME_USAGE.md)
+- Polish dataset curation (real-world application of the base schema):
+  [`docs/how-to/polish-dataset-curation.md`](../how-to/polish-dataset-curation.md)
 
 ---
 

@@ -80,15 +80,18 @@ const STEPS: Step[] = [
     index: "04",
     title: "Read the base coding schema",
     summary:
-      "The canonical extraction template used across JUDDGES pipelines — review the field definitions, types, and locales (EN / PL) in one place.",
+      "The canonical extraction template used across JUDDGES pipelines — 51 fields covering case identifiers, parties, court hierarchy, dates, legal grounds, and outcomes. Reviewing it before designing your own coding scheme is the fastest way to avoid reinventing fields that already exist.",
     bullets: [
-      "Browse the field list with descriptions and example values.",
-      "Switch between English and Polish locale variants.",
-      "Use this as the reference when planning your own extraction work.",
+      "Toggle between Table and JSON views; the Table view is searchable across all 51 fields.",
+      "Switch between English and Polish field definitions using the Schema language selector.",
+      "Copy or download the schema as JSON to seed your own extraction project or to feed into a coding-schema agent.",
     ],
     cta: { href: "/schemas/base", label: "Open base schema" },
     icon: FileJson,
-    screenshot: null,
+    screenshot: {
+      src: "/docs/onboarding/step-4-base-schema.png",
+      alt: "Base Judgment Extraction Schema page showing the schema_key, the English/Polish language switcher, '51 fields · 51 required' summary, Table / JSON view tabs, the fields search bar, and the first few fields (Keywords, Neutral citation number, Case number, Date of appeal court judgment, Appeal court judges names) with type and description columns.",
+    },
   },
 ];
 

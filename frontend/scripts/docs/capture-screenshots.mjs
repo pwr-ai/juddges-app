@@ -79,6 +79,15 @@ const STEPS = [
     },
   },
   {
+    name: 'step-4-base-schema',
+    url: '/schemas/base',
+    prepare: async (page) => {
+      await page.getByRole('heading', { name: /Base Judgment Extraction Schema/i }).waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {});
+      // Wait for the schema fields to populate.
+      await page.waitForTimeout(2000);
+    },
+  },
+  {
     name: 'step-3-chat',
     url: '/chat',
     waitUntil: 'load', // chat page keeps a persistent connection open
