@@ -232,10 +232,10 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 4G
+          memory: 8G
         reservations:
           cpus: '1'
-          memory: 2G
+          memory: 4G
 
   backend-beat:
     image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
