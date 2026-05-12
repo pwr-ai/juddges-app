@@ -16,6 +16,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import SearchPage from '@/app/search/page';
 
 const mockSearchResultsHook = jest.fn();
@@ -222,9 +223,11 @@ describe('Complete Search Flow Integration', () => {
 
   const renderWithProviders = (ui: React.ReactElement) => {
     return render(
-      <QueryClientProvider client={queryClient}>
-        {ui}
-      </QueryClientProvider>
+      <LanguageProvider initialLocale="en">
+        <QueryClientProvider client={queryClient}>
+          {ui}
+        </QueryClientProvider>
+      </LanguageProvider>
     );
   };
 

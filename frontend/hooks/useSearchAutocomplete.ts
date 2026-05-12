@@ -14,6 +14,37 @@ export interface AutocompleteSuggestion {
   sources: AutocompleteSource[];
 }
 
+export interface TopicHit {
+  id: string;
+  label_pl: string;
+  label_en: string;
+  aliases_pl: string[];
+  aliases_en: string[];
+  category: string | null;
+  doc_count: number;
+  jurisdictions: string[];
+  _formatted?: Record<string, string | string[]> | null;
+}
+
+export interface TopicLabel {
+  primary: string;
+  secondary: string;
+}
+
+/**
+ * Pick the locale-aware primary/secondary label for a topic hit.
+ *
+ * - locale `"pl"` → primary is `label_pl`, secondary is `label_en`
+ * - locale `"en"` (or anything else) → reversed
+ */
+export function pickTopicLabel(hit: TopicHit, locale: string): TopicLabel {
+  const lang = locale.split("-")[0].toLowerCase();
+  if (lang === "pl") {
+    return { primary: hit.label_pl, secondary: hit.label_en };
+  }
+  return { primary: hit.label_en, secondary: hit.label_pl };
+}
+
 interface UseSearchAutocompleteOptions {
   enabled?: boolean;
   debounceMs?: number;
@@ -23,6 +54,7 @@ interface UseSearchAutocompleteOptions {
 
 interface UseSearchAutocompleteResult {
   suggestions: AutocompleteSuggestion[];
+  topicHits: TopicHit[];
   isLoading: boolean;
   clearSuggestions: () => void;
 }
@@ -35,6 +67,7 @@ interface AutocompleteHit {
 
 interface AutocompleteResponse {
   hits?: AutocompleteHit[];
+  topic_hits?: TopicHit[];
 }
 
 const KNOWN_SOURCES: ReadonlySet<AutocompleteSource> = new Set([
@@ -68,10 +101,12 @@ export function useSearchAutocomplete(
   }: UseSearchAutocompleteOptions = {}
 ): UseSearchAutocompleteResult {
   const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [topicHits, setTopicHits] = useState<TopicHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const clearSuggestions = useCallback(() => {
     setSuggestions([]);
+    setTopicHits([]);
     setIsLoading(false);
   }, []);
 
@@ -99,6 +134,7 @@ export function useSearchAutocomplete(
 
         if (!response.ok) {
           setSuggestions([]);
+          setTopicHits([]);
           return;
         }
 
@@ -107,6 +143,7 @@ export function useSearchAutocomplete(
           .map(mapHitToSuggestion)
           .filter((item): item is AutocompleteSuggestion => item !== null);
         setSuggestions(mapped);
+        setTopicHits(data.topic_hits ?? []);
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
@@ -115,6 +152,7 @@ export function useSearchAutocomplete(
           message: error instanceof Error ? error.message : String(error),
         });
         setSuggestions([]);
+        setTopicHits([]);
       } finally {
         setIsLoading(false);
       }
@@ -128,6 +166,7 @@ export function useSearchAutocomplete(
 
   return {
     suggestions,
+    topicHits,
     isLoading,
     clearSuggestions,
   };

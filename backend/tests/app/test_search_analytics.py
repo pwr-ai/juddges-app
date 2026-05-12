@@ -26,6 +26,47 @@ class TestRecordSearchQuery:
         assert insert_arg["processing_ms"] == 12
 
     @patch("app.services.search_analytics.supabase_client")
+    def test_inserts_topic_hits_count(self, mock_client):
+        """topic_hits_count is stored alongside document hit_count."""
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_table.insert.return_value = mock_table
+        mock_table.execute.return_value = MagicMock(data=[{"id": 2}])
+
+        record_search_query(
+            "narkomania", hit_count=8, processing_ms=15, topic_hits_count=3
+        )
+
+        insert_arg = mock_table.insert.call_args[0][0]
+        assert insert_arg["topic_hits_count"] == 3
+
+    @patch("app.services.search_analytics.supabase_client")
+    def test_topic_hits_count_defaults_to_none(self, mock_client):
+        """Omitting topic_hits_count stores NULL (backward-compatible)."""
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_table.insert.return_value = mock_table
+        mock_table.execute.return_value = MagicMock(data=[{"id": 3}])
+
+        record_search_query("tort", hit_count=4)
+
+        insert_arg = mock_table.insert.call_args[0][0]
+        assert insert_arg["topic_hits_count"] is None
+
+    @patch("app.services.search_analytics.supabase_client")
+    def test_zero_topic_hits_count_stored(self, mock_client):
+        """A count of zero (topics index returned nothing) is stored explicitly."""
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_table.insert.return_value = mock_table
+        mock_table.execute.return_value = MagicMock(data=[{"id": 4}])
+
+        record_search_query("gibberish", hit_count=0, topic_hits_count=0)
+
+        insert_arg = mock_table.insert.call_args[0][0]
+        assert insert_arg["topic_hits_count"] == 0
+
+    @patch("app.services.search_analytics.supabase_client")
     def test_truncates_long_query(self, mock_client):
         mock_table = MagicMock()
         mock_client.table.return_value = mock_table

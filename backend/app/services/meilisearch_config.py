@@ -262,6 +262,97 @@ async def setup_meilisearch_index(service: MeiliSearchService) -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# Topics index
+# ---------------------------------------------------------------------------
+
+# Index settings for the ``topics`` index (bilingual criminal-case topic concepts).
+# Order of searchableAttributes affects relevance ranking — earlier = higher weight.
+MEILISEARCH_TOPICS_INDEX_SETTINGS: dict[str, Any] = {
+    "searchableAttributes": [
+        "label_pl",
+        "label_en",
+        "aliases_pl",
+        "aliases_en",
+    ],
+    "filterableAttributes": [
+        "category",
+        "jurisdictions",
+    ],
+    "sortableAttributes": [
+        "doc_count",
+    ],
+    # "*" instructs Meilisearch to display all stored fields (the default, but
+    # set explicitly so future schema additions are auto-included).
+    "displayedAttributes": ["*"],
+    "rankingRules": [
+        "words",
+        "typo",
+        "proximity",
+        "attribute",
+        "exactness",
+        "doc_count:desc",
+    ],
+    "typoTolerance": {
+        "enabled": True,
+        "minWordSizeForTypos": {
+            "oneTypo": 4,
+            "twoTypos": 8,
+        },
+    },
+    # Topics are short canonical phrases; stop-word removal would harm recall.
+    "stopWords": [],
+    "pagination": {
+        "maxTotalHits": 500,  # matches the 500-concept cap in scripts/generate_search_topics.py
+    },
+}
+
+
+async def setup_topics_meilisearch_index(service: MeiliSearchService) -> bool:
+    """Create the Meilisearch ``topics`` index and apply settings.
+
+    Returns True if successful, False otherwise.  Never raises — caller should
+    treat Meilisearch as optional.
+    """
+    if not service.admin_configured:
+        logger.info("Meilisearch admin not configured — skipping topics index setup")
+        return False
+
+    try:
+        # 1. Create index only if it doesn't already exist
+        if await service.index_exists():
+            logger.info(
+                f"Meilisearch index '{service.index_name}' already exists — skipping creation"
+            )
+        else:
+            task_resp = await service.create_index(primary_key="id")
+            task_uid = task_resp.get("taskUid")
+            if task_uid is not None:
+                await service.wait_for_task(task_uid)
+            logger.info(f"Meilisearch index '{service.index_name}' created")
+
+        # 2. Apply settings and surface failure.
+        settings_resp = await service.configure_index(MEILISEARCH_TOPICS_INDEX_SETTINGS)
+        task_uid = settings_resp.get("taskUid")
+        if task_uid is not None:
+            task = await service.wait_for_task(task_uid, max_wait=120.0)
+            status = task.get("status")
+            if status != "succeeded":
+                logger.error(
+                    f"Meilisearch topics settings task {task_uid} did not succeed "
+                    f"(status={status}): {task.get('error')}"
+                )
+                return False
+        logger.info(f"Meilisearch index '{service.index_name}' settings applied")
+
+        return True
+    except Exception:
+        logger.opt(exception=True).warning(
+            "Failed to set up Meilisearch topics index — topic autocomplete will be unavailable"
+        )
+        return False
+
+
 # Columns fetched from the ``judgments`` table for the Meilisearch sync path.
 # Used by both the Celery sync tasks and the one-shot backfill script.
 # The embedding ``vector`` column is intentionally excluded (~6 KB/row, unused

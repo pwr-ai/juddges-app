@@ -237,15 +237,22 @@ async def lifespan(app: FastAPI):
         "Using shared Supabase client for database and vector search operations"
     )
 
-    # Step 6: Initialize Meilisearch index (optional — non-blocking)
+    # Step 6: Initialize Meilisearch indexes (optional — non-blocking)
     try:
-        from app.services.meilisearch_config import setup_meilisearch_index
+        from app.services.meilisearch_config import (
+            setup_meilisearch_index,
+            setup_topics_meilisearch_index,
+        )
         from app.services.search import MeiliSearchService
 
         meili_service = MeiliSearchService.from_env()
         if meili_service.admin_configured:
-            logger.info("Setting up Meilisearch index...")
+            logger.info("Setting up Meilisearch judgments index...")
             await setup_meilisearch_index(meili_service)
+
+            topics_service = MeiliSearchService.topics_from_env()
+            logger.info("Setting up Meilisearch topics index...")
+            await setup_topics_meilisearch_index(topics_service)
         else:
             logger.info("Meilisearch admin key not configured — skipping index setup")
     except Exception as e:

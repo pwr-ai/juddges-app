@@ -1,50 +1,25 @@
 "use client";
 
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type {
-  AutocompleteSource,
-  AutocompleteSuggestion,
-} from "@/hooks/useSearchAutocomplete";
-
-const SOURCE_LABELS: Record<AutocompleteSource, string> = {
-  legal_topics: "Topic",
-  keywords: "Keyword",
-  cited_legislation: "Citation",
-};
-
-function formatCount(n: number): string {
-  if (n >= 1000) {
-    return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
-  }
-  return String(n);
-}
-
-function highlightMatch(value: string, query: string): React.ReactNode {
-  const trimmed = query.trim();
-  if (!trimmed) {
-    return value;
-  }
-  const idx = value.toLocaleLowerCase().indexOf(trimmed.toLocaleLowerCase());
-  if (idx < 0) {
-    return value;
-  }
-  return (
-    <>
-      {value.slice(0, idx)}
-      <mark className="bg-transparent font-semibold text-foreground">
-        {value.slice(idx, idx + trimmed.length)}
-      </mark>
-      {value.slice(idx + trimmed.length)}
-    </>
-  );
-}
+import { Eyebrow, Rule } from "@/components/editorial";
+import { sanitizeHighlightHtml } from "@/lib/highlight";
+import type { AutocompleteSuggestion, TopicHit } from "@/hooks/useSearchAutocomplete";
+import { pickTopicLabel } from "@/hooks/useSearchAutocomplete";
+import { postTopicClick } from "@/lib/api/topics";
 
 type SearchMode = "thinking" | "rabbit";
 
+/** Derive a displayable formatted string for a topic field, handling string|string[] from _formatted. */
+function getFormattedField(raw: string, formatted: string | string[] | undefined): string {
+  if (!formatted) return raw;
+  if (Array.isArray(formatted)) return formatted.join(", ");
+  return formatted;
+}
 export interface SearchFormProps {
   query: string;
   setQuery: (value: string) => void;
@@ -59,8 +34,11 @@ export interface SearchFormProps {
   hasPerformedSearch: boolean;
   onSearch: (mode?: SearchMode) => void;
   autocompleteSuggestions?: AutocompleteSuggestion[];
+  autocompleteTopicHits?: TopicHit[];
   isAutocompleteLoading?: boolean;
   onSelectAutocompleteSuggestion?: (value: string) => void;
+  /** BCP-47 locale tag used to pick primary/secondary topic labels. Defaults to "en". */
+  currentLocale?: string;
 }
 
 type PopularSearch = {
@@ -99,13 +77,19 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     hasPerformedSearch,
     onSearch,
     autocompleteSuggestions = [],
+    autocompleteTopicHits = [],
     isAutocompleteLoading = false,
     onSelectAutocompleteSuggestion,
+    currentLocale = "en",
   },
   forwardedRef
 ): React.JSX.Element {
+  const router = useRouter();
   const internalRef = useRef<HTMLInputElement>(null);
+  // Combined flat index: topics first, then judgment suggestions
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const totalItems = autocompleteTopicHits.length + autocompleteSuggestions.length;
+
   const setInputRef = (node: HTMLInputElement | null): void => {
     internalRef.current = node;
     if (!forwardedRef) {
@@ -139,7 +123,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   const showSuggestions =
     query.trim().length >= 2 &&
     !isSearching &&
-    (isAutocompleteLoading || autocompleteSuggestions.length > 0);
+    (isAutocompleteLoading || autocompleteTopicHits.length > 0 || autocompleteSuggestions.length > 0);
 
   const handleSuggestionSelect = (suggestion: string): void => {
     if (onSelectAutocompleteSuggestion) {
@@ -150,18 +134,36 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     internalRef.current?.focus();
   };
 
+  /** Navigate to a topic chip URL and fire analytics. */
+  const handleTopicSelect = useCallback(
+    (hit: TopicHit): void => {
+      const { primary } = pickTopicLabel(hit, currentLocale);
+      const params = new URLSearchParams({ q: primary, topic: hit.id });
+
+      // Fire-and-forget analytics
+      postTopicClick({
+        topic_id: hit.id,
+        query,
+        jurisdiction: null,
+      });
+
+      router.push(`/search?${params.toString()}`);
+    },
+    [currentLocale, query, router]
+  );
+
   useEffect(() => {
     setActiveSuggestionIndex(-1);
-  }, [query, autocompleteSuggestions.length, isAutocompleteLoading]);
+  }, [query, autocompleteTopicHits.length, autocompleteSuggestions.length, isAutocompleteLoading]);
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (!showSuggestions || autocompleteSuggestions.length === 0 || isAutocompleteLoading) {
+    if (!showSuggestions || totalItems === 0 || isAutocompleteLoading) {
       return;
     }
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveSuggestionIndex((prev) => Math.min(prev + 1, autocompleteSuggestions.length - 1));
+      setActiveSuggestionIndex((prev) => Math.min(prev + 1, totalItems - 1));
       return;
     }
 
@@ -173,9 +175,17 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
 
     if (event.key === "Enter" && activeSuggestionIndex >= 0) {
       event.preventDefault();
-      const selected = autocompleteSuggestions[activeSuggestionIndex];
-      if (selected) {
-        handleSuggestionSelect(selected.value);
+      if (activeSuggestionIndex < autocompleteTopicHits.length) {
+        // Focused on a topic
+        const hit = autocompleteTopicHits[activeSuggestionIndex];
+        if (hit) handleTopicSelect(hit);
+      } else {
+        // Focused on a judgment suggestion
+        const suggestionIndex = activeSuggestionIndex - autocompleteTopicHits.length;
+        const selected = autocompleteSuggestions[suggestionIndex];
+        if (selected) {
+          handleSuggestionSelect(selected.title);
+        }
       }
       return;
     }
@@ -229,41 +239,122 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
       )}
 
       {showSuggestions && (
-        <div className="mt-3 space-y-2 rounded-lg border border-border/60 bg-background/60 p-2">
-          <div className="px-1 text-xs text-muted-foreground">Topics &amp; keywords</div>
+        <div className="mt-3 rounded-lg border border-[color:var(--rule)] bg-background/60 p-2">
           {isAutocompleteLoading ? (
             <p className="px-1 text-sm text-muted-foreground">Loading suggestions...</p>
           ) : (
-            <div role="listbox" aria-label="Topic suggestions" className="space-y-1">
-              {autocompleteSuggestions.map((item, index) => {
-                const sourceLabels = item.sources.map((s) => SOURCE_LABELS[s]).join(", ");
-                return (
-                  <button
-                    key={`${item.value}-${item.sources.join("-")}`}
-                    type="button"
-                    role="option"
-                    aria-selected={index === activeSuggestionIndex}
-                    className={`flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted ${
-                      index === activeSuggestionIndex ? "bg-muted" : ""
-                    }`}
-                    onMouseEnter={() => setActiveSuggestionIndex(index)}
-                    onClick={() => handleSuggestionSelect(item.value)}
-                    aria-label={`Use suggestion: ${item.value} (${item.count} cases)`}
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {highlightMatch(item.value, query)}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-mono">{formatCount(item.count)} cases</span>
-                      {sourceLabels ? (
-                        <span className="rounded-full border border-border/60 px-1.5 py-0.5">
-                          {sourceLabels}
-                        </span>
-                      ) : null}
-                    </span>
-                  </button>
-                );
-              })}
+            <div role="listbox" aria-label="Search suggestions">
+              {/* TOPICS section */}
+              {autocompleteTopicHits.length > 0 && (
+                <div className="mb-1">
+                  <div className="px-1 pt-1 pb-0.5">
+                    <Eyebrow noRule as="div">Topics</Eyebrow>
+                  </div>
+                  <div role="group" aria-label="Topics">
+                    {autocompleteTopicHits.map((hit, index) => {
+                      const { primary, secondary } = pickTopicLabel(hit, currentLocale);
+                      const lang = currentLocale.split("-")[0].toLowerCase();
+                      const formattedPrimary =
+                        lang === "pl"
+                          ? getFormattedField(hit.label_pl, hit._formatted?.label_pl as string | string[] | undefined)
+                          : getFormattedField(hit.label_en, hit._formatted?.label_en as string | string[] | undefined);
+                      const isActive = index === activeSuggestionIndex;
+
+                      return (
+                        <button
+                          key={hit.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isActive}
+                          className={[
+                            "w-full flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm",
+                            "hover:bg-[color:var(--gold-soft)] hover:text-[color:var(--oxblood)]",
+                            "[&_mark]:bg-[color:var(--gold)] [&_mark]:text-[color:var(--ink)]",
+                            isActive ? "bg-[color:var(--gold-soft)] text-[color:var(--oxblood)]" : "",
+                          ].join(" ")}
+                          onMouseEnter={() => setActiveSuggestionIndex(index)}
+                          onClick={() => handleTopicSelect(hit)}
+                          aria-label={`Topic: ${primary}`}
+                        >
+                          <span className="flex items-center gap-1 min-w-0">
+                            <span
+                              className="font-medium truncate"
+                              // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
+                              dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(formattedPrimary) }}
+                            />
+                            {secondary && (
+                              <>
+                                <span className="text-[color:var(--ink-soft)] shrink-0">·</span>
+                                <span className="text-[color:var(--ink-soft)] text-xs truncate">
+                                  {secondary}
+                                </span>
+                              </>
+                            )}
+                          </span>
+                          <span
+                            className="ml-2 shrink-0 font-mono text-xs tabular-nums text-[color:var(--ink-soft)]"
+                            aria-label={`${hit.doc_count} documents`}
+                          >
+                            ({hit.doc_count})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Divider between sections — only when both are non-empty */}
+              {autocompleteTopicHits.length > 0 && autocompleteSuggestions.length > 0 && (
+                <Rule className="my-1" />
+              )}
+
+              {/* JUDGMENTS section */}
+              {autocompleteSuggestions.length > 0 && (
+                <div>
+                  <div className="px-1 pt-1 pb-0.5">
+                    <Eyebrow noRule as="div">Judgments</Eyebrow>
+                  </div>
+                  <div role="group" aria-label="Judgments" className="space-y-1">
+                    {autocompleteSuggestions.map((item, index) => {
+                      const flatIndex = autocompleteTopicHits.length + index;
+                      const isActive = flatIndex === activeSuggestionIndex;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isActive}
+                          className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted [&_mark]:bg-[color:var(--gold)] [&_mark]:text-[color:var(--ink)] ${
+                            isActive ? "bg-muted" : ""
+                          }`}
+                          onMouseEnter={() => setActiveSuggestionIndex(flatIndex)}
+                          onClick={() => handleSuggestionSelect(item.title)}
+                          aria-label={`Use suggestion: ${item.title}`}
+                        >
+                          <div
+                            className="font-medium"
+                            // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
+                            dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.title) }}
+                          />
+                          {(item.caseNumber || item.courtName) ? (
+                            <div className="text-xs text-muted-foreground">
+                              {[item.caseNumber, item.courtName, item.decisionDate].filter(Boolean).join(" · ")}
+                            </div>
+                          ) : null}
+                          {item.summary ? (
+                            <div
+                              className="text-xs text-muted-foreground line-clamp-1"
+                              // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
+                              dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.summary) }}
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
