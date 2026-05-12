@@ -512,17 +512,42 @@ async def setup_topics_meilisearch_index(service: MeiliSearchService) -> bool:
 # Used by both the Celery sync tasks and the one-shot backfill script.
 # The embedding ``vector`` column is intentionally excluded (~6 KB/row, unused
 # downstream — Meilisearch only stores the BGE-M3 vector we send via _vectors).
-JUDGMENT_SYNC_COLUMNS = (
-    "id, case_number, jurisdiction, court_name, court_level, decision_date, "
-    "publication_date, title, summary, full_text, judges, case_type, "
-    "decision_type, outcome, keywords, legal_topics, cited_legislation, "
-    "source_url, created_at, updated_at, "
-    "base_extraction_status, "
-    "base_num_victims, base_victim_age_offence, "
-    "base_case_number, base_co_def_acc_num, "
-    "base_date_of_appeal_court_judgment, "
-    "base_case_name, base_keywords, "
-    "structure_case_identification_summary, "
-    "structure_facts_summary, "
-    "structure_operative_part_summary"
+#
+# Includes every base_* field the transformer emits — keep these in lock-step
+# with BASE_SCHEMA_FIELDS above (and the appeal/extracted-at twin sources)
+# so Meili docs actually carry the values that filterableAttributes expects.
+JUDGMENT_SYNC_COLUMNS = ", ".join(
+    [
+        # Core columns
+        "id",
+        "case_number",
+        "jurisdiction",
+        "court_name",
+        "court_level",
+        "decision_date",
+        "publication_date",
+        "title",
+        "summary",
+        "full_text",
+        "judges",
+        "case_type",
+        "decision_type",
+        "outcome",
+        "keywords",
+        "legal_topics",
+        "cited_legislation",
+        "source_url",
+        "created_at",
+        "updated_at",
+        # Date / timestamp twins read by the transformer
+        "base_date_of_appeal_court_judgment",
+        "base_extracted_at",
+        # Structure-* extraction columns (unrelated to this filter work but
+        # historically part of the sync payload — keep them).
+        "structure_case_identification_summary",
+        "structure_facts_summary",
+        "structure_operative_part_summary",
+        # All filterable + searchable base_* columns (from BASE_SCHEMA_FIELDS).
+        *BASE_SCHEMA_FIELDS,
+    ]
 )
