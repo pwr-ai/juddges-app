@@ -24,13 +24,13 @@ Today's date: {today}
 User's language hint (informational): {languages_hint}
 
 Rules:
-- Emit every field. Use null when the user did not state the value. Never guess.
+- Omit any field you cannot fill from the query — the schema defaults missing fields to null. Never guess values.
 - Keep Polish accents intact (ą, ć, ę, ł, ń, ó, ś, ź, ż). Do not transliterate.
 - Use the rewritten_query for ranking signal: expand legal abbreviations (k.k. -> kodeks karny), drop the parts you turned into chips, keep useful synonyms.
 - Numeric ranges (base_*): only when the user gives an explicit bound ("at least 3", "between 2018 and 2022").
 - Arrays (keywords, legal_topics, cited_legislation): at most 6 candidates, no duplicates; the backend will canonicalise.
 - decision_date: ISO 8601 dates (YYYY-MM-DD). Resolve relative phrases ("ostatnie 5 lat", "since 2020") against the date above.
-- languages: only 'pl' or 'uk'. Lowercase. Include both when the user does not specify.
+- languages: only 'pl' or 'uk' (lowercase). Set this only when the user explicitly names a jurisdiction or language; otherwise omit it.
 
 Categorical vocabulary (use exactly these values or null):
 - jurisdiction: PL | UK
@@ -46,7 +46,7 @@ Output:
   rewritten_query: "VAT podatek od towarów i usług"
   jurisdiction: PL
   court_level: appellate
-  decision_date: {{from: "2022-01-01", to: "2022-12-31"}}
+  decision_date: {{"from": "2022-01-01", "to": "2022-12-31"}}
   keywords: ["VAT", "podatek od towarów i usług"]
 
 User: "criminal appeals with at least 3 victims since 2020"
@@ -54,8 +54,8 @@ Output:
   rewritten_query: "criminal appeal victims"
   case_type: criminal
   court_level: appellate
-  decision_date: {{from: "2020-01-01"}}
-  base_num_victims: {{min: 3}}
+  decision_date: {{"from": "2020-01-01"}}
+  base_num_victims: {{"min": 3}}
 
 User: "kodeks karny art 286"
 Output:
