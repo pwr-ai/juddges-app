@@ -83,6 +83,15 @@ from .utils import (
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
+# Mount the LLM query-rewrite sub-router under /documents (final path:
+# /documents/search/rewrite). Imported here (not at the module top) to avoid
+# any chance of a circular import via app.services.search.
+from app.judgments_pkg.query_rewrite import (  # noqa: E402
+    router as _query_rewrite_router,
+)
+
+router.include_router(_query_rewrite_router)
+
 # Make key symbols available at package level for external importers
 __all__ = [
     "_convert_judgment_to_legal_document",
