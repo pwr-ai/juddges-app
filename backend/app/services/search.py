@@ -52,18 +52,18 @@ _TOPICS_HIGHLIGHT_ATTRS: list[str] = [
     "aliases_en",
 ]
 
-# Maximum hits returned from the topics index per autocomplete call.
-_TOPICS_LIMIT: int = 4
-
 
 class MeiliSearchService:
     """Meilisearch HTTP client for autocomplete queries and index administration.
 
     A single instance is scoped to one Meilisearch index (``index_name``).
-    The autocomplete method queries the judgments index (``self``) *and* the
-    topics index in parallel.  The topics-side service is constructed lazily on
-    first access via the ``_topics_service`` cached property so it is built once
-    per process lifetime rather than once per keystroke.
+    The autocomplete method queries the topics index only — judgment-document
+    suggestions were retired in favour of topic chips that route the user to a
+    full search.  ``self`` (scoped to the judgments index) is still used by
+    ``documents_search`` for the results page.  The topics-side service is
+    constructed lazily on first access via the ``_topics_service`` cached
+    property so it is built once per process lifetime rather than once per
+    keystroke.
     """
 
     def __init__(
@@ -211,137 +211,64 @@ class MeiliSearchService:
         query: str,
         limit: int = 10,
         filters: str | None = None,
-        semantic_ratio: float = 0.0,
     ) -> dict[str, Any]:
-        """Return autocomplete hits from the judgments index, merged with topic hits.
+        """Return autocomplete topic hits from the Meilisearch ``topics`` index.
 
-        Both queries are fired in parallel.  A failure on the topics side is
-        handled silently: a ``logger.warning`` is emitted and ``topic_hits`` is
-        returned as an empty list so the judgments results are never blocked.
-
-        Topics are skipped entirely when ``query`` has fewer than 2 characters
-        (same guard as the document side).
+        The judgments index is *not* queried — autocomplete surfaces topic
+        chips only.  Clicking a topic navigates the user to a full search,
+        which is where judgment documents are returned.
 
         Args:
             query: The search string as typed by the user.
-            limit: Maximum document hits from the judgments index (default 10).
-                   The topics index is always capped at 4, independent of this
-                   value.
-            filters: Optional Meilisearch filter expression forwarded to *both*
-                     indexes.  If the topics index rejects the filter (e.g. it
-                     references a field that only exists on judgments), the topics
-                     query is retried without a filter rather than failing.
-            semantic_ratio: Hybrid search mix for the judgments query (0 = pure
-                            keyword, 1 = pure semantic).  Not applied to topics.
+            limit: Maximum topic hits to return (default 10).
+            filters: Optional Meilisearch filter expression. If the topics
+                     index rejects the filter (e.g. it references a field
+                     that does not exist on topics), the query is retried
+                     without the filter rather than failing.
+
+        Returns a dict shaped like ``{"topic_hits": [...], "query": str,
+        "processingTimeMs": int | None, "estimatedTotalHits": int | None}``.
         """
         if not self.configured:
             raise SearchServiceError("Meilisearch is not configured")
 
-        # ── Judgments query payload ───────────────────────────────────────────
-        payload: dict[str, Any] = {
-            "q": query,
-            "limit": limit,
-            # Keep autocomplete focused on short, high-signal fields.
-            "attributesToSearchOn": [
-                "title",
-                "case_number",
-                "keywords",
-                "legal_topics",
-                "court_name",
-                "summary",
-            ],
-            "attributesToHighlight": [
-                "title",
-                "summary",
-                "case_number",
-                "court_name",
-            ],
-            "attributesToCrop": ["summary"],
-            "cropLength": 24,
-            "attributesToRetrieve": [
-                "id",
-                "title",
-                "summary",
-                "case_number",
-                "jurisdiction",
-                "court_name",
-                "decision_date",
-                "case_type",
-                "keywords",
-            ],
-            "highlightPreTag": "<mark>",
-            "highlightPostTag": "</mark>",
-            "matchingStrategy": "last",
-        }
-        if filters:
-            payload["filter"] = filters
+        # Mirror the previous frontend behaviour: skip the network call for
+        # very short queries that would otherwise match too broadly.
+        if len(query) < 2:
+            return {
+                "topic_hits": [],
+                "query": query,
+                "processingTimeMs": None,
+                "estimatedTotalHits": 0,
+            }
 
-        if semantic_ratio > 0 and query.strip():
-            try:
-                query_vec = await asyncio.to_thread(embed_texts, query)
-                payload["hybrid"] = {
-                    "embedder": "bge-m3",
-                    "semanticRatio": semantic_ratio,
-                }
-                payload["vector"] = query_vec
-            except Exception:
-                logger.opt(exception=True).warning(
-                    "TEI embedding failed for query — falling back to keyword search"
-                )
-
-        # ── Parallel execution ────────────────────────────────────────────────
-        judgments_coro = self._query_judgments(payload)
-
-        long_enough = len(query) >= 2
-        if long_enough:
-            topics_coro = self._query_topics(query, filters=filters)
-            docs_result, topics_result = await asyncio.gather(
-                judgments_coro, topics_coro, return_exceptions=True
+        try:
+            topics_result = await self._query_topics(
+                query, limit=limit, filters=filters
             )
-        else:
-            docs_result = await judgments_coro
-            topics_result = None
-
-        # ── Handle judgments result ───────────────────────────────────────────
-        if isinstance(docs_result, Exception):
-            raise SearchServiceError(str(docs_result)) from docs_result
-
-        if not isinstance(docs_result, dict):
-            raise SearchServiceError("Unexpected Meilisearch response format")
-
-        # ── Handle topics result (silent degradation) ─────────────────────────
-        if topics_result is None:
-            topic_hits: list[dict[str, Any]] = []
-        elif isinstance(topics_result, Exception):
+        except SearchServiceError as exc:
             logger.warning(
-                "topics_index_unavailable — returning empty topic_hits: {}",
-                str(topics_result),
+                "topics_index_unavailable — returning empty topic_hits: {}", str(exc)
             )
-            topic_hits = []
-        else:
-            topic_hits = topics_result.get("hits", [])
+            return {
+                "topic_hits": [],
+                "query": query,
+                "processingTimeMs": None,
+                "estimatedTotalHits": 0,
+            }
 
         return {
-            **docs_result,
-            "topic_hits": topic_hits,
+            "topic_hits": topics_result.get("hits", []),
+            "query": topics_result.get("query", query),
+            "processingTimeMs": topics_result.get("processingTimeMs"),
+            "estimatedTotalHits": topics_result.get("estimatedTotalHits"),
         }
-
-    async def _query_judgments(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Execute the prepared judgments-index search payload."""
-        url = f"{self.base_url}/indexes/{self.index_name}/search"
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
-                response = await client.post(
-                    url, json=payload, headers=self._search_headers()
-                )
-                response.raise_for_status()
-                return response.json()
-        except httpx.HTTPError as exc:
-            raise SearchServiceError(str(exc)) from exc
 
     async def _query_topics(
         self,
         query: str,
+        *,
+        limit: int = 10,
         filters: str | None = None,
     ) -> dict[str, Any]:
         """Execute a topics-index search and return raw Meilisearch data.
@@ -364,7 +291,7 @@ class MeiliSearchService:
 
         topics_payload: dict[str, Any] = {
             "q": query,
-            "limit": _TOPICS_LIMIT,
+            "limit": limit,
             "attributesToHighlight": _TOPICS_HIGHLIGHT_ATTRS,
             "highlightPreTag": "<mark>",
             "highlightPostTag": "</mark>",

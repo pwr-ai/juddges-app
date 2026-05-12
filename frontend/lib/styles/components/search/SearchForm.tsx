@@ -6,9 +6,9 @@ import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eyebrow, Rule } from "@/components/editorial";
+import { Eyebrow } from "@/components/editorial";
 import { sanitizeHighlightHtml } from "@/lib/highlight";
-import type { AutocompleteSuggestion, TopicHit } from "@/hooks/useSearchAutocomplete";
+import type { TopicHit } from "@/hooks/useSearchAutocomplete";
 import { pickTopicLabel } from "@/hooks/useSearchAutocomplete";
 import { postTopicClick } from "@/lib/api/topics";
 
@@ -33,10 +33,8 @@ export interface SearchFormProps {
   hasError: boolean;
   hasPerformedSearch: boolean;
   onSearch: (mode?: SearchMode) => void;
-  autocompleteSuggestions?: AutocompleteSuggestion[];
   autocompleteTopicHits?: TopicHit[];
   isAutocompleteLoading?: boolean;
-  onSelectAutocompleteSuggestion?: (value: string) => void;
   /** BCP-47 locale tag used to pick primary/secondary topic labels. Defaults to "en". */
   currentLocale?: string;
 }
@@ -76,19 +74,16 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     hasError,
     hasPerformedSearch,
     onSearch,
-    autocompleteSuggestions = [],
     autocompleteTopicHits = [],
     isAutocompleteLoading = false,
-    onSelectAutocompleteSuggestion,
     currentLocale = "en",
   },
   forwardedRef
 ): React.JSX.Element {
   const router = useRouter();
   const internalRef = useRef<HTMLInputElement>(null);
-  // Combined flat index: topics first, then judgment suggestions
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
-  const totalItems = autocompleteTopicHits.length + autocompleteSuggestions.length;
+  const totalItems = autocompleteTopicHits.length;
 
   const setInputRef = (node: HTMLInputElement | null): void => {
     internalRef.current = node;
@@ -120,19 +115,9 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   };
 
   const showPopularSearches = !hasPerformedSearch && !hasResults && !hasError;
-  const showSuggestions =
-    query.trim().length >= 2 &&
-    !isSearching &&
-    (isAutocompleteLoading || autocompleteTopicHits.length > 0 || autocompleteSuggestions.length > 0);
-
-  const handleSuggestionSelect = (suggestion: string): void => {
-    if (onSelectAutocompleteSuggestion) {
-      onSelectAutocompleteSuggestion(suggestion);
-    } else {
-      setQuery(suggestion);
-    }
-    internalRef.current?.focus();
-  };
+  // Keep the dropdown mounted whenever the query is long enough so the user
+  // sees loading + empty states (not just successful hit lists).
+  const showSuggestions = query.trim().length >= 2 && !isSearching;
 
   /** Navigate to a topic chip URL and fire analytics. */
   const handleTopicSelect = useCallback(
@@ -154,7 +139,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
 
   useEffect(() => {
     setActiveSuggestionIndex(-1);
-  }, [query, autocompleteTopicHits.length, autocompleteSuggestions.length, isAutocompleteLoading]);
+  }, [query, autocompleteTopicHits.length, isAutocompleteLoading]);
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
     if (!showSuggestions || totalItems === 0 || isAutocompleteLoading) {
@@ -175,18 +160,8 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
 
     if (event.key === "Enter" && activeSuggestionIndex >= 0) {
       event.preventDefault();
-      if (activeSuggestionIndex < autocompleteTopicHits.length) {
-        // Focused on a topic
-        const hit = autocompleteTopicHits[activeSuggestionIndex];
-        if (hit) handleTopicSelect(hit);
-      } else {
-        // Focused on a judgment suggestion
-        const suggestionIndex = activeSuggestionIndex - autocompleteTopicHits.length;
-        const selected = autocompleteSuggestions[suggestionIndex];
-        if (selected) {
-          handleSuggestionSelect(selected.title);
-        }
-      }
+      const hit = autocompleteTopicHits[activeSuggestionIndex];
+      if (hit) handleTopicSelect(hit);
       return;
     }
 
@@ -242,11 +217,14 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
         <div className="mt-3 rounded-lg border border-[color:var(--rule)] bg-background/60 p-2">
           {isAutocompleteLoading ? (
             <p className="px-1 text-sm text-muted-foreground">Loading suggestions...</p>
+          ) : autocompleteTopicHits.length === 0 ? (
+            <p className="px-1 py-1 text-sm text-muted-foreground">
+              No matching topics — press <span className="font-medium">Search</span> to query judgments directly.
+            </p>
           ) : (
             <div role="listbox" aria-label="Search suggestions">
-              {/* TOPICS section */}
               {autocompleteTopicHits.length > 0 && (
-                <div className="mb-1">
+                <div>
                   <div className="px-1 pt-1 pb-0.5">
                     <Eyebrow noRule as="div">Topics</Eyebrow>
                   </div>
@@ -297,58 +275,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                           >
                             ({hit.doc_count})
                           </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Divider between sections — only when both are non-empty */}
-              {autocompleteTopicHits.length > 0 && autocompleteSuggestions.length > 0 && (
-                <Rule className="my-1" />
-              )}
-
-              {/* JUDGMENTS section */}
-              {autocompleteSuggestions.length > 0 && (
-                <div>
-                  <div className="px-1 pt-1 pb-0.5">
-                    <Eyebrow noRule as="div">Judgments</Eyebrow>
-                  </div>
-                  <div role="group" aria-label="Judgments" className="space-y-1">
-                    {autocompleteSuggestions.map((item, index) => {
-                      const flatIndex = autocompleteTopicHits.length + index;
-                      const isActive = flatIndex === activeSuggestionIndex;
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isActive}
-                          className={`w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted [&_mark]:bg-[color:var(--gold)] [&_mark]:text-[color:var(--ink)] ${
-                            isActive ? "bg-muted" : ""
-                          }`}
-                          onMouseEnter={() => setActiveSuggestionIndex(flatIndex)}
-                          onClick={() => handleSuggestionSelect(item.title)}
-                          aria-label={`Use suggestion: ${item.title}`}
-                        >
-                          <div
-                            className="font-medium"
-                            // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
-                            dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.title) }}
-                          />
-                          {(item.caseNumber || item.courtName) ? (
-                            <div className="text-xs text-muted-foreground">
-                              {[item.caseNumber, item.courtName, item.decisionDate].filter(Boolean).join(" · ")}
-                            </div>
-                          ) : null}
-                          {item.summary ? (
-                            <div
-                              className="text-xs text-muted-foreground line-clamp-1"
-                              // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
-                              dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.summary) }}
-                            />
-                          ) : null}
                         </button>
                       );
                     })}

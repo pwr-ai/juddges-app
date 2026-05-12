@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSearchStore } from '@/lib/store/searchStore';
 import { cn } from '@/lib/utils';
@@ -153,13 +153,28 @@ function SearchPageContent(): React.JSX.Element | null {
  ? loadingChunksRaw
  : Array.from(loadingChunksRaw as unknown as Set<string>);
 
- const filteredMetadata = useMemo(() => getFilteredMetadata(), [getFilteredMetadata]);
+ // Zustand store actions keep stable references across set() calls, so memoising
+ // on `[getFilteredMetadata]` alone would freeze these on the first render's empty
+ // state and never reflect new search results. Depend on the state slices they read.
+ const filteredMetadata = useMemo(
+   () => getFilteredMetadata(),
+   [getFilteredMetadata, searchMetadata, filters, filterVersion]
+ );
 
- const filteredCount = useMemo(() => getFilteredMetadataCount(), [getFilteredMetadataCount]);
+ const filteredCount = useMemo(
+   () => getFilteredMetadataCount(),
+   [getFilteredMetadataCount, searchMetadata, filters, filterVersion]
+ );
 
- const availableFilters = useMemo(() => getAvailableFiltersFromMetadata(), [getAvailableFiltersFromMetadata]);
+ const availableFilters = useMemo(
+   () => getAvailableFiltersFromMetadata(),
+   [getAvailableFiltersFromMetadata, searchMetadata, filters, filterVersion]
+ );
 
- const activeFilterCount = useMemo(() => getActiveFilterCount(), [getActiveFilterCount]);
+ const activeFilterCount = useMemo(
+   () => getActiveFilterCount(),
+   [getActiveFilterCount, filters, filterVersion]
+ );
 
  const computedTotalPages = useMemo(() => {
  return Math.ceil(filteredCount / pageSize);
@@ -167,7 +182,6 @@ function SearchPageContent(): React.JSX.Element | null {
 
  const selectedCount = getSelectedDocumentCount();
  const {
- suggestions: autocompleteSuggestions,
  topicHits: autocompleteTopicHits,
  isLoading: isAutocompleteLoading,
  clearSuggestions,
@@ -374,14 +388,6 @@ function SearchPageContent(): React.JSX.Element | null {
  searchTimestamp: searchTimestamp,
  }), [query, lastSearchMode, searchType, filters, selectedLanguages, searchMetadata.length, searchTimestamp]);
 
- const handleAutocompleteSelection = useCallback(
- (value: string): void => {
- setQuery(value);
- clearSuggestions();
- },
- [setQuery, clearSuggestions]
- );
-
  const showExpanded = searchMetadata.length === 0 && !error && !(query && hasPerformedSearch);
 
  if (!mounted) {
@@ -488,10 +494,8 @@ function SearchPageContent(): React.JSX.Element | null {
  hasError={!!error}
  hasPerformedSearch={hasPerformedSearch}
  onSearch={handleSearch}
- autocompleteSuggestions={autocompleteSuggestions}
  autocompleteTopicHits={autocompleteTopicHits}
  isAutocompleteLoading={isAutocompleteLoading}
- onSelectAutocompleteSuggestion={handleAutocompleteSelection}
  currentLocale={locale}
  />
 
@@ -540,10 +544,8 @@ function SearchPageContent(): React.JSX.Element | null {
  hasError={!!error}
  hasPerformedSearch={hasPerformedSearch}
  onSearch={handleSearch}
- autocompleteSuggestions={autocompleteSuggestions}
  autocompleteTopicHits={autocompleteTopicHits}
  isAutocompleteLoading={isAutocompleteLoading}
- onSelectAutocompleteSuggestion={handleAutocompleteSelection}
  currentLocale={locale}
  />
 

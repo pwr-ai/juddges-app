@@ -6,16 +6,6 @@ import logger from "@/lib/logger";
 
 const autocompleteLogger = logger.child("useSearchAutocomplete");
 
-export interface AutocompleteSuggestion {
-  id: string;
-  title: string;
-  summary?: string;
-  caseNumber?: string;
-  jurisdiction?: string;
-  courtName?: string;
-  decisionDate?: string;
-}
-
 export interface TopicHit {
   id: string;
   label_pl: string;
@@ -55,53 +45,13 @@ interface UseSearchAutocompleteOptions {
 }
 
 interface UseSearchAutocompleteResult {
-  suggestions: AutocompleteSuggestion[];
   topicHits: TopicHit[];
   isLoading: boolean;
   clearSuggestions: () => void;
 }
 
-interface AutocompleteHit {
-  id?: string;
-  document_id?: string;
-  title?: string;
-  summary?: string;
-  case_number?: string;
-  jurisdiction?: string;
-  court_name?: string;
-  decision_date?: string;
-  _formatted?: {
-    title?: string;
-    summary?: string;
-    case_number?: string;
-    court_name?: string;
-  };
-}
-
 interface AutocompleteResponse {
-  hits?: AutocompleteHit[];
   topic_hits?: TopicHit[];
-}
-
-function mapHitToSuggestion(hit: AutocompleteHit): AutocompleteSuggestion | null {
-  const formatted = hit._formatted;
-  const title = (formatted?.title || hit.title || "").trim();
-  if (!title) {
-    return null;
-  }
-  const id = (hit.id || hit.document_id || "").trim();
-  if (!id) {
-    return null;
-  }
-  return {
-    id,
-    title,
-    summary: formatted?.summary || hit.summary || undefined,
-    caseNumber: formatted?.case_number || hit.case_number || undefined,
-    jurisdiction: hit.jurisdiction || undefined,
-    courtName: formatted?.court_name || hit.court_name || undefined,
-    decisionDate: hit.decision_date || undefined,
-  };
 }
 
 export function useSearchAutocomplete(
@@ -113,12 +63,10 @@ export function useSearchAutocomplete(
     limit = 8,
   }: UseSearchAutocompleteOptions = {}
 ): UseSearchAutocompleteResult {
-  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [topicHits, setTopicHits] = useState<TopicHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const clearSuggestions = useCallback(() => {
-    setSuggestions([]);
     setTopicHits([]);
     setIsLoading(false);
   }, []);
@@ -131,9 +79,12 @@ export function useSearchAutocomplete(
       return;
     }
 
+    // Flip loading on synchronously so the dropdown shows a loading state
+    // during the debounce window — not just during the network round-trip.
+    setIsLoading(true);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(async () => {
-      setIsLoading(true);
       try {
         const params = new URLSearchParams();
         params.set("q", trimmedQuery);
@@ -146,16 +97,11 @@ export function useSearchAutocomplete(
         });
 
         if (!response.ok) {
-          setSuggestions([]);
           setTopicHits([]);
           return;
         }
 
         const data = (await response.json()) as AutocompleteResponse;
-        const mapped = (data.hits || [])
-          .map(mapHitToSuggestion)
-          .filter((item): item is AutocompleteSuggestion => item !== null);
-        setSuggestions(mapped);
         setTopicHits(data.topic_hits ?? []);
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -164,7 +110,6 @@ export function useSearchAutocomplete(
         autocompleteLogger.warn("Autocomplete request failed", {
           message: error instanceof Error ? error.message : String(error),
         });
-        setSuggestions([]);
         setTopicHits([]);
       } finally {
         setIsLoading(false);
@@ -178,7 +123,6 @@ export function useSearchAutocomplete(
   }, [clearSuggestions, debounceMs, enabled, limit, minChars, query]);
 
   return {
-    suggestions,
     topicHits,
     isLoading,
     clearSuggestions,

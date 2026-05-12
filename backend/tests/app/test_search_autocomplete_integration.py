@@ -1,4 +1,4 @@
-"""Integration tests for Meilisearch-backed autocomplete endpoint."""
+"""Integration tests for the topics-only autocomplete endpoint."""
 
 from typing import Any
 from unittest.mock import patch
@@ -37,6 +37,7 @@ async def test_autocomplete_returns_503_when_meilisearch_not_configured(
 async def test_autocomplete_returns_topic_hits_from_search_service(
     authenticated_client,
 ):
+    """The endpoint surfaces topic hits and never exposes a ``hits`` field."""
     from app.api.search import get_search_service
 
     class FakeSearchService:
@@ -47,41 +48,39 @@ async def test_autocomplete_returns_topic_hits_from_search_service(
         ) -> dict[str, Any]:
             assert query == "kred"
             assert limit == 5
-            assert filters == "jurisdiction = 'PL'"
+            assert filters == "jurisdictions IN ['pl']"
             return {
-                "hits": [
+                "topic_hits": [
                     {
-                        "value": "Kredyty frankowe",
-                        "count": 142,
-                        "sources": ["legal_topics", "keywords"],
-                    },
-                    {
-                        "value": "Kredyt mieszkaniowy",
-                        "count": 37,
-                        "sources": ["keywords"],
+                        "id": "consumer_credit",
+                        "label_pl": "Kredyty frankowe",
+                        "label_en": "Swiss-franc loans",
+                        "doc_count": 142,
+                        "category": "consumer_credit",
+                        "jurisdictions": ["pl"],
                     },
                 ],
                 "query": query,
                 "processingTimeMs": 4,
-                "estimatedTotalHits": 2,
+                "estimatedTotalHits": 1,
             }
 
     app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
 
     response = await authenticated_client.get(
         "/api/search/autocomplete",
-        params={"q": "kred", "limit": 5, "filters": "jurisdiction = 'PL'"},
+        params={"q": "kred", "limit": 5, "filters": "jurisdictions IN ['pl']"},
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["query"] == "kred"
     assert payload["processingTimeMs"] == 4
-    assert payload["estimatedTotalHits"] == 2
-    assert len(payload["hits"]) == 2
-    assert payload["hits"][0]["value"] == "Kredyty frankowe"
-    assert payload["hits"][0]["count"] == 142
-    assert payload["hits"][0]["sources"] == ["legal_topics", "keywords"]
+    assert payload["estimatedTotalHits"] == 1
+    assert "hits" not in payload
+    assert len(payload["topic_hits"]) == 1
+    assert payload["topic_hits"][0]["id"] == "consumer_credit"
+    assert payload["topic_hits"][0]["label_pl"] == "Kredyty frankowe"
 
 
 async def test_autocomplete_returns_502_when_search_backend_fails(
@@ -108,7 +107,7 @@ async def test_autocomplete_returns_502_when_search_backend_fails(
     assert "autocomplete service error" in payload["detail"].lower()
 
 
-async def test_autocomplete_analytics_includes_topic_hits_count(
+async def test_autocomplete_analytics_records_topic_hits_count(
     authenticated_client,
 ):
     """Background task is scheduled with topic_hits_count == number of topic hits."""
@@ -121,10 +120,6 @@ async def test_autocomplete_analytics_includes_topic_hits_count(
             self, query: str, limit: int = 10, filters: str | None = None
         ) -> dict[str, Any]:
             return {
-                "hits": [
-                    {"id": "doc-1", "title": "Drug offence ruling"},
-                    {"id": "doc-2", "title": "Another ruling"},
-                ],
                 "topic_hits": [
                     {
                         "id": "drug_trafficking",
@@ -159,7 +154,6 @@ async def test_autocomplete_analytics_includes_topic_hits_count(
     payload = response.json()
     assert len(payload["topic_hits"]) == 2
 
-    # Background task must have been registered with topic_hits_count=2
     mock_record.assert_called_once_with(
         query="narko",
         hit_count=2,
@@ -172,7 +166,7 @@ async def test_autocomplete_analytics_includes_topic_hits_count(
 async def test_autocomplete_analytics_zero_topic_hits(
     authenticated_client,
 ):
-    """topic_hits_count is 0 when the topics index returns nothing."""
+    """hit_count and topic_hits_count are both 0 when nothing matches."""
     from app.api.search import get_search_service
 
     class FakeSearchService:
@@ -182,10 +176,10 @@ async def test_autocomplete_analytics_zero_topic_hits(
             self, query: str, limit: int = 10, filters: str | None = None
         ) -> dict[str, Any]:
             return {
-                "hits": [{"id": "doc-1", "title": "Tax ruling"}],
                 "topic_hits": [],
                 "query": query,
                 "processingTimeMs": 5,
+                "estimatedTotalHits": 0,
             }
 
     app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
@@ -198,7 +192,7 @@ async def test_autocomplete_analytics_zero_topic_hits(
     assert response.status_code == 200
     mock_record.assert_called_once_with(
         query="vat",
-        hit_count=1,
+        hit_count=0,
         processing_ms=5,
         filters=None,
         topic_hits_count=0,

@@ -21,13 +21,14 @@ router = APIRouter(prefix="/api/search", tags=["Search"])
 
 
 class AutocompleteResponse(BaseModel):
-    """Autocomplete response payload.
+    """Autocomplete response payload — topic chips from the Meilisearch
+    ``topics`` index.
 
-    ``topic_hits`` is additive — existing ``hits`` field shape is unchanged.
-    If the topics index is unavailable, ``topic_hits`` is an empty list.
+    Judgment-document suggestions were retired in favour of routing topic
+    clicks to a full search.  If the topics index is unavailable,
+    ``topic_hits`` is an empty list.
     """
 
-    hits: list[dict[str, Any]] = Field(default_factory=list)
     topic_hits: list[TopicHit] = Field(default_factory=list)
     query: str
     processingTimeMs: int | None = None
@@ -107,7 +108,6 @@ async def autocomplete(
             status_code=502, detail=f"Autocomplete service error: {exc}"
         ) from exc
 
-    hits = result.get("hits", [])
     raw_topic_hits = result.get("topic_hits", [])
     processing_ms = result.get("processingTimeMs")
 
@@ -121,18 +121,19 @@ async def autocomplete(
                 "Skipping malformed topic hit: {} ({})", raw, type(exc).__name__
             )
 
-    # Record analytics in background (fire-and-forget)
+    # Record analytics in background (fire-and-forget). ``hit_count`` reflects
+    # how many topic chips the user saw — there are no separate judgment hits
+    # in the autocomplete path anymore.
     background_tasks.add_task(
         record_search_query,
         query=query,
-        hit_count=len(hits),
+        hit_count=len(topic_hits),
         processing_ms=processing_ms,
         filters=filters,
         topic_hits_count=len(topic_hits),
     )
 
     return AutocompleteResponse(
-        hits=hits,
         topic_hits=topic_hits,
         query=result.get("query", query),
         processingTimeMs=processing_ms,

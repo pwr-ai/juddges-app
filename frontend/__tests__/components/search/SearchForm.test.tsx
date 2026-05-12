@@ -107,45 +107,8 @@ describe('SearchForm', () => {
     expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
   });
 
-  it('renders judgment suggestions and selects one by title', async () => {
-    const user = userEvent.setup();
-    const onSelectAutocompleteSuggestion = jest.fn();
-
-    render(
-      <SearchForm
-        {...defaultProps}
-        query="kred"
-        autocompleteSuggestions={[
-          {
-            id: 'doc-1',
-            title: 'Kredyty frankowe',
-            caseNumber: 'I CSK 1/22',
-            courtName: 'Sąd Najwyższy',
-          },
-          {
-            id: 'doc-2',
-            title: 'art. 720 k.c.',
-          },
-        ]}
-        onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
-      />
-    );
-
-    expect(screen.getByText(/Judgments/i)).toBeInTheDocument();
-    expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
-    expect(screen.getByText('art. 720 k.c.')).toBeInTheDocument();
-    expect(screen.getByText(/I CSK 1\/22/)).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole('option', { name: /Use suggestion: Kredyty frankowe/i })
-    );
-
-    expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('Kredyty frankowe');
-  });
-
-
   // ---------------------------------------------------------------------------
-  // TOPICS section
+  // TOPICS section — the only autocomplete surface
   // ---------------------------------------------------------------------------
 
   const sampleTopicHits: TopicHit[] = [
@@ -224,7 +187,6 @@ describe('SearchForm', () => {
         />
       );
 
-      // secondary labels are the English ones
       expect(screen.getByText('Drug trafficking')).toBeInTheDocument();
     });
 
@@ -242,58 +204,36 @@ describe('SearchForm', () => {
       expect(screen.getByText('(299)')).toBeInTheDocument();
     });
 
-    it('hides TOPICS section when autocompleteTopicHits is empty', () => {
+    it('shows an empty state when there are no topic hits', () => {
       render(
         <SearchForm
           {...defaultProps}
           query="narko"
           autocompleteTopicHits={[]}
-          autocompleteSuggestions={[
-            { id: '1', title: 'Contract liability' },
-          ]}
         />
       );
 
-      // TOPICS eyebrow must not appear
+      expect(screen.getByText(/No matching topics/i)).toBeInTheDocument();
       expect(screen.queryByText(/^topics$/i)).not.toBeInTheDocument();
-      // JUDGMENTS section should still render
-      expect(screen.getByText(/judgments/i)).toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
 
-    it('hides JUDGMENTS section when autocompleteSuggestions is empty but topics present', () => {
+    it('shows loading text while fetching, before any topic hits arrive', () => {
       render(
         <SearchForm
           {...defaultProps}
           query="narko"
-          autocompleteTopicHits={sampleTopicHits}
-          autocompleteSuggestions={[]}
+          autocompleteTopicHits={[]}
+          isAutocompleteLoading={true}
         />
       );
 
-      expect(screen.getByText(/topics/i)).toBeInTheDocument();
-      expect(screen.queryByText(/^judgments$/i)).not.toBeInTheDocument();
-    });
-
-    it('renders both TOPICS and JUDGMENTS when both have data', () => {
-      render(
-        <SearchForm
-          {...defaultProps}
-          query="narko"
-          autocompleteTopicHits={sampleTopicHits}
-          autocompleteSuggestions={[
-            { id: '1', title: 'Contract liability' },
-          ]}
-        />
-      );
-
-      expect(screen.getByText(/topics/i)).toBeInTheDocument();
-      expect(screen.getByText(/judgments/i)).toBeInTheDocument();
+      expect(screen.getByText(/Loading suggestions/i)).toBeInTheDocument();
+      expect(screen.queryByText(/No matching topics/i)).not.toBeInTheDocument();
     });
 
     it('clicking a topic chip calls router.push with /search?q=...&topic=... (en locale)', async () => {
       const pushMock = jest.fn();
-      // The global jest.mock('next/navigation', ...) in tests/setup.ts is the
-      // live mock; mutate useRouter directly on the already-hoisted module mock.
       const navigation = jest.requireMock('next/navigation') as {
         useRouter: jest.Mock;
       };
@@ -312,9 +252,7 @@ describe('SearchForm', () => {
 
       await user.click(screen.getByRole('option', { name: /Topic: Drug trafficking/i }));
 
-      expect(pushMock).toHaveBeenCalledWith(
-        expect.stringContaining('/search?')
-      );
+      expect(pushMock).toHaveBeenCalledWith(expect.stringContaining('/search?'));
       const url = pushMock.mock.calls[0][0] as string;
       expect(url).toContain('q=Drug+trafficking');
       expect(url).toContain('topic=drug_trafficking');
@@ -362,7 +300,6 @@ describe('SearchForm', () => {
 
       await user.click(screen.getByRole('option', { name: /Topic: Drug trafficking/i }));
 
-      // Fire-and-forget, so we check fetch was called
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/search/topic-click',
         expect.objectContaining({
@@ -372,7 +309,7 @@ describe('SearchForm', () => {
       );
     });
 
-    it('ArrowDown focuses topics before judgments when both are populated', async () => {
+    it('ArrowDown cycles through topic options', async () => {
       const user = userEvent.setup();
 
       render(
@@ -380,34 +317,23 @@ describe('SearchForm', () => {
           {...defaultProps}
           query="narko"
           autocompleteTopicHits={sampleTopicHits}
-          autocompleteSuggestions={[
-            { id: 's1', title: 'Contract liability' },
-            { id: 's2', title: 'Tort law' },
-          ]}
           currentLocale="en"
         />
       );
 
       const input = screen.getByRole('textbox');
 
-      // Press ArrowDown once — should activate the first topic (index 0)
       await user.type(input, '{ArrowDown}');
 
       const firstTopic = screen.getByRole('option', { name: /Topic: Drug trafficking/i });
       expect(firstTopic).toHaveAttribute('aria-selected', 'true');
 
-      // The second topic should not be active yet
       const secondTopic = screen.getByRole('option', { name: /Topic: Fraud/i });
       expect(secondTopic).toHaveAttribute('aria-selected', 'false');
 
-      // Press ArrowDown 3 more times (total 4 presses) — skips second topic (index 1)
-      // and both judgment suggestions (indices 2, 3) → second suggestion at index 3
-      await user.type(input, '{ArrowDown}{ArrowDown}{ArrowDown}');
+      await user.type(input, '{ArrowDown}');
 
-      const secondSuggestion = screen.getByRole('option', { name: /Use suggestion: Tort law/i });
-      expect(secondSuggestion).toHaveAttribute('aria-selected', 'true');
-
-      // First topic should no longer be active
+      expect(secondTopic).toHaveAttribute('aria-selected', 'true');
       expect(firstTopic).toHaveAttribute('aria-selected', 'false');
     });
   });

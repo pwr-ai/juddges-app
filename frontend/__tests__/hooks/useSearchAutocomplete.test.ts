@@ -1,5 +1,5 @@
 /**
- * Hook tests for useSearchAutocomplete
+ * Hook tests for useSearchAutocomplete (topics-only)
  *
  * @jest-environment jsdom
  */
@@ -19,24 +19,22 @@ describe('useSearchAutocomplete Hook', () => {
     jest.useRealTimers();
   });
 
-  it('debounces requests and maps backend judgment hits into suggestions', async () => {
+  it('debounces requests and surfaces topic hits from the API', async () => {
+    const topicFixture: TopicHit = {
+      id: 'consumer_credit',
+      label_pl: 'Kredyty frankowe',
+      label_en: 'Swiss-franc loans',
+      aliases_pl: [],
+      aliases_en: [],
+      category: 'consumer_credit',
+      doc_count: 142,
+      jurisdictions: ['pl'],
+      _formatted: { label_pl: '<mark>Kred</mark>yty frankowe' },
+    };
+
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => ({
-        hits: [
-          {
-            id: 'doc-1',
-            title: 'Kredyty frankowe',
-            case_number: 'I CSK 1/22',
-            court_name: 'Sąd Najwyższy',
-          },
-          {
-            id: 'doc-2',
-            title: 'Kredyt mieszkaniowy',
-            summary: 'Decyzja w sprawie kredytu',
-          },
-        ],
-      }),
+      json: async () => ({ topic_hits: [topicFixture] }),
     });
 
     const { result } = renderHook(() =>
@@ -63,45 +61,9 @@ describe('useSearchAutocomplete Hook', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.suggestions).toHaveLength(2);
-      const [first, second] = result.current.suggestions;
-      expect(first.id).toBe('doc-1');
-      expect(first.title).toBe('Kredyty frankowe');
-      expect(first.caseNumber).toBe('I CSK 1/22');
-      expect(first.courtName).toBe('Sąd Najwyższy');
-      expect(second.title).toBe('Kredyt mieszkaniowy');
-      expect(second.summary).toBe('Decyzja w sprawie kredytu');
-    });
-  });
-
-  it('drops hits with empty titles or missing ids', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        hits: [
-          { id: 'doc-empty', title: '   ' },
-          { title: 'no-id title' },
-          {
-            id: 'doc-keep',
-            title: 'art. 720 k.c.',
-            summary: 'Pożyczka',
-          },
-        ],
-      }),
-    });
-
-    const { result } = renderHook(() =>
-      useSearchAutocomplete('art', { enabled: true, debounceMs: 50, limit: 5 })
-    );
-
-    act(() => {
-      jest.advanceTimersByTime(50);
-    });
-
-    await waitFor(() => {
-      expect(result.current.suggestions).toHaveLength(1);
-      expect(result.current.suggestions[0].id).toBe('doc-keep');
-      expect(result.current.suggestions[0].title).toBe('art. 720 k.c.');
+      expect(result.current.topicHits).toHaveLength(1);
+      expect(result.current.topicHits[0].id).toBe('consumer_credit');
+      expect(result.current.topicHits[0].label_pl).toBe('Kredyty frankowe');
     });
   });
 
@@ -115,94 +77,14 @@ describe('useSearchAutocomplete Hook', () => {
     });
 
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.suggestions).toEqual([]);
+    expect(result.current.topicHits).toEqual([]);
     expect(result.current.isLoading).toBe(false);
-  });
-
-  it('prefers _formatted highlighted fields over raw fields when present', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        hits: [
-          {
-            id: 'doc-fmt',
-            title: 'Prawo pracy',
-            _formatted: { title: '<mark>Prawo</mark> pracy' },
-          },
-        ],
-      }),
-    });
-
-    const { result } = renderHook(() =>
-      useSearchAutocomplete('prawo', { enabled: true, debounceMs: 50, limit: 5 })
-    );
-
-    act(() => {
-      jest.advanceTimersByTime(50);
-    });
-
-    await waitFor(() => {
-      expect(result.current.suggestions[0]).toEqual(
-        expect.objectContaining({
-          id: 'doc-fmt',
-          title: '<mark>Prawo</mark> pracy',
-        })
-      );
-    });
-  });
-
-  it('surfaces topicHits when the API returns them', async () => {
-    const topicFixture: TopicHit = {
-      id: 'drug_trafficking',
-      label_pl: 'Handel narkotykami',
-      label_en: 'Drug trafficking',
-      aliases_pl: ['narkomania'],
-      aliases_en: ['narcotics'],
-      category: 'drug_offences',
-      doc_count: 247,
-      jurisdictions: ['pl', 'uk'],
-      _formatted: { label_pl: '<mark>Handel</mark> narkotykami' },
-    };
-
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        hits: [],
-        topic_hits: [topicFixture],
-      }),
-    });
-
-    const { result } = renderHook(() =>
-      useSearchAutocomplete('handel', { enabled: true, debounceMs: 50, limit: 5 })
-    );
-
-    act(() => {
-      jest.advanceTimersByTime(50);
-    });
-
-    await waitFor(() => {
-      expect(result.current.topicHits).toHaveLength(1);
-      const topic = result.current.topicHits[0];
-      expect(topic.id).toBe('drug_trafficking');
-      expect(topic.label_pl).toBe('Handel narkotykami');
-      expect(topic.label_en).toBe('Drug trafficking');
-      expect(topic.doc_count).toBe(247);
-      expect(topic.jurisdictions).toEqual(['pl', 'uk']);
-    });
   });
 
   it('defaults topicHits to [] when the API omits the field', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => ({
-        hits: [
-          {
-            id: 'doc-3',
-            title: 'Tax law judgment',
-          },
-        ],
-        // topic_hits intentionally absent
-      }),
+      json: async () => ({}),
     });
 
     const { result } = renderHook(() =>
@@ -215,7 +97,27 @@ describe('useSearchAutocomplete Hook', () => {
 
     await waitFor(() => {
       expect(result.current.topicHits).toEqual([]);
-      expect(result.current.suggestions).toHaveLength(1);
+      expect(result.current.isLoading).toBe(false);
+    });
+  });
+
+  it('clears topic hits when fetch returns a non-OK response', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      json: async () => ({}),
+    });
+
+    const { result } = renderHook(() =>
+      useSearchAutocomplete('tax', { enabled: true, debounceMs: 50, limit: 5 })
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(50);
+    });
+
+    await waitFor(() => {
+      expect(result.current.topicHits).toEqual([]);
+      expect(result.current.isLoading).toBe(false);
     });
   });
 });
