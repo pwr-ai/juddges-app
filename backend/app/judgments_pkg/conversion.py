@@ -208,6 +208,33 @@ def _merge_base_extraction_fields(
             metadata[key] = value
 
 
+def _extract_base_fields(
+    raw_doc_data: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Build a fresh dict of `base_*` extracted-schema columns from a judgments row.
+
+    Returns None when the row has no non-empty base_* keys. Mirrors
+    `_merge_base_extraction_fields` semantics: skips None, empty lists, and
+    serialises datetimes to ISO strings — so the frontend can render values
+    without further parsing.
+    """
+    if not raw_doc_data:
+        return None
+    result: dict[str, Any] = {}
+    for key, value in raw_doc_data.items():
+        if not key.startswith("base_"):
+            continue
+        if value is None:
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            continue
+        if isinstance(value, datetime):
+            result[key] = value.isoformat()
+        else:
+            result[key] = value
+    return result if result else None
+
+
 def _build_document_metadata_dict(doc: LegalDocument) -> dict:
     """Build metadata dictionary from document, excluding full text and HTML content."""
     metadata = {
