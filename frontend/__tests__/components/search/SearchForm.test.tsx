@@ -45,12 +45,25 @@ describe('SearchForm', () => {
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
   });
 
-  it('shows popular searches before the first search', () => {
+  it('shows bilingual suggested-topic pills before the first search', () => {
     render(<SearchForm {...defaultProps} />);
 
     expect(screen.getByText(/Popular searches/i)).toBeInTheDocument();
-    expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
-    expect(screen.getByText('Intellectual property')).toBeInTheDocument();
+    // First dual pair — PL pill + EN pill rendered side by side.
+    expect(screen.getByRole('button', { name: 'Posiadanie narkotyków' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Drug possession' })).toBeInTheDocument();
+    // Spot-check a later dual pair so we don't only cover index 0.
+    expect(
+      screen.getByRole('button', { name: 'Sentencing for drug offences' })
+    ).toBeInTheDocument();
+    // Both single-phrase cross-lingual pills are rendered. The `[PL+UK]`
+    // badge is aria-hidden, so the accessible name is just the topic label.
+    expect(
+      screen.getByRole('button', { name: 'Money laundering from drug proceeds' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Conspiracy to supply controlled drugs' })
+    ).toBeInTheDocument();
   });
 
   it('hides popular searches after search results are shown', () => {
@@ -85,7 +98,7 @@ describe('SearchForm', () => {
     expect(onSearch).toHaveBeenCalledTimes(1);
   });
 
-  it('applies a popular-search preset', async () => {
+  it('clicking a dual Polish pill locks language to {"pl"}', async () => {
     const user = userEvent.setup();
     const setQuery = jest.fn();
     const setSearchType = jest.fn();
@@ -100,11 +113,57 @@ describe('SearchForm', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Intellectual property' }));
+    await user.click(screen.getByRole('button', { name: 'Posiadanie narkotyków' }));
 
-    expect(setQuery).toHaveBeenCalledWith('Intellectual property');
+    expect(setQuery).toHaveBeenCalledWith('Posiadanie narkotyków');
+    expect(setSearchType).toHaveBeenCalledWith('thinking');
+    expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl']));
+  });
+
+  it('clicking a dual English pill locks language to {"uk"}', async () => {
+    const user = userEvent.setup();
+    const setQuery = jest.fn();
+    const setSearchType = jest.fn();
+    const setSelectedLanguages = jest.fn();
+
+    render(
+      <SearchForm
+        {...defaultProps}
+        setQuery={setQuery}
+        setSearchType={setSearchType}
+        setSelectedLanguages={setSelectedLanguages}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Drug possession' }));
+
+    expect(setQuery).toHaveBeenCalledWith('Drug possession');
     expect(setSearchType).toHaveBeenCalledWith('thinking');
     expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
+  });
+
+  it('clicking a single cross-lingual pill enables both PL and UK', async () => {
+    const user = userEvent.setup();
+    const setQuery = jest.fn();
+    const setSearchType = jest.fn();
+    const setSelectedLanguages = jest.fn();
+
+    render(
+      <SearchForm
+        {...defaultProps}
+        setQuery={setQuery}
+        setSearchType={setSearchType}
+        setSelectedLanguages={setSelectedLanguages}
+      />
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: 'Money laundering from drug proceeds' })
+    );
+
+    expect(setQuery).toHaveBeenCalledWith('Money laundering from drug proceeds');
+    expect(setSearchType).toHaveBeenCalledWith('thinking');
+    expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['pl', 'uk']));
   });
 
   // ---------------------------------------------------------------------------
