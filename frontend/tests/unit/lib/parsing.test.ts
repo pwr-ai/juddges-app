@@ -1,104 +1,45 @@
-import {
-  convertXmlTagsToHtml,
-  fixHtmlContentServer,
-  buildDocumentHtml,
-} from '@/lib/parsing';
+// Tests for the standalone-HTML wrapper used by /api/documents/[id]/html.
+//
+// We import directly from `@/lib/parsing/html-builder` (rather than the
+// `@/lib/parsing` barrel) so this suite stays decoupled from the JSDOM-based
+// XML/HTML processors in the same package, which Jest's CJS transform cannot
+// load alongside their ESM-only dependencies.
 
-describe('convertXmlTagsToHtml', () => {
-  it('converts paragraph tags to p tags', () => {
-    expect(convertXmlTagsToHtml('<paragraph>hi</paragraph>')).toBe('<p>hi</p>');
-  });
-
-  it('converts heading, emphasis, strong_emphasis, and list tags', () => {
-    const input =
-      '<heading>Title</heading><emphasis>x</emphasis><strong_emphasis>y</strong_emphasis><ordered_list><list_item>1</list_item></ordered_list><unordered_list><list_item>a</list_item></unordered_list>';
-    const expected =
-      '<h3>Title</h3><em>x</em><strong>y</strong><ol><li>1</li></ol><ul><li>a</li></ul>';
-    expect(convertXmlTagsToHtml(input)).toBe(expected);
-  });
-
-  it('returns empty string for empty/null/undefined input', () => {
-    expect(convertXmlTagsToHtml('')).toBe('');
-    // @ts-expect-error testing runtime guard
-    expect(convertXmlTagsToHtml(null)).toBe('');
-    // @ts-expect-error testing runtime guard
-    expect(convertXmlTagsToHtml(undefined)).toBe('');
-  });
-
-  it('is case-insensitive on tag names', () => {
-    expect(convertXmlTagsToHtml('<PARAGRAPH>X</PARAGRAPH>')).toBe('<p>X</p>');
-  });
-
-  it('leaves unrelated tags untouched', () => {
-    expect(convertXmlTagsToHtml('<div>x</div>')).toBe('<div>x</div>');
-  });
-
-  it('handles special characters inside tags', () => {
-    expect(convertXmlTagsToHtml('<paragraph>&amp; <></paragraph>')).toBe(
-      '<p>&amp; <></p>'
-    );
-  });
-});
-
-describe('fixHtmlContentServer', () => {
-  it('returns empty string for empty input', () => {
-    expect(fixHtmlContentServer('')).toBe('');
-  });
-
-  it('replaces double newlines with paragraph breaks', () => {
-    expect(fixHtmlContentServer('a\n\nb')).toBe('a</p><p>b');
-  });
-
-  it('removes empty paragraph tags', () => {
-    expect(fixHtmlContentServer('<p></p><p>x</p>')).toBe('<p>x</p>');
-  });
-
-  it('self-closes void elements like br/hr/img/input', () => {
-    const result = fixHtmlContentServer('<br><hr><img src="x"><input name="y">');
-    expect(result).toContain('<br />');
-    expect(result).toContain('<hr />');
-    expect(result).toContain('<img src="x" />');
-    expect(result).toContain('<input name="y" />');
-  });
-
-  it('does not double-close already self-closed tags', () => {
-    const result = fixHtmlContentServer('<br />');
-    expect(result).toBe('<br />');
-  });
-});
+import { buildDocumentHtml } from '@/lib/parsing/html-builder';
 
 describe('buildDocumentHtml', () => {
-  it('wraps content in a full HTML document by default', () => {
-    const result = buildDocumentHtml('<paragraph>x</paragraph>');
-    expect(result).toContain('<!DOCTYPE html>');
-    expect(result).toContain('<html lang="en">');
-    expect(result).toContain('<body>');
-    expect(result).toContain('<p>x</p>');
+  it('wraps content in a doc-container with the given title', () => {
+    const out = buildDocumentHtml('<p>x</p>', 'My Doc');
+    expect(out).toContain('<!doctype html>');
+    expect(out).toContain('<title>My Doc</title>');
+    expect(out).toContain('class="doc-container"');
+    expect(out).toContain('<p>x</p>');
   });
 
-  it('returns processed content only when wrapInBody is false', () => {
-    const result = buildDocumentHtml('<paragraph>x</paragraph>', { wrapInBody: false });
-    expect(result).not.toContain('<!DOCTYPE html>');
-    expect(result).toContain('<p>x</p>');
+  it('defaults the title when none is provided', () => {
+    const out = buildDocumentHtml('<p>x</p>');
+    expect(out).toContain('<title>Document</title>');
   });
 
-  it('includes title when provided', () => {
-    const result = buildDocumentHtml('content', { title: 'My Doc' });
-    expect(result).toContain('<title>My Doc</title>');
+  it('escapes special characters in the title to prevent injection', () => {
+    const out = buildDocumentHtml('content', '<script>x</script>');
+    expect(out).not.toContain('<script>x</script>');
+    expect(out).toContain('&lt;script&gt;x&lt;/script&gt;');
   });
 
-  it('omits title element when not provided', () => {
-    const result = buildDocumentHtml('content');
-    expect(result).not.toContain('<title>');
+  it('converts plain-text content into <p> blocks split on blank lines', () => {
+    const out = buildDocumentHtml('hello\n\nworld', 'T');
+    expect(out).toContain('<p>hello</p>');
+    expect(out).toContain('<p>world</p>');
   });
 
-  it('appends custom styles when provided', () => {
-    const result = buildDocumentHtml('content', { styles: '.custom { color: red; }' });
-    expect(result).toContain('.custom { color: red; }');
-  });
-
-  it('handles empty content', () => {
-    const result = buildDocumentHtml('');
-    expect(result).toContain('<body>');
+  // Regression guard for the width leak: the previous buildDocumentHtml emitted
+  // `body { max-width: 800px; margin: 0 auto; padding: 2rem }`, which leaked
+  // through SanitizedHtmlView's unscoped <style> tag and clamped the host page
+  // to ~800px wide on /documents/[id]. Block any future re-introduction.
+  it('does not constrain body width in the embedded stylesheet', () => {
+    const out = buildDocumentHtml('<p>x</p>', 'My Doc');
+    expect(out).not.toMatch(/body\s*\{[^}]*max-width\s*:\s*\d+px/);
+    expect(out).not.toMatch(/body\s*\{[^}]*margin\s*:\s*0\s+auto/);
   });
 });
