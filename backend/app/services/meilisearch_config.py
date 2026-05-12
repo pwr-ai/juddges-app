@@ -245,6 +245,9 @@ MEILISEARCH_INDEX_SETTINGS: dict[str, Any] = {
 # validator. Keep these in this file so a settings change forces a code
 # change in the prompt/schema at the same time.
 
+# Note: ``decision_date`` and ``base_extraction_status`` are intentionally
+# omitted — date ranges are handled separately by the validator, and
+# extraction_status is an internal pipeline flag, not user-facing.
 MEILISEARCH_FACET_VOCABULARY: dict[str, tuple[str, ...]] = {
     "jurisdiction": ("PL", "UK"),
     "court_level": (
