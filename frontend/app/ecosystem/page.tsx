@@ -114,11 +114,10 @@ const PROJECTS: ProjectCard[] = [
     role: "this-app",
     team: "Wrocław University of Science and Technology",
     description:
-      "The web platform you are using right now. Provides hybrid semantic + full-text search, RAG chat, dynamic schema-driven extraction, and analytics over Polish and England & Wales judgments. Designed as an open research instrument that consumes datasets and models produced upstream.",
+      "The web platform you are using right now. Provides hybrid semantic + full-text search, dynamic schema-driven extraction, and analytics over Polish and England & Wales judgments. Designed as an open research instrument that consumes datasets and models produced upstream.",
     href: "https://github.com/pwr-ai/juddges-app",
     badges: [
       "Hybrid search",
-      "RAG chat",
       "Schema generator",
       "Analytics",
       "Open source",
@@ -145,7 +144,7 @@ const FLOW_STEPS = [
     icon: FlaskConical,
     title: "Research is enabled",
     description:
-      "Researchers query, chat with, and extract structured data from judgments through this platform — backed by the datasets and models produced upstream by the wider JuDDGES collaboration.",
+      "Researchers query and extract structured data from judgments through this platform — backed by the datasets and models produced upstream by the wider JuDDGES collaboration.",
     where: "JuDDGES App (this site)",
   },
 ];

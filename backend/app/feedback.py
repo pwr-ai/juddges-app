@@ -12,7 +12,7 @@ import re
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -303,6 +303,7 @@ Expected Supabase tables (create these manually or via migration):
 @limiter.limit(_FEEDBACK_RATE_LIMIT)
 async def submit_search_feedback(
     request: Request,
+    response: Response,
     body: SearchFeedbackRequest,
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
@@ -400,6 +401,7 @@ async def submit_search_feedback(
 @limiter.limit(_FEEDBACK_RATE_LIMIT)
 async def submit_feature_feedback(
     request: Request,
+    response: Response,
     body: FeatureFeedbackRequest,
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ):
@@ -679,6 +681,7 @@ async def get_recent_feature_feedback(
 @limiter.limit(_FEEDBACK_RATE_LIMIT)
 async def upvote_feature_request(
     request: Request,
+    response: Response,
     feedback_id: str,
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ):

@@ -42,14 +42,16 @@ describe('LandingPage', () => {
       />
     );
 
+    // /search is auth-gated; landing CTAs and demo links route through /auth/login
+    // so unauth visitors don't hit a redirect loop.
     expect(
       screen
         .getAllByRole('link', { name: /try search/i })
-        .some((link) => link.getAttribute('href') === '/search')
+        .some((link) => link.getAttribute('href') === '/auth/login')
     ).toBe(true);
     expect(screen.getByRole('link', { name: /frankowicze i abuzywne klauzule/i })).toHaveAttribute(
       'href',
-      expect.stringContaining('/search?')
+      '/auth/login'
     );
     expect(screen.getByText(/popular demo queries/i)).toBeInTheDocument();
   });

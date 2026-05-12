@@ -3,7 +3,7 @@
  */
 
 import { act, renderHook } from '@testing-library/react';
-import { useSearchResults } from '@/hooks/useSearchResults';
+import { useSearchResults, meiliHitToSearchDocument } from '@/hooks/useSearchResults';
 import { useSearchStore } from '@/lib/store/searchStore';
 
 jest.mock('@/lib/store/searchStore', () => ({
@@ -290,5 +290,41 @@ describe('useSearchResults', () => {
 
     expect(typeof result.current.convertMetadataToSearchDocument).toBe('function');
     expect(result.current.fullDocumentsMapRef.current).toBeInstanceOf(Map);
+  });
+});
+
+describe('meiliHitToSearchDocument', () => {
+  it('populates highlighted from _formatted and strips marks from plain fields', () => {
+    const hit = {
+      id: 'doc-1',
+      title: 'The Law',
+      summary: 'A summary of law.',
+      _formatted: {
+        title: 'The <mark>Law</mark>',
+        summary: 'A summary of <mark>law</mark>.',
+      },
+    } as unknown as Parameters<typeof meiliHitToSearchDocument>[0];
+
+    const result = meiliHitToSearchDocument(hit);
+
+    expect(result.title).toBe('The Law');
+    expect(result.summary).toBe('A summary of law.');
+    expect(result.highlighted).toEqual({
+      title: 'The <mark>Law</mark>',
+      summary: 'A summary of <mark>law</mark>.',
+    });
+  });
+
+  it('sets highlighted to null when _formatted is absent', () => {
+    const hit = {
+      id: 'doc-2',
+      title: 'Plain Title',
+      summary: 'Plain summary',
+    } as unknown as Parameters<typeof meiliHitToSearchDocument>[0];
+
+    const result = meiliHitToSearchDocument(hit);
+
+    expect(result.title).toBe('Plain Title');
+    expect(result.highlighted).toBeNull();
   });
 });

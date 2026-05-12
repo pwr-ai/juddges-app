@@ -200,3 +200,64 @@ class TestAttachEmbeddingsBatch:
     async def test_length_mismatch_raises(self):
         with pytest.raises(ValueError, match="same length"):
             await attach_embeddings_batch([{"id": "a"}], [])
+
+    @pytest.mark.asyncio
+    async def test_sub_batches_split_large_input(self, monkeypatch):
+        # Force a tiny chunk size so we can observe splitting on a small fixture.
+        monkeypatch.setattr(
+            "app.services.meilisearch_embeddings._TEI_SUB_BATCH_SIZE", 2
+        )
+        docs = [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}, {"id": "e"}]
+        rows = [
+            {"base_case_name": "A"},
+            {"base_case_name": "B"},
+            {"base_case_name": "C"},
+            {"base_case_name": "D"},
+            {"base_case_name": "E"},
+        ]
+        calls: list[list[str]] = []
+
+        def fake_embed(payload):
+            assert isinstance(payload, list)
+            calls.append(list(payload))
+            return [[float(len(t))] * 1024 for t in payload]
+
+        with patch(
+            "app.services.meilisearch_embeddings.embed_texts",
+            side_effect=fake_embed,
+        ):
+            result = await attach_embeddings_batch(docs, rows)
+
+        assert calls == [["A", "B"], ["C", "D"], ["E"]]
+        for d in result:
+            assert d["_vectors"]["bge-m3"][0] == 1.0
+            assert len(d["_vectors"]["bge-m3"]) == 1024
+
+    @pytest.mark.asyncio
+    async def test_sub_batch_failure_isolated_to_slice(self, monkeypatch):
+        monkeypatch.setattr(
+            "app.services.meilisearch_embeddings._TEI_SUB_BATCH_SIZE", 2
+        )
+        docs = [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}]
+        rows = [
+            {"base_case_name": "A"},
+            {"base_case_name": "B"},
+            {"base_case_name": "C"},
+            {"base_case_name": "D"},
+        ]
+
+        def fake_embed(payload):
+            if payload == ["A", "B"]:
+                raise RuntimeError("413")
+            return [[0.5] * 1024 for _ in payload]
+
+        with patch(
+            "app.services.meilisearch_embeddings.embed_texts",
+            side_effect=fake_embed,
+        ):
+            result = await attach_embeddings_batch(docs, rows)
+
+        assert result[0]["_vectors"] == {"bge-m3": None}
+        assert result[1]["_vectors"] == {"bge-m3": None}
+        assert result[2]["_vectors"]["bge-m3"] == [0.5] * 1024
+        assert result[3]["_vectors"]["bge-m3"] == [0.5] * 1024

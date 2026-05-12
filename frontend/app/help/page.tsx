@@ -87,29 +87,6 @@ export default function HelpPage() {
  ],
  },
  {
- id: "ai-assistant",
- title: "AI Assistant & Chat",
- icon: MessageSquare,
- questions: [
- {
- q: "How does the AI chat assistant work? ",
- a: "The AI assistant uses advanced language models trained on legal documents to answer questions, summarize content, and provide analysis. It retrieves relevant documents from the database and uses them to generate informed responses.",
- },
- {
- q: "Can I trust the AI's legal advice? ",
- a: "No. The AI assistant provides information and analysis for research and educational purposes only. It does NOT provide legal advice and should never be used as a substitute for consultation with a qualified attorney. Always verify information with legal professionals.",
- },
-	 {
-	 q: "What can I ask the AI assistant? ",
-	 a: "You can ask about legal concepts, request document summaries, compare cases, analyze legal arguments, or research specific issues in case law. The AI works best with specific, well-formulated questions related to judgments and legal reasoning.",
-	 },
- {
- q: "How many documents does the AI consider in its responses? ",
- a: "By default, the AI assistant retrieves and considers up to 20 relevant documents when generating responses. This ensures comprehensive coverage while maintaining response quality.",
- },
- ],
- },
- {
  id: "data-extraction",
  title: "Data Extraction & Schemas",
  icon: Database,
@@ -166,7 +143,7 @@ export default function HelpPage() {
  },
  {
  q: "What data do you collect? ",
- a: "We collect account information (email, name), usage data (searches, chat interactions), and research data (anonymized usage patterns). This helps us improve the platform and conduct academic research.",
+ a: "We collect account information (email, name), usage data (searches), and research data (anonymized usage patterns). This helps us improve the platform and conduct academic research.",
  },
  {
  q: "Are my searches private? ",

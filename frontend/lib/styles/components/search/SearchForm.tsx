@@ -3,26 +3,16 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import DOMPurify from "dompurify";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eyebrow, Rule } from "@/components/editorial";
+import { sanitizeHighlightHtml } from "@/lib/highlight";
 import type { AutocompleteSuggestion, TopicHit } from "@/hooks/useSearchAutocomplete";
 import { pickTopicLabel } from "@/hooks/useSearchAutocomplete";
 import { postTopicClick } from "@/lib/api/topics";
 
 type SearchMode = "thinking" | "rabbit";
-
-/**
- * Sanitize HTML from Meilisearch highlights: allow only mark tags via DOMPurify.
- */
-function sanitizeHighlight(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["mark"],
-    ALLOWED_ATTR: [],
-  });
-}
 
 /** Derive a displayable formatted string for a topic field, handling string|string[] from _formatted. */
 function getFormattedField(raw: string, formatted: string | string[] | undefined): string {
@@ -30,7 +20,6 @@ function getFormattedField(raw: string, formatted: string | string[] | undefined
   if (Array.isArray(formatted)) return formatted.join(", ");
   return formatted;
 }
-
 export interface SearchFormProps {
   query: string;
   setQuery: (value: string) => void;
@@ -291,7 +280,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                             <span
                               className="font-medium truncate"
                               // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
-                              dangerouslySetInnerHTML={{ __html: sanitizeHighlight(formattedPrimary) }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(formattedPrimary) }}
                             />
                             {secondary && (
                               <>
@@ -346,7 +335,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                           <div
                             className="font-medium"
                             // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
-                            dangerouslySetInnerHTML={{ __html: sanitizeHighlight(item.title) }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.title) }}
                           />
                           {(item.caseNumber || item.courtName) ? (
                             <div className="text-xs text-muted-foreground">
@@ -357,7 +346,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                             <div
                               className="text-xs text-muted-foreground line-clamp-1"
                               // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
-                              dangerouslySetInnerHTML={{ __html: sanitizeHighlight(item.summary) }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(item.summary) }}
                             />
                           ) : null}
                         </button>

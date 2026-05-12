@@ -114,6 +114,11 @@ export interface SearchDocument {
   };
   // Error flag for Weaviate database errors
   _isWeaviateError?: boolean;
+  // Highlighted HTML (with <mark>) from server-side search; rendered via QueryHighlight.
+  highlighted?: {
+    title?: string | null;
+    summary?: string | null;
+  } | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
@@ -143,6 +148,11 @@ export interface LegalDocumentMetadata {
   court_level?: string | null;
   legal_domain?: string | null;
   custom_metadata?: Record<string, string | string[] | number | boolean | null> | null;
+  // Highlighted HTML (with <mark>) from server-side search; rendered via QueryHighlight.
+  highlighted?: {
+    title?: string | null;
+    summary?: string | null;
+  } | null;
 }
 
 export interface SearchDocumentsDirectResponse {

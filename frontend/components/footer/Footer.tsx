@@ -63,7 +63,6 @@ export function Footer({ className }: { className?: string }) {
  {/* Column 2: Platform */}
  <FooterSection title="Platform">
  <li><FooterLink href="/search">Document Search</FooterLink></li>
- <li><FooterLink href="/chat">AI Assistant</FooterLink></li>
  <li><FooterLink href="/schemas">Data Extraction</FooterLink></li>
  <li><FooterLink href="/use-cases">Use Cases</FooterLink></li>
  <li><FooterLink href="/collections">Collections</FooterLink></li>
