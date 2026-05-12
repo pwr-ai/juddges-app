@@ -36,19 +36,16 @@ interface AvailableFilters {
 
 export type SearchMode = "text" | "vector" | "hybrid";
 
-export interface BaseNumericRange {
-  min?: number;
-  max?: number;
-}
+export type BaseNumericRange = { min?: number; max?: number };
 
-export interface BaseFilters {
-  numVictims?: BaseNumericRange;
-  victimAgeOffence?: BaseNumericRange;
-  caseNumber?: BaseNumericRange;
-  coDefAccNum?: BaseNumericRange;
-  /** Epoch seconds — base_date_of_appeal_court_judgment_ts */
-  appealJudgmentDate?: BaseNumericRange;
-}
+export type BaseFilterValue =
+  | { kind: "enum_multi"; values: string[] }
+  | { kind: "tag_array"; values: string[] }
+  | { kind: "boolean_tri"; value: boolean }
+  | { kind: "numeric_range"; range: BaseNumericRange }
+  | { kind: "date_range"; range: BaseNumericRange };
+
+export type BaseFilters = Partial<Record<string, BaseFilterValue>>;
 
 export const EMPTY_BASE_FILTERS: BaseFilters = {};
 
@@ -125,7 +122,7 @@ interface SearchState {
   setShowSaveAllPopover: (show: boolean) => void;
   setSearchType: (type: "rabbit" | "thinking") => void;
   setSearchMode: (mode: SearchMode) => void;
-  setBaseFilter: (field: keyof BaseFilters, range: BaseNumericRange | undefined) => void;
+  setBaseFilter: (field: string, value: BaseFilterValue | undefined) => void;
   setBaseFilters: (filters: BaseFilters) => void;
   resetBaseFilters: () => void;
   loadState: () => void;
@@ -814,14 +811,11 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
   setSearchType: (type: "rabbit" | "thinking") => set({ searchType: type }),
   setSearchMode: (mode: SearchMode) => set({ searchMode: mode }),
-  setBaseFilter: (field: keyof BaseFilters, range: BaseNumericRange | undefined) =>
+  setBaseFilter: (field: string, value: BaseFilterValue | undefined) =>
     set((state) => {
-      const next: BaseFilters = { ...state.baseFilters };
-      if (!range || (range.min === undefined && range.max === undefined)) {
-        delete next[field];
-      } else {
-        next[field] = range;
-      }
+      const next = { ...state.baseFilters };
+      if (value === undefined) delete next[field];
+      else next[field] = value;
       return { baseFilters: next };
     }),
   setBaseFilters: (filters: BaseFilters) => set({ baseFilters: { ...filters } }),

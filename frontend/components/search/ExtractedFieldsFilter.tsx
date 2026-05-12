@@ -3,20 +3,31 @@
 import React, { useCallback } from "react";
 
 import { cn } from "@/lib/utils";
-import type { BaseFilters, BaseNumericRange } from "@/lib/store/searchStore";
+import type { BaseFilters, BaseNumericRange, BaseFilterValue } from "@/lib/store/searchStore";
+
+// TODO(task-17): remove when this file is deleted.
+// Temporary adapter to convert old BaseNumericRange interface to new discriminated union
+function adaptRangeToFilterValue(range: BaseNumericRange | undefined): BaseFilterValue | undefined {
+  if (!range || (range.min === undefined && range.max === undefined)) return undefined;
+  return { kind: "numeric_range", range };
+}
+
+function adaptFilterValueToRange(value: BaseFilterValue | undefined): BaseNumericRange | undefined {
+  if (!value) return undefined;
+  if (value.kind === "numeric_range") return value.range;
+  return undefined;
+}
 
 export interface ExtractedFieldsFilterProps {
   filters: BaseFilters;
-  onChange: (field: keyof BaseFilters, range: BaseNumericRange | undefined) => void;
+  onChange: (field: string, value: BaseFilterValue | undefined) => void;
   onReset: () => void;
   disabled?: boolean;
   className?: string;
 }
 
-type FieldKey = keyof BaseFilters;
-
 interface NumericFieldConfig {
-  key: FieldKey;
+  key: string;
   label: string;
   description?: string;
   min?: number;
@@ -88,19 +99,25 @@ export function ExtractedFieldsFilter({
 }: ExtractedFieldsFilterProps): React.JSX.Element {
   const handleBound = useCallback(
     (config: NumericFieldConfig, side: "min" | "max", raw: string) => {
-      const current = filters[config.key] ?? {};
+      const currentValue = filters[config.key];
+      const currentRange = adaptFilterValueToRange(currentValue) ?? {};
       const bound = rangeBound(raw, Boolean(config.asDate));
-      const next: BaseNumericRange = {
-        ...current,
+      const nextRange: BaseNumericRange = {
+        ...currentRange,
         [side]: bound,
       };
-      onChange(config.key, next);
+      const nextValue = adaptRangeToFilterValue(nextRange);
+      onChange(config.key, nextValue);
     },
     [filters, onChange]
   );
 
-  const activeCount = (Object.keys(filters) as FieldKey[]).filter(
-    (k) => filters[k] && (filters[k]?.min !== undefined || filters[k]?.max !== undefined)
+  const activeCount = Object.keys(filters).filter(
+    (k) => {
+      const value = filters[k];
+      const range = adaptFilterValueToRange(value);
+      return range && (range.min !== undefined || range.max !== undefined);
+    }
   ).length;
 
   return (
@@ -127,7 +144,8 @@ export function ExtractedFieldsFilter({
       </div>
       <div className="space-y-3">
         {FIELDS.map((config) => {
-          const range = filters[config.key];
+          const value = filters[config.key];
+          const range = adaptFilterValueToRange(value);
           const inputType = config.asDate ? "date" : "number";
           const minValue = config.asDate
             ? epochSecondsToDate(range?.min)
