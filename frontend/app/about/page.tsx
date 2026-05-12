@@ -366,7 +366,7 @@ export default function AboutPage(): React.JSX.Element {
  <div className="font-semibold">JuDDGES App</div>
  </div>
  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
- This platform — search, RAG chat, and structured extraction.
+ This platform — search and structured extraction.
  </p>
  <a
  href="https://github.com/pwr-ai/juddges-app"
