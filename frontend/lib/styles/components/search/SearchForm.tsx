@@ -337,14 +337,15 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
               return (
                 <span
                   key={topic.id}
-                  className="inline-flex items-center gap-1"
+                  role="group"
                   aria-label={`Topic: ${topic.en.label}`}
+                  className="inline-flex items-center gap-1"
                 >
                   <button
                     type="button"
                     onClick={() => handleDualClick(topic.pl.label, "pl")}
                     className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
-                    aria-label={topic.pl.label}
+                    lang="pl"
                   >
                     {topic.pl.label}
                   </button>
@@ -352,7 +353,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                     type="button"
                     onClick={() => handleDualClick(topic.en.label, "uk")}
                     className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
-                    aria-label={topic.en.label}
+                    lang="en"
                   >
                     {topic.en.label}
                   </button>
@@ -366,7 +367,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                 type="button"
                 onClick={() => handleSingleClick(topic.label)}
                 className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
-                aria-label={topic.label}
+                lang="en"
                 title="Searches Polish and UK judgments"
               >
                 <span
