@@ -167,8 +167,9 @@ export function PreSearchFilters({
         <div className="mt-3">
           <button
             type="button"
-            onClick={() => setIsDrawerOpen(true)}
+            onClick={() => setIsDrawerOpen((prev) => !prev)}
             disabled={disabled}
+            aria-expanded={isDrawerOpen}
             className="flex w-full cursor-pointer list-none items-center justify-between rounded-md border border-[color:var(--rule)] bg-white px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--oxblood)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span>
@@ -179,18 +180,22 @@ export function PreSearchFilters({
                 </span>
               )}
             </span>
-            <ChevronDown className="h-3.5 w-3.5" />
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${isDrawerOpen ? "rotate-180" : ""}`}
+            />
           </button>
 
-          <BaseFiltersDrawer
-            open={isDrawerOpen}
-            onOpenChange={setIsDrawerOpen}
-            filters={baseFilters}
-            onChange={(field, value) => onChangeBaseFilter(field, value)}
-            onReset={onResetBaseFilters}
-            facetCounts={facetCounts}
-            disabled={disabled ?? false}
-          />
+          {isDrawerOpen && (
+            <div className="mt-2">
+              <BaseFiltersDrawer
+                filters={baseFilters}
+                onChange={(field, value) => onChangeBaseFilter(field, value)}
+                onReset={onResetBaseFilters}
+                facetCounts={facetCounts}
+                disabled={disabled ?? false}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

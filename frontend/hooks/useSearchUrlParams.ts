@@ -94,11 +94,8 @@ export function useSearchUrlParams({
           params.set('searchMode', searchMode);
         }
 
-        // Extracted-field numeric ranges (serialized as compact JSON)
-        const baseFilterKeys = Object.keys(baseFilters) as Array<keyof typeof baseFilters>;
-        const hasBaseFilters = baseFilterKeys.some(
-          (k) => baseFilters[k] && (baseFilters[k]?.min !== undefined || baseFilters[k]?.max !== undefined)
-        );
+        // Extracted-field filters (serialized as compact JSON across all control types)
+        const hasBaseFilters = Object.values(baseFilters).some((v) => v !== undefined);
         if (hasBaseFilters) {
           params.set('extracted', JSON.stringify(baseFilters));
         }
