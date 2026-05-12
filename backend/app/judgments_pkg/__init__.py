@@ -9,12 +9,18 @@ This package provides:
 - Similar document discovery
 """
 
+from __future__ import annotations
+
 import random
 import time
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException, Path, Query, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
+
+if TYPE_CHECKING:
+    from juddges_search.models import LegalDocument
 
 from app.config import settings
 from app.models import (
@@ -49,6 +55,7 @@ from .conversion import (
     _build_document_metadata_dict,
     _convert_judgment_to_legal_document,
     _convert_supabase_to_legal_document,
+    _extract_base_fields,
     _merge_base_extraction_fields,
 )
 from .search import (
@@ -288,6 +295,10 @@ async def get_similar_to_document_endpoint(
 async def get_document_by_id(
     document_id: str = Path(..., description="Document ID to retrieve"),
     return_vectors: bool = Query(False, description="Include vector embeddings"),
+    include_base_fields: bool = Query(
+        False,
+        description="Include extracted base_* schema columns under `base_fields`",
+    ),
 ) -> DocumentResponse:
     """Get a document by its ID."""
     try:
@@ -307,6 +318,8 @@ async def get_document_by_id(
         document = _convert_supabase_to_legal_document(
             doc_data, include_vectors=return_vectors
         )
+        if include_base_fields:
+            document.base_fields = _extract_base_fields(doc_data)
         return DocumentResponse(document=document)
 
     except HTTPException:
@@ -349,6 +362,8 @@ async def get_document_by_id_legacy(
     document = _convert_supabase_to_legal_document(
         doc_data, include_vectors=request.return_vectors
     )
+    if request.include_base_fields:
+        document.base_fields = _extract_base_fields(doc_data)
     return DocumentResponse(document=document)
 
 
@@ -377,10 +392,14 @@ async def get_documents_batch(request: BatchDocumentsRequest):
     db = get_vector_db()
     docs_data = await db.get_documents_by_ids(request.document_ids)
 
-    documents = [
-        _convert_supabase_to_legal_document(doc, include_vectors=request.return_vectors)
-        for doc in docs_data
-    ]
+    documents: list[LegalDocument] = []
+    for doc in docs_data:
+        converted = _convert_supabase_to_legal_document(
+            doc, include_vectors=request.return_vectors
+        )
+        if request.include_base_fields:
+            converted.base_fields = _extract_base_fields(doc)
+        documents.append(converted)
 
     return BatchDocumentsResponse(documents=documents)
 
