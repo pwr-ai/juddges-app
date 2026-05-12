@@ -33,6 +33,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       params.set("semantic_ratio", semanticRatio);
     }
 
+    // Multi-value facets[]
+    searchParams.getAll("facets").forEach((v) => params.append("facets", v));
+    const facetQuery = searchParams.get("facet_query");
+    if (facetQuery) params.set("facet_query", facetQuery);
+
     const backendUrl = getBackendUrl();
     const apiKey = process.env.BACKEND_API_KEY || "";
 
