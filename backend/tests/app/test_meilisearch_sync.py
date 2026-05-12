@@ -366,3 +366,105 @@ class TestFullSyncEmbeds:
         assert len(sent_docs) == 3
         for doc in sent_docs:
             assert doc["_vectors"] == {"bge-m3": fake_vec}
+
+
+class TestMeilisearchIndexSettings:
+    def test_filterable_attributes_cover_all_filterable_base_fields(self):
+        from app.services.meilisearch_config import MEILISEARCH_INDEX_SETTINGS
+
+        expected = {
+            "base_extraction_status",
+            "base_extraction_model",
+            "base_num_victims",
+            "base_victim_age_offence",
+            "base_case_number",
+            "base_co_def_acc_num",
+            "base_date_of_appeal_court_judgment_ts",
+            "base_extracted_at_ts",
+            "base_appellant",
+            "base_plea_point",
+            "base_remand_decision",
+            "base_offender_job_offence",
+            "base_offender_home_offence",
+            "base_offender_victim_relationship",
+            "base_offender_age_offence",
+            "base_victim_type",
+            "base_victim_job_offence",
+            "base_victim_home_offence",
+            "base_pre_sent_report",
+            "base_conv_court_names",
+            "base_sent_court_name",
+            "base_did_offender_confess",
+            "base_vic_impact_statement",
+            "base_keywords",
+            "base_convict_plea_dates",
+            "base_convict_offences",
+            "base_acquit_offences",
+            "base_sentences_received",
+            "base_sentence_serve",
+            "base_what_ancilliary_orders",
+            "base_offender_gender",
+            "base_offender_intox_offence",
+            "base_victim_gender",
+            "base_victim_intox_offence",
+            "base_pros_evid_type_trial",
+            "base_def_evid_type_trial",
+            "base_agg_fact_sent",
+            "base_mit_fact_sent",
+            "base_appeal_against",
+            "base_appeal_ground",
+            "base_sent_guide_which",
+            "base_appeal_outcome",
+            "base_reason_quash_conv",
+            "base_reason_sent_excessive",
+            "base_reason_sent_lenient",
+            "base_reason_dismiss",
+        }
+        actual = set(MEILISEARCH_INDEX_SETTINGS["filterableAttributes"])
+        missing = expected - actual
+        assert not missing, f"Missing filterable: {sorted(missing)}"
+
+    def test_searchable_attributes_include_base_text_fields(self):
+        from app.services.meilisearch_config import MEILISEARCH_INDEX_SETTINGS
+
+        expected = {
+            "base_neutral_citation_number",
+            "base_appeal_court_judges_names",
+            "base_case_name",
+            "base_offender_representative_name",
+            "base_crown_attorney_general_representative_name",
+            "base_remand_custody_time",
+            "base_offender_age_offence",
+            "base_offender_mental_offence",
+            "base_victim_mental_offence",
+        }
+        actual = set(MEILISEARCH_INDEX_SETTINGS["searchableAttributes"])
+        missing = expected - actual
+        assert not missing, f"Missing searchable: {sorted(missing)}"
+
+    def test_sortable_attributes_include_base_ts_and_numerics(self):
+        from app.services.meilisearch_config import MEILISEARCH_INDEX_SETTINGS
+
+        for f in (
+            "base_date_of_appeal_court_judgment_ts",
+            "base_extracted_at_ts",
+            "base_num_victims",
+            "base_case_number",
+        ):
+            assert f in MEILISEARCH_INDEX_SETTINGS["sortableAttributes"]
+
+    def test_existing_settings_blocks_preserved(self):
+        from app.services.meilisearch_config import MEILISEARCH_INDEX_SETTINGS
+
+        # Sanity: the existing non-base attributes are still there.
+        for f in ("title", "summary", "full_text"):
+            assert f in MEILISEARCH_INDEX_SETTINGS["searchableAttributes"]
+        for f in ("jurisdiction", "court_level", "keywords"):
+            assert f in MEILISEARCH_INDEX_SETTINGS["filterableAttributes"]
+        for f in ("decision_date", "updated_at", "created_at"):
+            assert f in MEILISEARCH_INDEX_SETTINGS["sortableAttributes"]
+        # Existing typoTolerance / synonyms / pagination / embedders blocks survive.
+        assert "typoTolerance" in MEILISEARCH_INDEX_SETTINGS
+        assert "synonyms" in MEILISEARCH_INDEX_SETTINGS
+        assert "pagination" in MEILISEARCH_INDEX_SETTINGS
+        assert "embedders" in MEILISEARCH_INDEX_SETTINGS
