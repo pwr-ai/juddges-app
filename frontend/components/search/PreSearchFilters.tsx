@@ -6,10 +6,12 @@ import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { SearchModeToggle } from "@/components/search/SearchModeToggle";
-import { ExtractedFieldsFilter } from "@/components/search/ExtractedFieldsFilter";
+import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
+import { useBaseFieldFacets } from "@/hooks/useBaseFieldFacets";
+import { FILTER_FIELDS } from "@/lib/extractions/base-schema-filter-config";
 import type {
   BaseFilters,
-  BaseNumericRange,
+  BaseFilterValue,
   SearchMode,
 } from "@/lib/store/searchStore";
 
@@ -24,9 +26,9 @@ export interface PreSearchFiltersProps {
   dateFrom: Date | undefined;
   dateTo: Date | undefined;
   onChangeDate: (field: "dateFrom" | "dateTo", value: Date | undefined) => void;
-  // Extracted-field numeric ranges
+  // Extracted-field filters
   baseFilters: BaseFilters;
-  onChangeBaseFilter: (field: keyof BaseFilters, range: BaseNumericRange | undefined) => void;
+  onChangeBaseFilter: (field: string, value: BaseFilterValue | undefined) => void;
   onResetBaseFilters: () => void;
   // Shared
   disabled?: boolean;
@@ -64,8 +66,16 @@ export function PreSearchFilters({
   disabled,
   className,
 }: PreSearchFiltersProps): React.JSX.Element {
-  const extractedActiveCount = (Object.keys(baseFilters) as Array<keyof BaseFilters>).filter(
-    (k) => baseFilters[k] && (baseFilters[k]?.min !== undefined || baseFilters[k]?.max !== undefined)
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+
+  const tagFields = React.useMemo(
+    () => FILTER_FIELDS.filter((c) => c.control === "tag_array").map((c) => c.field),
+    [],
+  );
+  const { facetCounts } = useBaseFieldFacets(tagFields, { enabled: isDrawerOpen });
+
+  const extractedActiveCount = Object.keys(baseFilters).filter(
+    (field) => baseFilters[field] !== undefined
   ).length;
 
   const onlyOneLanguage = selectedLanguages.size === 1;
@@ -152,10 +162,15 @@ export function PreSearchFilters({
         </div>
       </div>
 
-      {/* Extracted fields (text mode only) — collapsed by default to keep the strip compact */}
+      {/* Extracted fields (text mode only) — drawer trigger */}
       {searchMode === "text" && (
-        <details className="group mt-3 rounded-md border border-[color:var(--rule)] bg-white">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(true)}
+            disabled={disabled}
+            className="flex w-full cursor-pointer list-none items-center justify-between rounded-md border border-[color:var(--rule)] bg-white px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--oxblood)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <span>
               Extracted fields
               {extractedActiveCount > 0 && (
@@ -164,18 +179,19 @@ export function PreSearchFilters({
                 </span>
               )}
             </span>
-            <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="border-t border-[color:var(--rule)] p-2">
-            <ExtractedFieldsFilter
-              filters={baseFilters}
-              onChange={onChangeBaseFilter}
-              onReset={onResetBaseFilters}
-              disabled={disabled}
-              className="border-0 bg-transparent p-0"
-            />
-          </div>
-        </details>
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+
+          <BaseFiltersDrawer
+            open={isDrawerOpen}
+            onOpenChange={setIsDrawerOpen}
+            filters={baseFilters}
+            onChange={(field, value) => onChangeBaseFilter(field, value)}
+            onReset={onResetBaseFilters}
+            facetCounts={facetCounts}
+            disabled={disabled ?? false}
+          />
+        </div>
       )}
     </div>
   );
