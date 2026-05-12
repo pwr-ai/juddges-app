@@ -16,7 +16,7 @@ export function TagArrayControl({
   label, description, value, onChange, facetCounts, onQueryChange, disabled,
 }: TagArrayControlProps) {
   const [input, setInput] = useState("");
-  const selected = value?.values ?? [];
+  const selected = useMemo(() => value?.values ?? [], [value?.values]);
 
   const suggestions = useMemo(() => {
     if (!facetCounts) return [] as Array<[string, number]>;
