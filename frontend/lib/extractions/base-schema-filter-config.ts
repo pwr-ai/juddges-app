@@ -19,7 +19,8 @@ export type FilterGroup =
   | "appeal"
   | "court_date"
   | "evidence"
-  | "other";
+  | "other"
+  | "operational";
 
 export type FilterControl =
   | "enum_multi"        // multi-select over fixed enum values, RPC ANY/&&
@@ -51,6 +52,7 @@ export const GROUP_LABELS: Record<FilterGroup, string> = {
   court_date: "Court & Date",
   evidence: "Evidence & Reasons",
   other: "Other",
+  operational: "Operational",
 };
 
 /** Order groups appear in the drawer. */
@@ -63,6 +65,7 @@ export const GROUP_ORDER: readonly FilterGroup[] = [
   "appeal",
   "evidence",
   "other",
+  "operational",
 ] as const;
 
 // -----------------------------------------------------------------------------
@@ -177,6 +180,18 @@ export const FILTER_FIELDS: readonly FilterFieldConfig[] = [
     group: "court_date",
     control: "numeric_range",
   },
+  {
+    field: "conv_court_names",
+    label: "Convicting court",
+    group: "court_date",
+    control: "tag_array",
+  },
+  {
+    field: "sent_court_name",
+    label: "Sentencing court",
+    group: "court_date",
+    control: "tag_array",
+  },
 
   // --- offender ------------------------------------------------------------
   {
@@ -267,6 +282,18 @@ export const FILTER_FIELDS: readonly FilterFieldConfig[] = [
     label: "Victim impact statement filed",
     group: "victim",
     control: "boolean_tri",
+  },
+  {
+    field: "victim_job_offence",
+    label: "Victim job (free-text)",
+    group: "victim",
+    control: "tag_array",
+  },
+  {
+    field: "victim_home_offence",
+    label: "Victim accommodation (free-text)",
+    group: "victim",
+    control: "tag_array",
   },
 
   // --- charges_plea --------------------------------------------------------
@@ -422,6 +449,26 @@ export const FILTER_FIELDS: readonly FilterFieldConfig[] = [
     label: "Keywords",
     group: "other",
     control: "tag_array",
+  },
+
+  // --- operational --------------------------------------------------------
+  {
+    field: "extraction_model",
+    label: "Extraction model",
+    group: "operational",
+    control: "enum_multi",
+  },
+  {
+    field: "extracted_at",
+    label: "Extraction date",
+    group: "operational",
+    control: "date_range",
+  },
+  {
+    field: "extraction_status",
+    label: "Extraction status",
+    group: "operational",
+    control: "enum_multi",
   },
 ] as const;
 

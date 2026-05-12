@@ -12,6 +12,7 @@ import {
   FILTER_FIELDS,
   FILTER_FIELD_BY_NAME,
   FIELDS_BY_GROUP,
+  GROUP_LABELS,
   GROUP_ORDER,
   formatEnumLabel,
 } from "@/lib/extractions/base-schema-filter-config";
@@ -64,17 +65,40 @@ const REQUIRED_KEYS: Record<keyof BaseSchemaFilters, true> = {
   offender_representative_name: true,
 };
 
+// Fields registered in the UI registry but not (yet) mirrored in the
+// `BaseSchemaFilters` RPC payload type. These will be wired through to the
+// backend in follow-up tasks of the base_* schema rollout — until then the
+// registry is allowed to be a strict superset of `BaseSchemaFilters`.
+const REGISTRY_ONLY_FIELDS = new Set<string>([
+  "conv_court_names",
+  "sent_court_name",
+  "victim_job_offence",
+  "victim_home_offence",
+  "extraction_model",
+  "extracted_at",
+  "extraction_status",
+]);
+
+// `enum_multi` fields whose canonical enum values are discovered at runtime
+// from Meili facet counts rather than baked into the registry. Mirrors the
+// note in base-schema-filter-config.ts.
+const RUNTIME_DISCOVERED_ENUM_FIELDS = new Set<string>([
+  "extraction_model",
+  "extraction_status",
+]);
+
 describe("base-schema filter registry", () => {
-  it("registers exactly one entry per BaseSchemaFilters key", () => {
+  it("covers every BaseSchemaFilters key (registry may be a superset)", () => {
     const fields = new Set(FILTER_FIELDS.map((c) => c.field));
     const required = new Set(Object.keys(REQUIRED_KEYS));
 
     const missing = [...required].filter((k) => !fields.has(k));
-    const extra = [...fields].filter((k) => !required.has(k));
+    const extra = [...fields].filter(
+      (k) => !required.has(k) && !REGISTRY_ONLY_FIELDS.has(k),
+    );
 
     expect(missing).toEqual([]);
     expect(extra).toEqual([]);
-    expect(fields.size).toBe(required.size);
   });
 
   it("has a unique field name per entry", () => {
@@ -101,12 +125,17 @@ describe("base-schema filter registry", () => {
     expect(total).toBe(FILTER_FIELDS.length);
   });
 
-  it("requires enumValues on enum_multi controls", () => {
+  it("requires enumValues on enum_multi controls (except runtime-discovered enums)", () => {
     for (const c of FILTER_FIELDS) {
-      if (c.control === "enum_multi") {
-        expect(Array.isArray(c.enumValues)).toBe(true);
-        expect(c.enumValues!.length).toBeGreaterThan(0);
+      if (c.control !== "enum_multi") continue;
+      if (RUNTIME_DISCOVERED_ENUM_FIELDS.has(c.field)) {
+        // Runtime-discovered enums intentionally omit enumValues; the drawer
+        // pulls option lists from Meili facets at render time.
+        expect(c.enumValues).toBeUndefined();
+        continue;
       }
+      expect(Array.isArray(c.enumValues)).toBe(true);
+      expect(c.enumValues!.length).toBeGreaterThan(0);
     }
   });
 
@@ -116,5 +145,26 @@ describe("base-schema filter registry", () => {
       "Appeal conviction unsafe",
     );
     expect(formatEnumLabel("low")).toBe("Low");
+  });
+});
+
+describe("base-schema-filter-config — operational group + new fields", () => {
+  it("declares the operational group last in GROUP_ORDER", () => {
+    expect(GROUP_ORDER[GROUP_ORDER.length - 1]).toBe("operational");
+    expect(GROUP_LABELS.operational).toMatch(/Operational/i);
+  });
+  it.each([
+    ["conv_court_names",     "court_date",  "tag_array"],
+    ["sent_court_name",      "court_date",  "tag_array"],
+    ["victim_job_offence",   "victim",      "tag_array"],
+    ["victim_home_offence",  "victim",      "tag_array"],
+    ["extraction_model",     "operational", "enum_multi"],
+    ["extracted_at",         "operational", "date_range"],
+    ["extraction_status",    "operational", "enum_multi"],
+  ])("registers %s under %s as %s", (field, group, control) => {
+    const cfg = FILTER_FIELD_BY_NAME[field];
+    expect(cfg).toBeDefined();
+    expect(cfg!.group).toBe(group);
+    expect(cfg!.control).toBe(control);
   });
 });
