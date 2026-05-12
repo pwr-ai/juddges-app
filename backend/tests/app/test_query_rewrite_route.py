@@ -24,6 +24,17 @@ def test_client():
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def _clear_rewrite_cache():
+    """Isolate tests from each other (and from neighbouring suites) by
+    clearing the module-level TTL cache before every test in this file."""
+    from app.judgments_pkg.query_rewrite import _CACHE
+
+    _CACHE.clear()
+    yield
+    _CACHE.clear()
+
+
 @pytest.mark.unit
 def test_rewrite_route_returns_envelope(test_client):
     rewrite_result = QueryRewriteResult(
@@ -101,3 +112,38 @@ def test_rewrite_route_rejects_empty_query(test_client):
         headers={"X-API-Key": _API_KEY},
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.unit
+def test_rewrite_route_caches_identical_requests(test_client):
+    import cachetools
+
+    chain_mock = AsyncMock()
+    chain_mock.ainvoke.return_value = QueryRewriteResult(rewritten_query="hello")
+
+    validator_mock = AsyncMock()
+    validator_mock.validate.return_value = RewrittenQueryEnvelope(
+        rewritten_query="hello"
+    )
+
+    with (
+        patch("app.judgments_pkg.query_rewrite._get_chain", return_value=chain_mock),
+        patch(
+            "app.judgments_pkg.query_rewrite._get_validator",
+            return_value=validator_mock,
+        ),
+        patch(
+            "app.judgments_pkg.query_rewrite._CACHE",
+            new=cachetools.TTLCache(maxsize=128, ttl=60),
+        ),
+    ):
+        for _ in range(3):
+            resp = test_client.post(
+                "/documents/search/rewrite",
+                json={"query": "podatek VAT", "languages_hint": ["pl"]},
+                headers={"X-API-Key": _API_KEY},
+            )
+            assert resp.status_code == 200
+
+    assert chain_mock.ainvoke.await_count == 1
+    assert validator_mock.validate.await_count == 1

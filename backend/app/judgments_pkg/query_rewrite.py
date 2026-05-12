@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
+import cachetools
 from fastapi import APIRouter, Request
 from juddges_search.chains.query_rewrite import build_query_rewrite_chain
 from loguru import logger
@@ -42,6 +43,10 @@ class QueryRewriteRequest(BaseModel):
 _CHAIN: Any | None = None
 _VALIDATOR: FacetValidator | None = None
 
+# Short-TTL cache so repeated identical rewrites (e.g. typeahead, retries,
+# pagination) don't hammer the LLM or the Meili facet-validation calls.
+_CACHE: cachetools.TTLCache = cachetools.TTLCache(maxsize=256, ttl=60)
+
 
 def _get_chain():
     global _CHAIN
@@ -59,6 +64,11 @@ def _get_validator() -> FacetValidator:
     return _VALIDATOR
 
 
+def _cache_key(body: QueryRewriteRequest) -> tuple:
+    langs = tuple(sorted(body.languages_hint or []))
+    return (body.query.lower(), langs)
+
+
 # ── router ───────────────────────────────────────────────────────────────
 
 
@@ -73,6 +83,11 @@ router = APIRouter(tags=["search"])
 async def rewrite_query(
     request: Request, body: QueryRewriteRequest
 ) -> RewrittenQueryEnvelope:
+    key = _cache_key(body)
+    cached = _CACHE.get(key)
+    if cached is not None:
+        return cached
+
     chain = _get_chain()
     validator = _get_validator()
 
@@ -90,6 +105,9 @@ async def rewrite_query(
             type(exc).__name__,
             exc,
         )
-        return RewrittenQueryEnvelope(rewritten_query=body.query, degraded=True)
+        envelope = RewrittenQueryEnvelope(rewritten_query=body.query, degraded=True)
+    else:
+        envelope = await validator.validate(rewrite_result)
 
-    return await validator.validate(rewrite_result)
+    _CACHE[key] = envelope
+    return envelope
