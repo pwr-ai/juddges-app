@@ -112,6 +112,13 @@ export interface SearchDocument {
     x?: number;
     y?: number;
   };
+  /**
+   * Extracted base-schema columns (base_appellant, base_appeal_outcome,
+   * base_num_victims, …). Populated by the backend only when
+   * include_base_fields=true is requested on /documents/{id} or
+   * /documents/batch. Otherwise undefined.
+   */
+  base_fields?: Record<string, unknown> | null;
   // Error flag for Weaviate database errors
   _isWeaviateError?: boolean;
   // Highlighted HTML (with <mark>) from server-side search; rendered via QueryHighlight.
