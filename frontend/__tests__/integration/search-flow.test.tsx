@@ -367,34 +367,38 @@ describe('Complete Search Flow Integration', () => {
   });
 
   describe('Popular Searches', () => {
-    it('should populate query when popular search is clicked', async () => {
+    it('should populate query when a suggested-topic pill is clicked', async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<SearchPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
+        expect(
+          screen.getByRole('button', { name: 'Posiadanie narkotyków' })
+        ).toBeInTheDocument();
       });
 
-      const popularSearch = screen.getByText('Kredyty frankowe');
-      await user.click(popularSearch);
+      const polishPill = screen.getByRole('button', { name: 'Posiadanie narkotyków' });
+      await user.click(polishPill);
 
       expect(mockSearchStore.setQuery).toHaveBeenCalled();
     });
 
-    it('should configure correct settings for popular search', async () => {
+    it('should configure language settings for suggested-topic pill', async () => {
       const user = userEvent.setup();
 
       renderWithProviders(<SearchPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Intellectual property')).toBeInTheDocument();
+        expect(
+          screen.getByRole('button', { name: 'Drug possession' })
+        ).toBeInTheDocument();
       });
 
-      const ipBoxSearch = screen.getByText('Intellectual property');
-      await user.click(ipBoxSearch);
+      const englishPill = screen.getByRole('button', { name: 'Drug possession' });
+      await user.click(englishPill);
 
-      // Search collapsed to judgment-only — popular searches no longer
+      // Search collapsed to judgment-only — suggested-topic pills no longer
       // configure document_types; verify the language preset still applies.
       expect(mockSearchStore.setSelectedLanguages).toHaveBeenCalled();
     });
