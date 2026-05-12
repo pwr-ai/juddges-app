@@ -9,10 +9,13 @@ import {
 import { SearchChunk, SearchDocument, LegalDocumentMetadata } from '@/types/search';
 import {
   BaseFilters,
+  BaseFilterValue,
   BaseNumericRange,
   SearchMode,
   useSearchStore,
 } from '@/lib/store/searchStore';
+import { BASE_FILTER_FIELDS } from "@/lib/extractions/filter-fields-map";
+import { FILTER_FIELD_BY_NAME } from "@/lib/extractions/base-schema-filter-config";
 import logger from '@/lib/logger';
 
 const searchLogger = logger.child('useSearchResults');
@@ -21,19 +24,28 @@ const searchLogger = logger.child('useSearchResults');
 const PAGE_SIZE = 10; // Documents per load (user preference)
 const DEFAULT_LIMIT_CHUNKS = 150; // Chunks to fetch per request
 
-const BASE_FILTER_FIELDS: Record<keyof BaseFilters, string> = {
-  numVictims: 'base_num_victims',
-  victimAgeOffence: 'base_victim_age_offence',
-  caseNumber: 'base_case_number',
-  coDefAccNum: 'base_co_def_acc_num',
-  appealJudgmentDate: 'base_date_of_appeal_court_judgment_ts',
-};
-
-function rangeToClause(field: string, range: BaseNumericRange): string | null {
+function rangeClause(field: string, range: BaseNumericRange): string | null {
   const parts: string[] = [];
-  if (typeof range.min === 'number') parts.push(`${field} >= ${range.min}`);
-  if (typeof range.max === 'number') parts.push(`${field} <= ${range.max}`);
-  return parts.length ? parts.join(' AND ') : null;
+  if (typeof range.min === "number") parts.push(`${field} >= ${range.min}`);
+  if (typeof range.max === "number") parts.push(`${field} <= ${range.max}`);
+  return parts.length ? parts.join(" AND ") : null;
+}
+
+function jsonArray(values: string[]): string {
+  return `[${values.map((v) => JSON.stringify(v)).join(", ")}]`;
+}
+
+function controlToClause(meiliField: string, value: BaseFilterValue): string | null {
+  switch (value.kind) {
+    case "enum_multi":
+    case "tag_array":
+      return value.values.length ? `${meiliField} IN ${jsonArray(value.values)}` : null;
+    case "boolean_tri":
+      return `${meiliField} = ${value.value}`;
+    case "numeric_range":
+    case "date_range":
+      return rangeClause(meiliField, value.range);
+  }
 }
 
 function languagesToJurisdictionClause(languages: string[]): string | null {
@@ -56,15 +68,14 @@ export function buildMeilisearchFilter(
   const clauses: string[] = [];
   const lang = languagesToJurisdictionClause(languages);
   if (lang) clauses.push(`(${lang})`);
-  for (const [key, fieldName] of Object.entries(BASE_FILTER_FIELDS) as Array<
-    [keyof BaseFilters, string]
-  >) {
-    const range = baseFilters[key];
-    if (!range) continue;
-    const clause = rangeToClause(fieldName, range);
+  for (const [field, value] of Object.entries(baseFilters)) {
+    if (!value) continue;
+    const meiliField = BASE_FILTER_FIELDS[field];
+    if (!meiliField) continue;
+    const clause = controlToClause(meiliField, value);
     if (clause) clauses.push(`(${clause})`);
   }
-  return clauses.length ? clauses.join(' AND ') : undefined;
+  return clauses.length ? clauses.join(" AND ") : undefined;
 }
 
 export function meiliHitToSearchDocument(hit: MeilisearchDocumentHit): SearchDocument {
