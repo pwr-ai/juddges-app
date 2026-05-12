@@ -411,6 +411,46 @@ class MeiliSearchService:
 
         return await self._search_post(payload)
 
+    async def search(
+        self,
+        *,
+        query: str = "",
+        limit: int = 0,
+        offset: int = 0,
+        filters: str | None = None,
+        facets: list[str] | None = None,
+        facet_query: str | None = None,
+    ) -> dict[str, Any]:
+        """Thin Meilisearch search wrapper used by the facets pass-through path.
+
+        Unlike ``documents_search``, this method does **not** restrict the
+        returned attributes or inject hybrid embeddings — it is intentionally
+        minimal so callers can request facet counts (``facets``) and an
+        optional substring filter on values (``facet_query`` → Meili's
+        ``facetQuery``) without paying the cost of the full document search.
+
+        The Meilisearch response is returned verbatim so callers can read
+        ``facetDistribution`` and ``facetStats`` directly. Raises
+        :class:`SearchServiceError` on network/HTTP failure.
+        """
+        if not self.configured:
+            raise SearchServiceError("Meilisearch is not configured")
+
+        payload: dict[str, Any] = {
+            "q": query,
+            "limit": limit,
+            "offset": offset,
+        }
+        if filters:
+            payload["filter"] = filters
+        if facets:
+            payload["facets"] = facets
+        if facet_query is not None:
+            # Meilisearch expects camelCase facetQuery on the request body.
+            payload["facetQuery"] = facet_query
+
+        return await self._search_post(payload)
+
     # ── admin / index management ─────────────────────────────────────────
 
     async def health(self) -> dict[str, Any]:

@@ -421,7 +421,53 @@ async def search_documents(request: SearchChunksRequest):
     2. Performs hybrid search combining vector similarity and full-text search
     3. Applies comprehensive filters (jurisdiction, court, case type, date, etc.)
     4. Returns matching documents with relevance scores
+
+    Facets-only fast path: when ``request.facets`` is provided, the handler
+    skips the pgvector pipeline entirely and proxies a thin Meilisearch
+    ``/search`` call so the caller (e.g. the tag-array autocomplete) can
+    fetch ``facetDistribution`` / ``facetStats`` without paying for the
+    full document search.
     """
+    # ── Facets-only fast path ────────────────────────────────────────────
+    # The tag-array autocomplete sends ``facets=[...]`` with an empty query
+    # and ``limit=0`` to fetch per-value counts. Bypass query validation and
+    # the pgvector pipeline; defer entirely to Meilisearch and pass the
+    # facetDistribution / facetStats straight back.
+    if request.facets:
+        from app.services.search import MeiliSearchService, SearchServiceError
+
+        meili = MeiliSearchService.from_env()
+        try:
+            meili_response = await meili.search(
+                query=request.query or "",
+                limit=max(request.limit_docs, 0)
+                if request.limit_docs is not None
+                else 0,
+                offset=request.offset or 0,
+                facets=request.facets,
+                facet_query=request.facet_query,
+            )
+        except SearchServiceError as exc:
+            logger.warning(
+                "facets_proxy_meili_failure — returning empty facets: {}", str(exc)
+            )
+            return SearchChunksResponse(
+                chunks=[],
+                total_chunks=0,
+                unique_documents=0,
+                facetDistribution=None,
+                facetStats=None,
+            )
+
+        return SearchChunksResponse(
+            chunks=[],
+            total_chunks=0,
+            unique_documents=0,
+            query_time_ms=meili_response.get("processingTimeMs"),
+            facetDistribution=meili_response.get("facetDistribution"),
+            facetStats=meili_response.get("facetStats"),
+        )
+
     start_time = time.perf_counter()
     query = request.query
     _validate_search_query(query)

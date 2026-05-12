@@ -1028,6 +1028,22 @@ class SearchChunksRequest(BaseModel):
         default=None,
         description="Filter decisions until this date (inclusive, ISO format YYYY-MM-DD)",
     )
+    facets: list[str] | None = Field(
+        default=None,
+        description=(
+            "Meilisearch facets to compute on this search. Each name must be "
+            "in the index'''s filterableAttributes. Used by the frontend "
+            "tag-array autocomplete to surface per-value counts."
+        ),
+    )
+    facet_query: str | None = Field(
+        default=None,
+        description=(
+            "Optional substring filter on facet values (Meilisearch "
+            "`facetQuery`). Narrows the returned facetDistribution to values "
+            "that match this prefix/substring."
+        ),
+    )
 
     @field_validator("languages")
     @classmethod
@@ -1098,6 +1114,20 @@ class SearchChunksResponse(BaseModel):
     query_analysis_source: Literal["llm", "heuristic"] | None = Field(
         default=None,
         description="Source of query analysis for thinking mode.",
+    )
+    facetDistribution: dict[str, dict[str, int]] | None = Field(
+        default=None,
+        description=(
+            "Meilisearch facet counts keyed by field, then value. Populated "
+            "only when the request asked for facets."
+        ),
+    )
+    facetStats: dict[str, dict[str, float]] | None = Field(
+        default=None,
+        description=(
+            "Meilisearch numeric facet stats (min/max) keyed by field. "
+            "Populated only when the request asked for facets."
+        ),
     )
 
 
