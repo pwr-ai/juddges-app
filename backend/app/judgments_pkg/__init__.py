@@ -430,10 +430,12 @@ async def search_documents(request: SearchChunksRequest):
     """
     # ── Facets-only fast path ────────────────────────────────────────────
     # The tag-array autocomplete sends ``facets=[...]`` with an empty query
-    # and ``limit=0`` to fetch per-value counts. Bypass query validation and
-    # the pgvector pipeline; defer entirely to Meilisearch and pass the
-    # facetDistribution / facetStats straight back.
-    if request.facets:
+    # and ``limit_docs=0`` to fetch per-value counts. Bypass query validation
+    # and the pgvector pipeline only when the request is *purely* asking for
+    # facets — i.e. no real query text and no docs requested. A future caller
+    # that wants both relevance-ranked docs AND facets must run the normal
+    # pipeline so chunks aren't silently dropped.
+    if request.facets and not (request.query or "").strip():
         from app.services.search import MeiliSearchService, SearchServiceError
 
         meili = MeiliSearchService.from_env()
