@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Home, Search, FileQuestion, MessageSquare } from "lucide-react";
+import { Home, Search, FileQuestion } from "lucide-react";
 import { ErrorCard, SecondaryButton, PageContainer } from "@/lib/styles/components";
 
 export default function NotFound() {
@@ -31,20 +31,13 @@ export default function NotFound() {
             <p className="text-sm text-muted-foreground">
               You might be looking for:
             </p>
-            <div className="flex gap-2 justify-center">
+            <div className="flex justify-center">
               <SecondaryButton
                 onClick={() => router.push("/search")}
                 icon={Search}
                 size="sm"
               >
                 Search
-              </SecondaryButton>
-              <SecondaryButton
-                onClick={() => router.push("/chat")}
-                icon={MessageSquare}
-                size="sm"
-              >
-                AI Assistant
               </SecondaryButton>
             </div>
           </div>
@@ -53,4 +46,3 @@ export default function NotFound() {
     </PageContainer>
   );
 }
-
