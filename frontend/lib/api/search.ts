@@ -258,3 +258,41 @@ export async function searchChunks(
 
   return result;
 }
+
+/**
+ * Fetch Meilisearch facet counts for the given registry-field names.
+ *
+ * Calls `/api/search/documents` (Next.js proxy → backend) with the `facets[]`
+ * convention introduced in Task 5. Strips the `base_` prefix on the response
+ * so callers index by registry-field name (e.g. `appeal_outcome`, not
+ * `base_appeal_outcome`).
+ *
+ * Returns an empty object when the request fails — callers degrade
+ * gracefully into "no suggestions" rather than surfacing the error.
+ */
+export async function fetchBaseFieldFacets(
+  fields: string[],
+  query?: string,
+): Promise<Record<string, Record<string, number>>> {
+  if (fields.length === 0) return {};
+  const params = new URLSearchParams();
+  params.set("q", "");
+  for (const f of fields) params.append("facets", `base_${f}`);
+  if (query) params.set("facet_query", query);
+  params.set("limit", "0");
+
+  try {
+    const response = await fetch(`/api/search/documents?${params.toString()}`);
+    if (!response.ok) return {};
+    const body = await response.json();
+    const out: Record<string, Record<string, number>> = {};
+    const dist = body?.facetDistribution ?? {};
+    for (const [k, v] of Object.entries(dist)) {
+      const key = k.startsWith("base_") ? k.slice("base_".length) : k;
+      out[key] = v as Record<string, number>;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
