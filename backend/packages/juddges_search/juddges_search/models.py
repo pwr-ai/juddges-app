@@ -145,6 +145,14 @@ class LegalDocument(BaseModel):
     department_name: Optional[str] = Field(None, description="Name of the department")
     extracted_legal_bases: Optional[str] = Field(None, description="Extracted legal bases from the document")
     references: Optional[List[str]] = Field(default_factory=list, description="References to other documents")
+    base_fields: Optional[dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Extracted base-schema columns (base_appellant, base_appeal_outcome, "
+            "base_num_victims, …). Populated only when include_base_fields=true is "
+            "requested; otherwise None to keep search/list responses lean."
+        ),
+    )
 
     model_config = ConfigDict(
         extra="allow",

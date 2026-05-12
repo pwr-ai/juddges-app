@@ -133,11 +133,19 @@ def _convert_supabase_to_legal_document(
     if issuing_body_data and isinstance(issuing_body_data, dict):
         issuing_body = IssuingBody(**issuing_body_data)
 
-    # Parse dates using utility function
-    date_issued = parse_date(doc_data.get("date_issued"))
+    # Parse dates using utility function. Real `judgments` rows expose
+    # `decision_date`; legacy `legal_documents` callers passed `date_issued` —
+    # accept either so collection batch responses don't drop dates.
+    date_issued = parse_date(
+        doc_data.get("date_issued") or doc_data.get("decision_date")
+    )
     publication_date = parse_date(doc_data.get("publication_date"))
-    ingestion_date = parse_date(doc_data.get("ingestion_date"))
-    last_updated = parse_date(doc_data.get("last_updated"))
+    ingestion_date = parse_date(
+        doc_data.get("ingestion_date") or doc_data.get("created_at")
+    )
+    last_updated = parse_date(
+        doc_data.get("last_updated") or doc_data.get("updated_at")
+    )
 
     # Build vectors dict if requested
     vectors = {}
@@ -148,14 +156,16 @@ def _convert_supabase_to_legal_document(
             vectors["summary"] = doc_data["summary_embedding"]
 
     return LegalDocument(
-        document_id=doc_data.get("document_id", ""),
+        # Judgments rows use `id` (UUID); legacy rows used `document_id`.
+        # Empty document_id silently breaks the frontend Map keyed by it.
+        document_id=doc_data.get("document_id") or doc_data.get("id") or "",
         document_type=doc_type,
         title=doc_data.get("title"),
         date_issued=date_issued,
         issuing_body=issuing_body,
         language=doc_data.get("language"),
-        document_number=doc_data.get("document_number"),
-        country=doc_data.get("country", "PL"),
+        document_number=doc_data.get("document_number") or doc_data.get("case_number"),
+        country=doc_data.get("country") or doc_data.get("jurisdiction") or "PL",
         full_text=doc_data.get("full_text", ""),
         summary=doc_data.get("summary"),
         keywords=doc_data.get("keywords") or [],
@@ -174,11 +184,13 @@ def _convert_supabase_to_legal_document(
         raw_content=doc_data.get("raw_content"),
         presiding_judge=doc_data.get("presiding_judge"),
         judges=doc_data.get("judges") or [],
-        legal_bases=doc_data.get("legal_bases") or [],
+        legal_bases=doc_data.get("legal_bases")
+        or doc_data.get("cited_legislation")
+        or [],
         court_name=doc_data.get("court_name"),
         department_name=doc_data.get("department_name"),
         extracted_legal_bases=doc_data.get("extracted_legal_bases"),
-        references=doc_data.get("references") or [],
+        references=doc_data.get("references") or doc_data.get("legal_topics") or [],
     )
 
 
@@ -206,6 +218,33 @@ def _merge_base_extraction_fields(
             metadata[key] = value.isoformat()
         else:
             metadata[key] = value
+
+
+def _extract_base_fields(
+    raw_doc_data: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Build a fresh dict of `base_*` extracted-schema columns from a judgments row.
+
+    Returns None when the row has no non-empty base_* keys. Mirrors
+    `_merge_base_extraction_fields` semantics: skips None, empty lists, and
+    serialises datetimes to ISO strings — so the frontend can render values
+    without further parsing.
+    """
+    if not raw_doc_data:
+        return None
+    result: dict[str, Any] = {}
+    for key, value in raw_doc_data.items():
+        if not key.startswith("base_"):
+            continue
+        if value is None:
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            continue
+        if isinstance(value, datetime):
+            result[key] = value.isoformat()
+        else:
+            result[key] = value
+    return result if result else None
 
 
 def _build_document_metadata_dict(doc: LegalDocument) -> dict:

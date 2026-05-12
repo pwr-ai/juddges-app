@@ -1,12 +1,17 @@
 import type { SearchDocument } from "@/types/search";
 import type { ExportRow } from "@/lib/file-export";
+import {
+  BASE_FIELD_ORDER,
+  FIELD_LABELS,
+  formatValue,
+} from "@/lib/document-fields";
 
 export interface CollectionExportColumn {
   key: string;
   label: string;
 }
 
-export const COLLECTION_EXPORT_COLUMNS: CollectionExportColumn[] = [
+const STANDARD_COLUMNS: CollectionExportColumn[] = [
   { key: "document_id", label: "Document ID" },
   { key: "title", label: "Title" },
   { key: "date_issued", label: "Date issued" },
@@ -34,7 +39,16 @@ export const COLLECTION_EXPORT_COLUMNS: CollectionExportColumn[] = [
   { key: "legal_state", label: "Legal state" },
   { key: "full_text", label: "Full text" },
   { key: "source_url", label: "Source URL" },
-  { key: "score", label: "Score" },
+];
+
+const BASE_COLUMNS: CollectionExportColumn[] = BASE_FIELD_ORDER.map((key) => ({
+  key,
+  label: FIELD_LABELS[key]?.label ?? key,
+}));
+
+export const COLLECTION_EXPORT_COLUMNS: CollectionExportColumn[] = [
+  ...STANDARD_COLUMNS,
+  ...BASE_COLUMNS,
 ];
 
 function joinArray(value: unknown): string {
@@ -67,6 +81,10 @@ function formatLegalConcepts(value: SearchDocument["legal_concepts"]): string {
     .join("\n");
 }
 
+function formatBaseCell(key: string, value: unknown): string {
+  return formatValue(key, value) ?? "";
+}
+
 export function flattenDocumentForExport(doc: SearchDocument): ExportRow {
   const issuingBody = doc.issuing_body;
   const issuingBodyName =
@@ -80,7 +98,7 @@ export function flattenDocumentForExport(doc: SearchDocument): ExportRow {
       ? issuingBody.jurisdiction ?? ""
       : "";
 
-  return {
+  const row: ExportRow = {
     document_id: doc.document_id ?? "",
     title: doc.title ?? "",
     date_issued: doc.date_issued ?? "",
@@ -107,9 +125,18 @@ export function flattenDocumentForExport(doc: SearchDocument): ExportRow {
     factual_state: doc.factual_state ?? "",
     legal_state: doc.legal_state ?? "",
     full_text: doc.full_text ?? "",
-    source_url: doc.metadata?.source_url ?? "",
-    score: doc.score ?? "",
+    source_url:
+      doc.metadata?.source_url ??
+      ((doc as unknown as { source_url?: string | null }).source_url ?? ""),
   };
+
+  const baseFields = doc.base_fields ?? null;
+  for (const col of BASE_COLUMNS) {
+    const value = baseFields ? baseFields[col.key] : undefined;
+    row[col.key] = formatBaseCell(col.key, value);
+  }
+
+  return row;
 }
 
 export function buildCollectionExportRows(docs: SearchDocument[]): ExportRow[] {

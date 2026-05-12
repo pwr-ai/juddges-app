@@ -7,6 +7,8 @@ Tests:
 - POST /documents/batch - Batch retrieval
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from httpx import AsyncClient
 
@@ -465,3 +467,131 @@ async def test_batch_documents_order_preservation(authenticated_client: AsyncCli
 
             # Check if documents are returned
             assert len(data["documents"]) >= 0
+
+
+# ============================================================================
+# include_base_fields flag — unit tests (no external services required)
+# ============================================================================
+
+# Minimal Supabase row that satisfies _convert_supabase_to_legal_document.
+# Shape mirrors a real `judgments` row: `id` (not `document_id`) for the
+# primary key. The converter falls back from `document_id` → `id` so this
+# fixture catches the regression where empty document_id silently broke
+# the collection table view's batch refetch.
+_BASE_ROW: dict = {
+    "id": "X-1",
+    "document_type": "judgment",
+    "title": "Case X",
+    "country": "PL",
+    "full_text": "Full text content.",
+    "base_appellant": "offender",
+    "base_num_victims": 3,
+}
+
+
+def _make_db_mock(rows: list[dict] | dict | None) -> MagicMock:
+    """Return a fake db whose get_document_by_id / get_documents_by_ids resolve
+    to the supplied fixture data without hitting any real service."""
+    db = MagicMock()
+    if isinstance(rows, list):
+        db.get_documents_by_ids = AsyncMock(return_value=rows)
+    else:
+        db.get_document_by_id = AsyncMock(return_value=rows)
+    return db
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+async def test_get_document_include_base_fields_true(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /documents/{id}?include_base_fields=true → base_fields populated."""
+    mock_db = _make_db_mock(_BASE_ROW)
+    monkeypatch.setattr("app.judgments_pkg.get_vector_db", lambda: mock_db)
+
+    response = await authenticated_client.get(
+        "/documents/X-1", params={"include_base_fields": "true"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document"]["base_fields"] == {
+        "base_appellant": "offender",
+        "base_num_victims": 3,
+    }
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+async def test_get_document_include_base_fields_false(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /documents/{id} (no flag) → base_fields is None / absent."""
+    mock_db = _make_db_mock(_BASE_ROW)
+    monkeypatch.setattr("app.judgments_pkg.get_vector_db", lambda: mock_db)
+
+    response = await authenticated_client.get("/documents/X-1")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document"].get("base_fields") is None
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+async def test_batch_documents_include_base_fields_true(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /documents/batch include_base_fields=true → each doc carries its own base_fields."""
+    row_with_base = {
+        **_BASE_ROW,
+        "id": "X-1",
+        "base_appellant": "offender",
+        "base_num_victims": 2,
+    }
+    row_without_base = {
+        "id": "X-2",
+        "document_type": "judgment",
+        "title": "Case Y",
+        "country": "PL",
+        "full_text": "Another text.",
+    }
+    mock_db = _make_db_mock([row_with_base, row_without_base])
+    monkeypatch.setattr("app.judgments_pkg.get_vector_db", lambda: mock_db)
+
+    response = await authenticated_client.post(
+        "/documents/batch",
+        json={"document_ids": ["X-1", "X-2"], "include_base_fields": True},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    docs = body["documents"]
+    assert docs[0]["base_fields"] == {
+        "base_appellant": "offender",
+        "base_num_victims": 2,
+    }
+    assert docs[1].get("base_fields") is None
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+async def test_batch_documents_include_base_fields_default_off(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /documents/batch (no flag) → base_fields stays None even if source row has base_* keys."""
+    mock_db = _make_db_mock([_BASE_ROW])
+    monkeypatch.setattr("app.judgments_pkg.get_vector_db", lambda: mock_db)
+
+    response = await authenticated_client.post(
+        "/documents/batch",
+        json={"document_ids": ["X-1"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["documents"][0].get("base_fields") is None

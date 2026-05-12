@@ -21,6 +21,7 @@ export interface FetchDocumentsByIdsInput {
   document_ids: string[];
   return_vectors?: boolean;
   return_properties?: string[];
+  include_base_fields?: boolean;
 }
 
 export interface FetchDocumentsByIdsResponse {
@@ -125,6 +126,10 @@ export async function fetchDocumentsByIds(
       isArray: Array.isArray(input.return_properties),
       length: input.return_properties?.length,
     });
+  }
+
+  if (input.include_base_fields) {
+    payload.include_base_fields = true;
   }
 
   const response = await fetch(`/api/documents/batch`, {

@@ -796,6 +796,14 @@ class DocumentRequest(BaseModel):
     return_vectors: bool = Field(
         default=False, description="Whether to include vector embeddings"
     )
+    include_base_fields: bool = Field(
+        default=False,
+        description=(
+            "Include extracted base-schema columns (base_appellant, "
+            "base_appeal_outcome, base_num_victims, …) under the response's "
+            "`base_fields` key. Off by default to keep payloads lean."
+        ),
+    )
 
 
 class DocumentResponse(BaseModel):
@@ -815,6 +823,14 @@ class BatchDocumentsRequest(BaseModel):
         None,
         description="Optional list of property names to return. If None, returns all properties. Use to optimize performance by fetching only needed fields.",
         max_length=settings.MAX_RETURN_PROPERTIES,
+    )
+    include_base_fields: bool = Field(
+        default=False,
+        description=(
+            "Include extracted base-schema columns (base_appellant, "
+            "base_appeal_outcome, base_num_victims, …) under each document's "
+            "`base_fields` key. Off by default to keep payloads lean."
+        ),
     )
 
 

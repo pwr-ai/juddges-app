@@ -2,21 +2,20 @@
 
 import { useState, useEffect, useCallback, useMemo, FC } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CollectionWithDocuments } from "@/types/collection";
 import { getCollection, updateCollection, addDocumentToCollection, removeDocumentFromCollection, deleteCollection, addDocumentsToCollection, loadAllCollectionDocuments } from "@/lib/api/collections";
 import { SearchDocument } from "@/types/search";
-import { Plus, FileText, Lightbulb, Play, Wand2, Sparkles, Pencil, X, Zap, FolderOpen, ArrowLeft, AlertTriangle, Search, ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { Plus, FileText, Pencil, X, ArrowLeft, AlertTriangle, Search, ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon } from "lucide-react";
 import CollectionDocumentsTable from "@/components/collection-documents-table";
 import { toast } from "sonner";
 import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, AIBadge, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, TextButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard, GlassButton } from "@/lib/styles/components";
+import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, TextButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard, GlassButton } from "@/lib/styles/components";
 
 interface CollectionClientProps {
  id: string;
@@ -40,7 +39,6 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  const [isClosing, setIsClosing] = useState(false);
  const [editName, setEditName] = useState("");
  const [editDescription, setEditDescription] = useState("");
- const [isBannerDismissed, setIsBannerDismissed] = useState(false);
  const [isTipDismissed, setIsTipDismissed] = useState(false);
  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
  const [isDeleting, setIsDeleting] = useState(false);
@@ -63,7 +61,6 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  // Reset tip dismissal state when collection ID changes
  useEffect(() => {
  setIsTipDismissed(false);
- setIsBannerDismissed(false);
  setSearchQuery("");
  setCurrentPage(1);
  setAllDocumentsLoaded(false);
@@ -309,7 +306,9 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  }, [loadCollection]);
 
  const ensureAllDocumentsFetched = useCallback(async (docIds: string[]): Promise<boolean> => {
- const missing = docIds.filter((id) => !documents.has(id));
+ const missing = docIds.filter(
+  (id) => !documents.has(id) || documents.get(id)?.base_fields == null
+ );
  if (missing.length === 0) return true;
 
  setIsLoadingFullTable(true);
@@ -325,7 +324,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  setDocuments((prev) => {
  const next = new Map(prev);
  for (const doc of fetched) {
- if (doc?.document_id && !next.has(doc.document_id)) {
+ if (doc?.document_id) {
  next.set(doc.document_id, doc);
  }
  }
@@ -559,22 +558,6 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  toast.error("Failed to delete collection");
  setIsDeleting(false);
  }
- };
-
- const handleStartExtraction = (): void => {
- pageLogger.info('Navigating to extraction page', {
- collectionId: id,
- documentCount: collection?.documents.length
- });
- router.push(`/extract?collection=${id}`);
- };
-
- const handleGenerateSchema = (): void => {
- pageLogger.info('Navigating to schema generation', {
- collectionId: id,
- documentCount: collection?.documents.length
- });
- router.push(`/schema-chat?collection=${id}`);
  };
 
  if (isLoading) {
@@ -832,70 +815,6 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  )}
  </div>
  </div>
-
- {/* Extraction ready banner */}
- {collection.documents.length > 0 && !isBannerDismissed && (
- <BaseCard
- className="mt-4 p-6 rounded-xl border-primary/20 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent shadow-sm relative"
- clickable={false}
- >
- <IconButton
- icon={X}
- onClick={() => setIsBannerDismissed(true)}
- variant="muted"
- size="lg"
- aria-label="Dismiss banner"
- className="absolute top-4 right-4 z-10"
- />
- <div className="flex items-start gap-3 mb-4 pr-12">
- <div className="p-2 rounded-lg bg-primary/10 shrink-0">
- <Sparkles className="h-5 w-5 text-primary"/>
- </div>
- <div className="flex-1 min-w-0">
- <div className="flex items-center gap-2 mb-1.5 flex-wrap">
- <h3 className="font-semibold text-foreground">
- Ready to extract data from this collection?
- </h3>
- <AIBadge
- text="AI"
- icon={Zap}
- className="h-8 px-4 text-sm [&>svg]:h-4 [&>svg]:w-4"
- />
- </div>
- <p className="text-sm text-muted-foreground leading-relaxed">
- Generate a custom schema or start extraction with an existing schema to analyze your {totalDocumentCount} {totalDocumentCount === 1 ? 'document' : 'documents'}.
- </p>
- </div>
- </div>
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-primary/10">
- <div className="flex items-center gap-2 text-xs">
- <Lightbulb className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground"/>
- <span className="text-muted-foreground">
- Need help creating an expert-adjusted schema?{""}
- <Link href="/contact"className="font-semibold text-primary hover:text-primary/80 underline-offset-4">
- Contact Us
- </Link>
- </span>
- </div>
- <div className="flex flex-row gap-2 shrink-0 sm:justify-end">
- <SecondaryButton
- size="sm"
- onClick={handleGenerateSchema}
- icon={Wand2}
- >
- Generate Schema
- </SecondaryButton>
- <GlassButton
- onClick={handleStartExtraction}
- className="w-auto shrink-0 h-9 px-6"
- >
- <Play className="h-4 w-4"/>
- Start Extraction
- </GlassButton>
- </div>
- </div>
- </BaseCard>
- )}
 
  </div>
 

@@ -144,7 +144,10 @@ export function AppSidebar(): React.JSX.Element {
  <SidebarMenu className="space-y-1">
  <SidebarMenuItem>
  <SidebarMenuButton asChild isActive={pathname === "/search"}>
- <Link href="/search">
+ {/* prefetch={false}: anonymous prefetch caches the middleware 307 to
+    /auth/login under /search, which then bounces freshly-authed
+    users on their first click after login. */}
+ <Link href="/search" prefetch={false}>
  <Search />
  <span>{t('navigation.searchJudgments')}</span>
  </Link>

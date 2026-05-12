@@ -177,7 +177,10 @@ export async function loadAllCollectionDocuments(
   onProgress?.({ loaded: 0, total: documentIds.length });
 
   for (const chunk of chunks) {
-    const result = await fetchDocumentsByIds({ document_ids: chunk });
+    const result = await fetchDocumentsByIds({
+      document_ids: chunk,
+      include_base_fields: true,
+    });
     all.push(...result.documents);
     onProgress?.({ loaded: all.length, total: documentIds.length });
   }

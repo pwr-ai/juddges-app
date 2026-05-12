@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Logo } from '@/components/ui/logo'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import logger from '@/lib/logger'
+import { sanitizeNextPath } from '@/lib/auth/next-path'
 import {
   Mail,
   Lock,
@@ -37,6 +38,8 @@ export function LoginFormEnhanced({
   const [emailError, setEmailError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = sanitizeNextPath(searchParams?.get('next'))
 
   pageLogger.info('LoginFormEnhanced component mounted')
 
@@ -101,7 +104,7 @@ export function LoginFormEnhanced({
       // served from a pre-login cache and middleware will bounce the user
       // back to /auth/login on the first protected route.
       router.refresh()
-      router.push('/')
+      router.push(nextPath)
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'An error occurred'

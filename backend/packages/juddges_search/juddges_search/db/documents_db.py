@@ -44,7 +44,8 @@ _JUDGMENT_COLS = (
     "base_appellant, base_co_def_acc_num, base_appeal_against, "
     "base_appeal_ground, base_sent_guide_which, base_appeal_outcome, "
     "base_reason_quash_conv, base_reason_sent_excessive, "
-    "base_reason_sent_lenient, base_reason_dismiss"
+    "base_reason_sent_lenient, base_reason_dismiss, "
+    "base_extraction_error, base_schema_key, base_schema_version"
 )
 
 _UUID_RE = re.compile(

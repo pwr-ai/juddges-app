@@ -1,18 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeNextPath } from '@/lib/auth/next-path'
 import { NextResponse } from 'next/server'
-
-function sanitizeNextPath(nextParam: string | null): string {
-  if (!nextParam) {
-    return '/'
-  }
-
-  // Only allow in-app relative redirects.
-  if (!nextParam.startsWith('/') || nextParam.startsWith('//')) {
-    return '/'
-  }
-
-  return nextParam
-}
 
 function resolveAllowedHosts(): Set<string> {
   const allowed = new Set<string>()

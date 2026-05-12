@@ -66,7 +66,6 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     request.nextUrl.pathname !== "/" &&
-    !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/auth") &&
     !request.nextUrl.pathname.startsWith("/about") &&
     !request.nextUrl.pathname.startsWith("/ecosystem") &&
@@ -76,9 +75,16 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/status") &&
     !request.nextUrl.pathname.startsWith("/offline")
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // Preserve the originally-requested path (and query) so the login form
+    // can return the user there after a successful sign-in instead of
+    // dumping them on `/`.
     const url = request.nextUrl.clone();
+    const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = "/auth/login";
+    url.search = "";
+    if (nextTarget && nextTarget !== "/") {
+      url.searchParams.set("next", nextTarget);
+    }
     return NextResponse.redirect(url);
   }
 

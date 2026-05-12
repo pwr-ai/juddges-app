@@ -190,24 +190,23 @@ async def _get_cached_document_ids(only_with_coordinates: bool = False) -> list[
     db = get_vector_db()
     try:
         if only_with_coordinates:
-            # Query documents with coordinates
             response = (
-                db.client.table("legal_documents")
-                .select("document_id, x, y")
-                .not_.is_("x", "null")
-                .not_.is_("y", "null")
+                db.client.table("judgments")
+                .select("id, umap_x, umap_y")
+                .not_.is_("umap_x", "null")
+                .not_.is_("umap_y", "null")
                 .limit(settings.MAX_DOCUMENT_IDS_FETCH_LIMIT)
                 .execute()
             )
         else:
             response = (
-                db.client.table("legal_documents")
-                .select("document_id")
+                db.client.table("judgments")
+                .select("id")
                 .limit(settings.MAX_DOCUMENT_IDS_FETCH_LIMIT)
                 .execute()
             )
 
-        document_ids = [doc["document_id"] for doc in (response.data or [])]
+        document_ids = [doc["id"] for doc in (response.data or [])]
         logger.info(
             f"Found {len(document_ids)} documents (only_with_coords={only_with_coordinates})"
         )
