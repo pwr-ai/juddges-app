@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { Suspense, useMemo } from "react";
 
-import {
-  ActiveFilterChips,
-  ExtractedFilterDrawer,
-} from "@/components/filters/extracted-search-filters";
+import { ActiveFilterChips } from "@/components/filters/extracted-search-filters";
+import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +15,144 @@ import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-fi
 import type {
   BaseSchemaFilterRequest,
   BaseSchemaFilterResultRow,
+  BaseSchemaFilters,
 } from "@/types/base-schema-filter";
+import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
+
+// =============================================================================
+// Adapter: BaseSchemaFilters (PG RPC) ↔ BaseFilters (drawer's union)
+// =============================================================================
+
+function toDrawerFilters(s: BaseSchemaFilters): BaseFilters {
+  const out: BaseFilters = {};
+  for (const [field, value] of Object.entries(s)) {
+    if (value === undefined || value === null) continue;
+
+    // Skip substring fields - they're handled separately above the drawer
+    if (field === "case_name" ||
+        field === "appeal_court_judges_names" ||
+        field === "offender_representative_name") {
+      continue;
+    }
+
+    // Convert to BaseFilterValue shape based on value type
+    if (Array.isArray(value)) {
+      if (value.length === 0) continue;
+      // Could be enum_multi or tag_array - both use array format
+      out[field] = { kind: "tag_array", values: value };
+    } else if (typeof value === "boolean") {
+      out[field] = { kind: "boolean_tri", value };
+    } else if (typeof value === "number") {
+      out[field] = { kind: "numeric_range", min: value, max: value };
+    } else if (typeof value === "object" && value !== null) {
+      if ("min" in value || "max" in value) {
+        out[field] = { kind: "numeric_range", min: value.min, max: value.max };
+      } else if ("from" in value || "to" in value) {
+        out[field] = { kind: "date_range", from: value.from, to: value.to };
+      }
+    }
+  }
+  return out;
+}
+
+function applyDrawerChange(
+  s: BaseSchemaFilters,
+  field: string,
+  value: BaseFilterValue | undefined,
+): BaseSchemaFilters {
+  const next = { ...s };
+
+  if (value === undefined) {
+    delete (next as Record<string, unknown>)[field];
+    return next;
+  }
+
+  // Convert back to BaseSchemaFilters shape
+  switch (value.kind) {
+    case "tag_array":
+    case "enum_multi":
+      (next as Record<string, unknown>)[field] = value.values;
+      break;
+    case "boolean_tri":
+      (next as Record<string, unknown>)[field] = value.value;
+      break;
+    case "numeric_range":
+      if (value.min === value.max) {
+        (next as Record<string, unknown>)[field] = value.min;
+      } else {
+        (next as Record<string, unknown>)[field] = { min: value.min, max: value.max };
+      }
+      break;
+    case "date_range":
+      (next as Record<string, unknown>)[field] = { from: value.from, to: value.to };
+      break;
+  }
+
+  return next;
+}
+
+// =============================================================================
+// Substring inputs component - sits above the drawer
+// =============================================================================
+
+interface SubstringInputsProps {
+  appealCourtJudgesNames?: string;
+  caseName?: string;
+  offenderRepresentativeName?: string;
+  onChange: (field: string, value: string | undefined) => void;
+  disabled?: boolean;
+}
+
+function SubstringInputs({
+  appealCourtJudgesNames,
+  caseName,
+  offenderRepresentativeName,
+  onChange,
+  disabled,
+}: SubstringInputsProps) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label htmlFor="case-name" className="block text-sm font-medium text-muted-foreground mb-1">
+            Case name
+          </label>
+          <Input
+            id="case-name"
+            placeholder="Search case names..."
+            value={caseName ?? ""}
+            onChange={(e) => onChange("case_name", e.target.value.trim() || undefined)}
+            disabled={disabled}
+          />
+        </div>
+        <div>
+          <label htmlFor="judges-names" className="block text-sm font-medium text-muted-foreground mb-1">
+            Judges
+          </label>
+          <Input
+            id="judges-names"
+            placeholder="Search judge names..."
+            value={appealCourtJudgesNames ?? ""}
+            onChange={(e) => onChange("appeal_court_judges_names", e.target.value.trim() || undefined)}
+            disabled={disabled}
+          />
+        </div>
+        <div>
+          <label htmlFor="offender-rep" className="block text-sm font-medium text-muted-foreground mb-1">
+            Offender representative
+          </label>
+          <Input
+            id="offender-rep"
+            placeholder="Search representatives..."
+            value={offenderRepresentativeName ?? ""}
+            onChange={(e) => onChange("offender_representative_name", e.target.value.trim() || undefined)}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
   const date = row.decision_date ? new Date(row.decision_date) : null;
@@ -119,6 +254,37 @@ function ExtractionSearchPage() {
 
   const clearText = () => setTextQuery("");
 
+  // Drawer state management
+  const drawerFilters = toDrawerFilters(filters);
+
+  const setSubstringFilter = (field: string, value: string | undefined) => {
+    const next = { ...filters };
+    if (value === undefined) {
+      delete (next as Record<string, unknown>)[field];
+    } else {
+      (next as Record<string, unknown>)[field] = value;
+    }
+    setFilters(next);
+  };
+
+  const setDrawerFilter = (field: string, value: BaseFilterValue | undefined) => {
+    const next = applyDrawerChange(filters, field, value);
+    setFilters(next);
+  };
+
+  const resetDrawerFilters = () => {
+    // Reset only non-substring fields
+    const next = { ...filters };
+    Object.keys(filters).forEach(field => {
+      if (field !== "case_name" &&
+          field !== "appeal_court_judges_names" &&
+          field !== "offender_representative_name") {
+        delete (next as Record<string, unknown>)[field];
+      }
+    });
+    setFilters(next);
+  };
+
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 space-y-4">
       <header className="space-y-1">
@@ -129,18 +295,30 @@ function ExtractionSearchPage() {
         </p>
       </header>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Input
-          placeholder="Search case names, judges, charges, courts…"
-          value={textQuery}
-          onChange={(e) => setTextQuery(e.target.value)}
-          className="flex-1"
-          aria-label="Full-text search"
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Input
+            placeholder="Search case names, judges, charges, courts…"
+            value={textQuery}
+            onChange={(e) => setTextQuery(e.target.value)}
+            className="flex-1"
+            aria-label="Full-text search"
+          />
+        </div>
+
+        <SubstringInputs
+          caseName={filters.case_name}
+          appealCourtJudgesNames={filters.appeal_court_judges_names}
+          offenderRepresentativeName={filters.offender_representative_name}
+          onChange={setSubstringFilter}
+          disabled={isLoading}
         />
-        <ExtractedFilterDrawer
-          filters={filters}
-          onChange={setFilters}
-          activeCount={activeCount}
+
+        <BaseFiltersDrawer
+          filters={drawerFilters}
+          onChange={setDrawerFilter}
+          onReset={resetDrawerFilters}
+          disabled={isLoading}
         />
       </div>
 
