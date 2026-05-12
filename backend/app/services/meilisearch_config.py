@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -181,14 +182,76 @@ def transform_judgment_for_meilisearch(row: dict[str, Any]) -> dict[str, Any]:
     # Base-schema extraction status (used to filter to fully-extracted docs)
     doc["base_extraction_status"] = row.get("base_extraction_status")
 
-    # Numeric base-schema fields — kept native so Meilisearch can do range filters.
-    for num_field in (
+    # Helper to coerce Decimal values from psycopg NUMERIC columns
+    def coerce_numeric_value(val):
+        if isinstance(val, Decimal):
+            # Convert to int if integral, else float
+            return int(val) if val % 1 == 0 else float(val)
+        if isinstance(val, list):
+            # Recursively coerce each element in arrays
+            return [coerce_numeric_value(item) for item in val]
+        return val
+
+    # All filterable + searchable base_* fields (excluding operational columns)
+    BASE_SCHEMA_FIELDS = [
+        "base_extraction_status",
+        "base_extraction_model",
         "base_num_victims",
         "base_victim_age_offence",
         "base_case_number",
         "base_co_def_acc_num",
-    ):
-        doc[num_field] = row.get(num_field)
+        "base_appellant",
+        "base_plea_point",
+        "base_remand_decision",
+        "base_offender_job_offence",
+        "base_offender_home_offence",
+        "base_offender_victim_relationship",
+        "base_offender_age_offence",
+        "base_victim_type",
+        "base_victim_job_offence",
+        "base_victim_home_offence",
+        "base_pre_sent_report",
+        "base_conv_court_names",
+        "base_sent_court_name",
+        "base_did_offender_confess",
+        "base_vic_impact_statement",
+        "base_keywords",
+        "base_convict_plea_dates",
+        "base_convict_offences",
+        "base_acquit_offences",
+        "base_sentences_received",
+        "base_sentence_serve",
+        "base_what_ancilliary_orders",
+        "base_offender_gender",
+        "base_offender_intox_offence",
+        "base_victim_gender",
+        "base_victim_intox_offence",
+        "base_pros_evid_type_trial",
+        "base_def_evid_type_trial",
+        "base_agg_fact_sent",
+        "base_mit_fact_sent",
+        "base_appeal_against",
+        "base_appeal_ground",
+        "base_sent_guide_which",
+        "base_appeal_outcome",
+        "base_reason_quash_conv",
+        "base_reason_sent_excessive",
+        "base_reason_sent_lenient",
+        "base_reason_dismiss",
+        "base_neutral_citation_number",
+        "base_appeal_court_judges_names",
+        "base_case_name",
+        "base_offender_representative_name",
+        "base_crown_attorney_general_representative_name",
+        "base_remand_custody_time",
+        "base_offender_mental_offence",
+        "base_victim_mental_offence",
+    ]
+
+    # Pass through all base_* fields with Decimal coercion
+    for field in BASE_SCHEMA_FIELDS:
+        val = row.get(field)
+        doc[field] = coerce_numeric_value(val) if val is not None else None
 
     # Appeal-court judgment date: keep ISO string for display, expose an epoch
     # seconds field for numeric range filtering.
@@ -209,6 +272,26 @@ def transform_judgment_for_meilisearch(row: dict[str, Any]) -> dict[str, Any]:
         int(datetime.combine(appeal_date, datetime.min.time()).timestamp())
         if appeal_date is not None
         else None
+    )
+
+    # Extraction timestamp: ISO string + epoch seconds twin for numeric filtering
+    extracted_at_val = row.get("base_extracted_at")
+    extracted_at: datetime | None = None
+    if isinstance(extracted_at_val, datetime):
+        extracted_at = extracted_at_val
+    elif isinstance(extracted_at_val, str) and extracted_at_val:
+        try:
+            extracted_at = datetime.fromisoformat(
+                extracted_at_val.replace("Z", "+00:00")
+            )
+        except ValueError:
+            extracted_at = None
+
+    doc["base_extracted_at"] = (
+        extracted_at.isoformat() if extracted_at is not None else None
+    )
+    doc["base_extracted_at_ts"] = (
+        int(extracted_at.timestamp()) if extracted_at is not None else None
     )
 
     # Explicitly skip embedding — it's useless in Meilisearch and huge

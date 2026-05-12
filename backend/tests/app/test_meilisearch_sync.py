@@ -114,6 +114,45 @@ class TestTransformJudgmentForMeilisearch:
         assert isinstance(doc["id"], str)
         assert doc["id"] == str(uid)
 
+    def test_base_schema_fields_are_emitted(self):
+        from datetime import datetime
+
+        row = self._make_row(
+            base_appellant="offender",
+            base_appeal_outcome=["dismissed", "varied_sentence"],
+            base_vic_impact_statement=True,
+            base_num_victims=3,
+            base_offender_job_offence="employed",
+            base_case_name="Smith v The Crown",
+            base_date_of_appeal_court_judgment=date(2020, 6, 1),
+            base_extracted_at=datetime(2026, 5, 12, 10, 30, tzinfo=UTC),
+        )
+        doc = transform_judgment_for_meilisearch(row)
+
+        assert doc["base_appellant"] == "offender"
+        assert doc["base_appeal_outcome"] == ["dismissed", "varied_sentence"]
+        assert doc["base_vic_impact_statement"] is True
+        assert doc["base_num_victims"] == 3
+        assert doc["base_offender_job_offence"] == "employed"
+        assert doc["base_case_name"] == "Smith v The Crown"
+        assert doc["base_date_of_appeal_court_judgment"] == "2020-06-01"
+        assert isinstance(doc["base_extracted_at_ts"], int)
+        assert doc["base_extracted_at_ts"] == int(
+            datetime(2026, 5, 12, 10, 30, tzinfo=UTC).timestamp()
+        )
+
+    def test_decimal_numeric_base_fields_are_coerced(self):
+        from decimal import Decimal
+
+        row = self._make_row(
+            base_case_number=Decimal("1234"),
+            base_victim_age_offence=Decimal("17.5"),
+        )
+        doc = transform_judgment_for_meilisearch(row)
+        assert isinstance(doc["base_case_number"], int | float)
+        assert doc["base_case_number"] == 1234
+        assert doc["base_victim_age_offence"] == 17.5
+
 
 class TestIndexSettings:
     def test_searchable_attributes_order(self):
