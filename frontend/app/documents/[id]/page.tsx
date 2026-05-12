@@ -792,10 +792,22 @@ export default function DocumentPage(): React.JSX.Element {
  )}
  </div>
 
- {/* Two-column layout: Main content + Sidebar */}
- <div className="flex flex-col lg:flex-row gap-6">
+ {/* Full-width single-column layout */}
+ <div className="flex flex-col gap-6">
  {/* Main Content Area */}
  <div className="flex-1 min-w-0">
+
+ {/* Extracted Schema Fields — full-width grid of all metadata */}
+ {metadata && (
+ <div className="mb-6">
+ <KeyInformation
+ metadata={metadata}
+ layout="grid"
+ showAll
+ title="Extracted Schema Fields"
+ />
+ </div>
+ )}
 
  {/* Similar Documents Section */}
  {similarDocs.length > 0 && (
@@ -1430,15 +1442,6 @@ export default function DocumentPage(): React.JSX.Element {
  </div>
  </div>
 
- {/* Sidebar - Metadata */}
- {metadata && (
- <aside className="w-full lg:w-80 flex-shrink-0">
- <div className="sticky top-4">
- <h3 className="font-bold text-lg text-foreground mb-3">Metadata</h3>
- <KeyInformation metadata={metadata} />
- </div>
- </aside>
- )}
  </div>
  </PageContainer>
  </div>
