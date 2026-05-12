@@ -31,6 +31,7 @@ import {
   Layers,
   Link as LinkIcon,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -115,6 +116,147 @@ const FIELD_CONFIG: Record<string, FieldConfig> = {
   jurisdiction:          { label: 'Jurisdiction',          icon: MapPin },
   x:                     { label: 'Embedding X',           icon: Database },
   y:                     { label: 'Embedding Y',           icon: Database },
+
+  // ---------------------------------------------------------------------------
+  // Base extraction schema (criminal-case fields stored as typed columns on
+  // `judgments` and surfaced under the original `base_*` keys to avoid
+  // collisions with regular metadata).
+  // ---------------------------------------------------------------------------
+  base_extraction_status:                              { label: 'Extraction Status',          icon: Activity },
+  base_extraction_model:                               { label: 'Extraction Model',           icon: Sparkles },
+  base_extracted_at:                                   { label: 'Extracted At',               icon: Clock },
+  base_schema_key:                                     { label: 'Base Schema',                icon: Layers },
+  base_schema_version:                                 { label: 'Base Schema Version',        icon: Hash },
+
+  base_case_name:                                      { label: 'Case Name',                  icon: FileText,    wide: true },
+  base_neutral_citation_number:                        { label: 'Neutral Citation',           icon: Hash },
+  base_case_number:                                    { label: 'Base Case Number',           icon: Hash },
+  base_date_of_appeal_court_judgment:                  { label: 'Appeal Court Judgment Date', icon: Calendar },
+
+  base_appeal_court_judges_names:                      { label: 'Appeal Court Judges',        icon: Users,       wide: true },
+  base_offender_representative_name:                   { label: 'Offender Representative',    icon: User,        wide: true },
+  base_crown_attorney_general_representative_name:     { label: 'Crown / AG Representative',  icon: User,        wide: true },
+
+  base_conv_court_names:                               { label: 'Conviction Court(s)',        icon: Scale,       wide: true },
+  base_sent_court_name:                                { label: 'Sentencing Court',           icon: Scale,       wide: true },
+
+  base_plea_point:                                     { label: 'Plea Point',                 icon: Gavel },
+  base_convict_plea_dates:                             { label: 'Plea Dates',                 icon: Calendar,    wide: true },
+  base_convict_offences:                               { label: 'Convicted Offences',         icon: Gavel,       wide: true },
+  base_acquit_offences:                                { label: 'Acquitted Offences',         icon: Gavel,       wide: true },
+  base_did_offender_confess:                           { label: 'Offender Confessed',         icon: User },
+  base_remand_decision:                                { label: 'Remand Decision',            icon: Gavel },
+  base_remand_custody_time:                            { label: 'Remand Custody Time',        icon: Clock },
+
+  base_sentences_received:                             { label: 'Sentences Received',         icon: Scale,       wide: true },
+  base_sentence_serve:                                 { label: 'Sentence Service',           icon: Activity },
+  base_what_ancilliary_orders:                         { label: 'Ancillary Orders',           icon: BookOpen,    wide: true },
+
+  base_offender_gender:                                { label: 'Offender Gender',            icon: User },
+  base_offender_age_offence:                           { label: 'Offender Age at Offence',    icon: User },
+  base_offender_job_offence:                           { label: 'Offender Employment',        icon: User },
+  base_offender_home_offence:                          { label: 'Offender Housing',           icon: User },
+  base_offender_mental_offence:                        { label: 'Offender Mental State',      icon: User },
+  base_offender_intox_offence:                         { label: 'Offender Intoxication',      icon: User },
+  base_offender_victim_relationship:                   { label: 'Offender-Victim Relationship', icon: Users },
+
+  base_victim_type:                                    { label: 'Victim Type',                icon: User },
+  base_num_victims:                                    { label: 'Number of Victims',          icon: Users },
+  base_victim_gender:                                  { label: 'Victim Gender',              icon: User },
+  base_victim_age_offence:                             { label: 'Victim Age at Offence',      icon: User },
+  base_victim_job_offence:                             { label: 'Victim Employment',          icon: User },
+  base_victim_home_offence:                            { label: 'Victim Housing',             icon: User },
+  base_victim_mental_offence:                          { label: 'Victim Mental State',        icon: User },
+  base_victim_intox_offence:                           { label: 'Victim Intoxication',        icon: User },
+
+  base_pros_evid_type_trial:                           { label: 'Prosecution Evidence',       icon: BookOpen,    wide: true },
+  base_def_evid_type_trial:                            { label: 'Defence Evidence',           icon: BookOpen,    wide: true },
+  base_pre_sent_report:                                { label: 'Pre-sentence Report',        icon: FileText },
+  base_agg_fact_sent:                                  { label: 'Aggravating Factors',        icon: Tag,         wide: true },
+  base_mit_fact_sent:                                  { label: 'Mitigating Factors',         icon: Tag,         wide: true },
+  base_vic_impact_statement:                           { label: 'Victim Impact Statement',    icon: MessageSquare },
+
+  base_appellant:                                      { label: 'Appellant',                  icon: User },
+  base_co_def_acc_num:                                 { label: 'Co-defendants',              icon: Users },
+  base_appeal_against:                                 { label: 'Appeal Against',             icon: Tag,         wide: true },
+  base_appeal_ground:                                  { label: 'Appeal Grounds',             icon: BookOpen,    wide: true },
+  base_sent_guide_which:                               { label: 'Sentencing Guidelines',      icon: BookOpen,    wide: true },
+  base_appeal_outcome:                                 { label: 'Appeal Outcome',             icon: Tag,         wide: true },
+  base_reason_quash_conv:                              { label: 'Reasons to Quash Conviction', icon: BookOpen,   wide: true },
+  base_reason_sent_excessive:                          { label: 'Reasons Sentence Excessive', icon: BookOpen,    wide: true },
+  base_reason_sent_lenient:                            { label: 'Reasons Sentence Lenient',   icon: BookOpen,    wide: true },
+  base_reason_dismiss:                                 { label: 'Reasons for Dismissal',      icon: BookOpen,    wide: true },
+
+  base_keywords:                                       { label: 'Extracted Keywords',         icon: Tag,         wide: true },
+};
+
+/**
+ * Map enum-coded extraction values (e.g. `gender_male`, `outcome_conviction_quashed`)
+ * to short human labels. Only applied when the field key starts with `base_` so we
+ * don't accidentally rewrite generic strings elsewhere in the metadata.
+ */
+const ENUM_VALUE_LABELS: Record<string, string> = {
+  // Genders
+  gender_male: 'Male',
+  gender_female: 'Female',
+  gender_unknown: 'Unknown',
+  // Intoxication
+  intox_alcohol: 'Alcohol',
+  intox_drugs: 'Drugs',
+  intox_unknown: 'Unknown',
+  // Sentence service
+  serve_concurrent: 'Concurrent',
+  serve_consecutive: 'Consecutive',
+  serve_unknown: 'Unknown',
+  // Appeal against
+  appeal_conviction_unsafe: 'Conviction unsafe',
+  appeal_sentence_excessive: 'Sentence excessive',
+  appeal_sentence_lenient: 'Sentence lenient',
+  appeal_other: 'Other',
+  appeal_unknown: 'Unknown',
+  // Appeal outcomes
+  outcome_dismissed_or_refused: 'Dismissed / refused',
+  outcome_conviction_quashed: 'Conviction quashed',
+  outcome_sentence_more_severe: 'Sentence increased',
+  outcome_sentence_more_lenient: 'Sentence reduced',
+  outcome_other: 'Other',
+  outcome_unknown: 'Unknown',
+  // Appellant
+  offender: 'Offender',
+  attorney_general: 'Attorney General',
+  other: 'Other',
+  // Plea points
+  police_presence: 'Police presence',
+  first_court_appearance: 'First court appearance',
+  before_trial: 'Before trial',
+  first_day_of_trial: 'First day of trial',
+  after_first_day_of_trial: 'After first day of trial',
+  dont_know: 'Unknown',
+  // Remand
+  unconditional_bail: 'Unconditional bail',
+  conditional_bail: 'Conditional bail',
+  remanded_in_custody: 'Remanded in custody',
+  // Employment
+  employed: 'Employed',
+  self_employed: 'Self-employed',
+  unemployed: 'Unemployed',
+  student: 'Student',
+  retired: 'Retired',
+  // Housing
+  fixed_address: 'Fixed address',
+  homeless: 'Homeless',
+  temporary_accommodation: 'Temporary accommodation',
+  // Victim type
+  individual_person: 'Individual',
+  organisation: 'Organisation',
+  // Pre-sent report
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  // Offender-victim relationship
+  stranger: 'Stranger',
+  relative: 'Relative',
+  acquaintance: 'Acquaintance',
 };
 
 /**
@@ -171,6 +313,67 @@ const FIELD_ORDER: string[] = [
   'references',
   'keywords',
   'source_url',
+
+  // Base extraction schema — surfaced after core metadata, in the order they
+  // make sense narratively (case identity → people → plea/sentence →
+  // offender → victim → evidence → appeal → metadata).
+  'base_case_name',
+  'base_neutral_citation_number',
+  'base_case_number',
+  'base_date_of_appeal_court_judgment',
+  'base_appeal_court_judges_names',
+  'base_offender_representative_name',
+  'base_crown_attorney_general_representative_name',
+  'base_conv_court_names',
+  'base_sent_court_name',
+  'base_plea_point',
+  'base_convict_plea_dates',
+  'base_convict_offences',
+  'base_acquit_offences',
+  'base_did_offender_confess',
+  'base_remand_decision',
+  'base_remand_custody_time',
+  'base_sentences_received',
+  'base_sentence_serve',
+  'base_what_ancilliary_orders',
+  'base_offender_gender',
+  'base_offender_age_offence',
+  'base_offender_job_offence',
+  'base_offender_home_offence',
+  'base_offender_mental_offence',
+  'base_offender_intox_offence',
+  'base_offender_victim_relationship',
+  'base_victim_type',
+  'base_num_victims',
+  'base_victim_gender',
+  'base_victim_age_offence',
+  'base_victim_job_offence',
+  'base_victim_home_offence',
+  'base_victim_mental_offence',
+  'base_victim_intox_offence',
+  'base_pros_evid_type_trial',
+  'base_def_evid_type_trial',
+  'base_pre_sent_report',
+  'base_agg_fact_sent',
+  'base_mit_fact_sent',
+  'base_vic_impact_statement',
+  'base_appellant',
+  'base_co_def_acc_num',
+  'base_appeal_against',
+  'base_appeal_ground',
+  'base_sent_guide_which',
+  'base_appeal_outcome',
+  'base_reason_quash_conv',
+  'base_reason_sent_excessive',
+  'base_reason_sent_lenient',
+  'base_reason_dismiss',
+  'base_keywords',
+  'base_extracted_at',
+  'base_extraction_status',
+  'base_extraction_model',
+  'base_schema_key',
+  'base_schema_version',
+
   'processing_status',
   'interpretation_status',
   'ingestion_date',
@@ -210,6 +413,11 @@ const looksLikeDate = (key: string, value: string): boolean => {
  */
 const formatValue = (key: string, value: unknown): string | null => {
   if (value === null || value === undefined) return null;
+
+  // Booleans (e.g. base_did_offender_confess, base_vic_impact_statement)
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
 
   // Arrays → comma-separated list of cleaned items
   if (Array.isArray(value)) {
@@ -253,6 +461,13 @@ const formatValue = (key: string, value: unknown): string | null => {
     } catch {
       // fall through
     }
+  }
+
+  // Enum-coded base_* values (gender_male, outcome_conviction_quashed, …) →
+  // human label. Scoped to base_* so we don't rewrite generic strings
+  // elsewhere in metadata.
+  if (key.startsWith('base_') && Object.prototype.hasOwnProperty.call(ENUM_VALUE_LABELS, str)) {
+    return ENUM_VALUE_LABELS[str];
   }
 
   if (looksLikeDate(key, str)) {
@@ -347,7 +562,7 @@ const FieldCell = memo(function FieldCell({
     <div
       className={cn(
         'flex items-start gap-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 backdrop-blur-sm',
-        wide && 'sm:col-span-2 lg:col-span-2 xl:col-span-2',
+        wide && 'sm:col-span-2 lg:col-span-2 xl:col-span-2 2xl:col-span-3',
       )}
     >
       <div className="flex-shrink-0 mt-0.5">
@@ -421,7 +636,7 @@ export const KeyInformation = memo(function KeyInformation({
         className={cn(
           'grid gap-3',
           isGrid
-            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
             : 'grid-cols-1 md:grid-cols-2',
         )}
       >

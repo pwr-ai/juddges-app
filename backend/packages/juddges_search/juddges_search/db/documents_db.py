@@ -20,7 +20,31 @@ _JUDGMENT_COLS = (
     "decision_date, publication_date, title, summary, full_text, "
     "judges, case_type, decision_type, outcome, keywords, legal_topics, "
     "cited_legislation, metadata, source_dataset, source_id, source_url, "
-    "created_at, updated_at"
+    "created_at, updated_at, "
+    # Base-schema extraction fields (typed columns on judgments). Surfaced so
+    # the document metadata endpoint can render Number of Victims, Appellant,
+    # Appeal Outcome, etc. on the document page.
+    "base_extraction_status, base_extraction_model, base_extracted_at, "
+    "base_keywords, base_neutral_citation_number, base_case_number, "
+    "base_date_of_appeal_court_judgment, base_appeal_court_judges_names, "
+    "base_case_name, base_offender_representative_name, "
+    "base_crown_attorney_general_representative_name, base_conv_court_names, "
+    "base_convict_plea_dates, base_convict_offences, base_acquit_offences, "
+    "base_did_offender_confess, base_plea_point, base_remand_decision, "
+    "base_remand_custody_time, base_sent_court_name, base_sentences_received, "
+    "base_sentence_serve, base_what_ancilliary_orders, base_offender_gender, "
+    "base_offender_age_offence, base_offender_job_offence, "
+    "base_offender_home_offence, base_offender_mental_offence, "
+    "base_offender_intox_offence, base_offender_victim_relationship, "
+    "base_victim_type, base_num_victims, base_victim_gender, "
+    "base_victim_age_offence, base_victim_job_offence, base_victim_home_offence, "
+    "base_victim_mental_offence, base_victim_intox_offence, "
+    "base_pros_evid_type_trial, base_def_evid_type_trial, base_pre_sent_report, "
+    "base_agg_fact_sent, base_mit_fact_sent, base_vic_impact_statement, "
+    "base_appellant, base_co_def_acc_num, base_appeal_against, "
+    "base_appeal_ground, base_sent_guide_which, base_appeal_outcome, "
+    "base_reason_quash_conv, base_reason_sent_excessive, "
+    "base_reason_sent_lenient, base_reason_dismiss"
 )
 
 _UUID_RE = re.compile(

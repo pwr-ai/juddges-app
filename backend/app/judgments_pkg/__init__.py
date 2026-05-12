@@ -49,6 +49,7 @@ from .conversion import (
     _build_document_metadata_dict,
     _convert_judgment_to_legal_document,
     _convert_supabase_to_legal_document,
+    _merge_base_extraction_fields,
 )
 from .search import (
     _build_search_pagination,
@@ -246,7 +247,12 @@ async def get_document_metadata(
             )
 
         doc = _convert_supabase_to_legal_document(doc_data)
-        return _build_document_metadata_dict(doc)
+        result = _build_document_metadata_dict(doc)
+        # Surface base_* extracted-schema columns (Number of Victims,
+        # Appellant, Appeal Outcome, …) only on this endpoint — search/list
+        # responses don't need the bloat.
+        _merge_base_extraction_fields(result, doc_data)
+        return result
 
     except HTTPException:
         raise

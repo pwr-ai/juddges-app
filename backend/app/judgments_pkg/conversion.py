@@ -182,6 +182,32 @@ def _convert_supabase_to_legal_document(
     )
 
 
+def _merge_base_extraction_fields(
+    metadata: dict[str, Any],
+    raw_doc_data: dict[str, Any] | None,
+) -> None:
+    """Merge typed `base_*` extraction columns from a judgments row into a
+    metadata-response dict.
+
+    The `base_` prefix is preserved so the frontend can target these as a
+    distinct field group (Number of Victims, Appellant, Appeal Outcome, etc.)
+    without colliding with the document's regular metadata keys.
+    """
+    if not raw_doc_data:
+        return
+    for key, value in raw_doc_data.items():
+        if not key.startswith("base_"):
+            continue
+        if value is None:
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            continue
+        if isinstance(value, datetime):
+            metadata[key] = value.isoformat()
+        else:
+            metadata[key] = value
+
+
 def _build_document_metadata_dict(doc: LegalDocument) -> dict:
     """Build metadata dictionary from document, excluding full text and HTML content."""
     metadata = {
