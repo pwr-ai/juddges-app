@@ -38,27 +38,65 @@ export interface SearchFormProps {
   currentLocale?: string;
 }
 
-type PopularSearch = {
-  label: string;
-  mode: SearchMode;
-  languages: Set<string>;
-};
+type SuggestedTopic =
+  | {
+      id: string;
+      kind: "dual";
+      pl: { label: string };
+      en: { label: string };
+    }
+  | {
+      id: string;
+      kind: "single";
+      label: string;
+    };
 
-const POPULAR_SEARCHES: PopularSearch[] = [
+const SUGGESTED_TOPICS: SuggestedTopic[] = [
   {
-    label: "Kredyty frankowe",
-    mode: "thinking",
-    languages: new Set(["pl"]),
+    id: "drug-possession",
+    kind: "dual",
+    pl: { label: "Posiadanie narkotyków" },
+    en: { label: "Drug possession" },
   },
   {
-    label: "Intellectual property",
-    mode: "thinking",
-    languages: new Set(["uk"]),
+    id: "drug-distribution",
+    kind: "dual",
+    pl: { label: "Wprowadzanie narkotyków do obrotu" },
+    en: { label: "Drug supply and distribution" },
   },
   {
-    label: "Prawo pracy",
-    mode: "thinking",
-    languages: new Set(["pl"]),
+    id: "significant-quantity",
+    kind: "dual",
+    pl: { label: "Znaczna ilość narkotyków" },
+    en: { label: "Class A drug offences" },
+  },
+  {
+    id: "supply-to-minors",
+    kind: "dual",
+    pl: { label: "Udzielanie narkotyków małoletnim" },
+    en: { label: "Supplying drugs to minors" },
+  },
+  {
+    id: "sentencing",
+    kind: "dual",
+    pl: { label: "Wymiar kary za przestępstwa narkotykowe" },
+    en: { label: "Sentencing for drug offences" },
+  },
+  {
+    id: "recidivism",
+    kind: "dual",
+    pl: { label: "Recydywa przy przestępstwach narkotykowych" },
+    en: { label: "Sentencing uplift for repeat drug offenders" },
+  },
+  {
+    id: "money-laundering",
+    kind: "single",
+    label: "Money laundering from drug proceeds",
+  },
+  {
+    id: "conspiracy",
+    kind: "single",
+    label: "Conspiracy to supply controlled drugs",
   },
 ];
 
@@ -105,10 +143,17 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     onSearch();
   };
 
-  const handlePopularSearch = (item: PopularSearch): void => {
-    setQuery(item.label);
-    setSearchType(item.mode);
-    setSelectedLanguages(item.languages);
+  const handleDualClick = (label: string, lang: "pl" | "uk"): void => {
+    setQuery(label);
+    setSearchType("thinking");
+    setSelectedLanguages(new Set([lang]));
+    internalRef.current?.focus();
+  };
+
+  const handleSingleClick = (label: string): void => {
+    setQuery(label);
+    setSearchType("thinking");
+    setSelectedLanguages(new Set(["pl", "uk"]));
     internalRef.current?.focus();
   };
 
@@ -287,16 +332,53 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
       {showPopularSearches && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Popular searches</span>
-          {POPULAR_SEARCHES.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => handlePopularSearch(item)}
-              className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
-            >
-              {item.label}
-            </button>
-          ))}
+          {SUGGESTED_TOPICS.map((topic) => {
+            if (topic.kind === "dual") {
+              return (
+                <span
+                  key={topic.id}
+                  className="inline-flex items-center gap-1"
+                  aria-label={`Topic: ${topic.en.label}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleDualClick(topic.pl.label, "pl")}
+                    className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
+                    aria-label={topic.pl.label}
+                  >
+                    {topic.pl.label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDualClick(topic.en.label, "uk")}
+                    className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
+                    aria-label={topic.en.label}
+                  >
+                    {topic.en.label}
+                  </button>
+                </span>
+              );
+            }
+            // topic.kind === "single"
+            return (
+              <button
+                key={topic.id}
+                type="button"
+                onClick={() => handleSingleClick(topic.label)}
+                className="rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
+                aria-label={topic.label}
+                title="Searches Polish and UK judgments"
+              >
+                <span
+                  aria-hidden="true"
+                  className="mr-1 font-mono text-[10px] tracking-tight text-muted-foreground"
+                >
+                  [PL+UK]
+                </span>
+                {topic.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </form>
