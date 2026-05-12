@@ -232,19 +232,17 @@ describe('SearchForm', () => {
       expect(screen.queryByText(/No matching topics/i)).not.toBeInTheDocument();
     });
 
-    it('clicking a topic chip calls router.push with /search?q=...&topic=... (en locale)', async () => {
-      const pushMock = jest.fn();
-      const navigation = jest.requireMock('next/navigation') as {
-        useRouter: jest.Mock;
-      };
-      navigation.useRouter = jest.fn().mockReturnValue({ push: pushMock });
-
+    it('clicking a topic chip replaces the query and auto-runs search (en locale)', async () => {
+      const setQuery = jest.fn();
+      const onSearch = jest.fn();
       const user = userEvent.setup();
 
       render(
         <SearchForm
           {...defaultProps}
           query="narko"
+          setQuery={setQuery}
+          onSearch={onSearch}
           autocompleteTopicHits={[sampleTopicHits[0]]}
           currentLocale="en"
         />
@@ -252,25 +250,21 @@ describe('SearchForm', () => {
 
       await user.click(screen.getByRole('option', { name: /Topic: Drug trafficking/i }));
 
-      expect(pushMock).toHaveBeenCalledWith(expect.stringContaining('/search?'));
-      const url = pushMock.mock.calls[0][0] as string;
-      expect(url).toContain('q=Drug+trafficking');
-      expect(url).toContain('topic=drug_trafficking');
+      expect(setQuery).toHaveBeenCalledWith('Drug trafficking');
+      expect(onSearch).toHaveBeenCalledWith(undefined, 'Drug trafficking');
     });
 
-    it('clicking a topic chip calls router.push with pl primary label for pl locale', async () => {
-      const pushMock = jest.fn();
-      const navigation = jest.requireMock('next/navigation') as {
-        useRouter: jest.Mock;
-      };
-      navigation.useRouter = jest.fn().mockReturnValue({ push: pushMock });
-
+    it('clicking a topic chip uses pl primary label for pl locale', async () => {
+      const setQuery = jest.fn();
+      const onSearch = jest.fn();
       const user = userEvent.setup();
 
       render(
         <SearchForm
           {...defaultProps}
           query="narko"
+          setQuery={setQuery}
+          onSearch={onSearch}
           autocompleteTopicHits={[sampleTopicHits[0]]}
           currentLocale="pl"
         />
@@ -278,9 +272,8 @@ describe('SearchForm', () => {
 
       await user.click(screen.getByRole('option', { name: /Topic: Handel narkotykami/i }));
 
-      expect(pushMock).toHaveBeenCalledWith(expect.stringContaining('topic=drug_trafficking'));
-      const url = pushMock.mock.calls[0][0] as string;
-      expect(url).toContain('Handel');
+      expect(setQuery).toHaveBeenCalledWith('Handel narkotykami');
+      expect(onSearch).toHaveBeenCalledWith(undefined, 'Handel narkotykami');
     });
 
     it('fires postTopicClick when a topic chip is clicked', async () => {

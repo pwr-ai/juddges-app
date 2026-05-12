@@ -158,21 +158,25 @@ function SearchPageContent(): React.JSX.Element | null {
  // state and never reflect new search results. Depend on the state slices they read.
  const filteredMetadata = useMemo(
    () => getFilteredMetadata(),
+   // eslint-disable-next-line react-hooks/exhaustive-deps
    [getFilteredMetadata, searchMetadata, filters, filterVersion]
  );
 
  const filteredCount = useMemo(
    () => getFilteredMetadataCount(),
+   // eslint-disable-next-line react-hooks/exhaustive-deps
    [getFilteredMetadataCount, searchMetadata, filters, filterVersion]
  );
 
  const availableFilters = useMemo(
    () => getAvailableFiltersFromMetadata(),
+   // eslint-disable-next-line react-hooks/exhaustive-deps
    [getAvailableFiltersFromMetadata, searchMetadata, filters, filterVersion]
  );
 
  const activeFilterCount = useMemo(
    () => getActiveFilterCount(),
+   // eslint-disable-next-line react-hooks/exhaustive-deps
    [getActiveFilterCount, filters, filterVersion]
  );
 

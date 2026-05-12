@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ export interface SearchFormProps {
   hasResults: boolean;
   hasError: boolean;
   hasPerformedSearch: boolean;
-  onSearch: (mode?: SearchMode) => void;
+  onSearch: (mode?: SearchMode, overrideQuery?: string) => void;
   autocompleteTopicHits?: TopicHit[];
   isAutocompleteLoading?: boolean;
   /** BCP-47 locale tag used to pick primary/secondary topic labels. Defaults to "en". */
@@ -80,7 +79,6 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   },
   forwardedRef
 ): React.JSX.Element {
-  const router = useRouter();
   const internalRef = useRef<HTMLInputElement>(null);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const totalItems = autocompleteTopicHits.length;
@@ -119,22 +117,22 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   // sees loading + empty states (not just successful hit lists).
   const showSuggestions = query.trim().length >= 2 && !isSearching;
 
-  /** Navigate to a topic chip URL and fire analytics. */
+  /** Replace the input with the topic's primary label, fire analytics, and run search. */
   const handleTopicSelect = useCallback(
     (hit: TopicHit): void => {
       const { primary } = pickTopicLabel(hit, currentLocale);
-      const params = new URLSearchParams({ q: primary, topic: hit.id });
 
-      // Fire-and-forget analytics
+      setQuery(primary);
+
       postTopicClick({
         topic_id: hit.id,
         query,
         jurisdiction: null,
       });
 
-      router.push(`/search?${params.toString()}`);
+      onSearch(undefined, primary);
     },
-    [currentLocale, query, router]
+    [currentLocale, onSearch, query, setQuery]
   );
 
   useEffect(() => {
