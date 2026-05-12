@@ -39,6 +39,11 @@ MEILISEARCH_INDEX_SETTINGS: dict[str, Any] = {
         "decision_type",
         "outcome",
         "decision_date",
+        # Array fields exposed as filterable so facet-search powers the
+        # topic/keyword/citation autocompletion (see search.autocomplete).
+        "legal_topics",
+        "keywords",
+        "cited_legislation",
         "base_extraction_status",
         "base_num_victims",
         "base_victim_age_offence",

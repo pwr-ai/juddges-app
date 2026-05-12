@@ -162,6 +162,50 @@ class MeiliSearchService:
 
     # ── search ───────────────────────────────────────────────────────────
 
+    async def _search_post(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """POST a payload to Meilisearch's /search, degrading hybrid to keyword on 4xx.
+
+        Meilisearch rejects a hybrid request with HTTP 400 when the index has no
+        ``bge-m3`` embedder registered (e.g. the prod index whose ``userProvided``
+        embedder settings task never succeeded because the legacy docs lacked an
+        opt-out). Rather than surfacing that as a 502 to the UI, strip ``hybrid``
+        + ``vector`` and retry once as keyword-only — the user still gets results.
+
+        5xx and network failures are not retried; they indicate a Meili outage
+        the keyword path can't paper over.
+        """
+        url = f"{self.base_url}/indexes/{self.index_name}/search"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.post(
+                    url, json=payload, headers=self._search_headers()
+                )
+                if 400 <= response.status_code < 500 and (
+                    "hybrid" in payload or "vector" in payload
+                ):
+                    logger.warning(
+                        "Meilisearch rejected hybrid search "
+                        f"(status={response.status_code}): "
+                        f"{response.text[:300]} — retrying as keyword-only"
+                    )
+                    keyword_payload = {
+                        k: v
+                        for k, v in payload.items()
+                        if k not in ("hybrid", "vector")
+                    }
+                    response = await client.post(
+                        url, json=keyword_payload, headers=self._search_headers()
+                    )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise SearchServiceError(str(exc)) from exc
+
+        if not isinstance(data, dict):
+            raise SearchServiceError("Unexpected Meilisearch response format")
+
+        return data
+
     async def autocomplete(
         self,
         query: str,
@@ -438,22 +482,7 @@ class MeiliSearchService:
                     "TEI embedding failed for documents_search — falling back to keyword"
                 )
 
-        url = f"{self.base_url}/indexes/{self.index_name}/search"
-
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
-                response = await client.post(
-                    url, json=payload, headers=self._search_headers()
-                )
-                response.raise_for_status()
-                data = response.json()
-        except httpx.HTTPError as exc:
-            raise SearchServiceError(str(exc)) from exc
-
-        if not isinstance(data, dict):
-            raise SearchServiceError("Unexpected Meilisearch response format")
-
-        return data
+        return await self._search_post(payload)
 
     # ── admin / index management ─────────────────────────────────────────
 

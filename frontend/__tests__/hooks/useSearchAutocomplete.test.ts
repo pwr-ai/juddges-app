@@ -19,32 +19,27 @@ describe('useSearchAutocomplete Hook', () => {
     jest.useRealTimers();
   });
 
-  it('debounces requests and maps backend hits into suggestions', async () => {
+  it('debounces requests and maps backend facet hits into topic suggestions', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({
         hits: [
           {
-            id: 'doc-1',
-            title: 'VAT refund for digital services',
-            summary: 'Tax interpretation summary',
-            case_number: 'II CSK 123/25',
-            jurisdiction: 'PL',
-            court_name: 'Supreme Court',
-            decision_date: '2025-06-01',
-            _formatted: {
-              title: '<mark>VAT</mark> refund for digital services',
-              summary: 'Tax interpretation summary',
-              case_number: 'II CSK 123/25',
-              court_name: 'Supreme Court',
-            },
+            value: 'Kredyty frankowe',
+            count: 142,
+            sources: ['legal_topics', 'keywords'],
+          },
+          {
+            value: 'Kredyt mieszkaniowy',
+            count: 37,
+            sources: ['keywords'],
           },
         ],
       }),
     });
 
     const { result } = renderHook(() =>
-      useSearchAutocomplete('vat', { enabled: true, debounceMs: 200, limit: 5 })
+      useSearchAutocomplete('kred', { enabled: true, debounceMs: 200, limit: 5 })
     );
 
     act(() => {
@@ -58,7 +53,7 @@ describe('useSearchAutocomplete Hook', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/search/autocomplete?q=vat&limit=5',
+        '/api/search/autocomplete?q=kred&limit=5',
         expect.objectContaining({
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -67,15 +62,49 @@ describe('useSearchAutocomplete Hook', () => {
     });
 
     await waitFor(() => {
-      const suggestion = result.current.suggestions[0];
-      expect(suggestion).toBeDefined();
-      expect(suggestion.id).toBe('doc-1');
-      // Should use _formatted title (with <mark> tags)
-      expect(suggestion.title).toBe('<mark>VAT</mark> refund for digital services');
-      expect(suggestion.caseNumber).toBe('II CSK 123/25');
-      expect(suggestion.jurisdiction).toBe('PL');
-      expect(suggestion.courtName).toBe('Supreme Court');
-      expect(suggestion.decisionDate).toBe('2025-06-01');
+      expect(result.current.suggestions).toHaveLength(2);
+      const [first, second] = result.current.suggestions;
+      expect(first).toEqual({
+        value: 'Kredyty frankowe',
+        count: 142,
+        sources: ['legal_topics', 'keywords'],
+      });
+      expect(second.value).toBe('Kredyt mieszkaniowy');
+      expect(second.sources).toEqual(['keywords']);
+    });
+  });
+
+  it('drops hits with empty values and filters unknown source labels', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        hits: [
+          { value: '   ', count: 5, sources: ['legal_topics'] },
+          {
+            value: 'art. 720 k.c.',
+            count: 12,
+            sources: ['cited_legislation', 'mystery_source'],
+          },
+        ],
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useSearchAutocomplete('art', { enabled: true, debounceMs: 50, limit: 5 })
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(50);
+    });
+
+    await waitFor(() => {
+      expect(result.current.suggestions).toEqual([
+        {
+          value: 'art. 720 k.c.',
+          count: 12,
+          sources: ['cited_legislation'],
+        },
+      ]);
     });
   });
 
@@ -93,22 +122,16 @@ describe('useSearchAutocomplete Hook', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('falls back to non-formatted fields when _formatted is absent', async () => {
+  it('defaults count to 0 when backend omits it', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({
-        hits: [
-          {
-            id: 'doc-2',
-            title: 'Employment law case',
-            summary: 'Worker rights dispute',
-          },
-        ],
+        hits: [{ value: 'Prawo pracy', sources: ['legal_topics'] }],
       }),
     });
 
     const { result } = renderHook(() =>
-      useSearchAutocomplete('employment', { enabled: true, debounceMs: 50, limit: 5 })
+      useSearchAutocomplete('prawo', { enabled: true, debounceMs: 50, limit: 5 })
     );
 
     act(() => {
@@ -116,11 +139,11 @@ describe('useSearchAutocomplete Hook', () => {
     });
 
     await waitFor(() => {
-      const suggestion = result.current.suggestions[0];
-      expect(suggestion).toBeDefined();
-      expect(suggestion.title).toBe('Employment law case');
-      expect(suggestion.summary).toBe('Worker rights dispute');
-      expect(suggestion.caseNumber).toBeUndefined();
+      expect(result.current.suggestions[0]).toEqual({
+        value: 'Prawo pracy',
+        count: 0,
+        sources: ['legal_topics'],
+      });
     });
   });
 

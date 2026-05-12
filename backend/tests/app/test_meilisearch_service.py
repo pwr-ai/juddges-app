@@ -672,3 +672,117 @@ class TestAutocompleteTopics:
         assert any("topics_filter_unsupported" in msg for msg in logged_debug), (
             f"Expected 'topics_filter_unsupported' debug log; got: {logged_debug}"
         )
+
+
+# ── Documents-search hybrid retry tests (from main) ──────────────────────
+
+
+class TestDocumentsSearch:
+    @pytest.mark.asyncio
+    async def test_documents_search_pure_keyword(self, service):
+        captured = {}
+
+        async def fake_post(self_, url, json, headers):
+            captured["payload"] = json
+            return _mock_response(
+                200, {"hits": [{"id": "doc-1"}], "estimatedTotalHits": 1}
+            )
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.documents_search("drugs", limit=5, offset=0)
+
+        assert captured["payload"]["q"] == "drugs"
+        assert "hybrid" not in captured["payload"]
+        assert "vector" not in captured["payload"]
+        assert "full_text" in captured["payload"]["attributesToSearchOn"]
+        assert result["hits"][0]["id"] == "doc-1"
+
+    @pytest.mark.asyncio
+    async def test_documents_search_hybrid_includes_vector(self, service):
+        captured = {}
+        fake_vec = [0.1] * 1024
+
+        async def fake_post(self_, url, json, headers):
+            captured["payload"] = json
+            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            await service.documents_search("drugs", semantic_ratio=0.5)
+
+        assert captured["payload"]["hybrid"] == {
+            "embedder": "bge-m3",
+            "semanticRatio": 0.5,
+        }
+        assert captured["payload"]["vector"] == fake_vec
+
+    @pytest.mark.asyncio
+    async def test_hybrid_400_falls_back_to_keyword_retry(self, service):
+        """When Meili 400s on a hybrid request (missing embedder, etc.),
+        retry once with the hybrid/vector keys stripped instead of erroring out."""
+        calls: list[dict] = []
+        fake_vec = [0.2] * 1024
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            if "hybrid" in json:
+                return _mock_response(
+                    400,
+                    {
+                        "message": "Cannot find embedder with name `bge-m3`.",
+                        "code": "invalid_search_embedder",
+                    },
+                )
+            return _mock_response(
+                200,
+                {"hits": [{"id": "doc-after-retry"}], "estimatedTotalHits": 1},
+            )
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            result = await service.documents_search("drugs", semantic_ratio=0.5)
+
+        assert len(calls) == 2
+        assert "hybrid" in calls[0] and "vector" in calls[0]
+        assert "hybrid" not in calls[1] and "vector" not in calls[1]
+        assert result["hits"][0]["id"] == "doc-after-retry"
+
+    @pytest.mark.asyncio
+    async def test_keyword_400_does_not_retry(self, service):
+        """A 400 on a pure-keyword request has no hybrid to strip — surface it."""
+        calls: list[dict] = []
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            return _mock_response(
+                400, {"message": "Invalid filter syntax", "code": "invalid_filter"}
+            )
+
+        with (
+            patch("httpx.AsyncClient.post", new=fake_post),
+            pytest.raises(SearchServiceError),
+        ):
+            await service.documents_search("drugs", filters="bogus :: filter")
+
+        assert len(calls) == 1
+
+    @pytest.mark.asyncio
+    async def test_hybrid_500_does_not_retry(self, service):
+        """Server errors signal a Meili outage the keyword path can't paper over."""
+        calls: list[dict] = []
+        fake_vec = [0.3] * 1024
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            return _mock_response(503, {"message": "Service Unavailable"})
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+            pytest.raises(SearchServiceError),
+        ):
+            await service.documents_search("drugs", semantic_ratio=0.5)
