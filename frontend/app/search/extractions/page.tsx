@@ -43,12 +43,24 @@ function toDrawerFilters(s: BaseSchemaFilters): BaseFilters {
     } else if (typeof value === "boolean") {
       out[field] = { kind: "boolean_tri", value };
     } else if (typeof value === "number") {
-      out[field] = { kind: "numeric_range", min: value, max: value };
+      out[field] = { kind: "numeric_range", range: { min: value, max: value } };
     } else if (typeof value === "object" && value !== null) {
       if ("min" in value || "max" in value) {
-        out[field] = { kind: "numeric_range", min: value.min, max: value.max };
+        out[field] = {
+          kind: "numeric_range",
+          range: {
+            min: (value as { min?: number }).min,
+            max: (value as { max?: number }).max,
+          },
+        };
       } else if ("from" in value || "to" in value) {
-        out[field] = { kind: "date_range", from: value.from, to: value.to };
+        out[field] = {
+          kind: "date_range",
+          range: {
+            min: (value as { from?: number }).from,
+            max: (value as { to?: number }).to,
+          },
+        };
       }
     }
   }
@@ -77,14 +89,20 @@ function applyDrawerChange(
       (next as Record<string, unknown>)[field] = value.value;
       break;
     case "numeric_range":
-      if (value.min === value.max) {
-        (next as Record<string, unknown>)[field] = value.min;
+      if (value.range.min === value.range.max && value.range.min !== undefined) {
+        (next as Record<string, unknown>)[field] = value.range.min;
       } else {
-        (next as Record<string, unknown>)[field] = { min: value.min, max: value.max };
+        (next as Record<string, unknown>)[field] = {
+          min: value.range.min,
+          max: value.range.max,
+        };
       }
       break;
     case "date_range":
-      (next as Record<string, unknown>)[field] = { from: value.from, to: value.to };
+      (next as Record<string, unknown>)[field] = {
+        from: value.range.min,
+        to: value.range.max,
+      };
       break;
   }
 

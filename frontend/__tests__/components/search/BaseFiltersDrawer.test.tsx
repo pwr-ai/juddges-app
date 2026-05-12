@@ -49,7 +49,7 @@ describe("BaseFiltersDrawer", () => {
   it("calls onReset when reset button clicked", () => {
     const onReset = jest.fn();
     const filters = {
-      num_victims: { kind: "numeric_range" as const, min: 1, max: 5 },
+      num_victims: { kind: "numeric_range" as const, range: { min: 1, max: 5 } },
     };
     render(<BaseFiltersDrawer filters={filters} onChange={() => {}} onReset={onReset} />);
     fireEvent.click(screen.getByRole("button", { name: /reset/i }));
