@@ -359,47 +359,61 @@ def transform_judgment_for_meilisearch(row: dict[str, Any]) -> dict[str, Any]:
 async def setup_meilisearch_index(service: MeiliSearchService) -> bool:
     """Create the Meilisearch index and apply settings.
 
-    Returns True if successful, False otherwise. Never raises — caller should
-    treat Meilisearch as optional.
+    Settings are applied in two phases so a rejected embedders block (common
+    in prod while bge-m3 vector backfill is outstanding) doesn't take the rest
+    of the settings — including filterableAttributes — down with it.
     """
     if not service.admin_configured:
         logger.info("Meilisearch admin not configured — skipping index setup")
         return False
-
     try:
-        # 1. Create index only if it doesn't already exist
+        # 1. Create index only if missing.
         if await service.index_exists():
             logger.info(
-                f"Meilisearch index '{service.index_name}' already exists — skipping creation"
+                f"Meilisearch index '{service.index_name}' already exists — "
+                "skipping creation"
             )
         else:
             task_resp = await service.create_index(primary_key="id")
-            task_uid = task_resp.get("taskUid")
-            if task_uid is not None:
-                await service.wait_for_task(task_uid)
+            if task_resp.get("taskUid") is not None:
+                await service.wait_for_task(task_resp["taskUid"])
             logger.info(f"Meilisearch index '{service.index_name}' created")
 
-        # 2. Apply settings — and surface failure. ``wait_for_task`` only WARNs
-        # on failed/canceled, so we must inspect the terminal status here or a
-        # rejected embedder block silently leaves the index half-configured.
-        settings_resp = await service.configure_index(MEILISEARCH_INDEX_SETTINGS)
-        task_uid = settings_resp.get("taskUid")
-        if task_uid is not None:
-            task = await service.wait_for_task(task_uid, max_wait=120.0)
-            status = task.get("status")
-            if status != "succeeded":
+        # 2a. Phase A — safe settings (everything except embedders). Fatal on failure.
+        safe_settings = {
+            k: v for k, v in MEILISEARCH_INDEX_SETTINGS.items() if k != "embedders"
+        }
+        settings_resp = await service.configure_index(safe_settings)
+        if settings_resp.get("taskUid") is not None:
+            task = await service.wait_for_task(settings_resp["taskUid"], max_wait=120.0)
+            if task.get("status") != "succeeded":
                 logger.error(
-                    f"Meilisearch settings task {task_uid} did not succeed "
-                    f"(status={status}): {task.get('error')}"
+                    f"Meilisearch SAFE settings task {settings_resp['taskUid']} "
+                    f"did not succeed (status={task.get('status')}): {task.get('error')}"
                 )
                 return False
-        logger.info(f"Meilisearch index '{service.index_name}' settings applied")
+        logger.info(f"Meilisearch index '{service.index_name}' safe settings applied")
 
+        # 2b. Phase B — embedders. Failure logs but does not block setup.
+        embedders = MEILISEARCH_INDEX_SETTINGS.get("embedders")
+        if embedders:
+            try:
+                emb_resp = await service.update_settings_embedders(embedders)
+                if emb_resp.get("taskUid") is not None:
+                    emb_task = await service.wait_for_task(
+                        emb_resp["taskUid"], max_wait=120.0
+                    )
+                    if emb_task.get("status") != "succeeded":
+                        logger.warning(
+                            f"Meilisearch embedders task {emb_resp['taskUid']} "
+                            f"status={emb_task.get('status')}: {emb_task.get('error')}"
+                            " — non-fatal; filterable settings already applied"
+                        )
+            except Exception as exc:
+                logger.warning(f"Meilisearch embedders PATCH failed: {exc} — non-fatal")
         return True
     except Exception:
-        logger.opt(exception=True).warning(
-            "Failed to set up Meilisearch index — autocomplete will be unavailable"
-        )
+        logger.opt(exception=True).warning("Failed to set up Meilisearch index")
         return False
 
 

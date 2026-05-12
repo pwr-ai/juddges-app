@@ -5,6 +5,8 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
+
 from app.services.meilisearch_config import (
     JUDGMENT_SYNC_COLUMNS,
     MEILISEARCH_INDEX_SETTINGS,
@@ -468,3 +470,70 @@ class TestMeilisearchIndexSettings:
         assert "synonyms" in MEILISEARCH_INDEX_SETTINGS
         assert "pagination" in MEILISEARCH_INDEX_SETTINGS
         assert "embedders" in MEILISEARCH_INDEX_SETTINGS
+
+
+@pytest.mark.asyncio
+class TestSetupMeilisearchIndexSplit:
+    async def _service_with(
+        self,
+        *,
+        exists=True,
+        settings_status="succeeded",
+        embedder_raises=False,
+        embedder_status="succeeded",
+    ):
+        svc = MagicMock()
+        svc.admin_configured = True
+        svc.index_name = "judgments"
+        svc.index_exists = AsyncMock(return_value=exists)
+        svc.create_index = AsyncMock(return_value={"taskUid": 1})
+        svc.configure_index = AsyncMock(return_value={"taskUid": 2})
+        if embedder_raises:
+            svc.update_settings_embedders = AsyncMock(
+                side_effect=RuntimeError("rejected")
+            )
+        else:
+            svc.update_settings_embedders = AsyncMock(return_value={"taskUid": 3})
+
+        async def _wait_for_task(task_uid, max_wait=60.0):
+            # Distinguish phase A (taskUid=2) from phase B (taskUid=3).
+            if task_uid == 3:
+                return {"status": embedder_status}
+            return {"status": settings_status}
+
+        svc.wait_for_task = AsyncMock(side_effect=_wait_for_task)
+        return svc
+
+    async def test_calls_safe_settings_then_embedders(self):
+        from app.services.meilisearch_config import setup_meilisearch_index
+
+        svc = await self._service_with()
+        ok = await setup_meilisearch_index(svc)
+        assert ok is True
+        safe_arg = svc.configure_index.call_args[0][0]
+        assert "embedders" not in safe_arg, (
+            "Phase A must not include the embedders block"
+        )
+        svc.update_settings_embedders.assert_awaited_once()
+
+    async def test_embedders_failure_does_not_block_setup(self):
+        from app.services.meilisearch_config import setup_meilisearch_index
+
+        svc = await self._service_with(embedder_raises=True)
+        ok = await setup_meilisearch_index(svc)
+        assert ok is True
+        svc.update_settings_embedders.assert_awaited_once()
+
+    async def test_embedders_task_failed_status_does_not_block_setup(self):
+        from app.services.meilisearch_config import setup_meilisearch_index
+
+        svc = await self._service_with(embedder_status="failed")
+        ok = await setup_meilisearch_index(svc)
+        assert ok is True
+
+    async def test_safe_phase_failure_returns_false(self):
+        from app.services.meilisearch_config import setup_meilisearch_index
+
+        svc = await self._service_with(settings_status="failed")
+        ok = await setup_meilisearch_index(svc)
+        assert ok is False

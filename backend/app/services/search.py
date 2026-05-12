@@ -459,6 +459,27 @@ class MeiliSearchService:
             response.raise_for_status()
             return response.json()
 
+    async def update_settings_embedders(
+        self, embedders: dict[str, Any]
+    ) -> dict[str, Any]:
+        """PATCH the embedders block on its own.
+
+        Kept separate from ``configure_index`` so a rejected embedders update
+        (e.g. when bge-m3 backfill is incomplete in prod) doesn't take the rest
+        of the settings down with it. See
+        docs/reference/specs/2026-05-12-base-schema-search-filter-parity-design.md
+        §4.3 and the [[project-meili-settings-atomic-fail]] memory.
+        """
+        if not self.admin_configured:
+            raise SearchServiceError("Meilisearch admin key is not configured")
+        url = f"{self.base_url}/indexes/{self.index_name}/settings/embedders"
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.patch(
+                url, json=embedders, headers=self._admin_headers()
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def upsert_documents(
         self, documents: list[dict[str, Any]], primary_key: str = "id"
     ) -> dict[str, Any]:
