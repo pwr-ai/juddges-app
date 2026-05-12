@@ -1,5 +1,4 @@
 export { SearchHeader } from './SearchHeader';
-export { ExampleQueries } from './ExampleQueries';
 export { SearchEmptyState } from './SearchEmptyState';
 export { SearchForm } from './SearchForm';
 export { SearchResultsSection } from './SearchResultsSection';
