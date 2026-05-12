@@ -107,7 +107,7 @@ describe('SearchForm', () => {
     expect(setSelectedLanguages).toHaveBeenCalledWith(new Set(['uk']));
   });
 
-  it('renders topic suggestions with count + source labels and selects one', async () => {
+  it('renders judgment suggestions and selects one by title', async () => {
     const user = userEvent.setup();
     const onSelectAutocompleteSuggestion = jest.fn();
 
@@ -117,27 +117,27 @@ describe('SearchForm', () => {
         query="kred"
         autocompleteSuggestions={[
           {
-            value: 'Kredyty frankowe',
-            count: 142,
-            sources: ['legal_topics', 'keywords'],
+            id: 'doc-1',
+            title: 'Kredyty frankowe',
+            caseNumber: 'I CSK 1/22',
+            courtName: 'Sąd Najwyższy',
           },
           {
-            value: 'art. 720 k.c.',
-            count: 12,
-            sources: ['cited_legislation'],
+            id: 'doc-2',
+            title: 'art. 720 k.c.',
           },
         ]}
         onSelectAutocompleteSuggestion={onSelectAutocompleteSuggestion}
       />
     );
 
-    expect(screen.getByText(/Topics & keywords/i)).toBeInTheDocument();
-    expect(screen.getByText('Topic, Keyword')).toBeInTheDocument();
-    expect(screen.getByText('Citation')).toBeInTheDocument();
-    expect(screen.getByText('142 cases')).toBeInTheDocument();
+    expect(screen.getByText(/Judgments/i)).toBeInTheDocument();
+    expect(screen.getByText('Kredyty frankowe')).toBeInTheDocument();
+    expect(screen.getByText('art. 720 k.c.')).toBeInTheDocument();
+    expect(screen.getByText(/I CSK 1\/22/)).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('option', { name: /Use suggestion: Kredyty frankowe \(142 cases\)/i })
+      screen.getByRole('option', { name: /Use suggestion: Kredyty frankowe/i })
     );
 
     expect(onSelectAutocompleteSuggestion).toHaveBeenCalledWith('Kredyty frankowe');

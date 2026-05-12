@@ -19,20 +19,21 @@ describe('useSearchAutocomplete Hook', () => {
     jest.useRealTimers();
   });
 
-  it('debounces requests and maps backend facet hits into topic suggestions', async () => {
+  it('debounces requests and maps backend judgment hits into suggestions', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({
         hits: [
           {
-            value: 'Kredyty frankowe',
-            count: 142,
-            sources: ['legal_topics', 'keywords'],
+            id: 'doc-1',
+            title: 'Kredyty frankowe',
+            case_number: 'I CSK 1/22',
+            court_name: 'Sąd Najwyższy',
           },
           {
-            value: 'Kredyt mieszkaniowy',
-            count: 37,
-            sources: ['keywords'],
+            id: 'doc-2',
+            title: 'Kredyt mieszkaniowy',
+            summary: 'Decyzja w sprawie kredytu',
           },
         ],
       }),
@@ -64,26 +65,26 @@ describe('useSearchAutocomplete Hook', () => {
     await waitFor(() => {
       expect(result.current.suggestions).toHaveLength(2);
       const [first, second] = result.current.suggestions;
-      expect(first).toEqual({
-        value: 'Kredyty frankowe',
-        count: 142,
-        sources: ['legal_topics', 'keywords'],
-      });
-      expect(second.value).toBe('Kredyt mieszkaniowy');
-      expect(second.sources).toEqual(['keywords']);
+      expect(first.id).toBe('doc-1');
+      expect(first.title).toBe('Kredyty frankowe');
+      expect(first.caseNumber).toBe('I CSK 1/22');
+      expect(first.courtName).toBe('Sąd Najwyższy');
+      expect(second.title).toBe('Kredyt mieszkaniowy');
+      expect(second.summary).toBe('Decyzja w sprawie kredytu');
     });
   });
 
-  it('drops hits with empty values and filters unknown source labels', async () => {
+  it('drops hits with empty titles or missing ids', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({
         hits: [
-          { value: '   ', count: 5, sources: ['legal_topics'] },
+          { id: 'doc-empty', title: '   ' },
+          { title: 'no-id title' },
           {
-            value: 'art. 720 k.c.',
-            count: 12,
-            sources: ['cited_legislation', 'mystery_source'],
+            id: 'doc-keep',
+            title: 'art. 720 k.c.',
+            summary: 'Pożyczka',
           },
         ],
       }),
@@ -98,13 +99,9 @@ describe('useSearchAutocomplete Hook', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.suggestions).toEqual([
-        {
-          value: 'art. 720 k.c.',
-          count: 12,
-          sources: ['cited_legislation'],
-        },
-      ]);
+      expect(result.current.suggestions).toHaveLength(1);
+      expect(result.current.suggestions[0].id).toBe('doc-keep');
+      expect(result.current.suggestions[0].title).toBe('art. 720 k.c.');
     });
   });
 
@@ -122,11 +119,17 @@ describe('useSearchAutocomplete Hook', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('defaults count to 0 when backend omits it', async () => {
+  it('prefers _formatted highlighted fields over raw fields when present', async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({
-        hits: [{ value: 'Prawo pracy', sources: ['legal_topics'] }],
+        hits: [
+          {
+            id: 'doc-fmt',
+            title: 'Prawo pracy',
+            _formatted: { title: '<mark>Prawo</mark> pracy' },
+          },
+        ],
       }),
     });
 
@@ -139,11 +142,12 @@ describe('useSearchAutocomplete Hook', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.suggestions[0]).toEqual({
-        value: 'Prawo pracy',
-        count: 0,
-        sources: ['legal_topics'],
-      });
+      expect(result.current.suggestions[0]).toEqual(
+        expect.objectContaining({
+          id: 'doc-fmt',
+          title: '<mark>Prawo</mark> pracy',
+        })
+      );
     });
   });
 

@@ -6,12 +6,14 @@ import logger from "@/lib/logger";
 
 const autocompleteLogger = logger.child("useSearchAutocomplete");
 
-export type AutocompleteSource = "legal_topics" | "keywords" | "cited_legislation";
-
 export interface AutocompleteSuggestion {
-  value: string;
-  count: number;
-  sources: AutocompleteSource[];
+  id: string;
+  title: string;
+  summary?: string;
+  caseNumber?: string;
+  jurisdiction?: string;
+  courtName?: string;
+  decisionDate?: string;
 }
 
 export interface TopicHit {
@@ -60,9 +62,20 @@ interface UseSearchAutocompleteResult {
 }
 
 interface AutocompleteHit {
-  value?: string;
-  count?: number;
-  sources?: string[];
+  id?: string;
+  document_id?: string;
+  title?: string;
+  summary?: string;
+  case_number?: string;
+  jurisdiction?: string;
+  court_name?: string;
+  decision_date?: string;
+  _formatted?: {
+    title?: string;
+    summary?: string;
+    case_number?: string;
+    court_name?: string;
+  };
 }
 
 interface AutocompleteResponse {
@@ -70,24 +83,24 @@ interface AutocompleteResponse {
   topic_hits?: TopicHit[];
 }
 
-const KNOWN_SOURCES: ReadonlySet<AutocompleteSource> = new Set([
-  "legal_topics",
-  "keywords",
-  "cited_legislation",
-]);
-
 function mapHitToSuggestion(hit: AutocompleteHit): AutocompleteSuggestion | null {
-  const value = (hit.value || "").trim();
-  if (!value) {
+  const formatted = hit._formatted;
+  const title = (formatted?.title || hit.title || "").trim();
+  if (!title) {
     return null;
   }
-  const sources = (hit.sources || []).filter((s): s is AutocompleteSource =>
-    KNOWN_SOURCES.has(s as AutocompleteSource)
-  );
+  const id = (hit.id || hit.document_id || "").trim();
+  if (!id) {
+    return null;
+  }
   return {
-    value,
-    count: typeof hit.count === "number" ? hit.count : 0,
-    sources,
+    id,
+    title,
+    summary: formatted?.summary || hit.summary || undefined,
+    caseNumber: formatted?.case_number || hit.case_number || undefined,
+    jurisdiction: hit.jurisdiction || undefined,
+    courtName: formatted?.court_name || hit.court_name || undefined,
+    decisionDate: hit.decision_date || undefined,
   };
 }
 
