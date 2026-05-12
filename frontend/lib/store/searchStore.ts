@@ -57,7 +57,9 @@ interface SearchState {
   query: string;
   selectedLanguages: Set<string>;
   searchType: "rabbit" | "thinking";
-  /** Backend selector: "text" → Meilisearch, "vector"/"hybrid" → pgvector. */
+  /** Backend selector: "text"/"hybrid" → Meilisearch, "vector" → pgvector.
+   *  Hybrid is currently hidden from the UI (issue #200) — bge-m3 embedder
+   *  not registered in the Meili index, so semantic_ratio>0 returns 502. */
   searchMode: SearchMode;
   /** Numeric prefilters on base_* extracted columns (text mode only). */
   baseFilters: BaseFilters;
@@ -527,8 +529,17 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
         // Convert array back to Set for selectedDocumentIds
         const selectedDocumentIds = arrayToSet(parsedState.selectedDocumentIds);
 
+        // Coerce away the broken hybrid mode. Meilisearch hybrid is currently
+        // a no-op because the bge-m3 embedder isn't registered in the index
+        // (see issue #200), so any returning user with searchMode='hybrid' in
+        // localStorage would land on a 502-loop. Fall back to text until the
+        // embedder is wired up; remove once #200 ships.
+        const restoredSearchMode: SearchMode =
+          parsedState.searchMode === 'hybrid' ? 'text' : parsedState.searchMode;
+
         set({
           ...parsedState,
+          searchMode: restoredSearchMode,
           filters: mergedFilters,
           selectedLanguages,
           selectedDocumentIds,
