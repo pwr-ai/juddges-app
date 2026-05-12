@@ -42,9 +42,23 @@ def test_categorical_enum_rejects_unknown():
 
 
 @pytest.mark.unit
-def test_arrays_capped_to_six_values():
+def test_arrays_capped_dedupe_strip():
     payload = QueryRewriteResult(
         rewritten_query="x",
-        keywords=["a", "b", "c", "d", "e", "f", "g"],
+        keywords=["VAT", "vat", "  VAT  ", "topic1", "topic2", "topic3", "topic4", "topic5", "topic6"],
     )
-    assert len(payload.keywords) == 6
+    # case-insensitive dedupe → keeps the first form; then capped at 6
+    assert payload.keywords == ["VAT", "topic1", "topic2", "topic3", "topic4", "topic5"]
+
+
+@pytest.mark.unit
+def test_extra_fields_rejected():
+    with pytest.raises(ValidationError):
+        QueryRewriteResult(rewritten_query="x", unknown_field=1)
+
+
+@pytest.mark.unit
+def test_date_range_accepts_from_alias():
+    dr = DateRange.model_validate({"from": "2020-01-01", "to": "2024-12-31"})
+    assert dr.from_ == date(2020, 1, 1)
+    assert dr.to == date(2024, 12, 31)

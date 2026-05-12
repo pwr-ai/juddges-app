@@ -99,6 +99,8 @@ class QueryRewriteResult(BaseModel):
     base_victim_age_offence: NumericRange | None = None
     base_case_number: NumericRange | None = None
     base_co_def_acc_num: NumericRange | None = None
+    # base_date_of_appeal_court_judgment_ts: Unix epoch seconds, mirroring
+    # the Meilisearch numeric field (see meilisearch_config.transform_judgment_for_meilisearch).
     base_date_of_appeal_court_judgment_ts: NumericRange | None = None
 
     @field_validator("keywords", "legal_topics", "cited_legislation", mode="after")
