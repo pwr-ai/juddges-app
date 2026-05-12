@@ -11,6 +11,62 @@ from loguru import logger
 if TYPE_CHECKING:
     from app.services.search import MeiliSearchService
 
+# Allow-list of base_* extraction columns emitted to Meili — kept here so the index settings module and the transformer share one source of truth.
+BASE_SCHEMA_FIELDS = [
+    "base_extraction_status",
+    "base_extraction_model",
+    "base_num_victims",
+    "base_victim_age_offence",
+    "base_case_number",
+    "base_co_def_acc_num",
+    "base_appellant",
+    "base_plea_point",
+    "base_remand_decision",
+    "base_offender_job_offence",
+    "base_offender_home_offence",
+    "base_offender_victim_relationship",
+    "base_offender_age_offence",
+    "base_victim_type",
+    "base_victim_job_offence",
+    "base_victim_home_offence",
+    "base_pre_sent_report",
+    "base_conv_court_names",
+    "base_sent_court_name",
+    "base_did_offender_confess",
+    "base_vic_impact_statement",
+    "base_keywords",
+    "base_convict_plea_dates",
+    "base_convict_offences",
+    "base_acquit_offences",
+    "base_sentences_received",
+    "base_sentence_serve",
+    "base_what_ancilliary_orders",
+    "base_offender_gender",
+    "base_offender_intox_offence",
+    "base_victim_gender",
+    "base_victim_intox_offence",
+    "base_pros_evid_type_trial",
+    "base_def_evid_type_trial",
+    "base_agg_fact_sent",
+    "base_mit_fact_sent",
+    "base_appeal_against",
+    "base_appeal_ground",
+    "base_sent_guide_which",
+    "base_appeal_outcome",
+    "base_reason_quash_conv",
+    "base_reason_sent_excessive",
+    "base_reason_sent_lenient",
+    "base_reason_dismiss",
+    "base_neutral_citation_number",
+    "base_appeal_court_judges_names",
+    "base_case_name",
+    "base_offender_representative_name",
+    "base_crown_attorney_general_representative_name",
+    "base_remand_custody_time",
+    "base_offender_mental_offence",
+    "base_victim_mental_offence",
+]
+
 # Index settings applied when the index is first created or reconfigured.
 # Order of searchableAttributes affects relevance ranking — earlier = higher weight.
 MEILISEARCH_INDEX_SETTINGS: dict[str, Any] = {
@@ -179,79 +235,21 @@ def transform_judgment_for_meilisearch(row: dict[str, Any]) -> dict[str, Any]:
     else:
         doc["judges_flat"] = str(judges) if judges else ""
 
-    # Base-schema extraction status (used to filter to fully-extracted docs)
-    doc["base_extraction_status"] = row.get("base_extraction_status")
-
     # Helper to coerce Decimal values from psycopg NUMERIC columns
-    def coerce_numeric_value(val):
-        if isinstance(val, Decimal):
+    def coerce_numeric_value(value: Any) -> Any:
+        """Convert psycopg Decimal scalars/lists into JSON-friendly int|float; pass through everything else."""
+        if isinstance(value, Decimal):
             # Convert to int if integral, else float
-            return int(val) if val % 1 == 0 else float(val)
-        if isinstance(val, list):
+            return int(value) if value % 1 == 0 else float(value)
+        if isinstance(value, list):
             # Recursively coerce each element in arrays
-            return [coerce_numeric_value(item) for item in val]
-        return val
-
-    # All filterable + searchable base_* fields (excluding operational columns)
-    BASE_SCHEMA_FIELDS = [
-        "base_extraction_status",
-        "base_extraction_model",
-        "base_num_victims",
-        "base_victim_age_offence",
-        "base_case_number",
-        "base_co_def_acc_num",
-        "base_appellant",
-        "base_plea_point",
-        "base_remand_decision",
-        "base_offender_job_offence",
-        "base_offender_home_offence",
-        "base_offender_victim_relationship",
-        "base_offender_age_offence",
-        "base_victim_type",
-        "base_victim_job_offence",
-        "base_victim_home_offence",
-        "base_pre_sent_report",
-        "base_conv_court_names",
-        "base_sent_court_name",
-        "base_did_offender_confess",
-        "base_vic_impact_statement",
-        "base_keywords",
-        "base_convict_plea_dates",
-        "base_convict_offences",
-        "base_acquit_offences",
-        "base_sentences_received",
-        "base_sentence_serve",
-        "base_what_ancilliary_orders",
-        "base_offender_gender",
-        "base_offender_intox_offence",
-        "base_victim_gender",
-        "base_victim_intox_offence",
-        "base_pros_evid_type_trial",
-        "base_def_evid_type_trial",
-        "base_agg_fact_sent",
-        "base_mit_fact_sent",
-        "base_appeal_against",
-        "base_appeal_ground",
-        "base_sent_guide_which",
-        "base_appeal_outcome",
-        "base_reason_quash_conv",
-        "base_reason_sent_excessive",
-        "base_reason_sent_lenient",
-        "base_reason_dismiss",
-        "base_neutral_citation_number",
-        "base_appeal_court_judges_names",
-        "base_case_name",
-        "base_offender_representative_name",
-        "base_crown_attorney_general_representative_name",
-        "base_remand_custody_time",
-        "base_offender_mental_offence",
-        "base_victim_mental_offence",
-    ]
+            return [coerce_numeric_value(item) for item in value]
+        return value
 
     # Pass through all base_* fields with Decimal coercion
     for field in BASE_SCHEMA_FIELDS:
         val = row.get(field)
-        doc[field] = coerce_numeric_value(val) if val is not None else None
+        doc[field] = coerce_numeric_value(val)
 
     # Appeal-court judgment date: keep ISO string for display, expose an epoch
     # seconds field for numeric range filtering.

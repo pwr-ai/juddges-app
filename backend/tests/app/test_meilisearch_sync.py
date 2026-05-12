@@ -1,6 +1,7 @@
 """Unit tests for Meilisearch sync: transform function and config setup."""
 
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -115,8 +116,6 @@ class TestTransformJudgmentForMeilisearch:
         assert doc["id"] == str(uid)
 
     def test_base_schema_fields_are_emitted(self):
-        from datetime import datetime
-
         row = self._make_row(
             base_appellant="offender",
             base_appeal_outcome=["dismissed", "varied_sentence"],
@@ -142,8 +141,6 @@ class TestTransformJudgmentForMeilisearch:
         )
 
     def test_decimal_numeric_base_fields_are_coerced(self):
-        from decimal import Decimal
-
         row = self._make_row(
             base_case_number=Decimal("1234"),
             base_victim_age_offence=Decimal("17.5"),
@@ -152,6 +149,24 @@ class TestTransformJudgmentForMeilisearch:
         assert isinstance(doc["base_case_number"], int | float)
         assert doc["base_case_number"] == 1234
         assert doc["base_victim_age_offence"] == 17.5
+
+    def test_coerce_numeric_value_list_of_decimals(self):
+        # Test list-of-Decimal coercion by passing a list with mixed types
+        # Since coerce_numeric_value is nested inside transform_judgment_for_meilisearch,
+        # we test it by providing a field that contains a list with Decimals
+        row = self._make_row(
+            # Use a text[] field that could contain numeric-like values when coerced
+            base_offender_gender=[Decimal("30"), Decimal("17.5"), None, "string"]
+        )
+        doc = transform_judgment_for_meilisearch(row)
+
+        # Verify that the list was processed and Decimals were coerced
+        result = doc["base_offender_gender"]
+        assert result == [30, 17.5, None, "string"]
+        assert isinstance(result[0], int)
+        assert isinstance(result[1], float)
+        assert result[2] is None
+        assert isinstance(result[3], str)
 
 
 class TestIndexSettings:
