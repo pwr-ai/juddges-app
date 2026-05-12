@@ -451,6 +451,37 @@ class MeiliSearchService:
 
         return await self._search_post(payload)
 
+    async def facet_search(
+        self,
+        facet_name: str,
+        query: str,
+        limit: int = 10,
+    ) -> list[str]:
+        """Look up canonical facet values matching a free-text query.
+
+        Returns an empty list when Meilisearch is not configured — callers
+        should treat this as "no canonicalisation available" rather than
+        an error.
+        """
+        if not self.configured:
+            return []
+
+        url = f"{self.base_url}/indexes/{self.index_name}/facet-search"
+        payload = {"facetName": facet_name, "facetQuery": query, "limit": limit}
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                response = await client.post(
+                    url, json=payload, headers=self._search_headers()
+                )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            raise SearchServiceError(str(exc)) from exc
+
+        hits = data.get("facetHits") or []
+        return [h["value"] for h in hits if isinstance(h, dict) and "value" in h]
+
     # ── admin / index management ─────────────────────────────────────────
 
     async def health(self) -> dict[str, Any]:
