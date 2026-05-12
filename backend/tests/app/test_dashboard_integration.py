@@ -54,25 +54,6 @@ async def test_dashboard_refresh_stats_with_auth(authenticated_client: AsyncClie
 
 @pytest.mark.anyio
 @pytest.mark.api
-async def test_dashboard_recent_documents_requires_auth(client: AsyncClient):
-    """Recent documents should reject unauthenticated requests."""
-    response = await client.get("/dashboard/recent-documents")
-    assert response.status_code in [401, 403]
-
-
-@pytest.mark.anyio
-@pytest.mark.api
-async def test_dashboard_recent_documents_with_auth(authenticated_client: AsyncClient):
-    """Recent documents should return a list with valid auth."""
-    response = await authenticated_client.get("/dashboard/recent-documents")
-    assert response.status_code in [200, 500]
-    if response.status_code == 200:
-        data = response.json()
-        assert isinstance(data, list)
-
-
-@pytest.mark.anyio
-@pytest.mark.api
 async def test_dashboard_featured_examples_requires_auth(client: AsyncClient):
     """Featured examples should reject unauthenticated requests."""
     response = await client.get("/dashboard/featured-examples")

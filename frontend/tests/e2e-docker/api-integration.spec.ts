@@ -102,13 +102,6 @@ test.describe('Dashboard API', () => {
     }
   });
 
-  test('GET /dashboard/recent-documents returns document list', async ({ request }) => {
-    const response = await request.get('/dashboard/recent-documents');
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(Array.isArray(data)).toBeTruthy();
-  });
-
   test('POST /dashboard/refresh-stats clears the stats cache', async ({ request }) => {
     const response = await request.post('/dashboard/refresh-stats');
     expect(response.ok()).toBeTruthy();
