@@ -5,7 +5,7 @@ import { SidebarTrigger } from "./ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PrimaryButton, SecondaryButton, UserAvatar, UserCard, PlanBadge, IconButton, Badge } from "@/lib/styles/components";
+import { PrimaryButton, SecondaryButton, UserAvatar, UserCard, IconButton, Badge } from "@/lib/styles/components";
 import { AIBadge } from "@/lib/styles/components/ai-badge";
 
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -563,7 +563,6 @@ export function Navbar(): React.ReactElement {
         {user ? (
           // Authenticated user controls
           <>
-            <PlanBadge />
             <Popover open={isUserCardOpen} onOpenChange={setIsUserCardOpen}>
               <PopoverTrigger asChild>
                 <button

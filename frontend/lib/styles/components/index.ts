@@ -161,8 +161,6 @@ export { UserAvatar } from './user-avatar';
 export type { UserAvatarProps } from './user-avatar';
 export { UserCard } from './user-card';
 export type { UserCardProps } from './user-card';
-export { PlanBadge } from './plan-badge';
-export type { PlanBadgeProps } from './plan-badge';
 
 // Toast component
 export { SonnerToaster } from './sonner';

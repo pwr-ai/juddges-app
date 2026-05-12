@@ -20,7 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { UserAvatar } from "./user-avatar";
-import { PlanBadge } from "./plan-badge";
 import useCurrentUserName from "@/hooks/use-current-user-name";
 import { logger } from "@/lib/logger";
 

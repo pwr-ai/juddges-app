@@ -73,7 +73,6 @@ jest.mock('@/lib/styles/components', () => ({
   SecondaryButton: ({ children, ...props }: any) => <button {...props}>{children}</button>,
   UserAvatar: (props: any) => <div data-testid="user-avatar" {...props}>Avatar</div>,
   UserCard: (props: any) => <div data-testid="user-card" {...props}>UserCard</div>,
-  PlanBadge: () => <span data-testid="plan-badge">Plan</span>,
   IconButton: ({ icon: Icon, ...props }: any) => (
     <button {...props}>
       {Icon && <Icon className="w-4 h-4" />}
@@ -188,11 +187,6 @@ describe('Navbar', () => {
     it('shows user avatar', () => {
       render(<Navbar />);
       expect(screen.getByTestId('user-avatar')).toBeInTheDocument();
-    });
-
-    it('shows plan badge', () => {
-      render(<Navbar />);
-      expect(screen.getByTestId('plan-badge')).toBeInTheDocument();
     });
 
     it('does not show Login/Sign Up buttons', () => {
