@@ -167,10 +167,20 @@ describe('LandingPage', () => {
   });
 
   describe('navigation links', () => {
-    it('has a link to /schema-chat via the "Create a schema" capability CTA', () => {
+    it('routes the schema-extraction CTA to /schema-chat', () => {
       render(<LandingPage />);
       const schemaLink = screen.getByRole('link', { name: /create a schema/i });
       expect(schemaLink).toHaveAttribute('href', '/schema-chat');
+    });
+
+    it('routes the primary hero CTAs to the auth pages', () => {
+      render(<LandingPage />);
+      const trySearch = screen.getAllByRole('link', { name: /try search/i });
+      expect(trySearch.length).toBeGreaterThan(0);
+      expect(trySearch[0]).toHaveAttribute('href', '/auth/login');
+      const signUp = screen.getAllByRole('link', { name: /create free account/i });
+      expect(signUp.length).toBeGreaterThan(0);
+      signUp.forEach((link) => expect(link).toHaveAttribute('href', '/auth/sign-up'));
     });
   });
 

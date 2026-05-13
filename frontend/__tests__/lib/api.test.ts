@@ -78,7 +78,7 @@ function errorResponseNoJson(status: number): Response {
     status,
     json: async () => { throw new Error('not json'); },
     text: async () => 'raw error text',
-  } as Response;
+  } as unknown as Response;
 }
 
 // ── streamChatQuestion animation race condition ─────────────────────

@@ -34,7 +34,7 @@ function makeField(overrides: Record<string, unknown> = {}): SchemaField {
   } as SchemaField;
 }
 
-const metadata = { name: 'Test Schema', description: 'A test' };
+const metadata = { name: 'Test Schema', description: 'A test', field_count: 1 };
 
 function okResponse(data: unknown): Response {
   return { ok: true, status: 200, json: async () => data } as Response;
@@ -138,7 +138,7 @@ describe('SchemaService', () => {
         status: 500,
         statusText: 'Internal Server Error',
         json: async () => { throw new Error('no body'); },
-      } as Response);
+      } as unknown as Response);
 
       const result = await service.createSchema([makeField()], metadata);
       expect(result.success).toBe(false);

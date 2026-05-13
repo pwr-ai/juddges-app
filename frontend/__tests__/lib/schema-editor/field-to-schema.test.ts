@@ -19,6 +19,7 @@ import {
   checkDuplicateFieldName,
 } from '@/lib/schema-editor/rjsf/field-to-schema';
 import type { SchemaField, ValidationRules, PydanticFieldType } from '@/lib/schema-editor/rjsf/types';
+import type { RJSFSchema } from '@rjsf/utils';
 
 function makeField(overrides: Partial<SchemaField> = {}): SchemaField {
   return {
@@ -265,7 +266,7 @@ describe('jsonSchemaToFields', () => {
   });
 
   it('parses simple properties', () => {
-    const schema = {
+    const schema: RJSFSchema = {
       type: 'object',
       properties: {
         name: { type: 'string' },
@@ -282,7 +283,7 @@ describe('jsonSchemaToFields', () => {
   });
 
   it('generates unique IDs', () => {
-    const schema = {
+    const schema: RJSFSchema = {
       type: 'object',
       properties: { a: { type: 'string' }, b: { type: 'string' } },
     };
@@ -342,7 +343,7 @@ describe('validateJsonSchema', () => {
   });
 
   it('warns about too many properties', () => {
-    const properties: Record<string, unknown> = {};
+    const properties: Record<string, RJSFSchema> = {};
     for (let i = 0; i < 51; i++) {
       properties[`field_${i}`] = { type: 'string', description: 'd' };
     }
