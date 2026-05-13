@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 
@@ -53,10 +53,13 @@ function isStaticAsset(url) {
   return CACHEABLE_EXTENSIONS.some((ext) => url.pathname.endsWith(ext));
 }
 
-// Helper: check if request is a Next.js data/RSC request
-function isNextDataRequest(url) {
+// Helper: check if request is an immutable Next.js asset (hashed chunks, optimized images).
+// NOTE: RSC payloads (?_rsc=...) are NOT included here — they carry auth-gated content
+// and are handled separately (skipped entirely) so middleware can re-evaluate every time.
+function isNextStaticAsset(url) {
   return (
-    url.pathname.startsWith("/_next/") || url.searchParams.has("_rsc")
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/_next/image")
   );
 }
 
@@ -82,8 +85,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Never intercept RSC payloads: App Router prefetches for protected routes
+  // would otherwise cache pre-login redirect responses and replay them after login.
+  if (url.searchParams.has("_rsc")) {
+    return;
+  }
+
   // Static assets: Cache-First
-  if (isStaticAsset(url) || isNextDataRequest(url)) {
+  if (isStaticAsset(url) || isNextStaticAsset(url)) {
     event.respondWith(
       caches.match(event.request).then(
         (cached) =>
