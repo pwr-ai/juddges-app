@@ -1,12 +1,11 @@
 name: Performance Tests
 
 on:
-  pull_request:
-    branches: [develop, main]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/performance.yml'
+  # No `pull_request:` trigger — the backend perf job needs real SUPABASE_*
+  # secrets (currently unset in this repo) and a live DB, so PR runs always
+  # fail at module-import or first request. PR #197 attempted a one-line
+  # BACKEND_API_KEY patch and was abandoned for the same reason. Perf tests
+  # now run only on the weekly cron and via manual dispatch.
   schedule:
     # Run weekly on Monday at 2 AM UTC
     - cron: '0 2 * * 1'
