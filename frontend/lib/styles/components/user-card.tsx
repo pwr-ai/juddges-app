@@ -100,9 +100,6 @@ export function UserCard({
             <div className="text-sm font-medium text-foreground truncate">
               {userName || "User"}
             </div>
-            <div className="text-xs text-muted-foreground">
-              Preview Plan
-            </div>
           </div>
         </div>
       </div>
