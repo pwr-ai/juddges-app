@@ -119,6 +119,7 @@ class TestTopicClickEndpoint:
             topic_id="drug_trafficking",
             query="narko",
             jurisdiction="pl",
+            user_id=None,
         )
 
     @pytest.mark.anyio
@@ -138,6 +139,7 @@ class TestTopicClickEndpoint:
             topic_id="homicide",
             query="zabójstwo",
             jurisdiction=None,
+            user_id=None,
         )
 
     @pytest.mark.anyio
