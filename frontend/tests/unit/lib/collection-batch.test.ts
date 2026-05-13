@@ -70,7 +70,7 @@ describe('loadAllCollectionDocuments', () => {
     fetchMock.mockResolvedValueOnce({ documents: ids.map(makeDoc) });
     const result = await loadAllCollectionDocuments(ids);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith({ document_ids: ids });
+    expect(fetchMock).toHaveBeenCalledWith({ document_ids: ids, include_base_fields: true });
     expect(result.map((d) => d.document_id)).toEqual(ids);
   });
 
