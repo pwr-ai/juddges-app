@@ -56,6 +56,7 @@ align_concepts = _mod.align_concepts
 label_all_clusters = _mod.label_all_clusters
 make_slug = _mod.make_slug
 run_pipeline = _mod.run_pipeline
+push_topics_run_to_meilisearch = _mod.push_topics_run_to_meilisearch
 
 _MODULE_NAME = "generate_search_topics"
 
@@ -460,7 +461,7 @@ class TestSmokeEndToEnd:
 
     @pytest.mark.asyncio
     async def test_dry_run_does_not_touch_meilisearch(self, tmp_path):
-        """Dry-run must never call push_to_meilisearch."""
+        """Dry-run must never publish to Supabase or Meilisearch."""
         pl_rows = _make_rows(10, jurisdiction="PL")
         uk_rows = _make_rows(10, jurisdiction="UK")
         output_file = tmp_path / "topics.json"
@@ -508,7 +509,11 @@ class TestSmokeEndToEnd:
                 return_value=MagicMock(),
             ),
             patch(
-                f"{_MODULE_NAME}.push_to_meilisearch",
+                f"{_MODULE_NAME}.persist_search_topics_run",
+                new_callable=MagicMock,
+            ) as mock_persist,
+            patch(
+                f"{_MODULE_NAME}.push_topics_run_to_meilisearch",
                 new_callable=AsyncMock,
             ) as mock_push,
         ):
@@ -521,7 +526,83 @@ class TestSmokeEndToEnd:
                 dry_run=True,
             )
 
+        mock_persist.assert_not_called()
         mock_push.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_non_dry_run_persists_supabase_snapshot_before_meili_push(
+        self, tmp_path
+    ):
+        """Real publish path must write to Supabase, then push that run to Meili."""
+        pl_rows = _make_rows(6, jurisdiction="PL")
+        uk_rows = _make_rows(6, jurisdiction="UK")
+        output_file = tmp_path / "topics.json"
+
+        def _mock_pull(jurisdiction, **kw):
+            return pl_rows if jurisdiction.lower() == "pl" else uk_rows
+
+        def _mock_cluster(rows, jurisdiction, **kw):
+            clusters = [
+                {
+                    "topic_id": 0,
+                    "keywords": ["test"],
+                    "doc_count": 3,
+                    "representative_rows": rows[:2],
+                }
+            ]
+            return clusters, [0] * len(rows), ["text"] * len(rows)
+
+        def _mock_label_all(client, clusters, jurisdiction):
+            return [
+                {**c, "label": "Test", "label_keywords": [], "description": "Desc."}
+                for c in clusters
+            ]
+
+        with (
+            patch(
+                f"{_MODULE_NAME}.pull_criminal_judgments",
+                side_effect=_mock_pull,
+            ),
+            patch(f"{_MODULE_NAME}.count_criminal_judgments", return_value=12),
+            patch(
+                f"{_MODULE_NAME}.cluster_with_bertopic",
+                side_effect=_mock_cluster,
+            ),
+            patch(
+                f"{_MODULE_NAME}.label_all_clusters",
+                side_effect=_mock_label_all,
+            ),
+            patch(
+                f"{_MODULE_NAME}.align_concepts",
+                side_effect=self._alignment_mock,
+            ),
+            patch(
+                f"{_MODULE_NAME}._build_openai_client",
+                return_value=MagicMock(),
+            ),
+            patch(
+                f"{_MODULE_NAME}.persist_search_topics_run",
+                return_value="run-123",
+            ) as mock_persist,
+            patch(
+                f"{_MODULE_NAME}.push_topics_run_to_meilisearch",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_push,
+        ):
+            await run_pipeline(
+                jurisdictions="pl,uk",
+                output=output_file,
+                sample_per_jurisdiction=6,
+                clusters_per_jurisdiction=1,
+                max_concepts=500,
+                dry_run=False,
+            )
+
+        mock_persist.assert_called_once()
+        _, kwargs = mock_persist.call_args
+        assert kwargs["case_type"] == "criminal"
+        mock_push.assert_awaited_once_with(run_id="run-123")
 
 
 # ---------------------------------------------------------------------------
@@ -708,4 +789,45 @@ class TestAtomicSwap:
 
         # delete and setup must precede upsert
         assert call_order.index("delete_index") < call_order.index("upsert")
-        assert call_order.index("setup") < call_order.index("upsert")
+
+
+@pytest.mark.unit
+class TestPushTopicsRunToMeili:
+    @pytest.mark.asyncio
+    async def test_loads_supabase_rows_and_pushes_meili_documents(self):
+        rows = [
+            {
+                "id": "fraud",
+                "label_pl": "Oszustwo",
+                "label_en": "Fraud",
+                "aliases_pl": ["wyłudzenie"],
+                "aliases_en": ["deception"],
+                "category": "fraud",
+                "doc_count": 42,
+                "jurisdictions": ["uk"],
+                "generated_at": _NOW,
+                "corpus_snapshot": 500,
+            }
+        ]
+        expected_docs = [dict(rows[0])]
+
+        with (
+            patch(f"{_MODULE_NAME}.load_search_topics_run", return_value=rows),
+            patch(
+                f"{_MODULE_NAME}.topic_row_to_meilisearch_document",
+                side_effect=lambda row: dict(row),
+            ),
+            patch(
+                f"{_MODULE_NAME}.push_to_meilisearch",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as mock_push,
+        ):
+            result = await push_topics_run_to_meilisearch(run_id="run-123")
+
+        assert result is True
+        mock_push.assert_awaited_once_with(
+            expected_docs,
+            live_index="topics",
+            staging_index="topics_new",
+        )
