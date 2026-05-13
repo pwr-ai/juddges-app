@@ -109,6 +109,49 @@ describe("<DocumentCard>", () => {
     expect(link?.getAttribute("href")).not.toContain("q=");
   });
 
+  it("keeps the summary highlight visible by trimming long leading text under line-clamp", () => {
+    const longPrefix = "alpha bravo charlie delta echo foxtrot golf hotel india juliet ".repeat(4);
+    const { container } = render(
+      <DocumentCard
+        document={makeDoc({
+          highlighted: {
+            title: null,
+            summary: `${longPrefix}<mark>match</mark> trailing tail`,
+          },
+        })}
+        from="search"
+      />
+    );
+    const summaryP = container.querySelector("p.line-clamp-3") as HTMLElement | null;
+    expect(summaryP).not.toBeNull();
+    const inner = summaryP!.innerHTML;
+    expect(inner).toContain("<mark>match</mark>");
+    // Highlight must land near the start so line-clamp-3 cannot hide it.
+    const markIdx = inner.indexOf("<mark>");
+    expect(markIdx).toBeLessThan(80);
+    expect(summaryP!.textContent?.startsWith("… ")).toBe(true);
+  });
+
+  it("does not trim the summary in the extended (non-clamped) view", () => {
+    const longPrefix = "alpha bravo charlie delta echo foxtrot golf hotel india juliet ".repeat(4);
+    const { container } = render(
+      <DocumentCard
+        document={makeDoc({
+          highlighted: {
+            title: null,
+            summary: `${longPrefix}<mark>match</mark> trailing tail`,
+          },
+        })}
+        from="search"
+        showExtended
+      />
+    );
+    const summaryP = container.querySelector("p.whitespace-pre-wrap") as HTMLElement | null;
+    expect(summaryP).not.toBeNull();
+    // Full original prefix is preserved when not clamped.
+    expect(summaryP!.textContent?.startsWith("alpha bravo")).toBe(true);
+  });
+
   it("renders plain title/summary when no highlight or query is provided", () => {
     const { container } = render(<DocumentCard document={makeDoc()} />);
     expect(container.querySelector("mark")).toBeNull();
