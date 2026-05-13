@@ -136,7 +136,10 @@ services:
   # ============================================================================
 
   meilisearch:
-    image: getmeili/meilisearch:v1.13
+    # Tag is parameterized so rollback to the previous engine is a one-line .env
+    # edit + recreate. Bumped from v1.13 → v1.43 on 2026-05-13; see
+    # docs/how-to/upgrade-meilisearch.md for the dump-based migration runbook.
+    image: getmeili/meilisearch:${MEILISEARCH_IMAGE_TAG:-v1.43.0}
     container_name: juddges-meilisearch
     restart: unless-stopped
     expose:
