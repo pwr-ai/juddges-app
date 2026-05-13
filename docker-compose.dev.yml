@@ -107,7 +107,7 @@ services:
     # ============================================================================
 
     meilisearch-dev:
-        image: getmeili/meilisearch:v1.13
+        image: getmeili/meilisearch:${MEILISEARCH_IMAGE_TAG:-v1.43.0}
         container_name: juddges-meilisearch-dev
         restart: unless-stopped
         ports:
@@ -116,6 +116,11 @@ services:
             - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-dev-master-key}
             - MEILI_ENV=development
             - MEILI_LOG_LEVEL=INFO
+            - MEILI_MAX_INDEXING_MEMORY=${MEILI_MAX_INDEXING_MEMORY:-1536MiB}
+        # Dev now defaults to the same memory ceiling as prod so dump imports,
+        # settings reindexing, and vector-heavy rebuilds do not regress during
+        # the v1.13 -> v1.43 migration. The image tag stays overridable via
+        # MEILISEARCH_IMAGE_TAG for quick rollback/testing without another edit.
         # HNSW indexing of large vector corpora opens many mmap files; default 1024 fd
         # soft limit triggers "too_many_open_files" during embedder registration.
         # Soft raised to match hard after observing EMFILE at 65536 during apply-settings.
