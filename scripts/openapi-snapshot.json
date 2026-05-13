@@ -759,7 +759,7 @@
         "type": "object"
       },
       "AutocompleteResponse": {
-        "description": "Autocomplete response payload.",
+        "description": "Autocomplete response payload \u2014 topic chips from the Meilisearch\n``topics`` index.\n\nJudgment-document suggestions were retired in favour of routing topic\nclicks to a full search.  If the topics index is unavailable,\n``topic_hits`` is an empty list.",
         "properties": {
           "estimatedTotalHits": {
             "anyOf": [
@@ -771,14 +771,6 @@
               }
             ],
             "title": "Estimatedtotalhits"
-          },
-          "hits": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Hits",
-            "type": "array"
           },
           "processingTimeMs": {
             "anyOf": [
@@ -794,6 +786,13 @@
           "query": {
             "title": "Query",
             "type": "string"
+          },
+          "topic_hits": {
+            "items": {
+              "$ref": "#/components/schemas/TopicHit"
+            },
+            "title": "Topic Hits",
+            "type": "array"
           }
         },
         "required": [
@@ -1040,6 +1039,12 @@
             },
             "title": "Document Ids",
             "type": "array"
+          },
+          "include_base_fields": {
+            "default": false,
+            "description": "Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026) under each document's `base_fields` key. Off by default to keep payloads lean.",
+            "title": "Include Base Fields",
+            "type": "boolean"
           },
           "return_properties": {
             "anyOf": [
@@ -4792,6 +4797,56 @@
         "title": "DocumentExtractionSubmissionResponse",
         "type": "object"
       },
+      "DocumentPagination": {
+        "properties": {
+          "estimated_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Total"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "loaded_count": {
+            "title": "Loaded Count",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offset",
+          "limit",
+          "loaded_count",
+          "has_more"
+        ],
+        "title": "DocumentPagination",
+        "type": "object"
+      },
       "DocumentProcessingStatus": {
         "enum": [
           "pending",
@@ -4810,6 +4865,12 @@
             "description": "Document ID to retrieve",
             "title": "Document Id",
             "type": "string"
+          },
+          "include_base_fields": {
+            "default": false,
+            "description": "Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026) under the response's `base_fields` key. Off by default to keep payloads lean.",
+            "title": "Include Base Fields",
+            "type": "boolean"
           },
           "return_vectors": {
             "default": false,
@@ -5062,6 +5123,54 @@
           "documents"
         ],
         "title": "DocumentRetrievalResponse",
+        "type": "object"
+      },
+      "DocumentSearchResponse": {
+        "description": "Paginated document search response (Meilisearch-backed text mode).",
+        "properties": {
+          "documents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/DocumentPagination"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "query_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Time Ms"
+          },
+          "total_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Count"
+          }
+        },
+        "required": [
+          "query",
+          "pagination"
+        ],
+        "title": "DocumentSearchResponse",
         "type": "object"
       },
       "DocumentStats": {
@@ -7645,6 +7754,19 @@
           "title": "Smith v. Jones"
         },
         "properties": {
+          "base_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026). Populated only when include_base_fields=true is requested; otherwise None to keep search/list responses lean.",
+            "title": "Base Fields"
+          },
           "case_type": {
             "default": "criminal",
             "description": "Type of case (e.g., criminal, civil)",
@@ -11518,373 +11640,6 @@
         "title": "RunnableParallel<query>Input",
         "type": "object"
       },
-      "SSOConnectionBase": {
-        "description": "Base model for SSO connection data.",
-        "properties": {
-          "auto_provision_users": {
-            "default": true,
-            "description": "Auto-create users on first SSO login",
-            "title": "Auto Provision Users",
-            "type": "boolean"
-          },
-          "default_account_type": {
-            "default": "base",
-            "description": "Default account type for provisioned users",
-            "title": "Default Account Type",
-            "type": "string"
-          },
-          "domain": {
-            "description": "Email domain for SSO discovery",
-            "title": "Domain",
-            "type": "string"
-          },
-          "name": {
-            "description": "Display name for the SSO connection",
-            "title": "Name",
-            "type": "string"
-          },
-          "organization": {
-            "description": "Organization/company name",
-            "title": "Organization",
-            "type": "string"
-          },
-          "provider_type": {
-            "description": "SSO protocol type",
-            "enum": [
-              "saml",
-              "oauth"
-            ],
-            "title": "Provider Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "organization",
-          "provider_type",
-          "domain"
-        ],
-        "title": "SSOConnectionBase",
-        "type": "object"
-      },
-      "SSOConnectionResponse": {
-        "description": "Response model for an SSO connection.",
-        "properties": {
-          "auto_provision_users": {
-            "title": "Auto Provision Users",
-            "type": "boolean"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "default_account_type": {
-            "title": "Default Account Type",
-            "type": "string"
-          },
-          "domain": {
-            "title": "Domain",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "oauth_authorization_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Oauth Authorization Url"
-          },
-          "oauth_client_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Oauth Client Id"
-          },
-          "oauth_scopes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Oauth Scopes"
-          },
-          "oauth_token_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Oauth Token Url"
-          },
-          "oauth_userinfo_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Oauth Userinfo Url"
-          },
-          "organization": {
-            "title": "Organization",
-            "type": "string"
-          },
-          "provider_type": {
-            "title": "Provider Type",
-            "type": "string"
-          },
-          "saml_entity_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Saml Entity Id"
-          },
-          "saml_metadata_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Saml Metadata Url"
-          },
-          "saml_sso_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Saml Sso Url"
-          },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "supabase_provider_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supabase Provider Id"
-          },
-          "updated_at": {
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "organization",
-          "provider_type",
-          "status",
-          "domain",
-          "auto_provision_users",
-          "default_account_type",
-          "created_at",
-          "updated_at"
-        ],
-        "title": "SSOConnectionResponse",
-        "type": "object"
-      },
-      "SSOConnectionUpdateStatus": {
-        "description": "Update SSO connection status.",
-        "properties": {
-          "status": {
-            "enum": [
-              "active",
-              "inactive",
-              "pending"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "title": "SSOConnectionUpdateStatus",
-        "type": "object"
-      },
-      "SSODomainCheckResponse": {
-        "description": "Response for domain-based SSO discovery.",
-        "properties": {
-          "connection_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Connection Id"
-          },
-          "connection_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Connection Name"
-          },
-          "organization": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization"
-          },
-          "provider_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider Type"
-          },
-          "sso_enabled": {
-            "title": "Sso Enabled",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "sso_enabled"
-        ],
-        "title": "SSODomainCheckResponse",
-        "type": "object"
-      },
-      "SSOLoginEventResponse": {
-        "description": "SSO login event for audit log.",
-        "properties": {
-          "connection_id": {
-            "title": "Connection Id",
-            "type": "string"
-          },
-          "connection_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Connection Name"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
-          },
-          "error_message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Message"
-          },
-          "event_type": {
-            "title": "Event Type",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "ip_address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ip Address"
-          },
-          "user_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Id"
-          }
-        },
-        "required": [
-          "id",
-          "connection_id",
-          "email",
-          "event_type",
-          "created_at"
-        ],
-        "title": "SSOLoginEventResponse",
-        "type": "object"
-      },
       "SampleCase": {
         "description": "A single case reference with its dominant reasoning pattern.",
         "properties": {
@@ -13019,6 +12774,33 @@
             ],
             "title": "Decision Types"
           },
+          "facet_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional substring filter on facet values (Meilisearch `facetQuery`). Narrows the returned facetDistribution to values that match this prefix/substring.",
+            "title": "Facet Query"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Meilisearch facets to compute on this search. Each name must be in the index'''s filterableAttributes. Used by the frontend tag-array autocomplete to surface per-value counts.",
+            "title": "Facets"
+          },
           "fetch_full_documents": {
             "default": false,
             "description": "Whether to fetch full document objects in addition to chunks",
@@ -13277,6 +13059,42 @@
             ],
             "description": "AI-enhanced query text (only present when mode='thinking')",
             "title": "Enhanced Query"
+          },
+          "facetDistribution": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Meilisearch facet counts keyed by field, then value. Populated only when the request asked for facets.",
+            "title": "Facetdistribution"
+          },
+          "facetStats": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "number"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Meilisearch numeric facet stats (min/max) keyed by field. Populated only when the request asked for facets.",
+            "title": "Facetstats"
           },
           "inferred_filters": {
             "anyOf": [
@@ -14006,7 +13824,7 @@
         "description": "Request to set the active embedding model.",
         "properties": {
           "model_id": {
-            "description": "Model ID to activate (e.g., 'openai/text-embedding-3-small')",
+            "description": "Model ID to activate (e.g., 'tei/bge-m3')",
             "title": "Model Id",
             "type": "string"
           }
@@ -15172,6 +14990,36 @@
         "title": "Topic",
         "type": "object"
       },
+      "TopicClickEvent": {
+        "description": "Request body for the topic-click analytics endpoint.",
+        "properties": {
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "topic_id": {
+            "title": "Topic Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic_id",
+          "query"
+        ],
+        "title": "TopicClickEvent",
+        "type": "object"
+      },
       "TopicDocument": {
         "description": "A document associated with a topic.",
         "properties": {
@@ -15225,6 +15073,79 @@
           "relevance"
         ],
         "title": "TopicDocument",
+        "type": "object"
+      },
+      "TopicHit": {
+        "description": "A single hit from the Meilisearch ``topics`` index.\n\nThe ``formatted`` field (alias ``_formatted``) carries highlighted versions\nof the searchable fields when ``attributesToHighlight`` is set in the query.\nPydantic's ``populate_by_name=True`` model config lets callers pass the field\nas either ``formatted`` or ``_formatted``.",
+        "properties": {
+          "_formatted": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formatted"
+          },
+          "aliases_en": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases En",
+            "type": "array"
+          },
+          "aliases_pl": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases Pl",
+            "type": "array"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "doc_count": {
+            "default": 0,
+            "title": "Doc Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "jurisdictions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Jurisdictions",
+            "type": "array"
+          },
+          "label_en": {
+            "title": "Label En",
+            "type": "string"
+          },
+          "label_pl": {
+            "title": "Label Pl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label_pl",
+          "label_en"
+        ],
+        "title": "TopicHit",
         "type": "object"
       },
       "TopicKeyword": {
@@ -15382,6 +15303,52 @@
           "processing_time_ms"
         ],
         "title": "TopicModelingStatistics",
+        "type": "object"
+      },
+      "TopicsMetaResponse": {
+        "description": "Metadata about the Meilisearch topics index.\n\nFields are ``None`` until ``scripts/generate_search_topics.py`` has run\nat least once and written ``generated_at`` / ``corpus_snapshot`` onto index\ndocuments.",
+        "properties": {
+          "corpus_snapshot": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corpus Snapshot"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "jurisdictions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Jurisdictions",
+            "type": "array"
+          },
+          "total_concepts": {
+            "title": "Total Concepts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_concepts",
+          "generated_at",
+          "corpus_snapshot",
+          "jurisdictions"
+        ],
+        "title": "TopicsMetaResponse",
         "type": "object"
       },
       "TrackEventRequest": {
@@ -20123,60 +20090,55 @@
         ]
       }
     },
-    "/api/sso/check-domain": {
+    "/api/search/documents": {
       "get": {
-        "description": "Public endpoint for domain-based SSO discovery.\nUsed by the login form to detect if a user's email domain has SSO configured.",
-        "operationId": "check_domain_sso_api_sso_check_domain_get",
+        "description": "Paginated Meilisearch-backed document search for the /search results page.",
+        "operationId": "documents_search_api_search_documents_get",
         "parameters": [
           {
-            "description": "Email domain to check (e.g., 'acme.com')",
+            "description": "Search query (empty = match all)",
             "in": "query",
-            "name": "domain",
-            "required": true,
+            "name": "q",
+            "required": false,
             "schema": {
-              "description": "Email domain to check (e.g., 'acme.com')",
-              "title": "Domain",
+              "default": "",
+              "description": "Search query (empty = match all)",
+              "maxLength": 500,
+              "title": "Q",
               "type": "string"
             }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SSODomainCheckResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
           },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Check if SSO is enabled for an email domain",
-        "tags": [
-          "SSO Management"
-        ]
-      }
-    },
-    "/api/sso/connections": {
-      "get": {
-        "description": "List all SSO connections. Admin only.",
-        "operationId": "list_connections_api_sso_connections_get",
-        "parameters": [
           {
-            "description": "Filter by status",
+            "description": "Max documents to return",
             "in": "query",
-            "name": "status",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "description": "Max documents to return",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Pagination offset",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Pagination offset",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Optional Meilisearch filter expression",
+            "in": "query",
+            "name": "filters",
             "required": false,
             "schema": {
               "anyOf": [
@@ -20187,8 +20149,22 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by status",
-              "title": "Status"
+              "description": "Optional Meilisearch filter expression",
+              "title": "Filters"
+            }
+          },
+          {
+            "description": "Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5.",
+            "in": "query",
+            "name": "semantic_ratio",
+            "required": false,
+            "schema": {
+              "default": 0.0,
+              "description": "Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5.",
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Semantic Ratio",
+              "type": "number"
             }
           }
         ],
@@ -20197,11 +20173,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SSOConnectionResponse"
-                  },
-                  "title": "Response List Connections Api Sso Connections Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/DocumentSearchResponse"
                 }
               }
             },
@@ -20220,195 +20192,39 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "APIKeyHeader": []
           }
         ],
-        "summary": "List all SSO connections",
+        "summary": "Documents Search",
         "tags": [
-          "SSO Management"
+          "Search"
         ]
-      },
+      }
+    },
+    "/api/search/topic-click": {
       "post": {
-        "description": "Create a new SSO connection for an enterprise identity provider.\nAdmin only. The connection starts in 'pending' status.",
-        "operationId": "create_connection_api_sso_connections_post",
+        "description": "Record a topic-chip click for analytics (fire-and-forget).\n\nThe insert is scheduled as a background task so the response is returned\nimmediately without blocking on the database write.  Failures are logged\nas warnings only \u2014 never surfaced to the caller.",
+        "operationId": "topic_click_api_search_topic_click_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SSOConnectionBase"
+                "$ref": "#/components/schemas/TopicClickEvent"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SSOConnectionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Create a new SSO connection",
-        "tags": [
-          "SSO Management"
-        ]
-      }
-    },
-    "/api/sso/connections/{connection_id}": {
-      "delete": {
-        "description": "Delete an SSO connection. Admin only.",
-        "operationId": "delete_connection_api_sso_connections__connection_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "connection_id",
-            "required": true,
-            "schema": {
-              "title": "Connection Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Delete an SSO connection",
-        "tags": [
-          "SSO Management"
-        ]
-      },
-      "get": {
-        "description": "Get details of a specific SSO connection. Admin only.",
-        "operationId": "get_connection_api_sso_connections__connection_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "connection_id",
-            "required": true,
-            "schema": {
-              "title": "Connection Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SSOConnectionResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get SSO connection details",
-        "tags": [
-          "SSO Management"
-        ]
-      }
-    },
-    "/api/sso/connections/{connection_id}/events": {
-      "get": {
-        "description": "Get audit log of SSO login events for a connection. Admin only.",
-        "operationId": "get_connection_events_api_sso_connections__connection_id__events_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "connection_id",
-            "required": true,
-            "schema": {
-              "title": "Connection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 50,
-              "maximum": 200,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SSOLoginEventResponse"
+                  "additionalProperties": {
+                    "type": "string"
                   },
-                  "title": "Response Get Connection Events Api Sso Connections  Connection Id  Events Get",
-                  "type": "array"
+                  "title": "Response Topic Click Api Search Topic Click Post",
+                  "type": "object"
                 }
               }
             },
@@ -20427,70 +20243,39 @@
         },
         "security": [
           {
-            "HTTPBearer": []
+            "APIKeyHeader": []
           }
         ],
-        "summary": "Get SSO login events for a connection",
+        "summary": "Topic Click",
         "tags": [
-          "SSO Management"
+          "Search"
         ]
       }
     },
-    "/api/sso/connections/{connection_id}/status": {
-      "patch": {
-        "description": "Activate, deactivate, or set pending status for an SSO connection. Admin only.",
-        "operationId": "update_connection_status_api_sso_connections__connection_id__status_patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "connection_id",
-            "required": true,
-            "schema": {
-              "title": "Connection Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SSOConnectionUpdateStatus"
-              }
-            }
-          },
-          "required": true
-        },
+    "/api/search/topics/meta": {
+      "get": {
+        "description": "Return metadata about the Meilisearch topics index.\n\nUsed for debugging and the admin UI.  Returns ``total_concepts=0`` with\nall other fields ``None`` when the topics index is empty or unavailable.",
+        "operationId": "topics_meta_api_search_topics_meta_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SSOConnectionResponse"
+                  "$ref": "#/components/schemas/TopicsMetaResponse"
                 }
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
           {
-            "HTTPBearer": []
+            "APIKeyHeader": []
           }
         ],
-        "summary": "Update SSO connection status",
+        "summary": "Topics Meta",
         "tags": [
-          "SSO Management"
+          "Search"
         ]
       }
     },
@@ -22802,61 +22587,6 @@
         ]
       }
     },
-    "/dashboard/recent-documents": {
-      "get": {
-        "description": "Get highlighted documents for dashboard.\n\nReturns a curated selection of documents:\n- 2 IP Box documents (from full-text search for \"ipbox\")\n- 2 Frank documents (from full-text search for \"sprawa frankowa\")\n\nArgs:\n    limit: Number of documents to return (1-20) - currently returns 4 highlighted documents\n\nReturns:\n    List of highlighted documents with metadata",
-        "operationId": "get_recent_documents_dashboard_recent_documents_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 5,
-              "maximum": 20,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/DocumentSummary"
-                  },
-                  "title": "Response Get Recent Documents Dashboard Recent Documents Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get Recent Documents",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
     "/dashboard/refresh-stats": {
       "post": {
         "description": "Trigger a refresh of precomputed dashboard statistics.\n\nCalls the SQL function to recompute stats and clears all caches so that\nthe next /stats request returns fresh data.\n\nReturns:\n    dict: Status message",
@@ -23584,7 +23314,7 @@
     },
     "/documents/search": {
       "post": {
-        "description": "Search documents using hybrid search (vector + full-text + filters).\n\nThis endpoint:\n1. Generates an embedding for the query text\n2. Performs hybrid search combining vector similarity and full-text search\n3. Applies comprehensive filters (jurisdiction, court, case type, date, etc.)\n4. Returns matching documents with relevance scores",
+        "description": "Search documents using hybrid search (vector + full-text + filters).\n\nThis endpoint:\n1. Generates an embedding for the query text\n2. Performs hybrid search combining vector similarity and full-text search\n3. Applies comprehensive filters (jurisdiction, court, case type, date, etc.)\n4. Returns matching documents with relevance scores\n\nFacets-only fast path: when ``request.facets`` is provided, the handler\nskips the pgvector pipeline entirely and proxies a thin Meilisearch\n``/search`` call so the caller (e.g. the tag-array autocomplete) can\nfetch ``facetDistribution`` / ``facetStats`` without paying for the\nfull document search.",
         "operationId": "search_documents_documents_search_post",
         "requestBody": {
           "content": {
@@ -23777,6 +23507,18 @@
               "default": false,
               "description": "Include vector embeddings",
               "title": "Return Vectors",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Include extracted base_* schema columns under `base_fields`",
+            "in": "query",
+            "name": "include_base_fields",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include extracted base_* schema columns under `base_fields`",
+              "title": "Include Base Fields",
               "type": "boolean"
             }
           }

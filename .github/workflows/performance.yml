@@ -60,6 +60,13 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # app/auth.py raises at import time when BACKEND_API_KEY is unset,
+          # which blocks pytest collection of tests/performance/test_search_performance.py
+          # (it imports app.server). The test hardcodes the header value
+          # "X-API-Key: test-key", so we mirror that here rather than wiring in
+          # a real secret - the perf job exercises in-process ASGI calls, not
+          # an authenticated remote backend.
+          BACKEND_API_KEY: test-key
         run: |
           poetry run pytest tests/performance/ --performance -v -s --tb=short
 

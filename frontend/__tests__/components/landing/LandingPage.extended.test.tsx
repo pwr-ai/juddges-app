@@ -160,11 +160,6 @@ describe('LandingPage', () => {
       expect(screen.getByText(/Find relevant cases by meaning/i)).toBeInTheDocument();
     });
 
-    it('displays AI legal assistant capability', () => {
-      render(<LandingPage />);
-      expect(screen.getByText('AI Legal Assistant')).toBeInTheDocument();
-    });
-
     it('displays schema extraction capability', () => {
       render(<LandingPage />);
       expect(screen.getByText('Schema Extraction')).toBeInTheDocument();
@@ -172,10 +167,8 @@ describe('LandingPage', () => {
   });
 
   describe('navigation links', () => {
-    it('has links to /chat and /schema-chat', () => {
+    it('has a link to /schema-chat via the "Create a schema" capability CTA', () => {
       render(<LandingPage />);
-      const chatLink = screen.getByRole('link', { name: /start a conversation/i });
-      expect(chatLink).toHaveAttribute('href', '/chat');
       const schemaLink = screen.getByRole('link', { name: /create a schema/i });
       expect(schemaLink).toHaveAttribute('href', '/schema-chat');
     });
