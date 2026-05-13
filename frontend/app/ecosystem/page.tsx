@@ -187,6 +187,34 @@ export default function EcosystemPage(): React.JSX.Element {
             <ExternalLink className="size-3.5 opacity-60" />
           </a>
         </div>
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          <a
+            href="https://doi.org/10.57967/hf/8772"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+          >
+            <span className="text-foreground">PL</span>
+            <span className="text-border">·</span>
+            pl-appealcourt-criminal
+            <span className="text-border">·</span>
+            DOI 10.57967/hf/8772
+            <ExternalLink className="size-3 opacity-60" />
+          </a>
+          <a
+            href="https://doi.org/10.57967/hf/8773"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 hover:text-foreground transition-colors"
+          >
+            <span className="text-foreground">UK</span>
+            <span className="text-border">·</span>
+            en-appealcourt
+            <span className="text-border">·</span>
+            DOI 10.57967/hf/8773
+            <ExternalLink className="size-3 opacity-60" />
+          </a>
+        </div>
       </div>
 
       {/* Narrative intro */}

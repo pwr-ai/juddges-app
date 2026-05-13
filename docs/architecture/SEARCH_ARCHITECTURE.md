@@ -335,8 +335,8 @@ CREATE TABLE judgments (
 
 ```
 HuggingFace Datasets
-  ├── HFforLegal/case-law          (Polish judgments)
-  └── JuDDGES/en-appealcourt       (UK appeal court)
+  ├── JuDDGES/pl-appealcourt-criminal  (Polish judgments — DOI 10.57967/hf/8772)
+  └── JuDDGES/en-appealcourt           (UK appeal court — DOI 10.57967/hf/8773)
          │
          ▼
   ┌──────────────────┐

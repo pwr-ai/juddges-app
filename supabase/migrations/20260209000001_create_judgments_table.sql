@@ -2,7 +2,7 @@
 -- Migration: Create judgments table for Polish and UK court decisions
 -- =============================================================================
 -- This migration creates the core judgments table with support for:
--- - Polish court decisions from HFforLegal/case-law dataset
+-- - Polish court decisions from JuDDGES/pl-appealcourt-criminal dataset
 -- - UK Court of Appeal judgments from JuDDGES/en-appealcourt dataset
 -- - Vector embeddings for semantic search (requires pgvector)
 -- - Full-text search capabilities
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS public.judgments (
     metadata JSONB DEFAULT '{}'::jsonb,
 
     -- Source information
-    source_dataset TEXT,  -- e.g., 'HFforLegal/case-law', 'JuDDGES/en-appealcourt'
+    source_dataset TEXT,  -- e.g., 'JuDDGES/pl-appealcourt-criminal', 'JuDDGES/en-appealcourt'
     source_id TEXT,  -- Original ID from source dataset
     source_url TEXT,  -- Link to original judgment
 
