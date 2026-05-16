@@ -164,6 +164,11 @@ export interface NavigationTranslations {
   extractionResults: string;
   baseTemplate: string;
   compareDatasets: string;
+
+  // Workflow phase labels
+  phasePlan: string;
+  phaseSearch: string;
+  phaseExport: string;
 }
 
 /**

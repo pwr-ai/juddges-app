@@ -120,6 +120,11 @@ export const en: Translations = {
     extractionResults: 'Extraction Results',
     baseTemplate: 'Base Coding Schema',
     compareDatasets: 'Compare Datasets',
+
+    // Workflow phase labels
+    phasePlan: '1. Plan',
+    phaseSearch: '2. Search',
+    phaseExport: '3. Export',
   },
 
   chat: {
