@@ -367,14 +367,13 @@ function SubstringFilter({
   }, [value]);
 
   React.useEffect(() => {
+    const trimmed = local.trim();
+    if (trimmed === (value ?? "")) return;
     const handle = setTimeout(() => {
-      const trimmed = local.trim();
-      if (trimmed === (value ?? "")) return;
       onChange(trimmed === "" ? undefined : trimmed);
     }, 300);
     return () => clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [local]);
+  }, [local, value, onChange]);
 
   return (
     <div className="px-2">
