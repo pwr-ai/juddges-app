@@ -399,6 +399,48 @@ export interface DashboardTranslations {
 }
 
 /**
+ * Translation namespace for the Judge Fingerprint page
+ */
+export interface JudgeFingerprintTranslations {
+  // Header
+  pageTitle: string;
+  pageSubtitle: string;
+
+  // Search section
+  searchLabel: string;
+
+  // Loading / error states
+  loadingProfile: string;
+  loadingSubtitle: string;
+  errorLoadingTitle: string;
+  errorToastTitle: string;
+
+  // Comparison
+  comparisonHeading: string;
+  comparisonDescription: string;
+
+  // Profiles section
+  profilesHeading: string;
+
+  // Empty state
+  emptyTitle: string;
+  emptyDescription: string;
+
+  // How it works
+  howItWorks: string;
+  reasoningTextual: string;
+  reasoningTextualDescription: string;
+  reasoningDeductive: string;
+  reasoningDeductiveDescription: string;
+  reasoningAnalogical: string;
+  reasoningAnalogicalDescription: string;
+  reasoningPurposive: string;
+  reasoningPurposiveDescription: string;
+  reasoningTeleological: string;
+  reasoningTeleologicalDescription: string;
+}
+
+/**
  * Translation namespace for legal terminology
  */
 export interface LegalTranslations {
@@ -443,6 +485,7 @@ export interface Translations {
   errors: ErrorTranslations;
   legal: LegalTranslations;
   dashboard: DashboardTranslations;
+  judgeFingerprint: JudgeFingerprintTranslations;
 }
 
 /**
@@ -459,7 +502,8 @@ export type TranslationKey =
   | `auth.${keyof AuthTranslations}`
   | `errors.${keyof ErrorTranslations}`
   | `legal.${keyof LegalTranslations}`
-  | `dashboard.${keyof DashboardTranslations}`;
+  | `dashboard.${keyof DashboardTranslations}`
+  | `judgeFingerprint.${keyof JudgeFingerprintTranslations}`;
 
 /**
  * Interpolation values for dynamic translations
