@@ -362,6 +362,16 @@ function SubstringFilter({
 }: ControlProps<string>) {
   const [local, setLocal] = React.useState(value ?? "");
 
+  // Keep onChange in a ref so the debounce effect doesn't have to depend on
+  // it. FieldRow passes a fresh inline `set` callback on every render; if we
+  // put `onChange` in the deps directly, an unrelated parent re-render
+  // mid-keystroke would clear and reschedule the timer, preventing the
+  // debounce from ever firing on long bursts of re-renders.
+  const onChangeRef = React.useRef(onChange);
+  React.useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
   React.useEffect(() => {
     setLocal(value ?? "");
   }, [value]);
@@ -370,10 +380,10 @@ function SubstringFilter({
     const trimmed = local.trim();
     if (trimmed === (value ?? "")) return;
     const handle = setTimeout(() => {
-      onChange(trimmed === "" ? undefined : trimmed);
+      onChangeRef.current(trimmed === "" ? undefined : trimmed);
     }, 300);
     return () => clearTimeout(handle);
-  }, [local, value, onChange]);
+  }, [local, value]);
 
   return (
     <div className="px-2">
