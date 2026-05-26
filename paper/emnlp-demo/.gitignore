@@ -1,0 +1,20 @@
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+paper.pdf
+
+# ACL style files (fetched separately — see README.md)
+acl.sty
+acl_natbib.bst
