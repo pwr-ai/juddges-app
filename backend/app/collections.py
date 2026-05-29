@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 from juddges_search.db.collections_db import UNSET
 from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/collections", tags=["collections"])
@@ -45,13 +46,6 @@ class AddDocumentRequest(BaseModel):
         return validate_id_format(v, "document_id")
 
 
-def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:
-    """Extract user ID from request header."""
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="User ID header is required")
-    return x_user_id
-
-
 def transform_collection(data) -> CollectionWithDocuments:
     documents = []
     # Translate join-table rows (`collection_judgments` / `judgment_id`) into the
@@ -76,9 +70,10 @@ def transform_collection(data) -> CollectionWithDocuments:
 
 @router.get("", response_model=list[CollectionWithDocuments])
 async def list_collections(
-    db=Depends(get_collections_db), user_id: str = Depends(get_current_user)
+    db=Depends(get_collections_db),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
-    collections = await db.get_user_collections(user_id)
+    collections = await db.get_user_collections(user.id)
     return [transform_collection(c) for c in collections]
 
 
@@ -86,9 +81,9 @@ async def list_collections(
 async def create_collection(
     request: CreateCollectionRequest,
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
-    collection = await db.create_collection(user_id, request.name, request.description)
+    collection = await db.create_collection(user.id, request.name, request.description)
     return Collection(**collection)
 
 
@@ -98,7 +93,7 @@ async def get_collection(
     limit: int | None = None,
     offset: int = 0,
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Get a collection with its documents.
 
@@ -115,7 +110,7 @@ async def get_collection(
         raise HTTPException(status_code=400, detail=str(e))
 
     collection = await db.find_collection(
-        collection_id, user_id, limit=limit, offset=offset
+        collection_id, user.id, limit=limit, offset=offset
     )
     if not collection:
         raise HTTPException(404, "Collection not found")
@@ -127,7 +122,7 @@ async def update_collection(
     request: UpdateCollectionRequest,
     collection_id: str = Path(..., description="Collection ID to update"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Validate collection_id
     try:
@@ -140,7 +135,7 @@ async def update_collection(
         request.description if "description" in request.model_fields_set else UNSET
     )
     collection = await db.update_collection(
-        collection_id, user_id, request.name, description_arg
+        collection_id, user.id, request.name, description_arg
     )
     return Collection(**collection)
 
@@ -149,7 +144,7 @@ async def update_collection(
 async def delete_collection(
     collection_id: str = Path(..., description="Collection ID to delete"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Validate collection_id
     try:
@@ -158,7 +153,7 @@ async def delete_collection(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    await db.delete_collection(collection_id, user_id)
+    await db.delete_collection(collection_id, user.id)
     return {"message": "Collection deleted successfully"}
 
 
@@ -166,7 +161,7 @@ async def delete_collection(
 async def get_collection_documents(
     collection_id: str = Path(..., description="Collection ID to get documents from"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Get all documents in a collection with their full metadata."""
     # Validate collection_id
@@ -176,7 +171,7 @@ async def get_collection_documents(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    return await db.get_collection_documents(collection_id, user_id)
+    return await db.get_collection_documents(collection_id, user.id)
 
 
 @router.post("/{collection_id}/documents")
@@ -184,7 +179,7 @@ async def add_document(
     request: AddDocumentRequest,
     collection_id: str = Path(..., description="Collection ID to add document to"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Validate collection_id
     try:
@@ -193,7 +188,7 @@ async def add_document(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    await db.add_document(collection_id, request.document_id, user_id)
+    await db.add_document(collection_id, request.document_id, user.id)
     return {
         "message": "Document added successfully",
         "document_id": request.document_id,
@@ -221,7 +216,7 @@ async def add_documents_batch(
     request: AddDocumentsRequest,
     collection_id: str = Path(..., description="Collection ID to add documents to"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Add multiple documents to a collection at once."""
     # Validate collection_id
@@ -236,7 +231,7 @@ async def add_documents_batch(
 
     for document_id in request.document_ids:
         try:
-            await db.add_document(collection_id, document_id, user_id)
+            await db.add_document(collection_id, document_id, user.id)
             added.append(document_id)
         except Exception as e:
             logger.warning(f"Failed to add document {document_id}: {e}")
@@ -268,7 +263,7 @@ async def remove_document_by_body(
     request: RemoveDocumentRequest,
     collection_id: str = Path(..., description="Collection ID to remove document from"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Remove a document from a collection (expects document_id in request body)."""
     # Validate collection_id
@@ -278,7 +273,7 @@ async def remove_document_by_body(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    await db.remove_document(collection_id, request.document_id, user_id)
+    await db.remove_document(collection_id, request.document_id, user.id)
     return {"message": "Document removed successfully"}
 
 
@@ -287,7 +282,7 @@ async def remove_document_by_url(
     collection_id: str = Path(..., description="Collection ID to remove document from"),
     document_id: str = Path(..., description="Document ID to remove"),
     db=Depends(get_collections_db),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Remove a document from a collection (document_id in URL path)."""
     # Validate both IDs
@@ -298,5 +293,5 @@ async def remove_document_by_url(
         logger.warning(f"Invalid ID format: {e!s}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    await db.remove_document(collection_id, document_id, user_id)
+    await db.remove_document(collection_id, document_id, user.id)
     return {"message": "Document removed successfully"}

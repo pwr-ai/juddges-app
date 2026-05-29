@@ -33,11 +33,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/collections/${id}/documents`, {
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
     });
@@ -89,6 +98,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Get document_id or document_ids from request body
     const body = await request.json();
     const { document_id, document_ids, collection_id } = body;
@@ -99,7 +117,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'X-API-Key': API_KEY,
-          'X-User-ID': userData.user.id,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         } as HeadersInit,
         body: JSON.stringify({ document_ids }),
@@ -130,7 +148,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: JSON.stringify({ document_id, collection_id }),
@@ -178,6 +196,15 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Handle DELETE with document_id in request body
     // Note: DELETE with document_id in URL path is handled by [documentId]/route.ts
     const body = await request.json();
@@ -194,7 +221,7 @@ export async function DELETE(request: NextRequest) {
       method: 'DELETE',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: JSON.stringify({ document_id: documentId }),
