@@ -179,7 +179,8 @@
       "react-dom": "^19.0.0"
     },
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "ws": "^8.20.1"
   },
   "optionalDependencies": {
     "lightningcss-linux-arm64-musl": "^1.30.1",
