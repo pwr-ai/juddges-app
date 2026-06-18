@@ -830,4 +830,5 @@ class TestPushTopicsRunToMeili:
             expected_docs,
             live_index="topics",
             staging_index="topics_new",
+            auto_confirm=False,
         )

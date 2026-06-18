@@ -160,6 +160,7 @@ async def test_autocomplete_analytics_records_topic_hits_count(
         processing_ms=9,
         filters=None,
         topic_hits_count=2,
+        user_id=None,
     )
 
 
@@ -196,4 +197,5 @@ async def test_autocomplete_analytics_zero_topic_hits(
         processing_ms=5,
         filters=None,
         topic_hits_count=0,
+        user_id=None,
     )
