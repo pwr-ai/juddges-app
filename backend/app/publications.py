@@ -7,7 +7,7 @@ from juddges_search.db.supabase_db import get_publications_db
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.auth_jwt import AuthenticatedUser, get_current_user
+from app.core.auth_jwt import AuthenticatedUser, get_current_user, require_admin
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/publications", tags=["publications"])
@@ -411,6 +411,7 @@ async def add_schema_link(
     request: LinkSchemaRequest,
     publication_id: str = Path(..., description="Publication ID"),
     db=Depends(get_publications_db),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """Link a schema to a publication."""
     try:
@@ -427,6 +428,7 @@ async def remove_schema_link(
     publication_id: str = Path(..., description="Publication ID"),
     schema_id: str = Path(..., description="Schema ID to unlink"),
     db=Depends(get_publications_db),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """Remove a schema link from a publication."""
     try:
@@ -467,6 +469,7 @@ async def add_collection_link(
     request: LinkCollectionRequest,
     publication_id: str = Path(..., description="Publication ID"),
     db=Depends(get_publications_db),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """Link a collection to a publication."""
     try:
@@ -488,6 +491,7 @@ async def remove_collection_link(
     publication_id: str = Path(..., description="Publication ID"),
     collection_id: str = Path(..., description="Collection ID to unlink"),
     db=Depends(get_publications_db),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """Remove a collection link from a publication."""
     try:
@@ -528,6 +532,7 @@ async def add_extraction_job_link(
     request: LinkExtractionJobRequest,
     publication_id: str = Path(..., description="Publication ID"),
     db=Depends(get_publications_db),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """Link an extraction job to a publication."""
     try:
@@ -546,6 +551,7 @@ async def remove_extraction_job_link(
     publication_id: str = Path(..., description="Publication ID"),
     job_id: str = Path(..., description="Extraction job ID to unlink"),
     db=Depends(get_publications_db),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """Remove an extraction job link from a publication."""
     try:
