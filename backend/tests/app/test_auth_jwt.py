@@ -160,17 +160,115 @@ class TestGetUserSupabaseClient:
         mock_client = MagicMock()
         mock_create.return_value = mock_client
 
-        with patch.dict(
-            os.environ,
-            {
-                "SUPABASE_URL": "https://test.supabase.co",
-                "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
-            },
-        ):
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+        }
+        with patch.dict(os.environ, env):
+            os.environ.pop("SUPABASE_JWT_SECRET", None)
             result = get_user_supabase_client("user-token")
 
         mock_client.auth.set_session.assert_called_once_with("user-token", "")
         assert result is mock_client
+
+    @patch("app.core.auth_jwt.create_client")
+    def test_passes_refresh_token_when_provided(self, mock_create):
+        mock_client = MagicMock()
+        mock_create.return_value = mock_client
+
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+        }
+        with patch.dict(os.environ, env):
+            os.environ.pop("SUPABASE_JWT_SECRET", None)
+            result = get_user_supabase_client("user-token", refresh_token="ref-tok")
+
+        mock_client.auth.set_session.assert_called_once_with("user-token", "ref-tok")
+        assert result is mock_client
+
+    def test_secret_unset_skips_verification_and_does_not_raise(self):
+        """When SUPABASE_JWT_SECRET is absent, verification is skipped — no exception."""
+        import app.core.auth_jwt as mod
+
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+        }
+        with (
+            patch.dict(os.environ, env),
+            patch.object(mod, "create_client", return_value=MagicMock()),
+        ):
+            os.environ.pop("SUPABASE_JWT_SECRET", None)
+            # A clearly fake token — must NOT raise when secret is unset
+            get_user_supabase_client("not-a-real-jwt")  # should not raise
+
+    def test_secret_set_valid_token_succeeds(self):
+        """When SUPABASE_JWT_SECRET is set and token is valid, client is returned."""
+        import time
+
+        import jwt as pyjwt
+
+        import app.core.auth_jwt as mod
+
+        secret = "test-secret-for-unit-tests"  # noqa: S105
+        payload = {
+            "sub": "user-abc",
+            "role": "authenticated",
+            "aud": "authenticated",
+            "exp": int(time.time()) + 3600,
+            "iat": int(time.time()),
+        }
+        token = pyjwt.encode(payload, secret, algorithm="HS256")
+
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+            "SUPABASE_JWT_SECRET": secret,
+        }
+        mock_client = MagicMock()
+        with (
+            patch.dict(os.environ, env),
+            patch.object(mod, "create_client", return_value=mock_client),
+        ):
+            result = get_user_supabase_client(token)
+
+        assert result is mock_client
+
+    def test_secret_set_invalid_token_raises_401(self):
+        """When SUPABASE_JWT_SECRET is set and signature is wrong, raises HTTP 401."""
+        import time
+
+        import jwt as pyjwt
+
+        import app.core.auth_jwt as mod
+
+        real_secret = "real-secret"  # noqa: S105
+        wrong_secret = "wrong-secret"  # noqa: S105
+        payload = {
+            "sub": "user-abc",
+            "role": "authenticated",
+            "aud": "authenticated",
+            "exp": int(time.time()) + 3600,
+            "iat": int(time.time()),
+        }
+        # Sign with real_secret but verify against wrong_secret — should fail
+        token = pyjwt.encode(payload, real_secret, algorithm="HS256")
+
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+            "SUPABASE_JWT_SECRET": wrong_secret,
+        }
+        with (
+            patch.dict(os.environ, env),
+            patch.object(mod, "create_client", return_value=MagicMock()),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            get_user_supabase_client(token)
+
+        assert exc_info.value.status_code == 401
+        assert "Invalid token signature" in exc_info.value.detail
 
 
 # ===== get_current_user tests =====
