@@ -15319,6 +15319,7 @@
           "jurisdiction": {
             "anyOf": [
               {
+                "maxLength": 64,
                 "type": "string"
               },
               {
@@ -15328,10 +15329,12 @@
             "title": "Jurisdiction"
           },
           "query": {
+            "maxLength": 500,
             "title": "Query",
             "type": "string"
           },
           "topic_id": {
+            "maxLength": 200,
             "title": "Topic Id",
             "type": "string"
           }
