@@ -30,6 +30,13 @@ export async function GET(request: NextRequest) {
       throw new UnauthorizedError("Please log in to get filter options");
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedError("Please log in to get filter options");
+    }
+
     // Forward request to backend
     const response = await fetch(
       `${API_BASE_URL}/extractions/base-schema/filter-options`,
@@ -37,7 +44,7 @@ export async function GET(request: NextRequest) {
         method: 'GET',
         headers: {
           'X-API-Key': API_KEY,
-          'X-User-ID': userData.user.id,
+          'Authorization': `Bearer ${accessToken}`,
         },
       }
     );
