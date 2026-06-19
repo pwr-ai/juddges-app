@@ -25989,7 +25989,7 @@
                     "$ref": "#/components/schemas/SimpleExtractionRequest"
                   }
                 ],
-                "title": "Request"
+                "title": "Payload"
               }
             }
           },
@@ -26287,7 +26287,7 @@
                     "$ref": "#/components/schemas/SimpleExtractionRequest"
                   }
                 ],
-                "title": "Request"
+                "title": "Payload"
               }
             }
           },
