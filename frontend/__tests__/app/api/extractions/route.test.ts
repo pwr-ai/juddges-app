@@ -59,6 +59,10 @@ function mockSupabaseAuth(userId: string | null) {
         data: { user: userId ? { id: userId } : null },
         error: userId ? null : new Error("not authed"),
       }),
+      getSession: jest.fn().mockResolvedValue({
+        data: { session: userId ? { access_token: "test-access-token" } : null },
+        error: null,
+      }),
     },
     from: fromMock,
   };
@@ -485,7 +489,7 @@ describe("DELETE /api/extractions", () => {
         method: "DELETE",
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
-          "X-User-ID": USER_ID,
+          "Authorization": "Bearer test-access-token",
         }),
       })
     );

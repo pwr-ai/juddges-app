@@ -29,12 +29,12 @@ from app.server import app
 
 
 def _install_jwt_user_override(user_id: str) -> None:
-    """Override the Supabase Bearer dep so /collections tests can keep using
-    the legacy X-User-ID-style fixtures (which never carried a real JWT).
+    """Override the Supabase Bearer dep so JWT-migrated routers can be tested
+    without a real Supabase token.
 
-    Publications, playground, and extraction routers still consume X-User-ID
-    via their own ``get_current_user`` deps, so this override does not affect
-    them.
+    Covers /collections (PR #209) and /playground (PR #232). Publications and
+    extraction routers still consume X-User-ID via their own deps, so this
+    override does not affect them.
     """
 
     async def _resolver() -> AuthenticatedUser:
@@ -99,9 +99,9 @@ async def authenticated_client(
     """
     Create an authenticated async HTTP client with valid API key and user header.
 
-    Installs the Bearer-JWT override for /collections (the router migrated to
-    Supabase JWT in PR-for-#209) while keeping X-User-ID for legacy routers
-    (publications, playground, extraction).
+    Installs the Bearer-JWT override for /collections (#209) and /playground
+    (#232) while keeping X-User-ID for legacy routers (publications,
+    extraction).
     """
     headers = {**valid_api_headers, "X-User-ID": mock_user["id"]}
 

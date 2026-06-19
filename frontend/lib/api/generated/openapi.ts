@@ -2051,7 +2051,7 @@ export interface paths {
         put?: never;
         /**
          * Add Documents Batch
-         * @description Add multiple documents to a collection at once.
+         * @description Add multiple documents to a collection at once (max 100 per request).
          */
         post: operations["add_documents_batch_collections__collection_id__documents_batch_post"];
         delete?: never;
@@ -5211,11 +5211,12 @@ export interface paths {
          *
          *     This endpoint provides a chat-based interface for creating and refining
          *     extraction schemas. It maintains conversation state across requests using
-         *     session IDs.
+         *     session IDs scoped to the authenticated user.
          *
          *     Args:
          *         params: Chat request with message and context
          *         request: FastAPI request object
+         *         user: Authenticated user (from Bearer JWT)
          *
          *     Returns:
          *         Chat response with AI message and schema state
@@ -5257,6 +5258,7 @@ export interface paths {
          *     Args:
          *         params: Schema generation request with user's description
          *         request: FastAPI request object
+         *         user: Authenticated user (from Bearer JWT)
          *
          *     Returns:
          *         Generated schema with metadata
@@ -5297,6 +5299,7 @@ export interface paths {
          *     Args:
          *         params: Test request with schema and document IDs
          *         request: FastAPI request object
+         *         user: Authenticated user (from Bearer JWT)
          *
          *     Returns:
          *         Test results with success/failure statistics
@@ -6150,7 +6153,7 @@ export interface components {
         AddDocumentsRequest: {
             /**
              * Document Ids
-             * @description List of document IDs to add
+             * @description List of document IDs to add (max 100 per request)
              */
             document_ids: string[];
         };
@@ -19134,9 +19137,7 @@ export interface operations {
                 /** @description Filter by job status (IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED) */
                 status?: string | null;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -19610,9 +19611,7 @@ export interface operations {
     cancel_or_delete_extraction_job_extractions__job_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Extraction job ID to cancel */
                 job_id: string;
@@ -19644,9 +19643,7 @@ export interface operations {
     delete_extraction_job_extractions__job_id__delete_delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Extraction job ID to delete */
                 job_id: string;
@@ -19681,9 +19678,7 @@ export interface operations {
                 /** @description Export format: 'xlsx' or 'csv' */
                 format?: string;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Extraction job ID */
                 job_id: string;

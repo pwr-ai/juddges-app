@@ -9,8 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from juddges_search.info_extraction import BaseSchemaExtractor
 from loguru import logger
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.extraction_domain.base_schema_promote import promote_to_typed_columns
-from app.extraction_domain.shared import get_current_user, supabase
+from app.extraction_domain.shared import supabase
 from app.models import (
     BaseSchemaDefinitionResponse,
     BaseSchemaExtractionRequest,
@@ -34,7 +35,7 @@ router = APIRouter()
 async def export_extraction_results(
     job_id: str = Path(..., description="Extraction job ID"),
     format: str = Query("xlsx", description="Export format: 'xlsx' or 'csv'"),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """
     Export extraction results to CSV or Excel format.
@@ -46,7 +47,7 @@ async def export_extraction_results(
     - **format**: Export format ('xlsx' or 'csv', default: 'xlsx')
 
     **Authorization:**
-    - Requires X-User-ID header
+    - Requires Authorization: Bearer <JWT>
     - Only the job owner can export results
 
     **Returns:**
@@ -54,6 +55,7 @@ async def export_extraction_results(
     - Each row represents a document
     - Columns are flattened schema fields
     """
+    user_id = user.id
     from io import BytesIO
 
     import pandas as pd
