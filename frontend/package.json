@@ -181,7 +181,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "ws": "^8.20.1",
-    "markdown-it": "^14.2.0"
+    "markdown-it": "^14.2.0",
+    "postcss": "^8.5.10",
+    "uuid": "^13.0.1"
   },
   "optionalDependencies": {
     "lightningcss-linux-arm64-musl": "^1.30.1",
