@@ -240,14 +240,18 @@ class TestAPIKeyAuthentication:
     async def test_api_key_works_across_endpoints(
         self, client: AsyncClient, valid_api_headers: dict[str, str]
     ):
-        """Test that valid API key works for multiple protected endpoints."""
-        protected_endpoints = [
+        """Test that valid API key works for endpoints that require ONLY API key.
+
+        Note: /collections is intentionally excluded — it now also requires a
+        Supabase Bearer JWT (see #209 / collections-auth migration). Bearer
+        auth is exercised separately in test_collections_bearer_auth.py.
+        """
+        api_key_only_endpoints = [
             "/documents",
-            "/collections",
             "/schemas",
         ]
 
-        for endpoint in protected_endpoints:
+        for endpoint in api_key_only_endpoints:
             response = await client.get(endpoint, headers=valid_api_headers)
             assert response.status_code not in [401, 403], (
                 f"Valid API key should work for {endpoint}"

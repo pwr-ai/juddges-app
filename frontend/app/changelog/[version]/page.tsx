@@ -17,9 +17,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { version } = await params;
   const entry = await loadChangelogEntry(version);
-  if (!entry) return { title: "Release not found — Juddges" };
+  if (!entry) return { title: "Release not found" };
   return {
-    title: `${entry.title} — Juddges Changelog`,
+    title: `${entry.title} — Changelog`,
     description: `Release notes for Juddges ${entry.title}.`,
   };
 }

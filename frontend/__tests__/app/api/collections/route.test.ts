@@ -34,12 +34,20 @@ import { GET, POST } from "@/app/api/collections/route";
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const COLLECTION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
+const MOCK_ACCESS_TOKEN = "mocked-access-token";
+
 function mockSupabaseAuth(userId: string | null) {
   const supabase = {
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user: userId ? { id: userId } : null },
         error: userId ? null : new Error("not authed"),
+      }),
+      getSession: jest.fn().mockResolvedValue({
+        data: {
+          session: userId ? { access_token: MOCK_ACCESS_TOKEN } : null,
+        },
+        error: null,
       }),
     },
     from: jest.fn(),
@@ -91,7 +99,7 @@ describe("GET /api/collections", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
-          "X-User-ID": USER_ID,
+          "Authorization": `Bearer ${MOCK_ACCESS_TOKEN}`,
         }),
       })
     );
@@ -168,7 +176,7 @@ describe("POST /api/collections", () => {
         method: "POST",
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
-          "X-User-ID": USER_ID,
+          "Authorization": `Bearer ${MOCK_ACCESS_TOKEN}`,
         }),
         body: JSON.stringify({ name: "Crime", description: "test" }),
       })

@@ -36,6 +36,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Build backend URL with pagination params
     const backendParams = new URLSearchParams();
     const limit = searchParams.get('limit');
@@ -50,7 +59,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(backendUrl, {
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
     });
@@ -107,6 +116,15 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { name, description } = body;
 
     if (!name) {
@@ -124,7 +142,7 @@ export async function PUT(request: NextRequest) {
       method: 'PUT',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: backendRequestBody,
@@ -180,12 +198,21 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/collections/${id}`, {
       method: 'DELETE',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
     });

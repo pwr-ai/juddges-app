@@ -197,3 +197,15 @@ papers/**/main.pdf
 
 # MkDocs build output
 site/
+
+# Local research workspace (drafts, PDFs, scripts — not part of the app)
+papers/
+
+# Local data fixtures and large extraction blobs (not part of the app build)
+frontend/data/
+frontend/public/data/
+backend/packages/schema_generator_agent/schema_generator_agent/data/
+
+# Superseded env-module design notes — current implementation is frontend/lib/env/client.ts
+frontend/lib/env/README.md
+frontend/lib/env/types.ts

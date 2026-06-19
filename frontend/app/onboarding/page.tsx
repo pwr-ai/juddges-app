@@ -9,7 +9,7 @@ import {
 import { PageContainer } from "@/lib/styles/components";
 
 export const metadata: Metadata = {
-  title: "Get started — JUDDGES",
+  title: "Get started",
   description:
     "A tour of JUDDGES for legal researchers: search the corpus, build a collection, and read the base coding schema.",
 };

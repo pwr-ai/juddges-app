@@ -1,4 +1,5 @@
 import { loadChangelogEntries } from "@/lib/changelog";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
 
@@ -12,8 +13,7 @@ function escapeXml(s: string): string {
 }
 
 export async function GET() {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://juddges.app";
+  const siteUrl = SITE_URL;
   const entries = await loadChangelogEntries();
 
   const items = entries

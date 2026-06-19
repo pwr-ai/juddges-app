@@ -24,11 +24,17 @@ export async function POST(request: Request) {
       document_type = "judgment",
     } = body;
 
-    // Get user from session
+    // Get user and access token from session
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -66,11 +72,13 @@ export async function POST(request: Request) {
       };
     }
 
+    // Forward Bearer token so the backend can authenticate via get_current_user.
     const backendResponse = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": process.env.BACKEND_API_KEY || "",
+        "Authorization": `Bearer ${accessToken}`,
       },
       body: JSON.stringify(requestBody),
     });

@@ -4,7 +4,7 @@ import { loadChangelogEntries } from "@/lib/changelog";
 import { PageContainer, Header } from "@/lib/styles/components";
 
 export const metadata: Metadata = {
-  title: "Changelog — Juddges",
+  title: "Changelog",
   description: "Release notes and product updates for Juddges.",
 };
 
