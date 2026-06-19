@@ -99,15 +99,19 @@ async def rewrite_query(
 
     try:
         rewrite_result: QueryRewriteResult = await chain.ainvoke(chain_inputs)
+        # Validation (Meili facet lookups, numeric/date clamping) must also
+        # degrade on failure rather than surface a 500.
+        envelope = await validator.validate(rewrite_result)
     except Exception as exc:  # we explicitly degrade on any failure
         logger.warning(
-            "query_rewrite_chain failed — degrading: {}: {}",
+            "query_rewrite failed — degrading: {}: {}",
             type(exc).__name__,
             exc,
         )
         envelope = RewrittenQueryEnvelope(rewritten_query=body.query, degraded=True)
-    else:
-        envelope = await validator.validate(rewrite_result)
 
-    _CACHE[key] = envelope
+    # Never negatively-cache a degraded result: a transient upstream failure
+    # would otherwise stick for the cache TTL across retries.
+    if not envelope.degraded:
+        _CACHE[key] = envelope
     return envelope

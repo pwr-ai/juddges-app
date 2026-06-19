@@ -104,6 +104,36 @@ def test_rewrite_route_falls_back_on_chain_failure(test_client):
     validator_mock.validate.assert_not_called()
 
 
+def test_rewrite_route_falls_back_on_validator_failure(test_client):
+    """Validation errors must degrade (not 500) and must not be cached."""
+    from app.judgments_pkg.query_rewrite import _CACHE
+
+    chain_mock = AsyncMock()
+    chain_mock.ainvoke.return_value = QueryRewriteResult(rewritten_query="vat")
+    validator_mock = AsyncMock()
+    validator_mock.validate.side_effect = ValueError("day is out of range for month")
+
+    with (
+        patch("app.judgments_pkg.query_rewrite._get_chain", return_value=chain_mock),
+        patch(
+            "app.judgments_pkg.query_rewrite._get_validator",
+            return_value=validator_mock,
+        ),
+    ):
+        resp = test_client.post(
+            "/documents/search/rewrite",
+            json={"query": "vat", "languages_hint": ["pl"]},
+            headers={"X-API-Key": _API_KEY},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["degraded"] is True
+    assert body["rewritten_query"] == "vat"
+    # Degraded results are never negatively cached.
+    assert _CACHE == {}
+
+
 @pytest.mark.unit
 def test_rewrite_route_rejects_empty_query(test_client):
     resp = test_client.post(

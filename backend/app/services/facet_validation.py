@@ -10,6 +10,7 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 from datetime import date as _date
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 # NumericRange is referenced in Pydantic model bodies and built at runtime
@@ -175,7 +176,9 @@ class FacetValidator:
             return None
         today = self.today or _date.today()
         floor = _date(1900, 1, 1)
-        ceil = _date(today.year + 1, today.month, today.day)
+        # ~1 year ahead; timedelta avoids the Feb-29 ValueError that
+        # _date(today.year + 1, today.month, today.day) hits on a leap day.
+        ceil = today + timedelta(days=366)
 
         def _ok(d: _date | None) -> bool:
             return d is None or (floor <= d <= ceil)
