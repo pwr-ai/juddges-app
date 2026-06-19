@@ -79,3 +79,47 @@ async def test_dashboard_trending_topics_enforces_route_rate_limit(
     finally:
         if previous_enabled is not None:
             limiter.enabled = previous_enabled
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+async def test_dashboard_health_requires_api_key(client: AsyncClient):
+    """GET /dashboard/health must reject requests without X-API-Key (fixes #170)."""
+    response = await client.get("/dashboard/health")
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+async def test_dashboard_refresh_stats_requires_admin(
+    valid_api_headers: dict,
+):
+    """POST /dashboard/refresh-stats must reject non-admin authenticated users with 403 (fixes #216)."""
+    from httpx import ASGITransport, AsyncClient
+
+    from app.core.auth_jwt import AuthenticatedUser
+    from app.core.auth_jwt import get_current_user as jwt_get_current_user
+    from app.server import app
+
+    async def non_admin_user() -> AuthenticatedUser:
+        return AuthenticatedUser(
+            user_data={
+                "id": "non-admin-user",
+                "email": "user@example.com",
+                "role": "authenticated",
+                "app_metadata": {},
+            },
+            access_token="test-token",
+        )
+
+    app.dependency_overrides[jwt_get_current_user] = non_admin_user
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers=valid_api_headers,
+        ) as ac:
+            response = await ac.post("/dashboard/refresh-stats")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.pop(jwt_get_current_user, None)
