@@ -162,6 +162,55 @@ class TestExportExtractionResults:
 
 
 # =============================================================================
+# POST /extractions/base-schema  (auth gate added by issue #250 Part 3)
+# =============================================================================
+
+
+class TestBaseSchemaExtractionAuth:
+    """Part 3 of issue #250: extract_with_base_schema must require Bearer JWT.
+
+    The endpoint writes back to shared ``judgments`` rows, so caller identity
+    must be established before any mutations occur.
+    """
+
+    @pytest.mark.unit
+    async def test_unauthenticated_request_rejected(
+        self, client, valid_api_headers
+    ) -> None:
+        """POST /extractions/base-schema without Bearer JWT must be rejected (401/403)."""
+        # No JWT override installed → get_current_user raises 401
+        response = await client.post(
+            "/extractions/base-schema",
+            json={"document_ids": ["doc-1"]},
+            headers=valid_api_headers,
+        )
+        assert response.status_code in (401, 403), (
+            f"Expected 401/403 for unauthenticated base-schema extraction, "
+            f"got {response.status_code}. Bearer JWT is required on this write endpoint."
+        )
+
+    @pytest.mark.unit
+    async def test_authenticated_request_reaches_handler(
+        self, client, valid_api_headers
+    ) -> None:
+        """A Bearer-authenticated request passes the auth gate and reaches the handler."""
+        _install_jwt_user_override(_USER_001)
+
+        # Supabase unavailable → handler returns 503 after auth passes.
+        with patch("app.extraction_domain.results_router.supabase", None):
+            response = await client.post(
+                "/extractions/base-schema",
+                json={"document_ids": ["doc-1"]},
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code not in (401, 403, 422), (
+            f"Bearer auth path returned {response.status_code}; "
+            f"expected the handler to be reached. Body: {response.text[:300]}"
+        )
+
+
+# =============================================================================
 # POST /extractions/base-schema/filter
 # =============================================================================
 

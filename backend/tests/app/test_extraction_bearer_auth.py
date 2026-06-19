@@ -105,17 +105,15 @@ async def test_extraction_list_accepts_bearer_jwt(
     valid_api_headers: dict[str, str],
     override_jwt_user: AuthenticatedUser,
 ) -> None:
-    """A Bearer-authenticated request reaches the list handler (not 401/403/422)."""
-    mock_celery_app = MagicMock()
-    mock_inspect = MagicMock()
-    mock_inspect.active.return_value = {}
-    mock_inspect.scheduled.return_value = {}
-    mock_inspect.reserved.return_value = {}
-    mock_celery_app.control.inspect.return_value = mock_inspect
+    """A Bearer-authenticated request reaches the list handler (not 401/403/422).
 
+    Part 1 (issue #250): list now queries Supabase, not Celery inspect. We mock
+    supabase=None so the handler returns 503, which is the cheapest way to confirm
+    the auth gate was passed while keeping the test unit-scoped.
+    """
     headers = {**valid_api_headers, "Authorization": "Bearer fake-jwt-token"}
 
-    with patch("app.extraction_domain.jobs_router.celery_app", mock_celery_app):
+    with patch("app.extraction_domain.jobs_router.supabase", None):
         response = await client.get("/extractions", headers=headers)
 
     assert response.status_code not in (401, 403, 422), (
@@ -231,5 +229,53 @@ async def test_extraction_export_accepts_bearer_jwt(
     # Confirm the handler ran by checking the auth-unrelated 400 response
     assert response.status_code == 400, (
         f"Expected 400 (invalid format) after auth passes, got {response.status_code}. "
+        f"Body: {response.text[:300]}"
+    )
+
+
+# =============================================================================
+# POST /extractions/base-schema — write endpoint (auth added by issue #250 Part 3)
+# =============================================================================
+
+
+async def test_extraction_base_schema_rejects_unauthenticated(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone (no Bearer) must be rejected on the base-schema write endpoint."""
+    response = await client.post(
+        "/extractions/base-schema",
+        json={"document_ids": ["doc-1"]},
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no Bearer JWT is supplied to POST /extractions/base-schema; "
+        f"got {response.status_code}. Bearer JWT is required because this endpoint writes "
+        f"back to shared judgments rows."
+    )
+
+
+async def test_extraction_base_schema_accepts_bearer_jwt(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_jwt_user: AuthenticatedUser,
+) -> None:
+    """A Bearer-authenticated base-schema request reaches the handler (not 401/403/422).
+
+    We mock supabase=None so the handler immediately returns 503 — the cheapest
+    confirmation that the auth gate was passed without hitting real services.
+    """
+    headers = {**valid_api_headers, "Authorization": "Bearer fake-jwt-token"}
+
+    with patch("app.extraction_domain.results_router.supabase", None):
+        response = await client.post(
+            "/extractions/base-schema",
+            json={"document_ids": ["doc-1"]},
+            headers=headers,
+        )
+
+    assert response.status_code not in (401, 403, 422), (
+        f"Bearer auth path returned {response.status_code}; "
+        f"expected the handler to be reached (auth passed). "
         f"Body: {response.text[:300]}"
     )
