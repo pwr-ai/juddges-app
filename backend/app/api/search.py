@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
@@ -417,7 +418,7 @@ async def eval_queries_endpoint(
     accepted for this endpoint (403 otherwise).  When unset, any valid
     ``BACKEND_API_KEY`` is sufficient.
     """
-    if RESEARCHER_API_KEY and api_key != RESEARCHER_API_KEY:
+    if RESEARCHER_API_KEY and not secrets.compare_digest(api_key, RESEARCHER_API_KEY):
         raise HTTPException(
             status_code=403,
             detail="This endpoint requires the researcher API key.",
