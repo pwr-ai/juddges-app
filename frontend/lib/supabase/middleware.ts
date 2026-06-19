@@ -69,6 +69,9 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/auth") &&
     !request.nextUrl.pathname.startsWith("/about") &&
     !request.nextUrl.pathname.startsWith("/ecosystem") &&
+    // Metadata image routes must be reachable by social/search crawlers.
+    !request.nextUrl.pathname.startsWith("/opengraph-image") &&
+    !request.nextUrl.pathname.startsWith("/twitter-image") &&
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/api/health") &&
     !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
