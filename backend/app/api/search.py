@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from app.auth import verify_api_key
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
 from app.rate_limiter import limiter
-from app.services.search import MeiliSearchService, TopicHit
+from app.services.search import MeiliSearchService, SearchMode, TopicHit
 from app.services.search_analytics import (
     export_eval_queries,
     get_popular_queries,
@@ -62,13 +62,23 @@ class DocumentPagination(BaseModel):
 
 
 class DocumentSearchResponse(BaseModel):
-    """Paginated document search response (Meilisearch-backed text mode)."""
+    """Paginated document search response (Meilisearch-backed text mode).
+
+    ``search_mode`` indicates which ranking strategy was used:
+
+    - ``"keyword"`` — pure keyword search (``semantic_ratio == 0``).
+    - ``"hybrid"`` — hybrid semantic+keyword search ran successfully.
+    - ``"keyword_fallback"`` — hybrid was requested but Meilisearch returned
+      4xx (e.g. the ``bge-m3`` embedder is not registered); the response
+      contains keyword results only.  Ops should treat this as an ops alert.
+    """
 
     documents: list[dict[str, Any]] = Field(default_factory=list)
     query: str
     query_time_ms: int | None = None
     pagination: DocumentPagination
     total_count: int | None = None
+    search_mode: SearchMode = "keyword"
 
 
 class TopicClickEvent(BaseModel):
@@ -232,6 +242,7 @@ async def documents_search(
             next_offset=next_offset,
         ),
         total_count=estimated_total,
+        search_mode=result.get("search_mode", "keyword"),
     )
 
 

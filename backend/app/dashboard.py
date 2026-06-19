@@ -14,6 +14,7 @@ from supabase import Client, PostgrestAPIError, StorageException, create_client
 from supabase.client import ClientOptions
 
 from app.auth import verify_api_key
+from app.core.auth_jwt import AuthenticatedUser, require_admin
 from app.rate_limiter import limiter
 
 # Redis client setup (optional, falls back to in-memory cache)
@@ -41,7 +42,8 @@ except Exception as e:
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 DASHBOARD_READ_RATE_LIMIT = os.getenv("DASHBOARD_READ_RATE_LIMIT", "100/minute")
-DASHBOARD_REFRESH_RATE_LIMIT = os.getenv("DASHBOARD_REFRESH_RATE_LIMIT", "20/minute")
+DASHBOARD_HEALTH_RATE_LIMIT = os.getenv("DASHBOARD_HEALTH_RATE_LIMIT", "30/minute")
+DASHBOARD_REFRESH_RATE_LIMIT = os.getenv("DASHBOARD_REFRESH_RATE_LIMIT", "2/hour")
 
 
 def _get_required_env(name: str) -> str:
@@ -333,7 +335,9 @@ async def get_dashboard_stats(
 @router.post("/refresh-stats")
 @limiter.limit(DASHBOARD_REFRESH_RATE_LIMIT)
 async def refresh_dashboard_stats(
-    request: Request, api_key: str = Depends(verify_api_key)
+    request: Request,
+    api_key: str = Depends(verify_api_key),
+    admin: AuthenticatedUser = Depends(require_admin),
 ):
     """
     Trigger a refresh of precomputed dashboard statistics.
@@ -370,7 +374,11 @@ async def refresh_dashboard_stats(
 
 
 @router.get("/health")
-async def dashboard_health():
+@limiter.limit(DASHBOARD_HEALTH_RATE_LIMIT)
+async def dashboard_health(
+    request: Request,
+    api_key: str = Depends(verify_api_key),
+):
     """Check dashboard data availability."""
     try:
         stats = (

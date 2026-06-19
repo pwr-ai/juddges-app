@@ -44,12 +44,9 @@ async def test_dashboard_refresh_stats_requires_auth(client: AsyncClient):
 @pytest.mark.anyio
 @pytest.mark.api
 async def test_dashboard_refresh_stats_with_auth(authenticated_client: AsyncClient):
-    """Refresh stats should work with valid auth."""
+    """Refresh stats with non-admin auth returns 403 after admin gate added in #216."""
     response = await authenticated_client.post("/dashboard/refresh-stats")
-    assert response.status_code in [200, 500]
-    if response.status_code == 200:
-        data = response.json()
-        assert "status" in data
+    assert response.status_code == 403
 
 
 @pytest.mark.anyio
@@ -130,3 +127,19 @@ async def test_dashboard_test_document_counts_requires_auth(client: AsyncClient)
     """Test document counts should reject unauthenticated requests."""
     response = await client.get("/dashboard/test-document-counts")
     assert response.status_code in [401, 403]
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+async def test_dashboard_health_requires_auth(client: AsyncClient):
+    """Health check should reject unauthenticated requests after #170 fix."""
+    response = await client.get("/dashboard/health")
+    assert response.status_code in [401, 403]
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+async def test_dashboard_health_with_api_key(authenticated_client: AsyncClient):
+    """Health check should not return 401/403 with valid API key (DB may be unavailable)."""
+    response = await authenticated_client.get("/dashboard/health")
+    assert response.status_code not in [401, 403]
