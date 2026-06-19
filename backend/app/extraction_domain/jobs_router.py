@@ -24,6 +24,7 @@ from app.extraction_domain.shared import (
     _check_supabase_available,
     _convert_simplified_schema,
     _create_extraction_response,
+    _enforce_max_documents,
     _fetch_schema_from_db,
     _submit_extraction_task,
     _validate_collection_id,
@@ -450,6 +451,9 @@ async def create_extraction_job(
             extraction_request = payload
 
         # Validate and submit
+        _enforce_max_documents(
+            extraction_request.document_ids, extraction_request.collection_id
+        )
         _validate_collection_id(extraction_request.collection_id)
         task_id = _submit_extraction_task(extraction_request)
         return _create_extraction_response(task_id)
@@ -556,6 +560,9 @@ async def create_extraction_job_db(
             extraction_request = payload
 
         # Validate collection and schema
+        _enforce_max_documents(
+            extraction_request.document_ids, extraction_request.collection_id
+        )
         _validate_collection_id(extraction_request.collection_id)
 
         if extraction_request.user_schema is None:

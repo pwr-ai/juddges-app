@@ -607,3 +607,21 @@ class TestValidateDocumentsMaxCap:
         monkeypatch.setattr(shared_module, "MAX_DOCUMENTS_PER_JOB", 3)
         result = _validate_documents(["d1", "d2", "d3"], "col-1")
         assert result == ["d1", "d2", "d3"]
+
+    @pytest.mark.unit
+    def test_enforce_cap_rejects_full_mode_overflow(self, monkeypatch) -> None:
+        """_enforce_max_documents caps the full-mode path (used where document_ids
+        may legitimately be omitted) without requiring a non-empty list."""
+        monkeypatch.setattr(shared_module, "MAX_DOCUMENTS_PER_JOB", 3)
+        with pytest.raises(HTTPException) as exc_info:
+            shared_module._enforce_max_documents(["d1", "d2", "d3", "d4"], "col-1")
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["code"] == "TOO_MANY_DOCUMENTS"
+
+    @pytest.mark.unit
+    def test_enforce_cap_allows_empty_and_within_cap(self, monkeypatch) -> None:
+        """_enforce_max_documents is a no-op for empty/None and within-cap lists."""
+        monkeypatch.setattr(shared_module, "MAX_DOCUMENTS_PER_JOB", 3)
+        shared_module._enforce_max_documents(None, "col-1")
+        shared_module._enforce_max_documents([], "col-1")
+        shared_module._enforce_max_documents(["d1", "d2", "d3"], "col-1")

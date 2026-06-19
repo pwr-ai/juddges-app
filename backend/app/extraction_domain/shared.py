@@ -134,6 +134,34 @@ def is_uuid(value: str) -> bool:
 # =============================================================================
 
 
+def _enforce_max_documents(
+    document_ids: list[str] | None, collection_id: str | None = None
+) -> None:
+    """
+    Enforce the per-job document cap without requiring a non-empty list.
+
+    Use this on code paths (e.g. full-mode ``DocumentExtractionRequest``) that
+    may legitimately omit ``document_ids`` but must still not exceed the cap.
+
+    Raises:
+        HTTPException: 400 if document_ids exceeds MAX_DOCUMENTS_PER_JOB
+    """
+    docs = document_ids or []
+    if len(docs) > MAX_DOCUMENTS_PER_JOB:
+        logger.warning(
+            f"Document count {len(docs)} exceeds cap {MAX_DOCUMENTS_PER_JOB} for collection {collection_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Too Many Documents",
+                "message": f"Document count {len(docs)} exceeds the maximum of {MAX_DOCUMENTS_PER_JOB} documents per job. "
+                f"Split your request into smaller batches.",
+                "code": "TOO_MANY_DOCUMENTS",
+            },
+        )
+
+
 def _validate_documents(
     document_ids: list[str] | None, collection_id: str | None
 ) -> list[str]:
@@ -161,19 +189,7 @@ def _validate_documents(
                 "code": "EMPTY_DOCUMENT_LIST",
             },
         )
-    if len(docs) > MAX_DOCUMENTS_PER_JOB:
-        logger.warning(
-            f"Document count {len(docs)} exceeds cap {MAX_DOCUMENTS_PER_JOB} for collection {collection_id}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Too Many Documents",
-                "message": f"Document count {len(docs)} exceeds the maximum of {MAX_DOCUMENTS_PER_JOB} documents per job. "
-                f"Split your request into smaller batches.",
-                "code": "TOO_MANY_DOCUMENTS",
-            },
-        )
+    _enforce_max_documents(docs, collection_id)
     return docs
 
 
