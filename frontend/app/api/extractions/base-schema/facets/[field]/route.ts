@@ -34,6 +34,13 @@ export async function GET(
       throw new UnauthorizedError("Please log in to get facet counts");
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedError("Please log in to get facet counts");
+    }
+
     // Forward request to backend
     const response = await fetch(
       `${API_BASE_URL}/extractions/base-schema/facets/${encodeURIComponent(field)}`,
@@ -41,7 +48,7 @@ export async function GET(
         method: 'GET',
         headers: {
           'X-API-Key': API_KEY,
-          'X-User-ID': userData.user.id,
+          'Authorization': `Bearer ${accessToken}`,
         },
       }
     );

@@ -86,6 +86,13 @@ export async function POST(request: NextRequest) {
       throw new UnauthorizedError("Please log in to start an extraction");
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedError("Please log in to start an extraction");
+    }
+
     // Use provided document_ids or get all documents from the collection
     // document_ids from frontend are document IDs (backend returns them directly)
     let documentIds: string[];
@@ -104,7 +111,7 @@ export async function POST(request: NextRequest) {
         const response = await fetch(`${API_BASE_URL}/collections/${collection_id}/documents`, {
           headers: {
             'X-API-Key': API_KEY,
-            'X-User-ID': userData.user.id,
+            'Authorization': `Bearer ${accessToken}`,
           } as HeadersInit,
         });
 
@@ -171,7 +178,8 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_KEY
+        'X-API-Key': API_KEY,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify(backendPayload)
     });
@@ -331,12 +339,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Call the backend API to get extraction status and results
     const response = await fetch(
       `${API_BASE_URL}/extractions/${job_id}`,
       {
         headers: {
-          'X-API-Key': API_KEY
+          'X-API-Key': API_KEY,
+          'Authorization': `Bearer ${accessToken}`,
         }
       }
     );
@@ -524,6 +543,13 @@ export async function DELETE(request: NextRequest) {
       throw new UnauthorizedError("Please log in to cancel an extraction job");
     }
 
+    const { data: deleteSessionData } = await supabase.auth.getSession();
+    const deleteAccessToken = deleteSessionData.session?.access_token;
+
+    if (!deleteAccessToken) {
+      throw new UnauthorizedError("Please log in to cancel an extraction job");
+    }
+
     // Call the backend API to cancel the job with timeout
     const backendUrl = `${API_BASE_URL}/extractions/${job_id}`;
     apiLogger.info('Calling backend DELETE endpoint', { requestId, job_id, backendUrl });
@@ -539,7 +565,7 @@ export async function DELETE(request: NextRequest) {
           method: 'DELETE',
           headers: {
             'X-API-Key': API_KEY,
-            'X-User-ID': userData.user.id
+            'Authorization': `Bearer ${deleteAccessToken}`,
           },
           signal: controller.signal
         }

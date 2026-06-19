@@ -260,10 +260,11 @@
         "description": "Request model for adding multiple documents to a collection.",
         "properties": {
           "document_ids": {
-            "description": "List of document IDs to add",
+            "description": "List of document IDs to add (max 100 per request)",
             "items": {
               "type": "string"
             },
+            "maxItems": 100,
             "minItems": 1,
             "title": "Document Ids",
             "type": "array"
@@ -22450,7 +22451,7 @@
     },
     "/collections/{collection_id}/documents/batch": {
       "post": {
-        "description": "Add multiple documents to a collection at once.",
+        "description": "Add multiple documents to a collection at once (max 100 per request).",
         "operationId": "add_documents_batch_collections__collection_id__documents_batch_post",
         "parameters": [
           {
@@ -25567,15 +25568,6 @@
               "description": "Filter by job status (IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED)",
               "title": "Status"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -25603,6 +25595,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "List extraction jobs",
@@ -26254,15 +26249,6 @@
               "title": "Job Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -26290,6 +26276,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Cancel or delete extraction job",
@@ -26361,15 +26350,6 @@
               "title": "Job Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -26397,6 +26377,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Delete extraction job",
@@ -26432,15 +26415,6 @@
               "title": "Format",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -26466,6 +26440,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Export extraction results",
@@ -27864,17 +27841,6 @@
       "post": {
         "description": "Run synchronous extraction on a single document for real-time playground testing.",
         "operationId": "playground_extract_playground_extract_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -27910,6 +27876,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Run playground extraction",
@@ -27940,15 +27909,6 @@
               "default": 20,
               "title": "Limit",
               "type": "integer"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
             }
           }
         ],
@@ -27981,6 +27941,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "List playground test runs",
@@ -28000,15 +27963,6 @@
             "required": true,
             "schema": {
               "title": "Run Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -28040,6 +27994,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get playground test run details",
@@ -28241,17 +28198,6 @@
       "post": {
         "description": "Create a new publication.",
         "operationId": "create_publication_publications_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": false,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -28287,6 +28233,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Create Publication",
@@ -28308,15 +28257,6 @@
             "schema": {
               "description": "Publication ID to delete",
               "title": "Publication Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": false,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -28344,6 +28284,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Delete Publication",
@@ -28413,15 +28356,6 @@
               "title": "Publication Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": false,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "requestBody": {
@@ -28459,6 +28393,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Update Publication",
@@ -31188,7 +31125,7 @@
     },
     "/schema-generator/chat": {
       "post": {
-        "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"judgment\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
+        "description": "Process conversational messages for schema generation.\n\nThis endpoint provides a chat-based interface for creating and refining\nextraction schemas. It maintains conversation state across requests using\nsession IDs scoped to the authenticated user.\n\nArgs:\n    params: Chat request with message and context\n    request: FastAPI request object\n    user: Authenticated user (from Bearer JWT)\n\nReturns:\n    Chat response with AI message and schema state\n\nExample:\n    ```\n    POST /api/schema-generator/chat\n    {\n        \"message\": \"I need to extract drug information from court documents\",\n        \"collection_id\": \"drug-cases\",\n        \"document_type\": \"judgment\",\n        \"mode\": \"rabbit\"\n    }\n    ```",
         "operationId": "schema_chat_schema_generator_chat_post",
         "requestBody": {
           "content": {
@@ -31225,6 +31162,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Schema Chat",
@@ -31235,7 +31175,7 @@
     },
     "/schema-generator/simple": {
       "post": {
-        "description": "Generate a JSON Schema from a natural language description.\n\nThis endpoint provides a simple, single-shot approach to schema generation\nwithout the complexity of multi-turn conversations or agent systems.\n\nArgs:\n    params: Schema generation request with user's description\n    request: FastAPI request object\n\nReturns:\n    Generated schema with metadata\n\nExample:\n    ```\n    POST /api/schema-generator/simple\n    {\n        \"message\": \"Extract party names, contract dates, and monetary amounts\",\n        \"schema_name\": \"ContractExtraction\",\n        \"extraction_instructions\": \"These are Polish legal contracts from 2020-2024\"\n    }\n    ```",
+        "description": "Generate a JSON Schema from a natural language description.\n\nThis endpoint provides a simple, single-shot approach to schema generation\nwithout the complexity of multi-turn conversations or agent systems.\n\nArgs:\n    params: Schema generation request with user's description\n    request: FastAPI request object\n    user: Authenticated user (from Bearer JWT)\n\nReturns:\n    Generated schema with metadata\n\nExample:\n    ```\n    POST /api/schema-generator/simple\n    {\n        \"message\": \"Extract party names, contract dates, and monetary amounts\",\n        \"schema_name\": \"ContractExtraction\",\n        \"extraction_instructions\": \"These are Polish legal contracts from 2020-2024\"\n    }\n    ```",
         "operationId": "generate_schema_simple_schema_generator_simple_post",
         "requestBody": {
           "content": {
@@ -31272,6 +31212,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Generate Schema Simple",
@@ -31282,7 +31225,7 @@
     },
     "/schema-generator/test": {
       "post": {
-        "description": "Test a schema against sample documents.\n\nThis endpoint runs the schema on specified documents and returns\nextraction results and statistics.\n\nArgs:\n    params: Test request with schema and document IDs\n    request: FastAPI request object\n\nReturns:\n    Test results with success/failure statistics\n\nExample:\n    ```\n    POST /api/schema-generator/test\n    {\n        \"schema\": {...},\n        \"collection_id\": \"drug-cases\",\n        \"document_ids\": [\"doc1\", \"doc2\", \"doc3\"]\n    }\n    ```",
+        "description": "Test a schema against sample documents.\n\nThis endpoint runs the schema on specified documents and returns\nextraction results and statistics.\n\nArgs:\n    params: Test request with schema and document IDs\n    request: FastAPI request object\n    user: Authenticated user (from Bearer JWT)\n\nReturns:\n    Test results with success/failure statistics\n\nExample:\n    ```\n    POST /api/schema-generator/test\n    {\n        \"schema\": {...},\n        \"collection_id\": \"drug-cases\",\n        \"document_ids\": [\"doc1\", \"doc2\", \"doc3\"]\n    }\n    ```",
         "operationId": "test_schema_schema_generator_test_post",
         "requestBody": {
           "content": {
@@ -31319,6 +31262,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Test Schema",

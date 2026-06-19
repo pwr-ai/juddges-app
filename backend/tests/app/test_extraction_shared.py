@@ -30,7 +30,6 @@ from app.extraction_domain.shared import (
     create_backup,
     get_archived_metadata_path,
     get_archived_prompt_path,
-    get_current_user,
     get_metadata_file_path,
     get_prompt_file_path,
     is_system_prompt,
@@ -727,44 +726,7 @@ class TestArchivePrompt:
             assert not metadata_file.exists()
 
 
-# =============================================================================
-# get_current_user dependency
-# =============================================================================
-
-
-class TestGetCurrentUser:
-    @pytest.mark.unit
-    def test_valid_uuid_user_id(self) -> None:
-        """A valid UUID should be accepted and returned."""
-        valid_uuid = "550e8400-e29b-41d4-a716-446655440000"
-        result = get_current_user(x_user_id=valid_uuid)
-        assert result == valid_uuid
-
-    @pytest.mark.unit
-    def test_empty_user_id_raises(self) -> None:
-        with pytest.raises(HTTPException) as exc_info:
-            get_current_user(x_user_id="")
-        assert exc_info.value.status_code == 401
-
-    @pytest.mark.unit
-    def test_non_uuid_user_id_raises_422(self) -> None:
-        """BUG-15 regression: arbitrary strings like 'user-123' must be rejected
-        to prevent user impersonation via crafted X-User-ID headers."""
-        with pytest.raises(HTTPException) as exc_info:
-            get_current_user(x_user_id="user-123")
-        assert exc_info.value.status_code == 422
-        assert "UUID" in exc_info.value.detail
-
-    @pytest.mark.unit
-    def test_sql_injection_attempt_rejected(self) -> None:
-        """BUG-15 regression: injection payloads must not pass validation."""
-        with pytest.raises(HTTPException) as exc_info:
-            get_current_user(x_user_id="'; DROP TABLE users; --")
-        assert exc_info.value.status_code == 422
-
-    @pytest.mark.unit
-    def test_uppercase_uuid_accepted(self) -> None:
-        """UUIDs should be accepted regardless of case."""
-        upper_uuid = "550E8400-E29B-41D4-A716-446655440000"
-        result = get_current_user(x_user_id=upper_uuid)
-        assert result == upper_uuid
+# NOTE: The X-User-ID-based get_current_user dependency was removed from
+# app.extraction_domain.shared in the migration to Supabase Bearer JWT auth
+# (issue #233). Tests for the old dep have been deleted; auth-contract tests
+# for the new Bearer JWT dep live in test_extraction_bearer_auth.py.

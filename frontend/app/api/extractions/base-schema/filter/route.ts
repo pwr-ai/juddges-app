@@ -30,6 +30,13 @@ export async function POST(request: NextRequest) {
       throw new UnauthorizedError("Please log in to filter documents");
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedError("Please log in to filter documents");
+    }
+
     // Parse request body
     const body = await request.json();
     const { filters, text_query, limit = 50, offset = 0 } = body;
@@ -40,7 +47,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         filters: filters || {},
