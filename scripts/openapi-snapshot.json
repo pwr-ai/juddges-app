@@ -5777,6 +5777,233 @@
         "title": "EmbeddingModelsResponse",
         "type": "object"
       },
+      "EnvelopeArrays": {
+        "properties": {
+          "cited_legislation": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cited Legislation",
+            "type": "array"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "legal_topics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Legal Topics",
+            "type": "array"
+          }
+        },
+        "title": "EnvelopeArrays",
+        "type": "object"
+      },
+      "EnvelopeBaseFilters": {
+        "properties": {
+          "base_case_number": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "base_co_def_acc_num": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "base_date_of_appeal_court_judgment_ts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "base_num_victims": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "base_victim_age_offence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "EnvelopeBaseFilters",
+        "type": "object"
+      },
+      "EnvelopeDateRange": {
+        "properties": {
+          "from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          }
+        },
+        "title": "EnvelopeDateRange",
+        "type": "object"
+      },
+      "EnvelopeDiagnostics": {
+        "properties": {
+          "dropped_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dropped Terms",
+            "type": "array"
+          },
+          "latency_ms": {
+            "default": 0,
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "model": {
+            "default": "gpt-5-mini",
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "title": "EnvelopeDiagnostics",
+        "type": "object"
+      },
+      "EnvelopeFacets": {
+        "properties": {
+          "case_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Type"
+          },
+          "court_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Level"
+          },
+          "decision_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Type"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          }
+        },
+        "title": "EnvelopeFacets",
+        "type": "object"
+      },
+      "EnvelopeFilters": {
+        "properties": {
+          "arrays": {
+            "$ref": "#/components/schemas/EnvelopeArrays"
+          },
+          "base": {
+            "$ref": "#/components/schemas/EnvelopeBaseFilters"
+          },
+          "decision_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EnvelopeDateRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "facets": {
+            "$ref": "#/components/schemas/EnvelopeFacets"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          }
+        },
+        "title": "EnvelopeFilters",
+        "type": "object"
+      },
       "EvalExportMetadata": {
         "description": "Statistics about the exported eval dataset.",
         "properties": {
@@ -8645,6 +8872,36 @@
         "title": "MarketplaceStatsResponse",
         "type": "object"
       },
+      "NumericRange": {
+        "additionalProperties": false,
+        "description": "Closed numeric range used for base_* range filters.",
+        "properties": {
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          }
+        },
+        "title": "NumericRange",
+        "type": "object"
+      },
       "OCRCorrectionRequest": {
         "description": "Request to submit manual corrections for OCR text.",
         "properties": {
@@ -10335,6 +10592,47 @@
         "title": "PublishNewVersionRequest",
         "type": "object"
       },
+      "QueryRewriteRequest": {
+        "properties": {
+          "languages_hint": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages Hint"
+          },
+          "query": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "today": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Today"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "QueryRewriteRequest",
+        "type": "object"
+      },
       "QuestionDict": {
         "description": "Model for structured question input",
         "properties": {
@@ -11566,6 +11864,30 @@
           "avg_rating"
         ],
         "title": "ReviewsResponse",
+        "type": "object"
+      },
+      "RewrittenQueryEnvelope": {
+        "properties": {
+          "degraded": {
+            "default": false,
+            "title": "Degraded",
+            "type": "boolean"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/EnvelopeDiagnostics"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/EnvelopeFilters"
+          },
+          "rewritten_query": {
+            "title": "Rewritten Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rewritten_query"
+        ],
+        "title": "RewrittenQueryEnvelope",
         "type": "object"
       },
       "RollbackRequest": {
@@ -23471,6 +23793,53 @@
         ]
       }
     },
+    "/documents/search/rewrite": {
+      "post": {
+        "operationId": "rewrite_query_documents_search_rewrite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRewriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RewrittenQueryEnvelope"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "LLM query rewrite + structured filter extraction (thinking mode)",
+        "tags": [
+          "documents",
+          "search"
+        ]
+      }
+    },
     "/documents/similar": {
       "post": {
         "description": "Find similar documents for multiple document IDs.",
@@ -27844,17 +28213,6 @@
       "post": {
         "description": "Run synchronous extraction on a single document for real-time playground testing.",
         "operationId": "playground_extract_playground_extract_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -27890,6 +28248,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Run playground extraction",
@@ -27920,15 +28281,6 @@
               "default": 20,
               "title": "Limit",
               "type": "integer"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
             }
           }
         ],
@@ -27961,6 +28313,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "List playground test runs",
@@ -27980,15 +28335,6 @@
             "required": true,
             "schema": {
               "title": "Run Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -28020,6 +28366,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get playground test run details",

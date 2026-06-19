@@ -2475,6 +2475,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/documents/search/rewrite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** LLM query rewrite + structured filter extraction (thinking mode) */
+        post: operations["rewrite_query_documents_search_rewrite_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/documents/similar": {
         parameters: {
             query?: never;
@@ -8825,6 +8842,67 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /** EnvelopeArrays */
+        EnvelopeArrays: {
+            /** Cited Legislation */
+            cited_legislation?: string[];
+            /** Keywords */
+            keywords?: string[];
+            /** Legal Topics */
+            legal_topics?: string[];
+        };
+        /** EnvelopeBaseFilters */
+        EnvelopeBaseFilters: {
+            base_case_number?: components["schemas"]["NumericRange"] | null;
+            base_co_def_acc_num?: components["schemas"]["NumericRange"] | null;
+            base_date_of_appeal_court_judgment_ts?: components["schemas"]["NumericRange"] | null;
+            base_num_victims?: components["schemas"]["NumericRange"] | null;
+            base_victim_age_offence?: components["schemas"]["NumericRange"] | null;
+        };
+        /** EnvelopeDateRange */
+        EnvelopeDateRange: {
+            /** From */
+            from?: string | null;
+            /** To */
+            to?: string | null;
+        };
+        /** EnvelopeDiagnostics */
+        EnvelopeDiagnostics: {
+            /** Dropped Terms */
+            dropped_terms?: string[];
+            /**
+             * Latency Ms
+             * @default 0
+             */
+            latency_ms: number;
+            /**
+             * Model
+             * @default gpt-5-mini
+             */
+            model: string;
+        };
+        /** EnvelopeFacets */
+        EnvelopeFacets: {
+            /** Case Type */
+            case_type?: string | null;
+            /** Court Level */
+            court_level?: string | null;
+            /** Decision Type */
+            decision_type?: string | null;
+            /** Jurisdiction */
+            jurisdiction?: string | null;
+            /** Outcome */
+            outcome?: string | null;
+        };
+        /** EnvelopeFilters */
+        EnvelopeFilters: {
+            arrays?: components["schemas"]["EnvelopeArrays"];
+            base?: components["schemas"]["EnvelopeBaseFilters"];
+            decision_date?: components["schemas"]["EnvelopeDateRange"] | null;
+            facets?: components["schemas"]["EnvelopeFacets"];
+            /** Languages */
+            languages?: string[];
+        };
         /**
          * EvalExportMetadata
          * @description Statistics about the exported eval dataset.
@@ -10239,6 +10317,16 @@ export interface components {
             total_reviews: number;
         };
         /**
+         * NumericRange
+         * @description Closed numeric range used for base_* range filters.
+         */
+        NumericRange: {
+            /** Max */
+            max?: number | null;
+            /** Min */
+            min?: number | null;
+        };
+        /**
          * OCRCorrectionRequest
          * @description Request to submit manual corrections for OCR text.
          */
@@ -11080,6 +11168,15 @@ export interface components {
              */
             version: string;
         };
+        /** QueryRewriteRequest */
+        QueryRewriteRequest: {
+            /** Languages Hint */
+            languages_hint?: string[] | null;
+            /** Query */
+            query: string;
+            /** Today */
+            today?: string | null;
+        };
         /**
          * QuestionDict
          * @description Model for structured question input
@@ -11657,6 +11754,18 @@ export interface components {
             reviews: components["schemas"]["ReviewItem"][];
             /** Total Count */
             total_count: number;
+        };
+        /** RewrittenQueryEnvelope */
+        RewrittenQueryEnvelope: {
+            /**
+             * Degraded
+             * @default false
+             */
+            degraded: boolean;
+            diagnostics?: components["schemas"]["EnvelopeDiagnostics"];
+            filters?: components["schemas"]["EnvelopeFilters"];
+            /** Rewritten Query */
+            rewritten_query: string;
         };
         /**
          * RollbackRequest
@@ -17884,6 +17993,39 @@ export interface operations {
             };
         };
     };
+    rewrite_query_documents_search_rewrite_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryRewriteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewrittenQueryEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     find_similar_documents_batch_documents_similar_post: {
         parameters: {
             query?: never;
@@ -20504,9 +20646,7 @@ export interface operations {
     playground_extract_playground_extract_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -20542,9 +20682,7 @@ export interface operations {
                 schema_id: string;
                 limit?: number;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -20573,9 +20711,7 @@ export interface operations {
     get_playground_run_playground_runs__run_id__get: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 run_id: string;
             };

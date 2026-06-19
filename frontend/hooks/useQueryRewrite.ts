@@ -2,8 +2,13 @@ import { useCallback } from 'react';
 
 import logger from '@/lib/logger';
 import { queryRewriteEnvelopeSchema } from '@/lib/validation/query-rewrite-schema';
-import { useSearchStore, type BaseFilters } from '@/lib/store/searchStore';
+import {
+  useSearchStore,
+  type BaseFilters,
+  type BaseFilterValue,
+} from '@/lib/store/searchStore';
 import type {
+  NumericRange,
   QueryRewriteRequest,
   RewrittenQueryEnvelope,
 } from '@/types/query-rewrite';
@@ -47,19 +52,32 @@ export function useQueryRewrite(): UseQueryRewriteReturn {
         return envelope;
       }
 
-      // Numeric base filters — snake_case → camelCase
-      const next: BaseFilters = {
-        numVictims: envelope.filters.base.base_num_victims,
-        victimAgeOffence: envelope.filters.base.base_victim_age_offence,
-        caseNumber: envelope.filters.base.base_case_number,
-        coDefAccNum: envelope.filters.base.base_co_def_acc_num,
-        appealJudgmentDate:
-          envelope.filters.base.base_date_of_appeal_court_judgment_ts,
-      };
-      const cleaned = Object.fromEntries(
-        Object.entries(next).filter(([, v]) => v !== undefined),
-      ) as BaseFilters;
-      setBaseFilters(cleaned);
+      // Base filters: wire (base_*) → store keys + discriminated union values.
+      const base = envelope.filters.base;
+      const asRange = (
+        kind: 'numeric_range' | 'date_range',
+        r?: NumericRange,
+      ): BaseFilterValue | undefined =>
+        r && (r.min !== undefined || r.max !== undefined)
+          ? { kind, range: { min: r.min, max: r.max } }
+          : undefined;
+
+      const mapped: Array<[string, BaseFilterValue | undefined]> = [
+        ['num_victims', asRange('numeric_range', base.base_num_victims)],
+        ['victim_age_offence', asRange('numeric_range', base.base_victim_age_offence)],
+        ['case_number', asRange('numeric_range', base.base_case_number)],
+        ['co_def_acc_num', asRange('numeric_range', base.base_co_def_acc_num)],
+        [
+          'date_of_appeal_court_judgment',
+          asRange('date_range', base.base_date_of_appeal_court_judgment_ts),
+        ],
+      ];
+
+      const next: BaseFilters = {};
+      for (const [key, value] of mapped) {
+        if (value !== undefined) next[key] = value;
+      }
+      setBaseFilters(next);
 
       // Language hint
       if (envelope.filters.languages.length > 0) {

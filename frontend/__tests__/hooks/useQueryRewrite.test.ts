@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 
 import { useQueryRewrite } from '@/hooks/useQueryRewrite';
 import { useSearchStore } from '@/lib/store/searchStore';
+import type { RewrittenQueryEnvelope } from '@/types/query-rewrite';
 
 const buildEnvelope = (overrides: Partial<Record<string, unknown>> = {}) => ({
   rewritten_query: 'VAT digital services',
@@ -37,7 +38,7 @@ describe('useQueryRewrite', () => {
 
     const { result } = renderHook(() => useQueryRewrite());
 
-    let envelope;
+    let envelope: RewrittenQueryEnvelope | undefined;
     await act(async () => {
       envelope = await result.current.run({ query: 'podatek VAT z 2022' });
     });
@@ -45,7 +46,10 @@ describe('useQueryRewrite', () => {
     expect(envelope?.rewritten_query).toBe('VAT digital services');
 
     const state = useSearchStore.getState();
-    expect(state.baseFilters.numVictims).toEqual({ min: 3 });
+    expect(state.baseFilters.num_victims).toEqual({
+      kind: 'numeric_range',
+      range: { min: 3, max: undefined },
+    });
     expect(Array.from(state.filters.issuingBodies)).toEqual([]); // facets sidebar untouched
     expect(Array.from(state.filters.keywords)).toEqual(['VAT']);
     expect(state.filters.dateFrom?.toISOString().startsWith('2022-01-01')).toBe(true);
@@ -62,7 +66,7 @@ describe('useQueryRewrite', () => {
 
     const { result } = renderHook(() => useQueryRewrite());
 
-    let envelope;
+    let envelope: RewrittenQueryEnvelope | undefined;
     await act(async () => {
       envelope = await result.current.run({ query: 'x' });
     });
