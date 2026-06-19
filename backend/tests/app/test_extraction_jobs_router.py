@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
+import app.extraction_domain.shared as shared_module
 from app.extraction_domain.jobs_router import (
     _build_resubmit_request_from_job,
     _count_processed_documents,
@@ -28,6 +29,7 @@ from app.extraction_domain.jobs_router import (
     _pending_batch_response,
     _worker_unavailable_error,
 )
+from app.extraction_domain.shared import _validate_documents
 from app.models import DocumentExtractionResponse
 from tests.app.conftest import _install_jwt_user_override
 
@@ -585,3 +587,23 @@ class TestListExtractionJobsEndpoint:
             data = response.json()
             assert data["jobs"] == []
             assert data["total"] == 0
+
+
+class TestValidateDocumentsMaxCap:
+    """Tests for the MAX_DOCUMENTS_PER_JOB cap in _validate_documents."""
+
+    @pytest.mark.unit
+    def test_rejects_documents_exceeding_cap(self, monkeypatch) -> None:
+        """_validate_documents raises 400 when document count exceeds cap."""
+        monkeypatch.setattr(shared_module, "MAX_DOCUMENTS_PER_JOB", 3)
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_documents(["d1", "d2", "d3", "d4"], "col-1")
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail["code"] == "TOO_MANY_DOCUMENTS"
+
+    @pytest.mark.unit
+    def test_accepts_documents_at_cap(self, monkeypatch) -> None:
+        """_validate_documents accepts exactly MAX_DOCUMENTS_PER_JOB documents."""
+        monkeypatch.setattr(shared_module, "MAX_DOCUMENTS_PER_JOB", 3)
+        result = _validate_documents(["d1", "d2", "d3"], "col-1")
+        assert result == ["d1", "d2", "d3"]

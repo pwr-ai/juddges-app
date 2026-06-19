@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import UTC, datetime
 from pathlib import Path as FilePath
@@ -25,6 +26,7 @@ from app.workers import extract_information_from_documents_task
 _IN_PROGRESS_STATES = {"PENDING", "STARTED", "PROCESSING", "RETRY"}
 _CANCELLED_STATES = {"REVOKED", "CANCELLED"}
 _FAILURE_STATES = {"FAILURE", "PARTIAL_FAILURE", "COMPLETED_WITH_FAILURES"}
+MAX_DOCUMENTS_PER_JOB: int = int(os.getenv("MAX_DOCUMENTS_PER_JOB", "1000"))
 
 
 def _summarize_result_status(results: list[dict[str, Any]] | None) -> str | None:
@@ -136,7 +138,7 @@ def _validate_documents(
     document_ids: list[str] | None, collection_id: str | None
 ) -> list[str]:
     """
-    Validate that document_ids is not empty.
+    Validate that document_ids is not empty and does not exceed the per-job cap.
 
     Args:
         document_ids: List of document IDs to validate
@@ -146,7 +148,7 @@ def _validate_documents(
         The validated document_ids list
 
     Raises:
-        HTTPException: 400 if document list is empty
+        HTTPException: 400 if document list is empty or exceeds MAX_DOCUMENTS_PER_JOB
     """
     docs = document_ids or []
     if not docs or len(docs) == 0:
@@ -157,6 +159,19 @@ def _validate_documents(
                 "error": "Empty Collection",
                 "message": "No documents provided for extraction. Please ensure the collection contains documents.",
                 "code": "EMPTY_DOCUMENT_LIST",
+            },
+        )
+    if len(docs) > MAX_DOCUMENTS_PER_JOB:
+        logger.warning(
+            f"Document count {len(docs)} exceeds cap {MAX_DOCUMENTS_PER_JOB} for collection {collection_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "Too Many Documents",
+                "message": f"Document count {len(docs)} exceeds the maximum of {MAX_DOCUMENTS_PER_JOB} documents per job. "
+                f"Split your request into smaller batches.",
+                "code": "TOO_MANY_DOCUMENTS",
             },
         )
     return docs
