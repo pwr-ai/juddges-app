@@ -1148,6 +1148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/analytics/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * User Search History
+         * @description Return the authenticated caller's own search history (most recent first).
+         */
+        get: operations["user_search_history_api_search_analytics_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search/analytics/popular": {
         parameters: {
             query?: never;
@@ -1208,7 +1228,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sso/check-domain": {
+    "/api/search/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -1216,11 +1236,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Check if SSO is enabled for an email domain
-         * @description Public endpoint for domain-based SSO discovery.
-         *     Used by the login form to detect if a user's email domain has SSO configured.
+         * Documents Search
+         * @description Paginated Meilisearch-backed document search for the /search results page.
          */
-        get: operations["check_domain_sso_api_sso_check_domain_get"];
+        get: operations["documents_search_api_search_documents_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1229,76 +1248,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sso/connections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List all SSO connections
-         * @description List all SSO connections. Admin only.
-         */
-        get: operations["list_connections_api_sso_connections_get"];
-        put?: never;
-        /**
-         * Create a new SSO connection
-         * @description Create a new SSO connection for an enterprise identity provider.
-         *     Admin only. The connection starts in 'pending' status.
-         */
-        post: operations["create_connection_api_sso_connections_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sso/connections/{connection_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get SSO connection details
-         * @description Get details of a specific SSO connection. Admin only.
-         */
-        get: operations["get_connection_api_sso_connections__connection_id__get"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete an SSO connection
-         * @description Delete an SSO connection. Admin only.
-         */
-        delete: operations["delete_connection_api_sso_connections__connection_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sso/connections/{connection_id}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get SSO login events for a connection
-         * @description Get audit log of SSO login events for a connection. Admin only.
-         */
-        get: operations["get_connection_events_api_sso_connections__connection_id__events_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sso/connections/{connection_id}/status": {
+    "/api/search/topic-click": {
         parameters: {
             query?: never;
             header?: never;
@@ -1307,15 +1257,42 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Topic Click
+         * @description Record a topic-chip click for analytics (fire-and-forget).
+         *
+         *     The insert is scheduled as a background task so the response is returned
+         *     immediately without blocking on the database write.  Failures are logged
+         *     as warnings only — never surfaced to the caller.
+         */
+        post: operations["topic_click_api_search_topic_click_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search/topics/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Topics Meta
+         * @description Return metadata about the Meilisearch topics index.
+         *
+         *     Used for debugging and the admin UI.  Returns ``total_concepts=0`` with
+         *     all other fields ``None`` when the topics index is empty or unavailable.
+         */
+        get: operations["topics_meta_api_search_topics_meta_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Update SSO connection status
-         * @description Activate, deactivate, or set pending status for an SSO connection. Admin only.
-         */
-        patch: operations["update_connection_status_api_sso_connections__connection_id__status_patch"];
+        patch?: never;
         trace?: never;
     };
     "/argumentation/analyze": {
@@ -2074,7 +2051,7 @@ export interface paths {
         put?: never;
         /**
          * Add Documents Batch
-         * @description Add multiple documents to a collection at once.
+         * @description Add multiple documents to a collection at once (max 100 per request).
          */
         post: operations["add_documents_batch_collections__collection_id__documents_batch_post"];
         delete?: never;
@@ -2141,36 +2118,6 @@ export interface paths {
          * @description Check dashboard data availability.
          */
         get: operations["dashboard_health_dashboard_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/dashboard/recent-documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Recent Documents
-         * @description Get highlighted documents for dashboard.
-         *
-         *     Returns a curated selection of documents:
-         *     - 2 IP Box documents (from full-text search for "ipbox")
-         *     - 2 Frank documents (from full-text search for "sprawa frankowa")
-         *
-         *     Args:
-         *         limit: Number of documents to return (1-20) - currently returns 4 highlighted documents
-         *
-         *     Returns:
-         *         List of highlighted documents with metadata
-         */
-        get: operations["get_recent_documents_dashboard_recent_documents_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2494,6 +2441,12 @@ export interface paths {
          *     2. Performs hybrid search combining vector similarity and full-text search
          *     3. Applies comprehensive filters (jurisdiction, court, case type, date, etc.)
          *     4. Returns matching documents with relevance scores
+         *
+         *     Facets-only fast path: when ``request.facets`` is provided, the handler
+         *     skips the pgvector pipeline entirely and proxies a thin Meilisearch
+         *     ``/search`` call so the caller (e.g. the tag-array autocomplete) can
+         *     fetch ``facetDistribution`` / ``facetStats`` without paying for the
+         *     full document search.
          */
         post: operations["search_documents_documents_search_post"];
         delete?: never;
@@ -5258,11 +5211,12 @@ export interface paths {
          *
          *     This endpoint provides a chat-based interface for creating and refining
          *     extraction schemas. It maintains conversation state across requests using
-         *     session IDs.
+         *     session IDs scoped to the authenticated user.
          *
          *     Args:
          *         params: Chat request with message and context
          *         request: FastAPI request object
+         *         user: Authenticated user (from Bearer JWT)
          *
          *     Returns:
          *         Chat response with AI message and schema state
@@ -5304,6 +5258,7 @@ export interface paths {
          *     Args:
          *         params: Schema generation request with user's description
          *         request: FastAPI request object
+         *         user: Authenticated user (from Bearer JWT)
          *
          *     Returns:
          *         Generated schema with metadata
@@ -5344,6 +5299,7 @@ export interface paths {
          *     Args:
          *         params: Test request with schema and document IDs
          *         request: FastAPI request object
+         *         user: Authenticated user (from Bearer JWT)
          *
          *     Returns:
          *         Test results with success/failure statistics
@@ -6197,7 +6153,7 @@ export interface components {
         AddDocumentsRequest: {
             /**
              * Document Ids
-             * @description List of document IDs to add
+             * @description List of document IDs to add (max 100 per request)
              */
             document_ids: string[];
         };
@@ -6493,19 +6449,22 @@ export interface components {
         };
         /**
          * AutocompleteResponse
-         * @description Autocomplete response payload.
+         * @description Autocomplete response payload — topic chips from the Meilisearch
+         *     ``topics`` index.
+         *
+         *     Judgment-document suggestions were retired in favour of routing topic
+         *     clicks to a full search.  If the topics index is unavailable,
+         *     ``topic_hits`` is an empty list.
          */
         AutocompleteResponse: {
             /** Estimatedtotalhits */
             estimatedTotalHits?: number | null;
-            /** Hits */
-            hits?: {
-                [key: string]: unknown;
-            }[];
             /** Processingtimems */
             processingTimeMs?: number | null;
             /** Query */
             query: string;
+            /** Topic Hits */
+            topic_hits?: components["schemas"]["TopicHit"][];
         };
         /**
          * BaseSchemaDefinitionResponse
@@ -6628,6 +6587,12 @@ export interface components {
              * @description List of document IDs to retrieve
              */
             document_ids: string[];
+            /**
+             * Include Base Fields
+             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under each document's `base_fields` key. Off by default to keep payloads lean.
+             * @default false
+             */
+            include_base_fields: boolean;
             /**
              * Return Properties
              * @description Optional list of property names to return. If None, returns all properties. Use to optimize performance by fetching only needed fields.
@@ -8439,6 +8404,21 @@ export interface components {
              */
             status: "accepted" | "rejected";
         };
+        /** DocumentPagination */
+        DocumentPagination: {
+            /** Estimated Total */
+            estimated_total?: number | null;
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Loaded Count */
+            loaded_count: number;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Offset */
+            offset: number;
+        };
         /**
          * DocumentProcessingStatus
          * @enum {string}
@@ -8454,6 +8434,12 @@ export interface components {
              * @description Document ID to retrieve
              */
             document_id: string;
+            /**
+             * Include Base Fields
+             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under the response's `base_fields` key. Off by default to keep payloads lean.
+             * @default false
+             */
+            include_base_fields: boolean;
             /**
              * Return Vectors
              * @description Whether to include vector embeddings
@@ -8575,6 +8561,23 @@ export interface components {
              * @description Rewritten/enhanced question text or structured question input
              */
             question_rewritten?: string | components["schemas"]["QuestionDict"] | null;
+        };
+        /**
+         * DocumentSearchResponse
+         * @description Paginated document search response (Meilisearch-backed text mode).
+         */
+        DocumentSearchResponse: {
+            /** Documents */
+            documents?: {
+                [key: string]: unknown;
+            }[];
+            pagination: components["schemas"]["DocumentPagination"];
+            /** Query */
+            query: string;
+            /** Query Time Ms */
+            query_time_ms?: number | null;
+            /** Total Count */
+            total_count?: number | null;
         };
         /**
          * DocumentStats
@@ -9834,6 +9837,13 @@ export interface components {
          *     }
          */
         LegalDocument: {
+            /**
+             * Base Fields
+             * @description Extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …). Populated only when include_base_fields=true is requested; otherwise None to keep search/list responses lean.
+             */
+            base_fields?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Case Type
              * @description Type of case (e.g., criminal, civil)
@@ -11685,142 +11695,6 @@ export interface components {
             query: unknown;
         };
         /**
-         * SSOConnectionBase
-         * @description Base model for SSO connection data.
-         */
-        SSOConnectionBase: {
-            /**
-             * Auto Provision Users
-             * @description Auto-create users on first SSO login
-             * @default true
-             */
-            auto_provision_users: boolean;
-            /**
-             * Default Account Type
-             * @description Default account type for provisioned users
-             * @default base
-             */
-            default_account_type: string;
-            /**
-             * Domain
-             * @description Email domain for SSO discovery
-             */
-            domain: string;
-            /**
-             * Name
-             * @description Display name for the SSO connection
-             */
-            name: string;
-            /**
-             * Organization
-             * @description Organization/company name
-             */
-            organization: string;
-            /**
-             * Provider Type
-             * @description SSO protocol type
-             * @enum {string}
-             */
-            provider_type: "saml" | "oauth";
-        };
-        /**
-         * SSOConnectionResponse
-         * @description Response model for an SSO connection.
-         */
-        SSOConnectionResponse: {
-            /** Auto Provision Users */
-            auto_provision_users: boolean;
-            /** Created At */
-            created_at: string;
-            /** Default Account Type */
-            default_account_type: string;
-            /** Domain */
-            domain: string;
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Oauth Authorization Url */
-            oauth_authorization_url?: string | null;
-            /** Oauth Client Id */
-            oauth_client_id?: string | null;
-            /** Oauth Scopes */
-            oauth_scopes?: string | null;
-            /** Oauth Token Url */
-            oauth_token_url?: string | null;
-            /** Oauth Userinfo Url */
-            oauth_userinfo_url?: string | null;
-            /** Organization */
-            organization: string;
-            /** Provider Type */
-            provider_type: string;
-            /** Saml Entity Id */
-            saml_entity_id?: string | null;
-            /** Saml Metadata Url */
-            saml_metadata_url?: string | null;
-            /** Saml Sso Url */
-            saml_sso_url?: string | null;
-            /** Slug */
-            slug: string;
-            /** Status */
-            status: string;
-            /** Supabase Provider Id */
-            supabase_provider_id?: string | null;
-            /** Updated At */
-            updated_at: string;
-        };
-        /**
-         * SSOConnectionUpdateStatus
-         * @description Update SSO connection status.
-         */
-        SSOConnectionUpdateStatus: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "active" | "inactive" | "pending";
-        };
-        /**
-         * SSODomainCheckResponse
-         * @description Response for domain-based SSO discovery.
-         */
-        SSODomainCheckResponse: {
-            /** Connection Id */
-            connection_id?: string | null;
-            /** Connection Name */
-            connection_name?: string | null;
-            /** Organization */
-            organization?: string | null;
-            /** Provider Type */
-            provider_type?: string | null;
-            /** Sso Enabled */
-            sso_enabled: boolean;
-        };
-        /**
-         * SSOLoginEventResponse
-         * @description SSO login event for audit log.
-         */
-        SSOLoginEventResponse: {
-            /** Connection Id */
-            connection_id: string;
-            /** Connection Name */
-            connection_name?: string | null;
-            /** Created At */
-            created_at: string;
-            /** Email */
-            email: string;
-            /** Error Message */
-            error_message?: string | null;
-            /** Event Type */
-            event_type: string;
-            /** Id */
-            id: string;
-            /** Ip Address */
-            ip_address?: string | null;
-            /** User Id */
-            user_id?: string | null;
-        };
-        /**
          * SampleCase
          * @description A single case reference with its dominant reasoning pattern.
          */
@@ -12444,6 +12318,16 @@ export interface components {
              */
             decision_types?: string[] | null;
             /**
+             * Facet Query
+             * @description Optional substring filter on facet values (Meilisearch `facetQuery`). Narrows the returned facetDistribution to values that match this prefix/substring.
+             */
+            facet_query?: string | null;
+            /**
+             * Facets
+             * @description Meilisearch facets to compute on this search. Each name must be in the index'''s filterableAttributes. Used by the frontend tag-array autocomplete to surface per-value counts.
+             */
+            facets?: string[] | null;
+            /**
              * Fetch Full Documents
              * @description Whether to fetch full document objects in addition to chunks
              * @default false
@@ -12590,6 +12474,24 @@ export interface components {
              * @description AI-enhanced query text (only present when mode='thinking')
              */
             enhanced_query?: string | null;
+            /**
+             * Facetdistribution
+             * @description Meilisearch facet counts keyed by field, then value. Populated only when the request asked for facets.
+             */
+            facetDistribution?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
+            /**
+             * Facetstats
+             * @description Meilisearch numeric facet stats (min/max) keyed by field. Populated only when the request asked for facets.
+             */
+            facetStats?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
             /**
              * Inferred Filters
              * @description LLM-inferred filters applied to search when not explicitly provided by the user.
@@ -12934,7 +12836,7 @@ export interface components {
         SetActiveModelRequest: {
             /**
              * Model Id
-             * @description Model ID to activate (e.g., 'openai/text-embedding-3-small')
+             * @description Model ID to activate (e.g., 'tei/bge-m3')
              */
             model_id: string;
         };
@@ -13598,6 +13500,18 @@ export interface components {
             trend_slope: number;
         };
         /**
+         * TopicClickEvent
+         * @description Request body for the topic-click analytics endpoint.
+         */
+        TopicClickEvent: {
+            /** Jurisdiction */
+            jurisdiction?: string | null;
+            /** Query */
+            query: string;
+            /** Topic Id */
+            topic_id: string;
+        };
+        /**
          * TopicDocument
          * @description A document associated with a topic.
          */
@@ -13615,6 +13529,40 @@ export interface components {
             relevance: number;
             /** Title */
             title?: string | null;
+        };
+        /**
+         * TopicHit
+         * @description A single hit from the Meilisearch ``topics`` index.
+         *
+         *     The ``formatted`` field (alias ``_formatted``) carries highlighted versions
+         *     of the searchable fields when ``attributesToHighlight`` is set in the query.
+         *     Pydantic's ``populate_by_name=True`` model config lets callers pass the field
+         *     as either ``formatted`` or ``_formatted``.
+         */
+        TopicHit: {
+            /** Formatted */
+            _formatted?: {
+                [key: string]: unknown;
+            } | null;
+            /** Aliases En */
+            aliases_en?: string[];
+            /** Aliases Pl */
+            aliases_pl?: string[];
+            /** Category */
+            category?: string | null;
+            /**
+             * Doc Count
+             * @default 0
+             */
+            doc_count: number;
+            /** Id */
+            id: string;
+            /** Jurisdictions */
+            jurisdictions?: string[];
+            /** Label En */
+            label_en: string;
+            /** Label Pl */
+            label_pl: string;
         };
         /**
          * TopicKeyword
@@ -13694,6 +13642,24 @@ export interface components {
             processing_time_ms: number;
             /** Total Documents */
             total_documents: number;
+        };
+        /**
+         * TopicsMetaResponse
+         * @description Metadata about the Meilisearch topics index.
+         *
+         *     Fields are ``None`` until ``scripts/generate_search_topics.py`` has run
+         *     at least once and written ``generated_at`` / ``corpus_snapshot`` onto index
+         *     documents.
+         */
+        TopicsMetaResponse: {
+            /** Corpus Snapshot */
+            corpus_snapshot: number | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Jurisdictions */
+            jurisdictions: string[];
+            /** Total Concepts */
+            total_concepts: number;
         };
         /**
          * TrackEventRequest
@@ -14016,6 +13982,24 @@ export interface components {
             total?: number | null;
             /** Users */
             users: components["schemas"]["UserListItem"][];
+        };
+        /**
+         * UserSearchHistoryItem
+         * @description A single row from the requesting user's search history.
+         */
+        UserSearchHistoryItem: {
+            /** Created At */
+            created_at: string;
+            /** Filters */
+            filters?: string | null;
+            /** Hit Count */
+            hit_count: number;
+            /** Processing Ms */
+            processing_ms?: number | null;
+            /** Query */
+            query: string;
+            /** Topic Hits Count */
+            topic_hits_count?: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -15848,6 +15832,39 @@ export interface operations {
             };
         };
     };
+    user_search_history_api_search_analytics_history_get: {
+        parameters: {
+            query?: {
+                /** @description Lookback window in days */
+                days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSearchHistoryItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     popular_queries_api_search_analytics_popular_get: {
         parameters: {
             query?: {
@@ -15950,173 +15967,22 @@ export interface operations {
             };
         };
     };
-    check_domain_sso_api_sso_check_domain_get: {
-        parameters: {
-            query: {
-                /** @description Email domain to check (e.g., 'acme.com') */
-                domain: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SSODomainCheckResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_connections_api_sso_connections_get: {
+    documents_search_api_search_documents_get: {
         parameters: {
             query?: {
-                /** @description Filter by status */
-                status?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SSOConnectionResponse"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_connection_api_sso_connections_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SSOConnectionBase"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SSOConnectionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_connection_api_sso_connections__connection_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                connection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SSOConnectionResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_connection_api_sso_connections__connection_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                connection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_connection_events_api_sso_connections__connection_id__events_get: {
-        parameters: {
-            query?: {
+                /** @description Search query (empty = match all) */
+                q?: string;
+                /** @description Max documents to return */
                 limit?: number;
+                /** @description Pagination offset */
                 offset?: number;
+                /** @description Optional Meilisearch filter expression */
+                filters?: string | null;
+                /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5. */
+                semantic_ratio?: number;
             };
             header?: never;
-            path: {
-                connection_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -16127,7 +15993,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SSOLoginEventResponse"][];
+                    "application/json": components["schemas"]["DocumentSearchResponse"];
                 };
             };
             /** @description Validation Error */
@@ -16141,18 +16007,16 @@ export interface operations {
             };
         };
     };
-    update_connection_status_api_sso_connections__connection_id__status_patch: {
+    topic_click_api_search_topic_click_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                connection_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SSOConnectionUpdateStatus"];
+                "application/json": components["schemas"]["TopicClickEvent"];
             };
         };
         responses: {
@@ -16162,7 +16026,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SSOConnectionResponse"];
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -16172,6 +16038,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    topics_meta_api_search_topics_meta_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopicsMetaResponse"];
                 };
             };
         };
@@ -17137,9 +17023,7 @@ export interface operations {
     list_collections_collections_get: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -17154,23 +17038,12 @@ export interface operations {
                     "application/json": components["schemas"]["CollectionWithDocuments"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     create_collection_collections_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -17206,9 +17079,7 @@ export interface operations {
                 limit?: number | null;
                 offset?: number;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to retrieve */
                 collection_id: string;
@@ -17240,9 +17111,7 @@ export interface operations {
     update_collection_collections__collection_id__put: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to update */
                 collection_id: string;
@@ -17278,9 +17147,7 @@ export interface operations {
     delete_collection_collections__collection_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to delete */
                 collection_id: string;
@@ -17312,9 +17179,7 @@ export interface operations {
     get_collection_documents_collections__collection_id__documents_get: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to get documents from */
                 collection_id: string;
@@ -17346,9 +17211,7 @@ export interface operations {
     add_document_collections__collection_id__documents_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to add document to */
                 collection_id: string;
@@ -17384,9 +17247,7 @@ export interface operations {
     remove_document_by_body_collections__collection_id__documents_delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to remove document from */
                 collection_id: string;
@@ -17422,9 +17283,7 @@ export interface operations {
     add_documents_batch_collections__collection_id__documents_batch_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to add documents to */
                 collection_id: string;
@@ -17460,9 +17319,7 @@ export interface operations {
     remove_document_by_url_collections__collection_id__documents__document_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to remove document from */
                 collection_id: string;
@@ -17540,37 +17397,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    get_recent_documents_dashboard_recent_documents_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentSummary"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -18116,6 +17942,8 @@ export interface operations {
             query?: {
                 /** @description Include vector embeddings */
                 return_vectors?: boolean;
+                /** @description Include extracted base_* schema columns under `base_fields` */
+                include_base_fields?: boolean;
             };
             header?: never;
             path: {
@@ -19309,9 +19137,7 @@ export interface operations {
                 /** @description Filter by job status (IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED) */
                 status?: string | null;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -19785,9 +19611,7 @@ export interface operations {
     cancel_or_delete_extraction_job_extractions__job_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Extraction job ID to cancel */
                 job_id: string;
@@ -19819,9 +19643,7 @@ export interface operations {
     delete_extraction_job_extractions__job_id__delete_delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Extraction job ID to delete */
                 job_id: string;
@@ -19856,9 +19678,7 @@ export interface operations {
                 /** @description Export format: 'xlsx' or 'csv' */
                 format?: string;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Extraction job ID */
                 job_id: string;

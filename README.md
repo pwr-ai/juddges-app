@@ -207,4 +207,6 @@ Juddges App is licensed under the [Apache License 2.0](LICENSE). The frontend (`
 ## Acknowledgments
 
 - Polish and England & Wales judgment datasets: [huggingface.co/JuDDGES](https://huggingface.co/JuDDGES)
+  - Polish — [JuDDGES/pl-appealcourt-criminal](https://huggingface.co/datasets/JuDDGES/pl-appealcourt-criminal) · DOI [10.57967/hf/8772](https://doi.org/10.57967/hf/8772)
+  - UK — [JuDDGES/en-appealcourt](https://huggingface.co/datasets/JuDDGES/en-appealcourt) · DOI [10.57967/hf/8773](https://doi.org/10.57967/hf/8773)
 - Built on the foundations of the [JuDDGES research project](https://github.com/pwr-ai/JuDDGES)

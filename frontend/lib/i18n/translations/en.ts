@@ -120,6 +120,11 @@ export const en: Translations = {
     extractionResults: 'Extraction Results',
     baseTemplate: 'Base Coding Schema',
     compareDatasets: 'Compare Datasets',
+
+    // Workflow phase labels
+    phasePlan: '1. Plan',
+    phaseSearch: '2. Search',
+    phaseExport: '3. Export',
   },
 
   chat: {
@@ -354,5 +359,31 @@ export const en: Translations = {
     viewAll: 'View all',
     noTrending: 'No trending topics available',
     failedToLoadStats: 'Failed to load statistics',
+  },
+
+  judgeFingerprint: {
+    pageTitle: 'Judge reasoning profile',
+    pageSubtitle: 'Analyze and compare judges’ legal reasoning styles based on their judgments',
+    searchLabel: 'Search for a judge',
+    loadingProfile: 'Loading judge profile...',
+    loadingSubtitle: 'Analyzing reasoning style from judgments',
+    errorLoadingTitle: 'Failed to load profile',
+    errorToastTitle: 'Could not load judge profile',
+    comparisonHeading: 'Judge comparison',
+    comparisonDescription: 'Overlaid radar chart highlights differences in reasoning styles',
+    profilesHeading: 'Judge profiles',
+    emptyTitle: 'Judge reasoning profile',
+    emptyDescription: 'Search for a judge to view their legal reasoning style. Select 2–3 judges to compare their approaches.',
+    howItWorks: 'How it works',
+    reasoningTextual: 'Textual',
+    reasoningTextualDescription: 'Strict interpretation of statutory text; literal analysis of provisions.',
+    reasoningDeductive: 'Deductive',
+    reasoningDeductiveDescription: 'Applying general legal principles to specific factual scenarios.',
+    reasoningAnalogical: 'Analogical',
+    reasoningAnalogicalDescription: 'Comparing with similar cases and prior judgments.',
+    reasoningPurposive: 'Purposive',
+    reasoningPurposiveDescription: 'Interpretation grounded in legal-policy aims or legislative intent.',
+    reasoningTeleological: 'Teleological',
+    reasoningTeleologicalDescription: 'Purpose-driven interpretation referring to the goal and function of a provision.',
   },
 };

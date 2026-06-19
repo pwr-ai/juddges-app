@@ -203,3 +203,4 @@ grep -q "^\.env$" .gitignore || echo ".env" >> .gitignore
 - `docker-compose.yml` - Production service configuration
 - `docker-compose.dev.yml` - Development service configuration
 - `CLAUDE.md` - Project overview and development commands
+- [`seo-metadata.md`](./seo-metadata.md) - SEO/metadata; set `NEXT_PUBLIC_SITE_URL` in production for canonical/OG/sitemap URLs

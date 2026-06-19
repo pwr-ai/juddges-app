@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
+import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
 
 const routeLogger = logger.child("search-autocomplete-api");
@@ -35,6 +36,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     };
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
+    }
+
+    // Forward the Supabase session so the backend can attribute the analytics
+    // row to the logged-in user. Anonymous traffic stays anonymous.
+    const supabase = await createClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (accessToken) {
+      headers["Authorization"] = `Bearer ${accessToken}`;
     }
 
     const response = await fetch(

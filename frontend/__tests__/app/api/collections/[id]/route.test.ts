@@ -21,6 +21,7 @@ import { GET, PUT, DELETE } from "@/app/api/collections/[id]/route";
 
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const COLLECTION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const MOCK_ACCESS_TOKEN = "mocked-access-token";
 
 function mockSupabaseAuth(userId: string | null) {
   const supabase = {
@@ -28,6 +29,12 @@ function mockSupabaseAuth(userId: string | null) {
       getUser: jest.fn().mockResolvedValue({
         data: { user: userId ? { id: userId } : null },
         error: userId ? null : new Error("not authed"),
+      }),
+      getSession: jest.fn().mockResolvedValue({
+        data: {
+          session: userId ? { access_token: MOCK_ACCESS_TOKEN } : null,
+        },
+        error: null,
       }),
     },
     from: jest.fn(),
@@ -101,7 +108,7 @@ describe("GET /api/collections/[id]", () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
-          "X-User-ID": USER_ID,
+          "Authorization": `Bearer ${MOCK_ACCESS_TOKEN}`,
         }),
       })
     );
@@ -218,7 +225,7 @@ describe("PUT /api/collections/[id]", () => {
         method: "PUT",
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
-          "X-User-ID": USER_ID,
+          "Authorization": `Bearer ${MOCK_ACCESS_TOKEN}`,
         }),
         body: JSON.stringify({ name: "Renamed Collection" }),
       })
@@ -343,7 +350,7 @@ describe("DELETE /api/collections/[id]", () => {
         method: "DELETE",
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
-          "X-User-ID": USER_ID,
+          "Authorization": `Bearer ${MOCK_ACCESS_TOKEN}`,
         }),
       })
     );

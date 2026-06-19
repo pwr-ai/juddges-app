@@ -40,7 +40,7 @@ class TestTransformJudgmentForMeilisearch:
             "cited_legislation": ["Art. 471 KC"],
             "embedding": [0.1] * 1536,
             "metadata": {},
-            "source_dataset": "HFforLegal/case-law",
+            "source_dataset": "JuDDGES/pl-appealcourt-criminal",
             "source_id": "abc123",
             "source_url": "https://example.com/case/123",
             "created_at": datetime(2025, 1, 1, tzinfo=UTC),

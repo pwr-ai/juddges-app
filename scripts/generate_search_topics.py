@@ -50,7 +50,7 @@ if str(_BACKEND_DIR) not in sys.path:
 
 from dotenv import load_dotenv  # noqa: E402
 
-load_dotenv()
+load_dotenv(_SCRIPT_DIR.parent / ".env")
 
 # ---------------------------------------------------------------------------
 # Rich / loguru setup — must come before any module that calls logger
@@ -101,6 +101,11 @@ try:
     from app.services.meilisearch_config import (  # noqa: E402
         setup_topics_meilisearch_index,
     )
+    from app.services.search_topics_store import (  # noqa: E402
+        load_search_topics_run,
+        persist_search_topics_run,
+        topic_row_to_meilisearch_document,
+    )
     from app.services.search import MeiliSearchService  # noqa: E402
 except ImportError:
     # Tests run outside the backend container and may not have the backend
@@ -108,6 +113,9 @@ except ImportError:
     # but the rest of the module (slug helpers, alignment, etc.) stays usable.
     MeiliSearchService = None  # type: ignore[assignment,misc]
     setup_topics_meilisearch_index = None  # type: ignore[assignment]
+    load_search_topics_run = None  # type: ignore[assignment]
+    persist_search_topics_run = None  # type: ignore[assignment]
+    topic_row_to_meilisearch_document = None  # type: ignore[assignment]
 
 
 def _import_ml_deps():
@@ -775,6 +783,7 @@ async def push_to_meilisearch(
     *,
     live_index: str = "topics",
     staging_index: str = "topics_new",
+    auto_confirm: bool = False,
 ) -> bool:
     """Atomic swap workflow:
 
@@ -879,10 +888,13 @@ async def push_to_meilisearch(
     console.print(diff_table)
 
     # ── Confirmation ──────────────────────────────────────────────────────
-    confirmed = Confirm.ask(
-        "\nSwap [cyan]topics_new[/cyan] → [cyan]topics[/cyan] (atomic, zero-downtime)?",
-        default=True,
-    )
+    if auto_confirm:
+        confirmed = True
+    else:
+        confirmed = Confirm.ask(
+            "\nSwap [cyan]topics_new[/cyan] → [cyan]topics[/cyan] (atomic, zero-downtime)?",
+            default=True,
+        )
 
     if not confirmed:
         console.print(
@@ -925,6 +937,33 @@ async def push_to_meilisearch(
     console.print(f"  [green]Done.[/green]")
 
     return True
+
+
+async def push_topics_run_to_meilisearch(
+    *,
+    run_id: str | None = None,
+    live_index: str = "topics",
+    staging_index: str = "topics_new",
+    auto_confirm: bool = False,
+) -> bool:
+    """Load one persisted topics run from Supabase and publish it to Meili."""
+    if load_search_topics_run is None or topic_row_to_meilisearch_document is None:
+        raise RuntimeError("search_topics_store helpers are unavailable")
+
+    rows = load_search_topics_run(run_id=run_id)
+    if not rows:
+        console.print(
+            "[yellow]No search_topics rows found in Supabase — skipping Meilisearch push.[/yellow]"
+        )
+        return False
+
+    concepts = [topic_row_to_meilisearch_document(row) for row in rows]
+    return await push_to_meilisearch(
+        concepts,
+        live_index=live_index,
+        staging_index=staging_index,
+        auto_confirm=auto_confirm,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1035,12 +1074,28 @@ async def run_pipeline(
         f"  [green]Wrote {len(concepts)} concepts to {output}[/green]"
     )
 
-    # ── Step 7: Push to Meilisearch ─────────────────────────────────────────
+    # ── Step 7: Persist topics run to Supabase ──────────────────────────────
     if dry_run:
-        console.print("\n[yellow]Dry-run: skipping Meilisearch push.[/yellow]")
+        console.print(
+            "\n[yellow]Dry-run: skipping Supabase publish and Meilisearch push.[/yellow]"
+        )
     else:
-        console.print("\n[bold blue]Step 7: Push to Meilisearch (atomic swap)[/bold blue]")
-        ok = await push_to_meilisearch(concepts)
+        if persist_search_topics_run is None:
+            raise RuntimeError("search_topics_store helpers are unavailable")
+
+        console.print(
+            "\n[bold blue]Step 7: Persist topics snapshot to Supabase[/bold blue]"
+        )
+        run_id = persist_search_topics_run(concepts, case_type=case_type)
+        console.print(
+            f"  [green]Persisted {len(concepts)} concepts to Supabase "
+            f"(run_id={run_id})[/green]"
+        )
+
+        console.print(
+            "\n[bold blue]Step 8: Push to Meilisearch from Supabase (atomic swap)[/bold blue]"
+        )
+        ok = await push_topics_run_to_meilisearch(run_id=run_id)
         if ok:
             console.print("[green]Topics index updated successfully.[/green]")
         else:

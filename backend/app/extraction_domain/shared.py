@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import re
-import uuid
 from datetime import UTC, datetime
 from pathlib import Path as FilePath
 from typing import Any
 
 import jinja2
 from celery import exceptions as celery_exceptions
-from fastapi import Header, HTTPException, status
+from fastapi import HTTPException, status
 from loguru import logger
 
 from app.core.supabase import supabase_client as supabase
@@ -613,36 +612,3 @@ def archive_prompt(prompt_id: str) -> None:
     except Exception as e:
         logger.error(f"Error archiving prompt {prompt_id}: {e!s}")
         raise ValueError(f"Error archiving prompt: {e!s}")
-
-
-def get_current_user(x_user_id: str = Header(..., alias="X-User-ID")) -> str:
-    """
-    Extract and validate user ID from request header.
-
-    NOTE: This is an internal-only dependency intended for use behind API key
-    authentication middleware. The X-User-ID header is trusted only because the
-    calling service has already been authenticated via API key. Do NOT expose
-    endpoints using this dependency without upstream API key validation.
-
-    Args:
-        x_user_id: User ID from X-User-ID header (must be valid UUID format)
-
-    Returns:
-        Validated user ID string
-
-    Raises:
-        HTTPException: If user ID header is missing, empty, or not a valid UUID
-    """
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="User ID header is required")
-
-    # Validate UUID format to prevent injection of arbitrary user identifiers
-    try:
-        uuid.UUID(x_user_id)
-    except (ValueError, AttributeError):
-        raise HTTPException(
-            status_code=422,
-            detail="X-User-ID must be a valid UUID format",
-        )
-
-    return x_user_id

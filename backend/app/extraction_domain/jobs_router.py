@@ -9,6 +9,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from loguru import logger
 from supabase import PostgrestAPIError, StorageException
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.extraction_domain.shared import (
     _check_supabase_available,
     _convert_simplified_schema,
@@ -18,7 +19,6 @@ from app.extraction_domain.shared import (
     _validate_collection_id,
     _validate_documents,
     _validate_schema_id_required,
-    get_current_user,
     is_uuid,
     simplify_job_status,
     supabase,
@@ -704,6 +704,41 @@ async def create_bulk_extraction(
         )
 
 
+def _verify_job_ownership(job_id: str, user_id: str) -> None:
+    """Enforce per-user ownership on extraction job reads.
+
+    Raises 403 if the job has a database record owned by a different user.
+    Enforced only when the job is recorded and the database is reachable:
+    unknown ids carry no user data to leak, and transient DB/lookup errors
+    degrade to the prior behaviour rather than blocking status polling.
+    """
+    if supabase is None:
+        return
+    try:
+        owner = (
+            supabase.table("extraction_jobs")
+            .select("user_id")
+            .eq("job_id", job_id)
+            .single()
+            .execute()
+        )
+    except Exception as lookup_error:
+        # Never block status polling on transient DB/lookup errors; degrade to
+        # the prior behaviour rather than failing the request.
+        logger.warning(f"Ownership check skipped for job {job_id}: {lookup_error}")
+        return
+
+    owner_id = (owner.data or {}).get("user_id") if owner.data else None
+    if owner_id is not None and owner_id != user_id:
+        logger.warning(
+            f"User {user_id} attempted to read job {job_id} owned by another user"
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this job",
+        )
+
+
 @router.get(
     "/{job_id}",
     response_model=BatchExtractionResponse,
@@ -712,6 +747,7 @@ async def create_bulk_extraction(
 )
 async def get_extraction_job(
     job_id: str = Path(..., description="Extraction job ID (task ID)"),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> BatchExtractionResponse:
     """
     Get extraction job status and results.
@@ -727,6 +763,7 @@ async def get_extraction_job(
     - **CANCELLED**: Job was cancelled
     """
     try:
+        _verify_job_ownership(job_id, user.id)
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
@@ -833,7 +870,7 @@ async def list_extraction_jobs(
         None,
         description="Filter by job status (IN_PROGRESS, COMPLETED, PARTIALLY_COMPLETED, FAILED, CANCELLED)",
     ),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> ListExtractionJobsResponse:
     """
     List extraction jobs for the current user.
@@ -855,6 +892,7 @@ async def list_extraction_jobs(
     Performance may vary based on the number of stored tasks.
     For production use with many tasks, consider implementing a dedicated job tracking database.
     """
+    user_id = user.id
     try:
         logger.info(
             f"Listing extraction jobs for user {user_id}, page={page}, page_size={page_size}, status={status}"
@@ -984,7 +1022,7 @@ async def list_extraction_jobs(
 )
 async def cancel_or_delete_extraction_job(
     job_id: str = Path(..., description="Extraction job ID to cancel"),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> CancelJobResponse:
     """
     Cancel a running extraction job.
@@ -995,7 +1033,7 @@ async def cancel_or_delete_extraction_job(
     - **job_id**: The ID of the extraction job to cancel
 
     **Authorization:**
-    - Requires X-User-ID header
+    - Requires Authorization: Bearer <JWT>
     - Only the job owner can cancel (verified through collection ownership)
 
     **Response:**
@@ -1010,6 +1048,7 @@ async def cancel_or_delete_extraction_job(
     **Note:** This implementation uses Celery's revoke() method with terminate=True.
     The task will be terminated if it's currently running.
     """
+    user_id = user.id
     try:
         logger.info(f"User {user_id} requesting cancellation of job {job_id}")
 
@@ -1065,7 +1104,7 @@ async def cancel_or_delete_extraction_job(
 )
 async def delete_extraction_job(
     job_id: str = Path(..., description="Extraction job ID to delete"),
-    user_id: str = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> CancelJobResponse:
     """
     Permanently delete an extraction job from Supabase.
@@ -1076,13 +1115,14 @@ async def delete_extraction_job(
     - **job_id**: The ID of the extraction job to delete
 
     **Authorization:**
-    - Requires X-User-ID header
+    - Requires Authorization: Bearer <JWT>
     - Only the job owner can delete (verified through user_id)
 
     **Response:**
     - **status**: "deleted" or "not_found"
     - **message**: Human-readable status message
     """
+    user_id = user.id
     try:
         logger.info(f"User {user_id} requesting deletion of job {job_id}")
 

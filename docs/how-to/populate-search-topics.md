@@ -4,6 +4,10 @@ This runbook generates and publishes the `topics` Meilisearch index that powers
 the search-bar autocomplete chips. The pipeline is offline, idempotent, and
 performs a zero-downtime atomic swap, so it is safe to re-run.
 
+As of 2026-05-13, generated topics are first persisted to the Supabase
+`search_topics` table. Meilisearch is then rebuilt from that Supabase snapshot,
+so Supabase is the durable ground truth for topic reindexing.
+
 > **When to run:** initial prod bootstrap; periodic refresh as the corpus
 > grows (e.g. quarterly, or after a large ingestion batch); when autocomplete
 > stops returning chips and the cause is traced to an empty `topics` index.
@@ -106,8 +110,10 @@ The script is interactive and Rich-formatted. Expect these phases:
    concepts.
 5. **Write JSON** to `frontend/lib/stats/search-topics.json` (inside the
    container — this file is also committed to git from local dev runs).
-6. **Atomic Meili swap:**
+6. **Persist to Supabase** in `search_topics` as a snapshot run.
+7. **Atomic Meili swap from Supabase:**
    - Creates staging index `topics_new` with full settings.
+   - Loads the persisted topic run from Supabase.
    - Upserts the 500 concepts.
    - Diffs staging vs live `topics` (added / removed / shifted `doc_count`).
    - **Prompts:** `Swap topics_new → topics? [y/N]`.
@@ -144,6 +150,15 @@ curl -s "https://<prod-host>/api/v1/search/autocomplete?q=fraud&limit=5" \
 Finally, open the prod site, click the search bar, and confirm that topic
 chips appear under the input.
 
+If you only need to rebuild Meilisearch from the last persisted Supabase
+snapshot, without regenerating topics, run:
+
+```bash
+docker compose run --rm \
+  -e MEILISEARCH_INTERNAL_URL=http://meilisearch:7700 \
+  backend python scripts/sync_meilisearch_topics.py
+```
+
 ---
 
 ## 5. Failure modes & recovery
@@ -166,8 +181,12 @@ its volume snapshot if a deeper issue surfaces.
 ## 6. Related
 
 - `scripts/generate_search_topics.py` — pipeline source.
+- `scripts/sync_meilisearch_topics.py` — re-publish the latest persisted
+  `search_topics` snapshot to Meilisearch without regenerating topics.
 - `backend/app/services/meilisearch_config.py:269` — `topics` index settings
   (searchable/filterable/sortable attributes, `maxTotalHits: 500`).
+- `backend/app/services/search_topics_store.py` — Supabase persistence helpers
+  for `search_topics`.
 - `backend/app/services/search.py` (`MeiliSearchService.topics_from_env`,
   `autocomplete`) — the consumer side.
 - `backend/app/api/search.py` — HTTP route that surfaces topic chips.

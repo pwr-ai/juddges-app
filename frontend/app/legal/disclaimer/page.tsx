@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata: Metadata = {
- title: "Legal Disclaimer | JuDDGES",
+ title: "Legal Disclaimer",
  description:
 "Important legal disclaimers and limitations regarding the use of JuDDGES platform.",
 };

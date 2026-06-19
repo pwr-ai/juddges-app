@@ -11,6 +11,12 @@ jest.mock("@/lib/logger", () => ({
   })),
 }));
 
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(async () => ({
+    auth: { getSession: async () => ({ data: { session: null } }) },
+  })),
+}));
+
 import { NextRequest } from "next/server";
 
 describe("GET /api/search/documents", () => {

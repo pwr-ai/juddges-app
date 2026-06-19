@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { sanitizeNextPath } from "@/lib/auth/next-path";
 
 export const metadata: Metadata = {
-  title: "Sign In | JuDDGES",
+  title: "Sign In",
   description:
     "Sign in to your JuDDGES account to access AI-powered judgments analysis and extraction tools.",
 };

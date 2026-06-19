@@ -160,11 +160,6 @@ describe('LandingPage', () => {
       expect(screen.getByText(/Find relevant cases by meaning/i)).toBeInTheDocument();
     });
 
-    it('displays AI legal assistant capability', () => {
-      render(<LandingPage />);
-      expect(screen.getByText('AI Legal Assistant')).toBeInTheDocument();
-    });
-
     it('displays schema extraction capability', () => {
       render(<LandingPage />);
       expect(screen.getByText('Schema Extraction')).toBeInTheDocument();
@@ -172,12 +167,20 @@ describe('LandingPage', () => {
   });
 
   describe('navigation links', () => {
-    it('has links to /chat and /schema-chat', () => {
+    it('routes the schema-extraction CTA to /schema-chat', () => {
       render(<LandingPage />);
-      const chatLink = screen.getByRole('link', { name: /start a conversation/i });
-      expect(chatLink).toHaveAttribute('href', '/chat');
       const schemaLink = screen.getByRole('link', { name: /create a schema/i });
       expect(schemaLink).toHaveAttribute('href', '/schema-chat');
+    });
+
+    it('routes the primary hero CTAs to the auth pages', () => {
+      render(<LandingPage />);
+      const trySearch = screen.getAllByRole('link', { name: /try search/i });
+      expect(trySearch.length).toBeGreaterThan(0);
+      expect(trySearch[0]).toHaveAttribute('href', '/auth/login');
+      const signUp = screen.getAllByRole('link', { name: /create free account/i });
+      expect(signUp.length).toBeGreaterThan(0);
+      signUp.forEach((link) => expect(link).toHaveAttribute('href', '/auth/sign-up'));
     });
   });
 

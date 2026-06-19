@@ -162,7 +162,9 @@ juddges-app/
 
 ### Polish Judgments
 
-**Dataset**: [HFforLegal/case-law](https://huggingface.co/datasets/HFforLegal/case-law)
+**Dataset**: [JuDDGES/pl-appealcourt-criminal](https://huggingface.co/datasets/JuDDGES/pl-appealcourt-criminal)
+
+**DOI**: [10.57967/hf/8772](https://doi.org/10.57967/hf/8772)
 
 **Description**: Multi-jurisdiction case law dataset with standardized format
 
@@ -181,6 +183,8 @@ python ingest_judgments.py --polish 3000
 ### UK Judgments
 
 **Dataset**: [JuDDGES/en-appealcourt](https://huggingface.co/datasets/JuDDGES/en-appealcourt)
+
+**DOI**: [10.57967/hf/8773](https://doi.org/10.57967/hf/8773)
 
 **Description**: Complete collection of England & Wales Court of Appeal (Criminal Division) judgments
 
@@ -381,8 +385,8 @@ python ingest_judgments.py --uk 3000
 - **FastAPI Docs**: https://fastapi.tiangolo.com
 
 ### Data Sources
-- **HFforLegal/case-law**: https://huggingface.co/datasets/HFforLegal/case-law
-- **JuDDGES/en-appealcourt**: https://huggingface.co/datasets/JuDDGES/en-appealcourt
+- **JuDDGES/pl-appealcourt-criminal** (Polish): https://huggingface.co/datasets/JuDDGES/pl-appealcourt-criminal — DOI: [10.57967/hf/8772](https://doi.org/10.57967/hf/8772)
+- **JuDDGES/en-appealcourt** (UK): https://huggingface.co/datasets/JuDDGES/en-appealcourt — DOI: [10.57967/hf/8773](https://doi.org/10.57967/hf/8773)
 
 ### Community
 - **Issues**: GitHub Issues (when repo is created)

@@ -8,10 +8,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
 from app.services.search import MeiliSearchService, TopicHit
 from app.services.search_analytics import (
     export_eval_queries,
     get_popular_queries,
+    get_user_search_history,
     get_zero_result_queries,
     record_search_query,
     record_topic_click,
@@ -90,6 +92,7 @@ async def autocomplete(
         None, description="Optional Meilisearch filter expression"
     ),
     search_service: MeiliSearchService = Depends(get_search_service),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> AutocompleteResponse:
     """Return autocomplete suggestions from Meilisearch."""
     query = q.strip()
@@ -131,6 +134,7 @@ async def autocomplete(
         processing_ms=processing_ms,
         filters=filters,
         topic_hits_count=len(topic_hits),
+        user_id=user.id if user else None,
     )
 
     return AutocompleteResponse(
@@ -160,6 +164,7 @@ async def documents_search(
         ),
     ),
     search_service: MeiliSearchService = Depends(get_search_service),
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> DocumentSearchResponse:
     """Paginated Meilisearch-backed document search for the /search results page."""
     query = q.strip()
@@ -194,6 +199,7 @@ async def documents_search(
             hit_count=len(hits),
             processing_ms=processing_ms,
             filters=filters,
+            user_id=user.id if user else None,
         )
 
     return DocumentSearchResponse(
@@ -219,6 +225,7 @@ async def documents_search(
 async def topic_click(
     event: TopicClickEvent,
     background_tasks: BackgroundTasks,
+    user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> dict[str, str]:
     """Record a topic-chip click for analytics (fire-and-forget).
 
@@ -231,6 +238,7 @@ async def topic_click(
         topic_id=event.topic_id,
         query=event.query,
         jurisdiction=event.jurisdiction,
+        user_id=user.id if user else None,
     )
     return {"status": "ok"}
 
@@ -295,6 +303,28 @@ async def zero_result_queries_endpoint(
     """Return queries that produced zero search results."""
     rows = await get_zero_result_queries(days=days, limit=limit)
     return [ZeroResultQueryItem(**r) for r in rows]
+
+
+class UserSearchHistoryItem(BaseModel):
+    """A single row from the requesting user's search history."""
+
+    query: str
+    hit_count: int
+    topic_hits_count: int | None = None
+    processing_ms: int | None = None
+    filters: str | None = None
+    created_at: str
+
+
+@router.get("/analytics/history", response_model=list[UserSearchHistoryItem])
+async def user_search_history(
+    days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+    limit: int = Query(100, ge=1, le=500),
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> list[UserSearchHistoryItem]:
+    """Return the authenticated caller's own search history (most recent first)."""
+    rows = await get_user_search_history(user_id=user.id, days=days, limit=limit)
+    return [UserSearchHistoryItem(**r) for r in rows]
 
 
 # ── Eval query export ────────────────────────────────────────────────────

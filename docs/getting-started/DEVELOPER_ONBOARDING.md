@@ -1012,8 +1012,8 @@ redis-cli ping
 - **Tailwind CSS**: https://tailwindcss.com/docs
 
 ### Data Sources
-- **Polish Judgments**: https://huggingface.co/datasets/HFforLegal/case-law
-- **UK Judgments**: https://huggingface.co/datasets/JuDDGES/en-appealcourt
+- **Polish Judgments**: https://huggingface.co/datasets/JuDDGES/pl-appealcourt-criminal — DOI: [10.57967/hf/8772](https://doi.org/10.57967/hf/8772)
+- **UK Judgments**: https://huggingface.co/datasets/JuDDGES/en-appealcourt — DOI: [10.57967/hf/8773](https://doi.org/10.57967/hf/8773)
 
 ### Community
 - **GitHub Issues**: Report bugs and request features

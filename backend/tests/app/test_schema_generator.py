@@ -3,6 +3,9 @@ Unit tests for app.api.schema_generator module.
 
 Tests helper functions, response formatting, and the simple schema generation
 endpoint with mocked dependencies.
+
+Note: all endpoint tests that expect a non-401 result must install the JWT
+override because Bearer auth is now required on /chat, /test, and /simple.
 """
 
 from unittest.mock import MagicMock, patch
@@ -15,6 +18,34 @@ from app.api.schema_generator import (
     format_response_message,
     get_or_create_agent,
 )
+from app.core.auth_jwt import AuthenticatedUser
+from app.core.auth_jwt import get_current_user as jwt_get_current_user
+from app.server import app
+
+# ---------------------------------------------------------------------------
+# Auth helper — install a fake user so endpoint tests bypass Supabase
+# ---------------------------------------------------------------------------
+
+_FAKE_USER = AuthenticatedUser(
+    user_data={
+        "id": "test-user-id-schema",
+        "email": "schema@example.com",
+        "role": "authenticated",
+    },
+    access_token="fake-bearer-token",
+)
+
+
+def _install_test_user() -> None:
+    async def _resolver() -> AuthenticatedUser:
+        return _FAKE_USER
+
+    app.dependency_overrides[jwt_get_current_user] = _resolver
+
+
+def _clear_test_user() -> None:
+    app.dependency_overrides.pop(jwt_get_current_user, None)
+
 
 # ===== format_response_message tests =====
 
@@ -173,7 +204,9 @@ class TestGetOrCreateAgent:
 
         from juddges_search.models import DocumentType
 
-        result = get_or_create_agent("session-1", DocumentType.JUDGMENT, mock_request)
+        result = get_or_create_agent(
+            "session-1", "user-xyz", DocumentType.JUDGMENT, mock_request
+        )
         assert result is mock_agent
 
     @patch("app.api.schema_generator._generation_sessions")
@@ -181,6 +214,7 @@ class TestGetOrCreateAgent:
         mock_agent = MagicMock()
         from datetime import UTC, datetime
 
+        # Namespaced key is "user-xyz:existing-session"
         mock_sessions.__contains__ = MagicMock(return_value=True)
         mock_sessions.__getitem__ = MagicMock(
             return_value=(mock_agent, datetime.now(UTC))
@@ -191,7 +225,7 @@ class TestGetOrCreateAgent:
         from juddges_search.models import DocumentType
 
         result = get_or_create_agent(
-            "existing-session", DocumentType.JUDGMENT, mock_request
+            "existing-session", "user-xyz", DocumentType.JUDGMENT, mock_request
         )
         assert result is mock_agent
 
@@ -217,19 +251,25 @@ class TestGenerateSchemaSimpleEndpoint:
             "new_field_count": 2,
         }
 
-        from app.server import app
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/simple",
+                    json={
+                        "message": "Extract party names and amounts",
+                        "schema_name": "ContractSchema",
+                    },
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/simple",
-                json={
-                    "message": "Extract party names and amounts",
-                    "schema_name": "ContractSchema",
-                },
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -240,45 +280,66 @@ class TestGenerateSchemaSimpleEndpoint:
     async def test_simple_generation_value_error(self, mock_gen):
         mock_gen.side_effect = ValueError("Invalid schema spec")
 
-        from app.server import app
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/simple",
+                    json={"message": "bad input"},
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/simple",
-                json={"message": "bad input"},
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
         assert response.status_code == 400
 
     @patch("app.api.schema_generator.generate_schema")
     async def test_simple_generation_internal_error(self, mock_gen):
         mock_gen.side_effect = RuntimeError("LLM crashed")
 
-        from app.server import app
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/simple",
+                    json={"message": "extract data"},
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/simple",
-                json={"message": "extract data"},
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
         assert response.status_code == 500
 
     async def test_simple_generation_empty_message_rejected(self):
-        from app.server import app
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/simple",
-                json={"message": ""},
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
+        # With auth required, FastAPI resolves Depends(get_current_user) before
+        # Pydantic validates the body, so an unauthenticated call returns 401.
+        # Install the test user so the auth dep passes and we can verify body
+        # validation returns 422.
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/simple",
+                    json={"message": ""},
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
         assert response.status_code == 422
 
 
@@ -288,47 +349,65 @@ class TestGenerateSchemaSimpleEndpoint:
 @pytest.mark.unit
 class TestSchemaGeneratorRequestValidation:
     async def test_chat_empty_message_rejected(self):
-        from app.server import app
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/chat",
-                json={"message": ""},
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
+        # Install auth so Pydantic body validation is the failure point.
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/chat",
+                    json={"message": ""},
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
         assert response.status_code == 422
 
     async def test_test_endpoint_requires_schema(self):
-        from app.server import app
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/test",
-                json={
-                    "collection_id": "c1",
-                    "document_ids": ["d1"],
-                    # missing "schema" field
-                },
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
+        # Install auth so Pydantic body validation is the failure point.
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/test",
+                    json={
+                        "collection_id": "c1",
+                        "document_ids": ["d1"],
+                        # missing "schema" field
+                    },
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
         assert response.status_code == 422
 
     async def test_simple_schema_name_too_long(self):
-        from app.server import app
-
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/schema-generator/simple",
-                json={
-                    "message": "extract",
-                    "schema_name": "x" * 101,
-                },
-                headers={"X-API-Key": "test-api-key-12345"},
-            )
+        # Install auth so Pydantic body validation is the failure point.
+        _install_test_user()
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/schema-generator/simple",
+                    json={
+                        "message": "extract",
+                        "schema_name": "x" * 101,
+                    },
+                    headers={
+                        "X-API-Key": "test-api-key-12345",
+                        "Authorization": "Bearer fake-bearer-token",
+                    },
+                )
+        finally:
+            _clear_test_user()
         assert response.status_code == 422

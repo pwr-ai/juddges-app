@@ -42,6 +42,7 @@ def record_search_query(
     processing_ms: int | None = None,
     filters: str | None = None,
     topic_hits_count: int | None = None,
+    user_id: str | None = None,
 ) -> None:
     """Fire-and-forget insert into search_analytics. Never raises."""
     if not supabase_client:
@@ -54,6 +55,7 @@ def record_search_query(
                 "processing_ms": processing_ms,
                 "filters": filters[:500] if filters else None,
                 "topic_hits_count": topic_hits_count,
+                "user_id": user_id,
             }
         ).execute()
     except Exception as exc:
@@ -89,6 +91,27 @@ async def get_zero_result_queries(
         return result.data or []
     except Exception as exc:
         logger.warning(f"Failed to fetch zero-result queries: {exc}")
+        return []
+
+
+async def get_user_search_history(
+    user_id: str, days: int = 30, limit: int = 100
+) -> list[dict[str, Any]]:
+    """Return the most recent search-analytics rows for a single user."""
+    if not supabase_client:
+        return []
+    try:
+        result = supabase_client.rpc(
+            "get_user_search_history",
+            {
+                "p_user_id": user_id,
+                "days_back": days,
+                "max_results": limit,
+            },
+        ).execute()
+        return result.data or []
+    except Exception as exc:
+        logger.warning(f"Failed to fetch user search history: {exc}")
         return []
 
 

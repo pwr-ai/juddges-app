@@ -16,6 +16,7 @@ import {
   getOrdinal,
   pluralize,
 } from '@/lib/i18n/utils';
+import type { TranslationKey } from '@/lib/i18n/types';
 
 // Silence the dev-only warn/error logging triggered by missing keys.
 jest.mock('@/lib/logger', () => ({
@@ -46,13 +47,17 @@ describe('createTranslator', () => {
 
     it('returns the key unchanged when not found in any locale', () => {
       const { t } = createTranslator('en');
-      expect(t('common.totally.missing.path')).toBe('common.totally.missing.path');
+      // Intentionally a non-existent key to test fallback — cast bypasses the
+      // strict TranslationKey union which only includes real keys.
+      expect(t('common.totally.missing.path' as TranslationKey)).toBe(
+        'common.totally.missing.path'
+      );
     });
 
     it('returns the key unchanged when intermediate path segment is not an object', () => {
       // common.save is a string — descending past it should bail out, not throw.
       const { t } = createTranslator('en');
-      expect(t('common.save.deeper')).toBe('common.save.deeper');
+      expect(t('common.save.deeper' as TranslationKey)).toBe('common.save.deeper');
     });
   });
 
@@ -86,7 +91,7 @@ describe('createTranslator', () => {
 
     it('returns false for a key that does not exist', () => {
       const { hasTranslation } = createTranslator('en');
-      expect(hasTranslation('common.nope.not.here')).toBe(false);
+      expect(hasTranslation('common.nope.not.here' as TranslationKey)).toBe(false);
     });
   });
 

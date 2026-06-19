@@ -54,4 +54,47 @@ describe("<QueryHighlight>", () => {
     const { container } = render(<QueryHighlight text={null} />);
     expect(container.textContent).toBe("");
   });
+
+  it("recenters serverHtml when ensureMarkVisible is true and the mark is far from the start", () => {
+    const longPrefix = "alpha bravo charlie delta echo foxtrot ".repeat(5);
+    const { container } = render(
+      <QueryHighlight
+        text="ignored"
+        serverHtml={`${longPrefix}<mark>match</mark> trailing`}
+        ensureMarkVisible
+      />
+    );
+    expect(container.querySelector("mark")?.textContent).toBe("match");
+    // Without recentering, the <mark> lands hundreds of chars in; with it,
+    // the mark must appear within the first ~80 chars of the rendered HTML.
+    const innerHtml = container.innerHTML;
+    const markIdx = innerHtml.indexOf("<mark>");
+    expect(markIdx).toBeGreaterThan(0);
+    expect(markIdx).toBeLessThan(80);
+    expect(container.textContent?.startsWith("… ")).toBe(true);
+  });
+
+  it("does not recenter serverHtml when ensureMarkVisible is false (default)", () => {
+    const longPrefix = "alpha bravo charlie delta echo foxtrot ".repeat(5);
+    const input = `${longPrefix}<mark>match</mark> trailing`;
+    const { container } = render(
+      <QueryHighlight text="ignored" serverHtml={input} />
+    );
+    // No leading ellipsis added — original prefix preserved.
+    expect(container.textContent?.startsWith("alpha bravo")).toBe(true);
+    expect(container.textContent?.startsWith("…")).toBe(false);
+  });
+
+  it("recenters client-side highlights when ensureMarkVisible is true", () => {
+    const longPrefix = "alpha bravo charlie delta echo foxtrot ".repeat(5);
+    const { container } = render(
+      <QueryHighlight
+        text={`${longPrefix}match trailing`}
+        query="match"
+        ensureMarkVisible
+      />
+    );
+    expect(container.querySelector("mark")?.textContent).toBe("match");
+    expect(container.textContent?.startsWith("… ")).toBe(true);
+  });
 });

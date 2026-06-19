@@ -43,6 +43,10 @@ describe('POST /api/extractions/base-schema', () => {
           data: { user },
           error,
         }),
+        getSession: jest.fn().mockResolvedValue({
+          data: { session: user ? { access_token: 'test-access-token' } : null },
+          error: null,
+        }),
       },
     });
   };
@@ -84,7 +88,7 @@ describe('POST /api/extractions/base-schema', () => {
         method: 'POST',
         headers: expect.objectContaining({
           'X-API-Key': 'test-api-key',
-          'X-User-ID': 'user-1',
+          'Authorization': 'Bearer test-access-token',
         }),
         body: JSON.stringify({
           document_ids: ['doc-1'],

@@ -130,6 +130,7 @@ export function DocumentCard({
           text={summary}
           serverHtml={document.highlighted?.summary ?? null}
           query={query}
+          ensureMarkVisible={!showExtended}
         />
       </CardContent>
       <CardFooter className="flex items-center gap-2">

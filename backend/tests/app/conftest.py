@@ -23,7 +23,35 @@ os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")
 
 from app.auth import verify_api_key
+from app.core.auth_jwt import AuthenticatedUser
+from app.core.auth_jwt import get_current_user as jwt_get_current_user
 from app.server import app
+
+
+def _install_jwt_user_override(user_id: str) -> None:
+    """Override the Supabase Bearer dep so JWT-migrated routers can be tested
+    without a real Supabase token.
+
+    Covers /collections (PR #209) and /playground (PR #232). Publications and
+    extraction routers still consume X-User-ID via their own deps, so this
+    override does not affect them.
+    """
+
+    async def _resolver() -> AuthenticatedUser:
+        return AuthenticatedUser(
+            user_data={
+                "id": user_id,
+                "email": f"{user_id}@example.com",
+                "role": "authenticated",
+            },
+            access_token="test-bearer-token",
+        )
+
+    app.dependency_overrides[jwt_get_current_user] = _resolver
+
+
+def _clear_jwt_user_override() -> None:
+    app.dependency_overrides.pop(jwt_get_current_user, None)
 
 
 @pytest.fixture
@@ -70,15 +98,23 @@ async def authenticated_client(
 ) -> AsyncGenerator[AsyncClient, None]:
     """
     Create an authenticated async HTTP client with valid API key and user header.
+
+    Installs the Bearer-JWT override for /collections (#209) and /playground
+    (#232) while keeping X-User-ID for legacy routers (publications,
+    extraction).
     """
     headers = {**valid_api_headers, "X-User-ID": mock_user["id"]}
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-        headers=headers,
-    ) as ac:
-        yield ac
+    _install_jwt_user_override(mock_user["id"])
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers=headers,
+        ) as ac:
+            yield ac
+    finally:
+        _clear_jwt_user_override()
 
 
 @pytest.fixture
@@ -288,24 +324,26 @@ def override_user_auth(mock_user: dict[str, Any]):
     """
     Factory fixture to override user authentication.
 
+    Targets the Supabase Bearer-JWT dep (``app.core.auth_jwt.get_current_user``)
+    used by the migrated /collections router. Returns the user_id (string) so
+    callers can compare against handler payloads.
+
     Usage:
         def test_something(override_user_auth):
-            override_user_auth("custom-user-id")
-            # Now user authentication returns custom user ID
+            user_id = override_user_auth("custom-user-id")
+            # /collections handlers now see this user.
     """
-    from app.collections import get_current_user
 
-    def _override(user_id: str | None = None):
+    def _override(user_id: str | None = None) -> str:
         if user_id is None:
             user_id = mock_user["id"]
-
-        async def mock_get_current_user():
-            return user_id
-
-        app.dependency_overrides[get_current_user] = mock_get_current_user
+        _install_jwt_user_override(user_id)
         return user_id
 
-    return _override
+    try:
+        yield _override
+    finally:
+        _clear_jwt_user_override()
 
 
 @pytest.fixture
@@ -314,10 +352,16 @@ async def client_with_user(
 ) -> AsyncGenerator[AsyncClient, None]:
     """
     Create an authenticated async HTTP client with both API key and user ID.
+
+    Like ``authenticated_client``, also installs the Bearer-JWT override for
+    /collections so tests using this fixture work after the auth migration.
     """
     headers = {**valid_api_headers, "X-User-ID": mock_user["id"]}
-
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test", headers=headers
-    ) as ac:
-        yield ac
+    _install_jwt_user_override(mock_user["id"])
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test", headers=headers
+        ) as ac:
+            yield ac
+    finally:
+        _clear_jwt_user_override()

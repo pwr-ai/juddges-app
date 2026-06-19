@@ -412,6 +412,24 @@ export default function HomePage(): React.JSX.Element {
                 <EditorialButton variant="primary" size="sm" href="https://huggingface.co/JuDDGES" external arrow>
                   Hugging Face datasets
                 </EditorialButton>
+                <div className="flex flex-col gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-soft">
+                  <a
+                    href="https://doi.org/10.57967/hf/8772"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-oxblood transition-colors"
+                  >
+                    PL <span className="mx-1 text-rule-strong">·</span> pl-appealcourt-criminal <span className="mx-1 text-rule-strong">·</span> DOI 10.57967/hf/8772
+                  </a>
+                  <a
+                    href="https://doi.org/10.57967/hf/8773"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-oxblood transition-colors"
+                  >
+                    UK <span className="mx-1 text-rule-strong">·</span> en-appealcourt <span className="mx-1 text-rule-strong">·</span> DOI 10.57967/hf/8773
+                  </a>
+                </div>
                 <EditorialButton variant="ghost" size="sm" href="/about" arrow>
                   About the project
                 </EditorialButton>

@@ -19,11 +19,20 @@ export async function GET() {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/collections`, {
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
     });
@@ -62,6 +71,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { name, description } = body;
 
     if (!name) {
@@ -78,7 +96,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: backendRequestBody,

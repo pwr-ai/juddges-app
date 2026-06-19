@@ -3,7 +3,7 @@ Data Ingestion Script for Juddges App
 
 This script downloads judgment datasets from HuggingFace and ingests them into Supabase.
 Supports:
-- Polish judgments from HFforLegal/case-law
+- Polish judgments from JuDDGES/pl-court-raw
 - UK judgments from JuDDGES/en-court-raw (6,050 judgments)
 - UK fallback from JuDDGES/en-appealcourt (573 annotated judgments)
 

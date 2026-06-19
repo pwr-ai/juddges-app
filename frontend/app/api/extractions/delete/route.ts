@@ -56,6 +56,13 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       throw new UnauthorizedError("Please log in to delete an extraction job");
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedError("Please log in to delete an extraction job");
+    }
+
     // Call the backend API to delete the job with timeout
     const backendUrl = `${API_BASE_URL}/extractions/${job_id}/delete`;
     apiLogger.info('Calling backend DELETE endpoint', { requestId, job_id, backendUrl });
@@ -71,7 +78,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
           method: 'DELETE',
           headers: {
             'X-API-Key': API_KEY,
-            'X-User-ID': userData.user.id
+            'Authorization': `Bearer ${accessToken}`,
           },
           signal: controller.signal
         }

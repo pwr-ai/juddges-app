@@ -6,7 +6,9 @@ This guide explains how judgment data from HuggingFace is ingested into your Sup
 
 ### 1. Polish Judgments
 
-**Dataset**: [HFforLegal/case-law](https://huggingface.co/datasets/HFforLegal/case-law)
+**Dataset**: [JuDDGES/pl-appealcourt-criminal](https://huggingface.co/datasets/JuDDGES/pl-appealcourt-criminal)
+
+**DOI**: [10.57967/hf/8772](https://doi.org/10.57967/hf/8772)
 
 **Description**: Multi-jurisdiction legal case law dataset in standardized format. Contains Polish court decisions along with cases from other European jurisdictions.
 
@@ -36,6 +38,8 @@ This guide explains how judgment data from HuggingFace is ingested into your Sup
 ### 2. UK Judgments
 
 **Dataset**: [JuDDGES/en-appealcourt](https://huggingface.co/datasets/JuDDGES/en-appealcourt)
+
+**DOI**: [10.57967/hf/8773](https://doi.org/10.57967/hf/8773)
 
 **Description**: Complete collection of England & Wales Court of Appeal (Criminal Division) judgments. Contains 6,154 judgments with structured metadata.
 
@@ -70,7 +74,8 @@ This guide explains how judgment data from HuggingFace is ingested into your Sup
 ```
 ┌─────────────────────┐
 │  HuggingFace Hub    │
-│  - case-law (PL)    │
+│  - pl-appealcourt-  │
+│    criminal (PL)    │
 │  - en-appealcourt   │
 └──────────┬──────────┘
            │ Download via datasets library

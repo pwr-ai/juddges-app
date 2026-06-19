@@ -1,0 +1,338 @@
+% EMNLP 2026 System Demonstrations submission for Juddges App.
+%
+% Single-blind: author names ARE included at submission time.
+% Page limit: 6 pages of content + unlimited references/ethics/appendix.
+% Accepted papers receive 1 bonus page.
+%
+% This skeleton uses the official ACL style. See README.md for how to
+% fetch acl.sty and acl_natbib.bst from the acl-org repository.
+
+\documentclass[11pt]{article}
+
+\usepackage[]{acl}
+
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\title{Juddges App: An Open-Source Web Platform for Hybrid Search,
+Retrieval-Augmented Chat, and Structured Extraction over
+Polish and England \& Wales Court Judgments}
+
+\author{
+  \L{}ukasz Augustyniak\textsuperscript{1} \quad
+  Jakub Binkowski\textsuperscript{1} \quad
+  Albert Sawczyn\textsuperscript{1} \\
+  \textbf{Kamil Tagowski\textsuperscript{1}} \quad
+  \textbf{Micha\l{} Bernaczyk\textsuperscript{2}} \quad
+  \textbf{Krzysztof Kami\'{n}ski\textsuperscript{3}} \quad
+  \textbf{Tomasz Kajdanowicz\textsuperscript{1}} \\
+  \textsuperscript{1}Wroc\l{}aw University of Science and Technology, Poland \\
+  \textsuperscript{2}University of Wroc\l{}aw, Poland \\
+  \textsuperscript{3}Court of Appeal, Wroc\l{}aw, Poland \\
+  \texttt{lukasz.augustyniak@pwr.edu.pl}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present \textbf{Juddges App}, an open-source, self-hostable web
+platform for searching, analysing, and extracting structured information
+from judicial decisions of Polish appellate courts and the Court of
+Appeal of England \& Wales. The system combines hybrid retrieval (dense
+embeddings in \texttt{pgvector} with full-text indexing in Meilisearch),
+retrieval-augmented chat grounded in matched cases, schema-driven
+extraction via a LangGraph agent, an inline annotation workspace, and
+a corpus-level analytics dashboard. Sample corpora are loaded on demand
+from two public Hugging Face datasets so that any third party can
+reproduce the stack against the same data used by the maintainers, or
+substitute their own legal corpus. We report retrieval and extraction
+results on \todo{N} held-out queries and document an end-to-end demo
+walkthrough. The platform, datasets, and benchmarks are released under
+Apache~2.0 at \url{https://github.com/pwr-ai/juddges-app}.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Empirical legal research and the day-to-day work of legal practitioners
+both depend on the ability to locate, compare, and synthesise relevant
+court decisions across large case-law corpora
+\citep{katz2023legaltech,chalkidis2020legalbert}. Existing commercial
+legal-search portals are closed, jurisdiction-bound, often paywalled,
+and rarely expose retrieval signals or underlying models, which hinders
+reproducible research and prevents fine-grained extensions such as
+custom extraction schemas or jurisdiction-specific embeddings. Open data
+initiatives have begun to address the corpus-side gap
+\citep{chalkidis2022lexglue,niklaus2023multilegalpile,guha2023legalbench},
+but a research-grade, deployable application that ties together hybrid
+retrieval, retrieval-augmented question answering, and structured
+extraction over multilingual case law has been missing.
+
+\textbf{Juddges App} is designed to close that gap. It is the deployable
+companion to the JuDDGES research initiative \citep{juddges-project},
+which curates the underlying corpora and develops the legal-NLP
+methodology. Both projects are released independently under Apache~2.0.
+This demonstration paper makes three contributions:
+
+\begin{itemize}
+  \item A transparent, end-to-end open-source reference stack covering
+    hybrid retrieval, RAG-grounded chat, and schema-driven extraction
+    for multilingual case law.
+  \item A reproducible evaluation protocol with released queries and
+    held-out gold annotations for retrieval and extraction.
+  \item A self-hostable platform that has been used to investigate
+    cross-jurisdictional case comparison between Polish and
+    England~\&~Wales appellate judgments.
+\end{itemize}
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Legal IR and case-law search.}
+\todo{2--3 sentences contrasting Juddges App with prior legal-IR
+demos and platforms (e.g., CaseLaw access projects, Lexlytica,
+open-data portals). Cite recent ACL/EMNLP/NAACL demo papers on legal
+search.}
+
+\paragraph{Retrieval-augmented LLMs for law.}
+\todo{2--3 sentences on RAG-over-case-law work and how the chat chain
+here differs (grounded citations, hybrid retriever, Polish + English).}
+
+\paragraph{Information extraction from judgments.}
+\todo{2--3 sentences on schema-driven extraction from legal text and
+how the LangGraph agent here generalises beyond fixed templates.}
+
+\section{System Description}
+\label{sec:system}
+
+\subsection{Architecture}
+\label{sec:architecture}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{figures/architecture.pdf}
+  \caption{\textbf{Juddges App architecture.} A Next.js frontend talks
+  to a FastAPI backend that exposes LangChain chains via LangServe.
+  Judgments are indexed both in a \texttt{pgvector} HNSW table
+  (semantic) and in Meilisearch (lexical); the hybrid retriever
+  combines both signals. Celery handles asynchronous extraction jobs.
+  \todo{Generate architecture diagram.}}
+  \label{fig:architecture}
+\end{figure*}
+
+The system is implemented as a TypeScript/Python monorepo: a Next.js~15
+\citep{nextjs} frontend, a FastAPI \citep{fastapi} backend that exposes
+LangChain \citep{langchain} chains via LangServe, a Supabase-managed
+PostgreSQL database with \texttt{pgvector} \citep{pgvector} for semantic
+indexes, and Meilisearch \citep{meilisearch} for full-text search.
+Figure~\ref{fig:architecture} summarises the data flow. The backend
+ships as three reusable Poetry packages---\texttt{juddges\_search},
+\texttt{schema\_generator\_agent}, and \texttt{research\_agent}---each
+documented so that retrieval, extraction, and agent components can be
+embedded into other legal-NLP applications without the web frontend.
+
+\subsection{Hybrid Retrieval}
+\label{sec:retrieval}
+
+Each judgment is indexed both as a \texttt{vector(768)} embedding in a
+\texttt{pgvector} HNSW index and as a full-text record in Meilisearch.
+A configurable reranker combines the two signals at query time so that
+lexical-precise queries (citations, statute references) and semantic
+queries (factual analogies, cross-lingual paraphrases) share a single
+search surface. \todo{Describe the rerank formula or the score
+combination strategy actually used.}
+
+\subsection{Retrieval-Augmented Chat}
+\label{sec:chat}
+
+A LangChain chat chain retrieves top-$k$ judgments and grounds the
+response in matched passages, returning explicit citations back to the
+original cases. \todo{Specify the prompt template, citation extraction
+method, and refusal behaviour for low-confidence answers.}
+
+\subsection{Schema-Driven Extraction}
+\label{sec:extraction}
+
+A LangGraph agent generates a Pydantic schema from a natural-language
+description of the target fields, runs LLM extraction against a chosen
+corpus slice, and persists results as a versioned batch for downstream
+analysis. \todo{Describe the schema-generation prompt, the validation
+loop, and how repair is triggered on malformed outputs.}
+
+\subsection{Annotation Workspace and Analytics}
+\label{sec:annotation}
+
+A TipTap-based rich-text editor lets users annotate judgments inline
+and persists annotations server-side, so the same corpus can serve
+research analyses and human-in-the-loop training-data construction.
+The analytics dashboard renders pre-computed aggregations over
+jurisdiction, court, and decision-trend slices.
+
+\section{Evaluation}
+\label{sec:eval}
+
+We evaluate the three components that are most consequential for
+research use: retrieval, extraction, and end-to-end RAG groundedness.
+
+\subsection{Retrieval}
+\label{sec:eval-retrieval}
+
+\paragraph{Setup.} We evaluate on \todo{N} queries split across
+Polish (\texttt{sample\_queries.json}) and cross-jurisdictional
+(\texttt{cross\_jurisdictional\_queries.json}) sets. Relevance judgments
+are \todo{describe annotation protocol and inter-annotator agreement
+$\kappa$}.
+
+\paragraph{Metrics.} Recall@$k$ for $k \in \{1, 5, 10\}$, MRR, and
+nDCG@10.
+
+\paragraph{Results.}
+Table~\ref{tab:retrieval} shows that hybrid retrieval outperforms
+either signal alone.
+
+\begin{table}[t]
+  \centering
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    Retriever & R@1 & R@5 & R@10 & MRR \\
+    \midrule
+    BM25 (Meilisearch) & \todo{} & \todo{} & \todo{} & \todo{} \\
+    Dense (pgvector)   & \todo{} & \todo{} & \todo{} & \todo{} \\
+    Hybrid             & \todo{} & \todo{} & \todo{} & \todo{} \\
+    \bottomrule
+  \end{tabular}
+  \caption{Retrieval performance on \todo{N} held-out queries.}
+  \label{tab:retrieval}
+\end{table}
+
+\subsection{Information Extraction}
+\label{sec:eval-extraction}
+
+\paragraph{Setup.} A gold set of \todo{N} judgments annotated with
+\todo{describe schema fields, e.g., court, judges, charges, verdict,
+sentence}.
+
+\paragraph{Metrics.} Exact-match accuracy and span F1 per field;
+macro-averaged across fields. \todo{Report per-field numbers in
+Table~\ref{tab:extraction} (appendix).}
+
+\subsection{End-to-End RAG}
+\label{sec:eval-rag}
+
+We report groundedness rate (fraction of answers fully supported by
+retrieved passages) and citation accuracy on a \todo{N}-question
+evaluation set sampled from real user queries.
+
+\subsection{Latency}
+\label{sec:eval-latency}
+
+\paragraph{Setup.} Single-tenant production deployment,
+\todo{describe hardware}.
+
+\paragraph{Results.} Median end-to-end latency: \todo{}~ms search,
+\todo{}~ms first chat token, \todo{}~ms per-judgment extraction.
+
+\section{Demo Walkthrough}
+\label{sec:demo}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\columnwidth]{figures/search-ui.pdf}
+  \caption{Hybrid search results with side-by-side excerpt previews
+  and citation-ready exports. \todo{Add annotated screenshot.}}
+  \label{fig:search-ui}
+\end{figure}
+
+The accompanying 2.5-minute screencast (linked in the submission)
+demonstrates four flows: (1) hybrid search across the Polish and
+England \& Wales corpora, including cross-lingual queries
+(Section~\ref{sec:retrieval}); (2) grounded chat answering a legal
+question with inline citations (Section~\ref{sec:chat}); (3) building
+a Pydantic schema from a natural-language description and running it
+over a corpus slice (Section~\ref{sec:extraction}); and (4) inline
+annotation that is persisted server-side and surfaced in analytics
+(Section~\ref{sec:annotation}). Figure~\ref{fig:search-ui} shows the
+search interface; additional screenshots are in
+Appendix~\ref{app:screenshots}.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented Juddges App, an Apache-2.0 web platform that combines
+hybrid retrieval, retrieval-augmented chat, schema-driven extraction,
+and annotation over Polish and England~\&~Wales court judgments. The
+system, datasets, and benchmarks are released to support reproducible
+legal-NLP research and self-hosted deployments by legal practitioners.
+
+\section*{Ethical Considerations}
+\label{sec:ethics}
+
+Court judgments may contain personal data of parties, witnesses, and
+victims. We rely on the publicly released JuDDGES datasets, which
+follow the source courts' publication policies. Polish appellate
+judgments are published by the courts after redaction of sensitive
+personal data; we do not perform additional redaction and we surface
+the original publisher and case identifier with every result so users
+can verify provenance. We do not store identifying information about
+end users beyond what Supabase Auth requires for authentication.
+Retrieval and chat outputs reflect the biases of the underlying
+embeddings and language models; the application is therefore positioned
+as a research and triage tool, \emph{not} a substitute for legal
+counsel or judicial decision-making. \todo{Expand if Industry-track
+reviewers flag this; for Demo it is sufficient.}
+
+\section*{Limitations}
+\label{sec:limitations}
+
+\todo{Optional for Demo track, but recommended. Cover: (i) jurisdiction
+coverage limited to PL appellate criminal and EN\&W appellate; (ii)
+embedding model and chat backbone choices may not generalise to other
+languages; (iii) extraction quality depends on schema specification
+and underlying LLM; (iv) no formal user study yet.}
+
+\section*{Acknowledgements}
+
+We thank the JuDDGES research project at Wroc\l{}aw University of
+Science and Technology for the curated Polish and England~\&~Wales
+judgment corpora and the legal-NLP methodology this application builds
+on, and the Court of Appeal in Wroc\l{}aw for domain expertise on
+Polish appellate procedure. \todo{Add explicit grant numbers if
+applicable.}
+
+\bibliography{paper}
+\bibliographystyle{acl_natbib}
+
+\appendix
+
+\section{Additional Screenshots}
+\label{app:screenshots}
+
+\todo{Add full-size screenshots of chat, extraction-batch dashboard,
+and analytics views.}
+
+\section{Reproducibility Details}
+\label{app:repro}
+
+Code: \url{https://github.com/pwr-ai/juddges-app}. Persistent DOI:
+\url{https://doi.org/10.5281/zenodo.19911856}. Datasets: PL
+(\url{https://huggingface.co/datasets/JuDDGES/pl-appealcourt-criminal},
+DOI 10.57967/hf/8772) and EN
+(\url{https://huggingface.co/datasets/JuDDGES/en-appealcourt}, DOI
+10.57967/hf/8773). Models used in reported numbers: \todo{embedding
+model name and version, chat backbone name and version, extraction
+backbone name and version}. Hardware: \todo{}.
+
+\end{document}

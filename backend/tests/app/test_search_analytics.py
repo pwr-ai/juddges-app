@@ -4,7 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.search_analytics import export_eval_queries, record_search_query
+from app.services.search_analytics import (
+    export_eval_queries,
+    get_user_search_history,
+    record_search_query,
+)
 
 
 class TestRecordSearchQuery:
@@ -65,6 +69,32 @@ class TestRecordSearchQuery:
 
         insert_arg = mock_table.insert.call_args[0][0]
         assert insert_arg["topic_hits_count"] == 0
+
+    @patch("app.services.search_analytics.supabase_client")
+    def test_inserts_user_id(self, mock_client):
+        """user_id is forwarded to the insert payload when provided."""
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_table.insert.return_value = mock_table
+        mock_table.execute.return_value = MagicMock(data=[{"id": 5}])
+
+        record_search_query("nemo", hit_count=1, user_id="user-abc")
+
+        insert_arg = mock_table.insert.call_args[0][0]
+        assert insert_arg["user_id"] == "user-abc"
+
+    @patch("app.services.search_analytics.supabase_client")
+    def test_user_id_defaults_to_none(self, mock_client):
+        """Omitting user_id stores NULL (anonymous traffic)."""
+        mock_table = MagicMock()
+        mock_client.table.return_value = mock_table
+        mock_table.insert.return_value = mock_table
+        mock_table.execute.return_value = MagicMock(data=[{"id": 6}])
+
+        record_search_query("anon", hit_count=2)
+
+        insert_arg = mock_table.insert.call_args[0][0]
+        assert insert_arg["user_id"] is None
 
     @patch("app.services.search_analytics.supabase_client")
     def test_truncates_long_query(self, mock_client):
@@ -303,6 +333,110 @@ class TestExportEvalQueries:
 
         assert len(result["queries"]) == 1
         assert result["queries"][0]["query"] == "popular"
+
+
+class TestGetUserSearchHistory:
+    """Tests for the per-user history RPC consumer."""
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client", None)
+    async def test_returns_empty_without_supabase(self):
+        result = await get_user_search_history(user_id="u-1")
+        assert result == []
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_passes_args_to_rpc(self, mock_client):
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "query": "vat fraud",
+                    "hit_count": 12,
+                    "topic_hits_count": 3,
+                    "processing_ms": 45,
+                    "filters": None,
+                    "created_at": "2026-05-13T08:00:00+00:00",
+                }
+            ]
+        )
+
+        rows = await get_user_search_history(user_id="u-1", days=14, limit=25)
+
+        mock_client.rpc.assert_called_once_with(
+            "get_user_search_history",
+            {"p_user_id": "u-1", "days_back": 14, "max_results": 25},
+        )
+        assert rows[0]["query"] == "vat fraud"
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_swallows_rpc_errors(self, mock_client):
+        mock_client.rpc.side_effect = RuntimeError("db down")
+        result = await get_user_search_history(user_id="u-1")
+        assert result == []
+
+
+class TestUserHistoryEndpoint:
+    """Tests for GET /api/search/analytics/history."""
+
+    @pytest.mark.anyio
+    async def test_requires_auth(self, client, valid_api_headers):
+        """No JWT → 401/403 from get_current_user."""
+        response = await client.get(
+            "/api/search/analytics/history",
+            headers=valid_api_headers,
+        )
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.anyio
+    @patch("app.api.search.get_user_search_history")
+    async def test_returns_history_for_authenticated_user(
+        self, mock_history, client, valid_api_headers
+    ):
+        """Authenticated caller gets their history; user.id forwarded to service."""
+        from app.core.auth_jwt import AuthenticatedUser, get_current_user
+        from app.server import app
+
+        async def fake_user():
+            return AuthenticatedUser(
+                {"id": "user-xyz", "email": "u@example.com", "role": "authenticated"},
+                access_token="tok",
+            )
+
+        app.dependency_overrides[get_current_user] = fake_user
+
+        async def fake_history(*, user_id, days, limit):
+            assert user_id == "user-xyz"
+            return [
+                {
+                    "query": "narkomania",
+                    "hit_count": 7,
+                    "topic_hits_count": 2,
+                    "processing_ms": 33,
+                    "filters": None,
+                    "created_at": "2026-05-13T09:00:00+00:00",
+                }
+            ]
+
+        mock_history.side_effect = fake_history
+
+        try:
+            response = await client.get(
+                "/api/search/analytics/history?days=7&limit=10",
+                headers=valid_api_headers,
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body[0]["query"] == "narkomania"
+        assert body[0]["hit_count"] == 7
+        mock_history.assert_awaited_once()
+        kwargs = mock_history.call_args.kwargs
+        assert kwargs == {"user_id": "user-xyz", "days": 7, "limit": 10}
 
 
 class TestSyncStatus:

@@ -1,4 +1,8 @@
-import { sanitizeHighlightHtml, highlightQueryInText } from "@/lib/highlight";
+import {
+  sanitizeHighlightHtml,
+  highlightQueryInText,
+  recenterHighlightSnippet,
+} from "@/lib/highlight";
 
 describe("sanitizeHighlightHtml", () => {
   it("preserves <mark> tags", () => {
@@ -97,5 +101,51 @@ describe("highlightQueryInText", () => {
   it("returns escaped plain text when query is null/undefined", () => {
     expect(highlightQueryInText("hi", null)).toBe("hi");
     expect(highlightQueryInText("hi", undefined)).toBe("hi");
+  });
+});
+
+describe("recenterHighlightSnippet", () => {
+  it("returns input unchanged when there is no <mark>", () => {
+    expect(recenterHighlightSnippet("plain text, nothing to mark")).toBe(
+      "plain text, nothing to mark"
+    );
+  });
+
+  it("returns input unchanged when <mark> is already near the start", () => {
+    const input = "Lorem ipsum <mark>dolor</mark> sit amet";
+    expect(recenterHighlightSnippet(input, 60)).toBe(input);
+  });
+
+  it("trims leading text and prepends ellipsis when <mark> is far from the start", () => {
+    const longPrefix = "alpha bravo charlie delta echo foxtrot ".repeat(5);
+    const input = `${longPrefix}<mark>match</mark> trailing text`;
+    const out = recenterHighlightSnippet(input, 40);
+    expect(out.startsWith("… ")).toBe(true);
+    expect(out).toContain("<mark>match</mark>");
+    expect(out).toContain("trailing text");
+    expect(out.indexOf("<mark>")).toBeLessThanOrEqual(2 + 40);
+  });
+
+  it("preserves <mark> and trailing content verbatim when trimming", () => {
+    const longPrefix = "x ".repeat(80);
+    const input = `${longPrefix}<mark>important</mark> tail`;
+    const out = recenterHighlightSnippet(input, 30);
+    expect(out).toContain("<mark>important</mark>");
+    expect(out.endsWith(" tail")).toBe(true);
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(recenterHighlightSnippet("")).toBe("");
+    expect(recenterHighlightSnippet(null)).toBe("");
+    expect(recenterHighlightSnippet(undefined)).toBe("");
+  });
+
+  it("does not split inside the <mark> tag", () => {
+    const longPrefix = "lorem ".repeat(20);
+    const input = `${longPrefix}<mark>m</mark> tail`;
+    const out = recenterHighlightSnippet(input, 10);
+    // The opening <mark> must remain intact in the output.
+    expect(out).toContain("<mark>m</mark>");
+    expect(out).not.toMatch(/<mar(?!k>)/);
   });
 });
