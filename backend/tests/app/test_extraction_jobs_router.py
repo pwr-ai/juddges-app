@@ -701,7 +701,8 @@ class TestListExtractionJobsEndpoint:
     async def test_list_jobs_status_filter_passed_to_db(
         self, client, valid_api_headers
     ) -> None:
-        """status= query param is forwarded as a DB-level filter, not applied in Python."""
+        """status= query param is translated to the DB-level status values and
+        forwarded as an ``.in_()`` filter (not applied in Python)."""
         _install_jwt_user_override(_USER_001)
 
         mock_db_response = MagicMock()
@@ -715,8 +716,11 @@ class TestListExtractionJobsEndpoint:
                 return self
 
             def eq(self, col, val):
+                return self
+
+            def in_(self, col, vals):
                 if col == "status":
-                    captured_status_filter.append(val)
+                    captured_status_filter.extend(vals)
                 return self
 
             def order(self, *a, **kw):
@@ -738,6 +742,8 @@ class TestListExtractionJobsEndpoint:
             )
 
         assert response.status_code == 200
+        # COMPLETED is translated to the raw DB status values it subsumes.
+        assert "SUCCESS" in captured_status_filter
         assert "COMPLETED" in captured_status_filter
 
 

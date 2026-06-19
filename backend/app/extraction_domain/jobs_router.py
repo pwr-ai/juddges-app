@@ -885,6 +885,26 @@ async def get_extraction_job(
         )
 
 
+# Map the simplified, user-facing status filter values to every raw value the
+# ``extraction_jobs.status`` column may hold for that state. The column may store
+# raw Celery states (PENDING/STARTED/SUCCESS/FAILURE/REVOKED) or already-simplified
+# names depending on the write path, so each set includes both. COMPLETED and
+# PARTIALLY_COMPLETED both subsume SUCCESS and cannot be distinguished at the column
+# level (that distinction needs the per-document results JSON).
+_API_STATUS_TO_DB_VALUES: dict[str, list[str]] = {
+    "IN_PROGRESS": ["PENDING", "STARTED", "PROCESSING", "RETRY", "IN_PROGRESS"],
+    "COMPLETED": ["SUCCESS", "COMPLETED"],
+    "PARTIALLY_COMPLETED": [
+        "SUCCESS",
+        "PARTIAL_FAILURE",
+        "COMPLETED_WITH_FAILURES",
+        "PARTIALLY_COMPLETED",
+    ],
+    "FAILED": ["FAILURE", "FAILED"],
+    "CANCELLED": ["REVOKED", "CANCELLED"],
+}
+
+
 @router.get(
     "",
     response_model=ListExtractionJobsResponse,
@@ -948,7 +968,8 @@ async def list_extraction_jobs(
         )
 
         if status:
-            query = query.eq("status", status)
+            db_status_values = _API_STATUS_TO_DB_VALUES.get(status, [status])
+            query = query.in_("status", db_status_values)
 
         # Apply pagination at the DB level.
         offset = (page - 1) * page_size
@@ -963,7 +984,7 @@ async def list_extraction_jobs(
             ExtractionJobSummary(
                 task_id=row["job_id"],
                 collection_id=row.get("collection_id"),
-                status=row.get("status") or "UNKNOWN",
+                status=simplify_job_status(row.get("status") or "PENDING"),
                 created_at=row.get("created_at") or datetime.now(UTC).isoformat(),
                 updated_at=row.get("updated_at"),
                 total_documents=row.get("total_documents"),
@@ -1023,7 +1044,7 @@ async def cancel_or_delete_extraction_job(
 
     **Error Codes:**
     - 404: Job not found
-    - 403: Job belongs to another user (future enhancement)
+    - 403: Job belongs to another user
     - 400: Job already completed
 
     **Note:** This implementation uses Celery's revoke() method with terminate=True.
@@ -1074,6 +1095,10 @@ async def cancel_or_delete_extraction_job(
             message="Job cancellation requested. The task will be terminated if currently running.",
         )
 
+    except HTTPException:
+        # Ownership 403 / explicit HTTP errors must propagate unchanged, not be
+        # re-wrapped as a 500 by the broad handler below.
+        raise
     except Exception as e:
         # Broad catch: Celery revoke() and task state access can raise arbitrary
         # broker/connection exceptions.
