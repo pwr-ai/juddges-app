@@ -15,6 +15,7 @@ from app.core.auth_jwt import (
     AuthenticatedUser,
     get_admin_supabase_client,
     get_current_user,
+    require_admin,
 )
 
 router = APIRouter(prefix="/blog", tags=["blog"])
@@ -563,7 +564,7 @@ async def get_bookmarks(
 @router.post("/admin/posts")
 async def create_post(
     post: BlogPostCreate,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(require_admin),
 ):
     """
     Create a new blog post (admin only).
@@ -634,7 +635,7 @@ async def list_admin_posts(
         pattern="^(updated_at|created_at|published_at|views|likes_count|title)$",
     ),
     order: str = Query("desc", pattern="^(asc|desc)$"),
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(require_admin),
 ):
     """
     List blog posts for admin UI.
@@ -703,7 +704,7 @@ async def list_admin_posts(
 @router.get("/admin/posts/{post_id}")
 async def get_admin_post(
     post_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(require_admin),
 ):
     """Get a single post for admin edit UI."""
     try:
@@ -737,7 +738,7 @@ async def get_admin_post(
 async def update_post(
     post_id: str,
     post: BlogPostUpdate,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(require_admin),
 ):
     """Update an existing blog post."""
     try:
@@ -820,7 +821,7 @@ async def update_post(
 @router.delete("/admin/posts/{post_id}")
 async def delete_post(
     post_id: str,
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(require_admin),
 ):
     """Soft-delete a blog post."""
     try:
@@ -854,7 +855,7 @@ async def delete_post(
 
 @router.get("/admin/stats", response_model=BlogStatsResponse)
 async def get_admin_blog_stats(
-    current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(require_admin),
 ):
     """Get blog statistics for admin UI."""
     try:

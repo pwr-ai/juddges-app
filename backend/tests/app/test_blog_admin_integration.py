@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from app.core.auth_jwt import get_current_user
+from app.core.auth_jwt import get_current_user, require_admin
 from app.server import app
 
 if TYPE_CHECKING:
@@ -227,11 +227,12 @@ async def test_blog_admin_crud_happy_path(
     authenticated_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ):
     fake_supabase = FakeSupabase()
+    admin_user = FakeUser("user-1", admin=True)
 
-    async def mock_get_current_user() -> FakeUser:
-        return FakeUser("user-1", admin=False)
+    async def mock_require_admin() -> FakeUser:
+        return admin_user
 
-    app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[require_admin] = mock_require_admin
     monkeypatch.setattr("app.api.blog.get_admin_supabase_client", lambda: fake_supabase)
 
     try:
@@ -293,15 +294,198 @@ async def test_blog_admin_forbids_non_author_delete(
     authenticated_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ):
     fake_supabase = FakeSupabase()
+    admin_user = FakeUser("other-user", admin=True)
 
-    async def mock_get_current_user() -> FakeUser:
-        return FakeUser("other-user", admin=False)
+    async def mock_require_admin() -> FakeUser:
+        return admin_user
 
-    app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[require_admin] = mock_require_admin
     monkeypatch.setattr("app.api.blog.get_admin_supabase_client", lambda: fake_supabase)
 
     try:
         response = await authenticated_client.delete("/blog/admin/posts/post-1")
+        # post-1 belongs to user-1; other-user is admin but not the author.
+        # ensure_user_can_access_post allows admins to access any post, so this
+        # should succeed (the previous test already proved ownership enforcement
+        # before require_admin was added — now only admins reach this code path).
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+    finally:
+        app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Security tests: non-admin users must receive 403 on all /admin/* endpoints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.auth
+async def test_non_admin_cannot_create_post(
+    authenticated_client: AsyncClient,
+):
+    """Any authenticated non-admin user must receive 403 on POST /blog/admin/posts."""
+    non_admin = FakeUser("regular-user", admin=False)
+
+    async def mock_get_current_user() -> FakeUser:
+        return non_admin
+
+    # require_admin internally calls get_current_user, so override that to
+    # return a non-admin user — the real require_admin will then raise 403.
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    try:
+        payload = {
+            "title": "Hacked Post",
+            "excerpt": "Malicious excerpt",
+            "content": "Evil content",
+            "category": "Research",
+            "status": "published",
+        }
+        response = await authenticated_client.post("/blog/admin/posts", json=payload)
         assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.auth
+async def test_non_admin_cannot_list_admin_posts(
+    authenticated_client: AsyncClient,
+):
+    """Non-admin user must receive 403 on GET /blog/admin/posts."""
+    non_admin = FakeUser("regular-user", admin=False)
+
+    async def mock_get_current_user() -> FakeUser:
+        return non_admin
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    try:
+        response = await authenticated_client.get("/blog/admin/posts")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.auth
+async def test_non_admin_cannot_update_post(
+    authenticated_client: AsyncClient,
+):
+    """Non-admin user must receive 403 on PUT /blog/admin/posts/{id}."""
+    non_admin = FakeUser("regular-user", admin=False)
+
+    async def mock_get_current_user() -> FakeUser:
+        return non_admin
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    try:
+        response = await authenticated_client.put(
+            "/blog/admin/posts/post-1", json={"title": "Overwrite"}
+        )
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.auth
+async def test_non_admin_cannot_delete_post(
+    authenticated_client: AsyncClient,
+):
+    """Non-admin user must receive 403 on DELETE /blog/admin/posts/{id}."""
+    non_admin = FakeUser("regular-user", admin=False)
+
+    async def mock_get_current_user() -> FakeUser:
+        return non_admin
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    try:
+        response = await authenticated_client.delete("/blog/admin/posts/post-1")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.auth
+async def test_non_admin_cannot_access_admin_stats(
+    authenticated_client: AsyncClient,
+):
+    """Non-admin user must receive 403 on GET /blog/admin/stats."""
+    non_admin = FakeUser("regular-user", admin=False)
+
+    async def mock_get_current_user() -> FakeUser:
+        return non_admin
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    try:
+        response = await authenticated_client.get("/blog/admin/stats")
+        assert response.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+@pytest.mark.auth
+async def test_admin_can_access_all_admin_endpoints(
+    authenticated_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+):
+    """Admin user must be able to reach all /admin/* endpoints (200 responses)."""
+    fake_supabase = FakeSupabase()
+    admin_user = FakeUser("user-1", admin=True)
+
+    async def mock_require_admin() -> FakeUser:
+        return admin_user
+
+    app.dependency_overrides[require_admin] = mock_require_admin
+    monkeypatch.setattr("app.api.blog.get_admin_supabase_client", lambda: fake_supabase)
+
+    try:
+        # GET /blog/admin/posts
+        r = await authenticated_client.get("/blog/admin/posts")
+        assert r.status_code == 200
+
+        # GET /blog/admin/posts/{id}
+        r = await authenticated_client.get("/blog/admin/posts/post-1")
+        assert r.status_code == 200
+
+        # GET /blog/admin/stats
+        r = await authenticated_client.get("/blog/admin/stats")
+        assert r.status_code == 200
+
+        # POST /blog/admin/posts
+        r = await authenticated_client.post(
+            "/blog/admin/posts",
+            json={
+                "title": "Admin Post",
+                "excerpt": "Admin excerpt",
+                "content": "Admin content",
+                "category": "Research",
+                "status": "draft",
+            },
+        )
+        assert r.status_code == 200
+        new_id = r.json()["data"]["id"]
+
+        # PUT /blog/admin/posts/{id}
+        r = await authenticated_client.put(
+            f"/blog/admin/posts/{new_id}", json={"title": "Updated"}
+        )
+        assert r.status_code == 200
+
+        # DELETE /blog/admin/posts/{id}
+        r = await authenticated_client.delete(f"/blog/admin/posts/{new_id}")
+        assert r.status_code == 200
     finally:
         app.dependency_overrides.clear()
