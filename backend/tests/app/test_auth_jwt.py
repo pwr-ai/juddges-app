@@ -270,6 +270,39 @@ class TestGetUserSupabaseClient:
         assert exc_info.value.status_code == 401
         assert "Invalid token signature" in exc_info.value.detail
 
+    def test_secret_set_expired_token_raises_401(self):
+        """When SUPABASE_JWT_SECRET is set and token is expired, raises HTTP 401."""
+        import time
+
+        import jwt as pyjwt
+
+        import app.core.auth_jwt as mod
+
+        secret = "test-secret-for-unit-tests"  # noqa: S105
+        payload = {
+            "sub": "user-abc",
+            "role": "authenticated",
+            "aud": "authenticated",
+            "exp": int(time.time()) - 3600,  # expired 1 hour ago
+            "iat": int(time.time()) - 7200,
+        }
+        token = pyjwt.encode(payload, secret, algorithm="HS256")
+
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+            "SUPABASE_JWT_SECRET": secret,
+        }
+        with (
+            patch.dict(os.environ, env),
+            patch.object(mod, "create_client", return_value=MagicMock()),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            get_user_supabase_client(token)
+
+        assert exc_info.value.status_code == 401
+        assert "Invalid token signature" in exc_info.value.detail
+
 
 # ===== get_current_user tests =====
 
