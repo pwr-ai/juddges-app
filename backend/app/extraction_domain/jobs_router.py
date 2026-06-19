@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    status,
+)
 from loguru import logger
 from supabase import PostgrestAPIError, StorageException
 
@@ -14,6 +24,7 @@ from app.extraction_domain.shared import (
     _check_supabase_available,
     _convert_simplified_schema,
     _create_extraction_response,
+    _enforce_max_documents,
     _fetch_schema_from_db,
     _submit_extraction_task,
     _validate_collection_id,
@@ -38,7 +49,12 @@ from app.models import (
     ListExtractionJobsResponse,
     SimpleExtractionRequest,
 )
+from app.rate_limiter import limiter
 from app.workers import celery_app, extract_information_from_documents_task
+
+EXTRACTION_SUBMIT_RATE_LIMIT: str = os.getenv(
+    "EXTRACTION_SUBMIT_RATE_LIMIT", "10/minute"
+)
 
 router = APIRouter()
 
@@ -385,8 +401,10 @@ def _count_processed_documents(results: list[dict]) -> int | None:
     summary="Create extraction job",
     description="Submit a new extraction job. Supports both full and simple modes.",
 )
+@limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_extraction_job(
-    request: DocumentExtractionRequest | SimpleExtractionRequest,
+    request: Request,
+    payload: DocumentExtractionRequest | SimpleExtractionRequest,
 ) -> DocumentExtractionSubmissionResponse:
     """
     Create a new extraction job.
@@ -400,15 +418,15 @@ async def create_extraction_job(
     Returns a job_id (task_id) that can be used to check status and results.
     """
     try:
-        if isinstance(request, SimpleExtractionRequest):
+        if isinstance(payload, SimpleExtractionRequest):
             # Validate documents
             document_ids = _validate_documents(
-                request.document_ids, request.collection_id
+                payload.document_ids, payload.collection_id
             )
 
             # Validate and fetch schema
-            _validate_schema_id_required(request.schema_id)
-            schema_id = request.schema_id
+            _validate_schema_id_required(payload.schema_id)
+            schema_id = payload.schema_id
             user_schema = None
 
             if is_uuid(schema_id):
@@ -420,19 +438,22 @@ async def create_extraction_job(
                 logger.info("Successfully fetched schema from database")
 
             extraction_request = DocumentExtractionRequest(
-                collection_id=request.collection_id,
+                collection_id=payload.collection_id,
                 schema_id=schema_id,
                 user_schema=user_schema,
-                extraction_context=request.extraction_context,
-                additional_instructions=request.additional_instructions,
+                extraction_context=payload.extraction_context,
+                additional_instructions=payload.additional_instructions,
                 prompt_id="info_extraction",
-                language=request.language,
+                language=payload.language,
                 document_ids=document_ids,
             )
         else:
-            extraction_request = request
+            extraction_request = payload
 
         # Validate and submit
+        _enforce_max_documents(
+            extraction_request.document_ids, extraction_request.collection_id
+        )
         _validate_collection_id(extraction_request.collection_id)
         task_id = _submit_extraction_task(extraction_request)
         return _create_extraction_response(task_id)
@@ -462,8 +483,10 @@ async def create_extraction_job(
     summary="Create extraction job (DB schema)",
     description="Submit a new extraction job using schemas from Supabase database. Supports both full and simple modes.",
 )
+@limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_extraction_job_db(
-    request: DocumentExtractionRequest | SimpleExtractionRequest,
+    request: Request,
+    payload: DocumentExtractionRequest | SimpleExtractionRequest,
 ) -> DocumentExtractionSubmissionResponse:
     """
     Create a new extraction job using InformationExtractor with schemas from Supabase.
@@ -480,49 +503,49 @@ async def create_extraction_job_db(
     Returns a job_id (task_id) that can be used to check status and results.
     """
     try:
-        if isinstance(request, SimpleExtractionRequest):
+        if isinstance(payload, SimpleExtractionRequest):
             # Validate documents
             document_ids = _validate_documents(
-                request.document_ids, request.collection_id
+                payload.document_ids, payload.collection_id
             )
 
             # Validate schema_id is present and is a UUID
-            _validate_schema_id_required(request.schema_id)
-            if not is_uuid(request.schema_id):
+            _validate_schema_id_required(payload.schema_id)
+            if not is_uuid(payload.schema_id):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail={
                         "error": "Invalid Schema ID",
-                        "message": f"Schema ID '{request.schema_id}' is not a valid UUID. This endpoint requires a schema from Supabase database.",
+                        "message": f"Schema ID '{payload.schema_id}' is not a valid UUID. This endpoint requires a schema from Supabase database.",
                         "code": "INVALID_SCHEMA_ID",
                     },
                 )
 
             # Fetch full schema with metadata from database
-            logger.info(f"Fetching full schema {request.schema_id} from database")
+            logger.info(f"Fetching full schema {payload.schema_id} from database")
             user_schema = _fetch_schema_from_db(
-                request.schema_id, include_metadata=True
+                payload.schema_id, include_metadata=True
             )
             logger.info(
-                f"Successfully fetched full schema from database: {request.schema_id}"
+                f"Successfully fetched full schema from database: {payload.schema_id}"
             )
 
             extraction_request = DocumentExtractionRequest(
-                collection_id=request.collection_id,
+                collection_id=payload.collection_id,
                 schema_id=None,
                 user_schema=user_schema,
-                extraction_context=request.extraction_context,
-                additional_instructions=request.additional_instructions,
+                extraction_context=payload.extraction_context,
+                additional_instructions=payload.additional_instructions,
                 prompt_id="info_extraction",
-                language=request.language,
+                language=payload.language,
                 document_ids=document_ids,
             )
         else:
             # Validate user_schema has required fields if provided
-            if request.user_schema is not None:
+            if payload.user_schema is not None:
                 required_fields = ["name", "description", "text"]
                 missing_fields = [
-                    f for f in required_fields if f not in request.user_schema
+                    f for f in required_fields if f not in payload.user_schema
                 ]
                 if missing_fields:
                     raise HTTPException(
@@ -534,9 +557,12 @@ async def create_extraction_job_db(
                             "code": "INVALID_SCHEMA_FORMAT",
                         },
                     )
-            extraction_request = request
+            extraction_request = payload
 
         # Validate collection and schema
+        _enforce_max_documents(
+            extraction_request.document_ids, extraction_request.collection_id
+        )
         _validate_collection_id(extraction_request.collection_id)
 
         if extraction_request.user_schema is None:
@@ -579,8 +605,10 @@ async def create_extraction_job_db(
     summary="Create bulk extraction jobs",
     description="Apply multiple schemas to documents simultaneously. Creates one extraction job per schema.",
 )
+@limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_bulk_extraction(
-    request: BulkExtractionRequest = Body(...),
+    request: Request,
+    payload: BulkExtractionRequest = Body(...),
 ) -> BulkExtractionResponse:
     """
     Create bulk extraction jobs - one per schema.
@@ -595,13 +623,13 @@ async def create_bulk_extraction(
         bulk_id = str(uuid_module.uuid4())
 
         # Validate documents
-        document_ids = _validate_documents(request.document_ids, request.collection_id)
-        _validate_collection_id(request.collection_id)
+        document_ids = _validate_documents(payload.document_ids, payload.collection_id)
+        _validate_collection_id(payload.collection_id)
         _check_supabase_available()
 
         jobs = []
 
-        for schema_id in request.schema_ids:
+        for schema_id in payload.schema_ids:
             # Validate schema_id is a UUID
             if not is_uuid(schema_id):
                 jobs.append(
@@ -625,12 +653,12 @@ async def create_bulk_extraction(
 
                 # Create extraction request for this schema
                 extraction_request = DocumentExtractionRequest(
-                    collection_id=request.collection_id,
+                    collection_id=payload.collection_id,
                     schema_id=None,
                     user_schema=schema_data,
-                    extraction_context=request.extraction_context,
+                    extraction_context=payload.extraction_context,
                     prompt_id="info_extraction",
-                    language=request.language,
+                    language=payload.language,
                     document_ids=document_ids,
                 )
 
@@ -683,10 +711,10 @@ async def create_bulk_extraction(
             bulk_id=bulk_id,
             status="accepted" if accepted_count > 0 else "rejected",
             jobs=jobs,
-            total_schemas=len(request.schema_ids),
+            total_schemas=len(payload.schema_ids),
             total_documents=len(document_ids),
-            auto_export=request.auto_export,
-            scheduled_at=request.scheduled_at,
+            auto_export=payload.auto_export,
+            scheduled_at=payload.scheduled_at,
             message=f"Created {accepted_count} extraction jobs for {len(document_ids)} documents.",
         )
     except HTTPException:
