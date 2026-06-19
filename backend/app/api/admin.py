@@ -11,7 +11,7 @@ Date: 2026-02-23
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -311,11 +311,16 @@ async def list_users(
 
         return UserListResponse(users=users, page=page, per_page=per_page)
 
+    except HTTPException:
+        raise
     except Exception as e:
         # Broad catch: gotrue-py list_users raises arbitrary exceptions across
         # versions; no stable base exception class is exposed publicly.
-        logger.error(f"Admin list_users failed: {e}")
-        return UserListResponse(users=[], page=page, per_page=per_page)
+        logger.exception(f"Admin list_users failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve user list from auth provider.",
+        )
 
 
 @router.get("/activity", response_model=list[ActivityLogEntry])
@@ -360,9 +365,14 @@ async def get_recent_activity(
         logger.info(f"Admin activity fetched by {admin.email}: {len(entries)} entries")
         return entries
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Admin get_recent_activity failed: {e}")
-        return []
+        logger.exception(f"Admin get_recent_activity failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve activity log from database.",
+        )
 
 
 @router.get("/search-queries", response_model=SearchQueriesResponse)
@@ -424,9 +434,14 @@ async def get_search_queries(
             queries=entries, total=total, page=page, limit=limit
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Admin get_search_queries failed: {e}")
-        return SearchQueriesResponse(queries=[], total=0, page=page, limit=limit)
+        logger.exception(f"Admin get_search_queries failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve search queries from database.",
+        )
 
 
 @router.get("/documents/stats", response_model=DocumentStats)
@@ -527,11 +542,17 @@ async def get_system_health(
 
     try:
         services_health = await check_all_services()
+    except HTTPException:
+        raise
     except Exception as e:
-        # Broad catch: check_all_services() probes multiple external systems
-        # (database, Redis, OpenAI) which may raise arbitrary exceptions.
-        logger.error(f"Admin system health check failed: {e}")
-        services_health = {}
+        # check_all_services() itself raising means the health-probe machinery
+        # is broken — we cannot report meaningful service status, so surface a
+        # 500 rather than a falsely-healthy empty response.
+        logger.exception(f"Admin system health check failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Health check probe failed; service status is unavailable.",
+        )
 
     services: dict[str, ServiceHealthEntry] = {}
     for name, health in services_health.items():

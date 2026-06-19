@@ -8586,6 +8586,14 @@ export interface components {
         /**
          * DocumentSearchResponse
          * @description Paginated document search response (Meilisearch-backed text mode).
+         *
+         *     ``search_mode`` indicates which ranking strategy was used:
+         *
+         *     - ``"keyword"`` — pure keyword search (``semantic_ratio == 0``).
+         *     - ``"hybrid"`` — hybrid semantic+keyword search ran successfully.
+         *     - ``"keyword_fallback"`` — hybrid was requested but Meilisearch returned
+         *       4xx (e.g. the ``bge-m3`` embedder is not registered); the response
+         *       contains keyword results only.  Ops should treat this as an ops alert.
          */
         DocumentSearchResponse: {
             /** Documents */
@@ -8597,6 +8605,12 @@ export interface components {
             query: string;
             /** Query Time Ms */
             query_time_ms?: number | null;
+            /**
+             * Search Mode
+             * @default keyword
+             * @enum {string}
+             */
+            search_mode: "hybrid" | "keyword" | "keyword_fallback";
             /** Total Count */
             total_count?: number | null;
         };

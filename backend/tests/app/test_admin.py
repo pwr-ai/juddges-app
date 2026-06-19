@@ -274,7 +274,8 @@ class TestListUsers:
         assert response.status_code == 200
 
     @patch("app.api.admin.get_admin_supabase_client")
-    async def test_list_users_error_returns_empty(self, mock_get_client, admin_app):
+    async def test_list_users_error_returns_500(self, mock_get_client, admin_app):
+        """Fatal auth-provider failure must surface as 500, not 200 with empty list."""
         mock_client = MagicMock()
         mock_client.auth.admin.list_users.side_effect = Exception("auth error")
         mock_get_client.return_value = mock_client
@@ -286,9 +287,8 @@ class TestListUsers:
                 "/api/admin/users",
                 headers={"Authorization": "Bearer fake"},
             )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["users"] == []
+        assert response.status_code == 500
+        assert "user list" in response.json()["detail"].lower()
 
 
 # ===== Activity endpoint tests =====
@@ -323,7 +323,8 @@ class TestGetRecentActivity:
         assert len(data) == 1
 
     @patch("app.api.admin.get_admin_supabase_client")
-    async def test_activity_error_returns_empty(self, mock_get_client, admin_app):
+    async def test_activity_error_returns_500(self, mock_get_client, admin_app):
+        """Fatal DB failure on the primary query must surface as 500, not 200 with empty list."""
         mock_client = MagicMock()
         mock_client.table.side_effect = Exception("db down")
         mock_get_client.return_value = mock_client
@@ -335,8 +336,8 @@ class TestGetRecentActivity:
                 "/api/admin/activity",
                 headers={"Authorization": "Bearer fake"},
             )
-        assert response.status_code == 200
-        assert response.json() == []
+        assert response.status_code == 500
+        assert "activity log" in response.json()["detail"].lower()
 
 
 # ===== Search queries endpoint tests =====
@@ -392,6 +393,91 @@ class TestGetSearchQueries:
         data = response.json()
         assert data["total"] == 1
         assert len(data["queries"]) == 1
+
+    @patch("app.api.admin.get_admin_supabase_client")
+    async def test_search_queries_primary_failure_returns_500(
+        self, mock_get_client, admin_app
+    ):
+        """Primary data query failing must surface as 500 (count failure alone stays 200)."""
+        mock_client = MagicMock()
+
+        call_idx = {"n": 0}
+
+        def table_side(name):
+            call_idx["n"] += 1
+            m = MagicMock()
+            if call_idx["n"] == 1:
+                # count query succeeds
+                count_resp = MagicMock()
+                count_resp.count = 5
+                m.select.return_value.execute.return_value = count_resp
+            else:
+                # primary data query fails
+                m.select.return_value.order.return_value.range.return_value.execute.side_effect = Exception(
+                    "db error"
+                )
+            return m
+
+        mock_client.table.side_effect = table_side
+        mock_get_client.return_value = mock_client
+
+        async with AsyncClient(
+            transport=ASGITransport(app=admin_app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/admin/search-queries",
+                headers={"Authorization": "Bearer fake"},
+            )
+        assert response.status_code == 500
+        assert "search queries" in response.json()["detail"].lower()
+
+    @patch("app.api.admin.get_admin_supabase_client")
+    async def test_search_queries_count_failure_stays_200(
+        self, mock_get_client, admin_app
+    ):
+        """Count sub-query failure is tolerable; primary data success → 200 with total=0."""
+        mock_client = MagicMock()
+
+        call_idx = {"n": 0}
+
+        def table_side(name):
+            call_idx["n"] += 1
+            m = MagicMock()
+            if call_idx["n"] == 1:
+                # count query fails
+                m.select.return_value.execute.side_effect = Exception("count error")
+            else:
+                # data query succeeds
+                data_resp = MagicMock()
+                data_resp.data = [
+                    {
+                        "id": "q1",
+                        "query": "test",
+                        "user_id": None,
+                        "session_id": None,
+                        "result_count": None,
+                        "filters": None,
+                        "duration_ms": None,
+                        "created_at": None,
+                    }
+                ]
+                m.select.return_value.order.return_value.range.return_value.execute.return_value = data_resp
+            return m
+
+        mock_client.table.side_effect = table_side
+        mock_get_client.return_value = mock_client
+
+        async with AsyncClient(
+            transport=ASGITransport(app=admin_app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/admin/search-queries",
+                headers={"Authorization": "Bearer fake"},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0  # count failed, defaults to 0
+        assert len(data["queries"]) == 1  # primary data succeeded
 
 
 # ===== Document stats endpoint tests =====
@@ -512,7 +598,8 @@ class TestGetSystemHealth:
         assert data["status"] == "unhealthy"
 
     @patch("app.health.checks.check_all_services")
-    async def test_health_check_exception(self, mock_check, admin_app):
+    async def test_health_check_exception_returns_500(self, mock_check, admin_app):
+        """check_all_services() raising must surface as 500, not a falsely-healthy 200."""
         mock_check.side_effect = Exception("health check failed")
 
         async with AsyncClient(
@@ -522,10 +609,8 @@ class TestGetSystemHealth:
                 "/api/admin/system/health",
                 headers={"Authorization": "Bearer fake"},
             )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"  # no services = healthy
-        assert data["services"] == {}
+        assert response.status_code == 500
+        assert "health check" in response.json()["detail"].lower()
 
 
 # ===== Content stats endpoint tests =====

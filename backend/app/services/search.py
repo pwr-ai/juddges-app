@@ -5,13 +5,20 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlparse, urlunparse
 
 import httpx
 from juddges_search.embeddings import embed_texts
 from loguru import logger
 from pydantic import BaseModel, Field
+
+# Sentinel key injected into the raw Meilisearch response dict when a hybrid
+# search degrades to keyword-only.  Consumers (e.g. ``documents_search``) read
+# and strip this key so it never leaks into the HTTP response body.
+_FALLBACK_SENTINEL = "_hybrid_fallback"
+
+SearchMode = Literal["hybrid", "keyword", "keyword_fallback"]
 
 
 class SearchServiceError(RuntimeError):
@@ -183,11 +190,29 @@ class MeiliSearchService:
                 if 400 <= response.status_code < 500 and (
                     "hybrid" in payload or "vector" in payload
                 ):
+                    meili_error = response.text[:300]
                     logger.warning(
-                        "Meilisearch rejected hybrid search "
-                        f"(status={response.status_code}): "
-                        f"{response.text[:300]} — retrying as keyword-only"
+                        "hybrid_search_degraded index={} status={} reason={!r} — "
+                        "retrying as keyword-only; semantic ranking is unavailable",
+                        self.index_name,
+                        response.status_code,
+                        meili_error,
                     )
+                    try:
+                        import sentry_sdk
+
+                        sentry_sdk.add_breadcrumb(
+                            category="search",
+                            message="Hybrid search degraded to keyword-only",
+                            data={
+                                "index": self.index_name,
+                                "status_code": response.status_code,
+                                "meili_error": meili_error,
+                            },
+                            level="warning",
+                        )
+                    except Exception:
+                        pass  # sentry_sdk absent or not initialised — structured log is enough
                     keyword_payload = {
                         k: v
                         for k, v in payload.items()
@@ -196,8 +221,12 @@ class MeiliSearchService:
                     response = await client.post(
                         url, json=keyword_payload, headers=self._search_headers()
                     )
-                response.raise_for_status()
-                data = response.json()
+                    response.raise_for_status()
+                    data = response.json()
+                    data[_FALLBACK_SENTINEL] = True
+                else:
+                    response.raise_for_status()
+                    data = response.json()
         except httpx.HTTPError as exc:
             raise SearchServiceError(str(exc)) from exc
 
@@ -396,6 +425,8 @@ class MeiliSearchService:
         if filters:
             payload["filter"] = filters
 
+        # Track whether we intended hybrid search so we can set search_mode.
+        hybrid_requested = False
         if semantic_ratio > 0 and query.strip():
             try:
                 query_vec = await asyncio.to_thread(embed_texts, query)
@@ -404,12 +435,25 @@ class MeiliSearchService:
                     "semanticRatio": semantic_ratio,
                 }
                 payload["vector"] = query_vec
+                hybrid_requested = True
             except Exception:
                 logger.opt(exception=True).warning(
                     "TEI embedding failed for documents_search — falling back to keyword"
                 )
 
-        return await self._search_post(payload)
+        raw = await self._search_post(payload)
+
+        # Determine and surface the effective search mode.
+        fallback = raw.pop(_FALLBACK_SENTINEL, False)
+        if fallback:
+            search_mode: SearchMode = "keyword_fallback"
+        elif hybrid_requested:
+            search_mode = "hybrid"
+        else:
+            search_mode = "keyword"
+
+        raw["search_mode"] = search_mode
+        return raw
 
     async def search(
         self,
