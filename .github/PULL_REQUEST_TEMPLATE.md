@@ -35,5 +35,6 @@ Longer contributing guidance: docs/contributing/CONTRIBUTING.md
 - [ ] Branched from `develop` (not `main`)
 - [ ] Commit messages follow Conventional Commits
 - [ ] Tests pass locally (`npm run validate` and/or `poetry run poe check-all`)
+- [ ] If backend endpoints, params, or auth deps changed: ran `scripts/regen_openapi_types.sh` and committed `scripts/openapi-snapshot.json` + `frontend/lib/api/generated/openapi.ts` (keeps the **OpenAPI Type Drift** check green)
 - [ ] Docs updated if behavior, API, or architecture changed (`docs/`, Diátaxis-organized)
 - [ ] No Claude / co-author footers in commits (per project policy)
