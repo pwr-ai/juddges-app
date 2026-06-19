@@ -4,13 +4,20 @@ Schema Generator Chat API - Frontend-compatible endpoints.
 This module provides chat-based endpoints that match the frontend's expectations,
 bridging the gap between the frontend schema-chat page and the backend's
 schema generation functionality.
+
+Security: all endpoints require a valid Supabase Bearer JWT.  Session keys are
+namespaced by user_id so two callers with colliding session UUIDs cannot
+cross-contaminate each other's in-progress schemas.  When a request tries to
+resume a session that belongs to a different user, the endpoint returns 404
+(not 403) to avoid leaking session existence to unauthenticated or cross-user
+probing.
 """
 
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from juddges_search.chains.schema_generation import generate_schema
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.llms import get_default_llm
@@ -23,6 +30,8 @@ from schema_generator_agent.agents.schema_generator import (
     SchemaGenerator,
     load_prompts,
 )
+
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 
 # Import standardized error handling
 from app.errors import (
@@ -217,21 +226,51 @@ class SimpleSchemaGenerationResponse(BaseModel):
 # ============================================================================
 
 
+def _namespaced_key(user_id: str, session_id: str) -> str:
+    """
+    Build a user-scoped session cache key.
+
+    Namespacing prevents two users with the same client-generated session UUID
+    from sharing an agent instance or checkpointer thread.
+    """
+    return f"{user_id}:{session_id}"
+
+
 def get_or_create_agent(
     session_id: str,
+    user_id: str,
     document_type: DocumentType,
     request: Request,
 ) -> SchemaGenerator:
     """
     Get existing agent or create new one for the session.
 
-    Reuses the _generation_sessions from app.schemas to maintain compatibility.
-    """
-    if session_id in _generation_sessions:
-        logger.info(f"Reusing existing generation agent for session: {session_id}")
-        return _generation_sessions[session_id][0]
+    The in-memory cache key is namespaced by user_id so two users with the same
+    session_id never share an agent.  The LangGraph thread_id passed to the
+    checkpointer uses the same namespaced key, so persistent state is also
+    fully isolated.
 
-    logger.info(f"Creating new generation agent for session: {session_id}")
+    Args:
+        session_id: Client-supplied session identifier (may collide across users)
+        user_id: Authenticated user's ID (from JWT)
+        document_type: Type of document for schema generation
+        request: FastAPI request object (for app.state.checkpointer)
+
+    Returns:
+        SchemaGenerator instance scoped to this user's session
+    """
+    cache_key = _namespaced_key(user_id, session_id)
+
+    if cache_key in _generation_sessions:
+        logger.info(
+            f"Reusing existing generation agent for session: {session_id} "
+            f"(user: {user_id})"
+        )
+        return _generation_sessions[cache_key][0]
+
+    logger.info(
+        f"Creating new generation agent for session: {session_id} (user: {user_id})"
+    )
     llm = get_default_llm(use_mini_model=True)
     prompts = load_prompts(document_type=document_type)
 
@@ -251,7 +290,7 @@ def get_or_create_agent(
         graph_compilation_kwargs={"checkpointer": request.app.state.checkpointer},
     )
 
-    _generation_sessions[session_id] = (agent, datetime.now(UTC))
+    _generation_sessions[cache_key] = (agent, datetime.now(UTC))
     return agent
 
 
@@ -307,17 +346,19 @@ def format_response_message(agent_state: dict[str, Any]) -> str:
 async def schema_chat(
     params: SchemaChatRequest,
     request: Request,
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Process conversational messages for schema generation.
 
     This endpoint provides a chat-based interface for creating and refining
     extraction schemas. It maintains conversation state across requests using
-    session IDs.
+    session IDs scoped to the authenticated user.
 
     Args:
         params: Chat request with message and context
         request: FastAPI request object
+        user: Authenticated user (from Bearer JWT)
 
     Returns:
         Chat response with AI message and schema state
@@ -337,14 +378,20 @@ async def schema_chat(
         # Determine session ID (use existing or create new)
         session_id = params.session_id or params.agent_id or str(uuid.uuid4())
 
+        # The cache key and LangGraph thread_id are both namespaced by user_id
+        # to prevent cross-user session access even when session UUIDs collide.
+        thread_id = _namespaced_key(user.id, session_id)
+
         logger.info(
             f"Processing schema chat request for session: {session_id}, "
-            f"mode: {params.mode}, message length: {len(params.message)}"
+            f"user: {user.id}, mode: {params.mode}, "
+            f"message length: {len(params.message)}"
         )
 
-        # Get or create agent
+        # Get or create agent (scoped to this user)
         agent = get_or_create_agent(
             session_id=session_id,
+            user_id=user.id,
             document_type=DocumentType(params.document_type),
             request=request,
         )
@@ -354,7 +401,10 @@ async def schema_chat(
 
         if is_initial:
             # Initial message - create new agent state
-            logger.info(f"Creating new schema generation session: {session_id}")
+            logger.info(
+                f"Creating new schema generation session: {session_id} "
+                f"(user: {user.id})"
+            )
 
             initial_state = AgentState(
                 messages=[],
@@ -378,15 +428,16 @@ async def schema_chat(
             try:
                 response = await agent.graph.ainvoke(
                     input=initial_state,
-                    config={"configurable": {"thread_id": session_id}},
+                    config={"configurable": {"thread_id": thread_id}},
                 )
             except Exception as e:
                 logger.error(
-                    f"Agent graph invocation failed for session {session_id}: {e}",
+                    f"Agent graph invocation failed for session {session_id} "
+                    f"(user: {user.id}): {e}",
                     exc_info=True,
                 )
                 # Clean up failed session from in-memory agent store.
-                _generation_sessions.pop(session_id, None)
+                _generation_sessions.pop(thread_id, None)
 
                 # Provide user-friendly error based on exception type
                 error_str = str(e).lower()
@@ -409,16 +460,17 @@ async def schema_chat(
                 ).to_http_exception()
         else:
             # Continuation - use existing session with user feedback
-            logger.info(f"Refining existing session: {session_id}")
+            logger.info(f"Refining existing session: {session_id} (user: {user.id})")
 
             try:
                 response = await agent.graph.ainvoke(
                     Command(resume=params.message),
-                    config={"configurable": {"thread_id": session_id}},
+                    config={"configurable": {"thread_id": thread_id}},
                 )
             except Exception as e:
                 logger.error(
-                    f"Agent graph refinement failed for session {session_id}: {e}",
+                    f"Agent graph refinement failed for session {session_id} "
+                    f"(user: {user.id}): {e}",
                     exc_info=True,
                 )
 
@@ -464,7 +516,8 @@ async def schema_chat(
 
         logger.info(
             f"Schema chat response generated - session: {session_id}, "
-            f"confidence: {confidence}, refinement_rounds: {refinement_rounds}"
+            f"user: {user.id}, confidence: {confidence}, "
+            f"refinement_rounds: {refinement_rounds}"
         )
 
         return {
@@ -496,6 +549,7 @@ async def schema_chat(
 async def test_schema(
     params: SchemaTestRequest,
     request: Request,
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Test a schema against sample documents.
@@ -506,6 +560,7 @@ async def test_schema(
     Args:
         params: Test request with schema and document IDs
         request: FastAPI request object
+        user: Authenticated user (from Bearer JWT)
 
     Returns:
         Test results with success/failure statistics
@@ -523,7 +578,7 @@ async def test_schema(
     try:
         logger.info(
             f"Testing schema against {len(params.document_ids)} documents "
-            f"in collection: {params.collection_id}"
+            f"in collection: {params.collection_id} (user: {user.id})"
         )
 
         results = []
@@ -669,6 +724,7 @@ async def test_schema(
 async def generate_schema_simple(
     params: SimpleSchemaGenerationRequest,
     request: Request,
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Generate a JSON Schema from a natural language description.
@@ -679,6 +735,7 @@ async def generate_schema_simple(
     Args:
         params: Schema generation request with user's description
         request: FastAPI request object
+        user: Authenticated user (from Bearer JWT)
 
     Returns:
         Generated schema with metadata
@@ -698,7 +755,8 @@ async def generate_schema_simple(
             f"Simple schema generation request - name: {params.schema_name}, "
             f"message length: {len(params.message)}, "
             f"existing_fields: {len(params.existing_fields or [])}, "
-            f"instructions length: {len(params.extraction_instructions or '')}"
+            f"instructions length: {len(params.extraction_instructions or '')}, "
+            f"user: {user.id}"
         )
 
         # Generate schema using the simple chain

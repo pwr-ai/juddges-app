@@ -14,11 +14,17 @@ export async function POST(request: Request) {
     const apiUrl = getBackendUrl();
     const body = await request.json();
 
-    // Get user from session
+    // Get user and access token from session
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -41,12 +47,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call the backend simple endpoint
+    // Call the backend simple endpoint — forward Bearer token so the backend
+    // can authenticate the caller via its get_current_user dependency.
     const backendResponse = await fetch(`${apiUrl}/schema-generator/simple`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-Key": process.env.BACKEND_API_KEY || "",
+        "Authorization": `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         message: message.trim(),
