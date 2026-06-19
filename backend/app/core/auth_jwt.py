@@ -101,11 +101,6 @@ def get_user_supabase_client(access_token: str, refresh_token: str = "") -> Clie
                 detail="Invalid token signature",
                 headers={"WWW-Authenticate": "Bearer"},
             ) from exc
-    else:
-        logger.warning(
-            "SUPABASE_JWT_SECRET is not set — skipping local JWT signature verification. "
-            "Token integrity relies on Supabase Auth upstream validation only."
-        )
 
     url = os.getenv("SUPABASE_URL")
     anon_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
@@ -350,4 +345,9 @@ def get_user_db_client(user: AuthenticatedUser) -> Client:
     return get_user_supabase_client(user.raw_token)
 
 
+if not os.getenv("SUPABASE_JWT_SECRET"):
+    logger.warning(
+        "SUPABASE_JWT_SECRET is not set — local JWT signature verification is disabled. "
+        "Token integrity relies on Supabase Auth upstream validation only."
+    )
 logger.info("JWT authentication module initialized")
