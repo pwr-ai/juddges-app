@@ -25,6 +25,7 @@ from juddges_search.db.supabase_db import get_publications_db
 
 from app.core.auth_jwt import AuthenticatedUser
 from app.core.auth_jwt import get_current_user as jwt_get_current_user
+from app.core.auth_jwt import require_admin as jwt_require_admin
 from app.server import app
 
 pytestmark = [pytest.mark.anyio, pytest.mark.unit, pytest.mark.security]
@@ -44,6 +45,19 @@ def fake_user() -> AuthenticatedUser:
             "role": "authenticated",
         },
         access_token="fake-pub-jwt-token",
+    )
+
+
+@pytest.fixture
+def fake_admin_user() -> AuthenticatedUser:
+    return AuthenticatedUser(
+        user_data={
+            "id": "00000000-0000-4000-a000-000000000def",
+            "email": "admin@example.com",
+            "role": "authenticated",
+            "app_metadata": {"is_admin": True},
+        },
+        access_token="fake-admin-jwt-token",
     )
 
 
@@ -92,6 +106,30 @@ class _StubPublicationsDb:
     async def delete_publication(self, _pub_id: str) -> bool:
         return True
 
+    async def add_schema_link(
+        self, pub_id: str, schema_id: str, description=None
+    ) -> None:
+        return None
+
+    async def remove_schema_link(self, pub_id: str, schema_id: str) -> None:
+        return None
+
+    async def add_collection_link(
+        self, pub_id: str, collection_id: str, description=None
+    ) -> None:
+        return None
+
+    async def remove_collection_link(self, pub_id: str, collection_id: str) -> None:
+        return None
+
+    async def add_extraction_job_link(
+        self, pub_id: str, job_id: str, description=None
+    ) -> None:
+        return None
+
+    async def remove_extraction_job_link(self, pub_id: str, job_id: str) -> None:
+        return None
+
 
 @pytest.fixture
 def override_jwt_user(fake_user: AuthenticatedUser):
@@ -123,6 +161,25 @@ def db_only_override():
     try:
         yield
     finally:
+        app.dependency_overrides.pop(get_publications_db, None)
+
+
+@pytest.fixture
+def override_admin_user(fake_admin_user: AuthenticatedUser):
+    """Override require_admin dep to return a synthetic admin user + stub db."""
+
+    async def _admin_resolver() -> AuthenticatedUser:
+        return fake_admin_user
+
+    async def _db_resolver() -> _StubPublicationsDb:
+        return _StubPublicationsDb()
+
+    app.dependency_overrides[jwt_require_admin] = _admin_resolver
+    app.dependency_overrides[get_publications_db] = _db_resolver
+    try:
+        yield fake_admin_user
+    finally:
+        app.dependency_overrides.pop(jwt_require_admin, None)
         app.dependency_overrides.pop(get_publications_db, None)
 
 
@@ -328,3 +385,258 @@ async def test_list_publications_is_publicly_accessible(
         f"expected 200. Body: {response.text[:300]}"
     )
     assert isinstance(response.json(), list)
+
+
+# ---------------------------------------------------------------------------
+# Sub-resource endpoints — schemas (require admin)
+# ---------------------------------------------------------------------------
+
+
+async def test_add_schema_link_rejects_x_user_id_without_bearer(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """X-User-ID alone must not authenticate POST /publications/{id}/schemas."""
+    headers = {**valid_api_headers, "X-User-ID": "00000000-0000-4000-a000-000000000abc"}
+
+    response = await client.post(
+        "/publications/stub-pub-id/schemas",
+        headers=headers,
+        json={"schema_id": "stub-schema-id"},
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when only X-User-ID is supplied; got {response.status_code}."
+    )
+
+
+async def test_add_schema_link_missing_all_auth_returns_unauthorized(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone must be rejected for POST /publications/{id}/schemas."""
+    response = await client.post(
+        "/publications/stub-pub-id/schemas",
+        headers=valid_api_headers,
+        json={"schema_id": "stub-schema-id"},
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    )
+
+
+async def test_add_schema_link_accepts_admin_bearer(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_admin_user: AuthenticatedUser,
+) -> None:
+    """Admin Bearer request reaches POST /publications/{id}/schemas handler."""
+    headers = {
+        **valid_api_headers,
+        "Authorization": "Bearer fake-admin-jwt-token",
+    }
+
+    response = await client.post(
+        "/publications/stub-pub-id/schemas",
+        headers=headers,
+        json={"schema_id": "stub-schema-id"},
+    )
+
+    # 200/400 = auth passed (400 = ID validation failed, also means auth passed)
+    assert response.status_code in (200, 400), (
+        f"Admin Bearer path for POST schemas returned {response.status_code}; "
+        f"expected auth to pass. Body: {response.text[:300]}"
+    )
+
+
+async def test_remove_schema_link_rejects_no_auth(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone must be rejected for DELETE /publications/{id}/schemas/{schema_id}."""
+    response = await client.delete(
+        "/publications/stub-pub-id/schemas/stub-schema-id",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    )
+
+
+async def test_remove_schema_link_accepts_admin_bearer(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_admin_user: AuthenticatedUser,
+) -> None:
+    """Admin Bearer request reaches DELETE /publications/{id}/schemas/{schema_id}."""
+    headers = {
+        **valid_api_headers,
+        "Authorization": "Bearer fake-admin-jwt-token",
+    }
+
+    response = await client.delete(
+        "/publications/stub-pub-id/schemas/stub-schema-id",
+        headers=headers,
+    )
+
+    assert response.status_code in (200, 400), (
+        f"Admin Bearer path for DELETE schemas returned {response.status_code}; "
+        f"expected auth to pass. Body: {response.text[:300]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sub-resource endpoints — collections (require admin)
+# ---------------------------------------------------------------------------
+
+
+async def test_add_collection_link_rejects_no_auth(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone must be rejected for POST /publications/{id}/collections."""
+    response = await client.post(
+        "/publications/stub-pub-id/collections",
+        headers=valid_api_headers,
+        json={"collection_id": "stub-collection-id"},
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    )
+
+
+async def test_add_collection_link_accepts_admin_bearer(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_admin_user: AuthenticatedUser,
+) -> None:
+    """Admin Bearer request reaches POST /publications/{id}/collections handler."""
+    headers = {
+        **valid_api_headers,
+        "Authorization": "Bearer fake-admin-jwt-token",
+    }
+
+    response = await client.post(
+        "/publications/stub-pub-id/collections",
+        headers=headers,
+        json={"collection_id": "stub-collection-id"},
+    )
+
+    assert response.status_code in (200, 400), (
+        f"Admin Bearer path for POST collections returned {response.status_code}; "
+        f"expected auth to pass. Body: {response.text[:300]}"
+    )
+
+
+async def test_remove_collection_link_rejects_no_auth(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone must be rejected for DELETE /publications/{id}/collections/{id}."""
+    response = await client.delete(
+        "/publications/stub-pub-id/collections/stub-collection-id",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    )
+
+
+async def test_remove_collection_link_accepts_admin_bearer(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_admin_user: AuthenticatedUser,
+) -> None:
+    """Admin Bearer request reaches DELETE /publications/{id}/collections/{id}."""
+    headers = {
+        **valid_api_headers,
+        "Authorization": "Bearer fake-admin-jwt-token",
+    }
+
+    response = await client.delete(
+        "/publications/stub-pub-id/collections/stub-collection-id",
+        headers=headers,
+    )
+
+    assert response.status_code in (200, 400), (
+        f"Admin Bearer path for DELETE collections returned {response.status_code}; "
+        f"expected auth to pass. Body: {response.text[:300]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sub-resource endpoints — extraction-jobs (require admin)
+# ---------------------------------------------------------------------------
+
+
+async def test_add_extraction_job_link_rejects_no_auth(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone must be rejected for POST /publications/{id}/extraction-jobs."""
+    response = await client.post(
+        "/publications/stub-pub-id/extraction-jobs",
+        headers=valid_api_headers,
+        json={"job_id": "stub-job-id"},
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    )
+
+
+async def test_add_extraction_job_link_accepts_admin_bearer(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_admin_user: AuthenticatedUser,
+) -> None:
+    """Admin Bearer request reaches POST /publications/{id}/extraction-jobs handler."""
+    headers = {
+        **valid_api_headers,
+        "Authorization": "Bearer fake-admin-jwt-token",
+    }
+
+    response = await client.post(
+        "/publications/stub-pub-id/extraction-jobs",
+        headers=headers,
+        json={"job_id": "stub-job-id"},
+    )
+
+    assert response.status_code in (200, 400), (
+        f"Admin Bearer path for POST extraction-jobs returned {response.status_code}; "
+        f"expected auth to pass. Body: {response.text[:300]}"
+    )
+
+
+async def test_remove_extraction_job_link_rejects_no_auth(
+    client: AsyncClient, valid_api_headers: dict[str, str]
+) -> None:
+    """API key alone must be rejected for DELETE /publications/{id}/extraction-jobs/{id}."""
+    response = await client.delete(
+        "/publications/stub-pub-id/extraction-jobs/stub-job-id",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code in (401, 403), (
+        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    )
+
+
+async def test_remove_extraction_job_link_accepts_admin_bearer(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    override_admin_user: AuthenticatedUser,
+) -> None:
+    """Admin Bearer request reaches DELETE /publications/{id}/extraction-jobs/{id}."""
+    headers = {
+        **valid_api_headers,
+        "Authorization": "Bearer fake-admin-jwt-token",
+    }
+
+    response = await client.delete(
+        "/publications/stub-pub-id/extraction-jobs/stub-job-id",
+        headers=headers,
+    )
+
+    assert response.status_code in (200, 400), (
+        f"Admin Bearer path for DELETE extraction-jobs returned {response.status_code}; "
+        f"expected auth to pass. Body: {response.text[:300]}"
+    )
