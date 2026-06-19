@@ -8,7 +8,6 @@ Author: Juddges Backend Team
 Date: 2025-10-11
 """
 
-import datetime
 import os
 from typing import Any
 
@@ -87,14 +86,17 @@ def get_user_supabase_client(access_token: str, refresh_token: str = "") -> Clie
     """
     supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
 
-    if supabase_jwt_secret is not None:
+    # Truthiness (not ``is not None``): an empty-string secret (a realistic
+    # misconfiguration) must skip verification rather than reject every valid
+    # token with an empty signing key — that would 401 all authenticated calls.
+    if supabase_jwt_secret:
         try:
             jwt.decode(
                 access_token,
                 supabase_jwt_secret,
                 algorithms=["HS256"],
                 audience="authenticated",
-                leeway=datetime.timedelta(seconds=10),
+                leeway=10,
             )
         except jwt.PyJWTError as exc:
             logger.warning(f"JWT signature verification failed: {exc}")
@@ -347,7 +349,7 @@ def get_user_db_client(user: AuthenticatedUser) -> Client:
     return get_user_supabase_client(user.raw_token)
 
 
-if os.getenv("SUPABASE_JWT_SECRET") is None:
+if not os.getenv("SUPABASE_JWT_SECRET"):
     logger.warning(
         "SUPABASE_JWT_SECRET is not set — local JWT signature verification is disabled. "
         "Token integrity relies on Supabase Auth upstream validation only."

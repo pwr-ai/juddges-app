@@ -203,6 +203,23 @@ class TestGetUserSupabaseClient:
             # A clearly fake token — must NOT raise when secret is unset
             get_user_supabase_client("not-a-real-jwt")  # should not raise
 
+    def test_secret_empty_string_skips_verification(self):
+        """An empty-string SUPABASE_JWT_SECRET must skip verification (truthiness
+        guard), not 401 every valid token with an empty signing key."""
+        import app.core.auth_jwt as mod
+
+        env = {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY": "anon-key",
+            "SUPABASE_JWT_SECRET": "",
+        }
+        with (
+            patch.dict(os.environ, env),
+            patch.object(mod, "create_client", return_value=MagicMock()),
+        ):
+            # Empty secret must behave like "unset" — no signature check, no raise.
+            get_user_supabase_client("not-a-real-jwt")  # should not raise
+
     def test_secret_set_valid_token_succeeds(self):
         """When SUPABASE_JWT_SECRET is set and token is valid, client is returned."""
         import time
