@@ -704,6 +704,41 @@ async def create_bulk_extraction(
         )
 
 
+def _verify_job_ownership(job_id: str, user_id: str) -> None:
+    """Enforce per-user ownership on extraction job reads.
+
+    Raises 403 if the job has a database record owned by a different user.
+    Enforced only when the job is recorded and the database is reachable:
+    unknown ids carry no user data to leak, and transient DB/lookup errors
+    degrade to the prior behaviour rather than blocking status polling.
+    """
+    if supabase is None:
+        return
+    try:
+        owner = (
+            supabase.table("extraction_jobs")
+            .select("user_id")
+            .eq("job_id", job_id)
+            .single()
+            .execute()
+        )
+    except Exception as lookup_error:
+        # Never block status polling on transient DB/lookup errors; degrade to
+        # the prior behaviour rather than failing the request.
+        logger.warning(f"Ownership check skipped for job {job_id}: {lookup_error}")
+        return
+
+    owner_id = (owner.data or {}).get("user_id") if owner.data else None
+    if owner_id is not None and owner_id != user_id:
+        logger.warning(
+            f"User {user_id} attempted to read job {job_id} owned by another user"
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view this job",
+        )
+
+
 @router.get(
     "/{job_id}",
     response_model=BatchExtractionResponse,
@@ -712,6 +747,7 @@ async def create_bulk_extraction(
 )
 async def get_extraction_job(
     job_id: str = Path(..., description="Extraction job ID (task ID)"),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> BatchExtractionResponse:
     """
     Get extraction job status and results.
@@ -727,6 +763,7 @@ async def get_extraction_job(
     - **CANCELLED**: Job was cancelled
     """
     try:
+        _verify_job_ownership(job_id, user.id)
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
