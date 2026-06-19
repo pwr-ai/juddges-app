@@ -12,6 +12,9 @@ import { AppLayoutWrapper } from "@/components/layouts/AppLayoutWrapper";
 import { ChunkErrorBoundary } from "@/components/ChunkErrorBoundary";
 import { SonnerToaster } from "@/lib/styles/components";
 import { getBrandConfig, getCurrentBrand } from "@/lib/brand";
+import { siteMetadataBase } from "@/lib/site";
+import { JsonLd } from "@/components/JsonLd";
+import { getSiteStructuredData } from "@/lib/structured-data";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,24 +32,6 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
   preload: false, // Only used on admin and landing pages, not globally
 });
-
-const fallbackSiteUrl = "https://juddges.com";
-const configuredSiteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-  process.env.VERCEL_URL ||
-  fallbackSiteUrl;
-
-const metadataBase = (() => {
-  try {
-    const url = configuredSiteUrl.startsWith("http")
-      ? configuredSiteUrl
-      : `https://${configuredSiteUrl}`;
-    return new URL(url);
-  } catch {
-    return new URL(fallbackSiteUrl);
-  }
-})();
 
 // Get brand configuration at build/render time
 const currentBrand = getCurrentBrand();
@@ -75,9 +60,31 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: brandConfig.name,
-  description: brandConfig.tagline,
-  metadataBase,
+  metadataBase: siteMetadataBase,
+  title: {
+    default: brandConfig.metadata.title,
+    template: `%s · ${brandConfig.name}`,
+  },
+  description: brandConfig.metadata.description,
+  applicationName: brandConfig.name,
+  keywords: [
+    "judicial decisions",
+    "court judgments",
+    "case law search",
+    "Polish court judgments",
+    "UK court judgments",
+    "legal AI",
+    "semantic search",
+    "legal research",
+    "NLP",
+    "Juddges",
+  ],
+  authors: [{ name: brandConfig.copyrightHolder }],
+  creator: brandConfig.copyrightHolder,
+  publisher: brandConfig.copyrightHolder,
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: brandConfig.logo || '/icon.svg?v=2',
     apple: brandConfig.logo || '/apple-icon.svg?v=2',
@@ -86,6 +93,30 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: brandConfig.shortName,
+  },
+  openGraph: {
+    type: "website",
+    siteName: brandConfig.name,
+    title: brandConfig.metadata.ogTitle,
+    description: brandConfig.metadata.description,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: brandConfig.metadata.ogTitle,
+    description: brandConfig.metadata.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -133,6 +164,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`}>
+        <JsonLd data={getSiteStructuredData()} />
         <ChunkErrorBoundary>
           <QueryProvider>
             <AuthProvider>

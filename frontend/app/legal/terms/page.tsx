@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | JuDDGES",
+  title: "Terms of Service",
   description: "Terms of service for JuDDGES judgments analysis platform",
 };
 
