@@ -1,4 +1,15 @@
-"""Unit tests for topic-click analytics and topics/meta endpoint (Task 4)."""
+"""Unit tests for topic-click analytics and topics/meta endpoint (Task 4).
+
+Security additions (issues #165, #214):
+- TopicClickEvent Pydantic model enforces max_length on all fields; over-length
+  inputs are rejected at the model level (ValidationError) and surfaced as HTTP
+  422 by FastAPI.
+- The /topic-click and /autocomplete endpoints now carry @limiter.limit()
+  decorators. Because the autouse ``disable_rate_limiter`` fixture sets
+  ``limiter.enabled = False`` during tests, 429 responses are not observable
+  in unit tests. Tests instead verify that (a) the endpoints still return 200
+  within limits and (b) over-length inputs are rejected with 422.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +19,82 @@ import httpx
 import pytest
 
 from app.services.search_analytics import record_topic_click
+
+# ── TopicClickEvent model field-length caps (#214) ───────────────────────
+
+
+class TestTopicClickEventModel:
+    """Pydantic-level validation for TopicClickEvent length caps (issue #214).
+
+    These tests exercise the model directly so they run without any HTTP layer
+    or fixture overhead. pydantic.ValidationError is the expected exception for
+    over-length inputs; FastAPI converts that to HTTP 422.
+    """
+
+    def test_accepts_valid_payload(self):
+        """All fields within limits — model instantiates cleanly."""
+        from app.api.search import TopicClickEvent
+
+        event = TopicClickEvent(topic_id="fraud", query="oszustwo", jurisdiction="pl")
+        assert event.topic_id == "fraud"
+        assert event.query == "oszustwo"
+        assert event.jurisdiction == "pl"
+
+    def test_rejects_topic_id_over_200_chars(self):
+        """topic_id > 200 chars raises ValidationError."""
+        from pydantic import ValidationError
+
+        from app.api.search import TopicClickEvent
+
+        with pytest.raises(ValidationError):
+            TopicClickEvent(topic_id="x" * 201, query="q")
+
+    def test_accepts_topic_id_at_200_chars(self):
+        """topic_id of exactly 200 chars is valid."""
+        from app.api.search import TopicClickEvent
+
+        event = TopicClickEvent(topic_id="x" * 200, query="q")
+        assert len(event.topic_id) == 200
+
+    def test_rejects_query_over_500_chars(self):
+        """query > 500 chars raises ValidationError."""
+        from pydantic import ValidationError
+
+        from app.api.search import TopicClickEvent
+
+        with pytest.raises(ValidationError):
+            TopicClickEvent(topic_id="fraud", query="q" * 501)
+
+    def test_accepts_query_at_500_chars(self):
+        """query of exactly 500 chars is valid."""
+        from app.api.search import TopicClickEvent
+
+        event = TopicClickEvent(topic_id="fraud", query="q" * 500)
+        assert len(event.query) == 500
+
+    def test_rejects_jurisdiction_over_64_chars(self):
+        """jurisdiction > 64 chars raises ValidationError."""
+        from pydantic import ValidationError
+
+        from app.api.search import TopicClickEvent
+
+        with pytest.raises(ValidationError):
+            TopicClickEvent(topic_id="fraud", query="q", jurisdiction="j" * 65)
+
+    def test_accepts_jurisdiction_at_64_chars(self):
+        """jurisdiction of exactly 64 chars is valid."""
+        from app.api.search import TopicClickEvent
+
+        event = TopicClickEvent(topic_id="fraud", query="q", jurisdiction="j" * 64)
+        assert len(event.jurisdiction) == 64
+
+    def test_jurisdiction_is_optional(self):
+        """jurisdiction may be omitted (None is the default)."""
+        from app.api.search import TopicClickEvent
+
+        event = TopicClickEvent(topic_id="fraud", query="q")
+        assert event.jurisdiction is None
+
 
 # ── record_topic_click ────────────────────────────────────────────────────
 
@@ -167,6 +254,68 @@ class TestTopicClickEndpoint:
         response = await client.post(
             "/api/search/topic-click",
             json={"topic_id": "homicide", "query": "zabójstwo"},
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 200
+
+    # ── #214: TopicClickEvent field-length caps ───────────────────────────
+
+    @pytest.mark.anyio
+    async def test_rejects_topic_id_over_200_chars(self, client, valid_api_headers):
+        """topic_id longer than 200 chars triggers a 422 ValidationError (#214)."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "x" * 201, "query": "fraud"},
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.anyio
+    async def test_accepts_topic_id_at_max_length(self, client, valid_api_headers):
+        """topic_id of exactly 200 chars is accepted (#214)."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "x" * 200, "query": "fraud"},
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_rejects_query_over_500_chars(self, client, valid_api_headers):
+        """query longer than 500 chars triggers a 422 ValidationError (#214)."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "fraud", "query": "q" * 501},
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.anyio
+    async def test_accepts_query_at_max_length(self, client, valid_api_headers):
+        """query of exactly 500 chars is accepted (#214)."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "fraud", "query": "q" * 500},
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_rejects_jurisdiction_over_64_chars(self, client, valid_api_headers):
+        """jurisdiction longer than 64 chars triggers a 422 ValidationError (#214)."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "fraud", "query": "fraud", "jurisdiction": "j" * 65},
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.anyio
+    async def test_accepts_jurisdiction_at_max_length(self, client, valid_api_headers):
+        """jurisdiction of exactly 64 chars is accepted (#214)."""
+        response = await client.post(
+            "/api/search/topic-click",
+            json={"topic_id": "fraud", "query": "fraud", "jurisdiction": "j" * 64},
             headers=valid_api_headers,
         )
         assert response.status_code == 200
