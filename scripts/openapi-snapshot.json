@@ -19835,7 +19835,7 @@
     },
     "/api/search/analytics/eval-queries": {
       "get": {
-        "description": "Export deduplicated search queries as an evaluation dataset.\n\nCombines user search logs (from ``search_analytics``) with user-rated\nrelevance labels (from ``search_feedback``) into a single dataset\nsuitable for offline search quality evaluation.\n\nEach query includes:\n- ``query_source``: whether it came from logs or feedback\n- ``frequency``: how often users searched this query\n- ``relevance_labels``: list of user-provided relevance ratings (if any)\n- ``has_ground_truth``: whether at least one rating exists",
+        "description": "Export deduplicated search queries as an evaluation dataset.\n\nCombines user search logs (from ``search_analytics``) with user-rated\nrelevance labels (from ``search_feedback``) into a single dataset\nsuitable for offline search quality evaluation.\n\nEach query includes:\n- ``query_source``: whether it came from logs or feedback\n- ``frequency``: how often users searched this query\n- ``relevance_labels``: list of user-provided relevance ratings (if any)\n- ``has_ground_truth``: whether at least one rating exists\n\nWhen ``RESEARCHER_API_KEY`` is set in the environment, only that key is\naccepted for this endpoint (403 otherwise).  When unset, any valid\n``BACKEND_API_KEY`` is sufficient.",
         "operationId": "eval_queries_endpoint_api_search_analytics_eval_queries_get",
         "parameters": [
           {
@@ -26327,6 +26327,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get extraction job status and results",

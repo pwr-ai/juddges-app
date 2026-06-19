@@ -335,7 +335,8 @@ class TestGetExtractionJobEndpoint:
 
     @pytest.mark.unit
     async def test_pending_job(self, client, valid_api_headers) -> None:
-        """Test retrieving a pending job."""
+        """Test retrieving a pending job (ownership check degrades when DB is down)."""
+        _install_jwt_user_override(_USER_001)
         mock_result = MagicMock()
         mock_result.state = "PENDING"
         mock_result.info = None
@@ -348,7 +349,8 @@ class TestGetExtractionJobEndpoint:
             patch("app.extraction_domain.jobs_router.supabase", None),
         ):
             response = await client.get(
-                "/extractions/job-123", headers=valid_api_headers
+                "/extractions/job-123",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 200
             data = response.json()
@@ -356,11 +358,17 @@ class TestGetExtractionJobEndpoint:
 
     @pytest.mark.unit
     async def test_in_progress_job(self, client, valid_api_headers) -> None:
-        """Test retrieving an in-progress job."""
+        """Test retrieving an in-progress job owned by the caller."""
+        _install_jwt_user_override(_USER_001)
         mock_result = MagicMock()
         mock_result.state = "STARTED"
         mock_result.ready.return_value = False
         mock_result.info = {"completed_documents": 5}
+
+        owner_row = MagicMock()
+        owner_row.data = {"user_id": _USER_001}
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = owner_row
 
         with (
             patch(
@@ -371,13 +379,38 @@ class TestGetExtractionJobEndpoint:
                 "app.extraction_domain.jobs_router.update_job_status_in_supabase",
                 return_value=True,
             ),
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
         ):
             response = await client.get(
-                "/extractions/job-456", headers=valid_api_headers
+                "/extractions/job-456",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "IN_PROGRESS"
+
+    @pytest.mark.unit
+    async def test_get_job_owned_by_another_user_is_forbidden(
+        self, client, valid_api_headers
+    ) -> None:
+        """A user must not read another user's extraction job (IDOR, #233 follow-up)."""
+        _install_jwt_user_override(_USER_001)
+        owner_row = MagicMock()
+        owner_row.data = {"user_id": _USER_099}
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = owner_row
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch("app.extraction_domain.jobs_router.AsyncResult") as mock_async,
+        ):
+            response = await client.get(
+                "/extractions/job-belongs-to-other",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+            assert response.status_code == 403
+            # Ownership is rejected before any Celery result is fetched.
+            mock_async.assert_not_called()
 
 
 class TestCancelExtractionJobEndpoint:

@@ -214,7 +214,7 @@ export function AppSidebar(): React.JSX.Element {
  </Link>
  </SidebarHeader>
  <SidebarContent className="gap-3 px-2">
- {/* Primary Navigation - Search-first workflow */}
+ {/* Dashboard - overview entry point, sits above the workflow phases */}
  <SidebarGroup className="p-0">
  <SidebarGroupContent className="px-0">
  <SidebarMenu className="space-y-1">
@@ -228,7 +228,45 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
+ </SidebarMenu>
+ </SidebarGroupContent>
+ </SidebarGroup>
 
+ {/* Phase 1 — Plan: create a research collection, define the coding schema */}
+ <SidebarGroup className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phasePlan')}</SidebarGroupLabel>
+ <SidebarGroupContent className="px-0">
+ <SidebarMenu className="space-y-1">
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.researchCollections')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname.startsWith("/collections")}>
+ <Link href="/collections">
+ <FolderOpen />
+ <span>{t('navigation.researchCollections')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.baseTemplate')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/schemas/base"}>
+ <Link href="/schemas/base">
+ <FileJson />
+ <span>{t('navigation.baseTemplate')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+ </SidebarMenu>
+ </SidebarGroupContent>
+ </SidebarGroup>
+
+ {/* Phase 2 — Search: multi-session search and adding judgments to collections */}
+ <SidebarGroup className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseSearch')}</SidebarGroupLabel>
+ <SidebarGroupContent className="px-0">
+ <SidebarMenu className="space-y-1">
  <SidebarMenuItem>
  <ConditionalTooltip content={t('navigation.searchJudgments')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/search"}>
@@ -252,29 +290,15 @@ export function AppSidebar(): React.JSX.Element {
  </ConditionalTooltip>
  </SidebarMenuItem>
  )}
+ </SidebarMenu>
+ </SidebarGroupContent>
+ </SidebarGroup>
 
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.researchCollections')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname.startsWith("/collections")}>
- <Link href="/collections">
- <FolderOpen />
- <span>{t('navigation.researchCollections')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.baseTemplate')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/schemas/base"}>
- <Link href="/schemas/base">
- <FileJson />
- <span>{t('navigation.baseTemplate')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
+ {/* Phase 3 — Export: compare datasets / export annotated collections */}
+ <SidebarGroup className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseExport')}</SidebarGroupLabel>
+ <SidebarGroupContent className="px-0">
+ <SidebarMenu className="space-y-1">
  <SidebarMenuItem>
  <ConditionalTooltip content={t('navigation.compareDatasets')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/dataset-comparison"}>
@@ -285,7 +309,6 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
-
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>

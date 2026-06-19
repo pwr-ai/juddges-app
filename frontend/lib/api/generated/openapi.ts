@@ -1138,6 +1138,10 @@ export interface paths {
          *     - ``frequency``: how often users searched this query
          *     - ``relevance_labels``: list of user-provided relevance ratings (if any)
          *     - ``has_ground_truth``: whether at least one rating exists
+         *
+         *     When ``RESEARCHER_API_KEY`` is set in the environment, only that key is
+         *     accepted for this endpoint (403 otherwise).  When unset, any valid
+         *     ``BACKEND_API_KEY`` is sufficient.
          */
         get: operations["eval_queries_endpoint_api_search_analytics_eval_queries_get"];
         put?: never;
