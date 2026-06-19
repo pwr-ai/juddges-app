@@ -1148,6 +1148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/analytics/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * User Search History
+         * @description Return the authenticated caller's own search history (most recent first).
+         */
+        get: operations["user_search_history_api_search_analytics_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search/analytics/popular": {
         parameters: {
             query?: never;
@@ -13960,6 +13980,24 @@ export interface components {
             /** Users */
             users: components["schemas"]["UserListItem"][];
         };
+        /**
+         * UserSearchHistoryItem
+         * @description A single row from the requesting user's search history.
+         */
+        UserSearchHistoryItem: {
+            /** Created At */
+            created_at: string;
+            /** Filters */
+            filters?: string | null;
+            /** Hit Count */
+            hit_count: number;
+            /** Processing Ms */
+            processing_ms?: number | null;
+            /** Query */
+            query: string;
+            /** Topic Hits Count */
+            topic_hits_count?: number | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -15791,6 +15829,39 @@ export interface operations {
             };
         };
     };
+    user_search_history_api_search_analytics_history_get: {
+        parameters: {
+            query?: {
+                /** @description Lookback window in days */
+                days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSearchHistoryItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     popular_queries_api_search_analytics_popular_get: {
         parameters: {
             query?: {
@@ -16949,9 +17020,7 @@ export interface operations {
     list_collections_collections_get: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -16966,23 +17035,12 @@ export interface operations {
                     "application/json": components["schemas"]["CollectionWithDocuments"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     create_collection_collections_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -17018,9 +17076,7 @@ export interface operations {
                 limit?: number | null;
                 offset?: number;
             };
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to retrieve */
                 collection_id: string;
@@ -17052,9 +17108,7 @@ export interface operations {
     update_collection_collections__collection_id__put: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to update */
                 collection_id: string;
@@ -17090,9 +17144,7 @@ export interface operations {
     delete_collection_collections__collection_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to delete */
                 collection_id: string;
@@ -17124,9 +17176,7 @@ export interface operations {
     get_collection_documents_collections__collection_id__documents_get: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to get documents from */
                 collection_id: string;
@@ -17158,9 +17208,7 @@ export interface operations {
     add_document_collections__collection_id__documents_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to add document to */
                 collection_id: string;
@@ -17196,9 +17244,7 @@ export interface operations {
     remove_document_by_body_collections__collection_id__documents_delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to remove document from */
                 collection_id: string;
@@ -17234,9 +17280,7 @@ export interface operations {
     add_documents_batch_collections__collection_id__documents_batch_post: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to add documents to */
                 collection_id: string;
@@ -17272,9 +17316,7 @@ export interface operations {
     remove_document_by_url_collections__collection_id__documents__document_id__delete: {
         parameters: {
             query?: never;
-            header: {
-                "X-User-ID": string;
-            };
+            header?: never;
             path: {
                 /** @description Collection ID to remove document from */
                 collection_id: string;
