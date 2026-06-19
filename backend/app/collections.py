@@ -199,7 +199,9 @@ class AddDocumentsRequest(BaseModel):
     """Request model for adding multiple documents to a collection."""
 
     document_ids: list[str] = Field(
-        description="List of document IDs to add", min_length=1
+        description="List of document IDs to add (max 100 per request)",
+        min_length=1,
+        max_length=100,
     )
 
     @field_validator("document_ids")
@@ -218,7 +220,7 @@ async def add_documents_batch(
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
 ):
-    """Add multiple documents to a collection at once."""
+    """Add multiple documents to a collection at once (max 100 per request)."""
     # Validate collection_id
     try:
         collection_id = validate_id_format(collection_id, "collection_id")
@@ -226,16 +228,9 @@ async def add_documents_batch(
         logger.warning(f"Invalid collection_id format: {collection_id}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    added = []
-    failed = []
-
-    for document_id in request.document_ids:
-        try:
-            await db.add_document(collection_id, document_id, user.id)
-            added.append(document_id)
-        except Exception as e:
-            logger.warning(f"Failed to add document {document_id}: {e}")
-            failed.append({"document_id": document_id, "error": str(e)})
+    result = await db.bulk_add_documents(collection_id, request.document_ids, user.id)
+    added = result["added"]
+    failed = result["failed"]
 
     return {
         "message": f"Added {len(added)} documents, {len(failed)} failed",

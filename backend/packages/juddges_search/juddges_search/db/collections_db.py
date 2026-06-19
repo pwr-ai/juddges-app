@@ -248,6 +248,43 @@ class CollectionsDB(SupabaseClientMixin):
             logger.exception(f"Error adding judgment to collection: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to add judgment: {str(e)}")
 
+    async def bulk_add_documents(self, collection_id: str, judgment_ids: List[str], user_id: str) -> Dict[str, Any]:
+        """Add multiple judgments to a collection in a single upsert.
+
+        Verifies collection ownership once (not per document), then performs
+        a multi-row upsert against ``collection_judgments`` with duplicate
+        rows silently ignored.
+
+        Returns a dict with keys ``added`` (list[str]) and ``failed``
+        (list[dict] with ``document_id`` and ``error`` keys).
+        """
+        # Ownership check — done once for the whole batch.
+        collection = await self.find_collection(collection_id, user_id)
+        if not collection:
+            raise HTTPException(status_code=404, detail="Collection not found")
+
+        if not judgment_ids:
+            return {"added": [], "failed": []}
+
+        rows = [{"collection_id": collection_id, "judgment_id": jid} for jid in judgment_ids]
+
+        try:
+            self.client.table("collection_judgments").upsert(
+                rows,
+                on_conflict="collection_id,judgment_id",
+                ignore_duplicates=True,
+            ).execute()
+
+            logger.info(f"Bulk-added {len(judgment_ids)} judgments to collection {collection_id}")
+            return {"added": list(judgment_ids), "failed": []}
+
+        except (PostgrestAPIError, StorageException) as e:
+            logger.exception(f"Bulk upsert failed for collection {collection_id}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to bulk-add judgments: {str(e)}",
+            )
+
     async def remove_document(self, collection_id: str, judgment_id: str, user_id: str) -> bool:
         collection = await self.find_collection(collection_id, user_id)
         if not collection:
