@@ -31,6 +31,8 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useVersionStore } from "@/hooks/schema-editor/usePlaygroundStore";
+import { useSchemaEditorStore } from "@/hooks/schema-editor/useSchemaEditorStore";
+import { schemaService } from "@/lib/schema-editor/service";
 import { formatDistanceToNow } from "date-fns";
 import type { SchemaVersionSummary, SchemaChangeType } from "@/types/schema-playground";
 
@@ -93,6 +95,8 @@ export function VersionsTab({ schemaId }: VersionsTabProps) {
  setRollingBack,
  } = useVersionStore();
 
+ const { sessionId, setFields } = useSchemaEditorStore();
+
  // Load versions when schemaId changes
  useEffect(() => {
  if (!schemaId) {
@@ -139,16 +143,33 @@ export function VersionsTab({ schemaId }: VersionsTabProps) {
 
  const result = await response.json();
 
- toast.success("Rollback successful", {
- description: `Restored version ${versionNumber}. New version: ${result.new_version}`,
- });
-
- // Reload versions
+ // Reload versions list to reflect the new rollback version entry
  const versionsResponse = await fetch(`/api/schemas/${schemaId}/versions`);
  const versionsData = await versionsResponse.json();
  setVersions(versionsData.versions || [], versionsData.current_version || 1);
 
- // TODO: Reload schema fields in editor
+ // Reload the editor fields from the database so the canvas reflects the
+ // restored version. schemaService.loadSchema fetches the schema's current
+ // JSON text (now pointing at the restored state after the DB rollback) and
+ // parses it back into SchemaField objects — the same path used on initial load.
+ const loadResult = await schemaService.loadSchema(schemaId);
+ if (loadResult.success && loadResult.fields) {
+ const currentSessionId = sessionId ?? `session-${Date.now()}`;
+ const fieldsWithSession = loadResult.fields.map((field) => ({
+ ...field,
+ session_id: currentSessionId,
+ }));
+ setFields(fieldsWithSession, true); // markClean = true: no unsaved changes
+ toast.success("Rollback successful", {
+ description: `Restored to version ${versionNumber}. New version: ${result.new_version}`,
+ });
+ } else {
+ // Rollback succeeded in the DB but we could not reload the editor fields;
+ // surface a warning so the user knows to refresh manually.
+ toast.warning("Rollback applied — please reload the page to see updated fields", {
+ description: loadResult.error ?? "Could not reload editor fields",
+ });
+ }
  } catch (error) {
  const message = error instanceof Error ? error.message : "Unknown error";
  toast.error("Rollback failed", { description: message });
@@ -156,7 +177,7 @@ export function VersionsTab({ schemaId }: VersionsTabProps) {
  setRollingBack(false);
  }
  },
- [schemaId, setRollingBack, setVersions]
+ [schemaId, sessionId, setFields, setRollingBack, setVersions]
  );
 
  // If no schema, show placeholder
@@ -212,7 +233,7 @@ export function VersionsTab({ schemaId }: VersionsTabProps) {
  {/* Version list */}
  <ScrollArea className="flex-1">
  <div className="p-4 space-y-3">
- {versions.map((version, index) => (
+ {versions.map((version) => (
  <VersionCard
  key={version.id}
  version={version}

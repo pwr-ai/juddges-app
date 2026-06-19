@@ -58,6 +58,7 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
     isSaving,
     setIsSaving,
     markClean,
+    setFields,
     updateMetadata,
     setError,
   } = useSchemaEditorStore();
@@ -224,9 +225,9 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
   /**
    * Handle discard changes
    *
-   * Resets to last saved state after confirmation.
+   * Reloads fields from the last saved schema state then marks the store clean.
    */
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
     if (!isDirty) {
       toast.info('No changes to discard');
       return;
@@ -242,16 +243,37 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
 
     canvasPaneLogger.info('Discarding changes', { sessionId });
 
-    // TODO: Implement reload from last saved state
-    // For now, just mark as clean and show message
-    markClean();
     setValidationErrors([]);
     setValidationWarnings([]);
     setSaveSuccess(false);
 
-    toast.info('Changes discarded', {
-      description: 'Schema has been reset to last saved state.',
-    });
+    if (schemaId) {
+      // Reload fields from the persisted schema so the canvas reflects the
+      // last saved state. This is the same code path used on initial schema
+      // load (see useSchemaLoad → schemaService.loadSchema → setFields).
+      const loadResult = await schemaService.loadSchema(schemaId);
+      if (loadResult.success && loadResult.fields) {
+        const fieldsWithSession = loadResult.fields.map((field) => ({
+          ...field,
+          session_id: sessionId,
+        }));
+        setFields(fieldsWithSession, true); // markClean = true
+        toast.info('Changes discarded', {
+          description: 'Schema has been reset to last saved state.',
+        });
+      } else {
+        canvasPaneLogger.error('Failed to reload schema for discard', loadResult.error);
+        toast.error('Could not reload saved state', {
+          description: loadResult.error ?? 'Unknown error — please refresh the page.',
+        });
+      }
+    } else {
+      // Draft schema (never saved) — just mark clean; no DB state to reload
+      markClean();
+      toast.info('Changes discarded', {
+        description: 'Schema has been reset to last saved state.',
+      });
+    }
   };
 
   return (
