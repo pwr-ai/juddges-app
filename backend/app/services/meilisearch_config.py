@@ -241,6 +241,44 @@ MEILISEARCH_INDEX_SETTINGS: dict[str, Any] = {
 }
 
 
+# Vocabulary contracts shared by the LLM query rewriter and the facet
+# validator. Keep these in this file so a settings change forces a code
+# change in the prompt/schema at the same time.
+
+# Note: ``decision_date`` and ``base_extraction_status`` are intentionally
+# omitted — date ranges are handled separately by the validator, and
+# extraction_status is an internal pipeline flag, not user-facing.
+MEILISEARCH_FACET_VOCABULARY: dict[str, tuple[str, ...]] = {
+    "jurisdiction": ("PL", "UK"),
+    "court_level": (
+        "supreme",
+        "constitutional",
+        "appellate",
+        "regional",
+        "district",
+        "local",
+        "administrative",
+    ),
+    "case_type": ("criminal", "civil", "administrative", "commercial"),
+    "decision_type": ("judgment", "order", "resolution"),
+    "outcome": ("granted", "dismissed", "partial", "remanded"),
+}
+
+MEILISEARCH_NUMERIC_FACETS: tuple[str, ...] = (
+    "base_num_victims",
+    "base_victim_age_offence",
+    "base_case_number",
+    "base_co_def_acc_num",
+    "base_date_of_appeal_court_judgment_ts",
+)
+
+MEILISEARCH_OPEN_ARRAY_FACETS: tuple[str, ...] = (
+    "keywords",
+    "legal_topics",
+    "cited_legislation",
+)
+
+
 def transform_judgment_for_meilisearch(row: dict[str, Any]) -> dict[str, Any]:
     """Transform a Supabase judgments row into a Meilisearch document.
 
