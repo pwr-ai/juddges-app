@@ -2,6 +2,11 @@
 
 Tests cover: export endpoint (format validation, authorization, data flow),
 base schema extraction, filter, facets, definition, and filter-options endpoints.
+
+Auth note: results_router was migrated from X-User-ID header auth to Supabase
+Bearer JWT (issue #233). Endpoint tests that require user identity install the
+JWT override via _install_jwt_user_override() from conftest and send
+``Authorization: Bearer <token>`` instead of ``X-User-ID``.
 """
 
 from __future__ import annotations
@@ -9,6 +14,13 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from tests.app.conftest import _install_jwt_user_override
+
+_USER_001 = "00000000-0000-4000-a000-000000000001"
+_USER_099 = "00000000-0000-4000-a000-000000000099"
+_BEARER_HEADERS = {"Authorization": "Bearer fake-jwt-token"}
+
 
 # =============================================================================
 # GET /extractions/{job_id}/export
@@ -18,12 +30,10 @@ import pytest
 class TestExportExtractionResults:
     @pytest.mark.unit
     async def test_invalid_format_returns_400(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
         response = await client.get(
             "/extractions/job-1/export?format=pdf",
-            headers={
-                **valid_api_headers,
-                "X-User-ID": "00000000-0000-4000-a000-000000000001",
-            },
+            headers={**valid_api_headers, **_BEARER_HEADERS},
         )
         assert response.status_code == 400
 
@@ -31,18 +41,17 @@ class TestExportExtractionResults:
     async def test_supabase_unavailable_returns_503(
         self, client, valid_api_headers
     ) -> None:
+        _install_jwt_user_override(_USER_001)
         with patch("app.extraction_domain.results_router.supabase", None):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={
-                    **valid_api_headers,
-                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
-                },
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 503
 
     @pytest.mark.unit
     async def test_job_not_found_returns_404(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
         mock_response = MagicMock()
         mock_response.data = None
 
@@ -52,15 +61,18 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-missing/export?format=csv",
-                headers={
-                    **valid_api_headers,
-                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
-                },
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 404
 
     @pytest.mark.unit
     async def test_access_denied_returns_403(self, client, valid_api_headers) -> None:
+        """User 099 (attacker) tries to export a job that belongs to other-user.
+
+        The attacker authenticates as _USER_099 via JWT; the job in the DB has
+        a different user_id. The handler must deny access with 403.
+        """
+        _install_jwt_user_override(_USER_099)
         mock_response = MagicMock()
         mock_response.data = {
             "job_id": "job-1",
@@ -77,19 +89,17 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={
-                    **valid_api_headers,
-                    "X-User-ID": "00000000-0000-4000-a000-000000000099",
-                },
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 403
 
     @pytest.mark.unit
     async def test_no_results_returns_400(self, client, valid_api_headers) -> None:
+        _install_jwt_user_override(_USER_001)
         mock_response = MagicMock()
         mock_response.data = {
             "job_id": "job-1",
-            "user_id": "00000000-0000-4000-a000-000000000001",
+            "user_id": _USER_001,
             "collection_id": "col-1",
             "schema_id": None,
             "results": [],
@@ -102,20 +112,18 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={
-                    **valid_api_headers,
-                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
-                },
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 400
 
     @pytest.mark.unit
     async def test_export_csv_success(self, client, valid_api_headers) -> None:
         """Test successful CSV export with completed results."""
+        _install_jwt_user_override(_USER_001)
         mock_job_response = MagicMock()
         mock_job_response.data = {
             "job_id": "job-1",
-            "user_id": "00000000-0000-4000-a000-000000000001",
+            "user_id": _USER_001,
             "collection_id": "col-1",
             "schema_id": "schema-1",
             "results": [
@@ -146,10 +154,7 @@ class TestExportExtractionResults:
         with patch("app.extraction_domain.results_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions/job-1/export?format=csv",
-                headers={
-                    **valid_api_headers,
-                    "X-User-ID": "00000000-0000-4000-a000-000000000001",
-                },
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 200
             assert "text/csv" in response.headers["content-type"]
