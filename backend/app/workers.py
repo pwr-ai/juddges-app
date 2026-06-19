@@ -263,21 +263,18 @@ def extract_information_from_documents_task(
     - Uses Celery's autoretry_for to handle most connection and OpenAI transient errors automatically
     - Database errors from Supabase are retried with connection error strategy
 
-    Per-document swallow nuance:
-    - The inner try/except Exception block (lines 372-415) catches ALL exceptions
-      per document and converts them into a FAILED DocumentExtractionResponse.  This means
-      transient OpenAI errors that occur *during a single document's extraction* are swallowed
-      by that handler and will NOT propagate up to Celery's autoretry_for mechanism.
-    - Celery autoretry_for therefore only fires for OpenAI errors raised *outside* the
-      per-document loop — e.g. during LLM initialisation (get_llm) or document fetching
-      (get_documents_by_id), not during per-document extraction.
-    - To make per-document OpenAI transient failures trigger a full-task retry, the inner
-      except clause would need to re-raise those specific exception types instead of logging
-      them as document-level failures.  That is a deliberate design choice deferred to a
-      follow-up issue so existing behaviour is not silently changed.
-
-    Note: The InformationExtractor also has built-in retry logic for LLM API calls,
-    so transient LLM errors are handled at multiple levels.
+    Two-layer transient-error handling (#169):
+    - PRIMARY (per document): the InformationExtractor's per-LLM-call tenacity retry
+      now covers RateLimitError (429), InternalServerError (5xx), APITimeoutError and
+      APIConnectionError (in addition to TCP-level errors) with exponential backoff.
+      So a single transient 429/5xx during one document's extraction is retried at the
+      call level and does NOT immediately fail the document.
+    - OUTER SAFETY NET (whole task): autoretry_for below also lists the OpenAI transient
+      classes. Because the per-document try/except converts a *terminal* per-doc failure
+      into a FAILED result (partial-completion design), task-level autoretry only fires
+      for transient OpenAI errors raised *outside* the per-document loop — e.g. during LLM
+      initialisation (get_llm) or document fetching (get_documents_by_id). This is
+      intentional: re-running the whole task would reprocess already-succeeded documents.
 
     Args:
         request: DocumentExtractionRequest with user_schema containing full schema dict from Supabase
