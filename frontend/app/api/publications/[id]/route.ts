@@ -72,12 +72,22 @@ export async function PUT(
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'PUT',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
       body: JSON.stringify(body),
@@ -134,12 +144,22 @@ export async function DELETE(
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/publications/${id}`, {
       method: 'DELETE',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
     });

@@ -87,7 +87,7 @@ class _StubPublicationsDb:
         }
 
     async def update_publication(self, _pub_id: str, _data: dict) -> dict:
-        return self.create_publication.__wrapped__(self, {})  # type: ignore[attr-defined]
+        return await self.create_publication({})
 
     async def delete_publication(self, _pub_id: str) -> bool:
         return True
