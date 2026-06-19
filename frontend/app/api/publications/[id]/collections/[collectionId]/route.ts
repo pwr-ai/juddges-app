@@ -30,11 +30,21 @@ export async function DELETE(
       );
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const response = await fetch(`${API_BASE_URL}/publications/${id}/collections/${collectionId}`, {
       method: 'DELETE',
       headers: {
         'X-API-Key': API_KEY,
-        'X-User-ID': userData.user.id,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       } as HeadersInit,
     });
