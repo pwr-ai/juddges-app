@@ -685,8 +685,8 @@ export default function BlogPostPage() {
           <PrimaryButton size="lg" icon={ArrowRight} onClick={() => router.push("/blog")}>
             View All Articles
           </PrimaryButton>
-          <SecondaryButton size="lg" onClick={() => router.push("/chat")}>
-            Ask AI Assistant
+          <SecondaryButton size="lg" onClick={() => router.push("/search")}>
+            Search Judgments
           </SecondaryButton>
         </div>
       </LightCard>

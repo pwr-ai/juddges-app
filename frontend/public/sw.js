@@ -1,8 +1,11 @@
 /// <reference lib="webworker" />
 
-const CACHE_VERSION = "v3";
+// Bumped v3 -> v4. v3 still cached /api/* and navigation HTML responses
+// keyed only by URL, which could replay one user's authenticated response
+// to the next on the same browser after logout (issue #210). Activating
+// v4 evicts those entries. Bump again whenever cache semantics change.
+const CACHE_VERSION = "v4";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [];
 
@@ -31,9 +34,10 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Activate: clean old caches and claim clients
+// Activate: clean old caches and claim clients. Anything not in currentCaches
+// (notably any `dynamic-v*` entries from prior versions) gets evicted.
 self.addEventListener("activate", (event) => {
-  const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE];
+  const currentCaches = [STATIC_CACHE];
   event.waitUntil(
     caches
       .keys()
@@ -91,7 +95,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: Cache-First
+  // Static assets (hashed chunks, fonts, images): Cache-First. These are
+  // immutable / content-addressed, so cross-user replay is safe.
   if (isStaticAsset(url) || isNextStaticAsset(url)) {
     event.respondWith(
       caches.match(event.request).then(
@@ -111,46 +116,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Other API requests: Network-First with fallback
+  // API requests: network-only. We do NOT cache /api/* — too easy to leak
+  // one user's authenticated response to the next (issue #210). Offline
+  // replay isn't a goal for this app (see commit 1d05d48), so caching
+  // would only add risk for no benefit. Fall back to an offline JSON
+  // response if the network is genuinely unavailable.
   if (isApiRequest(url)) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() =>
-          caches
-            .match(event.request)
-            .then((cached) => cached || createOfflineApiResponse())
-        )
+      fetch(event.request).catch(() => createOfflineApiResponse())
     );
     return;
   }
 
-  // Page navigations: Network-First with offline fallback
+  // Page navigations: network-only for the same reason. Next.js may inline
+  // RSC payloads or per-user UI state into navigation responses; caching
+  // them by URL alone would cross users on a shared browser.
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() =>
-          caches
-            .match(event.request)
-            .then((cached) => cached || createOfflinePageResponse())
-        )
+      fetch(event.request).catch(() => createOfflinePageResponse())
     );
     return;
   }
@@ -184,6 +167,21 @@ function createOfflinePageResponse() {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
+    return;
+  }
+  // Defensive: if a future change ever re-introduces dynamic caching, this
+  // lets AuthContext.signOut() purge it without waiting for a SW bump.
+  // Currently a no-op (no `dynamic-*` caches are written), but cheap to keep.
+  if (event.data?.type === "CLEAR_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== STATIC_CACHE)
+            .map((key) => caches.delete(key))
+        )
+      )
+    );
     return;
   }
 });

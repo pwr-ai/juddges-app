@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Fingerprint, Users } from 'lucide-react';
 import { useQueries } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   PageContainer,
   BaseCard,
@@ -15,9 +16,11 @@ import { getJudgeProfile } from '@/lib/api/judge-fingerprint';
 import { JudgeSearch } from '@/components/judge-fingerprint/JudgeSearch';
 import { JudgeRadarChart } from '@/components/judge-fingerprint/JudgeRadarChart';
 import { JudgeProfileCard } from '@/components/judge-fingerprint/JudgeProfileCard';
+import { useTranslation } from '@/contexts/LanguageContext';
 import type { JudgeProfile } from '@/types/judge-fingerprint';
 
 export default function JudgeFingerprintPage() {
+  const { t } = useTranslation();
   const [selectedJudges, setSelectedJudges] = useState<string[]>([]);
 
   const handleSelectJudge = useCallback((name: string) => {
@@ -47,6 +50,25 @@ export default function JudgeFingerprintPage() {
     .filter((q) => q.isError)
     .map((q) => q.error?.message ?? 'Unknown error');
 
+  // Surface fetch failures via toast. Track which judge names have already
+  // been reported so re-renders during a single failure don't spam toasts.
+  const toastedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    profileQueries.forEach((q, idx) => {
+      const name = selectedJudges[idx];
+      if (!name) return;
+      if (q.isError && !toastedRef.current.has(name)) {
+        toastedRef.current.add(name);
+        toast.error(t('judgeFingerprint.errorToastTitle'), {
+          description: `${name}: ${q.error?.message ?? 'Unknown error'}`,
+        });
+      }
+      if (!q.isError) {
+        toastedRef.current.delete(name);
+      }
+    });
+  }, [profileQueries, selectedJudges, t]);
+
   // Collect successfully loaded profiles, preserving selection order
   const loadedProfiles: JudgeProfile[] = profileQueries
     .map((q) => q.data)
@@ -64,10 +86,10 @@ export default function JudgeFingerprintPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Profil rozumowania sedziego
+              {t('judgeFingerprint.pageTitle')}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Analizuj i porownuj style rozumowania prawnego sedziow na podstawie ich orzeczen
+              {t('judgeFingerprint.pageSubtitle')}
             </p>
           </div>
         </div>
@@ -78,7 +100,7 @@ export default function JudgeFingerprintPage() {
       <BaseCard clickable={false} variant="light" className="rounded-[16px]">
         <div className="space-y-3">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Wyszukaj sedziego
+            {t('judgeFingerprint.searchLabel')}
           </label>
           <JudgeSearch
             selectedJudges={selectedJudges}
@@ -94,15 +116,15 @@ export default function JudgeFingerprintPage() {
         <LoadingIndicator
           variant="centered"
           size="lg"
-          message="Ladowanie profilu sedziego..."
-          subtitle="Analizowanie stylu rozumowania na podstawie orzeczen"
+          message={t('judgeFingerprint.loadingProfile')}
+          subtitle={t('judgeFingerprint.loadingSubtitle')}
         />
       )}
 
       {/* Error state */}
       {hasError && !isLoading && (
         <ErrorCard
-          title="Blad ladowania profilu"
+          title={t('judgeFingerprint.errorLoadingTitle')}
           message={errorMessages.join('; ')}
         />
       )}
@@ -114,11 +136,11 @@ export default function JudgeFingerprintPage() {
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
               <h2 className="font-semibold text-base text-foreground">
-                Porownanie sedziow
+                {t('judgeFingerprint.comparisonHeading')}
               </h2>
             </div>
             <p className="text-xs text-muted-foreground">
-              Nakladajacy sie wykres radarowy pokazuje roznice w stylach rozumowania
+              {t('judgeFingerprint.comparisonDescription')}
             </p>
             <JudgeRadarChart profiles={loadedProfiles} height={400} />
           </div>
@@ -129,7 +151,7 @@ export default function JudgeFingerprintPage() {
       {loadedProfiles.length > 0 && !isLoading && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-foreground">
-            Profile sedziow ({loadedProfiles.length})
+            {t('judgeFingerprint.profilesHeading')} ({loadedProfiles.length})
           </h2>
           <div className="grid gap-4 lg:grid-cols-2">
             {loadedProfiles.map((profile) => (
@@ -143,44 +165,56 @@ export default function JudgeFingerprintPage() {
       {selectedJudges.length === 0 && !isLoading && (
         <div className="space-y-6">
           <EmptyState
-            title="Profil rozumowania sedziego"
-            description="Wyszukaj sedziego, aby wyswietlic analiz stylu rozumowania prawnego. Wybierz 2-3 sedziow, aby porownac ich podejscia."
+            title={t('judgeFingerprint.emptyTitle')}
+            description={t('judgeFingerprint.emptyDescription')}
             icon={Fingerprint}
           />
 
           {/* How it works */}
           <BaseCard clickable={false} variant="light" className="rounded-[16px]">
             <div className="space-y-3">
-              <h3 className="text-sm font-medium text-foreground">Jak to dziala</h3>
+              <h3 className="text-sm font-medium text-foreground">
+                {t('judgeFingerprint.howItWorks')}
+              </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-primary">Tekstualna</div>
+                  <div className="text-xs font-medium text-primary">
+                    {t('judgeFingerprint.reasoningTextual')}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Scisla interpretacja tekstu ustawy, analiza literalna przepisow.
+                    {t('judgeFingerprint.reasoningTextualDescription')}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-primary">Dedukcyjna</div>
+                  <div className="text-xs font-medium text-primary">
+                    {t('judgeFingerprint.reasoningDeductive')}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Stosowanie ogolnych zasad prawnych do konkretnych stanow faktycznych.
+                    {t('judgeFingerprint.reasoningDeductiveDescription')}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-primary">Analogiczna</div>
+                  <div className="text-xs font-medium text-primary">
+                    {t('judgeFingerprint.reasoningAnalogical')}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Porownywanie z podobnymi sprawami i orzeczeniami.
+                    {t('judgeFingerprint.reasoningAnalogicalDescription')}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-primary">Celowosciowa</div>
+                  <div className="text-xs font-medium text-primary">
+                    {t('judgeFingerprint.reasoningPurposive')}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Interpretacja oparta na celach polityki prawnej lub intencji ustawodawcy.
+                    {t('judgeFingerprint.reasoningPurposiveDescription')}
                   </p>
                 </div>
                 <div className="space-y-1 sm:col-span-2">
-                  <div className="text-xs font-medium text-primary">Teleologiczna</div>
+                  <div className="text-xs font-medium text-primary">
+                    {t('judgeFingerprint.reasoningTeleological')}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Interpretacja celowosciowa, odwolujaca sie do celu i funkcji przepisu.
+                    {t('judgeFingerprint.reasoningTeleologicalDescription')}
                   </p>
                 </div>
               </div>
