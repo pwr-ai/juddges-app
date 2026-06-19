@@ -10,13 +10,14 @@ import time
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.info_extraction.schema_utils import prepare_schema_from_db
 from juddges_search.llms import get_llm
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.core.supabase import get_supabase_client
 from app.utils.judgment_fetcher import get_documents_by_id
 
@@ -241,7 +242,7 @@ def _save_playground_run(
 )
 async def playground_extract(
     request: PlaygroundExtractionRequest,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> PlaygroundExtractionResponse:
     """
     Run synchronous extraction for playground testing.
@@ -267,12 +268,13 @@ async def playground_extract(
     - timing: Detailed timing breakdown
     - schema info and document metadata
     """
+    user_id = user.id
     start_time = time.time()
     started_at = datetime.now(UTC).isoformat()
 
     logger.info(
         f"Playground extraction started: schema={request.schema_id}, "
-        f"doc={request.document_id}, user={x_user_id}"
+        f"doc={request.document_id}, user={user_id}"
     )
 
     try:
@@ -358,7 +360,7 @@ async def playground_extract(
             schema_id=request.schema_id,
             schema_version_id=version_id or request.schema_version_id,
             document_id=request.document_id,
-            user_id=x_user_id,
+            user_id=user_id,
             extraction_result=extracted_data or {},
             execution_time_ms=int(total_ms),
             status="completed",
@@ -409,7 +411,7 @@ async def playground_extract(
             schema_id=request.schema_id,
             schema_version_id=request.schema_version_id,
             document_id=request.document_id,
-            user_id=x_user_id,
+            user_id=user_id,
             extraction_result={},
             execution_time_ms=int(total_ms),
             status="failed",
@@ -457,7 +459,7 @@ async def playground_extract(
 async def list_playground_runs(
     schema_id: str,
     limit: int = 20,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> list[PlaygroundTestRun]:
     """
     List recent playground test runs for a schema.
@@ -465,6 +467,7 @@ async def list_playground_runs(
     Returns the most recent test runs for the specified schema,
     useful for reviewing extraction history and comparing results.
     """
+    user_id = user.id
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -478,7 +481,7 @@ async def list_playground_runs(
                 "id, schema_id, schema_version_id, document_id, status, execution_time_ms, created_at"
             )
             .eq("schema_id", schema_id)
-            .eq("user_id", x_user_id)
+            .eq("user_id", user_id)
             .order("created_at", desc=True)
             .limit(limit)
             .execute()
@@ -514,13 +517,14 @@ async def list_playground_runs(
 )
 async def get_playground_run(
     run_id: str,
-    x_user_id: str = Header(..., alias="X-User-ID"),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, Any]:
     """
     Get full details of a specific playground test run.
 
     Returns the complete extraction result and metadata for a test run.
     """
+    user_id = user.id
     if not supabase:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -536,7 +540,7 @@ async def get_playground_run(
                 "schema_name, schema_version, document_title, created_at"
             )
             .eq("id", run_id)
-            .eq("user_id", x_user_id)
+            .eq("user_id", user_id)
             .single()
             .execute()
         )
