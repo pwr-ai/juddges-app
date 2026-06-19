@@ -628,6 +628,36 @@ class TestDocumentsSearch:
         assert "hybrid" in calls[0] and "vector" in calls[0]
         assert "hybrid" not in calls[1] and "vector" not in calls[1]
         assert result["hits"][0]["id"] == "doc-after-retry"
+        # search_mode must signal the degradation
+        assert result["search_mode"] == "keyword_fallback"
+
+    @pytest.mark.asyncio
+    async def test_documents_search_pure_keyword_sets_search_mode(self, service):
+        """Pure keyword search (semantic_ratio=0) must return search_mode='keyword'."""
+
+        async def fake_post(self_, url, json, headers):
+            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+
+        with patch("httpx.AsyncClient.post", new=fake_post):
+            result = await service.documents_search("contract", semantic_ratio=0.0)
+
+        assert result["search_mode"] == "keyword"
+
+    @pytest.mark.asyncio
+    async def test_documents_search_hybrid_success_sets_search_mode(self, service):
+        """Successful hybrid search must return search_mode='hybrid'."""
+        fake_vec = [0.1] * 1024
+
+        async def fake_post(self_, url, json, headers):
+            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            result = await service.documents_search("contract", semantic_ratio=0.5)
+
+        assert result["search_mode"] == "hybrid"
 
     @pytest.mark.asyncio
     async def test_keyword_400_does_not_retry(self, service):
@@ -664,3 +694,127 @@ class TestDocumentsSearch:
             pytest.raises(SearchServiceError),
         ):
             await service.documents_search("drugs", semantic_ratio=0.5)
+
+
+# ── search_mode / hybrid-fallback signal tests (issue #221) ──────────────
+
+
+class TestHybridFallbackSignal:
+    """Verify that a Meilisearch 400 on a hybrid request:
+
+    (a) still returns keyword results,
+    (b) sets search_mode == "keyword_fallback", and
+    (c) emits a structured warning log with enough context for ops.
+    """
+
+    @pytest.fixture
+    def svc(self):
+        return MeiliSearchService(
+            base_url="http://meili:7700",
+            api_key="search-key",
+            admin_key="admin-key",
+            index_name="judgments",
+            timeout_seconds=2.0,
+        )
+
+    @pytest.mark.asyncio
+    async def test_fallback_returns_keyword_results_and_sets_mode(self, svc):
+        """(a) keyword results returned, (b) search_mode == 'keyword_fallback'."""
+        fake_vec = [0.5] * 1024
+        keyword_hits = [{"id": "j-001", "title": "Drug case"}, {"id": "j-002"}]
+
+        calls: list[dict] = []
+
+        async def fake_post(self_, url, json, headers):
+            calls.append(json)
+            if "hybrid" in json or "vector" in json:
+                # Simulate bge-m3 not registered
+                return httpx.Response(
+                    400,
+                    json={
+                        "message": "Cannot find embedder with name `bge-m3`.",
+                        "code": "invalid_search_embedder",
+                    },
+                    request=httpx.Request("POST", url),
+                )
+            # Keyword retry succeeds
+            return _mock_response(
+                200, {"hits": keyword_hits, "estimatedTotalHits": len(keyword_hits)}
+            )
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            result = await svc.documents_search("narkotyki", semantic_ratio=0.5)
+
+        # (a) keyword results are present
+        assert result["hits"] == keyword_hits
+        # (b) mode signals the degradation
+        assert result["search_mode"] == "keyword_fallback"
+        # two HTTP calls: first hybrid (400), then keyword retry (200)
+        assert len(calls) == 2
+        assert "hybrid" in calls[0]
+        assert "hybrid" not in calls[1]
+
+    @pytest.mark.asyncio
+    async def test_fallback_emits_warning_log(self, svc):
+        """(c) a structured warning log is emitted when hybrid degrades."""
+        from loguru import logger
+
+        fake_vec = [0.5] * 1024
+        logged_warnings: list[str] = []
+
+        def _capture_sink(message):
+            logged_warnings.append(str(message))
+
+        async def fake_post(self_, url, json, headers):
+            if "hybrid" in json or "vector" in json:
+                return httpx.Response(
+                    400,
+                    json={"message": "Cannot find embedder with name `bge-m3`."},
+                    request=httpx.Request("POST", url),
+                )
+            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+
+        sink_id = logger.add(_capture_sink, level="WARNING")
+        try:
+            with (
+                patch("app.services.search.embed_texts", return_value=fake_vec),
+                patch("httpx.AsyncClient.post", new=fake_post),
+            ):
+                await svc.documents_search("narkotyki", semantic_ratio=0.5)
+        finally:
+            logger.remove(sink_id)
+
+        assert logged_warnings, "Expected at least one warning to be emitted"
+        combined = " ".join(logged_warnings)
+        assert "hybrid_search_degraded" in combined or "hybrid" in combined.lower(), (
+            f"Expected hybrid degradation warning; got: {logged_warnings}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_fallback_sentinel_leaks_into_result(self, svc):
+        """The internal _FALLBACK_SENTINEL key must not appear in the returned dict."""
+        from app.services.search import _FALLBACK_SENTINEL
+
+        fake_vec = [0.5] * 1024
+
+        async def fake_post(self_, url, json, headers):
+            if "hybrid" in json:
+                return httpx.Response(
+                    400,
+                    json={"message": "bge-m3 not found"},
+                    request=httpx.Request("POST", url),
+                )
+            return _mock_response(200, {"hits": [], "estimatedTotalHits": 0})
+
+        with (
+            patch("app.services.search.embed_texts", return_value=fake_vec),
+            patch("httpx.AsyncClient.post", new=fake_post),
+        ):
+            result = await svc.documents_search("test", semantic_ratio=0.5)
+
+        assert _FALLBACK_SENTINEL not in result, (
+            "Internal sentinel key must be stripped before the result is returned"
+        )

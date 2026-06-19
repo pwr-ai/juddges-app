@@ -5127,7 +5127,7 @@
         "type": "object"
       },
       "DocumentSearchResponse": {
-        "description": "Paginated document search response (Meilisearch-backed text mode).",
+        "description": "Paginated document search response (Meilisearch-backed text mode).\n\n``search_mode`` indicates which ranking strategy was used:\n\n- ``\"keyword\"`` \u2014 pure keyword search (``semantic_ratio == 0``).\n- ``\"hybrid\"`` \u2014 hybrid semantic+keyword search ran successfully.\n- ``\"keyword_fallback\"`` \u2014 hybrid was requested but Meilisearch returned\n  4xx (e.g. the ``bge-m3`` embedder is not registered); the response\n  contains keyword results only.  Ops should treat this as an ops alert.",
         "properties": {
           "documents": {
             "items": {
@@ -5154,6 +5154,16 @@
               }
             ],
             "title": "Query Time Ms"
+          },
+          "search_mode": {
+            "default": "keyword",
+            "enum": [
+              "hybrid",
+              "keyword",
+              "keyword_fallback"
+            ],
+            "title": "Search Mode",
+            "type": "string"
           },
           "total_count": {
             "anyOf": [
