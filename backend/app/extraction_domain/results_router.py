@@ -297,9 +297,15 @@ async def export_extraction_results(
 )
 async def extract_with_base_schema(
     request: BaseSchemaExtractionRequest,
+    _user: AuthenticatedUser = Depends(get_current_user),
 ) -> BaseSchemaExtractionResponse:
     """
     Extract structured data from legal documents using the universal base schema.
+
+    **Authorization:** Requires ``Authorization: Bearer <JWT>``.  This endpoint
+    writes back to shared ``judgments`` rows (``base_raw_extraction``,
+    ``base_extraction_status``, typed columns), so caller identity must be
+    established before mutations occur.
 
     This endpoint:
     1. Automatically detects document jurisdiction (EN_UK, PL, etc.)
@@ -438,6 +444,12 @@ async def extract_with_base_schema(
 )
 async def filter_by_extracted_data(
     request: ExtractedDataFilterRequest,
+    # Auth decision (issue #250, Part 3): this endpoint reads corpus-wide
+    # extracted data — no per-user rows are exposed.  The BFF already gates
+    # access via verify_api_key, and the frontend enforces login before
+    # reaching these endpoints.  Adding get_current_user here would be low-cost
+    # consistency, but is intentionally deferred until a user-scoped filter is
+    # required.  Re-evaluate if per-user judgment collections are introduced.
 ):
     """
     Filter documents by extracted_data fields.
@@ -508,6 +520,9 @@ async def filter_by_extracted_data(
 )
 async def get_facet_counts(
     field: str = Path(description="Field name to get facet counts for"),
+    # Auth decision (issue #250, Part 3): read-only corpus-wide aggregate; no
+    # per-user data exposed.  BFF-gated.  Intentionally unauthenticated at the
+    # FastAPI layer — see filter_by_extracted_data for rationale.
 ):
     """
     Get value counts for a specific extracted_data field.
@@ -561,7 +576,10 @@ async def get_facet_counts(
     summary="Get localized base schema definition",
     description="Get the universal base schema in English and Polish variants for UI display.",
 )
-async def get_base_schema_definition() -> BaseSchemaDefinitionResponse:
+async def get_base_schema_definition(
+    # Auth decision (issue #250, Part 3): returns static schema metadata only;
+    # no DB access, no user data.  BFF-gated.  Intentionally unauthenticated.
+) -> BaseSchemaDefinitionResponse:
     """
     Return the official base extraction schema used for judgments.
 
@@ -587,7 +605,10 @@ async def get_base_schema_definition() -> BaseSchemaDefinitionResponse:
     summary="Get available filter options",
     description="Get all available filter fields with their types and configurations.",
 )
-async def get_filter_options():
+async def get_filter_options(
+    # Auth decision (issue #250, Part 3): returns static filter field config;
+    # no DB access, no user data.  BFF-gated.  Intentionally unauthenticated.
+):
     """
     Get all available filter fields for the base schema.
 

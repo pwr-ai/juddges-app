@@ -885,6 +885,26 @@ async def get_extraction_job(
         )
 
 
+# Map the simplified, user-facing status filter values to every raw value the
+# ``extraction_jobs.status`` column may hold for that state. The column may store
+# raw Celery states (PENDING/STARTED/SUCCESS/FAILURE/REVOKED) or already-simplified
+# names depending on the write path, so each set includes both. COMPLETED and
+# PARTIALLY_COMPLETED both subsume SUCCESS and cannot be distinguished at the column
+# level (that distinction needs the per-document results JSON).
+_API_STATUS_TO_DB_VALUES: dict[str, list[str]] = {
+    "IN_PROGRESS": ["PENDING", "STARTED", "PROCESSING", "RETRY", "IN_PROGRESS"],
+    "COMPLETED": ["SUCCESS", "COMPLETED"],
+    "PARTIALLY_COMPLETED": [
+        "SUCCESS",
+        "PARTIAL_FAILURE",
+        "COMPLETED_WITH_FAILURES",
+        "PARTIALLY_COMPLETED",
+    ],
+    "FAILED": ["FAILURE", "FAILED"],
+    "CANCELLED": ["REVOKED", "CANCELLED"],
+}
+
+
 @router.get(
     "",
     response_model=ListExtractionJobsResponse,
@@ -903,8 +923,10 @@ async def list_extraction_jobs(
     """
     List extraction jobs for the current user.
 
-    This endpoint queries Celery's result backend to retrieve job information.
-    Jobs are filtered by user_id (implicitly through collection ownership).
+    Jobs are fetched directly from the ``extraction_jobs`` Supabase table,
+    filtered by the authenticated user's ``user_id``.  Only this user's own
+    jobs are returned — the previous Celery global inspect API (which exposed
+    every in-flight task across all users) has been replaced.
 
     **Query Parameters:**
     - **page**: Page number (1-based, default: 1)
@@ -916,9 +938,10 @@ async def list_extraction_jobs(
     - Total count of matching jobs
     - Pagination information
 
-    **Note:** This implementation queries Celery's result backend directly.
-    Performance may vary based on the number of stored tasks.
-    For production use with many tasks, consider implementing a dedicated job tracking database.
+    **Behavior change vs. prior implementation:** terminal jobs
+    (COMPLETED / FAILED / CANCELLED) are now included because they are
+    stored in the database.  Previously only Celery in-flight tasks were
+    visible.
     """
     user_id = user.id
     try:
@@ -926,116 +949,67 @@ async def list_extraction_jobs(
             f"Listing extraction jobs for user {user_id}, page={page}, page_size={page_size}, status={status}"
         )
 
-        # Query Celery's result backend to get all tasks
-        # Note: This approach has limitations - Celery doesn't provide built-in filtering by user
-        # In production, you should use a database to track job metadata
-
-        # Get the inspect API from Celery
-        inspect = celery_app.control.inspect()
-
-        # Defensive check: inspect can be None if no workers are running
-        if inspect is None:
-            logger.error("Celery inspect API returned None - no workers available")
+        if not supabase:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Task processing service is currently unavailable. No workers are running. Please contact support.",
+                status_code=503,
+                detail="Database service unavailable",
             )
 
-        # Get active, scheduled, and reserved tasks with defensive error handling
-        try:
-            active_tasks = inspect.active() or {}
-            scheduled_tasks = inspect.scheduled() or {}
-            reserved_tasks = inspect.reserved() or {}
-        except Exception as e:
-            # Broad catch: Celery inspect API can raise kombu/amqp connection errors.
-            logger.error(
-                "Failed to retrieve task information from Celery workers: {}",
-                e,
-                exc_info=True,
+        # Build user-scoped query against the extraction_jobs table.
+        query = (
+            supabase.table("extraction_jobs")
+            .select(
+                "job_id, collection_id, status, created_at, updated_at, "
+                "total_documents, completed_documents",
+                count="exact",
             )
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Task processing service is temporarily unavailable. Please try again later.",
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+        )
+
+        if status:
+            db_status_values = _API_STATUS_TO_DB_VALUES.get(status, [status])
+            query = query.in_("status", db_status_values)
+
+        # Apply pagination at the DB level.
+        offset = (page - 1) * page_size
+        query = query.range(offset, offset + page_size - 1)
+
+        db_response = query.execute()
+
+        rows = db_response.data or []
+        total = db_response.count if db_response.count is not None else len(rows)
+
+        jobs = [
+            ExtractionJobSummary(
+                task_id=row["job_id"],
+                collection_id=row.get("collection_id"),
+                status=simplify_job_status(row.get("status") or "PENDING"),
+                created_at=row.get("created_at") or datetime.now(UTC).isoformat(),
+                updated_at=row.get("updated_at"),
+                total_documents=row.get("total_documents"),
+                completed_documents=row.get("completed_documents"),
             )
-
-        # Combine all active tasks
-        all_active = []
-        for worker_tasks in [active_tasks, scheduled_tasks, reserved_tasks]:
-            for tasks in worker_tasks.values():
-                all_active.extend(tasks)
-
-        # Build list of job summaries
-        jobs = []
-
-        # Add active/scheduled tasks
-        for task_info in all_active:
-            task_id = task_info.get("id")
-            task_name = task_info.get("name", "")
-
-            # Filter for extraction tasks only
-            if "extract_information_from_documents_task" not in task_name:
-                continue
-
-            # Try to get task args to extract collection_id
-            args = task_info.get("args", [])
-            collection_id = None
-            if args and len(args) > 0 and isinstance(args[0], dict):
-                collection_id = args[0].get("collection_id")
-
-            # Get task status and simplify it
-            raw_status = "STARTED" if task_info.get("worker_pid") else "PENDING"
-            simplified_status = simplify_job_status(raw_status)
-
-            # Apply status filter if specified (map simplified status back for filtering)
-            if status and simplified_status != status and raw_status != status:
-                continue
-
-            jobs.append(
-                ExtractionJobSummary(
-                    task_id=task_id,
-                    collection_id=collection_id,
-                    status=simplified_status,
-                    created_at=datetime.now(
-                        UTC
-                    ).isoformat(),  # Not available from inspect
-                    updated_at=None,
-                    total_documents=None,
-                    completed_documents=None,
-                )
-            )
-
-        # For completed/failed tasks, we need to query the result backend
-        # This is limited because Celery doesn't provide a built-in way to list all results
-        # We can only check specific task IDs
-
-        # Log warning about limitations
-        if not jobs:
-            logger.warning(
-                "No active extraction jobs found. "
-                "Note: Celery's result backend doesn't support listing completed jobs without task IDs. "
-                "For production use, implement a job tracking database."
-            )
-
-        # Apply pagination
-        total = len(jobs)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        paginated_jobs = jobs[start_idx:end_idx]
+            for row in rows
+        ]
 
         logger.info(
-            f"Found {total} extraction jobs, returning page {page} with {len(paginated_jobs)} jobs"
+            f"Found {total} extraction jobs for user {user_id}, "
+            f"returning page {page} with {len(jobs)} jobs"
         )
 
         return ListExtractionJobsResponse(
-            jobs=paginated_jobs,
+            jobs=jobs,
             total=total,
             page=page,
             page_size=page_size,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        # Broad catch: listing jobs queries Celery inspect API which can raise
-        # arbitrary connection/broker exceptions.
+        # Broad catch: listing jobs queries Supabase which can raise
+        # arbitrary connection/postgrest exceptions.
         logger.error("Error listing extraction jobs: {}", str(e), exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Error listing extraction jobs: {e!s}"
@@ -1070,7 +1044,7 @@ async def cancel_or_delete_extraction_job(
 
     **Error Codes:**
     - 404: Job not found
-    - 403: Job belongs to another user (future enhancement)
+    - 403: Job belongs to another user
     - 400: Job already completed
 
     **Note:** This implementation uses Celery's revoke() method with terminate=True.
@@ -1104,6 +1078,10 @@ async def cancel_or_delete_extraction_job(
                 message=f"Job already completed with status: {task_status}",
             )
 
+        # Ownership check: load the DB record and verify the caller owns the job
+        # before issuing the Celery revoke.  Mirrors the delete path exactly.
+        _verify_job_ownership(job_id, user_id)
+
         # Task is running or pending - revoke it
         # terminate=True will kill the worker process if the task is running
         # signal='SIGTERM' is the default, which allows graceful shutdown
@@ -1117,6 +1095,10 @@ async def cancel_or_delete_extraction_job(
             message="Job cancellation requested. The task will be terminated if currently running.",
         )
 
+    except HTTPException:
+        # Ownership 403 / explicit HTTP errors must propagate unchanged, not be
+        # re-wrapped as a 500 by the broad handler below.
+        raise
     except Exception as e:
         # Broad catch: Celery revoke() and task state access can raise arbitrary
         # broker/connection exceptions.

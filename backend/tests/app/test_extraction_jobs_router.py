@@ -484,6 +484,45 @@ class TestCancelExtractionJobEndpoint:
             data = response.json()
             assert data["status"] == "not_found"
 
+    @pytest.mark.unit
+    async def test_cancel_job_owned_by_another_user_returns_403(
+        self, client, valid_api_headers
+    ) -> None:
+        """Part 2 of issue #250: cancel must 403 when the job belongs to another user.
+
+        User 099 (attacker) is authenticated; the job in the DB belongs to
+        user 001.  The ownership check must fire BEFORE revoke() is called.
+        """
+        _install_jwt_user_override(_USER_099)
+
+        # Task is running (STARTED, not ready) so we reach the revoke path.
+        mock_result = MagicMock()
+        mock_result.state = "STARTED"
+        mock_result.info = {"some": "info"}
+        mock_result.ready.return_value = False
+
+        owner_row = MagicMock()
+        owner_row.data = {"user_id": _USER_001}  # job belongs to user 001
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = owner_row
+
+        with (
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch("app.extraction_domain.jobs_router.celery_app") as mock_celery_app,
+        ):
+            response = await client.delete(
+                "/extractions/job-belongs-to-user-001",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 403
+        # revoke() must NOT have been called
+        mock_celery_app.control.revoke.assert_not_called()
+
 
 class TestDeleteExtractionJobEndpoint:
     """Tests for DELETE /extractions/{job_id}/delete endpoint."""
@@ -548,37 +587,107 @@ class TestDeleteExtractionJobEndpoint:
 
 
 class TestListExtractionJobsEndpoint:
-    """Tests for GET /extractions endpoint."""
+    """Tests for GET /extractions endpoint.
+
+    Part 1 of issue #250: list_extraction_jobs now queries the extraction_jobs
+    Supabase table filtered by user_id, replacing the previous Celery global
+    inspect API that exposed every user's in-flight tasks.
+    """
 
     @pytest.mark.unit
-    async def test_list_jobs_no_workers(self, client, valid_api_headers) -> None:
-        """Test listing jobs when no workers are available returns 500 (generic handler)."""
+    async def test_list_jobs_supabase_unavailable_returns_503(
+        self, client, valid_api_headers
+    ) -> None:
+        """Returns 503 when Supabase is not configured."""
         _install_jwt_user_override(_USER_001)
-        mock_celery_app = MagicMock()
-        mock_celery_app.control.inspect.return_value = None
 
-        with patch("app.extraction_domain.jobs_router.celery_app", mock_celery_app):
+        with patch("app.extraction_domain.jobs_router.supabase", None):
             response = await client.get(
                 "/extractions",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
-            # The inner 503 HTTPException is caught by the outer `except Exception`
-            # and re-wrapped as a 500 error
-            assert response.status_code == 500
+            assert response.status_code == 503
 
     @pytest.mark.unit
-    async def test_list_jobs_empty(self, client, valid_api_headers) -> None:
-        """Test listing jobs when no extraction jobs are running."""
+    async def test_list_jobs_returns_only_caller_jobs(
+        self, client, valid_api_headers
+    ) -> None:
+        """DB query is scoped to the authenticated user_id — other users' jobs are excluded.
+
+        Verifies that the eq("user_id", ...) filter is applied with the caller's
+        user id, not with a different user's id or with no filter at all.
+        """
         _install_jwt_user_override(_USER_001)
-        mock_inspect = MagicMock()
-        mock_inspect.active.return_value = {}
-        mock_inspect.scheduled.return_value = {}
-        mock_inspect.reserved.return_value = {}
 
-        mock_celery_app = MagicMock()
-        mock_celery_app.control.inspect.return_value = mock_inspect
+        mock_db_response = MagicMock()
+        mock_db_response.data = [
+            {
+                "job_id": "job-owned-by-001",
+                "collection_id": "col-1",
+                "status": "COMPLETED",
+                "created_at": "2025-01-01T00:00:00+00:00",
+                "updated_at": "2025-01-01T01:00:00+00:00",
+                "total_documents": 5,
+                "completed_documents": 5,
+            }
+        ]
+        mock_db_response.count = 1
 
-        with patch("app.extraction_domain.jobs_router.celery_app", mock_celery_app):
+        # Capture the user_id passed to the DB filter.
+        captured_user_id: list[str] = []
+
+        class _ChainMock:
+            def select(self, *a, **kw):
+                return self
+
+            def eq(self, col, val):
+                if col == "user_id":
+                    captured_user_id.append(val)
+                return self
+
+            def order(self, *a, **kw):
+                return self
+
+            def range(self, *a, **kw):
+                return self
+
+            def execute(self):
+                return mock_db_response
+
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value = _ChainMock()
+
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["jobs"]) == 1
+        assert data["jobs"][0]["task_id"] == "job-owned-by-001"
+        assert data["total"] == 1
+        # The query was scoped to the caller's user_id.
+        assert _USER_001 in captured_user_id
+
+    @pytest.mark.unit
+    async def test_list_jobs_empty_when_no_jobs(
+        self, client, valid_api_headers
+    ) -> None:
+        """Returns empty list and total=0 when the user has no jobs in the DB."""
+        _install_jwt_user_override(_USER_001)
+
+        mock_db_response = MagicMock()
+        mock_db_response.data = []
+        mock_db_response.count = 0
+
+        mock_supabase = MagicMock()
+        (
+            mock_supabase.table.return_value.select.return_value.eq.return_value.order.return_value.range.return_value.execute.return_value
+        ) = mock_db_response
+
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
             response = await client.get(
                 "/extractions",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
@@ -587,6 +696,55 @@ class TestListExtractionJobsEndpoint:
             data = response.json()
             assert data["jobs"] == []
             assert data["total"] == 0
+
+    @pytest.mark.unit
+    async def test_list_jobs_status_filter_passed_to_db(
+        self, client, valid_api_headers
+    ) -> None:
+        """status= query param is translated to the DB-level status values and
+        forwarded as an ``.in_()`` filter (not applied in Python)."""
+        _install_jwt_user_override(_USER_001)
+
+        mock_db_response = MagicMock()
+        mock_db_response.data = []
+        mock_db_response.count = 0
+
+        captured_status_filter: list[str] = []
+
+        class _ChainMock:
+            def select(self, *a, **kw):
+                return self
+
+            def eq(self, col, val):
+                return self
+
+            def in_(self, col, vals):
+                if col == "status":
+                    captured_status_filter.extend(vals)
+                return self
+
+            def order(self, *a, **kw):
+                return self
+
+            def range(self, *a, **kw):
+                return self
+
+            def execute(self):
+                return mock_db_response
+
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value = _ChainMock()
+
+        with patch("app.extraction_domain.jobs_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions?status=COMPLETED",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        # COMPLETED is translated to the raw DB status values it subsumes.
+        assert "SUCCESS" in captured_status_filter
+        assert "COMPLETED" in captured_status_filter
 
 
 class TestValidateDocumentsMaxCap:
