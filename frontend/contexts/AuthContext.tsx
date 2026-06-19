@@ -64,6 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     const { error } = await createClient().auth.signOut();
     if (error) throw error;
+    // Purge any per-user data the service worker may have cached during this
+    // session before the next user can hit the same browser profile (#210).
+    if (typeof navigator !== "undefined" && navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: "CLEAR_CACHES" });
+    }
     router.push("/auth/login");
   };
 
