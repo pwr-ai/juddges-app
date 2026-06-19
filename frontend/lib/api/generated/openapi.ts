@@ -20681,9 +20681,7 @@ export interface operations {
     create_publication_publications_post: {
         parameters: {
             query?: never;
-            header?: {
-                "X-User-ID"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -20748,9 +20746,7 @@ export interface operations {
     update_publication_publications__publication_id__put: {
         parameters: {
             query?: never;
-            header?: {
-                "X-User-ID"?: string;
-            };
+            header?: never;
             path: {
                 /** @description Publication ID to update */
                 publication_id: string;
@@ -20786,9 +20782,7 @@ export interface operations {
     delete_publication_publications__publication_id__delete: {
         parameters: {
             query?: never;
-            header?: {
-                "X-User-ID"?: string;
-            };
+            header?: never;
             path: {
                 /** @description Publication ID to delete */
                 publication_id: string;

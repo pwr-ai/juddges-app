@@ -28201,17 +28201,6 @@
       "post": {
         "description": "Create a new publication.",
         "operationId": "create_publication_publications_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": false,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -28247,6 +28236,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Create Publication",
@@ -28268,15 +28260,6 @@
             "schema": {
               "description": "Publication ID to delete",
               "title": "Publication Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": false,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -28304,6 +28287,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Delete Publication",
@@ -28373,15 +28359,6 @@
               "title": "Publication Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": false,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "requestBody": {
@@ -28419,6 +28396,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Update Publication",
