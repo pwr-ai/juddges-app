@@ -20,7 +20,7 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.core.auth_jwt import AuthenticatedUser, get_optional_user
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.core.supabase import get_supabase_client
 from app.models import validate_id_format
 
@@ -241,12 +241,12 @@ def _now_iso() -> str:
 )
 async def start_session(
     request: StartSessionRequest,
-    current_user: AuthenticatedUser | None = Depends(get_optional_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> StartSessionResponse:
     """Create a research session and launch the agent in the background."""
     from research_agent.persistence import ResearchMode, ResearchSession
 
-    user_id = current_user.id if current_user else "anonymous"
+    user_id = current_user.id
     session_id = str(uuid.uuid4())
 
     session_store, _ = _get_persistence()
@@ -279,7 +279,7 @@ async def start_session(
 )
 async def get_session(
     session_id: str,
-    current_user: AuthenticatedUser | None = Depends(get_optional_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> SessionResponse:
     """Read a research session by ID."""
     try:
@@ -290,6 +290,10 @@ async def get_session(
     session_store, _ = _get_persistence()
     session = await session_store.get_session(session_id)
     if session is None:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    # Return 404 (not 403) to avoid disclosing that the session exists to other users.
+    if session.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Session not found.")
 
     return SessionResponse(
@@ -314,7 +318,7 @@ async def get_session(
 )
 async def stream_session(
     session_id: str,
-    current_user: AuthenticatedUser | None = Depends(get_optional_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Return an SSE stream that emits progress events for the given session."""
     try:
@@ -322,8 +326,17 @@ async def stream_session(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    queue: asyncio.Queue = asyncio.Queue(maxsize=256)
-    _session_event_queues.setdefault(session_id, []).append(queue)
+    # Verify ownership BEFORE registering any SSE queue to avoid existence disclosure.
+    session_store, _ = _get_persistence()
+    session = await session_store.get_session(session_id)
+    if session is None or session.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+    queues = _session_event_queues.setdefault(session_id, [])
+    # Evict stale full queues before appending to avoid unbounded growth.
+    _session_event_queues[session_id] = [q for q in queues if not q.full()]
+    _session_event_queues[session_id].append(queue)
 
     async def _event_generator():
         try:
@@ -364,13 +377,18 @@ async def stream_session(
 async def send_message(
     session_id: str,
     request: SendMessageRequest,
-    current_user: AuthenticatedUser | None = Depends(get_optional_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, str]:
     """Placeholder for interrupt-resume: accepts user input at a decision point."""
     try:
         validate_id_format(session_id, "session_id")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    session_store, _ = _get_persistence()
+    session = await session_store.get_session(session_id)
+    if session is None or session.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Session not found.")
 
     logger.info(
         "Received user message for session {}: {}",
@@ -386,13 +404,19 @@ async def send_message(
 )
 async def stop_session(
     session_id: str,
-    current_user: AuthenticatedUser | None = Depends(get_optional_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, str]:
     """Cancel the running agent task and mark the session as stopped."""
     try:
         validate_id_format(session_id, "session_id")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Verify ownership before revealing whether the session/task exists.
+    session_store, _ = _get_persistence()
+    session = await session_store.get_session(session_id)
+    if session is None or session.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Session not found.")
 
     task = _running_sessions.get(session_id)
     if task is None:
@@ -417,12 +441,12 @@ async def stop_session(
     summary="List user's research sessions",
 )
 async def list_sessions(
-    current_user: AuthenticatedUser | None = Depends(get_optional_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     limit: int = Query(20, ge=1, le=100, description="Max sessions to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
 ) -> list[SessionResponse]:
     """List research sessions for the current user."""
-    user_id = current_user.id if current_user else "anonymous"
+    user_id = current_user.id
 
     session_store, _ = _get_persistence()
     sessions = await session_store.list_sessions(user_id, limit=limit, offset=offset)
