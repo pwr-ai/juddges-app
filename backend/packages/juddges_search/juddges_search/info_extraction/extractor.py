@@ -13,7 +13,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_openai import ChatOpenAI
 from loguru import logger
-from openai import RateLimitError
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    InternalServerError,
+    RateLimitError,
+)
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -76,7 +81,20 @@ class InformationExtractor:
         )
 
     @retry(
-        retry=retry_if_exception_type((RateLimitError, httpx.ConnectError, httpx.TimeoutException, ConnectionError)),
+        # Retry transient OpenAI failures per LLM call so a single 429/5xx/timeout
+        # does not fail the whole document (#169). 4xx other than 429 are not
+        # retried (they are permanent) since APIStatusError is not listed here.
+        retry=retry_if_exception_type(
+            (
+                RateLimitError,
+                APITimeoutError,
+                APIConnectionError,
+                InternalServerError,
+                httpx.ConnectError,
+                httpx.TimeoutException,
+                ConnectionError,
+            )
+        ),
         stop=stop_after_attempt(5),
         wait=wait_random_exponential(multiplier=1, min=1, max=60),
     )
