@@ -42,6 +42,10 @@ services:
       - HOSTNAME=0.0.0.0
       # Server-side routes inside the frontend container must use Docker service names
       - API_BASE_URL=http://backend:8002
+      # Canonical public origin for server-rendered SEO (metadataBase, robots.txt,
+      # sitemap.xml, OG images, changelog RSS). Falls back to the production domain
+      # if not provided via .env. See docs/reference/seo-metadata.md
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://juddges.augustyniak.ai}
     # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
