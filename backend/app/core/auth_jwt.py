@@ -11,6 +11,7 @@ Date: 2025-10-11
 import os
 from typing import Any
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
@@ -59,22 +60,52 @@ def get_admin_supabase_client() -> Client:
     return _admin_supabase_client
 
 
-def get_user_supabase_client(access_token: str) -> Client:
+def get_user_supabase_client(access_token: str, refresh_token: str = "") -> Client:
     """
     Create a Supabase client with user's JWT token.
 
     This client respects Row Level Security (RLS) policies and operates
     with the permissions of the authenticated user.
 
+    When SUPABASE_JWT_SECRET is configured, the JWT signature is verified
+    locally (HS256, audience="authenticated") before the client is constructed.
+    If the secret is not set, local verification is skipped and a warning is
+    logged — the token will still be validated by Supabase Auth upstream via
+    get_current_user().
+
     Args:
         access_token: User's JWT access token from Supabase
+        refresh_token: Optional refresh token (defaults to empty string)
 
     Returns:
         Client: Supabase client configured for the user
 
     Raises:
         ValueError: If required environment variables are not set
+        HTTPException: 401 if SUPABASE_JWT_SECRET is set and signature is invalid
     """
+    supabase_jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+
+    # Truthiness (not ``is not None``): an empty-string secret (a realistic
+    # misconfiguration) must skip verification rather than reject every valid
+    # token with an empty signing key — that would 401 all authenticated calls.
+    if supabase_jwt_secret:
+        try:
+            jwt.decode(
+                access_token,
+                supabase_jwt_secret,
+                algorithms=["HS256"],
+                audience="authenticated",
+                leeway=10,
+            )
+        except jwt.PyJWTError as exc:
+            logger.warning(f"JWT signature verification failed: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token signature",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
     url = os.getenv("SUPABASE_URL")
     anon_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
 
@@ -91,8 +122,8 @@ def get_user_supabase_client(access_token: str) -> Client:
     )
     client = create_client(url, anon_key, options=options)
 
-    # Set the user's access token for authenticated requests
-    client.auth.set_session(access_token, "")  # Empty refresh token is OK for API
+    # Set the user's session — pass through refresh_token when available
+    client.auth.set_session(access_token, refresh_token)
 
     return client
 
@@ -318,4 +349,9 @@ def get_user_db_client(user: AuthenticatedUser) -> Client:
     return get_user_supabase_client(user.raw_token)
 
 
+if not os.getenv("SUPABASE_JWT_SECRET"):
+    logger.warning(
+        "SUPABASE_JWT_SECRET is not set — local JWT signature verification is disabled. "
+        "Token integrity relies on Supabase Auth upstream validation only."
+    )
 logger.info("JWT authentication module initialized")
