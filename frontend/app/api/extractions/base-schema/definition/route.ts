@@ -29,13 +29,20 @@ export async function GET(): Promise<NextResponse> {
       throw new UnauthorizedError("Please log in to view base schema definition");
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+
+    if (!accessToken) {
+      throw new UnauthorizedError("Please log in to view base schema definition");
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/extractions/base-schema/definition`,
       {
         method: "GET",
         headers: {
           "X-API-Key": API_KEY,
-          "X-User-ID": userData.user.id,
+          "Authorization": `Bearer ${accessToken}`,
         },
       }
     );
