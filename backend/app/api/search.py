@@ -27,6 +27,10 @@ router = APIRouter(prefix="/api/search", tags=["Search"])
 
 # Rate limit for admin analytics endpoints (configurable via env)
 SEARCH_ANALYTICS_RATE_LIMIT = os.getenv("SEARCH_ANALYTICS_RATE_LIMIT", "30/minute")
+# Rate limit for autocomplete endpoint (configurable via env)
+AUTOCOMPLETE_RATE_LIMIT = os.getenv("AUTOCOMPLETE_RATE_LIMIT", "60/minute")
+# Rate limit for topic-click endpoint (configurable via env)
+TOPIC_CLICK_RATE_LIMIT = os.getenv("TOPIC_CLICK_RATE_LIMIT", "30/minute")
 # Optional secondary key that gates the eval-queries export endpoint.
 # When set, only callers presenting this exact key may access the endpoint.
 # When unset, any valid BACKEND_API_KEY is accepted.
@@ -70,9 +74,9 @@ class DocumentSearchResponse(BaseModel):
 class TopicClickEvent(BaseModel):
     """Request body for the topic-click analytics endpoint."""
 
-    topic_id: str
-    query: str  # the autocomplete query the user had typed
-    jurisdiction: str | None = None  # if a filter was active
+    topic_id: str = Field(..., max_length=200)
+    query: str = Field(..., max_length=500)  # the autocomplete query the user had typed
+    jurisdiction: str | None = Field(None, max_length=64)  # if a filter was active
 
 
 class TopicsMetaResponse(BaseModel):
@@ -95,7 +99,9 @@ def get_search_service() -> MeiliSearchService:
 
 
 @router.get("/autocomplete", response_model=AutocompleteResponse)
+@limiter.limit(AUTOCOMPLETE_RATE_LIMIT)
 async def autocomplete(
+    request: Request,
     background_tasks: BackgroundTasks,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(10, ge=1, le=50, description="Maximum number of hits"),
@@ -233,7 +239,9 @@ async def documents_search(
 
 
 @router.post("/topic-click", status_code=200)
+@limiter.limit(TOPIC_CLICK_RATE_LIMIT)
 async def topic_click(
+    request: Request,
     event: TopicClickEvent,
     background_tasks: BackgroundTasks,
     user: AuthenticatedUser | None = Depends(get_optional_user),

@@ -435,3 +435,77 @@ class TestEventLoopReuse:
         assert mock_loop.run_until_complete.call_count == 2
         mock_loop.close.assert_called_once()
         assert len(result) == 1
+
+
+# ---------------------------------------------------------------------------
+# Task decorator: autoretry_for includes OpenAI transient exceptions (#169)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+class TestAutoretryForIncludes:
+    """Assert that extract_information_from_documents_task.autoretry_for
+    covers the OpenAI transient HTTP exception classes added in #169.
+
+    These tests are intentionally lightweight — they introspect the task
+    decorator metadata without touching a real Celery broker or OpenAI API.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _task(self):
+        from app.workers import extract_information_from_documents_task
+
+        self.task = extract_information_from_documents_task
+
+    def test_openai_rate_limit_error_in_autoretry_for(self):
+        import openai
+
+        assert openai.RateLimitError in self.task.autoretry_for, (
+            "openai.RateLimitError (HTTP 429) must be in autoretry_for so that "
+            "rate-limit bursts trigger a Celery retry rather than permanent failure"
+        )
+
+    def test_openai_api_connection_error_in_autoretry_for(self):
+        import openai
+
+        assert openai.APIConnectionError in self.task.autoretry_for, (
+            "openai.APIConnectionError must be in autoretry_for"
+        )
+
+    def test_openai_api_timeout_error_in_autoretry_for(self):
+        import openai
+
+        assert openai.APITimeoutError in self.task.autoretry_for, (
+            "openai.APITimeoutError must be in autoretry_for"
+        )
+
+    def test_openai_internal_server_error_in_autoretry_for(self):
+        import openai
+
+        assert openai.InternalServerError in self.task.autoretry_for, (
+            "openai.InternalServerError (HTTP 5xx) must be in autoretry_for so that "
+            "OpenAI outages trigger a Celery retry rather than permanent failure"
+        )
+
+    def test_openai_api_status_error_not_in_autoretry_for(self):
+        """Broad APIStatusError covers all 4xx/5xx responses including permanent
+        client errors (400/401/403) and must NOT be in autoretry_for."""
+        import openai
+
+        assert openai.APIStatusError not in self.task.autoretry_for, (
+            "openai.APIStatusError must NOT be in autoretry_for because it also "
+            "matches permanent 4xx client errors (bad API key, invalid model, etc.)"
+        )
+
+    def test_tcp_connection_errors_still_present(self):
+        """Ensure original TCP-level transient exceptions were not accidentally removed."""
+        for exc_cls in (ConnectionError, OSError, TimeoutError):
+            assert exc_cls in self.task.autoretry_for, (
+                f"{exc_cls.__name__} must remain in autoretry_for"
+            )
+
+    def test_max_retries_raised_to_at_least_3(self):
+        """max_retries should be at least 3 to give 429s meaningful retry room."""
+        assert self.task.max_retries >= 3, (
+            f"max_retries is {self.task.max_retries}; expected >= 3 after #169"
+        )

@@ -4,6 +4,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
+import openai
 from celery import Celery, Task
 from celery.exceptions import Retry
 from celery.schedules import crontab
@@ -216,9 +217,23 @@ def _calculate_task_timing_metrics(
     bind=True,
     pydantic=True,
     track_started=True,
-    max_retries=2,
+    max_retries=3,
     default_retry_delay=60,
-    autoretry_for=(ConnectionError, OSError, TimeoutError),
+    autoretry_for=(
+        # TCP / OS-level transient failures
+        ConnectionError,
+        OSError,
+        TimeoutError,
+        # OpenAI HTTP-level transient failures.
+        # RateLimitError (429) and APIConnectionError / APITimeoutError cover
+        # network and quota bursts; InternalServerError covers 5xx responses.
+        # Broad APIStatusError is intentionally excluded: it also matches 4xx
+        # permanent errors (400/401/403) that should NOT be retried.
+        openai.RateLimitError,
+        openai.APIConnectionError,
+        openai.APITimeoutError,
+        openai.InternalServerError,
+    ),
     retry_backoff=True,
     retry_backoff_max=300,
     retry_jitter=True,
@@ -236,16 +251,30 @@ def extract_information_from_documents_task(
 
     Error handling:
     - Connection errors (ConnectionError, OSError, TimeoutError): Automatically retried by Celery
-      up to 2 times (3 attempts total) with exponential backoff (60s base, 300s max)
+      up to 3 times (4 attempts total) with exponential backoff (60s base, 300s max)
+    - OpenAI transient HTTP errors (RateLimitError/429, APIConnectionError, APITimeoutError,
+      InternalServerError/5xx): Automatically retried by the same Celery autoretry_for policy.
+      Broad APIStatusError is excluded to avoid retrying permanent 4xx client errors
+      (e.g. invalid model name → 400, bad API key → 401).
     - Schema/validation errors: Not retried, fail immediately
     - Other errors: Mark all documents as failed and return failed results
 
     Retry strategy:
-    - Uses Celery's autoretry_for to handle most connection errors automatically
+    - Uses Celery's autoretry_for to handle most connection and OpenAI transient errors automatically
     - Database errors from Supabase are retried with connection error strategy
 
-    Note: The InformationExtractor also has built-in retry logic for LLM API calls,
-    so transient LLM errors are handled at multiple levels.
+    Two-layer transient-error handling (#169):
+    - PRIMARY (per document): the InformationExtractor's per-LLM-call tenacity retry
+      now covers RateLimitError (429), InternalServerError (5xx), APITimeoutError and
+      APIConnectionError (in addition to TCP-level errors) with exponential backoff.
+      So a single transient 429/5xx during one document's extraction is retried at the
+      call level and does NOT immediately fail the document.
+    - OUTER SAFETY NET (whole task): autoretry_for below also lists the OpenAI transient
+      classes. Because the per-document try/except converts a *terminal* per-doc failure
+      into a FAILED result (partial-completion design), task-level autoretry only fires
+      for transient OpenAI errors raised *outside* the per-document loop — e.g. during LLM
+      initialisation (get_llm) or document fetching (get_documents_by_id). This is
+      intentional: re-running the whole task would reprocess already-succeeded documents.
 
     Args:
         request: DocumentExtractionRequest with user_schema containing full schema dict from Supabase
@@ -469,11 +498,19 @@ def extract_information_from_documents_task(
     except Retry:
         # Re-raise retry exceptions to let Celery handle them
         raise
-    except (ConnectionError, OSError, TimeoutError) as e:
-        # These are already configured in autoretry_for, but we can customize retry behavior here
-        # Note: Celery's autoretry_for will handle these automatically, this is just for logging
+    except (
+        ConnectionError,
+        OSError,
+        TimeoutError,
+        openai.RateLimitError,
+        openai.APIConnectionError,
+        openai.APITimeoutError,
+        openai.InternalServerError,
+    ) as e:
+        # These are all configured in autoretry_for above; this branch just adds
+        # structured logging before Celery's autoretry machinery re-raises.
         logger.warning(
-            f"Retryable connection error (attempt {self.request.retries + 1}/{self.max_retries + 1}): {type(e).__name__}: {e}"
+            f"Retryable transient error (attempt {self.request.retries + 1}/{self.max_retries + 1}): {type(e).__name__}: {e}"
         )
         raise  # Let Celery's autoretry_for handle it
     except Exception as e:
