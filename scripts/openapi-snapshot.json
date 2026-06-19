@@ -16307,6 +16307,63 @@
         "title": "UserListResponse",
         "type": "object"
       },
+      "UserSearchHistoryItem": {
+        "description": "A single row from the requesting user's search history.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "hit_count": {
+            "title": "Hit Count",
+            "type": "integer"
+          },
+          "processing_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Ms"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "topic_hits_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Hits Count"
+          }
+        },
+        "required": [
+          "query",
+          "hit_count",
+          "created_at"
+        ],
+        "title": "UserSearchHistoryItem",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -19868,6 +19925,78 @@
         ]
       }
     },
+    "/api/search/analytics/history": {
+      "get": {
+        "description": "Return the authenticated caller's own search history (most recent first).",
+        "operationId": "user_search_history_api_search_analytics_history_get",
+        "parameters": [
+          {
+            "description": "Lookback window in days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Lookback window in days",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserSearchHistoryItem"
+                  },
+                  "title": "Response User Search History Api Search Analytics History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "User Search History",
+        "tags": [
+          "Search"
+        ]
+      }
+    },
     "/api/search/analytics/popular": {
       "get": {
         "description": "Return the most frequently searched queries.",
@@ -20082,6 +20211,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Autocomplete",
@@ -20193,6 +20325,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Documents Search",
@@ -20244,6 +20379,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Topic Click",
@@ -21878,17 +22016,6 @@
     "/collections": {
       "get": {
         "operationId": "list_collections_collections_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "content": {
@@ -21903,21 +22030,14 @@
               }
             },
             "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
           }
         },
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "List Collections",
@@ -21927,17 +22047,6 @@
       },
       "post": {
         "operationId": "create_collection_collections_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -21973,6 +22082,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Create Collection",
@@ -21993,15 +22105,6 @@
             "schema": {
               "description": "Collection ID to delete",
               "title": "Collection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -22029,6 +22132,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Delete Collection",
@@ -22076,15 +22182,6 @@
               "title": "Offset",
               "type": "integer"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -22112,6 +22209,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get Collection",
@@ -22130,15 +22230,6 @@
             "schema": {
               "description": "Collection ID to update",
               "title": "Collection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -22178,6 +22269,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Update Collection",
@@ -22199,15 +22293,6 @@
             "schema": {
               "description": "Collection ID to remove document from",
               "title": "Collection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -22245,6 +22330,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Remove Document By Body",
@@ -22264,15 +22352,6 @@
             "schema": {
               "description": "Collection ID to get documents from",
               "title": "Collection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -22300,6 +22379,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get Collection Documents",
@@ -22318,15 +22400,6 @@
             "schema": {
               "description": "Collection ID to add document to",
               "title": "Collection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -22364,6 +22437,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Add Document",
@@ -22385,15 +22461,6 @@
             "schema": {
               "description": "Collection ID to add documents to",
               "title": "Collection Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
               "type": "string"
             }
           }
@@ -22431,6 +22498,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Add Documents Batch",
@@ -22465,15 +22535,6 @@
               "title": "Document Id",
               "type": "string"
             }
-          },
-          {
-            "in": "header",
-            "name": "X-User-ID",
-            "required": true,
-            "schema": {
-              "title": "X-User-Id",
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -22499,6 +22560,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Remove Document By Url",
