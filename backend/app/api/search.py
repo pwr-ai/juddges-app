@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.auth import verify_api_key
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
+from app.rate_limiter import limiter
 from app.services.search import MeiliSearchService, TopicHit
 from app.services.search_analytics import (
     export_eval_queries,
@@ -20,6 +23,13 @@ from app.services.search_analytics import (
 )
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
+
+# Rate limit for admin analytics endpoints (configurable via env)
+SEARCH_ANALYTICS_RATE_LIMIT = os.getenv("SEARCH_ANALYTICS_RATE_LIMIT", "30/minute")
+# Optional secondary key that gates the eval-queries export endpoint.
+# When set, only callers presenting this exact key may access the endpoint.
+# When unset, any valid BACKEND_API_KEY is accepted.
+RESEARCHER_API_KEY = os.getenv("RESEARCHER_API_KEY")
 
 
 class AutocompleteResponse(BaseModel):
@@ -286,9 +296,12 @@ class ZeroResultQueryItem(BaseModel):
 
 
 @router.get("/analytics/popular", response_model=list[PopularQueryItem])
+@limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def popular_queries(
+    request: Request,
     days: int = Query(7, ge=1, le=90, description="Lookback window in days"),
     limit: int = Query(20, ge=1, le=100),
+    api_key: str = Depends(verify_api_key),
 ) -> list[PopularQueryItem]:
     """Return the most frequently searched queries."""
     rows = await get_popular_queries(days=days, limit=limit)
@@ -296,9 +309,12 @@ async def popular_queries(
 
 
 @router.get("/analytics/zero-results", response_model=list[ZeroResultQueryItem])
+@limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def zero_result_queries_endpoint(
+    request: Request,
     days: int = Query(7, ge=1, le=90, description="Lookback window in days"),
     limit: int = Query(20, ge=1, le=100),
+    api_key: str = Depends(verify_api_key),
 ) -> list[ZeroResultQueryItem]:
     """Return queries that produced zero search results."""
     rows = await get_zero_result_queries(days=days, limit=limit)
@@ -372,7 +388,9 @@ class EvalExportResponse(BaseModel):
 
 
 @router.get("/analytics/eval-queries", response_model=EvalExportResponse)
+@limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def eval_queries_endpoint(
+    request: Request,
     days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
     min_frequency: int = Query(
         1, ge=1, le=100, description="Minimum query frequency to include"
@@ -381,6 +399,7 @@ async def eval_queries_endpoint(
     include_feedback: bool = Query(
         True, description="Include user relevance labels from search_feedback"
     ),
+    api_key: str = Depends(verify_api_key),
 ) -> EvalExportResponse:
     """Export deduplicated search queries as an evaluation dataset.
 
@@ -393,7 +412,16 @@ async def eval_queries_endpoint(
     - ``frequency``: how often users searched this query
     - ``relevance_labels``: list of user-provided relevance ratings (if any)
     - ``has_ground_truth``: whether at least one rating exists
+
+    When ``RESEARCHER_API_KEY`` is set in the environment, only that key is
+    accepted for this endpoint (403 otherwise).  When unset, any valid
+    ``BACKEND_API_KEY`` is sufficient.
     """
+    if RESEARCHER_API_KEY and api_key != RESEARCHER_API_KEY:
+        raise HTTPException(
+            status_code=403,
+            detail="This endpoint requires the researcher API key.",
+        )
     data = await export_eval_queries(
         days=days,
         min_frequency=min_frequency,

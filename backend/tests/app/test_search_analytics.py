@@ -483,3 +483,161 @@ class TestSyncStatus:
                 assert status["status"] == "unknown"
         finally:
             mod._last_sync = original
+
+
+class TestAnalyticsEndpointsAuth:
+    """Prove that /analytics/popular, /zero-results, and /eval-queries
+    require a valid API key (fixes #164)."""
+
+    @pytest.mark.anyio
+    async def test_popular_queries_requires_api_key(self, client):
+        """No API key -> 403 from APIKeyHeader."""
+        response = await client.get("/api/search/analytics/popular")
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.anyio
+    async def test_popular_queries_rejects_invalid_key(self, client):
+        """Wrong API key -> 401."""
+        response = await client.get(
+            "/api/search/analytics/popular",
+            headers={"X-API-Key": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.anyio
+    @patch("app.api.search.get_popular_queries")
+    async def test_popular_queries_accepts_valid_key(
+        self, mock_popular, client, valid_api_headers
+    ):
+        """Valid API key -> 200."""
+        mock_popular.return_value = []
+        response = await client.get(
+            "/api/search/analytics/popular",
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_zero_results_requires_api_key(self, client):
+        """No API key -> 403 from APIKeyHeader."""
+        response = await client.get("/api/search/analytics/zero-results")
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.anyio
+    async def test_zero_results_rejects_invalid_key(self, client):
+        """Wrong API key -> 401."""
+        response = await client.get(
+            "/api/search/analytics/zero-results",
+            headers={"X-API-Key": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.anyio
+    @patch("app.api.search.get_zero_result_queries")
+    async def test_zero_results_accepts_valid_key(
+        self, mock_zero, client, valid_api_headers
+    ):
+        """Valid API key -> 200."""
+        mock_zero.return_value = []
+        response = await client.get(
+            "/api/search/analytics/zero-results",
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_eval_queries_requires_api_key(self, client):
+        """No API key -> 403 from APIKeyHeader."""
+        response = await client.get("/api/search/analytics/eval-queries")
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.anyio
+    async def test_eval_queries_rejects_invalid_key(self, client):
+        """Wrong API key -> 401."""
+        response = await client.get(
+            "/api/search/analytics/eval-queries",
+            headers={"X-API-Key": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    @pytest.mark.anyio
+    @patch("app.api.search.export_eval_queries")
+    async def test_eval_queries_accepts_valid_key_when_researcher_key_unset(
+        self, mock_export, client, valid_api_headers, monkeypatch
+    ):
+        """When RESEARCHER_API_KEY is not set, any valid key works."""
+        import app.api.search as search_mod
+
+        monkeypatch.setattr(search_mod, "RESEARCHER_API_KEY", None)
+        mock_export.return_value = {
+            "queries": [],
+            "metadata": {
+                "exported_at": "2026-01-01T00:00:00Z",
+                "days": 30,
+                "min_frequency": 1,
+                "total_queries": 0,
+                "labeled_queries": 0,
+                "unlabeled_queries": 0,
+                "source_breakdown": {},
+            },
+        }
+        response = await client.get(
+            "/api/search/analytics/eval-queries",
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_eval_queries_rejects_non_researcher_key_when_researcher_key_set(
+        self, client, valid_api_headers, monkeypatch
+    ):
+        """When RESEARCHER_API_KEY is set, a regular API key is rejected with 403."""
+        import app.api.search as search_mod
+
+        monkeypatch.setattr(search_mod, "RESEARCHER_API_KEY", "special-researcher-key")
+        response = await client.get(
+            "/api/search/analytics/eval-queries",
+            headers=valid_api_headers,  # valid BACKEND_API_KEY, but NOT researcher key
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.anyio
+    @patch("app.api.search.export_eval_queries")
+    async def test_eval_queries_accepts_researcher_key_when_set(
+        self, mock_export, client, monkeypatch
+    ):
+        """When RESEARCHER_API_KEY is set, the researcher key is accepted."""
+        import app.api.search as search_mod
+
+        researcher_key = "special-researcher-key"
+        monkeypatch.setattr(search_mod, "RESEARCHER_API_KEY", researcher_key)
+        mock_export.return_value = {
+            "queries": [],
+            "metadata": {
+                "exported_at": "2026-01-01T00:00:00Z",
+                "days": 30,
+                "min_frequency": 1,
+                "total_queries": 0,
+                "labeled_queries": 0,
+                "unlabeled_queries": 0,
+                "source_breakdown": {},
+            },
+        }
+
+        from app.auth import verify_api_key
+        from app.server import app
+
+        # Override verify_api_key to accept and return the researcher key
+        async def mock_verify():
+            return researcher_key
+
+        app.dependency_overrides[verify_api_key] = mock_verify
+        try:
+            response = await client.get(
+                "/api/search/analytics/eval-queries",
+                headers={"X-API-Key": researcher_key},
+            )
+        finally:
+            app.dependency_overrides.pop(verify_api_key, None)
+
+        assert response.status_code == 200
