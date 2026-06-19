@@ -2,11 +2,12 @@
 
 from enum import Enum
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from juddges_search.db.supabase_db import get_publications_db
 from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/publications", tags=["publications"])
@@ -165,11 +166,6 @@ class LinkExtractionJobRequest(BaseModel):
         return validate_id_format(v, "job_id")
 
 
-def get_current_user(x_user_id: str = Header(None, alias="X-User-ID")) -> str | None:
-    """Extract optional user ID from request header."""
-    return x_user_id
-
-
 def transform_publication(data: dict) -> PublicationWithResources:
     """Transform database response to PublicationWithResources model."""
     schemas = []
@@ -259,9 +255,10 @@ async def list_publications(
 async def create_publication(
     request: CreatePublicationRequest,
     db=Depends(get_publications_db),
-    user_id: str | None = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Create a new publication."""
+    user_id = user.id
     data = {
         "title": request.title,
         "authors": [a.model_dump() for a in request.authors],
@@ -316,7 +313,7 @@ async def update_publication(
     request: UpdatePublicationRequest,
     publication_id: str = Path(..., description="Publication ID to update"),
     db=Depends(get_publications_db),
-    user_id: str | None = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Update an existing publication."""
     try:
@@ -371,7 +368,7 @@ async def update_publication(
 async def delete_publication(
     publication_id: str = Path(..., description="Publication ID to delete"),
     db=Depends(get_publications_db),
-    user_id: str | None = Depends(get_current_user),
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     """Delete a publication."""
     try:
