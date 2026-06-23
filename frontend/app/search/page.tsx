@@ -20,6 +20,7 @@ import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
 import { PreSearchFilters } from '@/components/search/PreSearchFilters';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete';
+import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
 import { useSearchUrlParams } from '@/hooks/useSearchUrlParams';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -175,6 +176,14 @@ function SearchPageContent(): React.JSX.Element | null {
  debounceMs: 250,
  minChars: 2,
  limit: 8,
+ });
+
+ // Corpus-derived phrase suggestions (issue #153). Complements topic chips.
+ const { suggestionHits } = useSearchSuggestions(query, {
+ enabled: mounted && !isSearching,
+ debounceMs: 250,
+ minChars: 2,
+ limit: 6,
  });
 
  // Search results hook
@@ -481,6 +490,7 @@ function SearchPageContent(): React.JSX.Element | null {
  onSearch={handleSearch}
  autocompleteTopicHits={autocompleteTopicHits}
  isAutocompleteLoading={isAutocompleteLoading}
+ suggestionHits={suggestionHits}
  currentLocale={locale}
  />
 
@@ -531,6 +541,7 @@ function SearchPageContent(): React.JSX.Element | null {
  onSearch={handleSearch}
  autocompleteTopicHits={autocompleteTopicHits}
  isAutocompleteLoading={isAutocompleteLoading}
+ suggestionHits={suggestionHits}
  currentLocale={locale}
  />
 

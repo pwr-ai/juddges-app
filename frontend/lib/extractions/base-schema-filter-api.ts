@@ -18,10 +18,12 @@ import type {
   BaseSchemaFilterRequest,
   BaseSchemaFilterResponse,
   FacetCount,
+  NumericHistogramResponse,
 } from "@/types/base-schema-filter";
 
 const FILTER_URL = "/api/extractions/base-schema/filter";
 const FACETS_URL = "/api/extractions/base-schema/facets";
+const HISTOGRAM_URL = "/api/extractions/base-schema/histogram";
 
 async function postFilter(
   request: BaseSchemaFilterRequest,
@@ -76,5 +78,40 @@ export function useExtractionFacet(field: string | null, enabled: boolean = true
     queryFn: ({ signal }) => fetchFacet(field as string, signal),
     enabled: enabled && Boolean(field),
     staleTime: 5 * 60_000,
+  });
+}
+
+async function fetchHistogram(
+  field: string,
+  buckets: number,
+  signal?: AbortSignal,
+): Promise<NumericHistogramResponse> {
+  const response = await fetch(
+    `${HISTOGRAM_URL}/${encodeURIComponent(field)}?buckets=${buckets}`,
+    { signal },
+  );
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { field, buckets: [], total: 0 };
+    }
+    throw new Error(`Histogram fetch failed for ${field}: ${response.status}`);
+  }
+  return (await response.json()) as NumericHistogramResponse;
+}
+
+/**
+ * Numeric distribution histogram for a range-filterable field. Cached 1h —
+ * corpus distributions barely shift (issue #140).
+ */
+export function useNumericHistogram(
+  field: string | null,
+  buckets: number = 20,
+  enabled: boolean = true,
+) {
+  return useQuery({
+    queryKey: ["base-schema-histogram", field, buckets],
+    queryFn: ({ signal }) => fetchHistogram(field as string, buckets, signal),
+    enabled: enabled && Boolean(field),
+    staleTime: 3_600_000,
   });
 }

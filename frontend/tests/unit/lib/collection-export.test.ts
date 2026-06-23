@@ -1,8 +1,10 @@
 import {
   COLLECTION_EXPORT_COLUMNS,
+  EXPORT_PRESET_COLUMNS,
   buildCollectionExportRows,
   buildExportFilename,
   flattenDocumentForExport,
+  getExportColumns,
 } from '@/lib/collection-export';
 import type { SearchDocument } from '@/types/search';
 
@@ -131,6 +133,48 @@ describe('buildCollectionExportRows', () => {
 
   it('returns an empty array for empty input', () => {
     expect(buildCollectionExportRows([])).toEqual([]);
+  });
+
+  it('default preset projects only the default column keys', () => {
+    const [row] = buildCollectionExportRows([makeDoc()], 'default');
+    const defaultKeys = EXPORT_PRESET_COLUMNS.default.map((c) => c.key).sort();
+    expect(Object.keys(row).sort()).toEqual(defaultKeys);
+  });
+
+  it('full preset includes structure_*/deep_* extraction columns', () => {
+    const [row] = buildCollectionExportRows([makeDoc()], 'full');
+    expect(Object.prototype.hasOwnProperty.call(row, 'structure_facts_summary')).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(row, 'deep_precedential_value')).toBe(true);
+  });
+
+  it('research preset carries deep signals but not the full base set', () => {
+    const research = getExportColumns('research').map((c) => c.key);
+    expect(research).toContain('deep_complexity_score');
+    expect(research).not.toContain('base_appellant');
+  });
+});
+
+describe('extraction_fields flattening (issue #198)', () => {
+  it('writes structure_*/deep_* values through formatValue in the full preset', () => {
+    const doc = makeDoc({
+      extraction_fields: {
+        structure_facts_summary: 'The defendant was charged.',
+        deep_complexity_score: 4,
+        deep_legal_domains: ['criminal', 'appeal'],
+        deep_precedential_value: 'high',
+      },
+    });
+    const [row] = buildCollectionExportRows([doc], 'full');
+    expect(row.structure_facts_summary).toBe('The defendant was charged.');
+    expect(row.deep_complexity_score).toBe('4');
+    expect(row.deep_legal_domains).toBe('criminal, appeal');
+    expect(row.deep_precedential_value).toBe('high');
+  });
+
+  it('leaves extraction columns empty when extraction_fields is absent', () => {
+    const [row] = buildCollectionExportRows([makeDoc()], 'full');
+    expect(row.structure_facts_summary).toBe('');
+    expect(row.deep_complexity_score).toBe('');
   });
 });
 
