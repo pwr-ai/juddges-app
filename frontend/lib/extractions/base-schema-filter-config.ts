@@ -476,6 +476,34 @@ export const FILTER_FIELDS: readonly FilterFieldConfig[] = [
 export const FILTER_FIELD_BY_NAME: Record<string, FilterFieldConfig> =
   Object.fromEntries(FILTER_FIELDS.map((c) => [c.field, c]));
 
+// -----------------------------------------------------------------------------
+// Quick filters — highest-signal fields surfaced inline above the advanced
+// drawer (see GitHub issue #139). The strip shares the same filter-state
+// instance as the drawer; the drawer stays the source of truth for everything
+// else.
+//
+// NOTE: this list is a best-guess pending facet-usage telemetry. Once
+// `search_analytics` has ~2 weeks of /search/extractions data, replace it with
+// the actual top-N most-used fields.
+// -----------------------------------------------------------------------------
+
+export const QUICK_FILTER_FIELDS: readonly string[] = [
+  "date_of_appeal_court_judgment", // date_range — universal narrowing dimension
+  "appeal_outcome", // enum_multi — main grouping researchers care about
+  "offender_gender", // enum_multi — high-cardinality pivot value
+  "convict_offences", // tag_array — top-of-mind in criminal-law research
+  "did_offender_confess", // boolean_tri — small but useful narrowing
+] as const;
+
+/**
+ * Quick-filter field configs, in `QUICK_FILTER_FIELDS` order. Unknown field
+ * names are skipped so a typo in the constant can never crash the strip.
+ */
+export const QUICK_FILTER_CONFIGS: readonly FilterFieldConfig[] =
+  QUICK_FILTER_FIELDS.map((field) => FILTER_FIELD_BY_NAME[field]).filter(
+    (c): c is FilterFieldConfig => Boolean(c),
+  );
+
 /** Fields grouped for display, in `GROUP_ORDER`. */
 export const FIELDS_BY_GROUP: Record<FilterGroup, FilterFieldConfig[]> =
   GROUP_ORDER.reduce(

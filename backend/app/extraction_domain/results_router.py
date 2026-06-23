@@ -8,9 +8,11 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from juddges_search.info_extraction import BaseSchemaExtractor
 from loguru import logger
+from pydantic import ValidationError
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.extraction_domain.base_schema_promote import promote_to_typed_columns
+from app.extraction_domain.nl_filter_generator import generate_base_schema_filter
 from app.extraction_domain.shared import supabase
 from app.models import (
     BaseSchemaDefinitionResponse,
@@ -22,7 +24,12 @@ from app.models import (
     FacetCountsResponse,
     FilterFieldConfig,
     FilterOptionsResponse,
+    HistogramBucket,
+    NLFilterRequest,
+    NLFilterResponse,
+    NumericHistogramResponse,
 )
+from app.services.search_analytics import record_search_query
 
 router = APIRouter()
 
@@ -512,6 +519,73 @@ async def filter_by_extracted_data(
         )
 
 
+@router.post(
+    "/base-schema/nl-filter",
+    response_model=NLFilterResponse,
+    summary="Translate a natural-language question into base-schema filters",
+    description=(
+        "Opt-in 'paste your question' shortcut: converts a plain-language "
+        "question into the structured ``{filters, text_query}`` payload accepted "
+        "by ``/base-schema/filter``. The dialog pre-fills the form for review — "
+        "it never auto-runs the search."
+    ),
+)
+async def nl_to_filter(
+    request: NLFilterRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> NLFilterResponse:
+    """Translate a natural-language question into a base-schema filter payload.
+
+    **Authorization:** Requires ``Authorization: Bearer <JWT>``.
+
+    LLM hallucination of an unknown enum triggers a Pydantic ``ValidationError``
+    in ``generate_base_schema_filter`` — surfaced here as a 422 so the caller can
+    prompt the user to rephrase rather than running a poisoned query.
+
+    Every request is logged to ``search_analytics`` (fire-and-forget) so NL → filter
+    conversion can later be compared against form usage.
+    """
+    try:
+        result = await generate_base_schema_filter(request.query)
+    except ValidationError as exc:
+        logger.info(
+            "NL filter validation failed for query {!r}: {}", request.query, exc
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Translation Failed",
+                "message": ("Couldn't translate that question; try simpler phrasing."),
+                "code": "NL_FILTER_INVALID",
+            },
+        ) from exc
+    except Exception as exc:
+        logger.opt(exception=exc).error(
+            "NL filter generation failed for query {!r}.", request.query
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "Translation Failed",
+                "message": "Couldn't translate that question; try simpler phrasing.",
+                "code": "NL_FILTER_FAILED",
+            },
+        ) from exc
+
+    payload = result.to_rpc_payload()
+
+    # Telemetry (issue #141): log NL → filter requests so conversion can later be
+    # compared against form usage. Fire-and-forget; never blocks the response.
+    record_search_query(
+        query=request.query,
+        hit_count=0,
+        filters=json.dumps(payload["filters"], ensure_ascii=False, default=str),
+        user_id=user.id,
+    )
+
+    return NLFilterResponse(**payload)
+
+
 @router.get(
     "/base-schema/facets/{field}",
     response_model=FacetCountsResponse,
@@ -566,6 +640,66 @@ async def get_facet_counts(
                 "error": "Facet Query Failed",
                 "message": str(e),
                 "code": "FACET_QUERY_FAILED",
+            },
+        )
+
+
+@router.get(
+    "/base-schema/histogram/{field}",
+    response_model=NumericHistogramResponse,
+    summary="Get the distribution histogram for a numeric field",
+    description="Get equal-width bucket counts for a numeric extracted_data field, "
+    "used to render range-filter distribution histograms.",
+)
+async def get_numeric_histogram(
+    field: str = Path(description="Numeric field name to bucket"),
+    bucket_count: int = Query(
+        default=20, ge=1, le=100, description="Number of equal-width buckets"
+    ),
+    # Auth decision (issue #250, Part 3): read-only corpus-wide aggregate; no
+    # per-user data exposed.  BFF-gated.  Intentionally unauthenticated at the
+    # FastAPI layer — see filter_by_extracted_data for rationale.
+):
+    """Return the distribution of a numeric extracted field as bucket counts."""
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Database Unavailable",
+                "message": "Database connection not available.",
+                "code": "DATABASE_UNAVAILABLE",
+            },
+        )
+
+    try:
+        response = supabase.rpc(
+            "get_numeric_field_histogram",
+            {"field": field, "bucket_count": bucket_count},
+        ).execute()
+
+        buckets = [
+            HistogramBucket(
+                bucket_lo=float(row["bucket_lo"]),
+                bucket_hi=float(row["bucket_hi"]),
+                count=int(row["cnt"]),
+            )
+            for row in (response.data or [])
+        ]
+
+        return NumericHistogramResponse(
+            field=field,
+            buckets=buckets,
+            total=sum(b.count for b in buckets),
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get histogram for {field}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Histogram Query Failed",
+                "message": str(e),
+                "code": "HISTOGRAM_QUERY_FAILED",
             },
         )
 

@@ -45,13 +45,54 @@ _JUDGMENT_COLS = (
     "base_appeal_ground, base_sent_guide_which, base_appeal_outcome, "
     "base_reason_quash_conv, base_reason_sent_excessive, "
     "base_reason_sent_lenient, base_reason_dismiss, "
-    "base_extraction_error, base_schema_key, base_schema_version"
+    "base_extraction_error, base_schema_key, base_schema_version, "
+    # Structural-segmentation (Pass 1) typed columns. Raw JSONB
+    # (structure_raw_extraction) is intentionally NOT selected — the export
+    # surface exposes typed columns only (issue #198 non-goal).
+    "structure_extraction_status, structure_extraction_model, "
+    "structure_extracted_at, structure_section_count, structure_confidence, "
+    "structure_case_identification_summary, structure_facts_summary, "
+    "structure_operative_part_summary, structure_court_analysis_summary, "
+    "structure_conclusion_summary, "
+    # Deep-analysis (Pass 2) typed columns. Raw JSONB (deep_analysis_raw) is
+    # likewise excluded.
+    "deep_analysis_status, deep_analysis_model, deep_analysed_at, "
+    "deep_complexity_score, deep_factual_complexity, deep_legal_complexity, "
+    "deep_reasoning_quality_score, deep_legal_domains, deep_reasoning_patterns, "
+    "deep_judicial_tone, deep_precedential_value, deep_research_value, "
+    "deep_text_quality, deep_analysis_confidence"
+)
+
+# Slim projection for list / sample responses (map dots, batch cards). Drops
+# `full_text` (often 50–100 KB/row) and the large `base_*` extraction block —
+# neither is rendered on a list/card. Callers that need the body or extracted
+# fields hit the detail endpoint, which uses the full `_JUDGMENT_COLS`.
+_JUDGMENT_LIST_COLS = (
+    "id, case_number, jurisdiction, court_name, court_level, "
+    "decision_date, publication_date, title, summary, "
+    "judges, case_type, decision_type, outcome, keywords, legal_topics, "
+    "cited_legislation, metadata, source_dataset, source_id, source_url, "
+    "created_at, updated_at"
 )
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
 )
+
+
+def _csv_in_list(values: List[str]) -> str:
+    """Render a value list for a PostgREST ``in.(...)`` filter.
+
+    Each value is double-quoted (with embedded quotes/backslashes escaped) so
+    that reserved characters — commas, parentheses, whitespace — cannot break
+    out of the filter. Safe for the raw-string ``.or_()`` builder.
+    """
+    quoted = []
+    for v in values:
+        escaped = str(v).replace("\\", "\\\\").replace('"', '\\"')
+        quoted.append(f'"{escaped}"')
+    return ",".join(quoted)
 
 
 class SupabaseVectorDB(SupabaseClientMixin):
@@ -258,6 +299,7 @@ class SupabaseVectorDB(SupabaseClientMixin):
     async def get_documents_by_ids(
         self,
         document_ids: List[str],
+        include_full_text: bool = True,
     ) -> List[Dict[str, Any]]:
         """Fetch multiple judgments by their UUIDs or source_ids.
 
@@ -265,23 +307,34 @@ class SupabaseVectorDB(SupabaseClientMixin):
         each input is routed to the matching column. Returned rows are
         deduplicated by `judgments.id` (so a caller passing both forms for the
         same row gets it once).
+
+        Args:
+            document_ids: UUID `id` and/or text `source_id` values.
+            include_full_text: When True (default) the full `_JUDGMENT_COLS`
+                projection is returned, preserving the historical `/batch`
+                contract. List/sample callers pass False to drop `full_text`
+                (50–100 KB/row) and the large `base_*` block they never render.
         """
         if not document_ids:
             return []
 
         uuid_ids = [i for i in document_ids if _UUID_RE.match(i)]
         text_ids = [i for i in document_ids if not _UUID_RE.match(i)]
+        cols = _JUDGMENT_COLS if include_full_text else _JUDGMENT_LIST_COLS
+
+        # Merge the UUID-`id` and text-`source_id` lookups into a single
+        # round-trip via a PostgREST OR filter (`id=in.(...),source_id=in.(...)`)
+        # instead of two separate `.execute()` calls. Behaviour is identical:
+        # rows are still deduplicated by `judgments.id`.
+        or_clauses: List[str] = []
+        if uuid_ids:
+            or_clauses.append(f"id.in.({_csv_in_list(uuid_ids)})")
+        if text_ids:
+            or_clauses.append(f"source_id.in.({_csv_in_list(text_ids)})")
 
         try:
-            rows_by_id: Dict[str, Dict[str, Any]] = {}
-            if uuid_ids:
-                r = self.client.table("judgments").select(_JUDGMENT_COLS).in_("id", uuid_ids).execute()
-                for row in r.data or []:
-                    rows_by_id[row["id"]] = row
-            if text_ids:
-                r = self.client.table("judgments").select(_JUDGMENT_COLS).in_("source_id", text_ids).execute()
-                for row in r.data or []:
-                    rows_by_id[row["id"]] = row
+            r = self.client.table("judgments").select(cols).or_(",".join(or_clauses)).execute()
+            rows_by_id: Dict[str, Dict[str, Any]] = {row["id"]: row for row in (r.data or [])}
             return list(rows_by_id.values())
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch judgments: {e}")
