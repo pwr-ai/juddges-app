@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface StreamingMessageProps {
@@ -7,7 +7,7 @@ interface StreamingMessageProps {
   onComplete?: () => void;
 }
 
-export const StreamingMessage: React.FC<StreamingMessageProps> = ({
+const StreamingMessageComponent: React.FC<StreamingMessageProps> = ({
   content,
   isComplete,
   onComplete
@@ -67,19 +67,13 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
           <div className="text-slate-800 leading-relaxed">
             {content}
             {!isComplete && (
-              <motion.span
-                className="inline-block w-0.5 h-5 bg-blue-500 ml-1 align-middle"
-                animate={{
-                  opacity: [1, 1, 0, 0],
-                }}
-                transition={{
-                  duration: 1,
-                  repeat: Infinity,
-                  times: [0, 0.45, 0.5, 1],
-                }}
+              // CSS-driven caret: blinks without a per-frame React/motion update.
+              <span
+                aria-hidden="true"
+                className="inline-block w-0.5 h-5 bg-blue-500 ml-1 align-middle animate-caret-blink"
               >
                 |
-              </motion.span>
+              </span>
             )}
           </div>
         </div>
@@ -126,6 +120,12 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     </div>
   );
 };
+
+StreamingMessageComponent.displayName = 'StreamingMessage';
+
+// Memoised: re-renders only when content/completion/callback actually change,
+// not on unrelated parent updates while a message list is mounted.
+export const StreamingMessage = memo(StreamingMessageComponent);
 
 // Component for token-by-token animation effect
 export const AnimatedToken: React.FC<{ children: React.ReactNode; delay?: number }> = ({

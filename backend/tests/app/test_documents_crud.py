@@ -595,3 +595,74 @@ async def test_batch_documents_include_base_fields_default_off(
     assert response.status_code == 200
     body = response.json()
     assert body["documents"][0].get("base_fields") is None
+
+
+# ============================================================================
+# extraction_fields (structure_*/deep_*) — unit tests (issue #198)
+# ============================================================================
+
+# Row carrying base_*, structure_*, deep_* and the raw JSONB blobs that must be
+# excluded from the typed extraction surface.
+_EXTRACTION_ROW: dict = {
+    "id": "X-1",
+    "document_type": "judgment",
+    "title": "Case X",
+    "country": "PL",
+    "full_text": "Full text content.",
+    "base_appellant": "offender",
+    "structure_facts_summary": "The defendant was charged with...",
+    "structure_confidence": "high",
+    "structure_section_count": 5,
+    "deep_complexity_score": 4,
+    "deep_legal_domains": ["criminal", "appeal"],
+    "deep_precedential_value": "high",
+    # Raw JSONB blobs — must NOT appear in extraction_fields.
+    "structure_raw_extraction": {"raw": "blob"},
+    "deep_analysis_raw": {"raw": "blob"},
+}
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+async def test_get_document_include_extraction_fields_true(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /documents/{id}?include_base_fields=true → extraction_fields carries
+    typed structure_*/deep_* columns and excludes raw JSONB blobs."""
+    mock_db = _make_db_mock(_EXTRACTION_ROW)
+    monkeypatch.setattr("app.judgments_pkg.get_vector_db", lambda: mock_db)
+
+    response = await authenticated_client.get(
+        "/documents/X-1", params={"include_base_fields": "true"}
+    )
+
+    assert response.status_code == 200
+    extraction = response.json()["document"]["extraction_fields"]
+    assert extraction == {
+        "structure_facts_summary": "The defendant was charged with...",
+        "structure_confidence": "high",
+        "structure_section_count": 5,
+        "deep_complexity_score": 4,
+        "deep_legal_domains": ["criminal", "appeal"],
+        "deep_precedential_value": "high",
+    }
+    # Raw JSONB blobs excluded.
+    assert "structure_raw_extraction" not in extraction
+    assert "deep_analysis_raw" not in extraction
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+async def test_get_document_include_extraction_fields_false(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /documents/{id} (no flag) → extraction_fields is None / absent."""
+    mock_db = _make_db_mock(_EXTRACTION_ROW)
+    monkeypatch.setattr("app.judgments_pkg.get_vector_db", lambda: mock_db)
+
+    response = await authenticated_client.get("/documents/X-1")
+
+    assert response.status_code == 200
+    assert response.json()["document"].get("extraction_fields") is None

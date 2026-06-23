@@ -2,7 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import { Components } from "react-markdown";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -71,8 +71,9 @@ function CodeBlock({ language, children }: { language: string; children: string 
   );
 }
 
-export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
-  const components: Components = {
+// Static renderer map — hoisted to module scope so it is allocated once instead
+// of on every MarkdownRenderer render.
+const components: Components = {
     // Headings
     h1: ({ children }) => (
       <h1 className="scroll-m-20 text-4xl font-bold tracking-tight mb-6 mt-8 first:mt-0">
@@ -215,16 +216,21 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
     img: ({ src, alt }) => {
       if (!src || typeof src !== 'string') return null;
 
-      // Check if it's an external image or placeholder
-      const isExternal = src.startsWith("http") || src.startsWith("/api/placeholder");
+      // Remote/placeholder hosts may not be allow-listed in next.config images,
+      // so keep those as a lazy native <img>. Local/relative assets get the
+      // optimised next/image pipeline (which is lazy by default).
+      const isRemoteOrPlaceholder =
+        src.startsWith("http") || src.startsWith("/api/placeholder");
 
       return (
         <span className="block my-8 rounded-lg overflow-hidden border border-border shadow-sm">
-          {isExternal || src.startsWith("/") ? (
+          {isRemoteOrPlaceholder ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={src}
               alt={alt || ""}
+              loading="lazy"
+              decoding="async"
               className="w-full h-auto object-cover"
             />
           ) : (
@@ -233,6 +239,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               alt={alt || ""}
               width={1200}
               height={600}
+              loading="lazy"
               className="w-full h-auto object-cover"
             />
           )}
@@ -304,7 +311,18 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         {children}
       </div>
     ),
-  };
+};
+
+export const MarkdownRenderer = memo(function MarkdownRenderer({
+  content,
+  className,
+}: MarkdownRendererProps) {
+  // ReactMarkdown re-parses on every render; memoise the rendered tree so it
+  // only re-runs when the markdown content actually changes.
+  const rendered = useMemo(
+    () => <ReactMarkdown components={components}>{content}</ReactMarkdown>,
+    [content]
+  );
 
   return (
     <div
@@ -313,9 +331,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
         className
       )}
     >
-      <ReactMarkdown components={components}>
-        {content}
-      </ReactMarkdown>
+      {rendered}
     </div>
   );
-}
+});

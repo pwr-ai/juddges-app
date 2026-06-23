@@ -209,3 +209,7 @@ backend/packages/schema_generator_agent/schema_generator_agent/data/
 # Superseded env-module design notes — current implementation is frontend/lib/env/client.ts
 frontend/lib/env/README.md
 frontend/lib/env/types.ts
+
+# Local Claude Code agent tooling (caveman skills) — personal dev env, not part of the app
+.agents/
+skills-lock.json

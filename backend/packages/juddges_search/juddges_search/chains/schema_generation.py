@@ -5,6 +5,7 @@ Generates OpenAI-compatible JSON Schemas from natural language descriptions
 using a single LLM call with structured output parsing.
 """
 
+from functools import lru_cache
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -336,8 +337,15 @@ def parse_llm_json_output(message) -> dict[str, Any]:
         raise ValueError(f"Invalid JSON in LLM response: {e}")
 
 
+@lru_cache(maxsize=1)
 def _build_schema_generation_chain():
-    """Build the schema generation chain (lazy initialization)."""
+    """Build the schema generation chain once (lazy, memoised).
+
+    The chain is pure — prompt template, a cached ChatOpenAI client, and
+    stateless parsers — so it is safe to build a single instance and reuse it
+    across requests instead of reconstructing (and re-resolving the LLM
+    client) on every call.
+    """
     return (
         RunnableLambda(prepare_input).with_config(run_name="prepare_schema_input")
         | schema_generation_prompt.with_config(run_name="schema_generation_prompt")
