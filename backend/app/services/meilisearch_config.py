@@ -546,6 +546,65 @@ async def setup_topics_meilisearch_index(service: MeiliSearchService) -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# Suggestions index (corpus-derived phrase-level autocomplete — issue #153)
+# ---------------------------------------------------------------------------
+
+
+async def setup_suggestions_meilisearch_index(service: MeiliSearchService) -> bool:
+    """Create the Meilisearch ``suggestions`` index and apply settings.
+
+    Returns True if successful, False otherwise.  Never raises — caller should
+    treat the suggestions index as optional and fall back gracefully.
+    """
+    from app.services.suggestions_config import (
+        MEILISEARCH_SUGGESTIONS_INDEX_SETTINGS,
+    )
+
+    if not service.admin_configured:
+        logger.info(
+            "Meilisearch admin not configured — skipping suggestions index setup"
+        )
+        return False
+
+    try:
+        # 1. Create index only if it doesn't already exist
+        if await service.index_exists():
+            logger.info(
+                f"Meilisearch index '{service.index_name}' already exists — "
+                "skipping creation"
+            )
+        else:
+            task_resp = await service.create_index(primary_key="id")
+            task_uid = task_resp.get("taskUid")
+            if task_uid is not None:
+                await service.wait_for_task(task_uid)
+            logger.info(f"Meilisearch index '{service.index_name}' created")
+
+        # 2. Apply settings and surface failure.
+        settings_resp = await service.configure_index(
+            MEILISEARCH_SUGGESTIONS_INDEX_SETTINGS
+        )
+        task_uid = settings_resp.get("taskUid")
+        if task_uid is not None:
+            task = await service.wait_for_task(task_uid, max_wait=120.0)
+            status = task.get("status")
+            if status != "succeeded":
+                logger.error(
+                    f"Meilisearch suggestions settings task {task_uid} did not "
+                    f"succeed (status={status}): {task.get('error')}"
+                )
+                return False
+        logger.info(f"Meilisearch index '{service.index_name}' settings applied")
+        return True
+    except Exception:
+        logger.opt(exception=True).warning(
+            "Failed to set up Meilisearch suggestions index — corpus autocomplete "
+            "will be unavailable"
+        )
+        return False
+
+
 # Columns fetched from the ``judgments`` table for the Meilisearch sync path.
 # Used by both the Celery sync tasks and the one-shot backfill script.
 # The embedding ``vector`` column is intentionally excluded (~6 KB/row, unused

@@ -60,6 +60,27 @@ _TOPICS_HIGHLIGHT_ATTRS: list[str] = [
 ]
 
 
+# ── Suggestion hit schema (corpus-derived autocomplete — issue #153) ──────────
+
+
+class SuggestionHit(BaseModel):
+    """A single hit from the Meilisearch ``suggestions`` index.
+
+    Phrase-level suggestion mined from the PL + EN judgment corpus.  The
+    ``formatted`` field (alias ``_formatted``) carries the highlighted ``term``
+    when ``attributesToHighlight`` is set on the query.
+    """
+
+    model_config = {"populate_by_name": True}
+
+    id: str
+    term: str
+    language: str
+    category: str
+    weight: int = 0
+    formatted: dict[str, Any] | None = Field(default=None, alias="_formatted")
+
+
 class MeiliSearchService:
     """Meilisearch HTTP client for autocomplete queries and index administration.
 
@@ -89,6 +110,7 @@ class MeiliSearchService:
         self.timeout_seconds = timeout_seconds
         # Lazily initialised on first access; ``None`` until then.
         self._topics_service_instance: MeiliSearchService | None = None
+        self._suggestions_service_instance: MeiliSearchService | None = None
 
     @property
     def configured(self) -> bool:
@@ -111,6 +133,15 @@ class MeiliSearchService:
         if self._topics_service_instance is None:
             self._topics_service_instance = MeiliSearchService.topics_from_env()
         return self._topics_service_instance
+
+    @property
+    def _suggestions_service(self) -> MeiliSearchService:
+        """Lazily constructed suggestions-index service (cached for lifetime)."""
+        if self._suggestions_service_instance is None:
+            self._suggestions_service_instance = (
+                MeiliSearchService.suggestions_from_env()
+            )
+        return self._suggestions_service_instance
 
     @classmethod
     def from_env(cls) -> MeiliSearchService:
@@ -150,6 +181,30 @@ class MeiliSearchService:
             admin_key=os.getenv("MEILISEARCH_ADMIN_KEY")
             or os.getenv("MEILI_MASTER_KEY"),
             index_name=os.getenv("MEILISEARCH_TOPICS_INDEX_NAME", "topics"),
+            timeout_seconds=float(os.getenv("MEILISEARCH_TIMEOUT_SECONDS", "5")),
+        )
+
+    @classmethod
+    def suggestions_from_env(cls) -> MeiliSearchService:
+        """Construct a MeiliSearchService scoped to the ``suggestions`` index.
+
+        Reads the same connection env vars as ``from_env()``; only the index
+        name comes from ``MEILISEARCH_SUGGESTIONS_INDEX_NAME`` (default
+        ``"suggestions"``).
+        """
+        base_url = os.getenv("MEILISEARCH_INTERNAL_URL") or os.getenv("MEILISEARCH_URL")
+        base_url = _normalize_meilisearch_url_for_runtime(base_url)
+        return cls(
+            base_url=base_url,
+            api_key=(
+                os.getenv("MEILISEARCH_SEARCH_KEY")
+                or os.getenv("MEILISEARCH_API_KEY")
+                or os.getenv("MEILISEARCH_ADMIN_KEY")
+                or os.getenv("MEILI_MASTER_KEY")
+            ),
+            admin_key=os.getenv("MEILISEARCH_ADMIN_KEY")
+            or os.getenv("MEILI_MASTER_KEY"),
+            index_name=os.getenv("MEILISEARCH_SUGGESTIONS_INDEX_NAME", "suggestions"),
             timeout_seconds=float(os.getenv("MEILISEARCH_TIMEOUT_SECONDS", "5")),
         )
 
@@ -356,6 +411,97 @@ class MeiliSearchService:
                 return response.json()
         except httpx.HTTPError as exc:
             raise SearchServiceError(str(exc)) from exc
+
+    # ── suggestions (corpus-derived autocomplete — issue #153) ────────────
+
+    async def suggest(
+        self,
+        query: str,
+        *,
+        limit: int = 8,
+        language: str | None = None,
+        category: str | None = None,
+    ) -> dict[str, Any]:
+        """Return phrase-level corpus suggestions from the ``suggestions`` index.
+
+        Unlike :meth:`autocomplete` (topic chips) and :meth:`documents_search`
+        (full judgments), this returns short ranked phrases mined from the
+        corpus. Degrades silently to an empty hit list when the suggestions
+        index is unavailable so the caller can fall back to today's behaviour.
+
+        Args:
+            query: The search string as typed by the user.
+            limit: Maximum suggestions to return.
+            language: Optional ``"pl"`` / ``"en"`` filter (active jurisdiction).
+            category: Optional category filter (e.g. ``"legal_topic"``).
+
+        Returns a dict shaped like ``{"suggestion_hits": [...], "query": str,
+        "processingTimeMs": int | None, "estimatedTotalHits": int | None}``.
+        """
+        empty: dict[str, Any] = {
+            "suggestion_hits": [],
+            "query": query,
+            "processingTimeMs": None,
+            "estimatedTotalHits": 0,
+        }
+
+        # Mirror the autocomplete contract: skip very short queries.
+        if len(query) < 2:
+            return empty
+
+        svc = self._suggestions_service
+        if not svc.configured:
+            logger.debug("Suggestions Meilisearch service not configured — skipping")
+            return empty
+
+        filter_clauses: list[str] = []
+        if language:
+            filter_clauses.append(f'language = "{language}"')
+        if category:
+            filter_clauses.append(f'category = "{category}"')
+
+        payload: dict[str, Any] = {
+            "q": query,
+            "limit": limit,
+            "attributesToHighlight": ["term"],
+            "highlightPreTag": "<mark>",
+            "highlightPostTag": "</mark>",
+            "sort": ["weight:desc"],
+        }
+        if filter_clauses:
+            payload["filter"] = " AND ".join(filter_clauses)
+
+        url = f"{svc.base_url}/indexes/{svc.index_name}/search"
+        try:
+            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+                response = await client.post(
+                    url, json=payload, headers=svc._search_headers()
+                )
+                if response.status_code == 400 and "filter" in payload:
+                    # Filter references a field not on the index — retry plain.
+                    logger.debug(
+                        "suggestions_filter_unsupported — retrying without filter"
+                    )
+                    payload_no_filter = {
+                        k: v for k, v in payload.items() if k != "filter"
+                    }
+                    response = await client.post(
+                        url, json=payload_no_filter, headers=svc._search_headers()
+                    )
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPError as exc:
+            logger.warning(
+                "suggestions_index_unavailable — returning empty hits: {}", str(exc)
+            )
+            return empty
+
+        return {
+            "suggestion_hits": data.get("hits", []),
+            "query": data.get("query", query),
+            "processingTimeMs": data.get("processingTimeMs"),
+            "estimatedTotalHits": data.get("estimatedTotalHits"),
+        }
 
     async def documents_search(
         self,
