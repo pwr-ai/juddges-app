@@ -11,10 +11,12 @@ JWT override via _install_jwt_user_override() from conftest and send
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
+from app.extraction_domain.nl_filter_generator import BaseSchemaFilter
 from tests.app.conftest import _install_jwt_user_override
 
 _USER_001 = "00000000-0000-4000-a000-000000000001"
@@ -331,6 +333,79 @@ class TestGetFacetCounts:
 
 
 # =============================================================================
+# GET /extractions/base-schema/histogram/{field}
+# =============================================================================
+
+
+class TestGetNumericHistogram:
+    @pytest.mark.unit
+    async def test_supabase_unavailable(self, client, valid_api_headers) -> None:
+        with patch("app.extraction_domain.results_router.supabase", None):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims",
+                headers=valid_api_headers,
+            )
+            assert response.status_code == 503
+
+    @pytest.mark.unit
+    async def test_histogram_success(self, client, valid_api_headers) -> None:
+        mock_response = MagicMock()
+        mock_response.data = [
+            {"bucket_lo": 1, "bucket_hi": 2, "cnt": 120},
+            {"bucket_lo": 2, "bucket_hi": 3, "cnt": 40},
+            {"bucket_lo": 3, "bucket_hi": 4, "cnt": 0},
+        ]
+
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = mock_response
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims?bucket_count=20",
+                headers=valid_api_headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["field"] == "num_victims"
+            assert len(data["buckets"]) == 3
+            assert data["buckets"][0]["bucket_lo"] == 1.0
+            assert data["buckets"][0]["count"] == 120
+            assert data["total"] == 160
+            mock_supabase.rpc.assert_called_once_with(
+                "get_numeric_field_histogram",
+                {"field": "num_victims", "bucket_count": 20},
+            )
+
+    @pytest.mark.unit
+    async def test_histogram_empty(self, client, valid_api_headers) -> None:
+        mock_response = MagicMock()
+        mock_response.data = []
+
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = mock_response
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims",
+                headers=valid_api_headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["buckets"] == []
+            assert data["total"] == 0
+
+    @pytest.mark.unit
+    async def test_histogram_rejects_out_of_range_bucket_count(
+        self, client, valid_api_headers
+    ) -> None:
+        response = await client.get(
+            "/extractions/base-schema/histogram/num_victims?bucket_count=999",
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 422
+
+
+# =============================================================================
 # GET /extractions/base-schema/definition
 # =============================================================================
 
@@ -394,3 +469,108 @@ class TestGetFilterOptions:
             data = response.json()
             assert len(data["fields"]) == 1
             assert data["fields"][0]["field"] == "appellant"
+
+
+# =============================================================================
+# POST /extractions/base-schema/nl-filter  (issue #141: opt-in NL -> filter)
+# =============================================================================
+
+
+class TestNlToFilter:
+    @pytest.mark.unit
+    async def test_requires_bearer_jwt(self, client, valid_api_headers) -> None:
+        """Without a Bearer JWT the endpoint must be rejected."""
+        response = await client.post(
+            "/extractions/base-schema/nl-filter",
+            headers=valid_api_headers,
+            json={"query": "robbery cases involving a knife"},
+        )
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.unit
+    async def test_success_returns_filters_and_text_query(
+        self, client, valid_api_headers
+    ) -> None:
+        """Happy path: returns the same {filters, text_query} shape the filter
+        endpoint accepts, and logs the request to search_analytics."""
+        _install_jwt_user_override(_USER_001)
+
+        translated = BaseSchemaFilter(
+            co_def_acc_num={"min": 2},
+            did_offender_confess=True,
+        )
+
+        with (
+            patch(
+                "app.extraction_domain.results_router.generate_base_schema_filter",
+                new=AsyncMock(return_value=translated),
+            ),
+            patch(
+                "app.extraction_domain.results_router.record_search_query"
+            ) as mock_record,
+        ):
+            response = await client.post(
+                "/extractions/base-schema/nl-filter",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+                json={"query": "at least 2 co-defendants where the offender confessed"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert set(data.keys()) == {"filters", "text_query"}
+        assert data["filters"]["did_offender_confess"] is True
+        assert data["filters"]["co_def_acc_num"] == {"min": 2}
+        assert data["text_query"] is None
+        # Telemetry: every request is logged to search_analytics.
+        mock_record.assert_called_once()
+
+    @pytest.mark.unit
+    async def test_text_query_split_from_filters(
+        self, client, valid_api_headers
+    ) -> None:
+        """Free-text questions populate text_query, not p_filters."""
+        _install_jwt_user_override(_USER_001)
+
+        translated = BaseSchemaFilter(text_query="robbery knife")
+
+        with (
+            patch(
+                "app.extraction_domain.results_router.generate_base_schema_filter",
+                new=AsyncMock(return_value=translated),
+            ),
+            patch("app.extraction_domain.results_router.record_search_query"),
+        ):
+            response = await client.post(
+                "/extractions/base-schema/nl-filter",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+                json={"query": "robbery cases involving a knife"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["text_query"] == "robbery knife"
+        assert data["filters"] == {}
+
+    @pytest.mark.unit
+    async def test_validation_error_returns_422(
+        self, client, valid_api_headers
+    ) -> None:
+        """LLM hallucination of an unknown enum -> Pydantic ValidationError ->
+        the endpoint surfaces 422 so the dialog can ask for simpler phrasing."""
+        _install_jwt_user_override(_USER_001)
+
+        def _raise_validation_error(*_args, **_kwargs):
+            raise ValidationError.from_exception_data("BaseSchemaFilter", [])
+
+        with patch(
+            "app.extraction_domain.results_router.generate_base_schema_filter",
+            new=AsyncMock(side_effect=_raise_validation_error),
+        ):
+            response = await client.post(
+                "/extractions/base-schema/nl-filter",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+                json={"query": "something the model cannot map"},
+            )
+
+        assert response.status_code == 422
+        assert response.json()["detail"]["code"] == "NL_FILTER_INVALID"

@@ -188,3 +188,20 @@ export interface FacetCount {
   value: string;
   count: number;
 }
+
+// -----------------------------------------------------------------------------
+// Numeric distribution histogram shape (returned by
+// /api/extractions/base-schema/histogram/[field]).
+// -----------------------------------------------------------------------------
+
+export interface HistogramBucket {
+  bucket_lo: number;
+  bucket_hi: number;
+  count: number;
+}
+
+export interface NumericHistogramResponse {
+  field: string;
+  buckets: HistogramBucket[];
+  total: number;
+}

@@ -92,6 +92,25 @@ function isApiRequest(url) {
   return url.pathname.startsWith("/api/");
 }
 
+// Helper: guard against caching personalized/authenticated responses even on
+// the static-asset path (issue #210). A genuinely public, cacheable asset is
+// never served with Set-Cookie and never marked private/no-store. If a response
+// carries any of these markers it is per-user or sensitive and must not be
+// written to a shared, path-keyed cache. Returns true when caching is safe.
+function isSafeToCache(response) {
+  if (!response || !response.ok) {
+    return false;
+  }
+  if (response.headers.has("set-cookie")) {
+    return false;
+  }
+  const cacheControl = (response.headers.get("cache-control") || "").toLowerCase();
+  if (cacheControl.includes("private") || cacheControl.includes("no-store")) {
+    return false;
+  }
+  return true;
+}
+
 // Fetch handler with appropriate caching strategies
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -123,7 +142,11 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(event.request).then((response) => {
-            if (response.ok) {
+            // Defense-in-depth: only persist responses that are provably
+            // public. A static-extension URL that comes back with Set-Cookie
+            // or a private/no-store directive is personalized and must not be
+            // replayed to another user from a shared, path-keyed cache (#210).
+            if (isSafeToCache(response)) {
               const clone = response.clone();
               caches.open(STATIC_CACHE).then((cache) => {
                 cache.put(event.request, clone);
