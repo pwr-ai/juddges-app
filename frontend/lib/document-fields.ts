@@ -147,6 +147,40 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   base_reason_dismiss:                                 { label: 'Reasons for Dismissal',      icon: BookOpen,    wide: true },
 
   base_keywords:                                       { label: 'Extracted Keywords',         icon: Tag,         wide: true },
+
+  // ---------------------------------------------------------------------------
+  // Structural-segmentation extraction (Pass 1) — typed columns on `judgments`
+  // surfaced under the original `structure_*` keys. Raw JSONB is never exposed.
+  // ---------------------------------------------------------------------------
+  structure_extraction_status:           { label: 'Structure Status',           icon: Activity },
+  structure_extraction_model:            { label: 'Structure Model',            icon: Sparkles },
+  structure_extracted_at:                { label: 'Structure Extracted At',     icon: Clock },
+  structure_section_count:               { label: 'Section Count',              icon: Hash },
+  structure_confidence:                  { label: 'Structure Confidence',       icon: Activity },
+  structure_case_identification_summary: { label: 'Case Identification Summary', icon: FileText,  wide: true },
+  structure_facts_summary:               { label: 'Facts Summary',              icon: FileText,    wide: true },
+  structure_operative_part_summary:      { label: 'Operative Part Summary',     icon: FileText,    wide: true },
+  structure_court_analysis_summary:      { label: 'Court Analysis Summary',     icon: FileText,    wide: true },
+  structure_conclusion_summary:          { label: 'Conclusion Summary',         icon: FileText,    wide: true },
+
+  // ---------------------------------------------------------------------------
+  // Deep-analysis extraction (Pass 2) — research-value signals surfaced under
+  // the original `deep_*` keys.
+  // ---------------------------------------------------------------------------
+  deep_analysis_status:                  { label: 'Deep Analysis Status',       icon: Activity },
+  deep_analysis_model:                   { label: 'Deep Analysis Model',        icon: Sparkles },
+  deep_analysed_at:                      { label: 'Deep Analysed At',           icon: Clock },
+  deep_complexity_score:                 { label: 'Complexity Score',           icon: Activity },
+  deep_factual_complexity:               { label: 'Factual Complexity',         icon: Activity },
+  deep_legal_complexity:                 { label: 'Legal Complexity',           icon: Activity },
+  deep_reasoning_quality_score:          { label: 'Reasoning Quality Score',    icon: Activity },
+  deep_legal_domains:                    { label: 'Legal Domains',              icon: Layers,      wide: true },
+  deep_reasoning_patterns:               { label: 'Reasoning Patterns',         icon: BookOpen,    wide: true },
+  deep_judicial_tone:                    { label: 'Judicial Tone',              icon: MessageSquare },
+  deep_precedential_value:               { label: 'Precedential Value',         icon: Scale },
+  deep_research_value:                   { label: 'Research Value',             icon: Sparkles },
+  deep_text_quality:                     { label: 'Text Quality',               icon: Activity },
+  deep_analysis_confidence:              { label: 'Deep Analysis Confidence',   icon: Activity },
 };
 
 /**
@@ -306,6 +340,34 @@ export const FIELD_ORDER: string[] = [
   'base_schema_key',
   'base_schema_version',
 
+  // Structural-segmentation (Pass 1): narrative summaries first, then signals.
+  'structure_case_identification_summary',
+  'structure_facts_summary',
+  'structure_operative_part_summary',
+  'structure_court_analysis_summary',
+  'structure_conclusion_summary',
+  'structure_section_count',
+  'structure_confidence',
+  'structure_extracted_at',
+  'structure_extraction_status',
+  'structure_extraction_model',
+
+  // Deep-analysis (Pass 2): research-value signals.
+  'deep_complexity_score',
+  'deep_factual_complexity',
+  'deep_legal_complexity',
+  'deep_reasoning_quality_score',
+  'deep_legal_domains',
+  'deep_reasoning_patterns',
+  'deep_judicial_tone',
+  'deep_precedential_value',
+  'deep_research_value',
+  'deep_text_quality',
+  'deep_analysis_confidence',
+  'deep_analysed_at',
+  'deep_analysis_status',
+  'deep_analysis_model',
+
   'processing_status',
   'interpretation_status',
   'ingestion_date',
@@ -318,6 +380,15 @@ export const FIELD_ORDER: string[] = [
 /** Subset of FIELD_ORDER restricted to base_* keys, preserving order. */
 export const BASE_FIELD_ORDER: string[] = FIELD_ORDER.filter((k) =>
   k.startsWith('base_')
+);
+
+/**
+ * Subset of FIELD_ORDER restricted to the structural and deep extraction
+ * layers (structure_ / deep_ prefixes; issue #198), preserving order. Surfaced
+ * via the document API `extraction_fields` and the Full/Research export presets.
+ */
+export const EXTRACTION_FIELD_ORDER: string[] = FIELD_ORDER.filter(
+  (k) => k.startsWith('structure_') || k.startsWith('deep_')
 );
 
 /**

@@ -12,8 +12,17 @@ from pydantic import BaseModel, Field
 
 from app.auth import verify_api_key
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
+from app.judgments_pkg.query_attribute_parser import (
+    build_meili_filter,
+    parse_query_attributes,
+)
 from app.rate_limiter import limiter
-from app.services.search import MeiliSearchService, SearchMode, TopicHit
+from app.services.search import (
+    MeiliSearchService,
+    SearchMode,
+    SuggestionHit,
+    TopicHit,
+)
 from app.services.search_analytics import (
     export_eval_queries,
     get_popular_queries,
@@ -24,6 +33,7 @@ from app.services.search_analytics import (
     record_search_query,
     record_topic_click,
 )
+from app.services.suggestions_config import SUGGESTION_CATEGORIES
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
@@ -33,6 +43,8 @@ SEARCH_ANALYTICS_RATE_LIMIT = os.getenv("SEARCH_ANALYTICS_RATE_LIMIT", "30/minut
 AUTOCOMPLETE_RATE_LIMIT = os.getenv("AUTOCOMPLETE_RATE_LIMIT", "60/minute")
 # Rate limit for topic-click endpoint (configurable via env)
 TOPIC_CLICK_RATE_LIMIT = os.getenv("TOPIC_CLICK_RATE_LIMIT", "30/minute")
+# Rate limit for corpus-suggestion endpoint (configurable via env)
+SUGGEST_RATE_LIMIT = os.getenv("SUGGEST_RATE_LIMIT", "60/minute")
 # Optional secondary key that gates the eval-queries export endpoint.
 # When set, only callers presenting this exact key may access the endpoint.
 # When unset, any valid BACKEND_API_KEY is accepted.
@@ -49,6 +61,20 @@ class AutocompleteResponse(BaseModel):
     """
 
     topic_hits: list[TopicHit] = Field(default_factory=list)
+    query: str
+    processingTimeMs: int | None = None
+    estimatedTotalHits: int | None = None
+
+
+class SuggestResponse(BaseModel):
+    """Corpus-derived autocomplete suggestions (issue #153).
+
+    Phrase-level hits from the Meilisearch ``suggestions`` index, mined from the
+    PL + EN judgment corpus.  ``suggestion_hits`` is an empty list when the
+    suggestions index is unavailable (graceful fallback for the frontend).
+    """
+
+    suggestion_hits: list[SuggestionHit] = Field(default_factory=list)
     query: str
     processingTimeMs: int | None = None
     estimatedTotalHits: int | None = None
@@ -81,6 +107,25 @@ class DocumentSearchResponse(BaseModel):
     pagination: DocumentPagination
     total_count: int | None = None
     search_mode: SearchMode = "keyword"
+    # Structured attributes extracted from the raw query when
+    # ``parse_attributes=true``. ``None`` when parsing is disabled or matched
+    # nothing — base-search responses are unchanged.
+    parsed_attributes: dict[str, Any] | None = None
+
+
+def _parsed_attributes_dict(parsed: Any) -> dict[str, Any]:
+    """Serialise the non-None parsed attributes for the response/analytics."""
+    fields = (
+        "court",
+        "jurisdiction",
+        "year",
+        "date_from",
+        "date_to",
+        "case_number",
+        "case_number_prefix",
+        "judge",
+    )
+    return {f: getattr(parsed, f) for f in fields if getattr(parsed, f) is not None}
 
 
 class TopicClickEvent(BaseModel):
@@ -174,6 +219,79 @@ async def autocomplete(
     )
 
 
+@router.get("/suggest", response_model=SuggestResponse)
+@limiter.limit(SUGGEST_RATE_LIMIT)
+async def suggest(
+    request: Request,
+    q: str = Query(..., min_length=1, max_length=500, description="Search query"),
+    limit: int = Query(8, ge=1, le=25, description="Maximum number of suggestions"),
+    language: str | None = Query(
+        None, description="Filter by suggestion language ('pl' or 'en')"
+    ),
+    category: str | None = Query(
+        None,
+        description=(
+            "Filter by suggestion category (keyword, legal_topic, legislation, "
+            "court, judge, phrase, query)"
+        ),
+    ),
+    search_service: MeiliSearchService = Depends(get_search_service),
+) -> SuggestResponse:
+    """Return corpus-derived phrase-level autocomplete suggestions (issue #153).
+
+    Surfaces the *language of legal practice* — legal terms, doctrines, court
+    names, judge names, statute names — mined from the PL + EN judgment corpus.
+    Falls back to an empty list (HTTP 200) when the ``suggestions`` index is
+    unavailable so the frontend can degrade to today's behaviour rather than
+    showing an error.
+    """
+    query = q.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    lang = (language or "").strip().lower() or None
+    if lang is not None and lang not in ("pl", "en"):
+        raise HTTPException(status_code=422, detail="language must be 'pl' or 'en'")
+
+    cat = (category or "").strip().lower() or None
+    if cat is not None and cat not in SUGGESTION_CATEGORIES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"category must be one of {', '.join(SUGGESTION_CATEGORIES)}",
+        )
+
+    if not search_service.configured:
+        # Graceful fallback rather than 503: the frontend treats an empty list
+        # as "no corpus suggestions" and shows its own popular-search chips.
+        return SuggestResponse(suggestion_hits=[], query=query)
+
+    try:
+        result = await search_service.suggest(
+            query=query, limit=limit, language=lang, category=cat
+        )
+    except Exception as exc:
+        logger.warning("suggest_endpoint_error — returning empty hits: {}", str(exc))
+        return SuggestResponse(suggestion_hits=[], query=query)
+
+    suggestion_hits: list[SuggestionHit] = []
+    for raw in result.get("suggestion_hits", []):
+        try:
+            suggestion_hits.append(SuggestionHit.model_validate(raw))
+        except Exception as exc:
+            logger.debug(
+                "Skipping malformed suggestion hit: {} ({})",
+                raw,
+                type(exc).__name__,
+            )
+
+    return SuggestResponse(
+        suggestion_hits=suggestion_hits,
+        query=result.get("query", query),
+        processingTimeMs=result.get("processingTimeMs"),
+        estimatedTotalHits=result.get("estimatedTotalHits"),
+    )
+
+
 @router.get("/documents", response_model=DocumentSearchResponse)
 async def documents_search(
     background_tasks: BackgroundTasks,
@@ -192,6 +310,16 @@ async def documents_search(
             "(default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5."
         ),
     ),
+    parse_attributes: bool = Query(
+        False,
+        description=(
+            "When true, parse structural attributes (court, year/date range, "
+            "case number, judge, jurisdiction) out of the free-text query at "
+            "request time. Filterable attributes (jurisdiction, decision_date) "
+            "become Meilisearch filter clauses; the remaining text is used as "
+            "the FTS query. Default false keeps base-search behaviour identical."
+        ),
+    ),
     search_service: MeiliSearchService = Depends(get_search_service),
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> DocumentSearchResponse:
@@ -201,12 +329,35 @@ async def documents_search(
     if not search_service.configured:
         raise HTTPException(status_code=503, detail="Meilisearch is not configured")
 
+    effective_query = query
+    effective_filters = filters
+    parsed_attributes: dict[str, Any] | None = None
+
+    # Opt-in query-time attribute parsing (issue #192). The parser is cheap and
+    # deterministic; when it matches nothing the query/filters are untouched so
+    # base-search behaviour stays byte-identical.
+    if parse_attributes and query:
+        parsed = parse_query_attributes(query)
+        if parsed.has_attributes():
+            # Filterable attributes → Meili filter; AND-combine with any
+            # caller-supplied filter rather than overwriting it.
+            parsed_filter = build_meili_filter(parsed)
+            if parsed_filter:
+                effective_filters = (
+                    f"({filters}) AND ({parsed_filter})" if filters else parsed_filter
+                )
+            # Searchable-but-not-filterable attributes (court, case number,
+            # judge) are appended to the FTS query to preserve recall.
+            fts_parts = [parsed.remainder, *parsed.fts_terms()]
+            effective_query = " ".join(p for p in fts_parts if p).strip()
+            parsed_attributes = _parsed_attributes_dict(parsed)
+
     try:
         result = await search_service.documents_search(
-            query=query,
+            query=effective_query,
             limit=limit,
             offset=offset,
-            filters=filters,
+            filters=effective_filters,
             semantic_ratio=semantic_ratio,
         )
     except Exception as exc:
@@ -245,6 +396,7 @@ async def documents_search(
         ),
         total_count=estimated_total,
         search_mode=result.get("search_mode", "keyword"),
+        parsed_attributes=parsed_attributes,
     )
 
 
