@@ -48,6 +48,18 @@ _JUDGMENT_COLS = (
     "base_extraction_error, base_schema_key, base_schema_version"
 )
 
+# Slim projection for list / sample responses (map dots, batch cards). Drops
+# `full_text` (often 50–100 KB/row) and the large `base_*` extraction block —
+# neither is rendered on a list/card. Callers that need the body or extracted
+# fields hit the detail endpoint, which uses the full `_JUDGMENT_COLS`.
+_JUDGMENT_LIST_COLS = (
+    "id, case_number, jurisdiction, court_name, court_level, "
+    "decision_date, publication_date, title, summary, "
+    "judges, case_type, decision_type, outcome, keywords, legal_topics, "
+    "cited_legislation, metadata, source_dataset, source_id, source_url, "
+    "created_at, updated_at"
+)
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -258,6 +270,7 @@ class SupabaseVectorDB(SupabaseClientMixin):
     async def get_documents_by_ids(
         self,
         document_ids: List[str],
+        include_full_text: bool = True,
     ) -> List[Dict[str, Any]]:
         """Fetch multiple judgments by their UUIDs or source_ids.
 
@@ -265,21 +278,29 @@ class SupabaseVectorDB(SupabaseClientMixin):
         each input is routed to the matching column. Returned rows are
         deduplicated by `judgments.id` (so a caller passing both forms for the
         same row gets it once).
+
+        Args:
+            document_ids: UUID `id` and/or text `source_id` values.
+            include_full_text: When True (default) the full `_JUDGMENT_COLS`
+                projection is returned, preserving the historical `/batch`
+                contract. List/sample callers pass False to drop `full_text`
+                (50–100 KB/row) and the large `base_*` block they never render.
         """
         if not document_ids:
             return []
 
         uuid_ids = [i for i in document_ids if _UUID_RE.match(i)]
         text_ids = [i for i in document_ids if not _UUID_RE.match(i)]
+        cols = _JUDGMENT_COLS if include_full_text else _JUDGMENT_LIST_COLS
 
         try:
             rows_by_id: Dict[str, Dict[str, Any]] = {}
             if uuid_ids:
-                r = self.client.table("judgments").select(_JUDGMENT_COLS).in_("id", uuid_ids).execute()
+                r = self.client.table("judgments").select(cols).in_("id", uuid_ids).execute()
                 for row in r.data or []:
                     rows_by_id[row["id"]] = row
             if text_ids:
-                r = self.client.table("judgments").select(_JUDGMENT_COLS).in_("source_id", text_ids).execute()
+                r = self.client.table("judgments").select(cols).in_("source_id", text_ids).execute()
                 for row in r.data or []:
                     rows_by_id[row["id"]] = row
             return list(rows_by_id.values())
