@@ -119,7 +119,7 @@ async def get_trending_topics(days: int = 30, limit: int = 20) -> list[dict[str,
     """Return the most-clicked topics in the last N days with a PL/UK split.
 
     Backed by the ``get_trending_topics`` RPC (see
-    ``supabase/migrations/20260514000001_create_topic_clicks_functions.sql``).
+    ``supabase/migrations/20260514000002_create_topic_clicks_functions.sql``).
     """
     if not supabase_client:
         return []

@@ -1368,6 +1368,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/topics/my-clicks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Topic Clicks
+         * @description Return the authenticated caller's recently-explored topics.
+         *
+         *     Filtered server-side by the authenticated user id — never accepts a
+         *     caller-supplied id (avoids the IDOR class of bug).
+         */
+        get: operations["my_topic_clicks_api_search_topics_my_clicks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search/topics/trending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trending Topics
+         * @description Return the most-clicked topics over the last N days.
+         *
+         *     Each row carries a PL/UK split so the UI can surface cross-lingual topic
+         *     comparison. Public (no API key) — aggregate, non-attributable data only.
+         */
+        get: operations["trending_topics_api_search_topics_trending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/argumentation/analyze": {
         parameters: {
             query?: never;
@@ -14130,6 +14176,33 @@ export interface components {
             /** Trend */
             trend: string;
         };
+        /**
+         * TrendingTopicItem
+         * @description A single trending topic with its cross-lingual (PL/UK) click split.
+         */
+        TrendingTopicItem: {
+            /** Click Count */
+            click_count: number;
+            /** Last Clicked */
+            last_clicked?: string | null;
+            /**
+             * Other Count
+             * @default 0
+             */
+            other_count: number;
+            /**
+             * Pl Count
+             * @default 0
+             */
+            pl_count: number;
+            /** Topic Id */
+            topic_id: string;
+            /**
+             * Uk Count
+             * @default 0
+             */
+            uk_count: number;
+        };
         /** UpdateCollectionRequest */
         UpdateCollectionRequest: {
             /** Description */
@@ -14348,6 +14421,22 @@ export interface components {
             query: string;
             /** Topic Hits Count */
             topic_hits_count?: number | null;
+        };
+        /**
+         * UserTopicClickItem
+         * @description A topic the requesting user has recently explored.
+         */
+        UserTopicClickItem: {
+            /** Click Count */
+            click_count: number;
+            /** Jurisdiction */
+            jurisdiction?: string | null;
+            /** Last Clicked */
+            last_clicked?: string | null;
+            /** Last Query */
+            last_query?: string | null;
+            /** Topic Id */
+            topic_id: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -16511,6 +16600,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopicsMetaResponse"];
+                };
+            };
+        };
+    };
+    my_topic_clicks_api_search_topics_my_clicks_get: {
+        parameters: {
+            query?: {
+                /** @description Lookback window in days */
+                days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTopicClickItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trending_topics_api_search_topics_trending_get: {
+        parameters: {
+            query?: {
+                /** @description Lookback window in days */
+                days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrendingTopicItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

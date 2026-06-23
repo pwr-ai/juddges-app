@@ -16181,6 +16181,51 @@
         "title": "TrendingTopic",
         "type": "object"
       },
+      "TrendingTopicItem": {
+        "description": "A single trending topic with its cross-lingual (PL/UK) click split.",
+        "properties": {
+          "click_count": {
+            "title": "Click Count",
+            "type": "integer"
+          },
+          "last_clicked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Clicked"
+          },
+          "other_count": {
+            "default": 0,
+            "title": "Other Count",
+            "type": "integer"
+          },
+          "pl_count": {
+            "default": 0,
+            "title": "Pl Count",
+            "type": "integer"
+          },
+          "topic_id": {
+            "title": "Topic Id",
+            "type": "string"
+          },
+          "uk_count": {
+            "default": 0,
+            "title": "Uk Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "topic_id",
+          "click_count"
+        ],
+        "title": "TrendingTopicItem",
+        "type": "object"
+      },
       "UpdateCollectionRequest": {
         "properties": {
           "description": {
@@ -16943,6 +16988,58 @@
           "created_at"
         ],
         "title": "UserSearchHistoryItem",
+        "type": "object"
+      },
+      "UserTopicClickItem": {
+        "description": "A topic the requesting user has recently explored.",
+        "properties": {
+          "click_count": {
+            "title": "Click Count",
+            "type": "integer"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          },
+          "last_clicked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Clicked"
+          },
+          "last_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Query"
+          },
+          "topic_id": {
+            "title": "Topic Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic_id",
+          "click_count"
+        ],
+        "title": "UserTopicClickItem",
         "type": "object"
       },
       "ValidationError": {
@@ -21204,6 +21301,147 @@
           }
         ],
         "summary": "Topics Meta",
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/api/search/topics/my-clicks": {
+      "get": {
+        "description": "Return the authenticated caller's recently-explored topics.\n\nFiltered server-side by the authenticated user id \u2014 never accepts a\ncaller-supplied id (avoids the IDOR class of bug).",
+        "operationId": "my_topic_clicks_api_search_topics_my_clicks_get",
+        "parameters": [
+          {
+            "description": "Lookback window in days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Lookback window in days",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserTopicClickItem"
+                  },
+                  "title": "Response My Topic Clicks Api Search Topics My Clicks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Topic Clicks",
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/api/search/topics/trending": {
+      "get": {
+        "description": "Return the most-clicked topics over the last N days.\n\nEach row carries a PL/UK split so the UI can surface cross-lingual topic\ncomparison. Public (no API key) \u2014 aggregate, non-attributable data only.",
+        "operationId": "trending_topics_api_search_topics_trending_get",
+        "parameters": [
+          {
+            "description": "Lookback window in days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Lookback window in days",
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrendingTopicItem"
+                  },
+                  "title": "Response Trending Topics Api Search Topics Trending Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Trending Topics",
         "tags": [
           "Search"
         ]
