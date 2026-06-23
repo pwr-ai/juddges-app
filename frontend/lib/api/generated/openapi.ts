@@ -6679,7 +6679,7 @@ export interface components {
             document_ids: string[];
             /**
              * Include Base Fields
-             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under each document's `base_fields` key. Off by default to keep payloads lean.
+             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under each document's `base_fields` key, plus structure_*\/deep_* extraction columns under `extraction_fields`. Off by default to keep payloads lean.
              * @default false
              */
             include_base_fields: boolean;
@@ -8526,7 +8526,7 @@ export interface components {
             document_id: string;
             /**
              * Include Base Fields
-             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under the response's `base_fields` key. Off by default to keep payloads lean.
+             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under the response's `base_fields` key, plus structure_*\/deep_* extraction columns under `extraction_fields`. Off by default to keep payloads lean.
              * @default false
              */
             include_base_fields: boolean;
@@ -10152,6 +10152,13 @@ export interface components {
              * @description Extracted legal bases from the document
              */
             extracted_legal_bases?: string | null;
+            /**
+             * Extraction Fields
+             * @description Structural-segmentation (structure_*_summary, structure_confidence, …) and deep-analysis (deep_complexity_score, deep_reasoning_quality_score, deep_legal_domains, deep_precedential_value, …) typed extraction columns. Raw JSONB blobs are excluded. Populated only when include_base_fields=true is requested; otherwise None.
+             */
+            extraction_fields?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Full Text
              * @description Complete text of the document
@@ -18421,7 +18428,7 @@ export interface operations {
             query?: {
                 /** @description Include vector embeddings */
                 return_vectors?: boolean;
-                /** @description Include extracted base_* schema columns under `base_fields` */
+                /** @description Include extracted base_* schema columns under `base_fields` and structure_*\/deep_* extraction columns under `extraction_fields` */
                 include_base_fields?: boolean;
             };
             header?: never;
