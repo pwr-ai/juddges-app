@@ -12,6 +12,10 @@ from pydantic import BaseModel, Field
 
 from app.auth import verify_api_key
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
+from app.judgments_pkg.query_attribute_parser import (
+    build_meili_filter,
+    parse_query_attributes,
+)
 from app.rate_limiter import limiter
 from app.services.search import MeiliSearchService, SearchMode, TopicHit
 from app.services.search_analytics import (
@@ -79,6 +83,25 @@ class DocumentSearchResponse(BaseModel):
     pagination: DocumentPagination
     total_count: int | None = None
     search_mode: SearchMode = "keyword"
+    # Structured attributes extracted from the raw query when
+    # ``parse_attributes=true``. ``None`` when parsing is disabled or matched
+    # nothing — base-search responses are unchanged.
+    parsed_attributes: dict[str, Any] | None = None
+
+
+def _parsed_attributes_dict(parsed: Any) -> dict[str, Any]:
+    """Serialise the non-None parsed attributes for the response/analytics."""
+    fields = (
+        "court",
+        "jurisdiction",
+        "year",
+        "date_from",
+        "date_to",
+        "case_number",
+        "case_number_prefix",
+        "judge",
+    )
+    return {f: getattr(parsed, f) for f in fields if getattr(parsed, f) is not None}
 
 
 class TopicClickEvent(BaseModel):
@@ -190,6 +213,16 @@ async def documents_search(
             "(default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5."
         ),
     ),
+    parse_attributes: bool = Query(
+        False,
+        description=(
+            "When true, parse structural attributes (court, year/date range, "
+            "case number, judge, jurisdiction) out of the free-text query at "
+            "request time. Filterable attributes (jurisdiction, decision_date) "
+            "become Meilisearch filter clauses; the remaining text is used as "
+            "the FTS query. Default false keeps base-search behaviour identical."
+        ),
+    ),
     search_service: MeiliSearchService = Depends(get_search_service),
     user: AuthenticatedUser | None = Depends(get_optional_user),
 ) -> DocumentSearchResponse:
@@ -199,12 +232,35 @@ async def documents_search(
     if not search_service.configured:
         raise HTTPException(status_code=503, detail="Meilisearch is not configured")
 
+    effective_query = query
+    effective_filters = filters
+    parsed_attributes: dict[str, Any] | None = None
+
+    # Opt-in query-time attribute parsing (issue #192). The parser is cheap and
+    # deterministic; when it matches nothing the query/filters are untouched so
+    # base-search behaviour stays byte-identical.
+    if parse_attributes and query:
+        parsed = parse_query_attributes(query)
+        if parsed.has_attributes():
+            # Filterable attributes → Meili filter; AND-combine with any
+            # caller-supplied filter rather than overwriting it.
+            parsed_filter = build_meili_filter(parsed)
+            if parsed_filter:
+                effective_filters = (
+                    f"({filters}) AND ({parsed_filter})" if filters else parsed_filter
+                )
+            # Searchable-but-not-filterable attributes (court, case number,
+            # judge) are appended to the FTS query to preserve recall.
+            fts_parts = [parsed.remainder, *parsed.fts_terms()]
+            effective_query = " ".join(p for p in fts_parts if p).strip()
+            parsed_attributes = _parsed_attributes_dict(parsed)
+
     try:
         result = await search_service.documents_search(
-            query=query,
+            query=effective_query,
             limit=limit,
             offset=offset,
-            filters=filters,
+            filters=effective_filters,
             semantic_ratio=semantic_ratio,
         )
     except Exception as exc:
@@ -243,6 +299,7 @@ async def documents_search(
         ),
         total_count=estimated_total,
         search_mode=result.get("search_mode", "keyword"),
+        parsed_attributes=parsed_attributes,
     )
 
 

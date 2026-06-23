@@ -66,6 +66,20 @@ _UUID_RE = re.compile(
 )
 
 
+def _csv_in_list(values: List[str]) -> str:
+    """Render a value list for a PostgREST ``in.(...)`` filter.
+
+    Each value is double-quoted (with embedded quotes/backslashes escaped) so
+    that reserved characters — commas, parentheses, whitespace — cannot break
+    out of the filter. Safe for the raw-string ``.or_()`` builder.
+    """
+    quoted = []
+    for v in values:
+        escaped = str(v).replace("\\", "\\\\").replace('"', '\\"')
+        quoted.append(f'"{escaped}"')
+    return ",".join(quoted)
+
+
 class SupabaseVectorDB(SupabaseClientMixin):
     """Database operations for vector search using pgvector.
 
@@ -293,16 +307,19 @@ class SupabaseVectorDB(SupabaseClientMixin):
         text_ids = [i for i in document_ids if not _UUID_RE.match(i)]
         cols = _JUDGMENT_COLS if include_full_text else _JUDGMENT_LIST_COLS
 
+        # Merge the UUID-`id` and text-`source_id` lookups into a single
+        # round-trip via a PostgREST OR filter (`id=in.(...),source_id=in.(...)`)
+        # instead of two separate `.execute()` calls. Behaviour is identical:
+        # rows are still deduplicated by `judgments.id`.
+        or_clauses: List[str] = []
+        if uuid_ids:
+            or_clauses.append(f"id.in.({_csv_in_list(uuid_ids)})")
+        if text_ids:
+            or_clauses.append(f"source_id.in.({_csv_in_list(text_ids)})")
+
         try:
-            rows_by_id: Dict[str, Dict[str, Any]] = {}
-            if uuid_ids:
-                r = self.client.table("judgments").select(cols).in_("id", uuid_ids).execute()
-                for row in r.data or []:
-                    rows_by_id[row["id"]] = row
-            if text_ids:
-                r = self.client.table("judgments").select(cols).in_("source_id", text_ids).execute()
-                for row in r.data or []:
-                    rows_by_id[row["id"]] = row
+            r = self.client.table("judgments").select(cols).or_(",".join(or_clauses)).execute()
+            rows_by_id: Dict[str, Dict[str, Any]] = {row["id"]: row for row in (r.data or [])}
             return list(rows_by_id.values())
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch judgments: {e}")
