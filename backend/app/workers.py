@@ -47,6 +47,7 @@ celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
 # circular-import hazard (meilisearch_sync imports celery_app from here).
 celery_app.conf.imports = [
     "app.tasks.meilisearch_sync",
+    "app.tasks.suggestions_index",
     "app.tasks.reasoning_line_pipeline",
     "app.tasks.digest_notifications",
     "app.tasks.maintenance",
@@ -88,6 +89,12 @@ celery_app.conf.beat_schedule = {
     "vacuum-analyze-judgments-weekly": {
         "task": "maintenance.vacuum_analyze",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
+    },
+    # Corpus-derived autocomplete suggestions (issue #153) — weekly rebuild,
+    # offset to a low-traffic window away from the other Sunday jobs.
+    "suggestions-rebuild-weekly": {
+        "task": "suggestions.rebuild_index",
+        "schedule": crontab(hour=4, minute=30, day_of_week=0),
     },
 }
 celery_app.conf.timezone = "UTC"
