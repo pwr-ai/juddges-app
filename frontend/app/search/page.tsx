@@ -5,7 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useSearchStore } from '@/lib/store/searchStore';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
-import { motion } from 'framer-motion';
 import {
  PageContainer,
  DocumentDialog,
@@ -38,9 +37,7 @@ function TypingHeader({
  speed?: number;
 }): React.JSX.Element {
  const [displayedText, setDisplayedText] = useState("");
- const [showCursor, setShowCursor] = useState(true);
  const indexRef = useRef(0);
- const cursorIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
  useEffect(() => {
  setDisplayedText("");
@@ -52,38 +49,22 @@ function TypingHeader({
  indexRef.current += 1;
  } else {
  clearInterval(interval);
- // Blink cursor after typing is complete
- cursorIntervalRef.current = setInterval(() => {
- setShowCursor((prev) => !prev);
- }, 530);
  }
  }, speed);
 
  return () => {
  clearInterval(interval);
- if (cursorIntervalRef.current) {
- clearInterval(cursorIntervalRef.current);
- cursorIntervalRef.current = null;
- }
  };
  }, [text, speed]);
 
  return (
  <h1 className={className}>
  {displayedText}
- {showCursor && (
- <motion.span
- className="inline-block w-0.5 h-[1.2em] bg-primary ml-1 align-middle"
- animate={{
- opacity: [1, 1, 0, 0],
- }}
- transition={{
- duration: 1,
- repeat: Infinity,
- times: [0, 0.45, 0.5, 1],
- }}
+ {/* CSS-driven caret: no per-blink React re-render, self-cleans on unmount */}
+ <span
+ aria-hidden="true"
+ className="inline-block w-0.5 h-[1.2em] bg-primary ml-1 align-middle animate-caret-blink"
  />
- )}
  </h1>
  );
 }
