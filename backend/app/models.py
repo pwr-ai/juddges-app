@@ -421,6 +421,22 @@ class FacetCountsResponse(BaseModel):
     total: int
 
 
+class HistogramBucket(BaseModel):
+    """A single equal-width bucket of a numeric distribution."""
+
+    bucket_lo: float
+    bucket_hi: float
+    count: int
+
+
+class NumericHistogramResponse(BaseModel):
+    """Distribution histogram for a numeric extracted-data field."""
+
+    field: str
+    buckets: list[HistogramBucket]
+    total: int
+
+
 class FilterFieldConfig(BaseModel):
     """Configuration for a filter field."""
 
@@ -824,7 +840,8 @@ class DocumentRequest(BaseModel):
         description=(
             "Include extracted base-schema columns (base_appellant, "
             "base_appeal_outcome, base_num_victims, …) under the response's "
-            "`base_fields` key. Off by default to keep payloads lean."
+            "`base_fields` key, plus structure_*/deep_* extraction columns "
+            "under `extraction_fields`. Off by default to keep payloads lean."
         ),
     )
 
@@ -852,7 +869,8 @@ class BatchDocumentsRequest(BaseModel):
         description=(
             "Include extracted base-schema columns (base_appellant, "
             "base_appeal_outcome, base_num_victims, …) under each document's "
-            "`base_fields` key. Off by default to keep payloads lean."
+            "`base_fields` key, plus structure_*/deep_* extraction columns "
+            "under `extraction_fields`. Off by default to keep payloads lean."
         ),
     )
 

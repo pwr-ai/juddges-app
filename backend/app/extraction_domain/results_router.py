@@ -24,8 +24,10 @@ from app.models import (
     FacetCountsResponse,
     FilterFieldConfig,
     FilterOptionsResponse,
+    HistogramBucket,
     NLFilterRequest,
     NLFilterResponse,
+    NumericHistogramResponse,
 )
 from app.services.search_analytics import record_search_query
 
@@ -638,6 +640,66 @@ async def get_facet_counts(
                 "error": "Facet Query Failed",
                 "message": str(e),
                 "code": "FACET_QUERY_FAILED",
+            },
+        )
+
+
+@router.get(
+    "/base-schema/histogram/{field}",
+    response_model=NumericHistogramResponse,
+    summary="Get the distribution histogram for a numeric field",
+    description="Get equal-width bucket counts for a numeric extracted_data field, "
+    "used to render range-filter distribution histograms.",
+)
+async def get_numeric_histogram(
+    field: str = Path(description="Numeric field name to bucket"),
+    bucket_count: int = Query(
+        default=20, ge=1, le=100, description="Number of equal-width buckets"
+    ),
+    # Auth decision (issue #250, Part 3): read-only corpus-wide aggregate; no
+    # per-user data exposed.  BFF-gated.  Intentionally unauthenticated at the
+    # FastAPI layer — see filter_by_extracted_data for rationale.
+):
+    """Return the distribution of a numeric extracted field as bucket counts."""
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Database Unavailable",
+                "message": "Database connection not available.",
+                "code": "DATABASE_UNAVAILABLE",
+            },
+        )
+
+    try:
+        response = supabase.rpc(
+            "get_numeric_field_histogram",
+            {"field": field, "bucket_count": bucket_count},
+        ).execute()
+
+        buckets = [
+            HistogramBucket(
+                bucket_lo=float(row["bucket_lo"]),
+                bucket_hi=float(row["bucket_hi"]),
+                count=int(row["cnt"]),
+            )
+            for row in (response.data or [])
+        ]
+
+        return NumericHistogramResponse(
+            field=field,
+            buckets=buckets,
+            total=sum(b.count for b in buckets),
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get histogram for {field}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "Histogram Query Failed",
+                "message": str(e),
+                "code": "HISTOGRAM_QUERY_FAILED",
             },
         )
 

@@ -89,6 +89,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/ingestion/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Ingestion
+         * @description Submit a background judgment-ingestion job to Celery (#104).
+         *
+         *     Returns a ``task_id`` that can be polled via ``GET /ingestion/status``.
+         *     Replaces the previously-blocking ``scripts/ingest_judgments.py`` run.
+         */
+        post: operations["start_ingestion_api_admin_ingestion_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/ingestion/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ingestion Status
+         * @description Return the progress / result of an ingestion job (#104).
+         */
+        get: operations["get_ingestion_status_api_admin_ingestion_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/search-queries": {
         parameters: {
             query?: never;
@@ -1252,6 +1295,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest
+         * @description Return corpus-derived phrase-level autocomplete suggestions (issue #153).
+         *
+         *     Surfaces the *language of legal practice* — legal terms, doctrines, court
+         *     names, judge names, statute names — mined from the PL + EN judgment corpus.
+         *     Falls back to an empty list (HTTP 200) when the ``suggestions`` index is
+         *     unavailable so the frontend can degrade to today's behaviour rather than
+         *     showing an error.
+         */
+        get: operations["suggest_api_search_suggest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search/topic-click": {
         parameters: {
             query?: never;
@@ -1291,6 +1360,52 @@ export interface paths {
          *     all other fields ``None`` when the topics index is empty or unavailable.
          */
         get: operations["topics_meta_api_search_topics_meta_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search/topics/my-clicks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Topic Clicks
+         * @description Return the authenticated caller's recently-explored topics.
+         *
+         *     Filtered server-side by the authenticated user id — never accepts a
+         *     caller-supplied id (avoids the IDOR class of bug).
+         */
+        get: operations["my_topic_clicks_api_search_topics_my_clicks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search/topics/trending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Trending Topics
+         * @description Return the most-clicked topics over the last N days.
+         *
+         *     Each row carries a PL/UK split so the UI can surface cross-lingual topic
+         *     comparison. Public (no API key) — aggregate, non-attributable data only.
+         */
+        get: operations["trending_topics_api_search_topics_trending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3438,6 +3553,26 @@ export interface paths {
          * @description Get all available filter fields with their types and configurations.
          */
         get: operations["get_filter_options_extractions_base_schema_filter_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/extractions/base-schema/histogram/{field}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the distribution histogram for a numeric field
+         * @description Get equal-width bucket counts for a numeric extracted_data field, used to render range-filter distribution histograms.
+         */
+        get: operations["get_numeric_histogram_extractions_base_schema_histogram__field__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6610,7 +6745,7 @@ export interface components {
             document_ids: string[];
             /**
              * Include Base Fields
-             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under each document's `base_fields` key. Off by default to keep payloads lean.
+             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under each document's `base_fields` key, plus structure_*\/deep_* extraction columns under `extraction_fields`. Off by default to keep payloads lean.
              * @default false
              */
             include_base_fields: boolean;
@@ -8457,7 +8592,7 @@ export interface components {
             document_id: string;
             /**
              * Include Base Fields
-             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under the response's `base_fields` key. Off by default to keep payloads lean.
+             * @description Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, …) under the response's `base_fields` key, plus structure_*\/deep_* extraction columns under `extraction_fields`. Off by default to keep payloads lean.
              * @default false
              */
             include_base_fields: boolean;
@@ -8601,6 +8736,10 @@ export interface components {
                 [key: string]: unknown;
             }[];
             pagination: components["schemas"]["DocumentPagination"];
+            /** Parsed Attributes */
+            parsed_attributes?: {
+                [key: string]: unknown;
+            } | null;
             /** Query */
             query: string;
             /** Query Time Ms */
@@ -9556,6 +9695,18 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * HistogramBucket
+         * @description A single equal-width bucket of a numeric distribution.
+         */
+        HistogramBucket: {
+            /** Bucket Hi */
+            bucket_hi: number;
+            /** Bucket Lo */
+            bucket_lo: number;
+            /** Count */
+            count: number;
+        };
+        /**
          * HumanMessage
          * @description Message from a human.
          *
@@ -9606,6 +9757,102 @@ export interface components {
             type: "human";
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * IngestionStartRequest
+         * @description Parameters for triggering a background judgment-ingestion job (#104).
+         */
+        IngestionStartRequest: {
+            /**
+             * Batch Size
+             * @description Documents per batch
+             * @default 50
+             */
+            batch_size: number;
+            /**
+             * No Embeddings
+             * @description Skip generating embeddings
+             * @default false
+             */
+            no_embeddings: boolean;
+            /**
+             * Polish
+             * @description Polish judgments to ingest
+             * @default 0
+             */
+            polish: number;
+            /**
+             * Resume
+             * @description Resume from last checkpoint
+             * @default false
+             */
+            resume: boolean;
+            /**
+             * Skip Polish
+             * @description Skip Polish ingestion
+             * @default false
+             */
+            skip_polish: boolean;
+            /**
+             * Skip Uk
+             * @description Skip UK ingestion
+             * @default false
+             */
+            skip_uk: boolean;
+            /**
+             * Uk
+             * @description UK judgments to ingest
+             * @default 0
+             */
+            uk: number;
+        };
+        /**
+         * IngestionStartResponse
+         * @description Response returned after submitting an ingestion job.
+         */
+        IngestionStartResponse: {
+            /**
+             * Status
+             * @default PENDING
+             */
+            status: string;
+            /**
+             * Task Id
+             * @description Celery task id; poll status with it
+             */
+            task_id: string;
+        };
+        /**
+         * IngestionStatusResponse
+         * @description Current state of an ingestion job (progress, result, errors).
+         */
+        IngestionStatusResponse: {
+            /**
+             * Error
+             * @description Error message if failed
+             */
+            error?: string | null;
+            /**
+             * Progress
+             * @description Progress meta while running (processed/total/ETA)
+             */
+            progress?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Result
+             * @description Final summary once completed
+             */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * State
+             * @description Celery task state, e.g. PENDING/PROGRESS/SUCCESS
+             */
+            state: string;
+            /** Task Id */
+            task_id: string;
         };
         /**
          * InputTokenDetails
@@ -9984,6 +10231,13 @@ export interface components {
              */
             extracted_legal_bases?: string | null;
             /**
+             * Extraction Fields
+             * @description Structural-segmentation (structure_*_summary, structure_confidence, …) and deep-analysis (deep_complexity_score, deep_reasoning_quality_score, deep_legal_domains, deep_precedential_value, …) typed extraction columns. Raw JSONB blobs are excluded. Populated only when include_base_fields=true is requested; otherwise None.
+             */
+            extraction_fields?: {
+                [key: string]: unknown;
+            } | null;
+            /**
              * Full Text
              * @description Complete text of the document
              */
@@ -10333,6 +10587,18 @@ export interface components {
             total_listings: number;
             /** Total Reviews */
             total_reviews: number;
+        };
+        /**
+         * NumericHistogramResponse
+         * @description Distribution histogram for a numeric extracted-data field.
+         */
+        NumericHistogramResponse: {
+            /** Buckets */
+            buckets: components["schemas"]["HistogramBucket"][];
+            /** Field */
+            field: string;
+            /** Total */
+            total: number;
         };
         /**
          * NumericRange
@@ -13248,6 +13514,51 @@ export interface components {
             review_text?: string | null;
         };
         /**
+         * SuggestResponse
+         * @description Corpus-derived autocomplete suggestions (issue #153).
+         *
+         *     Phrase-level hits from the Meilisearch ``suggestions`` index, mined from the
+         *     PL + EN judgment corpus.  ``suggestion_hits`` is an empty list when the
+         *     suggestions index is unavailable (graceful fallback for the frontend).
+         */
+        SuggestResponse: {
+            /** Estimatedtotalhits */
+            estimatedTotalHits?: number | null;
+            /** Processingtimems */
+            processingTimeMs?: number | null;
+            /** Query */
+            query: string;
+            /** Suggestion Hits */
+            suggestion_hits?: components["schemas"]["SuggestionHit"][];
+        };
+        /**
+         * SuggestionHit
+         * @description A single hit from the Meilisearch ``suggestions`` index.
+         *
+         *     Phrase-level suggestion mined from the PL + EN judgment corpus.  The
+         *     ``formatted`` field (alias ``_formatted``) carries the highlighted ``term``
+         *     when ``attributesToHighlight`` is set on the query.
+         */
+        SuggestionHit: {
+            /** Formatted */
+            _formatted?: {
+                [key: string]: unknown;
+            } | null;
+            /** Category */
+            category: string;
+            /** Id */
+            id: string;
+            /** Language */
+            language: string;
+            /** Term */
+            term: string;
+            /**
+             * Weight
+             * @default 0
+             */
+            weight: number;
+        };
+        /**
          * SummarizeRequest
          * @description Request model for document summarization.
          */
@@ -13909,6 +14220,33 @@ export interface components {
             /** Trend */
             trend: string;
         };
+        /**
+         * TrendingTopicItem
+         * @description A single trending topic with its cross-lingual (PL/UK) click split.
+         */
+        TrendingTopicItem: {
+            /** Click Count */
+            click_count: number;
+            /** Last Clicked */
+            last_clicked?: string | null;
+            /**
+             * Other Count
+             * @default 0
+             */
+            other_count: number;
+            /**
+             * Pl Count
+             * @default 0
+             */
+            pl_count: number;
+            /** Topic Id */
+            topic_id: string;
+            /**
+             * Uk Count
+             * @default 0
+             */
+            uk_count: number;
+        };
         /** UpdateCollectionRequest */
         UpdateCollectionRequest: {
             /** Description */
@@ -14127,6 +14465,22 @@ export interface components {
             query: string;
             /** Topic Hits Count */
             topic_hits_count?: number | null;
+        };
+        /**
+         * UserTopicClickItem
+         * @description A topic the requesting user has recently explored.
+         */
+        UserTopicClickItem: {
+            /** Click Count */
+            click_count: number;
+            /** Jurisdiction */
+            jurisdiction?: string | null;
+            /** Last Clicked */
+            last_clicked?: string | null;
+            /** Last Query */
+            last_query?: string | null;
+            /** Topic Id */
+            topic_id: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -14790,6 +15144,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentStats"];
+                };
+            };
+        };
+    };
+    start_ingestion_api_admin_ingestion_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestionStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestionStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ingestion_status_api_admin_ingestion_status_get: {
+        parameters: {
+            query: {
+                /** @description Celery task id returned by /ingestion/start */
+                task_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestionStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -16107,6 +16526,8 @@ export interface operations {
                 filters?: string | null;
                 /** @description Hybrid mix between keyword and semantic search. 0 = pure keyword (default), 1 = pure semantic. Frontend's 'hybrid' mode sends ~0.5. */
                 semantic_ratio?: number;
+                /** @description When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical. */
+                parse_attributes?: boolean;
             };
             header?: never;
             path?: never;
@@ -16121,6 +16542,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_api_search_suggest_get: {
+        parameters: {
+            query: {
+                /** @description Search query */
+                q: string;
+                /** @description Maximum number of suggestions */
+                limit?: number;
+                /** @description Filter by suggestion language ('pl' or 'en') */
+                language?: string | null;
+                /** @description Filter by suggestion category (keyword, legal_topic, legislation, court, judge, phrase, query) */
+                category?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestResponse"];
                 };
             };
             /** @description Validation Error */
@@ -16185,6 +16644,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopicsMetaResponse"];
+                };
+            };
+        };
+    };
+    my_topic_clicks_api_search_topics_my_clicks_get: {
+        parameters: {
+            query?: {
+                /** @description Lookback window in days */
+                days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserTopicClickItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trending_topics_api_search_topics_trending_get: {
+        parameters: {
+            query?: {
+                /** @description Lookback window in days */
+                days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrendingTopicItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -18102,7 +18627,7 @@ export interface operations {
             query?: {
                 /** @description Include vector embeddings */
                 return_vectors?: boolean;
-                /** @description Include extracted base_* schema columns under `base_fields` */
+                /** @description Include extracted base_* schema columns under `base_fields` and structure_*\/deep_* extraction columns under `extraction_fields` */
                 include_base_fields?: boolean;
             };
             header?: never;
@@ -19490,6 +20015,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FilterOptionsResponse"];
+                };
+            };
+        };
+    };
+    get_numeric_histogram_extractions_base_schema_histogram__field__get: {
+        parameters: {
+            query?: {
+                /** @description Number of equal-width buckets */
+                bucket_count?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Numeric field name to bucket */
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumericHistogramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

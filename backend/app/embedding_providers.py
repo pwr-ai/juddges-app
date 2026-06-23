@@ -125,6 +125,12 @@ class TEIEmbeddingProvider(BaseEmbeddingProvider):
             )
         return self._client
 
+    async def aclose(self) -> None:
+        """Close the cached httpx client (call on application shutdown)."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
     async def embed_text(self, text: str) -> list[float]:
         result = await self.embed_texts([text])
         return result[0]
@@ -213,6 +219,22 @@ def list_available_models() -> list[dict]:
         model_dict["api_key_configured"] = True
         models.append(model_dict)
     return models
+
+
+async def close_active_provider() -> None:
+    """Close the cached embedding provider's httpx client, if any.
+
+    Intended for the FastAPI lifespan shutdown hook so the reused TEI
+    connection pool is released cleanly on exit.
+    """
+    global _active_provider, _active_model_id
+    if _active_provider is not None and hasattr(_active_provider, "aclose"):
+        try:
+            await _active_provider.aclose()
+        except Exception as e:  # shutdown best-effort
+            logger.warning(f"Error closing embedding provider client: {e}")
+    _active_provider = None
+    _active_model_id = None
 
 
 def set_active_model(model_id: str) -> EmbeddingModelConfig:

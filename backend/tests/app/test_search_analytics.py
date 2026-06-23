@@ -6,7 +6,9 @@ import pytest
 
 from app.services.search_analytics import (
     export_eval_queries,
+    get_trending_topics,
     get_user_search_history,
+    get_user_topic_clicks,
     record_search_query,
 )
 
@@ -641,3 +643,178 @@ class TestAnalyticsEndpointsAuth:
             app.dependency_overrides.pop(verify_api_key, None)
 
         assert response.status_code == 200
+
+
+# ── Topic analytics surface (issue #229) ─────────────────────────────────
+
+
+class TestGetTrendingTopics:
+    """Tests for the trending-topics RPC consumer."""
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client", None)
+    async def test_returns_empty_without_supabase(self):
+        assert await get_trending_topics() == []
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_passes_args_to_rpc(self, mock_client):
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "topic_id": "fraud",
+                    "click_count": 9,
+                    "pl_count": 6,
+                    "uk_count": 3,
+                    "other_count": 0,
+                    "last_clicked": "2026-05-13T08:00:00+00:00",
+                }
+            ]
+        )
+
+        rows = await get_trending_topics(days=14, limit=5)
+
+        mock_client.rpc.assert_called_once_with(
+            "get_trending_topics",
+            {"days_back": 14, "max_results": 5},
+        )
+        assert rows[0]["topic_id"] == "fraud"
+        assert rows[0]["pl_count"] == 6
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_swallows_rpc_errors(self, mock_client):
+        mock_client.rpc.side_effect = RuntimeError("db down")
+        assert await get_trending_topics() == []
+
+
+class TestGetUserTopicClicks:
+    """Tests for the per-user topic-clicks RPC consumer."""
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client", None)
+    async def test_returns_empty_without_supabase(self):
+        assert await get_user_topic_clicks(user_id="u-1") == []
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_passes_args_to_rpc(self, mock_client):
+        mock_rpc = MagicMock()
+        mock_client.rpc.return_value = mock_rpc
+        mock_rpc.execute.return_value = MagicMock(
+            data=[
+                {
+                    "topic_id": "homicide",
+                    "click_count": 2,
+                    "last_clicked": "2026-05-13T09:00:00+00:00",
+                    "last_query": "zabójstwo",
+                    "jurisdiction": "pl",
+                }
+            ]
+        )
+
+        rows = await get_user_topic_clicks(user_id="u-1", days=7, limit=20)
+
+        mock_client.rpc.assert_called_once_with(
+            "get_user_topic_clicks",
+            {"p_user_id": "u-1", "days_back": 7, "max_results": 20},
+        )
+        assert rows[0]["topic_id"] == "homicide"
+
+    @pytest.mark.anyio
+    @patch("app.services.search_analytics.supabase_client")
+    async def test_swallows_rpc_errors(self, mock_client):
+        mock_client.rpc.side_effect = RuntimeError("db down")
+        assert await get_user_topic_clicks(user_id="u-1") == []
+
+
+class TestTrendingTopicsEndpoint:
+    """Tests for GET /api/search/topics/trending."""
+
+    @pytest.mark.anyio
+    @patch("app.api.search.get_trending_topics")
+    async def test_returns_trending(self, mock_trending, client, valid_api_headers):
+        async def fake_trending(*, days, limit):
+            assert days == 30 and limit == 20
+            return [
+                {
+                    "topic_id": "fraud",
+                    "click_count": 9,
+                    "pl_count": 6,
+                    "uk_count": 3,
+                    "other_count": 0,
+                    "last_clicked": "2026-05-13T08:00:00+00:00",
+                }
+            ]
+
+        mock_trending.side_effect = fake_trending
+
+        response = await client.get(
+            "/api/search/topics/trending",
+            headers=valid_api_headers,
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body[0]["topic_id"] == "fraud"
+        assert body[0]["uk_count"] == 3
+
+
+class TestMyTopicClicksEndpoint:
+    """Tests for GET /api/search/topics/my-clicks."""
+
+    @pytest.mark.anyio
+    async def test_requires_auth(self, client, valid_api_headers):
+        """No JWT → 401/403 from get_current_user."""
+        response = await client.get(
+            "/api/search/topics/my-clicks",
+            headers=valid_api_headers,
+        )
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.anyio
+    @patch("app.api.search.get_user_topic_clicks")
+    async def test_returns_clicks_for_authenticated_user(
+        self, mock_clicks, client, valid_api_headers
+    ):
+        """Authenticated caller gets their clicks; user.id forwarded to service."""
+        from app.core.auth_jwt import AuthenticatedUser, get_current_user
+        from app.server import app
+
+        async def fake_user():
+            return AuthenticatedUser(
+                {"id": "user-xyz", "email": "u@example.com", "role": "authenticated"},
+                access_token="tok",
+            )
+
+        app.dependency_overrides[get_current_user] = fake_user
+
+        async def fake_clicks(*, user_id, days, limit):
+            assert user_id == "user-xyz"
+            return [
+                {
+                    "topic_id": "homicide",
+                    "click_count": 2,
+                    "last_clicked": "2026-05-13T09:00:00+00:00",
+                    "last_query": "zabójstwo",
+                    "jurisdiction": "pl",
+                }
+            ]
+
+        mock_clicks.side_effect = fake_clicks
+
+        try:
+            response = await client.get(
+                "/api/search/topics/my-clicks?days=7&limit=10",
+                headers=valid_api_headers,
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body[0]["topic_id"] == "homicide"
+        kwargs = mock_clicks.call_args.kwargs
+        assert kwargs == {"user_id": "user-xyz", "days": 7, "limit": 10}
