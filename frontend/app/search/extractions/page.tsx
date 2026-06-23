@@ -6,6 +6,7 @@ import { Suspense, useMemo } from "react";
 import { ActiveFilterChips } from "@/components/filters/extracted-search-filters";
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
+import { QuickFilters } from "@/components/search/QuickFilters";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -340,6 +341,12 @@ function ExtractionSearchPage() {
           appealCourtJudgesNames={filters.appeal_court_judges_names}
           offenderRepresentativeName={filters.offender_representative_name}
           onChange={setSubstringFilter}
+          disabled={isLoading}
+        />
+
+        <QuickFilters
+          filters={drawerFilters}
+          onChange={setDrawerFilter}
           disabled={isLoading}
         />
 
