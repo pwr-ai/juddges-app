@@ -1,11 +1,37 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { GROUP_ORDER, GROUP_LABELS }
   from "@/lib/extractions/base-schema-filter-config";
 
+// Histogram fetches fire for numeric_range controls; stub fetch so the
+// distribution query resolves to an empty histogram during these tests.
+beforeEach(() => {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ field: "", buckets: [], total: 0 }),
+    } as Response),
+  ) as unknown as typeof fetch;
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
+function renderDrawer(ui: React.ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
+
 describe("BaseFiltersDrawer", () => {
   it("renders one section per non-empty group", () => {
-    render(<BaseFiltersDrawer filters={{}} onChange={() => {}} onReset={() => {}} />);
+    renderDrawer(<BaseFiltersDrawer filters={{}} onChange={() => {}} onReset={() => {}} />);
     // Every group in GROUP_ORDER that has at least one non-substring field
     // should produce a heading. We can't hard-code a count because the
     // registry may change — assert each visible label is present.
@@ -24,7 +50,7 @@ describe("BaseFiltersDrawer", () => {
 
   it("calls onChange with the registry field key for numeric_range", () => {
     const onChange = jest.fn();
-    render(<BaseFiltersDrawer filters={{}} onChange={onChange} onReset={() => {}} />);
+    renderDrawer(<BaseFiltersDrawer filters={{}} onChange={onChange} onReset={() => {}} />);
     // Find a NumericRangeControl by its aria-label
     const minInput = screen.getByLabelText(/number of victims minimum/i);
     fireEvent.change(minInput, { target: { value: "3" } });
@@ -36,7 +62,7 @@ describe("BaseFiltersDrawer", () => {
 
   it("calls onChange with kind:enum_multi for a checkbox group", () => {
     const onChange = jest.fn();
-    render(<BaseFiltersDrawer filters={{}} onChange={onChange} onReset={() => {}} />);
+    renderDrawer(<BaseFiltersDrawer filters={{}} onChange={onChange} onReset={() => {}} />);
     // The "Appellant" enum_multi control includes an `offender` checkbox.
     const checkbox = screen.getAllByRole("checkbox", { name: /offender/i })[0];
     fireEvent.click(checkbox);
@@ -51,7 +77,7 @@ describe("BaseFiltersDrawer", () => {
     const filters = {
       num_victims: { kind: "numeric_range" as const, range: { min: 1, max: 5 } },
     };
-    render(<BaseFiltersDrawer filters={filters} onChange={() => {}} onReset={onReset} />);
+    renderDrawer(<BaseFiltersDrawer filters={filters} onChange={() => {}} onReset={onReset} />);
     fireEvent.click(screen.getByRole("button", { name: /reset/i }));
     expect(onReset).toHaveBeenCalled();
   });
@@ -60,7 +86,7 @@ describe("BaseFiltersDrawer", () => {
     const facetCounts = {
       convict_offences: { theft: 99 },
     };
-    render(
+    renderDrawer(
       <BaseFiltersDrawer
         filters={{}}
         onChange={() => {}}

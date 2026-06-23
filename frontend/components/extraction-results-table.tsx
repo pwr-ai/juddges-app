@@ -181,7 +181,7 @@ function formatCellValue(value: unknown): React.ReactNode {
  return (
  <div className="flex flex-wrap gap-1">
  {value.map((v, i) => (
- <React.Fragment key={i}>{formatLabel(v)}</React.Fragment>
+ <React.Fragment key={`${v}-${i}`}>{formatLabel(v)}</React.Fragment>
  ))}
  </div>
  );
@@ -720,7 +720,7 @@ export function ExtractionResultsTable({
  ) : (
  paginatedRows.map((row, rowIndex) => (
  <tr
- key={row.document_id || rowIndex}
+ key={row.document_id}
  className={cn(
 "border-b border-slate-100 last:border-b-0",
 "transition-colors",

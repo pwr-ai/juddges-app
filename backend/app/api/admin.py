@@ -131,6 +131,41 @@ class ContentStats(BaseModel):
     total_views: int = 0
 
 
+class IngestionStartRequest(BaseModel):
+    """Parameters for triggering a background judgment-ingestion job (#104)."""
+
+    polish: int = Field(default=0, ge=0, description="Polish judgments to ingest")
+    uk: int = Field(default=0, ge=0, description="UK judgments to ingest")
+    skip_polish: bool = Field(default=False, description="Skip Polish ingestion")
+    skip_uk: bool = Field(default=False, description="Skip UK ingestion")
+    no_embeddings: bool = Field(default=False, description="Skip generating embeddings")
+    resume: bool = Field(default=False, description="Resume from last checkpoint")
+    batch_size: int = Field(
+        default=50, ge=1, le=1000, description="Documents per batch"
+    )
+
+
+class IngestionStartResponse(BaseModel):
+    """Response returned after submitting an ingestion job."""
+
+    task_id: str = Field(description="Celery task id; poll status with it")
+    status: str = "PENDING"
+
+
+class IngestionStatusResponse(BaseModel):
+    """Current state of an ingestion job (progress, result, errors)."""
+
+    task_id: str
+    state: str = Field(description="Celery task state, e.g. PENDING/PROGRESS/SUCCESS")
+    progress: dict[str, Any] | None = Field(
+        default=None, description="Progress meta while running (processed/total/ETA)"
+    )
+    result: dict[str, Any] | None = Field(
+        default=None, description="Final summary once completed"
+    )
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
 # ===== Endpoints =====
 
 
@@ -663,6 +698,87 @@ async def get_content_stats(
         published=published_count,
         drafts=draft_count,
         total_views=total_views,
+    )
+
+
+@router.post("/ingestion/start", response_model=IngestionStartResponse)
+async def start_ingestion(
+    payload: IngestionStartRequest,
+    admin: AuthenticatedUser = Depends(require_admin),
+) -> IngestionStartResponse:
+    """Submit a background judgment-ingestion job to Celery (#104).
+
+    Returns a ``task_id`` that can be polled via ``GET /ingestion/status``.
+    Replaces the previously-blocking ``scripts/ingest_judgments.py`` run.
+    """
+    if payload.skip_polish and payload.skip_uk:
+        raise HTTPException(
+            status_code=400, detail="Cannot skip both Polish and UK ingestion."
+        )
+    if payload.polish <= 0 and payload.uk <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide a positive 'polish' or 'uk' sample size.",
+        )
+
+    # Lazy import keeps the heavy Celery/datasets import chain off module load.
+    from app.tasks.ingestion import ingest_judgments_task
+
+    try:
+        task = ingest_judgments_task.delay(
+            polish=payload.polish,
+            uk=payload.uk,
+            skip_polish=payload.skip_polish,
+            skip_uk=payload.skip_uk,
+            no_embeddings=payload.no_embeddings,
+            resume=payload.resume,
+            batch_size=payload.batch_size,
+        )
+    except Exception as e:
+        logger.exception(f"Failed to submit ingestion task: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Failed to submit ingestion job to the task queue.",
+        )
+
+    logger.info(
+        f"Ingestion job {task.id} submitted by {admin.email}: "
+        f"polish={payload.polish}, uk={payload.uk}"
+    )
+    return IngestionStartResponse(task_id=task.id, status="PENDING")
+
+
+@router.get("/ingestion/status", response_model=IngestionStatusResponse)
+async def get_ingestion_status(
+    task_id: str = Query(description="Celery task id returned by /ingestion/start"),
+    admin: AuthenticatedUser = Depends(require_admin),
+) -> IngestionStatusResponse:
+    """Return the progress / result of an ingestion job (#104)."""
+    from celery.result import AsyncResult
+
+    from app.workers import celery_app
+
+    result = AsyncResult(id=task_id, app=celery_app)
+    state = result.state
+
+    progress: dict[str, Any] | None = None
+    final_result: dict[str, Any] | None = None
+    error: str | None = None
+
+    info = result.info
+    if state == "PROGRESS" and isinstance(info, dict):
+        progress = info
+    elif state == "SUCCESS":
+        final_result = info if isinstance(info, dict) else {"result": info}
+    elif state == "FAILURE":
+        error = str(info) if info is not None else "Unknown error"
+
+    return IngestionStatusResponse(
+        task_id=task_id,
+        state=state,
+        progress=progress,
+        result=final_result,
+        error=error,
     )
 
 

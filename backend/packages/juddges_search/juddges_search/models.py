@@ -153,6 +153,16 @@ class LegalDocument(BaseModel):
             "requested; otherwise None to keep search/list responses lean."
         ),
     )
+    extraction_fields: Optional[dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Structural-segmentation (structure_*_summary, structure_confidence, …) "
+            "and deep-analysis (deep_complexity_score, deep_reasoning_quality_score, "
+            "deep_legal_domains, deep_precedential_value, …) typed extraction "
+            "columns. Raw JSONB blobs are excluded. Populated only when "
+            "include_base_fields=true is requested; otherwise None."
+        ),
+    )
 
     model_config = ConfigDict(
         extra="allow",

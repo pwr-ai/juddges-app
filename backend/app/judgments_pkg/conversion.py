@@ -247,6 +247,51 @@ def _extract_base_fields(
     return result if result else None
 
 
+# Prefixes for the structural-segmentation (Pass 1) and deep-analysis (Pass 2)
+# extraction layers stored as typed columns on `judgments`. Surfaced under
+# `extraction_fields` alongside the UK `base_*` schema (see issue #198).
+_EXTRACTION_PREFIXES: tuple[str, ...] = ("structure_", "deep_")
+
+# Raw JSONB extraction blobs are intentionally excluded from the typed export
+# surface (issue #198 non-goal): only typed columns are exposed.
+_EXTRACTION_EXCLUDE_KEYS: frozenset[str] = frozenset(
+    {
+        "structure_raw_extraction",
+        "deep_analysis_raw",
+    }
+)
+
+
+def _extract_extraction_fields(
+    raw_doc_data: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Build a dict of structural (`structure_*`) and deep-analysis (`deep_*`)
+    typed extraction columns from a judgments row.
+
+    Mirrors `_extract_base_fields` semantics: skips None values, empty lists,
+    and the raw JSONB blobs (`structure_raw_extraction`, `deep_analysis_raw`);
+    serialises datetimes to ISO strings. Returns None when no non-empty
+    extraction columns are present so list/search responses stay lean.
+    """
+    if not raw_doc_data:
+        return None
+    result: dict[str, Any] = {}
+    for key, value in raw_doc_data.items():
+        if not key.startswith(_EXTRACTION_PREFIXES):
+            continue
+        if key in _EXTRACTION_EXCLUDE_KEYS:
+            continue
+        if value is None:
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            continue
+        if isinstance(value, datetime):
+            result[key] = value.isoformat()
+        else:
+            result[key] = value
+    return result if result else None
+
+
 def _build_document_metadata_dict(doc: LegalDocument) -> dict:
     """Build metadata dictionary from document, excluding full text and HTML content."""
     metadata = {

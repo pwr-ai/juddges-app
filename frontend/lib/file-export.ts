@@ -1,5 +1,3 @@
-import ExcelJS from "exceljs";
-
 export type ExportFormat = "xlsx" | "csv" | "json";
 
 export type ExportRow = Record<string, unknown>;
@@ -23,6 +21,9 @@ export async function exportToXLSX(
   filename: string,
   sheetName = "Data"
 ): Promise<void> {
+  // Lazy-load exceljs (~700KB) only when an XLSX export is actually requested,
+  // keeping it out of the initial client bundle. CSV/JSON exports never pull it.
+  const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName.slice(0, 31));
 

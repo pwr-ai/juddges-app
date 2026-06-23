@@ -28,7 +28,9 @@ load_dotenv()
 from app.services.meilisearch_config import (  # noqa: E402
     setup_meilisearch_index,
     transform_judgment_for_meilisearch,
+    verify_embedder_registered,
 )
+from app.services.meilisearch_embeddings import EMBEDDER_NAME  # noqa: E402
 from app.services.search import MeiliSearchService  # noqa: E402
 
 
@@ -45,10 +47,23 @@ async def cmd_setup(service: MeiliSearchService) -> None:
     """Create and configure the Meilisearch index."""
     print(f"Setting up Meilisearch index '{service.index_name}'...")
     success = await setup_meilisearch_index(service)
-    if success:
-        print("Index setup complete.")
-    else:
+    if not success:
         print("Index setup failed or was skipped — check logs above.")
+        sys.exit(1)
+
+    # Hard-fail if the bge-m3 embedder did not register — a setup that reports
+    # success while the embedder is absent is exactly the silent gap behind
+    # issue #200 (hybrid search 400s with invalid_search_embedder).
+    if await verify_embedder_registered(service):
+        print(f"Index setup complete (embedder '{EMBEDDER_NAME}' registered).")
+    else:
+        print(
+            f"Index setup applied but embedder '{EMBEDDER_NAME}' is NOT "
+            "registered on the index. Hybrid search will degrade to "
+            "keyword-only. Re-run --setup and inspect the embedders task error "
+            "(see issue #200).",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
@@ -111,9 +126,7 @@ async def main() -> None:
     parser.add_argument(
         "--full-sync", action="store_true", help="Sync all judgments from Supabase"
     )
-    parser.add_argument(
-        "--all", action="store_true", help="Setup index then full sync"
-    )
+    parser.add_argument("--all", action="store_true", help="Setup index then full sync")
     parser.add_argument("--stats", action="store_true", help="Show index statistics")
     parser.add_argument(
         "--batch-size",
