@@ -13,6 +13,8 @@ from juddges_search.embeddings import embed_texts
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.services.meilisearch_embeddings import EMBEDDER_NAME
+
 # Sentinel key injected into the raw Meilisearch response dict when a hybrid
 # search degrades to keyword-only.  Consumers (e.g. ``documents_search``) read
 # and strip this key so it never leaks into the HTTP response body.
@@ -577,7 +579,7 @@ class MeiliSearchService:
             try:
                 query_vec = await asyncio.to_thread(embed_texts, query)
                 payload["hybrid"] = {
-                    "embedder": "bge-m3",
+                    "embedder": EMBEDDER_NAME,
                     "semanticRatio": semantic_ratio,
                 }
                 payload["vector"] = query_vec
@@ -740,6 +742,23 @@ class MeiliSearchService:
             )
             response.raise_for_status()
             return response.json()
+
+    async def get_settings_embedders(self) -> dict[str, Any]:
+        """GET the currently registered embedders block.
+
+        Returns the raw ``settings/embedders`` mapping (``{}`` when none are
+        registered). Used to verify the bge-m3 embedder actually landed after a
+        settings apply — a silent gap here is what caused issue #200 (hybrid
+        search 400s with ``invalid_search_embedder``).
+        """
+        if not self.admin_configured:
+            raise SearchServiceError("Meilisearch admin key is not configured")
+        url = f"{self.base_url}/indexes/{self.index_name}/settings/embedders"
+        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            response = await client.get(url, headers=self._admin_headers())
+            response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, dict) else {}
 
     async def upsert_documents(
         self, documents: list[dict[str, Any]], primary_key: str = "id"
