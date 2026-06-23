@@ -17,7 +17,9 @@ from app.services.search import MeiliSearchService, SearchMode, TopicHit
 from app.services.search_analytics import (
     export_eval_queries,
     get_popular_queries,
+    get_trending_topics,
     get_user_search_history,
+    get_user_topic_clicks,
     get_zero_result_queries,
     record_search_query,
     record_topic_click,
@@ -297,6 +299,58 @@ async def topics_meta(
         corpus_snapshot=data.get("corpus_snapshot"),
         jurisdictions=data.get("jurisdictions", []),
     )
+
+
+class TrendingTopicItem(BaseModel):
+    """A single trending topic with its cross-lingual (PL/UK) click split."""
+
+    topic_id: str
+    click_count: int
+    pl_count: int = 0
+    uk_count: int = 0
+    other_count: int = 0
+    last_clicked: str | None = None
+
+
+class UserTopicClickItem(BaseModel):
+    """A topic the requesting user has recently explored."""
+
+    topic_id: str
+    click_count: int
+    last_clicked: str | None = None
+    last_query: str | None = None
+    jurisdiction: str | None = None
+
+
+@router.get("/topics/trending", response_model=list[TrendingTopicItem])
+@limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
+async def trending_topics(
+    request: Request,
+    days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+    limit: int = Query(20, ge=1, le=100),
+) -> list[TrendingTopicItem]:
+    """Return the most-clicked topics over the last N days.
+
+    Each row carries a PL/UK split so the UI can surface cross-lingual topic
+    comparison. Public (no API key) — aggregate, non-attributable data only.
+    """
+    rows = await get_trending_topics(days=days, limit=limit)
+    return [TrendingTopicItem(**r) for r in rows]
+
+
+@router.get("/topics/my-clicks", response_model=list[UserTopicClickItem])
+async def my_topic_clicks(
+    days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+    limit: int = Query(50, ge=1, le=200),
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> list[UserTopicClickItem]:
+    """Return the authenticated caller's recently-explored topics.
+
+    Filtered server-side by the authenticated user id — never accepts a
+    caller-supplied id (avoids the IDOR class of bug).
+    """
+    rows = await get_user_topic_clicks(user_id=user.id, days=days, limit=limit)
+    return [UserTopicClickItem(**r) for r in rows]
 
 
 # ── Search analytics endpoints ───────────────────────────────────────────

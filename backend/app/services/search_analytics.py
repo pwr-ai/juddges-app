@@ -115,6 +115,50 @@ async def get_user_search_history(
         return []
 
 
+async def get_trending_topics(days: int = 30, limit: int = 20) -> list[dict[str, Any]]:
+    """Return the most-clicked topics in the last N days with a PL/UK split.
+
+    Backed by the ``get_trending_topics`` RPC (see
+    ``supabase/migrations/20260514000001_create_topic_clicks_functions.sql``).
+    """
+    if not supabase_client:
+        return []
+    try:
+        result = supabase_client.rpc(
+            "get_trending_topics",
+            {"days_back": days, "max_results": limit},
+        ).execute()
+        return result.data or []
+    except Exception as exc:
+        logger.warning(f"Failed to fetch trending topics: {exc}")
+        return []
+
+
+async def get_user_topic_clicks(
+    user_id: str, days: int = 30, limit: int = 50
+) -> list[dict[str, Any]]:
+    """Return the requesting user's recently-clicked topics (deduplicated).
+
+    Backed by the ``get_user_topic_clicks`` RPC. The ``p_user_id`` filter is
+    applied inside the function — callers MUST pass the authenticated user id.
+    """
+    if not supabase_client:
+        return []
+    try:
+        result = supabase_client.rpc(
+            "get_user_topic_clicks",
+            {
+                "p_user_id": user_id,
+                "days_back": days,
+                "max_results": limit,
+            },
+        ).execute()
+        return result.data or []
+    except Exception as exc:
+        logger.warning(f"Failed to fetch user topic clicks: {exc}")
+        return []
+
+
 # ── Eval query export ────────────────────────────────────────────────────
 
 
