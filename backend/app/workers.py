@@ -50,6 +50,7 @@ celery_app.conf.imports = [
     "app.tasks.reasoning_line_pipeline",
     "app.tasks.digest_notifications",
     "app.tasks.maintenance",
+    "app.tasks.ingestion",
 ]
 
 # Celery Beat schedule — periodic background jobs
@@ -87,6 +88,21 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
     },
 }
+
+# Optional periodic incremental ingestion (#104). Disabled by default to avoid
+# unexpected recurring HuggingFace downloads in production; opt in by setting
+# INGESTION_BEAT_ENABLED=true and (optionally) INGESTION_BEAT_POLISH /
+# INGESTION_BEAT_UK sample sizes. Idempotent thanks to upsert-on-conflict.
+if os.environ.get("INGESTION_BEAT_ENABLED", "false").lower() == "true":
+    celery_app.conf.beat_schedule["ingestion-incremental-daily"] = {
+        "task": "ingestion.ingest_judgments",
+        "schedule": crontab(hour=2, minute=0),
+        "kwargs": {
+            "polish": int(os.environ.get("INGESTION_BEAT_POLISH", "0")),
+            "uk": int(os.environ.get("INGESTION_BEAT_UK", "0")),
+        },
+    }
+
 celery_app.conf.timezone = "UTC"
 
 
