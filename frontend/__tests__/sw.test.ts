@@ -235,6 +235,87 @@ describe("service worker (sw.js)", () => {
       const cache = sw.caches.caches.get(sw.staticCacheName);
       expect(cache?.put).toHaveBeenCalledTimes(1);
     });
+
+    it("does NOT cache a static-looking response carrying Set-Cookie (issue #210)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("personalized", {
+          status: 200,
+          headers: {
+            "Content-Type": "image/svg+xml",
+            "Set-Cookie": "sb-access-token=secret; Path=/",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/_next/image?url=avatar.svg");
+      sw.fetch(event);
+      const response = (await event.respondWith.mock.calls[0][0]) as Response;
+
+      // The user still gets the live response — only persistence is skipped.
+      expect(response.status).toBe(200);
+      for (const cache of sw.caches.caches.values()) {
+        expect(cache.put).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does NOT cache a static-looking response marked Cache-Control: private (issue #210)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("personalized", {
+          status: 200,
+          headers: {
+            "Content-Type": "application/javascript",
+            "Cache-Control": "private, max-age=0",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/_next/static/chunks/main.abc123.js");
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      for (const cache of sw.caches.caches.values()) {
+        expect(cache.put).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does NOT cache a static-looking response marked Cache-Control: no-store (issue #210)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("personalized", {
+          status: 200,
+          headers: {
+            "Content-Type": "application/javascript",
+            "Cache-Control": "no-store",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/_next/static/chunks/app.def456.js");
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      for (const cache of sw.caches.caches.values()) {
+        expect(cache.put).not.toHaveBeenCalled();
+      }
+    });
+
+    it("still caches a normal public static asset with no auth markers", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("body", {
+          status: 200,
+          headers: {
+            "Content-Type": "font/woff2",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/fonts/geist.woff2");
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      const cache = sw.caches.caches.get(sw.staticCacheName);
+      expect(cache?.put).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("RSC payloads", () => {
