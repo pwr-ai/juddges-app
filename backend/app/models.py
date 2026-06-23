@@ -817,7 +817,8 @@ class DocumentRequest(BaseModel):
         description=(
             "Include extracted base-schema columns (base_appellant, "
             "base_appeal_outcome, base_num_victims, …) under the response's "
-            "`base_fields` key. Off by default to keep payloads lean."
+            "`base_fields` key, plus structure_*/deep_* extraction columns "
+            "under `extraction_fields`. Off by default to keep payloads lean."
         ),
     )
 
@@ -845,7 +846,8 @@ class BatchDocumentsRequest(BaseModel):
         description=(
             "Include extracted base-schema columns (base_appellant, "
             "base_appeal_outcome, base_num_victims, …) under each document's "
-            "`base_fields` key. Off by default to keep payloads lean."
+            "`base_fields` key, plus structure_*/deep_* extraction columns "
+            "under `extraction_fields`. Off by default to keep payloads lean."
         ),
     )
 
