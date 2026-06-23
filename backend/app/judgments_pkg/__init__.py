@@ -56,6 +56,7 @@ from .conversion import (
     _convert_judgment_to_legal_document,
     _convert_supabase_to_legal_document,
     _extract_base_fields,
+    _extract_extraction_fields,
     _merge_base_extraction_fields,
 )
 from .search import (
@@ -308,7 +309,10 @@ async def get_document_by_id(
     return_vectors: bool = Query(False, description="Include vector embeddings"),
     include_base_fields: bool = Query(
         False,
-        description="Include extracted base_* schema columns under `base_fields`",
+        description=(
+            "Include extracted base_* schema columns under `base_fields` and "
+            "structure_*/deep_* extraction columns under `extraction_fields`"
+        ),
     ),
 ) -> DocumentResponse:
     """Get a document by its ID."""
@@ -331,6 +335,7 @@ async def get_document_by_id(
         )
         if include_base_fields:
             document.base_fields = _extract_base_fields(doc_data)
+            document.extraction_fields = _extract_extraction_fields(doc_data)
         return DocumentResponse(document=document)
 
     except HTTPException:
@@ -375,6 +380,7 @@ async def get_document_by_id_legacy(
     )
     if request.include_base_fields:
         document.base_fields = _extract_base_fields(doc_data)
+        document.extraction_fields = _extract_extraction_fields(doc_data)
     return DocumentResponse(document=document)
 
 
@@ -410,6 +416,7 @@ async def get_documents_batch(request: BatchDocumentsRequest):
         )
         if request.include_base_fields:
             converted.base_fields = _extract_base_fields(doc)
+            converted.extraction_fields = _extract_extraction_fields(doc)
         documents.append(converted)
 
     return BatchDocumentsResponse(documents=documents)

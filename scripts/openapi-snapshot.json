@@ -1043,7 +1043,7 @@
           },
           "include_base_fields": {
             "default": false,
-            "description": "Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026) under each document's `base_fields` key. Off by default to keep payloads lean.",
+            "description": "Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026) under each document's `base_fields` key, plus structure_*/deep_* extraction columns under `extraction_fields`. Off by default to keep payloads lean.",
             "title": "Include Base Fields",
             "type": "boolean"
           },
@@ -4869,7 +4869,7 @@
           },
           "include_base_fields": {
             "default": false,
-            "description": "Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026) under the response's `base_fields` key. Off by default to keep payloads lean.",
+            "description": "Include extracted base-schema columns (base_appellant, base_appeal_outcome, base_num_victims, \u2026) under the response's `base_fields` key, plus structure_*/deep_* extraction columns under `extraction_fields`. Off by default to keep payloads lean.",
             "title": "Include Base Fields",
             "type": "boolean"
           },
@@ -8228,6 +8228,19 @@
             ],
             "description": "Extracted legal bases from the document",
             "title": "Extracted Legal Bases"
+          },
+          "extraction_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structural-segmentation (structure_*_summary, structure_confidence, \u2026) and deep-analysis (deep_complexity_score, deep_reasoning_quality_score, deep_legal_domains, deep_precedential_value, \u2026) typed extraction columns. Raw JSONB blobs are excluded. Populated only when include_base_fields=true is requested; otherwise None.",
+            "title": "Extraction Fields"
           },
           "full_text": {
             "description": "Complete text of the document",
@@ -24404,13 +24417,13 @@
             }
           },
           {
-            "description": "Include extracted base_* schema columns under `base_fields`",
+            "description": "Include extracted base_* schema columns under `base_fields` and structure_*/deep_* extraction columns under `extraction_fields`",
             "in": "query",
             "name": "include_base_fields",
             "required": false,
             "schema": {
               "default": false,
-              "description": "Include extracted base_* schema columns under `base_fields`",
+              "description": "Include extracted base_* schema columns under `base_fields` and structure_*/deep_* extraction columns under `extraction_fields`",
               "title": "Include Base Fields",
               "type": "boolean"
             }

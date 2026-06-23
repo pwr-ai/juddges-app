@@ -45,7 +45,22 @@ _JUDGMENT_COLS = (
     "base_appeal_ground, base_sent_guide_which, base_appeal_outcome, "
     "base_reason_quash_conv, base_reason_sent_excessive, "
     "base_reason_sent_lenient, base_reason_dismiss, "
-    "base_extraction_error, base_schema_key, base_schema_version"
+    "base_extraction_error, base_schema_key, base_schema_version, "
+    # Structural-segmentation (Pass 1) typed columns. Raw JSONB
+    # (structure_raw_extraction) is intentionally NOT selected — the export
+    # surface exposes typed columns only (issue #198 non-goal).
+    "structure_extraction_status, structure_extraction_model, "
+    "structure_extracted_at, structure_section_count, structure_confidence, "
+    "structure_case_identification_summary, structure_facts_summary, "
+    "structure_operative_part_summary, structure_court_analysis_summary, "
+    "structure_conclusion_summary, "
+    # Deep-analysis (Pass 2) typed columns. Raw JSONB (deep_analysis_raw) is
+    # likewise excluded.
+    "deep_analysis_status, deep_analysis_model, deep_analysed_at, "
+    "deep_complexity_score, deep_factual_complexity, deep_legal_complexity, "
+    "deep_reasoning_quality_score, deep_legal_domains, deep_reasoning_patterns, "
+    "deep_judicial_tone, deep_precedential_value, deep_research_value, "
+    "deep_text_quality, deep_analysis_confidence"
 )
 
 # Slim projection for list / sample responses (map dots, batch cards). Drops
