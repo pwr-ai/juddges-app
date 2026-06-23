@@ -9,6 +9,7 @@ import { Eyebrow } from "@/components/editorial";
 import { sanitizeHighlightHtml } from "@/lib/highlight";
 import type { TopicHit } from "@/hooks/useSearchAutocomplete";
 import { pickTopicLabel } from "@/hooks/useSearchAutocomplete";
+import type { SuggestionHit } from "@/hooks/useSearchSuggestions";
 import { postTopicClick } from "@/lib/api/topics";
 
 type SearchMode = "thinking" | "rabbit";
@@ -18,6 +19,21 @@ function getFormattedField(raw: string, formatted: string | string[] | undefined
   if (!formatted) return raw;
   if (Array.isArray(formatted)) return formatted.join(", ");
   return formatted;
+}
+
+/** Human-readable badge label for a corpus-suggestion category (issue #153). */
+const SUGGESTION_CATEGORY_LABELS: Record<string, string> = {
+  keyword: "Keyword",
+  legal_topic: "Topic",
+  legislation: "Statute",
+  court: "Court",
+  judge: "Judge",
+  phrase: "Phrase",
+  query: "Popular",
+};
+
+function suggestionCategoryLabel(category: string): string {
+  return SUGGESTION_CATEGORY_LABELS[category] ?? "Phrase";
 }
 export interface SearchFormProps {
   query: string;
@@ -34,6 +50,8 @@ export interface SearchFormProps {
   onSearch: (mode?: SearchMode, overrideQuery?: string) => void;
   autocompleteTopicHits?: TopicHit[];
   isAutocompleteLoading?: boolean;
+  /** Corpus-derived phrase suggestions (issue #153). */
+  suggestionHits?: SuggestionHit[];
   /** BCP-47 locale tag used to pick primary/secondary topic labels. Defaults to "en". */
   currentLocale?: string;
 }
@@ -113,6 +131,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
     onSearch,
     autocompleteTopicHits = [],
     isAutocompleteLoading = false,
+    suggestionHits = [],
     currentLocale = "en",
   },
   forwardedRef
@@ -178,6 +197,15 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
       onSearch(undefined, primary);
     },
     [currentLocale, onSearch, query, setQuery]
+  );
+
+  /** Run a search for a corpus-derived suggestion term (issue #153). */
+  const handleSuggestionSelect = useCallback(
+    (hit: SuggestionHit): void => {
+      setQuery(hit.term);
+      onSearch(undefined, hit.term);
+    },
+    [onSearch, setQuery]
   );
 
   useEffect(() => {
@@ -260,9 +288,9 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
         <div className="mt-3 rounded-lg border border-[color:var(--rule)] bg-background/60 p-2">
           {isAutocompleteLoading ? (
             <p className="px-1 text-sm text-muted-foreground">Loading suggestions...</p>
-          ) : autocompleteTopicHits.length === 0 ? (
+          ) : autocompleteTopicHits.length === 0 && suggestionHits.length === 0 ? (
             <p className="px-1 py-1 text-sm text-muted-foreground">
-              No matching topics — press <span className="font-medium">Search</span> to query judgments directly.
+              No matching suggestions — press <span className="font-medium">Search</span> to query judgments directly.
             </p>
           ) : (
             <div role="listbox" aria-label="Search suggestions">
@@ -317,6 +345,56 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
                             aria-label={`${hit.doc_count} documents`}
                           >
                             ({hit.doc_count})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {suggestionHits.length > 0 && (
+                <div className={autocompleteTopicHits.length > 0 ? "mt-2" : ""}>
+                  <div className="px-1 pt-1 pb-0.5">
+                    <Eyebrow noRule as="div">From the corpus</Eyebrow>
+                  </div>
+                  <div role="group" aria-label="Corpus suggestions">
+                    {suggestionHits.map((hit) => {
+                      const formattedTerm = getFormattedField(
+                        hit.term,
+                        hit._formatted?.term as string | string[] | undefined
+                      );
+                      const langLabel = hit.language === "pl" ? "PL" : "EN";
+
+                      return (
+                        <button
+                          key={hit.id}
+                          type="button"
+                          role="option"
+                          aria-selected={false}
+                          className={[
+                            "w-full flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm",
+                            "hover:bg-[color:var(--gold-soft)] hover:text-[color:var(--oxblood)]",
+                            "[&_mark]:bg-[color:var(--gold)] [&_mark]:text-[color:var(--ink)]",
+                          ].join(" ")}
+                          onClick={() => handleSuggestionSelect(hit)}
+                          aria-label={`Suggestion: ${hit.term} (${suggestionCategoryLabel(hit.category)}, ${langLabel})`}
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="font-medium truncate"
+                              // DOMPurify-sanitized Meilisearch highlight HTML (only <mark> tags allowed)
+                              dangerouslySetInnerHTML={{ __html: sanitizeHighlightHtml(formattedTerm) }}
+                            />
+                            <span className="shrink-0 rounded-full border border-[color:var(--rule)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-tight text-[color:var(--ink-soft)]">
+                              {suggestionCategoryLabel(hit.category)}
+                            </span>
+                          </span>
+                          <span
+                            className="ml-2 shrink-0 font-mono text-[10px] uppercase tabular-nums text-[color:var(--ink-soft)]"
+                            aria-label={`Language: ${langLabel}`}
+                          >
+                            {langLabel}
                           </span>
                         </button>
                       );

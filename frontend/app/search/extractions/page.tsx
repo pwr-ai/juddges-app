@@ -5,6 +5,7 @@ import { Suspense, useMemo } from "react";
 
 import { ActiveFilterChips } from "@/components/filters/extracted-search-filters";
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
+import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
@@ -291,6 +292,16 @@ function ExtractionSearchPage() {
     setFilters(next);
   };
 
+  // Issue #141: opt-in NL → filter. Pre-fills form state for review; never runs
+  // the search itself (setFilters/setTextQuery only update state + reset paging).
+  const applyNlFilters = (
+    nextFilters: BaseSchemaFilters,
+    nextTextQuery: string,
+  ) => {
+    setFilters(nextFilters);
+    setTextQuery(nextTextQuery);
+  };
+
   const resetDrawerFilters = () => {
     // Reset only non-substring fields
     const next = { ...filters };
@@ -339,12 +350,20 @@ function ExtractionSearchPage() {
           disabled={isLoading}
         />
 
-        <BaseFiltersDrawer
-          filters={drawerFilters}
-          onChange={setDrawerFilter}
-          onReset={resetDrawerFilters}
-          disabled={isLoading}
-        />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
+              Advanced filters
+            </span>
+            <NlFilterDialog onApply={applyNlFilters} disabled={isLoading} />
+          </div>
+          <BaseFiltersDrawer
+            filters={drawerFilters}
+            onChange={setDrawerFilter}
+            onReset={resetDrawerFilters}
+            disabled={isLoading}
+          />
+        </div>
       </div>
 
       <ActiveFilterChips

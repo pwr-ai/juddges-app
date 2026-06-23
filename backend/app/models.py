@@ -383,6 +383,29 @@ class ExtractedDataFilterRequest(BaseModel):
     )
 
 
+class NLFilterRequest(BaseModel):
+    """Request for translating a natural-language question into base-schema filters."""
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        description="Plain-language question to translate into structured filters",
+    )
+
+
+class NLFilterResponse(BaseModel):
+    """Translated filter payload, matching the body shape of the filter endpoint."""
+
+    filters: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured filters in the JSONB shape accepted by the RPC",
+    )
+    text_query: str | None = Field(
+        default=None,
+        description="Free-text query split out from the structured filters",
+    )
+
+
 class FacetCount(BaseModel):
     """Count for a single facet value."""
 
@@ -395,6 +418,22 @@ class FacetCountsResponse(BaseModel):
 
     field: str
     counts: list[FacetCount]
+    total: int
+
+
+class HistogramBucket(BaseModel):
+    """A single equal-width bucket of a numeric distribution."""
+
+    bucket_lo: float
+    bucket_hi: float
+    count: int
+
+
+class NumericHistogramResponse(BaseModel):
+    """Distribution histogram for a numeric extracted-data field."""
+
+    field: str
+    buckets: list[HistogramBucket]
     total: int
 
 
@@ -801,7 +840,8 @@ class DocumentRequest(BaseModel):
         description=(
             "Include extracted base-schema columns (base_appellant, "
             "base_appeal_outcome, base_num_victims, …) under the response's "
-            "`base_fields` key. Off by default to keep payloads lean."
+            "`base_fields` key, plus structure_*/deep_* extraction columns "
+            "under `extraction_fields`. Off by default to keep payloads lean."
         ),
     )
 
@@ -829,7 +869,8 @@ class BatchDocumentsRequest(BaseModel):
         description=(
             "Include extracted base-schema columns (base_appellant, "
             "base_appeal_outcome, base_num_victims, …) under each document's "
-            "`base_fields` key. Off by default to keep payloads lean."
+            "`base_fields` key, plus structure_*/deep_* extraction columns "
+            "under `extraction_fields`. Off by default to keep payloads lean."
         ),
     )
 
