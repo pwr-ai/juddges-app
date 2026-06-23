@@ -383,6 +383,29 @@ class ExtractedDataFilterRequest(BaseModel):
     )
 
 
+class NLFilterRequest(BaseModel):
+    """Request for translating a natural-language question into base-schema filters."""
+
+    query: str = Field(
+        ...,
+        min_length=1,
+        description="Plain-language question to translate into structured filters",
+    )
+
+
+class NLFilterResponse(BaseModel):
+    """Translated filter payload, matching the body shape of the filter endpoint."""
+
+    filters: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured filters in the JSONB shape accepted by the RPC",
+    )
+    text_query: str | None = Field(
+        default=None,
+        description="Free-text query split out from the structured filters",
+    )
+
+
 class FacetCount(BaseModel):
     """Count for a single facet value."""
 
