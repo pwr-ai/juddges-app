@@ -331,6 +331,79 @@ class TestGetFacetCounts:
 
 
 # =============================================================================
+# GET /extractions/base-schema/histogram/{field}
+# =============================================================================
+
+
+class TestGetNumericHistogram:
+    @pytest.mark.unit
+    async def test_supabase_unavailable(self, client, valid_api_headers) -> None:
+        with patch("app.extraction_domain.results_router.supabase", None):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims",
+                headers=valid_api_headers,
+            )
+            assert response.status_code == 503
+
+    @pytest.mark.unit
+    async def test_histogram_success(self, client, valid_api_headers) -> None:
+        mock_response = MagicMock()
+        mock_response.data = [
+            {"bucket_lo": 1, "bucket_hi": 2, "cnt": 120},
+            {"bucket_lo": 2, "bucket_hi": 3, "cnt": 40},
+            {"bucket_lo": 3, "bucket_hi": 4, "cnt": 0},
+        ]
+
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = mock_response
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims?bucket_count=20",
+                headers=valid_api_headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["field"] == "num_victims"
+            assert len(data["buckets"]) == 3
+            assert data["buckets"][0]["bucket_lo"] == 1.0
+            assert data["buckets"][0]["count"] == 120
+            assert data["total"] == 160
+            mock_supabase.rpc.assert_called_once_with(
+                "get_numeric_field_histogram",
+                {"field": "num_victims", "bucket_count": 20},
+            )
+
+    @pytest.mark.unit
+    async def test_histogram_empty(self, client, valid_api_headers) -> None:
+        mock_response = MagicMock()
+        mock_response.data = []
+
+        mock_supabase = MagicMock()
+        mock_supabase.rpc.return_value.execute.return_value = mock_response
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.get(
+                "/extractions/base-schema/histogram/num_victims",
+                headers=valid_api_headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["buckets"] == []
+            assert data["total"] == 0
+
+    @pytest.mark.unit
+    async def test_histogram_rejects_out_of_range_bucket_count(
+        self, client, valid_api_headers
+    ) -> None:
+        response = await client.get(
+            "/extractions/base-schema/histogram/num_victims?bucket_count=999",
+            headers=valid_api_headers,
+        )
+        assert response.status_code == 422
+
+
+# =============================================================================
 # GET /extractions/base-schema/definition
 # =============================================================================
 

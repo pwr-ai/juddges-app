@@ -3561,6 +3561,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extractions/base-schema/histogram/{field}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the distribution histogram for a numeric field
+         * @description Get equal-width bucket counts for a numeric extracted_data field, used to render range-filter distribution histograms.
+         */
+        get: operations["get_numeric_histogram_extractions_base_schema_histogram__field__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/extractions/bulk": {
         parameters: {
             query?: never;
@@ -9675,6 +9695,18 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * HistogramBucket
+         * @description A single equal-width bucket of a numeric distribution.
+         */
+        HistogramBucket: {
+            /** Bucket Hi */
+            bucket_hi: number;
+            /** Bucket Lo */
+            bucket_lo: number;
+            /** Count */
+            count: number;
+        };
+        /**
          * HumanMessage
          * @description Message from a human.
          *
@@ -10555,6 +10587,18 @@ export interface components {
             total_listings: number;
             /** Total Reviews */
             total_reviews: number;
+        };
+        /**
+         * NumericHistogramResponse
+         * @description Distribution histogram for a numeric extracted-data field.
+         */
+        NumericHistogramResponse: {
+            /** Buckets */
+            buckets: components["schemas"]["HistogramBucket"][];
+            /** Field */
+            field: string;
+            /** Total */
+            total: number;
         };
         /**
          * NumericRange
@@ -19971,6 +20015,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FilterOptionsResponse"];
+                };
+            };
+        };
+    };
+    get_numeric_histogram_extractions_base_schema_histogram__field__get: {
+        parameters: {
+            query?: {
+                /** @description Number of equal-width buckets */
+                bucket_count?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Numeric field name to bucket */
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumericHistogramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

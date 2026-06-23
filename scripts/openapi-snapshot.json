@@ -7438,6 +7438,30 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HistogramBucket": {
+        "description": "A single equal-width bucket of a numeric distribution.",
+        "properties": {
+          "bucket_hi": {
+            "title": "Bucket Hi",
+            "type": "number"
+          },
+          "bucket_lo": {
+            "title": "Bucket Lo",
+            "type": "number"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bucket_lo",
+          "bucket_hi",
+          "count"
+        ],
+        "title": "HistogramBucket",
+        "type": "object"
+      },
       "HumanMessage": {
         "additionalProperties": true,
         "description": "Message from a human.\n\n``HumanMessage``s are messages that are passed in from a human to the model.\n\nExample:\n\n    .. code-block:: python\n\n        from langchain_core.messages import HumanMessage, SystemMessage\n\n        messages = [\n            SystemMessage(content=\"You are a helpful assistant! Your name is Bob.\"),\n            HumanMessage(content=\"What is your name?\"),\n        ]\n\n        # Instantiate a chat model and invoke it with the messages\n        model = ...\n        print(model.invoke(messages))",
@@ -9036,6 +9060,33 @@
           "most_downloaded"
         ],
         "title": "MarketplaceStatsResponse",
+        "type": "object"
+      },
+      "NumericHistogramResponse": {
+        "description": "Distribution histogram for a numeric extracted-data field.",
+        "properties": {
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/HistogramBucket"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "field",
+          "buckets",
+          "total"
+        ],
+        "title": "NumericHistogramResponse",
         "type": "object"
       },
       "NumericRange": {
@@ -26932,6 +26983,70 @@
           }
         ],
         "summary": "Get available filter options",
+        "tags": [
+          "extraction"
+        ]
+      }
+    },
+    "/extractions/base-schema/histogram/{field}": {
+      "get": {
+        "description": "Get equal-width bucket counts for a numeric extracted_data field, used to render range-filter distribution histograms.",
+        "operationId": "get_numeric_histogram_extractions_base_schema_histogram__field__get",
+        "parameters": [
+          {
+            "description": "Numeric field name to bucket",
+            "in": "path",
+            "name": "field",
+            "required": true,
+            "schema": {
+              "description": "Numeric field name to bucket",
+              "title": "Field",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of equal-width buckets",
+            "in": "query",
+            "name": "bucket_count",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Number of equal-width buckets",
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Bucket Count",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumericHistogramResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Get the distribution histogram for a numeric field",
         "tags": [
           "extraction"
         ]
