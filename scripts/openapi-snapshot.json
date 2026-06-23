@@ -9062,6 +9062,47 @@
         "title": "MarketplaceStatsResponse",
         "type": "object"
       },
+      "NLFilterRequest": {
+        "description": "Request for translating a natural-language question into base-schema filters.",
+        "properties": {
+          "query": {
+            "description": "Plain-language question to translate into structured filters",
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "NLFilterRequest",
+        "type": "object"
+      },
+      "NLFilterResponse": {
+        "description": "Translated filter payload, matching the body shape of the filter endpoint.",
+        "properties": {
+          "filters": {
+            "additionalProperties": true,
+            "description": "Structured filters in the JSONB shape accepted by the RPC",
+            "title": "Filters",
+            "type": "object"
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text query split out from the structured filters",
+            "title": "Text Query"
+          }
+        },
+        "title": "NLFilterResponse",
+        "type": "object"
+      },
       "NumericHistogramResponse": {
         "description": "Distribution histogram for a numeric extracted-data field.",
         "properties": {
@@ -27047,6 +27088,56 @@
           }
         ],
         "summary": "Get the distribution histogram for a numeric field",
+        "tags": [
+          "extraction"
+        ]
+      }
+    },
+    "/extractions/base-schema/nl-filter": {
+      "post": {
+        "description": "Opt-in 'paste your question' shortcut: converts a plain-language question into the structured ``{filters, text_query}`` payload accepted by ``/base-schema/filter``. The dialog pre-fills the form for review \u2014 it never auto-runs the search.",
+        "operationId": "nl_to_filter_extractions_base_schema_nl_filter_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NLFilterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NLFilterResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Translate a natural-language question into base-schema filters",
         "tags": [
           "extraction"
         ]
