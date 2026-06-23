@@ -133,7 +133,8 @@ async def list_documents(
     sampled_ids = random.sample(all_document_ids, sample_size)
 
     db = get_vector_db()
-    docs_data = await db.get_documents_by_ids(sampled_ids)
+    # List view never renders the body — skip full_text to trim the payload.
+    docs_data = await db.get_documents_by_ids(sampled_ids, include_full_text=False)
 
     documents = [
         _convert_supabase_to_legal_document(doc, include_vectors=return_vectors)
@@ -175,7 +176,8 @@ async def get_documents_sample(
     sampled_ids = random.sample(all_document_ids, sample_size)
 
     db = get_vector_db()
-    docs_data = await db.get_documents_by_ids(sampled_ids)
+    # Visualization sample never renders the body — skip full_text.
+    docs_data = await db.get_documents_by_ids(sampled_ids, include_full_text=False)
 
     documents = [
         _convert_supabase_to_legal_document(doc, include_vectors=return_vectors)

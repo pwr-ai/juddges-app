@@ -5140,6 +5140,18 @@
           "pagination": {
             "$ref": "#/components/schemas/DocumentPagination"
           },
+          "parsed_attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parsed Attributes"
+          },
           "query": {
             "title": "Query",
             "type": "string"
@@ -7500,6 +7512,137 @@
           "content"
         ],
         "title": "HumanMessage",
+        "type": "object"
+      },
+      "IngestionStartRequest": {
+        "description": "Parameters for triggering a background judgment-ingestion job (#104).",
+        "properties": {
+          "batch_size": {
+            "default": 50,
+            "description": "Documents per batch",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "no_embeddings": {
+            "default": false,
+            "description": "Skip generating embeddings",
+            "title": "No Embeddings",
+            "type": "boolean"
+          },
+          "polish": {
+            "default": 0,
+            "description": "Polish judgments to ingest",
+            "minimum": 0.0,
+            "title": "Polish",
+            "type": "integer"
+          },
+          "resume": {
+            "default": false,
+            "description": "Resume from last checkpoint",
+            "title": "Resume",
+            "type": "boolean"
+          },
+          "skip_polish": {
+            "default": false,
+            "description": "Skip Polish ingestion",
+            "title": "Skip Polish",
+            "type": "boolean"
+          },
+          "skip_uk": {
+            "default": false,
+            "description": "Skip UK ingestion",
+            "title": "Skip Uk",
+            "type": "boolean"
+          },
+          "uk": {
+            "default": 0,
+            "description": "UK judgments to ingest",
+            "minimum": 0.0,
+            "title": "Uk",
+            "type": "integer"
+          }
+        },
+        "title": "IngestionStartRequest",
+        "type": "object"
+      },
+      "IngestionStartResponse": {
+        "description": "Response returned after submitting an ingestion job.",
+        "properties": {
+          "status": {
+            "default": "PENDING",
+            "title": "Status",
+            "type": "string"
+          },
+          "task_id": {
+            "description": "Celery task id; poll status with it",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "title": "IngestionStartResponse",
+        "type": "object"
+      },
+      "IngestionStatusResponse": {
+        "description": "Current state of an ingestion job (progress, result, errors).",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if failed",
+            "title": "Error"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Progress meta while running (processed/total/ETA)",
+            "title": "Progress"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Final summary once completed",
+            "title": "Result"
+          },
+          "state": {
+            "description": "Celery task state, e.g. PENDING/PROGRESS/SUCCESS",
+            "title": "State",
+            "type": "string"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "state"
+        ],
+        "title": "IngestionStatusResponse",
         "type": "object"
       },
       "InputTokenDetails": {
@@ -14686,6 +14829,95 @@
         "title": "SubmitReviewRequest",
         "type": "object"
       },
+      "SuggestResponse": {
+        "description": "Corpus-derived autocomplete suggestions (issue #153).\n\nPhrase-level hits from the Meilisearch ``suggestions`` index, mined from the\nPL + EN judgment corpus.  ``suggestion_hits`` is an empty list when the\nsuggestions index is unavailable (graceful fallback for the frontend).",
+        "properties": {
+          "estimatedTotalHits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimatedtotalhits"
+          },
+          "processingTimeMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processingtimems"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "suggestion_hits": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionHit"
+            },
+            "title": "Suggestion Hits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SuggestResponse",
+        "type": "object"
+      },
+      "SuggestionHit": {
+        "description": "A single hit from the Meilisearch ``suggestions`` index.\n\nPhrase-level suggestion mined from the PL + EN judgment corpus.  The\n``formatted`` field (alias ``_formatted``) carries the highlighted ``term``\nwhen ``attributesToHighlight`` is set on the query.",
+        "properties": {
+          "_formatted": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formatted"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "weight": {
+            "default": 0,
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "term",
+          "language",
+          "category"
+        ],
+        "title": "SuggestionHit",
+        "type": "object"
+      },
       "SummarizeRequest": {
         "description": "Request model for document summarization.",
         "properties": {
@@ -18259,6 +18491,103 @@
         ]
       }
     },
+    "/api/admin/ingestion/start": {
+      "post": {
+        "description": "Submit a background judgment-ingestion job to Celery (#104).\n\nReturns a ``task_id`` that can be polled via ``GET /ingestion/status``.\nReplaces the previously-blocking ``scripts/ingest_judgments.py`` run.",
+        "operationId": "start_ingestion_api_admin_ingestion_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Ingestion",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/ingestion/status": {
+      "get": {
+        "description": "Return the progress / result of an ingestion job (#104).",
+        "operationId": "get_ingestion_status_api_admin_ingestion_status_get",
+        "parameters": [
+          {
+            "description": "Celery task id returned by /ingestion/start",
+            "in": "query",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "description": "Celery task id returned by /ingestion/start",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ingestion Status",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/search-queries": {
       "get": {
         "description": "Get recent search queries across all users.\n\nReturns queries ordered by most recent first with optional pagination.",
@@ -20634,6 +20963,18 @@
               "title": "Semantic Ratio",
               "type": "number"
             }
+          },
+          {
+            "description": "When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical.",
+            "in": "query",
+            "name": "parse_attributes",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical.",
+              "title": "Parse Attributes",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -20667,6 +21008,108 @@
           }
         ],
         "summary": "Documents Search",
+        "tags": [
+          "Search"
+        ]
+      }
+    },
+    "/api/search/suggest": {
+      "get": {
+        "description": "Return corpus-derived phrase-level autocomplete suggestions (issue #153).\n\nSurfaces the *language of legal practice* \u2014 legal terms, doctrines, court\nnames, judge names, statute names \u2014 mined from the PL + EN judgment corpus.\nFalls back to an empty list (HTTP 200) when the ``suggestions`` index is\nunavailable so the frontend can degrade to today's behaviour rather than\nshowing an error.",
+        "operationId": "suggest_api_search_suggest_get",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Search query",
+              "maxLength": 500,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum number of suggestions",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "description": "Maximum number of suggestions",
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by suggestion language ('pl' or 'en')",
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by suggestion language ('pl' or 'en')",
+              "title": "Language"
+            }
+          },
+          {
+            "description": "Filter by suggestion category (keyword, legal_topic, legislation, court, judge, phrase, query)",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by suggestion category (keyword, legal_topic, legislation, court, judge, phrase, query)",
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Suggest",
         "tags": [
           "Search"
         ]
