@@ -47,16 +47,21 @@ celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
 # circular-import hazard (meilisearch_sync imports celery_app from here).
 celery_app.conf.imports = [
     "app.tasks.meilisearch_sync",
+    "app.tasks.suggestions_index",
     "app.tasks.reasoning_line_pipeline",
     "app.tasks.digest_notifications",
     "app.tasks.maintenance",
+    "app.tasks.ingestion",
 ]
 
 # Celery Beat schedule — periodic background jobs
 celery_app.conf.beat_schedule = {
-    "meilisearch-full-sync-every-6h": {
+    "meilisearch-full-sync-every-8h": {
         "task": "meilisearch.full_sync",
-        "schedule": 6 * 60 * 60,  # every 6 hours
+        "schedule": 8 * 60 * 60,  # every 8 hours (was 6h — eased cadence)
+        # Drop a queued run if it hasn't started within the cadence window, so a
+        # slow run can never let beat pile up overlapping syncs.
+        "options": {"expires": 8 * 60 * 60},
     },
     "reasoning-lines-auto-assign-weekly": {
         "task": "reasoning_lines.auto_assign",
@@ -86,7 +91,28 @@ celery_app.conf.beat_schedule = {
         "task": "maintenance.vacuum_analyze",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
     },
+    # Corpus-derived autocomplete suggestions (issue #153) — weekly rebuild,
+    # offset to a low-traffic window away from the other Sunday jobs.
+    "suggestions-rebuild-weekly": {
+        "task": "suggestions.rebuild_index",
+        "schedule": crontab(hour=4, minute=30, day_of_week=0),
+    },
 }
+
+# Optional periodic incremental ingestion (#104). Disabled by default to avoid
+# unexpected recurring HuggingFace downloads in production; opt in by setting
+# INGESTION_BEAT_ENABLED=true and (optionally) INGESTION_BEAT_POLISH /
+# INGESTION_BEAT_UK sample sizes. Idempotent thanks to upsert-on-conflict.
+if os.environ.get("INGESTION_BEAT_ENABLED", "false").lower() == "true":
+    celery_app.conf.beat_schedule["ingestion-incremental-daily"] = {
+        "task": "ingestion.ingest_judgments",
+        "schedule": crontab(hour=2, minute=0),
+        "kwargs": {
+            "polish": int(os.environ.get("INGESTION_BEAT_POLISH", "0")),
+            "uk": int(os.environ.get("INGESTION_BEAT_UK", "0")),
+        },
+    }
+
 celery_app.conf.timezone = "UTC"
 
 

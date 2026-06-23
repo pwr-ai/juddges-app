@@ -119,6 +119,14 @@ export interface SearchDocument {
    * /documents/batch. Otherwise undefined.
    */
   base_fields?: Record<string, unknown> | null;
+  /**
+   * Structural-segmentation (structure_*_summary, structure_confidence, …) and
+   * deep-analysis (deep_complexity_score, deep_legal_domains,
+   * deep_precedential_value, …) typed extraction columns. Raw JSONB blobs are
+   * excluded. Populated by the backend only when include_base_fields=true is
+   * requested on /documents/{id} or /documents/batch. Otherwise undefined.
+   */
+  extraction_fields?: Record<string, unknown> | null;
   // Error flag for Weaviate database errors
   _isWeaviateError?: boolean;
   // Highlighted HTML (with <mark>) from server-side search; rendered via QueryHighlight.
