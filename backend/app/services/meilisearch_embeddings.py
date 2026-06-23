@@ -16,6 +16,11 @@ from loguru import logger
 
 EMBEDDER_NAME = "bge-m3"
 
+# BGE-M3 produces 1024-dim vectors. Single source of truth shared with the
+# index-settings embedder declaration in ``meilisearch_config.py`` so the
+# ``userProvided`` dimensions can never drift from what the pipeline ships.
+EMBEDDER_DIMENSIONS = 1024
+
 # Cap how many texts get shipped to TEI in a single HTTP request. Curated
 # embed-text strings are a few KB each, so 500-row Celery batches blow past
 # proxy `client_max_body_size` (HTTP 413). 32 keeps each POST well under 1 MB

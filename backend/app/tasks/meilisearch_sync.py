@@ -18,11 +18,22 @@ from app.services.meilisearch_embeddings import (
     attach_embeddings_batch,
 )
 from app.services.search import MeiliSearchService
-from app.services.sync_status import record_sync_completed, record_sync_failed
+from app.services.sync_status import (
+    _get_redis,
+    record_sync_completed,
+    record_sync_failed,
+)
 from app.workers import celery_app
 
 if TYPE_CHECKING:
     from celery import Task
+
+
+# Redis SETNX lock so two full syncs can never run concurrently (e.g. a slow run
+# still in flight when beat fires the next). The TTL self-heals the lock if a
+# worker crashes mid-sync without releasing it.
+FULL_SYNC_LOCK_KEY = "meilisearch:full_sync:lock"
+FULL_SYNC_LOCK_TTL_SECONDS = 6 * 60 * 60
 
 
 def _get_service() -> MeiliSearchService:
@@ -112,6 +123,26 @@ def full_sync_judgments_to_meilisearch(
         logger.warning("Supabase client unavailable — cannot run full sync")
         return {"status": "skipped", "reason": "no_supabase"}
 
+    # Acquire the SETNX lock. If another full sync already holds it, skip rather
+    # than run a redundant overlapping pass. When Redis is unavailable we fall
+    # back to running unlocked (single-worker deployments are safe).
+    redis_lock = _get_redis()
+    lock_acquired = False
+    if redis_lock is not None:
+        try:
+            lock_acquired = bool(
+                redis_lock.set(
+                    FULL_SYNC_LOCK_KEY, "1", nx=True, ex=FULL_SYNC_LOCK_TTL_SECONDS
+                )
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(f"Full-sync lock check failed, proceeding unlocked: {exc}")
+            redis_lock = None
+        else:
+            if not lock_acquired:
+                logger.info("Meilisearch full sync already running — skipping")
+                return {"status": "skipped", "reason": "already_running"}
+
     total_synced = 0
     offset = 0
 
@@ -152,6 +183,12 @@ def full_sync_judgments_to_meilisearch(
     except Exception as exc:
         record_sync_failed(str(exc))
         raise
+    finally:
+        if lock_acquired and redis_lock is not None:
+            try:
+                redis_lock.delete(FULL_SYNC_LOCK_KEY)
+            except Exception as exc:  # pragma: no cover - defensive
+                logger.debug(f"Failed to release full-sync lock: {exc}")
 
     record_sync_completed(total_synced)
     logger.info(f"Meilisearch full sync complete: {total_synced} documents total")

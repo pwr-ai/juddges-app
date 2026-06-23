@@ -355,6 +355,7 @@ class TestFullSyncEmbeds:
         with (
             patch("app.tasks.meilisearch_sync.supabase_client", sb),
             patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+            patch("app.tasks.meilisearch_sync._get_redis", return_value=None),
             patch("app.services.meilisearch_embeddings.embed_texts", embed_mock),
             patch("app.tasks.meilisearch_sync.record_sync_completed"),
             patch("asyncio.run", side_effect=lambda c: _run_coro(c)),
@@ -368,6 +369,60 @@ class TestFullSyncEmbeds:
         assert len(sent_docs) == 3
         for doc in sent_docs:
             assert doc["_vectors"] == {"bge-m3": fake_vec}
+
+    def test_skips_when_lock_already_held(self):
+        """A second full sync exits early when the Redis SETNX lock is held."""
+        from app.tasks.meilisearch_sync import full_sync_judgments_to_meilisearch
+
+        service = MagicMock()
+        service.admin_configured = True
+
+        # SETNX returns falsy → lock already held by another run.
+        redis_lock = MagicMock()
+        redis_lock.set.return_value = False
+
+        sb = MagicMock()
+
+        with (
+            patch("app.tasks.meilisearch_sync.supabase_client", sb),
+            patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+            patch("app.tasks.meilisearch_sync._get_redis", return_value=redis_lock),
+        ):
+            result = full_sync_judgments_to_meilisearch.run()
+
+        assert result == {"status": "skipped", "reason": "already_running"}
+        # No work performed, lock not released (the holder owns it).
+        sb.table.assert_not_called()
+        redis_lock.delete.assert_not_called()
+
+    def test_releases_lock_after_run(self):
+        """A successful sync releases the SETNX lock in the finally block."""
+        from app.tasks.meilisearch_sync import full_sync_judgments_to_meilisearch
+
+        service = MagicMock()
+        service.admin_configured = True
+        service.upsert_documents = AsyncMock(return_value={"taskUid": 1})
+        service.wait_for_task = AsyncMock(return_value={"status": "succeeded"})
+
+        redis_lock = MagicMock()
+        redis_lock.set.return_value = True  # lock acquired
+
+        sb = MagicMock()
+        sb.table().select().order().range().execute.side_effect = [
+            MagicMock(data=[]),  # empty first page → loop exits immediately
+        ]
+
+        with (
+            patch("app.tasks.meilisearch_sync.supabase_client", sb),
+            patch("app.tasks.meilisearch_sync._get_service", return_value=service),
+            patch("app.tasks.meilisearch_sync._get_redis", return_value=redis_lock),
+            patch("app.tasks.meilisearch_sync.record_sync_completed"),
+            patch("asyncio.run", side_effect=lambda c: _run_coro(c)),
+        ):
+            result = full_sync_judgments_to_meilisearch.run()
+
+        assert result["status"] == "completed"
+        redis_lock.delete.assert_called_once()
 
 
 class TestMeilisearchIndexSettings:

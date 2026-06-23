@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import { Download, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -8,6 +8,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -15,10 +17,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SearchDocument } from "@/types/search";
 import {
-  COLLECTION_EXPORT_COLUMNS,
+  EXPORT_PRESET_LABELS,
   buildCollectionExportRows,
   buildExportFilename,
   flattenDocumentForExport,
+  getExportColumns,
+  type CollectionExportPreset,
 } from "@/lib/collection-export";
 import { exportToCSV, exportToXLSX, type ExportFormat } from "@/lib/file-export";
 import logger from "@/lib/logger";
@@ -46,6 +50,27 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
   className,
 }) => {
   const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
+  const [preset, setPreset] = useState<CollectionExportPreset>("default");
+
+  // Persist the chosen preset per-collection so a user's preference sticks.
+  const presetStorageKey = `collection-export-preset:${collectionName}`;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(presetStorageKey);
+    if (stored === "default" || stored === "full" || stored === "research") {
+      setPreset(stored);
+    }
+  }, [presetStorageKey]);
+
+  const handlePresetChange = (value: string): void => {
+    const next = value as CollectionExportPreset;
+    setPreset(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(presetStorageKey, next);
+    }
+  };
+
+  const columns = useMemo(() => getExportColumns(preset), [preset]);
 
   const rows = useMemo(
     () => documents.map((doc) => ({ doc, row: flattenDocumentForExport(doc) })),
@@ -56,19 +81,19 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
     const query = searchQuery.trim().toLowerCase();
     if (!query) return rows;
     return rows.filter(({ row }) =>
-      COLLECTION_EXPORT_COLUMNS.some((col) => {
+      columns.some((col) => {
         const value = row[col.key];
         if (value === null || value === undefined || value === "") return false;
         return String(value).toLowerCase().includes(query);
       })
     );
-  }, [rows, searchQuery]);
+  }, [rows, searchQuery, columns]);
 
   const handleExport = async (format: ExportFormat): Promise<void> => {
     setIsExporting(format);
     try {
       // Export always uses the full document set, ignoring the in-table filter.
-      const exportRows = buildCollectionExportRows(documents);
+      const exportRows = buildCollectionExportRows(documents, preset);
       if (exportRows.length === 0) {
         toast.warning("Nothing to export — collection is empty");
         return;
@@ -118,9 +143,26 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
               Export
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Download as</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Columns</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={preset}
+              onValueChange={handlePresetChange}
+            >
+              {(
+                Object.keys(EXPORT_PRESET_LABELS) as CollectionExportPreset[]
+              ).map((key) => (
+                <DropdownMenuRadioItem
+                  key={key}
+                  value={key}
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  {EXPORT_PRESET_LABELS[key]}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuLabel>Download as</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => handleExport("xlsx")}
               disabled={isExporting !== null}
@@ -148,7 +190,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
         <table className="min-w-full text-sm">
           <thead className="bg-[var(--parchment-deep)] sticky top-0 z-10">
             <tr>
-              {COLLECTION_EXPORT_COLUMNS.map((col) => (
+              {columns.map((col) => (
                 <th
                   key={col.key}
                   scope="col"
@@ -166,7 +208,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
             {filteredRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={COLLECTION_EXPORT_COLUMNS.length}
+                  colSpan={columns.length}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
                   {searchQuery
@@ -183,7 +225,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
                     idx % 2 === 1 && "bg-[var(--parchment)]/40"
                   )}
                 >
-                  {COLLECTION_EXPORT_COLUMNS.map((col) => {
+                  {columns.map((col) => {
                     const value = row[col.key];
                     const display = previewValue(value);
                     return (
