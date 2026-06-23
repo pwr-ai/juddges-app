@@ -43,14 +43,21 @@ to assert the new default (rename + flip assertions).
 ### 2. Register the `bge-m3` embedder on the live index
 
 The `embedders` block already exists in `MEILISEARCH_INDEX_SETTINGS` but
-hasn't been pushed to the running Meilisearch. Run:
+hasn't been pushed to the running Meilisearch. Run the sync CLI's `--setup`,
+which now reads the embedders back after applying and **exits non-zero if the
+`bge-m3` embedder is not registered** (issue #200 — a setup that silently
+"succeeds" without the embedder is what broke hybrid search in prod):
 
 ```bash
 docker compose -f docker-compose.dev.yml exec backend \
-    poetry run celery -A app.workers call meilisearch.setup_index
+    poetry run python scripts/sync_meilisearch.py --setup
+# prints: Index setup complete (embedder 'bge-m3' registered).
 ```
 
-Verify:
+(The `meilisearch.setup_index` Celery task runs the same
+`setup_meilisearch_index` path and logs the same verification result.)
+
+Verify directly if needed:
 
 ```bash
 curl -H "Authorization: Bearer $MEILI_MASTER_KEY" \
@@ -105,8 +112,9 @@ These pieces were built and stay in `main`, dormant until the steps above run:
 
 ## Open follow-ups before re-enabling
 
-- `backend/app/services/search.py:134` hardcodes `"bge-m3"` — should use
-  `EMBEDDER_NAME` from `meilisearch_embeddings` for a single source of truth.
+- ~~`backend/app/services/search.py` hardcodes `"bge-m3"`~~ — done (issue
+  #200): the hybrid payload and the index-settings embedder block both derive
+  from `EMBEDDER_NAME` / `EMBEDDER_DIMENSIONS` in `meilisearch_embeddings`.
 - The `documents_search` endpoint (full results page) is keyword-only.
   Decide whether it should also accept a `semantic_ratio` query param or
   stay keyword-only by design.

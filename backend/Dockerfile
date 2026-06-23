@@ -81,21 +81,25 @@ USER appuser
 EXPOSE 8002
 
 # Use gunicorn with uvicorn workers for better process management and monitoring
-# 12 workers for high concurrency handling
+# Worker count is env-driven via GUNICORN_WORKERS. When unset it defaults to the
+# gunicorn-recommended (2 * vCPU) + 1, computed from the container's CPU count.
+# On a 2-4 vCPU prod host this yields 5-9 workers instead of a hard-coded 12,
+# which removed needless context-switch overhead.
 # --timeout 120: Request timeout (2 minutes for complex AI/ML operations)
 # --graceful-timeout 30: Graceful shutdown timeout
 # --keep-alive 5: Keep-alive connections
 # --max-requests 1000: Restart workers after 1000 requests (prevents memory leaks)
 # --max-requests-jitter 50: Add randomness to prevent all workers restarting simultaneously
-CMD ["gunicorn", "app.server:app", \
-     "--worker-class", "uvicorn.workers.UvicornWorker", \
-     "--workers", "12", \
-     "--bind", "0.0.0.0:8002", \
-     "--timeout", "120", \
-     "--graceful-timeout", "30", \
-     "--keep-alive", "5", \
-     "--max-requests", "1000", \
-     "--max-requests-jitter", "50", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+CMD ["sh", "-c", \
+     "exec gunicorn app.server:app \
+        --worker-class uvicorn.workers.UvicornWorker \
+        --workers \"${GUNICORN_WORKERS:-$(( $(nproc) * 2 + 1 ))}\" \
+        --bind 0.0.0.0:8002 \
+        --timeout 120 \
+        --graceful-timeout 30 \
+        --keep-alive 5 \
+        --max-requests 1000 \
+        --max-requests-jitter 50 \
+        --access-logfile - \
+        --error-logfile - \
+        --log-level info"]

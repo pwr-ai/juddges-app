@@ -56,6 +56,7 @@ from .conversion import (
     _convert_judgment_to_legal_document,
     _convert_supabase_to_legal_document,
     _extract_base_fields,
+    _extract_extraction_fields,
     _merge_base_extraction_fields,
 )
 from .search import (
@@ -132,7 +133,8 @@ async def list_documents(
     sampled_ids = random.sample(all_document_ids, sample_size)
 
     db = get_vector_db()
-    docs_data = await db.get_documents_by_ids(sampled_ids)
+    # List view never renders the body — skip full_text to trim the payload.
+    docs_data = await db.get_documents_by_ids(sampled_ids, include_full_text=False)
 
     documents = [
         _convert_supabase_to_legal_document(doc, include_vectors=return_vectors)
@@ -174,7 +176,8 @@ async def get_documents_sample(
     sampled_ids = random.sample(all_document_ids, sample_size)
 
     db = get_vector_db()
-    docs_data = await db.get_documents_by_ids(sampled_ids)
+    # Visualization sample never renders the body — skip full_text.
+    docs_data = await db.get_documents_by_ids(sampled_ids, include_full_text=False)
 
     documents = [
         _convert_supabase_to_legal_document(doc, include_vectors=return_vectors)
@@ -306,7 +309,10 @@ async def get_document_by_id(
     return_vectors: bool = Query(False, description="Include vector embeddings"),
     include_base_fields: bool = Query(
         False,
-        description="Include extracted base_* schema columns under `base_fields`",
+        description=(
+            "Include extracted base_* schema columns under `base_fields` and "
+            "structure_*/deep_* extraction columns under `extraction_fields`"
+        ),
     ),
 ) -> DocumentResponse:
     """Get a document by its ID."""
@@ -329,6 +335,7 @@ async def get_document_by_id(
         )
         if include_base_fields:
             document.base_fields = _extract_base_fields(doc_data)
+            document.extraction_fields = _extract_extraction_fields(doc_data)
         return DocumentResponse(document=document)
 
     except HTTPException:
@@ -373,6 +380,7 @@ async def get_document_by_id_legacy(
     )
     if request.include_base_fields:
         document.base_fields = _extract_base_fields(doc_data)
+        document.extraction_fields = _extract_extraction_fields(doc_data)
     return DocumentResponse(document=document)
 
 
@@ -408,6 +416,7 @@ async def get_documents_batch(request: BatchDocumentsRequest):
         )
         if request.include_base_fields:
             converted.base_fields = _extract_base_fields(doc)
+            converted.extraction_fields = _extract_extraction_fields(doc)
         documents.append(converted)
 
     return BatchDocumentsResponse(documents=documents)
