@@ -211,6 +211,35 @@ class TestAdminMethods:
         assert result["taskUid"] == 2
 
     @pytest.mark.asyncio
+    async def test_get_settings_embedders_returns_registered(self, service):
+        mock_resp = _mock_response(
+            200, {"bge-m3": {"source": "userProvided", "dimensions": 1024}}
+        )
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+            result = await service.get_settings_embedders()
+
+        assert result == {"bge-m3": {"source": "userProvided", "dimensions": 1024}}
+
+    @pytest.mark.asyncio
+    async def test_get_settings_embedders_empty_when_none(self, service):
+        mock_resp = _mock_response(200, {})
+
+        with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_resp
+            result = await service.get_settings_embedders()
+
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_settings_embedders_raises_without_admin_key(
+        self, search_only_service
+    ):
+        with pytest.raises(SearchServiceError, match="admin key"):
+            await search_only_service.get_settings_embedders()
+
+    @pytest.mark.asyncio
     async def test_upsert_documents(self, service):
         mock_resp = _mock_response(202, {"taskUid": 3})
 

@@ -272,7 +272,7 @@ describe('SearchForm', () => {
         />
       );
 
-      expect(screen.getByText(/No matching topics/i)).toBeInTheDocument();
+      expect(screen.getByText(/No matching suggestions/i)).toBeInTheDocument();
       expect(screen.queryByText(/^topics$/i)).not.toBeInTheDocument();
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     });
@@ -288,7 +288,7 @@ describe('SearchForm', () => {
       );
 
       expect(screen.getByText(/Loading suggestions/i)).toBeInTheDocument();
-      expect(screen.queryByText(/No matching topics/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/No matching suggestions/i)).not.toBeInTheDocument();
     });
 
     it('clicking a topic chip replaces the query and auto-runs search (en locale)', async () => {

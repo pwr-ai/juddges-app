@@ -52,6 +52,26 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Navigation/API network timeout. On flaky networks the browser can hang for
+// 5–10 s waiting for a navigation response before the connection finally errors,
+// leaving the user staring at a blank tab (issue #178). We race the fetch against
+// an AbortController so a stalled request fails fast and falls through to the
+// offline shell instead. Kept short enough to feel responsive, long enough to
+// tolerate normal latency.
+const NETWORK_TIMEOUT_MS = 2500;
+
+// Fetch with a hard timeout. Resolves like `fetch`; rejects (AbortError) once
+// NETWORK_TIMEOUT_MS elapses so callers can fall through to their offline path.
+// NOTE: this does NOT add cache fallback for navigations/API — those responses
+// are deliberately never cached (cross-user replay risk, issue #210).
+function fetchWithTimeout(request, timeoutMs = NETWORK_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(request, { signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 // Helper: check if a request is for a static asset
 function isStaticAsset(url) {
   return CACHEABLE_EXTENSIONS.some((ext) => url.pathname.endsWith(ext));
@@ -70,6 +90,25 @@ function isNextStaticAsset(url) {
 // Helper: check if request is an API call
 function isApiRequest(url) {
   return url.pathname.startsWith("/api/");
+}
+
+// Helper: guard against caching personalized/authenticated responses even on
+// the static-asset path (issue #210). A genuinely public, cacheable asset is
+// never served with Set-Cookie and never marked private/no-store. If a response
+// carries any of these markers it is per-user or sensitive and must not be
+// written to a shared, path-keyed cache. Returns true when caching is safe.
+function isSafeToCache(response) {
+  if (!response || !response.ok) {
+    return false;
+  }
+  if (response.headers.has("set-cookie")) {
+    return false;
+  }
+  const cacheControl = (response.headers.get("cache-control") || "").toLowerCase();
+  if (cacheControl.includes("private") || cacheControl.includes("no-store")) {
+    return false;
+  }
+  return true;
 }
 
 // Fetch handler with appropriate caching strategies
@@ -103,7 +142,11 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(event.request).then((response) => {
-            if (response.ok) {
+            // Defense-in-depth: only persist responses that are provably
+            // public. A static-extension URL that comes back with Set-Cookie
+            // or a private/no-store directive is personalized and must not be
+            // replayed to another user from a shared, path-keyed cache (#210).
+            if (isSafeToCache(response)) {
               const clone = response.clone();
               caches.open(STATIC_CACHE).then((cache) => {
                 cache.put(event.request, clone);
@@ -123,17 +166,19 @@ self.addEventListener("fetch", (event) => {
   // response if the network is genuinely unavailable.
   if (isApiRequest(url)) {
     event.respondWith(
-      fetch(event.request).catch(() => createOfflineApiResponse())
+      fetchWithTimeout(event.request).catch(() => createOfflineApiResponse())
     );
     return;
   }
 
   // Page navigations: network-only for the same reason. Next.js may inline
   // RSC payloads or per-user UI state into navigation responses; caching
-  // them by URL alone would cross users on a shared browser.
+  // them by URL alone would cross users on a shared browser. We add a short
+  // timeout (issue #178) so a stalled network surfaces the offline shell
+  // quickly instead of hanging for 5–10 s.
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => createOfflinePageResponse())
+      fetchWithTimeout(event.request).catch(() => createOfflinePageResponse())
     );
     return;
   }
