@@ -19,6 +19,7 @@ import {
  Bookmark,
  FileJson,
  BarChart3,
+ TrendingUp,
  LogIn,
  UserPlus,
  LayoutDashboard,
@@ -273,6 +274,17 @@ export function AppSidebar(): React.JSX.Element {
  <Link href="/search">
  <Search />
  <span>{t('navigation.searchJudgments')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.topicTrends')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/topics"}>
+ <Link href="/topics">
+ <TrendingUp />
+ <span>{t('navigation.topicTrends')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
