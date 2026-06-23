@@ -21,6 +21,7 @@ Defaults (override via kwargs):
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from typing import Any
 
 from langchain_openai import ChatOpenAI
@@ -61,16 +62,45 @@ def _apply_defaults(kwargs: dict[str, Any]) -> dict[str, Any]:
     return kwargs
 
 
+@lru_cache(maxsize=32)
+def _cached_chat_openai(frozen_kwargs: tuple[tuple[str, Any], ...]) -> ChatOpenAI:
+    """Construct (and memoise) a ChatOpenAI keyed on its resolved kwargs.
+
+    A ChatOpenAI carries an httpx connection pool; building a fresh one per
+    request (e.g. the per-query classifier LLM in the chat chain) re-pays TLS
+    handshake + pool warmup every time. Caching on the fully-resolved kwargs
+    means identical configs share one warm client while distinct configs still
+    get their own. ``frozen_kwargs`` is a sorted tuple of items so the cache
+    key is order-independent and hashable.
+    """
+    return ChatOpenAI(**dict(frozen_kwargs))
+
+
+def _freeze_kwargs(kwargs: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """Build a hashable, order-stable cache key from resolved kwargs.
+
+    Falls back to building uncached when any value is unhashable (e.g. a
+    caller passes a list/dict override) so behaviour is never broken.
+    """
+    return tuple(sorted(kwargs.items()))
+
+
 def get_default_llm(use_mini_model: bool, **kwargs: Any) -> ChatOpenAI:
     llm_name = LLM_MINI_NAME if use_mini_model else LLM_NAME
-    return ChatOpenAI(
-        model=llm_name,
-        base_url=LLM_BASE_URL,
-        **_apply_defaults(kwargs),
-    )
+    resolved = {"model": llm_name, "base_url": LLM_BASE_URL, **_apply_defaults(kwargs)}
+    try:
+        return _cached_chat_openai(_freeze_kwargs(resolved))
+    except TypeError:
+        # Unhashable override value — construct without caching.
+        return ChatOpenAI(**resolved)
 
 
 def get_llm(name: str | None = None, **kwargs: Any) -> ChatOpenAI:
     if name is None:
         name = LLM_NAME
-    return ChatOpenAI(model=name, **_apply_defaults(kwargs))
+    resolved = {"model": name, **_apply_defaults(kwargs)}
+    try:
+        return _cached_chat_openai(_freeze_kwargs(resolved))
+    except TypeError:
+        # Unhashable override value — construct without caching.
+        return ChatOpenAI(**resolved)

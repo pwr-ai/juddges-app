@@ -96,6 +96,11 @@ function loadServiceWorker(): SwSandbox {
     fetch: globalThis.fetch,
     URL: globalThis.URL,
     Response: globalThis.Response,
+    // AbortController/Signal are SW globals in real browsers; the vm sandbox
+    // needs them wired in explicitly for the navigation/API timeout (issue #178).
+    AbortController: globalThis.AbortController,
+    AbortSignal: globalThis.AbortSignal,
+    DOMException: globalThis.DOMException,
     Promise,
     setTimeout,
     clearTimeout,
@@ -223,6 +228,43 @@ describe("service worker (sw.js)", () => {
       const text = await response.text();
       expect(text).toContain("Offline");
     });
+
+    it("passes an AbortController signal so stalled navigations time out (issue #178)", async () => {
+      const event = makeFetchEvent("https://example.test/dashboard", { mode: "navigate" });
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const init = fetchMock.mock.calls[0][1];
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("falls through to the offline shell when the fetch is aborted by timeout", async () => {
+      jest.useFakeTimers();
+      try {
+        // Reload the SW inside fake-timer scope so its captured setTimeout is faked.
+        const fakeSw = loadServiceWorker();
+        fetchMock.mockImplementationOnce((_req, init?: RequestInit) => {
+          return new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError"))
+            );
+          });
+        });
+
+        const event = makeFetchEvent("https://example.test/dashboard", { mode: "navigate" });
+        fakeSw.fetch(event);
+
+        jest.advanceTimersByTime(3000);
+
+        const response = (await event.respondWith.mock.calls[0][0]) as Response;
+        expect(response.status).toBe(503);
+        const text = await response.text();
+        expect(text).toContain("Offline");
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 
   describe("static assets", () => {
@@ -230,6 +272,87 @@ describe("service worker (sw.js)", () => {
       const event = makeFetchEvent("https://example.test/_next/static/chunks/main.abc123.js");
       sw.fetch(event);
 
+      await event.respondWith.mock.calls[0][0];
+
+      const cache = sw.caches.caches.get(sw.staticCacheName);
+      expect(cache?.put).toHaveBeenCalledTimes(1);
+    });
+
+    it("does NOT cache a static-looking response carrying Set-Cookie (issue #210)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("personalized", {
+          status: 200,
+          headers: {
+            "Content-Type": "image/svg+xml",
+            "Set-Cookie": "sb-access-token=secret; Path=/",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/_next/image?url=avatar.svg");
+      sw.fetch(event);
+      const response = (await event.respondWith.mock.calls[0][0]) as Response;
+
+      // The user still gets the live response — only persistence is skipped.
+      expect(response.status).toBe(200);
+      for (const cache of sw.caches.caches.values()) {
+        expect(cache.put).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does NOT cache a static-looking response marked Cache-Control: private (issue #210)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("personalized", {
+          status: 200,
+          headers: {
+            "Content-Type": "application/javascript",
+            "Cache-Control": "private, max-age=0",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/_next/static/chunks/main.abc123.js");
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      for (const cache of sw.caches.caches.values()) {
+        expect(cache.put).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does NOT cache a static-looking response marked Cache-Control: no-store (issue #210)", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("personalized", {
+          status: 200,
+          headers: {
+            "Content-Type": "application/javascript",
+            "Cache-Control": "no-store",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/_next/static/chunks/app.def456.js");
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      for (const cache of sw.caches.caches.values()) {
+        expect(cache.put).not.toHaveBeenCalled();
+      }
+    });
+
+    it("still caches a normal public static asset with no auth markers", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("body", {
+          status: 200,
+          headers: {
+            "Content-Type": "font/woff2",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        })
+      );
+
+      const event = makeFetchEvent("https://example.test/fonts/geist.woff2");
+      sw.fetch(event);
       await event.respondWith.mock.calls[0][0];
 
       const cache = sw.caches.caches.get(sw.staticCacheName);

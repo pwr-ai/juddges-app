@@ -707,6 +707,46 @@ class JudgmentIngestionPipeline:
             raise
 
 
+def _submit_to_celery(args) -> None:
+    """Submit the ingestion job to the Celery task queue (issue #104).
+
+    Imports the backend Celery task lazily so the script's default
+    (foreground) mode keeps working without the backend package installed.
+    """
+    backend_path = Path(__file__).resolve().parent.parent / "backend"
+    if str(backend_path) not in sys.path:
+        sys.path.insert(0, str(backend_path))
+
+    try:
+        from app.tasks.ingestion import ingest_judgments_task
+    except ImportError as exc:
+        console.print(
+            f"[red]Could not import the backend Celery task: {exc}[/red]"
+        )
+        console.print(
+            "[yellow]Run --submit from an environment where the backend "
+            "package and Celery are installed.[/yellow]"
+        )
+        sys.exit(1)
+
+    task = ingest_judgments_task.delay(
+        polish=args.polish,
+        uk=args.uk,
+        skip_polish=args.skip_polish,
+        skip_uk=args.skip_uk,
+        no_embeddings=args.no_embeddings,
+        resume=args.resume,
+        batch_size=args.batch_size,
+    )
+    console.print(
+        f"[green]Submitted ingestion job to Celery.[/green] task_id={task.id}"
+    )
+    console.print(
+        "Poll progress via GET /api/admin/ingestion/status?task_id="
+        f"{task.id} or `celery result {task.id}`."
+    )
+
+
 def main():
     """Main entry point for the ingestion script."""
     parser = argparse.ArgumentParser(description='Ingest judgments from HuggingFace into Supabase')
@@ -717,8 +757,20 @@ def main():
     parser.add_argument('--no-embeddings', action='store_true', help='Skip generating embeddings')
     parser.add_argument('--resume', action='store_true', help='Resume from last checkpoint')
     parser.add_argument('--batch-size', type=int, default=50, help='Number of documents per batch (default: 50)')
+    parser.add_argument(
+        '--submit',
+        action='store_true',
+        help='Submit ingestion as a background Celery task instead of running '
+             'it in the foreground (requires a configured broker + worker). '
+             'See issue #104.',
+    )
 
     args = parser.parse_args()
+
+    # --submit: hand off to the Celery task (#104) instead of blocking here.
+    if args.submit:
+        _submit_to_celery(args)
+        return
 
     # Configure logging
     logger.remove()  # Remove default logger
