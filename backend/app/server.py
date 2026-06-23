@@ -295,6 +295,20 @@ async def lifespan(app: FastAPI):
     logger.info("Starting application shutdown sequence...")
     if pool:
         await pool.close()
+    # Release the reused embedding httpx connection pools (async TEI provider +
+    # the sync juddges_search client) so shutdown doesn't leak sockets.
+    try:
+        from app.embedding_providers import close_active_provider
+
+        await close_active_provider()
+    except Exception as e:
+        logger.warning(f"Error during embedding provider cleanup: {e}")
+    try:
+        from juddges_search.embeddings import close_client as close_embeddings_client
+
+        close_embeddings_client()
+    except Exception as e:
+        logger.warning(f"Error during embeddings client cleanup: {e}")
     del app.state.checkpointer
     del app.state.agent
     logger.info("Application shutdown completed successfully")
