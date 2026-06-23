@@ -29,6 +29,7 @@ const geistMono = localFont({
 const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
+  display: "swap", // Avoid invisible text (FOIT) while the serif loads
   variable: "--font-instrument-serif",
   preload: false, // Only used on admin and landing pages, not globally
 });

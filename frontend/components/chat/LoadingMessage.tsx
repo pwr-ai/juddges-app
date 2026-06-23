@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface LoadingMessageProps {
@@ -59,7 +59,7 @@ const wittyMessages = [
   "Ensuring accuracy before responding..."
 ];
 
-export const LoadingMessage: React.FC<LoadingMessageProps> = ({
+const LoadingMessageComponent: React.FC<LoadingMessageProps> = ({
   style = 'modern',
   queryType = 'general',
   estimatedDuration = 15,
@@ -301,6 +301,12 @@ export const LoadingMessage: React.FC<LoadingMessageProps> = ({
     </div>
   );
 };
+
+LoadingMessageComponent.displayName = 'LoadingMessage';
+
+// Memoised: the parent message list can re-render frequently while a response
+// streams; the loading bubble only depends on its own props.
+export const LoadingMessage = memo(LoadingMessageComponent);
 
 // Judicial Precision Style (Conservative)
 const JudicialLoadingMessage: React.FC<{ currentMessage: string; progress: number }> = ({

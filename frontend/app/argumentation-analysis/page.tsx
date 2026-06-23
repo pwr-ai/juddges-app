@@ -47,7 +47,7 @@ const STRENGTH_CONFIG: Record<string, { icon: React.ElementType; color: string; 
  weak: { icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-100' },
 };
 
-function ArgumentCard({
+const ArgumentCard = React.memo(function ArgumentCard({
  argument,
  index,
  isStrongest,
@@ -217,7 +217,8 @@ function ArgumentCard({
  </div>
  </BaseCard>
  );
-}
+});
+ArgumentCard.displayName = 'ArgumentCard';
 
 function OverallAnalysisCard({
  analysis,

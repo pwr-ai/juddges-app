@@ -936,6 +936,28 @@
   }
 }
 
+/* Text-input style blinking caret — pure CSS so it doesn't re-render React */
+@keyframes caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-caret-blink {
+  animation: caret-blink 1.06s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-caret-blink {
+    animation: none;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.6s ease-out;
 }
