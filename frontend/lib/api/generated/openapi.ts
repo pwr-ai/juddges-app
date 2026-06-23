@@ -3581,6 +3581,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extractions/base-schema/nl-filter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Translate a natural-language question into base-schema filters
+         * @description Opt-in 'paste your question' shortcut: converts a plain-language question into the structured ``{filters, text_query}`` payload accepted by ``/base-schema/filter``. The dialog pre-fills the form for review — it never auto-runs the search.
+         */
+        post: operations["nl_to_filter_extractions_base_schema_nl_filter_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/extractions/bulk": {
         parameters: {
             query?: never;
@@ -10587,6 +10607,35 @@ export interface components {
             total_listings: number;
             /** Total Reviews */
             total_reviews: number;
+        };
+        /**
+         * NLFilterRequest
+         * @description Request for translating a natural-language question into base-schema filters.
+         */
+        NLFilterRequest: {
+            /**
+             * Query
+             * @description Plain-language question to translate into structured filters
+             */
+            query: string;
+        };
+        /**
+         * NLFilterResponse
+         * @description Translated filter payload, matching the body shape of the filter endpoint.
+         */
+        NLFilterResponse: {
+            /**
+             * Filters
+             * @description Structured filters in the JSONB shape accepted by the RPC
+             */
+            filters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Text Query
+             * @description Free-text query split out from the structured filters
+             */
+            text_query?: string | null;
         };
         /**
          * NumericHistogramResponse
@@ -20041,6 +20090,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NumericHistogramResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nl_to_filter_extractions_base_schema_nl_filter_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NLFilterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NLFilterResponse"];
                 };
             };
             /** @description Validation Error */
