@@ -509,25 +509,32 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+# Cache-Control rules, evaluated in order — the first matching path fragment
+# wins. Defined once at import time (instead of rebuilding the literal strings
+# on every response) and looked up by a single pass in the middleware below.
+# Order matters: the more specific "/dashboard/stats" must precede the broader
+# "/dashboard/" so it keeps its longer max-age.
+_CACHE_CONTROL_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("/dashboard/stats",), "public, max-age=14400"),  # 4 hours
+    (("/dashboard/",), "public, max-age=3600"),  # 1 hour
+    (("/collections",), "public, max-age=1800"),  # 30 minutes
+    (
+        ("/legal/dpa", "/legal/retention-policies"),
+        "public, max-age=86400",  # 24 hours (legal docs rarely change)
+    ),
+)
+
+
 @app.middleware("http")
 async def add_cache_headers(request, call_next):
     """Add HTTP cache headers for static and cacheable content."""
     response = await call_next(request)
 
-    # Add cache headers for dashboard stats and other cacheable endpoints
-    if "/dashboard/stats" in request.url.path:
-        response.headers["Cache-Control"] = "public, max-age=14400"  # 4 hours
-    elif "/dashboard/" in request.url.path:
-        response.headers["Cache-Control"] = "public, max-age=3600"  # 1 hour
-    elif "/collections" in request.url.path:
-        response.headers["Cache-Control"] = "public, max-age=1800"  # 30 minutes
-    elif (
-        "/legal/dpa" in request.url.path
-        or "/legal/retention-policies" in request.url.path
-    ):
-        response.headers["Cache-Control"] = (
-            "public, max-age=86400"  # 24 hours (legal docs rarely change)
-        )
+    path = request.url.path
+    for fragments, cache_control in _CACHE_CONTROL_RULES:
+        if any(fragment in path for fragment in fragments):
+            response.headers["Cache-Control"] = cache_control
+            break
 
     return response
 

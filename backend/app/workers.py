@@ -54,9 +54,12 @@ celery_app.conf.imports = [
 
 # Celery Beat schedule — periodic background jobs
 celery_app.conf.beat_schedule = {
-    "meilisearch-full-sync-every-6h": {
+    "meilisearch-full-sync-every-8h": {
         "task": "meilisearch.full_sync",
-        "schedule": 6 * 60 * 60,  # every 6 hours
+        "schedule": 8 * 60 * 60,  # every 8 hours (was 6h — eased cadence)
+        # Drop a queued run if it hasn't started within the cadence window, so a
+        # slow run can never let beat pile up overlapping syncs.
+        "options": {"expires": 8 * 60 * 60},
     },
     "reasoning-lines-auto-assign-weekly": {
         "task": "reasoning_lines.auto_assign",
