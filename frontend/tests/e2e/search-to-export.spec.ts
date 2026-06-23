@@ -41,6 +41,11 @@ const DOC_TITLE = 'Swiss Franc Loan Consumer Ruling';
 const DOC_COURT = 'Supreme Court of Poland';
 const NEW_COLLECTION_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const NEW_COLLECTION_NAME = 'Journey Collection';
+// A pre-existing collection so the popover renders its list (and thus the
+// "Create New Collection" affordance). When the list is empty the popover only
+// shows a "No collections available" message with no create button.
+const SEED_COLLECTION_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const SEED_COLLECTION_NAME = 'Existing Matters';
 
 /** Single Meilisearch hit returned by GET /api/search/documents. */
 const MEILI_HIT = {
@@ -166,6 +171,13 @@ async function mockBackend(page: Page): Promise<{
   getAddedDocumentId: () => string | null;
 }> {
   const collection = makeCollection();
+  // Pre-existing collection returned by the list endpoint so the popover shows
+  // its collection list (the "Create New Collection" button lives in that
+  // branch — an empty list renders only an informational message).
+  const seedCollection = makeCollection({
+    id: SEED_COLLECTION_ID,
+    name: SEED_COLLECTION_NAME,
+  });
   let createBody: { name?: string } | null = null;
   let addedDocumentId: string | null = null;
 
@@ -191,11 +203,13 @@ async function mockBackend(page: Page): Promise<{
       });
       return;
     }
-    // GET — return the current list (created collection appears after POST).
+    // GET — always include the seed collection so the popover list (and its
+    // "Create New Collection" button) renders; the freshly created collection
+    // is appended once it has been POSTed.
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(createBody ? [collection] : []),
+      body: JSON.stringify(createBody ? [seedCollection, collection] : [seedCollection]),
     });
   });
 
@@ -220,7 +234,10 @@ async function mockBackend(page: Page): Promise<{
   // Read the collection (detail page). Must be registered after the more
   // specific /documents route so it doesn't swallow it.
   await page.route(`**/api/collections/${NEW_COLLECTION_ID}*`, async (route: Route) => {
-    if (route.request().url().includes('/documents')) return; // handled above
+    if (route.request().url().includes('/documents')) {
+      await route.fallback(); // defer to the dedicated /documents handler above
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -228,11 +245,29 @@ async function mockBackend(page: Page): Promise<{
     });
   });
 
+  // Batch document fetch (POST /api/documents/batch). Used by the collection
+  // table view (`loadAllCollectionDocuments` → `fetchDocumentsByIds`) to hydrate
+  // the full-column table. Returns the *plural* `{ documents: [...] }` shape.
+  // Registered before the generic /api/documents/** route so it wins.
+  await page.route(`**/api/documents/batch*`, async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ documents: [DOCUMENT_RESPONSE.document] }),
+    });
+  });
+
   // Document detail fetched by the collection page for each member doc.
+  // Registered AFTER /batch: Playwright tries the most-recently-registered
+  // handler first, so this generic one runs first and explicitly falls back to
+  // the dedicated /batch (and /search) handlers for those paths.
   await page.route(`**/api/documents/**`, async (route: Route) => {
     const url = route.request().url();
-    // Don't hijack the search endpoint (handled above).
-    if (url.includes('/documents/search')) return;
+    // Defer the search / batch endpoints to their dedicated handlers.
+    if (url.includes('/documents/search') || url.includes('/documents/batch')) {
+      await route.fallback();
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -264,7 +299,11 @@ test.describe('Core journey: search → save to collection → export', () => {
       await page.goto('/search');
       await page.waitForLoadState('domcontentloaded');
 
-      const searchInput = page.getByRole('textbox', { name: /search/i }).first();
+      // The search input has no accessible name of its own; target it by its
+      // placeholder (the submit button below carries aria-label="Search").
+      const searchInput = page
+        .getByPlaceholder(/liability for defective construction/i)
+        .first();
       await expect(searchInput).toBeVisible();
       await searchInput.fill('swiss franc loan');
       await page.getByRole('button', { name: /^search$/i }).first().click();
