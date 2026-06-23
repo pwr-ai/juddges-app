@@ -592,3 +592,133 @@ class TestSetupMeilisearchIndexSplit:
         svc = await self._service_with(settings_status="failed")
         ok = await setup_meilisearch_index(svc)
         assert ok is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestAtomicApplyPartialFailureRollback:
+    """Regression coverage for issue #226 / #200.
+
+    The atomic-apply contract for ``setup_meilisearch_index`` is implemented as a
+    two-phase split: the *safe* settings block (filterableAttributes, synonyms,
+    typoTolerance, …) is applied in Phase A, fully and on its own, BEFORE the
+    embedders block is patched in Phase B. This guarantees that when the
+    bge-m3 embedder block fails — the exact failure that has been hitting prod —
+    filterableAttributes/synonyms reflect EITHER the new fully-applied state OR
+    the old state, but never the half-applied state where the embedder PATCH
+    poisons the whole settings transaction.
+
+    These tests simulate "success for the non-embedder block, error for the
+    embedder block" and assert (1) the safe block is applied whole, (2) the
+    embedders block is never folded into the safe PATCH, and (3) the
+    partial-failure path emits a warning log / alert signal.
+    """
+
+    @staticmethod
+    def _capture_logs():
+        """Attach a temporary loguru sink and return its captured record list.
+
+        ``conftest`` removes all loguru sinks, so we add our own to assert that
+        the partial-failure path actually logs. Returns ``(records, sink_id)``;
+        caller must ``logger.remove(sink_id)`` when done.
+        """
+        from loguru import logger
+
+        records: list[dict] = []
+        sink_id = logger.add(
+            lambda message: records.append(message.record),
+            level="WARNING",
+        )
+        return records, sink_id
+
+    def _service(self, *, embedder_mode: str):
+        """Build a mocked service whose safe phase succeeds.
+
+        ``embedder_mode`` controls Phase B's failure shape:
+        - ``"raises"``      → ``update_settings_embedders`` raises (e.g. 4xx).
+        - ``"task_failed"`` → the embedder task resolves with status ``failed``
+          (e.g. "embedder bge-m3 not found").
+        """
+        svc = MagicMock()
+        svc.admin_configured = True
+        svc.index_name = "judgments"
+        svc.index_exists = AsyncMock(return_value=True)
+        svc.create_index = AsyncMock(return_value={"taskUid": 1})
+        # Phase A: safe settings succeed.
+        svc.configure_index = AsyncMock(return_value={"taskUid": 2})
+
+        if embedder_mode == "raises":
+            svc.update_settings_embedders = AsyncMock(
+                side_effect=RuntimeError("embedder bge-m3 not found")
+            )
+        elif embedder_mode == "task_failed":
+            svc.update_settings_embedders = AsyncMock(return_value={"taskUid": 3})
+        else:  # pragma: no cover - guard against typos in test setup
+            raise ValueError(f"unknown embedder_mode: {embedder_mode}")
+
+        async def _wait_for_task(task_uid, max_wait=60.0):
+            if task_uid == 3:
+                return {
+                    "status": "failed",
+                    "error": {"message": "embedder bge-m3 not found"},
+                }
+            return {"status": "succeeded"}
+
+        svc.wait_for_task = AsyncMock(side_effect=_wait_for_task)
+        return svc
+
+    @pytest.mark.parametrize("embedder_mode", ["raises", "task_failed"])
+    async def test_partial_embedder_failure_applies_safe_block_whole_and_logs(
+        self, embedder_mode
+    ):
+        """Embedder PATCH fails → safe settings still fully applied + warning logged.
+
+        Covers all three acceptance criteria from issue #226:
+          1. Meili returns success for the non-embedder block, error for embedders.
+          2. filterableAttributes/synonyms reflect the new *fully-applied* state
+             (one configure_index call carrying the whole safe block) — never the
+             half-applied state, and the embedders block is never smuggled into it.
+          3. The partial-failure path emits a warning log.
+        """
+        from app.services.meilisearch_config import (
+            MEILISEARCH_INDEX_SETTINGS,
+            setup_meilisearch_index,
+        )
+
+        svc = self._service(embedder_mode=embedder_mode)
+        records, sink_id = self._capture_logs()
+        try:
+            ok = await setup_meilisearch_index(svc)
+        finally:
+            from loguru import logger
+
+            logger.remove(sink_id)
+
+        # Setup still succeeds: the safe block is committed; embedder failure is
+        # non-fatal. (This is the "old-OR-new, never half-applied" guarantee —
+        # the safe transaction commits independently of the embedder one.)
+        assert ok is True
+
+        # (2) The safe settings were applied in exactly one PATCH that carried
+        # filterableAttributes + synonyms WHOLE, and did NOT include embedders.
+        svc.configure_index.assert_awaited_once()
+        safe_arg = svc.configure_index.call_args[0][0]
+        assert "embedders" not in safe_arg, (
+            "embedders must never be folded into the safe settings PATCH — that "
+            "is the half-applied failure shape that hit prod"
+        )
+        assert (
+            safe_arg["filterableAttributes"]
+            == (MEILISEARCH_INDEX_SETTINGS["filterableAttributes"])
+        )
+        assert safe_arg["synonyms"] == MEILISEARCH_INDEX_SETTINGS["synonyms"]
+
+        # The embedder block was attempted and failed in its own phase.
+        svc.update_settings_embedders.assert_awaited_once()
+
+        # (3) The partial-failure path fired a warning-level log mentioning embedders.
+        warnings = [r for r in records if r["level"].no >= 30]
+        assert warnings, "partial embedder failure must emit a WARNING log"
+        assert any("embedder" in r["message"].lower() for r in warnings), (
+            "the partial-failure warning must identify the embedder block"
+        )
