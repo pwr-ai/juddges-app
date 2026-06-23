@@ -71,6 +71,7 @@ export function BaseFiltersDrawer({
                   return (
                     <NumericRangeControl
                       key={cfg.field}
+                      field={cfg.field}
                       label={cfg.label}
                       description={cfg.help}
                       value={v?.kind === "numeric_range" ? v : undefined}

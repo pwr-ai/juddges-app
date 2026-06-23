@@ -398,6 +398,22 @@ class FacetCountsResponse(BaseModel):
     total: int
 
 
+class HistogramBucket(BaseModel):
+    """A single equal-width bucket of a numeric distribution."""
+
+    bucket_lo: float
+    bucket_hi: float
+    count: int
+
+
+class NumericHistogramResponse(BaseModel):
+    """Distribution histogram for a numeric extracted-data field."""
+
+    field: str
+    buckets: list[HistogramBucket]
+    total: int
+
+
 class FilterFieldConfig(BaseModel):
     """Configuration for a filter field."""
 
