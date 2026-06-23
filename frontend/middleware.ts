@@ -48,20 +48,25 @@ export async function middleware(request: NextRequest) {
   // Get the session response from Supabase middleware
   const response = await updateSession(request)
 
+  // Only (re)write the locale cookie when it is missing or actually changed.
+  // Rewriting it on every request adds a needless Set-Cookie header to every
+  // RSC navigation (issue #178).
+  const existingLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value
+  const localeNeedsWrite = existingLocale !== locale
+
   // If updateSession returned a redirect, return it as-is
   if (response.status >= 300 && response.status < 400) {
-    // Set locale cookie on redirects too
-    response.cookies.set(LOCALE_COOKIE_NAME, locale, {
-      path: '/',
-      maxAge: 31536000, // 1 year
-      sameSite: 'lax',
-    })
+    if (localeNeedsWrite) {
+      response.cookies.set(LOCALE_COOKIE_NAME, locale, {
+        path: '/',
+        maxAge: 31536000, // 1 year
+        sameSite: 'lax',
+      })
+    }
     return response
   }
 
-  // Set locale cookie if not already set or different
-  const existingLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value
-  if (!existingLocale || existingLocale !== locale) {
+  if (localeNeedsWrite) {
     response.cookies.set(LOCALE_COOKIE_NAME, locale, {
       path: '/',
       maxAge: 31536000, // 1 year

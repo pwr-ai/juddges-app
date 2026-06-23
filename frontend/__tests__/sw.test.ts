@@ -96,6 +96,11 @@ function loadServiceWorker(): SwSandbox {
     fetch: globalThis.fetch,
     URL: globalThis.URL,
     Response: globalThis.Response,
+    // AbortController/Signal are SW globals in real browsers; the vm sandbox
+    // needs them wired in explicitly for the navigation/API timeout (issue #178).
+    AbortController: globalThis.AbortController,
+    AbortSignal: globalThis.AbortSignal,
+    DOMException: globalThis.DOMException,
     Promise,
     setTimeout,
     clearTimeout,
@@ -222,6 +227,43 @@ describe("service worker (sw.js)", () => {
       expect(response.status).toBe(503);
       const text = await response.text();
       expect(text).toContain("Offline");
+    });
+
+    it("passes an AbortController signal so stalled navigations time out (issue #178)", async () => {
+      const event = makeFetchEvent("https://example.test/dashboard", { mode: "navigate" });
+      sw.fetch(event);
+      await event.respondWith.mock.calls[0][0];
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const init = fetchMock.mock.calls[0][1];
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("falls through to the offline shell when the fetch is aborted by timeout", async () => {
+      jest.useFakeTimers();
+      try {
+        // Reload the SW inside fake-timer scope so its captured setTimeout is faked.
+        const fakeSw = loadServiceWorker();
+        fetchMock.mockImplementationOnce((_req, init?: RequestInit) => {
+          return new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError"))
+            );
+          });
+        });
+
+        const event = makeFetchEvent("https://example.test/dashboard", { mode: "navigate" });
+        fakeSw.fetch(event);
+
+        jest.advanceTimersByTime(3000);
+
+        const response = (await event.respondWith.mock.calls[0][0]) as Response;
+        expect(response.status).toBe(503);
+        const text = await response.text();
+        expect(text).toContain("Offline");
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 

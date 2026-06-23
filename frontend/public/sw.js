@@ -52,6 +52,26 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Navigation/API network timeout. On flaky networks the browser can hang for
+// 5–10 s waiting for a navigation response before the connection finally errors,
+// leaving the user staring at a blank tab (issue #178). We race the fetch against
+// an AbortController so a stalled request fails fast and falls through to the
+// offline shell instead. Kept short enough to feel responsive, long enough to
+// tolerate normal latency.
+const NETWORK_TIMEOUT_MS = 2500;
+
+// Fetch with a hard timeout. Resolves like `fetch`; rejects (AbortError) once
+// NETWORK_TIMEOUT_MS elapses so callers can fall through to their offline path.
+// NOTE: this does NOT add cache fallback for navigations/API — those responses
+// are deliberately never cached (cross-user replay risk, issue #210).
+function fetchWithTimeout(request, timeoutMs = NETWORK_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(request, { signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 // Helper: check if a request is for a static asset
 function isStaticAsset(url) {
   return CACHEABLE_EXTENSIONS.some((ext) => url.pathname.endsWith(ext));
@@ -123,17 +143,19 @@ self.addEventListener("fetch", (event) => {
   // response if the network is genuinely unavailable.
   if (isApiRequest(url)) {
     event.respondWith(
-      fetch(event.request).catch(() => createOfflineApiResponse())
+      fetchWithTimeout(event.request).catch(() => createOfflineApiResponse())
     );
     return;
   }
 
   // Page navigations: network-only for the same reason. Next.js may inline
   // RSC payloads or per-user UI state into navigation responses; caching
-  // them by URL alone would cross users on a shared browser.
+  // them by URL alone would cross users on a shared browser. We add a short
+  // timeout (issue #178) so a stalled network surfaces the offline shell
+  // quickly instead of hanging for 5–10 s.
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => createOfflinePageResponse())
+      fetchWithTimeout(event.request).catch(() => createOfflinePageResponse())
     );
     return;
   }
