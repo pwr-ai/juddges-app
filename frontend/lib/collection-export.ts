@@ -2,6 +2,7 @@ import type { SearchDocument } from "@/types/search";
 import type { ExportRow } from "@/lib/file-export";
 import {
   BASE_FIELD_ORDER,
+  EXTRACTION_FIELD_ORDER,
   FIELD_LABELS,
   formatValue,
 } from "@/lib/document-fields";
@@ -10,6 +11,16 @@ export interface CollectionExportColumn {
   key: string;
   label: string;
 }
+
+/**
+ * Column presets for collection export (issue #198). The picker on
+ * `/collections/[id]` lets the user choose how much of the judgment field
+ * surface to download:
+ *  - `default`  — core bibliographic fields only (the historical export).
+ *  - `full`     — core + UK base schema + structural/deep extraction columns.
+ *  - `research` — core + deep-analysis research-value signals (no full base set).
+ */
+export type CollectionExportPreset = "default" | "full" | "research";
 
 const STANDARD_COLUMNS: CollectionExportColumn[] = [
   { key: "document_id", label: "Document ID" },
@@ -46,10 +57,59 @@ const BASE_COLUMNS: CollectionExportColumn[] = BASE_FIELD_ORDER.map((key) => ({
   label: FIELD_LABELS[key]?.label ?? key,
 }));
 
+const EXTRACTION_COLUMNS: CollectionExportColumn[] = EXTRACTION_FIELD_ORDER.map(
+  (key) => ({
+    key,
+    label: FIELD_LABELS[key]?.label ?? key,
+  })
+);
+
+/** Deep-analysis research-value signals surfaced in the "Research" preset. */
+const RESEARCH_DEEP_KEYS = new Set<string>([
+  "deep_complexity_score",
+  "deep_factual_complexity",
+  "deep_legal_complexity",
+  "deep_reasoning_quality_score",
+  "deep_legal_domains",
+  "deep_reasoning_patterns",
+  "deep_judicial_tone",
+  "deep_precedential_value",
+  "deep_research_value",
+]);
+
+const RESEARCH_COLUMNS: CollectionExportColumn[] = EXTRACTION_COLUMNS.filter(
+  (col) => RESEARCH_DEEP_KEYS.has(col.key)
+);
+
+/**
+ * Default preset == the historical fixed column set (core + full base schema),
+ * preserved for backward compatibility with existing callers/tests.
+ */
 export const COLLECTION_EXPORT_COLUMNS: CollectionExportColumn[] = [
   ...STANDARD_COLUMNS,
   ...BASE_COLUMNS,
 ];
+
+export const EXPORT_PRESET_COLUMNS: Record<
+  CollectionExportPreset,
+  CollectionExportColumn[]
+> = {
+  default: COLLECTION_EXPORT_COLUMNS,
+  full: [...STANDARD_COLUMNS, ...BASE_COLUMNS, ...EXTRACTION_COLUMNS],
+  research: [...STANDARD_COLUMNS, ...RESEARCH_COLUMNS],
+};
+
+export const EXPORT_PRESET_LABELS: Record<CollectionExportPreset, string> = {
+  default: "Default",
+  full: "Full",
+  research: "Research",
+};
+
+export function getExportColumns(
+  preset: CollectionExportPreset
+): CollectionExportColumn[] {
+  return EXPORT_PRESET_COLUMNS[preset] ?? COLLECTION_EXPORT_COLUMNS;
+}
 
 function joinArray(value: unknown): string {
   if (!Array.isArray(value)) return "";
@@ -136,11 +196,37 @@ export function flattenDocumentForExport(doc: SearchDocument): ExportRow {
     row[col.key] = formatBaseCell(col.key, value);
   }
 
+  const extractionFields = doc.extraction_fields ?? null;
+  for (const col of EXTRACTION_COLUMNS) {
+    const value = extractionFields ? extractionFields[col.key] : undefined;
+    row[col.key] = formatBaseCell(col.key, value);
+  }
+
   return row;
 }
 
-export function buildCollectionExportRows(docs: SearchDocument[]): ExportRow[] {
-  return docs.map(flattenDocumentForExport);
+/**
+ * Project a fully-flattened row down to the keys of the chosen preset. Keeps
+ * column order stable and only the selected fields, so the downloaded file
+ * matches what the user picked.
+ */
+function projectRow(
+  row: ExportRow,
+  columns: CollectionExportColumn[]
+): ExportRow {
+  const projected: ExportRow = {};
+  for (const col of columns) {
+    projected[col.key] = row[col.key] ?? "";
+  }
+  return projected;
+}
+
+export function buildCollectionExportRows(
+  docs: SearchDocument[],
+  preset: CollectionExportPreset = "default"
+): ExportRow[] {
+  const columns = getExportColumns(preset);
+  return docs.map((doc) => projectRow(flattenDocumentForExport(doc), columns));
 }
 
 export function buildExportFilename(collectionName: string): string {

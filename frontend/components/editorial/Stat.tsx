@@ -60,7 +60,17 @@ export function Stat({
       return;
     }
 
+    // Respect reduced-motion: jump straight to the final value, no rAF loop.
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setDisplay(formatStat(value));
+      return;
+    }
+
     let cancelled = false;
+    let rafId = 0;
     const duration = 1800;
     const start = performance.now();
 
@@ -71,12 +81,15 @@ export function Stat({
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.floor(eased * value);
       setDisplay(formatStat(current));
-      if (progress < 1) requestAnimationFrame(tick);
+      // One-shot tween: schedule the next frame only until we resolve to the
+      // final value, then the rAF loop unmounts itself.
+      if (progress < 1) rafId = requestAnimationFrame(tick);
     }
 
-    requestAnimationFrame(tick);
+    rafId = requestAnimationFrame(tick);
     return () => {
       cancelled = true;
+      cancelAnimationFrame(rafId);
     };
   }, [inView, value, isStatic]);
 

@@ -97,6 +97,21 @@ def embed_texts(docs: str | list[str]) -> list[float] | list[list[float]]:
     return data[0] if is_single else data
 
 
+def close_client() -> None:
+    """Close and drop the cached sync TEI client (call on shutdown).
+
+    Safe to call when no client was ever created — the lru_cache is simply
+    cleared so a later call rebuilds a fresh client.
+    """
+    cached = _client.cache_info()
+    if cached.currsize:
+        try:
+            _client().close()
+        except Exception as e:  # shutdown best-effort
+            logger.warning(f"Error closing juddges_search TEI client: {e}")
+    _client.cache_clear()
+
+
 # Kept for backward compatibility — some call sites want the "model".
 # Returns a no-op sentinel; callers should only use embed_texts().
 def get_embedding_model():

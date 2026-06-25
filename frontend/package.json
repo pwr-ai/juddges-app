@@ -79,7 +79,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^4.1.0",
     "docx": "^9.5.1",
-    "dompurify": "^3.4.8",
+    "dompurify": "^3.4.11",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.9.4",
     "highlight.js": "^11.10.0",
@@ -180,7 +180,8 @@
     },
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "ws": "^8.20.1",
+    "ws": "^8.21.0",
+    "undici": "^7.28.0",
     "markdown-it": "^14.2.0",
     "postcss": "^8.5.10",
     "uuid": "^13.0.1"

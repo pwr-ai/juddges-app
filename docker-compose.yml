@@ -99,6 +99,9 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_BACKEND_URL=redis://redis:6379/0
+      # Gunicorn worker count. Unset → Dockerfile defaults to (2 * vCPU) + 1.
+      # Override in .env (GUNICORN_WORKERS=...) to pin it for the prod host.
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-}
     # All other environment variables loaded from env_file
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
