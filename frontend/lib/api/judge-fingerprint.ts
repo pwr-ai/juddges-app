@@ -24,7 +24,9 @@ export async function searchJudges(
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Failed to search judges' }));
+    const errorData = await response
+      .json()
+      .catch((parseError) => ({ error: 'Failed to search judges', parseError: String(parseError) }));
     apiLogger.error('Search judges API error:', response.status, errorData);
     throw new Error('Failed to search judges. Please try again.');
   }
@@ -48,7 +50,7 @@ export async function getJudgeProfile(judgeName: string): Promise<JudgeProfile> 
   if (!response.ok) {
     const errorData = await response
       .json()
-      .catch(() => ({ error: 'Failed to fetch judge profile' }));
+      .catch((parseError) => ({ error: 'Failed to fetch judge profile', parseError: String(parseError) }));
     apiLogger.error('Get judge profile API error:', response.status, errorData);
     throw new Error(`Failed to fetch profile for ${judgeName}. Please try again.`);
   }
@@ -72,7 +74,7 @@ export async function compareJudges(judgeNames: string[]): Promise<JudgeCompareR
   if (!response.ok) {
     const errorData = await response
       .json()
-      .catch(() => ({ error: 'Failed to compare judges' }));
+      .catch((parseError) => ({ error: 'Failed to compare judges', parseError: String(parseError) }));
     apiLogger.error('Compare judges API error:', response.status, errorData);
     throw new Error('Failed to compare judges. Please try again.');
   }

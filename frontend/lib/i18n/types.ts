@@ -410,6 +410,20 @@ export interface JudgeFingerprintTranslations {
 
   // Search section
   searchLabel: string;
+  searchPlaceholder: string;
+  searchMaxReached: string;
+  searchHint: string;
+  searching: string;
+  noResults: string;
+  caseCount: string;
+  removeJudge: string;
+
+  // Profile card
+  dominantStyle: string;
+  statCases: string;
+  statAnalyzed: string;
+  periodTo: string;
+  sampleCases: string;
 
   // Loading / error states
   loadingProfile: string;

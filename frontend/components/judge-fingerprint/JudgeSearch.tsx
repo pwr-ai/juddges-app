@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { searchJudges } from '@/lib/api/judge-fingerprint';
 import type { JudgeSearchResult } from '@/types/judge-fingerprint';
 import { Badge } from '@/lib/styles/components';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 interface JudgeSearchProps {
   /** Currently selected judge names */
@@ -34,6 +35,7 @@ export function JudgeSearch({
   onRemoveJudge,
   maxSelections = 3,
 }: JudgeSearchProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,8 +103,8 @@ export function JudgeSearch({
             }}
             placeholder={
               canAddMore
-                ? 'Wyszukaj sedziego po nazwisku...'
-                : `Maksymalnie ${maxSelections} sedziow`
+                ? t('judgeFingerprint.searchPlaceholder')
+                : t('judgeFingerprint.searchMaxReached', { max: maxSelections })
             }
             disabled={!canAddMore}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
@@ -115,13 +117,13 @@ export function JudgeSearch({
             {isLoading && (
               <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Szukanie...
+                {t('judgeFingerprint.searching')}
               </div>
             )}
 
             {!isLoading && filteredResults.length === 0 && (
               <div className="px-3 py-3 text-sm text-muted-foreground">
-                Nie znaleziono sedziow pasujacych do &quot;{debouncedQuery}&quot;
+                {t('judgeFingerprint.noResults', { query: debouncedQuery })}
               </div>
             )}
 
@@ -137,7 +139,7 @@ export function JudgeSearch({
                     <span className="text-foreground truncate">{judge.name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                    {judge.case_count} spraw
+                    {t('judgeFingerprint.caseCount', { count: judge.case_count })}
                   </span>
                 </button>
               ))}
@@ -159,7 +161,7 @@ export function JudgeSearch({
               <button
                 onClick={() => onRemoveJudge(name)}
                 className="p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
-                aria-label={`Usun ${name}`}
+                aria-label={t('judgeFingerprint.removeJudge', { name })}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -169,8 +171,7 @@ export function JudgeSearch({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Wyszukaj do {maxSelections} sedziow, aby wyswietlic ich profil rozumowania.
-        Wybierz 2-3, aby porownac.
+        {t('judgeFingerprint.searchHint', { max: maxSelections })}
       </p>
     </div>
   );

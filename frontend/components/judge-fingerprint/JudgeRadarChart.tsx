@@ -11,16 +11,24 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
+import { useTranslation } from '@/contexts/LanguageContext';
 import type { JudgeProfile, StyleScores } from '@/types/judge-fingerprint';
 
-/** Polish labels for reasoning dimensions */
-const DIMENSION_LABELS: Record<keyof StyleScores, string> = {
-  textual: 'Tekstualna',
-  deductive: 'Dedukcyjna',
-  analogical: 'Analogiczna',
-  policy: 'Celowosciowa',
-  teleological: 'Teleologiczna',
-};
+/**
+ * Locale-aware labels for the five reasoning dimensions.
+ * Reuses the `reasoning*` keys already defined for the page's "how it works"
+ * section (`policy` maps to the "purposive" label).
+ */
+function useDimensionLabels(): Record<keyof StyleScores, string> {
+  const { t } = useTranslation();
+  return {
+    textual: t('judgeFingerprint.reasoningTextual'),
+    deductive: t('judgeFingerprint.reasoningDeductive'),
+    analogical: t('judgeFingerprint.reasoningAnalogical'),
+    policy: t('judgeFingerprint.reasoningPurposive'),
+    teleological: t('judgeFingerprint.reasoningTeleological'),
+  };
+}
 
 /** Color palette for up to 3 judges */
 const JUDGE_COLORS = [
@@ -43,6 +51,8 @@ interface JudgeRadarChartProps {
 }
 
 export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps) {
+  const dimensionLabels = useDimensionLabels();
+
   // Transform profile data into recharts-compatible format
   const chartData: RadarDataPoint[] = useMemo(() => {
     const dimensions: (keyof StyleScores)[] = [
@@ -55,7 +65,7 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
 
     return dimensions.map((dim) => {
       const point: RadarDataPoint = {
-        dimension: DIMENSION_LABELS[dim],
+        dimension: dimensionLabels[dim],
         fullMark: 100,
       };
       for (const profile of profiles) {
@@ -63,7 +73,7 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
       }
       return point;
     });
-  }, [profiles]);
+  }, [profiles, dimensionLabels]);
 
   if (profiles.length === 0) return null;
 
@@ -118,4 +128,4 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
   );
 }
 
-export { DIMENSION_LABELS, JUDGE_COLORS };
+export { useDimensionLabels, JUDGE_COLORS };

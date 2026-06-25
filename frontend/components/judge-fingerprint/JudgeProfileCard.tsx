@@ -4,12 +4,10 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { UserRound, Calendar, Scale, ExternalLink } from 'lucide-react';
 import { BaseCard, Badge } from '@/lib/styles/components';
-import { JudgeRadarChart, DIMENSION_LABELS } from './JudgeRadarChart';
+import { JudgeRadarChart, useDimensionLabels } from './JudgeRadarChart';
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
-import type { JudgeProfile, StyleScores } from '@/types/judge-fingerprint';
-
-/** Human-readable label for the dominant style */
-const STYLE_LABELS: Record<keyof StyleScores, string> = DIMENSION_LABELS;
+import { useTranslation } from '@/contexts/LanguageContext';
+import type { JudgeProfile } from '@/types/judge-fingerprint';
 
 interface JudgeProfileCardProps {
   profile: JudgeProfile;
@@ -17,6 +15,8 @@ interface JudgeProfileCardProps {
 
 export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
   const router = useRouter();
+  const { t, locale } = useTranslation();
+  const styleLabels = useDimensionLabels();
 
   const handleViewDocument = (documentId: string) => {
     const cleanId = cleanDocumentIdForUrl(documentId);
@@ -26,7 +26,7 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
   /** Format a date string to a locale-friendly display */
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('pl-PL', {
+      return new Date(dateStr).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -51,10 +51,10 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
               </h3>
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 <Badge variant="default" className="text-xs">
-                  {STYLE_LABELS[profile.dominant_style]}
+                  {styleLabels[profile.dominant_style]}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  Dominujacy styl
+                  {t('judgeFingerprint.dominantStyle')}
                 </span>
               </div>
             </div>
@@ -68,14 +68,14 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
               <Scale className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="text-xl font-bold text-primary">{profile.total_cases}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Spraw</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{t('judgeFingerprint.statCases')}</div>
           </div>
           <div className="text-center p-3 rounded-xl bg-primary/5">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Scale className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="text-xl font-bold text-primary">{profile.cases_analyzed}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">Przeanalizowanych</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{t('judgeFingerprint.statAnalyzed')}</div>
           </div>
           <div className="text-center p-3 rounded-xl bg-primary/5 col-span-2 sm:col-span-1">
             <div className="flex items-center justify-center gap-1 mb-1">
@@ -84,7 +84,7 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
             <div className="text-xs font-semibold text-primary">
               {formatDate(profile.period.first_case)}
             </div>
-            <div className="text-xs text-muted-foreground">do</div>
+            <div className="text-xs text-muted-foreground">{t('judgeFingerprint.periodTo')}</div>
             <div className="text-xs font-semibold text-primary">
               {formatDate(profile.period.last_case)}
             </div>
@@ -98,7 +98,7 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
         {profile.sample_cases.length > 0 && (
           <div className="space-y-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Przykladowe sprawy
+              {t('judgeFingerprint.sampleCases')}
             </span>
             <div className="space-y-1.5">
               {profile.sample_cases.slice(0, 5).map((sc) => (
@@ -113,7 +113,7 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-muted-foreground">{formatDate(sc.date)}</span>
                       <Badge variant="outline" className="text-xs">
-                        {STYLE_LABELS[sc.reasoning_pattern] ?? sc.reasoning_pattern}
+                        {styleLabels[sc.reasoning_pattern] ?? sc.reasoning_pattern}
                       </Badge>
                     </div>
                   </div>
