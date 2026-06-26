@@ -92,6 +92,10 @@ services:
     env_file:
       - .env
     environment:
+      # Enables strict prod env validation at startup (#191): missing REDIS_AUTH,
+      # LANGCHAIN_CACHE_DATABASE_URL/DATABASE_URL, or a Meilisearch key abort the
+      # boot instead of silently degrading. Ensure those are set in the prod .env.
+      - PYTHON_ENV=production
       # Internal service discovery for container-to-container communication
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700

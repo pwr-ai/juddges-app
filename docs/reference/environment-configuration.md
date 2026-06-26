@@ -197,6 +197,30 @@ grep -q "^\.env$" .gitignore || echo ".env" >> .gitignore
 - Use strong, random values for passwords and tokens
 - Consider using a secrets manager (AWS Secrets Manager, HashiCorp Vault) for production
 
+## Required vs Optional Variables (dev vs prod)
+
+`backend/app/server.py:validate_environment_variables` enforces this matrix at
+startup. `PYTHON_ENV=production` switches the stricter prod rules on.
+
+| Variable | Dev | Prod | Notes |
+|---|---|---|---|
+| `BACKEND_API_KEY` | **Required** | **Required** | Missing → startup aborts (`ValueError`) in any env. |
+| `OPENAI_API_KEY` | **Required** | **Required** | |
+| `SUPABASE_URL` | **Required** | **Required** | |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Required** | **Required** | |
+| `REDIS_AUTH` | Optional (silent) | **Required** | Prod startup aborts (`SystemExit`) if unset — guest sessions would run on an unauthenticated Redis. |
+| `LANGCHAIN_CACHE_DATABASE_URL` | Optional (silent) | **Required\*** | \*Satisfied by `DATABASE_URL` (the cache falls back to it). Prod aborts only if *both* are unset — a disabled LLM cache doubles OpenAI cost and adds latency. |
+| `MEILISEARCH_SEARCH_KEY` / `MEILISEARCH_ADMIN_KEY` | Optional (silent) | **Required if wired** | Prod aborts only when `MEILISEARCH_URL` is set but no key is configured. |
+| `DATABASE_URL` | Optional | Optional | Also the default source for the LLM cache (above). Without it the checkpointer falls back to in-memory. |
+| `REDIS_HOST` / `REDIS_PORT` | Optional | Optional | |
+| `MEILISEARCH_URL` / `MEILISEARCH_INDEX_NAME` | Optional | Optional | |
+| `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` | Optional | Optional | Observability only. |
+| `PYTHON_ENV` | Optional | Optional | Selects dev vs prod rules above (`production` enables strict mode). |
+
+Genuinely-optional misses log at **INFO** in dev (quiet local startup) and
+**WARNING** in prod (so real gaps are visible). Production-required misses are
+**fatal** — the process exits rather than silently degrading.
+
 ## See Also
 
 - `.env.example` - Complete reference of all configuration options

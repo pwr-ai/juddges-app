@@ -97,43 +97,41 @@ def validate_environment_variables():
         "SUPABASE_SERVICE_ROLE_KEY": "Supabase service role key (for database operations)",
     }
 
+    # Genuinely optional everywhere — absence is fine in dev and prod.
     optional_vars = {
         "DATABASE_URL": "PostgreSQL URL for persistent checkpointer state (falls back to in-memory)",
         "REDIS_HOST": "Redis host for guest sessions (default: localhost)",
         "REDIS_PORT": "Redis port for guest sessions (default: 6379)",
-        "REDIS_AUTH": "Redis password for guest sessions",
         "PYTHON_ENV": "Python environment (development/production)",
         "LANGFUSE_PUBLIC_KEY": "Langfuse public key (for observability)",
         "LANGFUSE_SECRET_KEY": "Langfuse secret key (for observability)",
         "LANGFUSE_HOST": "Langfuse host URL (for observability)",
         "MEILISEARCH_URL": "Meilisearch endpoint URL (for autocomplete search)",
-        "MEILISEARCH_SEARCH_KEY": "Meilisearch search key (preferred for query-only use)",
-        "MEILISEARCH_ADMIN_KEY": "Meilisearch admin key (fallback if search key not set)",
         "MEILISEARCH_INDEX_NAME": "Meilisearch index name (default: judgments)",
     }
 
-    missing_required = []
-    missing_optional = []
+    is_production = os.getenv("PYTHON_ENV", "development").lower() == "production"
+    # In dev these vars are nice-to-haves; in prod their absence is a real
+    # defect, so genuinely-optional misses log at WARNING there, INFO in dev.
+    optional_log = logger.warning if is_production else logger.info
 
-    # Check required variables
+    missing_required = []
+
+    # Check hard-required variables (every environment).
     for var_name, description in required_vars.items():
-        value = os.getenv(var_name)
-        if not value:
+        if not os.getenv(var_name):
             missing_required.append(f"  - {var_name}: {description}")
             logger.error(f"Missing required environment variable: {var_name}")
         else:
             logger.info(f"  {var_name}: configured")
 
-    # Check optional variables
-    for var_name, description in optional_vars.items():
-        value = os.getenv(var_name)
-        if not value:
-            missing_optional.append(f"  - {var_name}: {description}")
-            logger.warning(f"Optional environment variable not set: {var_name}")
+    # Check genuinely-optional variables — INFO in dev, WARNING in prod.
+    for var_name in optional_vars:
+        if not os.getenv(var_name):
+            optional_log(f"Optional environment variable not set: {var_name}")
         else:
             logger.info(f"  {var_name}: configured")
 
-    # Raise error if required variables are missing
     if missing_required:
         error_msg = "Missing required environment variables:\n" + "\n".join(
             missing_required
@@ -141,12 +139,35 @@ def validate_environment_variables():
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    if missing_optional:
-        warning_msg = (
-            "Missing optional environment variables (some features may be disabled):\n"
-            + "\n".join(missing_optional)
-        )
-        logger.warning(warning_msg)
+    # Production-required: optional in dev, but their absence in prod silently
+    # masks real problems (unauthenticated Redis, a disabled LLM cache that
+    # doubles OpenAI cost and adds latency, an unkeyed Meilisearch in the
+    # request path). Fail fast rather than warn.
+    if is_production:
+        prod_errors = []
+        if not os.getenv("REDIS_AUTH"):
+            prod_errors.append(
+                "  - REDIS_AUTH: Redis password (guest sessions run unauthenticated without it)"
+            )
+        if not (os.getenv("LANGCHAIN_CACHE_DATABASE_URL") or os.getenv("DATABASE_URL")):
+            prod_errors.append(
+                "  - LANGCHAIN_CACHE_DATABASE_URL (or DATABASE_URL): LLM cache DB "
+                "(a disabled cache doubles OpenAI cost and adds latency)"
+            )
+        if os.getenv("MEILISEARCH_URL") and not (
+            os.getenv("MEILISEARCH_SEARCH_KEY") or os.getenv("MEILISEARCH_ADMIN_KEY")
+        ):
+            prod_errors.append(
+                "  - MEILISEARCH_SEARCH_KEY or MEILISEARCH_ADMIN_KEY: Meilisearch is "
+                "wired in (MEILISEARCH_URL set) but no key is configured"
+            )
+        if prod_errors:
+            error_msg = (
+                "Missing production-required environment variables:\n"
+                + "\n".join(prod_errors)
+            )
+            logger.error(error_msg)
+            raise SystemExit(error_msg)
 
     logger.info("Environment variable validation completed successfully")
 
