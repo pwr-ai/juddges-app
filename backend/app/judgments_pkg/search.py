@@ -328,7 +328,7 @@ def _build_search_rpc_params(
         "filter_date_to": effective_filters["date_to"],
         # Lowered from 0.5 — that threshold was dropping legitimate semantic
         # matches for niche English landmark queries (e.g. "Woollin", "Jogee")
-        # whose 768-dim cosine similarity sits in the 0.2-0.4 band.
+        # whose 1024-dim cosine similarity sits in the 0.2-0.4 band.
         "similarity_threshold": 0.15,
         "hybrid_alpha": effective_alpha,
         "result_limit": limit,
