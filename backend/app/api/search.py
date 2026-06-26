@@ -150,8 +150,24 @@ class TopicsMetaResponse(BaseModel):
     jurisdictions: list[str]  # distinct jurisdictions in the index
 
 
+# Process-lifetime singleton, set by the app lifespan (#180). Sharing one
+# instance means one reused httpx connection pool across requests instead of a
+# fresh client + TLS handshake per call. ``None`` until the lifespan runs (e.g.
+# in unit tests that drive routes without startup), where we fall back to a
+# per-request ``from_env()`` so behaviour is unchanged.
+_search_service_singleton: MeiliSearchService | None = None
+
+
+def set_search_service_singleton(service: MeiliSearchService | None) -> None:
+    """Install (or clear) the shared search-service singleton. Called by lifespan."""
+    global _search_service_singleton
+    _search_service_singleton = service
+
+
 def get_search_service() -> MeiliSearchService:
-    """Dependency factory for autocomplete search service."""
+    """Dependency for the search service — shared singleton, else a fresh instance."""
+    if _search_service_singleton is not None:
+        return _search_service_singleton
     return MeiliSearchService.from_env()
 
 

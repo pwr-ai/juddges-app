@@ -847,3 +847,44 @@ class TestHybridFallbackSignal:
         assert _FALLBACK_SENTINEL not in result, (
             "Internal sentinel key must be stripped before the result is returned"
         )
+
+
+class TestSharedClientLifecycle:
+    """#180: the service reuses one httpx client and closes it on aclose()."""
+
+    @pytest.mark.asyncio
+    async def test_client_is_reused_across_calls(self, service):
+        c1 = service._client()
+        c2 = service._client()
+        assert c1 is c2, "shared client must be reused, not rebuilt per call"
+        await service.aclose()
+
+    @pytest.mark.asyncio
+    async def test_aclose_closes_and_allows_recreate(self, service):
+        c1 = service._client()
+        assert not c1.is_closed
+        await service.aclose()
+        assert c1.is_closed, "aclose() must close the shared client"
+        # A later call rebuilds a fresh, open client.
+        c2 = service._client()
+        assert c2 is not c1
+        assert not c2.is_closed
+        await service.aclose()
+
+    @pytest.mark.asyncio
+    async def test_aclose_is_idempotent_without_client(self, service):
+        # _client() never invoked — aclose() must be a safe no-op, twice.
+        await service.aclose()
+        await service.aclose()
+
+    @pytest.mark.asyncio
+    async def test_aclose_cascades_to_sub_services(self, service):
+        sub = MeiliSearchService(
+            base_url="http://meili:7700",
+            api_key="search-key",
+            index_name="topics",
+        )
+        sub_client = sub._client()
+        service._topics_service_instance = sub
+        await service.aclose()
+        assert sub_client.is_closed, "aclose() must cascade to cached sub-services"
