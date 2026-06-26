@@ -239,6 +239,10 @@ async def lifespan(app: FastAPI):
 
     # Step 6: Initialize Meilisearch indexes (optional — non-blocking)
     try:
+        # Process-lifetime singleton: shares one httpx connection pool across all
+        # search requests (#180). Installed for the get_search_service dependency
+        # and closed in the shutdown sequence below.
+        from app.api.search import set_search_service_singleton
         from app.services.meilisearch_config import (
             setup_meilisearch_index,
             setup_topics_meilisearch_index,
@@ -246,13 +250,16 @@ async def lifespan(app: FastAPI):
         from app.services.search import MeiliSearchService
 
         meili_service = MeiliSearchService.from_env()
+        app.state.meili_service = meili_service
+        set_search_service_singleton(meili_service)
         if meili_service.admin_configured:
             logger.info("Setting up Meilisearch judgments index...")
             await setup_meilisearch_index(meili_service)
 
-            topics_service = MeiliSearchService.topics_from_env()
+            # Reuse the singleton's cached topics sub-service so its client is
+            # torn down by the same aclose() cascade on shutdown.
             logger.info("Setting up Meilisearch topics index...")
-            await setup_topics_meilisearch_index(topics_service)
+            await setup_topics_meilisearch_index(meili_service._topics_service)
         else:
             logger.info("Meilisearch admin key not configured — skipping index setup")
     except Exception as e:
@@ -309,6 +316,16 @@ async def lifespan(app: FastAPI):
         close_embeddings_client()
     except Exception as e:
         logger.warning(f"Error during embeddings client cleanup: {e}")
+    # Close the shared Meilisearch client pool (#180).
+    meili_service = getattr(app.state, "meili_service", None)
+    if meili_service is not None:
+        try:
+            await meili_service.aclose()
+        except Exception as e:
+            logger.warning(f"Error during Meilisearch client cleanup: {e}")
+        from app.api.search import set_search_service_singleton
+
+        set_search_service_singleton(None)
     del app.state.checkpointer
     del app.state.agent
     logger.info("Application shutdown completed successfully")
