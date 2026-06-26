@@ -956,19 +956,19 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  .map(docId => documents.get(String(docId)))
  .filter(Boolean) as SearchDocument[];
 
- // Check for database errors: either has _isDatabaseError flag, or is error type with Weaviate-related summary
+ // Check for database errors: either has _isDatabaseError flag, or is error type with a database-related summary
  // Also check for documents with"ERROR"in title or document_id (common pattern for error documents)
  const databaseErrors = loadedDocuments.filter((doc: SearchDocument) => {
  if ((doc as any)._isDatabaseError) return true;
  if (doc.document_type === 'error') {
- // If summary mentions database-related issues, it's a Weaviate error
+ // If summary mentions database-related issues, it's a database error
  if (doc.summary?.toLowerCase().includes('source information cannot be loaded') ||
  doc.summary?.toLowerCase().includes('database') ||
  doc.summary?.toLowerCase().includes('database') ||
  doc.summary?.toLowerCase().includes('unavailable')) {
  return true;
  }
- // If document has"ERROR"in title and is error type, treat as Weaviate error
+ // If document has"ERROR"in title and is error type, treat as a database error
  // (since all error documents in collections are likely database-related)
  if (doc.title?.toUpperCase().includes('ERROR') || doc.document_id?.toUpperCase().includes('ERROR')) {
  return true;
