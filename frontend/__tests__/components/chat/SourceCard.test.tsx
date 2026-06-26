@@ -57,9 +57,8 @@ describe('SourceCard', () => {
       <SourceCard
         document={{
           ...baseDocument,
-          // Database errors are signalled by the `_isWeaviateError` /
-          // `_isDatabaseError` flags, not via a separate document_type.
-          _isWeaviateError: true,
+          // Database errors are signalled by the `_isDatabaseError` flag,
+          // not via a separate document_type.
           _isDatabaseError: true,
         } as any}
       />

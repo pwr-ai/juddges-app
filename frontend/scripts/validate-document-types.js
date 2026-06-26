@@ -24,7 +24,7 @@ const SEARCH_PATTERNS = {
     /document_type[\s]*=/, // Property access is OK
     /document_type\./, // Property access is OK
     /\.document_type/, // Property access is OK
-    /document_type:.*properties\.document_type/, // Weaviate mapping is OK
+    /document_type:.*properties\.document_type/, // schema property mapping is OK
     /documentType[\s]*:\s*DocumentType\b/, // Single document/example values are OK
     /documentType[\s]*\??:\s*string(?:\s*\|\s*null)?\b/, // DTO fields for one document are OK
     /documentType[\s]*:\s*documentType\b/, // Object literals forwarding one document field are OK
@@ -36,15 +36,15 @@ const SEARCH_PATTERNS = {
 function checkFile(filePath, content) {
   const errors = [];
   const warnings = [];
-  
+
   const lines = content.split('\n');
-  
+
   lines.forEach((line, index) => {
     const lineNum = index + 1;
-    
+
     // Check if line should be allowed (has legitimate singular usage)
     const isAllowed = SEARCH_PATTERNS.allowed.some(pattern => pattern.test(line));
-    
+
     if (!isAllowed) {
       // Check for forbidden patterns
       SEARCH_PATTERNS.forbidden.forEach(pattern => {
@@ -59,20 +59,20 @@ function checkFile(filePath, content) {
       });
     }
   });
-  
+
   return { errors, warnings };
 }
 
 function walkDirectory(dir, extensions = ['.ts', '.tsx', '.js', '.jsx']) {
   let results = [];
-  
+
   try {
     const files = fs.readdirSync(dir);
-    
+
     for (const file of files) {
       const filePath = path.join(dir, file);
       const stat = fs.statSync(filePath);
-      
+
       if (stat.isDirectory()) {
         // Skip node_modules and .next directories
         if (['node_modules', '.next', 'dist', 'build'].includes(file)) {
@@ -86,49 +86,49 @@ function walkDirectory(dir, extensions = ['.ts', '.tsx', '.js', '.jsx']) {
   } catch (error) {
     console.error(`Error reading directory ${dir}:`, error.message);
   }
-  
+
   return results;
 }
 
 function validateDocumentTypes() {
   console.log('🔍 Validating document types consistency...\n');
-  
+
   const files = walkDirectory(FRONTEND_ROOT);
   let totalErrors = 0;
   let totalWarnings = 0;
-  
+
   for (const filePath of files) {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       const { errors, warnings } = checkFile(filePath, content);
-      
+
       if (errors.length > 0 || warnings.length > 0) {
         console.log(`📁 ${path.relative(FRONTEND_ROOT, filePath)}`);
-        
+
         errors.forEach(error => {
           console.log(`  ❌ Line ${error.line}: ${error.issue}`);
           console.log(`     ${error.content}`);
           totalErrors++;
         });
-        
+
         warnings.forEach(warning => {
           console.log(`  ⚠️  Line ${warning.line}: ${warning.issue}`);
           console.log(`     ${warning.content}`);
           totalWarnings++;
         });
-        
+
         console.log('');
       }
     } catch (error) {
       console.error(`Error reading file ${filePath}:`, error.message);
     }
   }
-  
+
   console.log('📊 Summary:');
   console.log(`   Total files checked: ${files.length}`);
   console.log(`   Errors found: ${totalErrors}`);
   console.log(`   Warnings: ${totalWarnings}`);
-  
+
   if (totalErrors > 0) {
     console.log('\n❌ Validation failed. Please fix the errors above.');
     process.exit(1);

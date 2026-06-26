@@ -28,8 +28,8 @@ const JUDGMENT_TYPE_INFO = {
 export function SourceCard({ document, onSaveToCollection }: SourceCardProps) {
  const typeInfo = JUDGMENT_TYPE_INFO;
  const Icon = typeInfo.icon;
- // Document fetch errors are surfaced via the `_isWeaviateError` flag on the document.
- const isDocumentFetched = !document._isWeaviateError;
+ // Document fetch errors are surfaced via the `_isDatabaseError` flag on the document.
+ const isDocumentFetched = !(document as any)._isDatabaseError;
 
  // Avoid crashing on malformed dates from partially normalized documents.
  const formattedDate = (() => {

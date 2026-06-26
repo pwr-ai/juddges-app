@@ -23,43 +23,6 @@ export enum DocumentProcessingStatus {
   PARTIALLY_COMPLETED = 'partially_completed'
 }
 
-// Raw Weaviate document structure (matches the schema exactly)
-export interface WeaviateDocument {
-  document_id: string;
-  title: string | null;
-  date_issued: string | null;
-  document_number: string | null;
-  language: string | null;
-  country: string | null;
-  full_text: string | null;
-  summary: string | null;
-  thesis: string | null;
-  keywords: string[] | null;
-  issuing_body: string | null;
-  ingestion_date: string | null;
-  last_updated: string | null;
-  processing_status: string | null;
-  source_url: string | null;
-  legal_references: string | null;
-  parties: string | null;
-  outcome: string | null;
-  source: string | null;
-  metadata: string | null;
-  publication_date: string | null;
-  raw_content: string | null;
-  presiding_judge: string | null;
-  judges: string[] | null;
-  legal_bases: string[] | null;
-  court_name: string | null;
-  department_name: string | null;
-  extracted_legal_bases: string | null;
-  references: string[] | null;
-  x: number | null;
-  y: number | null;
-  factual_state: string | null;
-  legal_state: string | null;
-}
-
 // Frontend-friendly SearchDocument interface (for UI components)
 export interface SearchDocument {
   document_id: string;
@@ -127,8 +90,9 @@ export interface SearchDocument {
    * requested on /documents/{id} or /documents/batch. Otherwise undefined.
    */
   extraction_fields?: Record<string, unknown> | null;
-  // Error flag for Weaviate database errors
-  _isWeaviateError?: boolean;
+  // Error flag set by the frontend when a document's source row could not be
+  // loaded from the database (rendered as a warning in SourceCard).
+  _isDatabaseError?: boolean;
   // Highlighted HTML (with <mark>) from server-side search; rendered via QueryHighlight.
   highlighted?: {
     title?: string | null;
