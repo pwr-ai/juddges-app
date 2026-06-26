@@ -55,7 +55,7 @@ docker compose up -d                                  # prod (local build)
 Both are installed editable via Poetry (`develop = true`).
 
 ### Vector search
-Uses **Supabase pgvector** (`vector(768)` column on `judgments`, HNSW index). Some legacy code paths may still reference Weaviate (`WEAVIATE_*` env vars, imports) — these are unused; when touching vector code, verify it goes through pgvector.
+Uses **Supabase pgvector** (`vector(1024)` columns on `judgments` and `document_chunks`, HNSW index — BGE-M3 dimension; `EMBEDDER_DIMENSIONS` in `backend/app/services/meilisearch_embeddings.py` is the single source of truth, guarded by `backend/tests/app/test_embedding_dimension_contract.py`). Some legacy code paths may still reference Weaviate (`WEAVIATE_*` env vars, imports) — these are unused; when touching vector code, verify it goes through pgvector.
 
 ### FastAPI server (`backend/app/server.py`)
 Router-per-domain (`documents.py`, `collections.py`, `analytics.py`, `feedback.py`, …) registered with URL prefixes. LangServe exposes LangChain chains as HTTP endpoints. Celery handles async work; tasks live in `backend/app/workers.py`.

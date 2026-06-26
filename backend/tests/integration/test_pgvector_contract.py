@@ -45,6 +45,20 @@ def test_judgments_embedding_column_has_expected_dimension(db):
         )
 
 
+def test_document_chunks_embedding_column_has_expected_dimension(db):
+    """document_chunks.embedding must match EMBEDDING_DIMENSION (same space as judgments)."""
+    with db.cursor() as cur:
+        cur.execute(
+            "SELECT atttypmod FROM pg_attribute "
+            "WHERE attrelid = 'document_chunks'::regclass AND attname = 'embedding'"
+        )
+        row = cur.fetchone()
+        assert row is not None, "embedding column not found on document_chunks"
+        assert row[0] == EMBEDDING_DIM, (
+            f"document_chunks vector dim {row[0]} != EMBEDDING_DIMENSION ({EMBEDDING_DIM})"
+        )
+
+
 def test_hnsw_index_exists_on_judgments_embedding(db):
     """An HNSW index must exist on judgments.embedding for semantic search."""
     with db.cursor() as cur:
