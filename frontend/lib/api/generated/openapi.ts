@@ -8679,16 +8679,6 @@ export interface components {
          */
         DocumentRetrievalRequest: {
             /**
-             * Max Documents
-             * @description Deprecated: Not used in simplified endpoint
-             */
-            max_documents?: number | null;
-            /**
-             * Max Threshold
-             * @description Deprecated: Not used in simplified endpoint
-             */
-            max_threshold?: number | null;
-            /**
              * Mode
              * @description Retrieval mode
              * @default rabbit
@@ -8714,19 +8704,8 @@ export interface components {
              * @description Source documents for the chunks
              */
             documents: components["schemas"]["LegalDocument"][];
-            /**
-             * Pagination
-             * @description Pagination metadata
-             * @example {
-             *       "page": 1,
-             *       "page_size": 20,
-             *       "total_pages": 5,
-             *       "total_results": 100
-             *     }
-             */
-            pagination?: {
-                [key: string]: unknown;
-            };
+            /** @description Offset-based progressive-loading pagination metadata (mirrors the underlying search response). */
+            pagination?: components["schemas"]["PaginationMetadata"] | null;
             /**
              * Question
              * @description Question text or structured question input

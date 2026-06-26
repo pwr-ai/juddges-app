@@ -112,3 +112,47 @@ class TestDocumentExtractionRequest:
                 language="pl",
                 document_ids=["123"],
             )
+
+
+class TestDocumentRetrievalCleanup:
+    """#148: drop deprecated no-op request fields; type pagination as a model."""
+
+    def test_request_drops_deprecated_fields(self):
+        from app.models import DocumentRetrievalRequest
+
+        fields = set(DocumentRetrievalRequest.model_fields)
+        assert "max_documents" not in fields
+        assert "max_threshold" not in fields
+
+    def test_request_silently_ignores_legacy_fields(self):
+        # Removing the fields must not 422 old clients still sending them.
+        from app.models import DocumentRetrievalRequest
+
+        req = DocumentRetrievalRequest.model_validate(
+            {
+                "question": "q",
+                "mode": "rabbit",
+                "max_documents": 5,
+                "max_threshold": 100,
+            }
+        )
+        assert req.question == "q"
+        assert not hasattr(req, "max_documents")
+
+    def test_response_pagination_is_typed_model(self):
+        from app.models import DocumentRetrievalResponse, PaginationMetadata
+
+        ann = DocumentRetrievalResponse.model_fields["pagination"].annotation
+        # PaginationMetadata must appear in the (optional) annotation.
+        assert PaginationMetadata in getattr(ann, "__args__", (ann,))
+
+    def test_response_accepts_pagination_metadata(self):
+        from app.models import DocumentRetrievalResponse, PaginationMetadata
+
+        resp = DocumentRetrievalResponse(
+            question="q",
+            chunks=[],
+            documents=[],
+            pagination=PaginationMetadata(offset=0, limit=20, loaded_count=0),
+        )
+        assert isinstance(resp.pagination, PaginationMetadata)

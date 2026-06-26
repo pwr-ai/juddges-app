@@ -5007,32 +5007,6 @@
       "DocumentRetrievalRequest": {
         "description": "Request for simplified document search (legacy endpoint - no pagination or filtering).",
         "properties": {
-          "max_documents": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Deprecated: Not used in simplified endpoint",
-            "title": "Max Documents"
-          },
-          "max_threshold": {
-            "anyOf": [
-              {
-                "maximum": 1000.0,
-                "minimum": 10.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Deprecated: Not used in simplified endpoint",
-            "title": "Max Threshold"
-          },
           "mode": {
             "default": "rabbit",
             "description": "Retrieval mode",
@@ -5077,18 +5051,15 @@
             "type": "array"
           },
           "pagination": {
-            "additionalProperties": true,
-            "description": "Pagination metadata",
-            "examples": [
+            "anyOf": [
               {
-                "page": 1,
-                "page_size": 20,
-                "total_pages": 5,
-                "total_results": 100
+                "$ref": "#/components/schemas/PaginationMetadata"
+              },
+              {
+                "type": "null"
               }
             ],
-            "title": "Pagination",
-            "type": "object"
+            "description": "Offset-based progressive-loading pagination metadata (mirrors the underlying search response)."
           },
           "question": {
             "anyOf": [

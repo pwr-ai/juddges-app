@@ -81,16 +81,6 @@ class DocumentRetrievalRequest(BaseModel):
     mode: Literal["rabbit", "thinking"] = Field(
         description="Retrieval mode", default="rabbit"
     )
-    max_documents: int | None = Field(
-        description="Deprecated: Not used in simplified endpoint",
-        default=None,
-    )
-    max_threshold: int | None = Field(
-        description="Deprecated: Not used in simplified endpoint",
-        default=None,
-        ge=10,
-        le=1000,
-    )
 
 
 class DocumentRetrievalResponse(BaseModel):
@@ -105,10 +95,10 @@ class DocumentRetrievalResponse(BaseModel):
     documents: list[LegalDocument] = Field(
         description="Source documents for the chunks"
     )
-    pagination: dict = Field(
+    pagination: PaginationMetadata | None = Field(
         default=None,
-        description="Pagination metadata",
-        examples=[{"page": 1, "page_size": 20, "total_results": 100, "total_pages": 5}],
+        description="Offset-based progressive-loading pagination metadata "
+        "(mirrors the underlying search response).",
     )
 
 
