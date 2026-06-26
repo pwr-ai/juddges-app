@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse, urlunparse
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 import httpx
 from juddges_search.embeddings import embed_texts
@@ -113,6 +117,41 @@ class MeiliSearchService:
         # Lazily initialised on first access; ``None`` until then.
         self._topics_service_instance: MeiliSearchService | None = None
         self._suggestions_service_instance: MeiliSearchService | None = None
+        # Shared, process-lifetime httpx client. Lazily created on first request
+        # (inside the running event loop) so a connection pool is reused across
+        # calls instead of paying a fresh TLS handshake per Meili request (#180).
+        self._http: httpx.AsyncClient | None = None
+
+    def _client(self) -> httpx.AsyncClient:
+        """Return the shared httpx client, creating it on first use."""
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=self.timeout_seconds)
+        return self._http
+
+    @asynccontextmanager
+    async def _client_ctx(self) -> AsyncIterator[httpx.AsyncClient]:
+        """Yield the shared client without closing it.
+
+        Drop-in replacement for ``async with httpx.AsyncClient(...) as client``
+        that keeps the connection pool alive for the service's lifetime. The
+        pool is torn down once via :meth:`aclose` on app shutdown.
+        """
+        yield self._client()
+
+    async def aclose(self) -> None:
+        """Close the shared client and any lazily-created sub-service clients.
+
+        Wired into the FastAPI lifespan shutdown. Idempotent.
+        """
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
+        self._http = None
+        for sub in (
+            self._topics_service_instance,
+            self._suggestions_service_instance,
+        ):
+            if sub is not None:
+                await sub.aclose()
 
     @property
     def configured(self) -> bool:
@@ -240,7 +279,7 @@ class MeiliSearchService:
         """
         url = f"{self.base_url}/indexes/{self.index_name}/search"
         try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            async with self._client_ctx() as client:
                 response = await client.post(
                     url, json=payload, headers=self._search_headers()
                 )
@@ -389,7 +428,7 @@ class MeiliSearchService:
         url = f"{svc.base_url}/indexes/{svc.index_name}/search"
 
         try:
-            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+            async with svc._client_ctx() as client:
                 response = await client.post(
                     url, json=topics_payload, headers=svc._search_headers()
                 )
@@ -475,7 +514,7 @@ class MeiliSearchService:
 
         url = f"{svc.base_url}/indexes/{svc.index_name}/search"
         try:
-            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+            async with svc._client_ctx() as client:
                 response = await client.post(
                     url, json=payload, headers=svc._search_headers()
                 )
@@ -662,7 +701,7 @@ class MeiliSearchService:
         payload = {"facetName": facet_name, "facetQuery": query, "limit": limit}
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            async with self._client_ctx() as client:
                 response = await client.post(
                     url, json=payload, headers=self._search_headers()
                 )
@@ -679,7 +718,7 @@ class MeiliSearchService:
     async def health(self) -> dict[str, Any]:
         """Check Meilisearch server health (GET /health)."""
         url = f"{self.base_url}/health"
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.get(url)
             response.raise_for_status()
             return response.json()
@@ -687,7 +726,7 @@ class MeiliSearchService:
     async def index_exists(self) -> bool:
         """Check whether the index already exists (GET /indexes/{uid})."""
         url = f"{self.base_url}/indexes/{self.index_name}"
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.get(url, headers=self._admin_headers())
             return response.status_code == 200
 
@@ -699,7 +738,7 @@ class MeiliSearchService:
         url = f"{self.base_url}/indexes"
         payload = {"uid": self.index_name, "primaryKey": primary_key}
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.post(
                 url, json=payload, headers=self._admin_headers()
             )
@@ -715,7 +754,7 @@ class MeiliSearchService:
 
         url = f"{self.base_url}/indexes/{self.index_name}/settings"
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.patch(
                 url, json=settings, headers=self._admin_headers()
             )
@@ -736,7 +775,7 @@ class MeiliSearchService:
         if not self.admin_configured:
             raise SearchServiceError("Meilisearch admin key is not configured")
         url = f"{self.base_url}/indexes/{self.index_name}/settings/embedders"
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.patch(
                 url, json=embedders, headers=self._admin_headers()
             )
@@ -754,7 +793,7 @@ class MeiliSearchService:
         if not self.admin_configured:
             raise SearchServiceError("Meilisearch admin key is not configured")
         url = f"{self.base_url}/indexes/{self.index_name}/settings/embedders"
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.get(url, headers=self._admin_headers())
             response.raise_for_status()
             data = response.json()
@@ -772,9 +811,15 @@ class MeiliSearchService:
             f"/documents?primaryKey={primary_key}"
         )
 
-        async with httpx.AsyncClient(timeout=max(self.timeout_seconds, 30.0)) as client:
+        # Bulk upserts need a longer ceiling than the default search timeout;
+        # the shared client is built with ``self.timeout_seconds`` so override
+        # per-request here.
+        async with self._client_ctx() as client:
             response = await client.post(
-                url, json=documents, headers=self._admin_headers()
+                url,
+                json=documents,
+                headers=self._admin_headers(),
+                timeout=max(self.timeout_seconds, 30.0),
             )
             response.raise_for_status()
             return response.json()
@@ -786,7 +831,7 @@ class MeiliSearchService:
 
         url = f"{self.base_url}/indexes/{self.index_name}/documents/{document_id}"
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.delete(url, headers=self._admin_headers())
             response.raise_for_status()
             return response.json()
@@ -795,7 +840,7 @@ class MeiliSearchService:
         """Poll a Meilisearch async task by UID."""
         url = f"{self.base_url}/tasks/{task_uid}"
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.get(url, headers=self._admin_headers())
             response.raise_for_status()
             return response.json()
@@ -829,7 +874,7 @@ class MeiliSearchService:
         """Retrieve stats for the index (document count, indexing status, etc.)."""
         url = f"{self.base_url}/indexes/{self.index_name}/stats"
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.get(url, headers=self._admin_headers())
             response.raise_for_status()
             return response.json()
@@ -857,7 +902,7 @@ class MeiliSearchService:
         if filter_expr:
             params["filter"] = filter_expr
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.get(
                 url, params=params, headers=self._admin_headers()
             )
@@ -881,7 +926,7 @@ class MeiliSearchService:
         url = f"{self.base_url}/swap-indexes"
         payload = [{"indexes": [index_a, index_b]}]
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.post(
                 url, json=payload, headers=self._admin_headers()
             )
@@ -900,7 +945,7 @@ class MeiliSearchService:
         uid = index_uid if index_uid is not None else self.index_name
         url = f"{self.base_url}/indexes/{uid}"
 
-        async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+        async with self._client_ctx() as client:
             response = await client.delete(url, headers=self._admin_headers())
             # 202 = task enqueued; 404 = already gone (treat as success)
             if response.status_code not in (200, 202, 404):
@@ -942,7 +987,7 @@ class MeiliSearchService:
             stats_url = f"{svc.base_url}/indexes/{svc.index_name}/stats"
             search_url = f"{svc.base_url}/indexes/{svc.index_name}/search"
 
-            async with httpx.AsyncClient(timeout=svc.timeout_seconds) as client:
+            async with svc._client_ctx() as client:
                 # 1. Fetch document count from index stats
                 stats_response = await client.get(
                     stats_url, headers=svc._admin_headers()
