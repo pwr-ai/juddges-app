@@ -11,24 +11,8 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { useTranslation } from '@/contexts/LanguageContext';
 import type { JudgeProfile, StyleScores } from '@/types/judge-fingerprint';
-
-/**
- * Locale-aware labels for the five reasoning dimensions.
- * Reuses the `reasoning*` keys already defined for the page's "how it works"
- * section (`policy` maps to the "purposive" label).
- */
-function useDimensionLabels(): Record<keyof StyleScores, string> {
-  const { t } = useTranslation();
-  return {
-    textual: t('judgeFingerprint.reasoningTextual'),
-    deductive: t('judgeFingerprint.reasoningDeductive'),
-    analogical: t('judgeFingerprint.reasoningAnalogical'),
-    policy: t('judgeFingerprint.reasoningPurposive'),
-    teleological: t('judgeFingerprint.reasoningTeleological'),
-  };
-}
+import { useDimensionLabels } from './dimensionLabels';
 
 /** Color palette for up to 3 judges */
 const JUDGE_COLORS = [
@@ -128,4 +112,5 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
   );
 }
 
-export { useDimensionLabels, JUDGE_COLORS };
+export { JUDGE_COLORS };
+export { useDimensionLabels } from './dimensionLabels';
