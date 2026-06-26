@@ -250,6 +250,18 @@ class EmbeddingGenerator:
         return self.stats
 
 
+def _log_summary(stats: dict) -> None:
+    """Emit the embedding-generation summary through loguru (not bare print)."""
+    logger.info("=" * 50)
+    logger.info("EMBEDDING GENERATION SUMMARY")
+    logger.info("=" * 50)
+    logger.info(f"Total processed:  {stats['total_processed']}")
+    logger.info(f"Successful:       {stats['successful']}")
+    logger.info(f"Failed:           {stats['failed']}")
+    logger.info(f"Skipped:          {stats['skipped']}")
+    logger.info("=" * 50)
+
+
 async def main():
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(description="Generate embeddings for judgments")
@@ -290,15 +302,7 @@ async def main():
 
     stats = await generator.run(limit=args.limit)
 
-    # Print summary
-    print("\n" + "=" * 50)
-    print("EMBEDDING GENERATION SUMMARY")
-    print("=" * 50)
-    print(f"Total processed:  {stats['total_processed']}")
-    print(f"Successful:       {stats['successful']}")
-    print(f"Failed:           {stats['failed']}")
-    print(f"Skipped:          {stats['skipped']}")
-    print("=" * 50)
+    _log_summary(stats)
 
 
 if __name__ == "__main__":

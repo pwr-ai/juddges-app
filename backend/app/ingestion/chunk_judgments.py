@@ -470,6 +470,17 @@ class DocumentChunker:
         return self.stats
 
 
+def _log_summary(stats: dict) -> None:
+    """Emit the document-chunking summary through loguru (not bare print)."""
+    logger.info("=" * 50)
+    logger.info("DOCUMENT CHUNKING SUMMARY")
+    logger.info("=" * 50)
+    logger.info(f"Judgments processed: {stats['documents_processed']}")
+    logger.info(f"Chunks created:      {stats['chunks_created']}")
+    logger.info(f"Failed:              {stats['failed']}")
+    logger.info("=" * 50)
+
+
 async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -512,14 +523,7 @@ async def main():
 
     stats = await chunker.run(limit=args.limit)
 
-    # Print summary
-    print("\n" + "=" * 50)
-    print("DOCUMENT CHUNKING SUMMARY")
-    print("=" * 50)
-    print(f"Judgments processed: {stats['documents_processed']}")
-    print(f"Chunks created:      {stats['chunks_created']}")
-    print(f"Failed:              {stats['failed']}")
-    print("=" * 50)
+    _log_summary(stats)
 
 
 if __name__ == "__main__":

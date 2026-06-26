@@ -391,3 +391,23 @@ class TestSectionPatterns:
             assert isinstance(pattern[0], str)
             assert isinstance(pattern[1], str)
             assert isinstance(pattern[2], bool)
+
+
+def test_log_summary_emits_via_loguru_not_print(capsys):
+    """#172: the run summary must go through loguru, not bare print()."""
+    from loguru import logger
+
+    from app.ingestion.chunk_judgments import _log_summary
+
+    captured: list[str] = []
+    sink_id = logger.add(lambda m: captured.append(str(m)), level="INFO")
+    try:
+        _log_summary({"documents_processed": 5, "chunks_created": 42, "failed": 1})
+    finally:
+        logger.remove(sink_id)
+
+    blob = " ".join(captured)
+    assert "DOCUMENT CHUNKING SUMMARY" in blob
+    assert "Judgments processed" in blob and "5" in blob
+    assert "Chunks created" in blob and "42" in blob
+    assert capsys.readouterr().out == ""
