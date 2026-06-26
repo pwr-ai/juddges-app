@@ -240,3 +240,26 @@ class TestConstants:
             "failed": 0,
             "skipped": 0,
         }
+
+
+def test_log_summary_emits_via_loguru_not_print(capsys):
+    """#172: the run summary must go through loguru, not bare print()."""
+    from loguru import logger
+
+    from app.ingestion.embed_documents import _log_summary
+
+    captured: list[str] = []
+    sink_id = logger.add(lambda m: captured.append(str(m)), level="INFO")
+    try:
+        _log_summary(
+            {"total_processed": 10, "successful": 8, "failed": 1, "skipped": 1}
+        )
+    finally:
+        logger.remove(sink_id)
+
+    blob = " ".join(captured)
+    assert "EMBEDDING GENERATION SUMMARY" in blob
+    assert "Total processed" in blob and "10" in blob
+    assert "Successful" in blob and "8" in blob
+    # Nothing leaked to stdout via print().
+    assert capsys.readouterr().out == ""
