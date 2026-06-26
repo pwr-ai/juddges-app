@@ -78,3 +78,41 @@ class TestSetupLangchainCache:
 
         # Should NOT raise
         setup_langchain_cache()
+
+
+@pytest.mark.unit
+class TestLangchainCacheDatabaseUrlFallback:
+    """#191: cache falls back to DATABASE_URL when its own var is unset."""
+
+    @patch("app.langchain_cache.set_llm_cache")
+    @patch("app.langchain_cache.SQLAlchemyMd5Cache")
+    @patch("app.langchain_cache.create_engine")
+    def test_falls_back_to_database_url(
+        self, mock_engine, mock_cache_cls, mock_set, monkeypatch
+    ):
+        monkeypatch.delenv("LANGCHAIN_CACHE_DATABASE_URL", raising=False)
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/main")
+
+        from app.langchain_cache import setup_langchain_cache
+
+        setup_langchain_cache()
+
+        mock_engine.assert_called_once_with("postgresql://u:p@localhost:5432/main")
+        mock_set.assert_called_once()
+
+    @patch("app.langchain_cache.set_llm_cache")
+    @patch("app.langchain_cache.SQLAlchemyMd5Cache")
+    @patch("app.langchain_cache.create_engine")
+    def test_explicit_var_takes_precedence_over_database_url(
+        self, mock_engine, mock_cache_cls, mock_set, monkeypatch
+    ):
+        monkeypatch.setenv(
+            "LANGCHAIN_CACHE_DATABASE_URL", "postgresql://u:p@cache-host:5432/cache"
+        )
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@main-host:5432/main")
+
+        from app.langchain_cache import setup_langchain_cache
+
+        setup_langchain_cache()
+
+        mock_engine.assert_called_once_with("postgresql://u:p@cache-host:5432/cache")

@@ -29,10 +29,15 @@ def setup_langchain_cache() -> None:
         Exception: If cache setup fails (logged but not raised to prevent app crash)
     """
     try:
-        database_url = os.getenv("LANGCHAIN_CACHE_DATABASE_URL")
+        # Default to the app's primary DATABASE_URL so the LLM cache works out
+        # of the box; teams can still point it at a separate DB when wanted.
+        database_url = os.getenv("LANGCHAIN_CACHE_DATABASE_URL") or os.getenv(
+            "DATABASE_URL"
+        )
         if not database_url:
             logger.warning(
-                "LANGCHAIN_CACHE_DATABASE_URL not set — skipping cache setup"
+                "Neither LANGCHAIN_CACHE_DATABASE_URL nor DATABASE_URL set — "
+                "skipping LLM cache setup"
             )
             return
 
