@@ -121,22 +121,38 @@ export default defineConfig({
       testMatch: /auth\.setup\.ts$/,
     },
 
+    /*
+     * Backend-free UI smoke (#171). No `setup` dependency — runs
+     * unauthenticated against a frontend started with placeholder Supabase env.
+     * This is the subset gated on every PR (`npm run test:e2e:smoke`). The
+     * authenticated projects below ignore the smoke dir so the full dispatch
+     * suite does not re-run it.
+     */
+    {
+      name: 'chromium-ui-smoke',
+      testMatch: /smoke\/.*\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
+      testIgnore: /smoke\//,
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
       dependencies: ['setup'],
+      testIgnore: /smoke\//,
     },
 
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
       dependencies: ['setup'],
+      testIgnore: /smoke\//,
     },
 
     /* Test against mobile viewports. */
@@ -144,11 +160,13 @@ export default defineConfig({
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
       dependencies: ['setup'],
+      testIgnore: /smoke\//,
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
       dependencies: ['setup'],
+      testIgnore: /smoke\//,
     },
 
     /* Test against branded browsers. */
