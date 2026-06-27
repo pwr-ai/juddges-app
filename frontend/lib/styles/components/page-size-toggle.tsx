@@ -27,8 +27,6 @@ export function PageSizeToggle({
               key={size}
               size="sm"
               onClick={() => onChange(size)}
-              enhancedHover={true}
-              enhancedFocus={true}
               enhancedActive={true}
               className="h-9 min-w-[44px] px-3"
             >

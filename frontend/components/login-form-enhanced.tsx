@@ -345,8 +345,6 @@ export function LoginFormEnhanced({
               disabled={isLoading}
               icon={isLoading ? undefined : ArrowRight}
               size="md"
-              enhancedHover
-              enhancedFocus
               aria-label={isLoading ? 'Signing in...' : 'Sign in'}
             >
               {isLoading ? (

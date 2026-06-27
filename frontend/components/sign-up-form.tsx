@@ -54,7 +54,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       <div className="flex justify-center mb-2">
         <Logo size="lg" />
       </div>
-      
+
       <LightCard padding="lg">
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-2">Sign up</h2>
@@ -108,8 +108,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 disabled={isLoading}
                 icon={isLoading ? undefined : UserPlus}
                 size="md"
-                enhancedHover
-                enhancedFocus
                 aria-label={isLoading ? 'Creating account...' : 'Sign up'}
               >
                 {isLoading ? (
@@ -130,7 +128,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
             </div>
           </form>
       </LightCard>
-      
+
       {/* Terms and Privacy - Outside the card */}
       <div className="text-center text-xs text-muted-foreground">
         By signing up, you agree to our{' '}
