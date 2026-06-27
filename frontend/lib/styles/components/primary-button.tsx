@@ -36,36 +36,6 @@ export interface PrimaryButtonProps {
  /** Button size */
  size?: "sm"|"md"|"lg"|"xl";
  /**
- * Enhanced hover visibility - makes hover effects more prominent
- *
- * Recommended for primary actions like"Search","Submit","Create".
- *
- * Effects:
- * - Larger lift effect (scale 1.08 + -translate-y-1.5)
- * - Stronger shadow (shadow-2xl with primary/50 glow)
- * - More visible border (border-primary/80)
- * - Stronger ring (ring-primary/40)
- *
- * @default false
- * @see {@link /frontend/lib/styles/components/ENHANCEMENT_PATTERN_GUIDE.md}
- */
- enhancedHover?: boolean;
- /**
- * Enhanced focus visibility - makes focus ring larger and more visible
- *
- * Critical for primary buttons in forms and important user flows.
- *
- * Effects:
- * - Extra large focus ring (ring-4 vs ring-2)
- * - Higher visibility (primary/90 vs primary)
- * - Larger offset (offset-4 vs offset-2)
- * - Strong shadow (shadow-xl with primary/60 glow)
- *
- * @default false
- * @see {@link /frontend/lib/styles/components/ENHANCEMENT_PATTERN_GUIDE.md}
- */
- enhancedFocus?: boolean;
- /**
  * Enhanced active visibility - makes active state more visible
  *
  * Provides clear feedback that the primary action is being executed.
@@ -116,8 +86,6 @@ export function PrimaryButton({
  isLoading = false,
  loadingText,
  size ="md",
- enhancedHover: _enhancedHover = false,
- enhancedFocus: _enhancedFocus = false,
  enhancedActive = false,
  href,
 }: PrimaryButtonProps): React.JSX.Element {
