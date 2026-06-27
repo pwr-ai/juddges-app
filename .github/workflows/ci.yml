@@ -277,6 +277,11 @@ jobs:
     # repeatedly). Tag must track the @playwright/test version in package.json.
     container:
       image: mcr.microsoft.com/playwright:v1.59.0-jammy
+    # The container's default shell is `sh` (dash), which doesn't do `{1..60}`
+    # brace expansion — force bash (present in the image) for all run steps.
+    defaults:
+      run:
+        shell: bash
     # Cap total time so any future stuck step fails fast on a PR instead of
     # hanging the runner.
     timeout-minutes: 12
