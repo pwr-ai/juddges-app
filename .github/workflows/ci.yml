@@ -272,8 +272,13 @@ jobs:
     name: Frontend E2E Smoke (UI-only)
     runs-on: ubuntu-latest
     needs: [frontend-build]
-    # Cap total time so a stuck step (e.g. a slow apt mirror) fails fast on a PR
-    # instead of hanging the runner.
+    # Run in the official Playwright image so chromium + its system deps are
+    # PRE-INSTALLED — no browser download step (that download hung the runner
+    # repeatedly). Tag must track the @playwright/test version in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.59.0-jammy
+    # Cap total time so any future stuck step fails fast on a PR instead of
+    # hanging the runner.
     timeout-minutes: 12
     # Backend-free UI smoke (#171): runs on every PR (and manual dispatch) to
     # catch build/render regressions pre-merge. The full multi-browser + API
@@ -299,14 +304,6 @@ jobs:
         with:
           name: frontend-build
           path: frontend/
-
-      # chromium only, and WITHOUT `--with-deps`: the GitHub ubuntu-latest image
-      # already ships chromium's shared libs, and the apt step `--with-deps`
-      # triggers can hang on a slow mirror. If a launch later fails on a missing
-      # lib, re-add `--with-deps`.
-      - name: Install Playwright browser (chromium)
-        working-directory: frontend
-        run: npx playwright install chromium
 
       - name: Start frontend (background)
         working-directory: frontend
