@@ -66,6 +66,7 @@ describe('button className baseline (#144)', () => {
 
   describe('TextButton', () => {
     it('default', () => expect(classOf(<TextButton>x</TextButton>)).toMatchSnapshot());
+    it('disabled', () => expect(classOf(<TextButton disabled>x</TextButton>)).toMatchSnapshot());
   });
 
   describe('IconButton', () => {
@@ -75,5 +76,6 @@ describe('button className baseline (#144)', () => {
 
   describe('GlassButton', () => {
     it('default', () => expect(classOf(<GlassButton>x</GlassButton>)).toMatchSnapshot());
+    it('white', () => expect(classOf(<GlassButton variant="white">x</GlassButton>)).toMatchSnapshot());
   });
 });

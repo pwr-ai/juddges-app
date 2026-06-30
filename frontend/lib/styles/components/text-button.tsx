@@ -7,7 +7,7 @@
 "use client";
 
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { textButtonClassName } from './button-variants';
 
 /**
  * Props for TextButton component
@@ -66,18 +66,7 @@ export function TextButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={cn(
-        "flex items-center gap-2",
-        "text-sm font-medium",
-        "text-muted-foreground hover:text-foreground",
-        "active:opacity-80",
-        "transition-colors duration-200",
-        "group",
-        // Focus state for accessibility
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-        disabled && "opacity-50 cursor-not-allowed",
-        className
-      )}
+      className={textButtonClassName(disabled, className)}
     >
       {Icon && iconPosition === "left" && (
         <Icon className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-200" />
