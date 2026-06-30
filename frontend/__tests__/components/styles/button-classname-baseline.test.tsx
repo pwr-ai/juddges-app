@@ -48,6 +48,8 @@ describe('button className baseline (#144)', () => {
     }
     it('disabled', () => expect(classOf(<PrimaryButton disabled>x</PrimaryButton>)).toMatchSnapshot());
     it('with icon', () => expect(classOf(<PrimaryButton icon={Icon}>x</PrimaryButton>)).toMatchSnapshot());
+    it('size=xl', () => expect(classOf(<PrimaryButton size="xl">x</PrimaryButton>)).toMatchSnapshot());
+    it('extraction variant', () => expect(classOf(<PrimaryButton>Start Extraction</PrimaryButton>)).toMatchSnapshot());
   });
 
   describe('SecondaryButton', () => {
@@ -56,6 +58,7 @@ describe('button className baseline (#144)', () => {
     }
     it('enhancedHover', () => expect(classOf(<SecondaryButton enhancedHover>x</SecondaryButton>)).toMatchSnapshot());
     it('enhancedFocus', () => expect(classOf(<SecondaryButton enhancedFocus>x</SecondaryButton>)).toMatchSnapshot());
+    it('enhancedActive', () => expect(classOf(<SecondaryButton enhancedActive>x</SecondaryButton>)).toMatchSnapshot());
   });
 
   describe('AccentButton', () => {
@@ -72,6 +75,13 @@ describe('button className baseline (#144)', () => {
   describe('IconButton', () => {
     it('default', () => expect(classOf(<IconButton icon={Icon} aria-label="x" />)).toMatchSnapshot());
     it('enhancedHover', () => expect(classOf(<IconButton icon={Icon} aria-label="x" enhancedHover />)).toMatchSnapshot());
+    it('variant=primary', () => expect(classOf(<IconButton icon={Icon} aria-label="x" variant="primary" />)).toMatchSnapshot());
+    it('variant=error', () => expect(classOf(<IconButton icon={Icon} aria-label="x" variant="error" />)).toMatchSnapshot());
+    it('hoverStyle=color', () => expect(classOf(<IconButton icon={Icon} aria-label="x" hoverStyle="color" />)).toMatchSnapshot());
+    it('enhancedActive', () => expect(classOf(<IconButton icon={Icon} aria-label="x" enhancedActive />)).toMatchSnapshot());
+    it('enhancedFocus', () => expect(classOf(<IconButton icon={Icon} aria-label="x" enhancedFocus />)).toMatchSnapshot());
+    it('disabled', () => expect(classOf(<IconButton icon={Icon} aria-label="x" disabled />)).toMatchSnapshot());
+    it('compact lg', () => expect(classOf(<IconButton icon={Icon} aria-label="x" compact size="lg" />)).toMatchSnapshot());
   });
 
   describe('GlassButton', () => {
