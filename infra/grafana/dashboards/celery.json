@@ -1,0 +1,39 @@
+{
+  "uid": "juddges-celery",
+  "title": "Juddges \u2014 Celery",
+  "tags": [
+    "juddges",
+    "placeholder"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Status",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "# Juddges \u2014 Celery \u2014 not yet wired up\n\n**Blocked:** No Celery/broker metrics are exported (no celery-exporter, no Flower-to-Prometheus bridge).\n\n### Intended tiles\n- Queue depth per queue\n- Task duration histogram by task name\n- Failure rate / retry rate\n\n### What it needs\nStand up celery-exporter (or scrape Redis broker length) into Prometheus, then wire panels to it. Follow-up to #196.\n\n_This placeholder is committed so the dashboard set is complete and reviewable; it renders cleanly (text only) and carries no panels that would error against a datasource that does not exist yet._"
+      }
+    }
+  ]
+}

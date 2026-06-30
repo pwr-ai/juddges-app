@@ -1,0 +1,32 @@
+# Grafana file-based datasource provisioning — Supabase Postgres.
+#
+# Values are templated from environment variables so no secrets live in the
+# repo. Grafana expands ${VAR} at load time (Grafana >= 7.1).
+#
+# Required env on the Grafana host:
+#   SUPABASE_DB_HOST   e.g. db.<project>.supabase.co  (or the pooler host)
+#   SUPABASE_DB_PORT   5432 (direct) or 6543 (transaction pooler)
+#   SUPABASE_DB_NAME   postgres
+#   SUPABASE_DB_USER   a read-only role is strongly recommended (see README)
+#   SUPABASE_DB_PASSWORD
+apiVersion: 1
+
+datasources:
+  - name: Supabase
+    uid: supabase
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: ${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}
+    user: ${SUPABASE_DB_USER}
+    database: ${SUPABASE_DB_NAME}
+    isDefault: true
+    jsonData:
+      sslmode: require
+      postgresVersion: 1500
+      timescaledb: false
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+    secureJsonData:
+      password: ${SUPABASE_DB_PASSWORD}
+    editable: false
