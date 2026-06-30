@@ -20,7 +20,7 @@ import { render } from '@testing-library/react';
 import {
   PrimaryButton,
   SecondaryButton,
-  AccentButton,
+  VariantButton,
   TextButton,
   IconButton,
   GlassButton,
@@ -63,7 +63,7 @@ describe('button className baseline (#144)', () => {
 
   describe('AccentButton', () => {
     for (const size of SIZES) {
-      it(`size=${size}`, () => expect(classOf(<AccentButton size={size}>x</AccentButton>)).toMatchSnapshot());
+      it(`size=${size}`, () => expect(classOf(<VariantButton intent="accent" size={size}>x</VariantButton>)).toMatchSnapshot());
     }
   });
 

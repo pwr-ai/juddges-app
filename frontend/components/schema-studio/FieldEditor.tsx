@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, AlertCircle, Type, Hash, ToggleLeft, List, Calendar, ListChecks } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PrimaryButton, SecondaryButton, AccentButton, BaseCard, LightCard, SectionHeader } from "@/lib/styles/components";
+import { PrimaryButton, SecondaryButton, BaseCard, LightCard, SectionHeader } from "@/lib/styles/components";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { SchemaField, ValidationRules } from "@/hooks/schema-editor/types";
