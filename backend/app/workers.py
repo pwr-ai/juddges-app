@@ -40,6 +40,13 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL")
 
 celery_app = Celery(PROJECT_NAME, broker=BROKER_URL, backend=BACKEND_URL)
 
+# Initialize Sentry in the worker/beat processes too (not just the FastAPI
+# server). With CeleryIntegration this captures exceptions raised inside tasks.
+# No-op when SENTRY_DSN is unset, so dev/CI/test collection is unaffected.
+from app.sentry import init_sentry  # noqa: E402
+
+init_sentry()
+
 # Explicitly register task modules so the worker knows about them.
 # NOTE: autodiscover_tasks(["app.tasks"]) only finds ``app.tasks.tasks``
 # (a file named tasks.py), not arbitrarily named modules like

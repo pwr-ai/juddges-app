@@ -1,0 +1,39 @@
+{
+  "uid": "juddges-web-vitals",
+  "title": "Juddges \u2014 Web Vitals",
+  "tags": [
+    "juddges",
+    "placeholder"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Status",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "# Juddges \u2014 Web Vitals \u2014 not yet wired up\n\n**Blocked:** The app_events table does not exist yet (its creation is a separate, not-yet-landed issue).\n\n### Intended tiles\n- LCP / INP / CLS p75\n- Per-route breakdown\n\n### What it needs\nLand the app_events table + frontend track() wrapper, then add SQL panels computing p75 per metric/route. Follow-up to #196.\n\n_This placeholder is committed so the dashboard set is complete and reviewable; it renders cleanly (text only) and carries no panels that would error against a datasource that does not exist yet._"
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "uid": "juddges-api-health",
+  "title": "Juddges \u2014 API Health",
+  "tags": [
+    "juddges",
+    "placeholder"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Status",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "# Juddges \u2014 API Health \u2014 not yet wired up\n\n**Blocked:** No Prometheus/OpenTelemetry instrumentation exists in the FastAPI app yet (no /metrics endpoint).\n\n### Intended tiles\n- Request rate by route (5m)\n- Latency p50 / p95 / p99\n- 4xx / 5xx rate by route\n- Error-budget burn (once an SLO is defined)\n\n### What it needs\nAdd a Prometheus exporter (e.g. prometheus-fastapi-instrumentator) + a Prometheus datasource, OR log request metrics to a Postgres table this dashboard can query. Track under a follow-up to #196.\n\n_This placeholder is committed so the dashboard set is complete and reviewable; it renders cleanly (text only) and carries no panels that would error against a datasource that does not exist yet._"
+      }
+    }
+  ]
+}

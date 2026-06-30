@@ -1,0 +1,17 @@
+# File-based dashboard provisioning. Grafana watches the path below and loads
+# every *.json dashboard it finds — dashboards are versioned in git, never
+# clicked-through in the UI.
+apiVersion: 1
+
+providers:
+  - name: juddges
+    orgId: 1
+    folder: Juddges
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      # Mount infra/grafana/dashboards here on the Grafana host.
+      path: /etc/grafana/provisioning/dashboards/juddges
+      foldersFromFilesStructure: false
