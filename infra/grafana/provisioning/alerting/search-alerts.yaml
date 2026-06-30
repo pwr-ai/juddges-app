@@ -1,0 +1,47 @@
+# Grafana unified-alerting provisioning. Defines the one "live" alert the data
+# currently supports: search p95 latency sustained above 2s. Routing
+# (Slack/PagerDuty) is intentionally out of scope — this rule fires to the
+# default contact point until a notification policy is added separately.
+#
+# Adjust folderUid / the orgId if your Grafana uses a different folder than the
+# "Juddges" dashboard folder created by the dashboard provider.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: juddges-search
+    folder: Juddges
+    interval: 1m
+    rules:
+      - uid: juddges-search-p95
+        title: Search p95 latency > 2s
+        condition: THRESHOLD
+        for: 10m
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          summary: Search p95 processing time has exceeded 2000ms for 10 minutes.
+        labels:
+          service: search
+          severity: warning
+        data:
+          - refId: QUERY
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: supabase
+            model:
+              refId: QUERY
+              format: table
+              rawSql: >
+                SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY processing_ms) AS p95_ms
+                FROM search_analytics
+                WHERE created_at > now() - interval '10 minutes'
+                  AND processing_ms IS NOT NULL
+          - refId: THRESHOLD
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: THRESHOLD
+              type: threshold
+              expression: QUERY
+              conditions:
+                - evaluator: { type: gt, params: [2000] }

@@ -1,0 +1,108 @@
+{
+  "uid": "juddges-search",
+  "title": "Juddges — Search",
+  "tags": ["juddges", "search"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": { "from": "now-7d", "to": "now" },
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Search volume",
+      "description": "Searches over time (from search_analytics).",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "supabase" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 40 }, "unit": "short" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroup(created_at, '1h') AS time, count(*) AS searches FROM search_analytics WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Zero-result rate",
+      "description": "Share of searches that returned no hits (hit_count = 0) over the selected range.",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "supabase" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 25 } ] }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "background" },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT 100.0 * avg((hit_count = 0)::int) AS zero_result_pct FROM search_analytics WHERE $__timeFilter(created_at)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Searches (range)",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "supabase" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value" },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS total FROM search_analytics WHERE $__timeFilter(created_at)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Search latency p50 / p95 / p99 (ms)",
+      "description": "Server-side processing_ms percentiles. Drives the 'search p95 > 2s' alert.",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "supabase" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 }, "unit": "ms" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroup(created_at, '1h') AS time, percentile_cont(0.50) WITHIN GROUP (ORDER BY processing_ms) AS p50, percentile_cont(0.95) WITHIN GROUP (ORDER BY processing_ms) AS p95, percentile_cont(0.99) WITHIN GROUP (ORDER BY processing_ms) AS p99 FROM search_analytics WHERE $__timeFilter(created_at) AND processing_ms IS NOT NULL GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Top 20 queries (range)",
+      "description": "Most frequent queries with average latency and zero-result share.",
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "supabase" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT query, count(*) AS searches, round(avg(processing_ms)) AS avg_ms, round(100.0 * avg((hit_count = 0)::int), 1) AS zero_pct FROM search_analytics WHERE $__timeFilter(created_at) GROUP BY query ORDER BY searches DESC LIMIT 20"
+        }
+      ]
+    }
+  ]
+}

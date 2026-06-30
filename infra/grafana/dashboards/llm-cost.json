@@ -1,0 +1,39 @@
+{
+  "uid": "juddges-llm-cost",
+  "title": "Juddges \u2014 LLM Cost",
+  "tags": [
+    "juddges",
+    "placeholder"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Status",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "# Juddges \u2014 LLM Cost \u2014 not yet wired up\n\n**Blocked:** Token/cost figures live in Langfuse; no Prometheus/SQL export is wired up. LangChain cache hit-rate also depends on the LANGCHAIN_CACHE_DATABASE_URL issue landing.\n\n### Intended tiles\n- OpenAI tokens/day by model\n- Cost/day estimate\n- LangChain cache hit rate (blocked on cache env-var issue)\n\n### What it needs\nExport Langfuse usage to Postgres (scheduled sync) or enable Langfuse's Prometheus endpoint, then point panels at it. Follow-up to #196.\n\n_This placeholder is committed so the dashboard set is complete and reviewable; it renders cleanly (text only) and carries no panels that would error against a datasource that does not exist yet._"
+      }
+    }
+  ]
+}
