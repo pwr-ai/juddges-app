@@ -8,8 +8,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { PRIMARY_GRADIENT, PRIMARY_GRADIENT_HOVER } from '@/lib/button-utils';
+import { primaryButtonClassName } from './button-variants';
 
 import Link from 'next/link';
 
@@ -89,41 +88,16 @@ export function PrimaryButton({
  enhancedActive = false,
  href,
 }: PrimaryButtonProps): React.JSX.Element {
- const sizeClasses = {
- sm: "h-9 px-6 rounded-xl text-sm",
- md: "h-12 px-8 rounded-xl text-base",
- lg: "h-14 px-10 rounded-2xl text-base",
- xl: "h-16 px-10 rounded-2xl text-base",
- };
-
  const isDisabled = disabled || isLoading;
 
  // Check if this is a"Start Extraction"button for enhanced glassmorphism 2.0
  const isExtractionButton = typeof children === 'string' && children.includes('Start Extraction');
 
- const commonClasses = cn(
- PRIMARY_GRADIENT,
- PRIMARY_GRADIENT_HOVER,
-"group relative overflow-hidden inline-flex items-center justify-center",
- sizeClasses[size],
-"font-semibold",
-"text-white",
-"shadow-lg hover:shadow-xl",
-"transition-all duration-300",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- isDisabled &&"opacity-70 cursor-not-allowed",
- // Enhanced glassmorphism 2.0 for extraction buttons - darker blue, subtle gradients, more transparency, less glow
- isExtractionButton && [
-"backdrop-blur-[40px] backdrop-saturate-[220%]",
-"bg-gradient-to-r from-blue-700/70 via-blue-600/70 to-indigo-700/70",
-"shadow-[0_0_0_1px_rgba(255,255,255,0.9),0_8px_32px_rgba(30,58,138,0.2),0_4px_16px_rgba(30,58,138,0.15),inset_0_1px_0_rgba(255,255,255,1)]",
-"hover:from-blue-700/75 hover:via-blue-600/75 hover:to-indigo-700/75",
-"hover:shadow-[0_0_0_1px_rgba(255,255,255,1),0_8px_32px_rgba(30,58,138,0.25),0_4px_16px_rgba(30,58,138,0.2),inset_0_1px_0_rgba(255,255,255,1)]",
-"hover:-translate-y-0.5",
-"",
-"",
- ],
- className
+ const commonClasses = primaryButtonClassName(
+ size,
+ isDisabled,
+ isExtractionButton,
+ className,
  );
 
  const content = (

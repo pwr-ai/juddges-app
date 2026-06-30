@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { iconButtonClassName } from './button-variants';
 
 /**
  * Props for IconButton component
@@ -145,61 +146,11 @@ export function IconButton({
  disableHover = false,
  ...rest
 }: IconButtonProps & React.ButtonHTMLAttributes<HTMLButtonElement>): React.JSX.Element {
- const sizeClasses = {
- sm: compact ? "p-1 h-11 w-11": "p-2 h-11 w-11", // Minimum 44x44px touch target (h-11 w-11 = 44px)
- md: compact ? "p-1 h-11 w-11": "p-1.5 h-11 w-11", // Minimum 44x44px touch target (h-11 w-11 = 44px)
- lg: compact ? "p-1.5 h-11 w-11": "p-2 h-12 w-12", // lg can be larger, compact mode meets minimum
- };
-
  const iconSizes = {
  sm: "h-3 w-3",
  md: "h-4 w-4",
  lg: "h-5 w-5",
  };
-
- // Base variant classes (without hover)
- const baseVariantClasses = {
- default: "text-foreground",
- error: "text-destructive",
- primary: "text-primary",
- muted: "text-muted-foreground",
- };
-
- // Hover classes based on hoverStyle prop
- const getHoverClasses = (): string => {
- if (hoverStyle === "color") {
- // Only change color on hover, no background or border - make it more visible
- const colorHoverClasses = {
- default: "hover:text-foreground",
- error: "hover:text-destructive",
- primary: "hover:text-primary",
- muted: "hover:text-foreground",
- };
- return colorHoverClasses[variant];
- } else {
- // Background hover (default behavior)
- const backgroundHoverClasses = {
- default: "hover:bg-muted",
- error: "hover:bg-destructive/10 hover:text-destructive",
- primary: "hover:bg-primary/10",
- muted: "hover:bg-muted",
- };
- return backgroundHoverClasses[variant];
- }
- };
-
- // Enhanced hover classes - more visible per styling guide
- const getEnhancedHoverClasses = (): string => {
- if (variant === "primary") {
- return"hover:bg-primary/30 hover:shadow-xl hover:shadow-primary/50 hover:border hover:border-primary/60 hover:ring-2 hover:ring-primary/30";
- }
- return"hover:bg-primary/30 hover:shadow-xl hover:shadow-primary/50 hover:border hover:border-primary/60 hover:ring-2 hover:ring-primary/30";
- };
-
- // Check if className includes custom hover styles - if so, disable IconButton's hover effects
- // Check both the raw className and the final merged className to be safe
- const classNameStr = typeof className === 'string' ? className : '';
- const hasCustomHover = disableHover || (classNameStr.includes("hover: "));
 
  return (
  <button
@@ -207,37 +158,18 @@ export function IconButton({
  onClick={(e) => onClick?.(e)}
  disabled={disabled}
  aria-label={ariaLabel}
- className={cn(
-"rounded-lg",
-"transition-all duration-200",
-"flex items-center justify-center",
-"flex-shrink-0",
-"group",
- // Only apply border-0 if className doesn't include border classes
- !classNameStr.includes("border") &&"border-0",
- sizeClasses[size],
- baseVariantClasses[variant],
- // Only apply IconButton's hover classes if hover is not disabled
- !hasCustomHover && !enhancedHover && getHoverClasses(),
- !hasCustomHover && enhancedHover && getEnhancedHoverClasses(),
- // Scale effects - only if hover is not disabled
- !hasCustomHover && hoverStyle === "color"&&"hover:scale-125 hover:bg-transparent",
- !hasCustomHover && !enhancedHover && hoverStyle === "background"&&"hover:scale-110",
- !hasCustomHover && enhancedHover && hoverStyle === "background"&&"hover:scale-115",
- // Active state for tactile feedback - default
- !enhancedActive &&"active:scale-[0.95] active:opacity-80",
- // Enhanced active - more visible with border (matching hover style)
- enhancedActive &&"active:scale-[0.90] active:opacity-70",
- enhancedActive &&"active:border active:border-primary/50",
- enhancedActive &&"active:ring-2 active:ring-primary/30",
- // Focus state for accessibility - default
- !enhancedFocus &&"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- // Enhanced focus - more visible
- enhancedFocus &&"focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/80 focus-visible:ring-offset-4",
- enhancedFocus &&"focus-visible:shadow-lg focus-visible:shadow-primary/50",
- disabled &&"opacity-50 cursor-not-allowed",
- className
- )}
+ className={iconButtonClassName({
+ size,
+ variant,
+ hoverStyle,
+ compact,
+ enhancedHover,
+ enhancedFocus,
+ enhancedActive,
+ disableHover,
+ disabled,
+ className,
+ })}
  {...rest}
  >
  <Icon className={cn(

@@ -9,6 +9,7 @@
 import React, { forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { secondaryButtonClassName } from './button-variants';
 
 import Link from 'next/link';
 
@@ -120,48 +121,13 @@ export const SecondaryButton = forwardRef<HTMLButtonElement, SecondaryButtonProp
 "aria-label": ariaLabel,
  href,
 }, ref) => {
- const sizeClasses = {
- sm: "text-sm h-9 px-4 rounded-xl",
- md: "text-sm h-10 px-5 rounded-xl",
- lg: "text-base h-11 px-6 rounded-xl",
- };
-
- const commonClasses = cn(
- sizeClasses[size],
-"inline-flex items-center justify-center",
-"transition-all duration-300",
- // Glassmorphism 2.0 base styling
-"bg-white/70 backdrop-blur-xl backdrop-saturate-[200%]",
-"border border-white/80",
-"shadow-[0_4px_16px_rgba(15,23,42,0.08),0_0_20px_rgba(99,102,241,0.05),inset_0_1px_0_rgba(255,255,255,0.9)]",
-"",
- // Default hover
- !enhancedHover &&"hover:bg-white/85",
- !enhancedHover &&"hover:scale-105 hover:shadow-[0_6px_20px_rgba(15,23,42,0.12),0_0_30px_rgba(99,102,241,0.08),inset_0_1px_0_rgba(255,255,255,0.95)]",
- !enhancedHover &&"hover:border-white/90",
- // Enhanced hover - more visible per styling guide (white/black overlay pattern)
- enhancedHover &&"hover:bg-white",
- enhancedHover &&"hover:border-primary/80",
- enhancedHover &&"hover:shadow-[0_8px_32px_rgba(15,23,42,0.15),0_4px_16px_rgba(99,102,241,0.12),0_0_40px_rgba(99,102,241,0.15),inset_0_1px_0_rgba(255,255,255,1)]",
- enhancedHover &&"",
- enhancedHover &&"hover:scale-[1.08] hover:-translate-y-1",
- enhancedHover &&"hover:text-primary",
- enhancedHover &&"hover:ring-2 hover:ring-primary/40",
- // Active state for tactile feedback - default
- !enhancedActive &&"active:scale-[0.98] active:opacity-90",
- // Enhanced active - more visible with border (matching hover style)
- enhancedActive &&"active:scale-[0.95] active:opacity-80",
- enhancedActive &&"active:border-primary/50",
- enhancedActive &&"active:ring-2 active:ring-primary/30",
-"font-semibold",
- // Focus state for accessibility - default
- !enhancedFocus &&"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- // Enhanced focus - more visible
- enhancedFocus &&"focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/80 focus-visible:ring-offset-4",
- enhancedFocus &&"focus-visible:border-primary/70",
- enhancedFocus &&"focus-visible:shadow-lg focus-visible:shadow-primary/50",
- className
- );
+ const commonClasses = secondaryButtonClassName({
+ size,
+ enhancedHover,
+ enhancedFocus,
+ enhancedActive,
+ className,
+ });
 
  const content = (
  <>
