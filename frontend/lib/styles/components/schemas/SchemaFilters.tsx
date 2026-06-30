@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Filter, X, User } from 'lucide-react';
-import { Badge, AccentButton, SearchableDropdownButton } from '@/lib/styles/components';
+import { Badge, VariantButton, SearchableDropdownButton } from '@/lib/styles/components';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ExtractionSchema } from '@/types/extraction_schemas';
@@ -137,14 +137,14 @@ export function SchemaFilters({
  </div>
 
  {activeFilterCount > 0 && (
- <AccentButton
+ <VariantButton intent="accent"
  onClick={handleResetFilters}
  icon={X}
  size="sm"
  className="h-8 px-3 text-xs font-semibold rounded-lg"
  >
  Clear ({activeFilterCount})
- </AccentButton>
+ </VariantButton>
  )}
  </div>
 
@@ -375,14 +375,14 @@ export function SchemaFilters({
  </div>
 
  {activeFilterCount > 0 && (
- <AccentButton
+ <VariantButton intent="accent"
  onClick={handleResetFilters}
  icon={X}
  size="sm"
  className="h-8 px-3 text-xs font-semibold rounded-lg"
  >
  Clear ({activeFilterCount})
- </AccentButton>
+ </VariantButton>
  )}
  </div>
 

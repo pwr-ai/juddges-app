@@ -18,7 +18,7 @@ import {
  BaseCard,
  PrimaryButton,
  SecondaryButton,
- AccentButton,
+ VariantButton,
  TextButton,
  LoadingIndicator,
  EmptyState,
@@ -1038,7 +1038,7 @@ function ExtractPageContent() {
  {/* Action buttons */}
  <div className="mt-auto">
  {job.status === 'in_progress' && (
- <AccentButton
+ <VariantButton intent="accent"
  size="sm"
  icon={Eye}
  onClick={() => {
@@ -1047,11 +1047,11 @@ function ExtractPageContent() {
  className="w-full"
  >
  Open Details
- </AccentButton>
+ </VariantButton>
  )}
 
  {job.status === 'completed' && (
- <AccentButton
+ <VariantButton intent="accent"
  size="sm"
  icon={Eye}
  onClick={() => {
@@ -1060,7 +1060,7 @@ function ExtractPageContent() {
  className="w-full"
  >
  View Results
- </AccentButton>
+ </VariantButton>
  )}
 
  {job.status === 'failed' && (

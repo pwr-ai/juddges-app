@@ -28,7 +28,7 @@ import {
  PageContainer,
  LightCard,
  SecondaryButton,
- AccentButton,
+ VariantButton,
  LoadingIndicator,
  ErrorCard,
  Badge,
@@ -229,23 +229,23 @@ export default function SchemaDetailPage() {
  Configure Extraction
  </SecondaryButton>
  {isSchemaOwner() && (
- <AccentButton
+ <VariantButton intent="accent"
  size="sm"
  icon={Palette}
  onClick={handleOpenInStudio}
  className="!text-foreground font-semibold"
  >
  Edit in Studio
- </AccentButton>
+ </VariantButton>
  )}
- <AccentButton
+ <VariantButton intent="accent"
  size="sm"
  icon={Copy}
  onClick={handleDuplicate}
  className="!text-foreground font-semibold"
  >
  Duplicate
- </AccentButton>
+ </VariantButton>
  {isSchemaOwner() && (
  <SecondaryButton
  size="sm"

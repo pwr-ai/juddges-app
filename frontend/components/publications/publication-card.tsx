@@ -4,7 +4,7 @@ import { FC, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AccentButton, SecondaryButton, TextButton } from "@/lib/styles/components";
+import { VariantButton, SecondaryButton, TextButton } from "@/lib/styles/components";
 import { PublicationWithResources, PublicationStatus } from "@/types/publication";
 import {
  FileText,
@@ -230,13 +230,13 @@ export const PublicationCard: FC<PublicationCardProps> = ({ publication, current
  {Object.keys(publication.links).length > 0 && (
  <CardFooter className="flex flex-wrap gap-2">
  {publication.links.pdf && (
- <AccentButton
+ <VariantButton intent="accent"
  size="sm"
  onClick={() => window.open(publication.links.pdf, '_blank', 'noopener,noreferrer')}
  icon={FileText}
  >
  PDF
- </AccentButton>
+ </VariantButton>
  )}
  {publication.links.arxiv && (
  <SecondaryButton

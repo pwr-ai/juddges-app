@@ -6,7 +6,7 @@ import { Plus, Inbox, Trash2, FolderTree, ChevronDown, ChevronRight, GripVertica
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PrimaryButton, SecondaryButton as SecondaryButtonStyled, DropdownButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
-import { SecondaryButton, AccentButton, IconButton } from "@/lib/styles/components";
+import { SecondaryButton, VariantButton, IconButton } from "@/lib/styles/components";
 import {
  AlertDialog,
  AlertDialogAction,
@@ -720,15 +720,15 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
  Preview
  </SecondaryButton>
  )}
- <AccentButton onClick={handleOpenFieldGroupDialog} size="sm"icon={Plus}>
+ <VariantButton intent="accent" onClick={handleOpenFieldGroupDialog} size="sm"icon={Plus}>
  <span className="flex items-center gap-1.5">
  <FolderTree className="h-3.5 w-3.5"/>
  Group
  </span>
- </AccentButton>
- <AccentButton onClick={handleAddField} size="sm"icon={Plus}>
+ </VariantButton>
+ <VariantButton intent="accent" onClick={handleAddField} size="sm"icon={Plus}>
  Field
- </AccentButton>
+ </VariantButton>
  </div>
  </div>
 

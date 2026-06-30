@@ -13,7 +13,7 @@ import { X, CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { cn, formatSnakeCaseToHumanReadable } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
-import { AccentButton } from "@/lib/styles/components";
+import { VariantButton } from "@/lib/styles/components";
 
 
 interface FiltersState {
@@ -180,13 +180,13 @@ export function SearchFilters({
  </div>
 
  {activeFilterCount > 0 && (
- <AccentButton
+ <VariantButton intent="accent"
  onClick={onResetFilters}
  icon={X}
  size="sm"
  >
  Clear all
- </AccentButton>
+ </VariantButton>
  )}
  </div>
 
