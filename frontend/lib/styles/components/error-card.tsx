@@ -5,7 +5,7 @@
  */
 
 import React, { memo } from 'react';
-import { GlassButton } from './glass-button';
+import { VariantButton } from './variant-button';
 import { SecondaryButton } from './secondary-button';
 import { IconButton } from './icon-button';
 import { RefreshCw, X, AlertCircle } from 'lucide-react';
@@ -208,14 +208,14 @@ export const ErrorCard = memo(function ErrorCard({
  {(showRetry && onRetry) || secondaryAction || (onDismiss && !showDismissIcon) ? (
  <div className="flex items-center gap-3 justify-center mt-6">
  {showRetry && onRetry && (
- <GlassButton
+ <VariantButton intent="glass"
  onClick={onRetry}
  className="w-auto"
  variant="white"
  >
  <RefreshCw className="h-4 w-4"/>
  {retryLabel}
- </GlassButton>
+ </VariantButton>
  )}
  {secondaryAction && (
  <SecondaryButton

@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
- GlassButton,
  SecondaryButton,
  LoadingIndicator,
  BaseCard,
@@ -395,7 +394,7 @@ export function BulkExtractionDialog({
  <SecondaryButton onClick={onClose}>
  Cancel
  </SecondaryButton>
- <GlassButton
+ <VariantButton intent="glass"
  onClick={handleSubmit}
  disabled={selectedSchemas.size === 0 || isSubmitting}
  isLoading={isSubmitting}
@@ -408,7 +407,7 @@ export function BulkExtractionDialog({
  Start Bulk Extraction ({selectedSchemas.size} schema{selectedSchemas.size > 1 ? 's' : ''})
  </>
  )}
- </GlassButton>
+ </VariantButton>
  </div>
  </>
  ) : (

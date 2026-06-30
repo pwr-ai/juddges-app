@@ -12,7 +12,7 @@ import { Plus, FolderOpen, BookMarked, Scale, Lightbulb, X, Search, Calendar, Cl
 import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { EmptyState, PrimaryButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, IconButton, PageContainer, GlassButton, Badge } from "@/lib/styles/components";
+import { EmptyState, PrimaryButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, IconButton, PageContainer, VariantButton, Badge } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -330,12 +330,12 @@ export default function CollectionsPage() {
  <div className="shrink-0">
  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
  <DialogTrigger asChild>
- <GlassButton
+ <VariantButton intent="glass"
  className="w-auto shrink-0 h-9 px-6"
  >
  <Plus className="h-4 w-4"/>
  New Collection
- </GlassButton>
+ </VariantButton>
  </DialogTrigger>
  <DialogContent className="sm:max-w-[500px] [&>button:last-child]:hidden">
  {/* Custom close button using reusable IconButton */}

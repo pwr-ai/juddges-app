@@ -9,9 +9,12 @@
 "use client";
 
 import React from 'react';
-import { GlassButton, type GlassButtonProps } from './glass-button';
+import { VariantButton, type VariantButtonProps } from './variant-button';
 
-export type ModalSaveButtonProps = GlassButtonProps;
+export type ModalSaveButtonProps = Omit<
+  Extract<VariantButtonProps, { intent: "glass" }>,
+  "intent"
+>;
 
 /**
  * Modal Save Button Component
@@ -30,5 +33,5 @@ export type ModalSaveButtonProps = GlassButtonProps;
  * ```
  */
 export function ModalSaveButton(props: ModalSaveButtonProps): React.JSX.Element {
-  return <GlassButton {...props} />;
+  return <VariantButton intent="glass" {...props} />;
 }

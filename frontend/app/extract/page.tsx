@@ -26,7 +26,6 @@ import {
  AIBadge,
  PageContainer,
  SectionHeader,
- GlassButton,
 } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { ErrorCode } from "@/lib/errors";
@@ -1063,7 +1062,7 @@ function ExtractPageContent() {
  )}
 
  {job.status === 'failed' && (
- <GlassButton
+ <VariantButton intent="glass"
  variant="white"
  onClick={() => {
  handleRetry(job);
@@ -1072,7 +1071,7 @@ function ExtractPageContent() {
  >
  <RefreshCw className="h-4 w-4"/>
  Retry Extraction
- </GlassButton>
+ </VariantButton>
  )}
  </div>
  </div>
@@ -1352,7 +1351,7 @@ function ExtractPageContent() {
  )}
 
  <div className="flex gap-2">
- <GlassButton
+ <VariantButton intent="glass"
  onClick={handleExtract}
  disabled={
  !selectedCollection ||
@@ -1379,7 +1378,7 @@ function ExtractPageContent() {
  }
  </>
  )}
- </GlassButton>
+ </VariantButton>
  <SecondaryButton
  onClick={() => setShowBulkExtraction(true)}
  disabled={

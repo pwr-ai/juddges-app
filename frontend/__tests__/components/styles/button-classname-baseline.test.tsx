@@ -22,7 +22,6 @@ import {
   SecondaryButton,
   VariantButton,
   IconButton,
-  GlassButton,
 } from '@/lib/styles/components';
 
 // Minimal icon stub — the variants only need a component that takes className.
@@ -84,7 +83,7 @@ describe('button className baseline (#144)', () => {
   });
 
   describe('GlassButton', () => {
-    it('default', () => expect(classOf(<GlassButton>x</GlassButton>)).toMatchSnapshot());
-    it('white', () => expect(classOf(<GlassButton variant="white">x</GlassButton>)).toMatchSnapshot());
+    it('default', () => expect(classOf(<VariantButton intent="glass">x</VariantButton>)).toMatchSnapshot());
+    it('white', () => expect(classOf(<VariantButton intent="glass" variant="white">x</VariantButton>)).toMatchSnapshot());
   });
 });

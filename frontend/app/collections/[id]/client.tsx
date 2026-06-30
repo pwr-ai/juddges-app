@@ -15,7 +15,7 @@ import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, VariantButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard, GlassButton } from "@/lib/styles/components";
+import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, VariantButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard } from "@/lib/styles/components";
 
 interface CollectionClientProps {
  id: string;
@@ -672,12 +672,12 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  }}
  >
  <DialogTrigger asChild>
- <GlassButton
+ <VariantButton intent="glass"
  className="w-auto shrink-0 h-9 px-6"
  >
  <Plus className="h-4 w-4"/>
  Add Documents
- </GlassButton>
+ </VariantButton>
  </DialogTrigger>
  <DialogContent className="sm:max-w-[500px] [&>button:last-child]:hidden">
  <DialogPrimitive.Close asChild>
@@ -725,14 +725,14 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  >
  Cancel
  </SecondaryButton>
- <GlassButton
+ <VariantButton intent="glass"
  onClick={handleAddDocuments}
  disabled={!newDocumentIds.trim() || isAdding}
  isLoading={isAdding}
  className="w-auto shrink-0 h-9 px-6"
  >
  Add Documents
- </GlassButton>
+ </VariantButton>
  </div>
  </div>
  </DialogContent>
@@ -1254,7 +1254,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  rows={3}
  className="w-full font-mono text-sm resize-none"
  />
- <GlassButton
+ <VariantButton intent="glass"
  onClick={handleAddDocuments}
  disabled={!newDocumentIds.trim() || isAdding}
  isLoading={isAdding}
@@ -1262,7 +1262,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  >
  <Plus className="h-4 w-4"/>
  Add Documents
- </GlassButton>
+ </VariantButton>
  </div>
  </div>
  </LightCard>
