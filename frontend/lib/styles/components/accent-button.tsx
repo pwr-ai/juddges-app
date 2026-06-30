@@ -9,6 +9,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { accentButtonSizes, accentButtonBase } from './button-variants';
 
 /**
  * Props for AccentButton component
@@ -62,34 +63,13 @@ export function AccentButton({
  icon: Icon,
  size ="sm",
 }: AccentButtonProps): React.JSX.Element {
- const sizeClasses = {
- sm: "text-sm h-9 px-4 rounded-xl",
- md: "text-sm h-10 px-5 rounded-xl",
- lg: "text-base h-11 px-6 rounded-xl",
- };
-
  return (
  <Button
  type={type}
  onClick={onClick}
  disabled={disabled}
  variant="outline"
- className={cn(
- sizeClasses[size],
-"transition-all duration-300",
-"bg-gradient-to-r from-primary/10 via-blue-500/10 to-cyan-500/10",
-"",
-"border-primary/30",
-"text-primary",
-"hover:from-primary/15 hover:via-blue-500/15 hover:to-cyan-500/15",
-"",
-"hover:scale-105 hover:shadow-md",
- // Active state for tactile feedback
-"active:scale-[0.98] active:opacity-90",
- // Focus state for accessibility
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- className
- )}
+ className={cn(accentButtonSizes[size], accentButtonBase, className)}
  >
  {Icon && <Icon className="mr-1.5 h-3.5 w-3.5"/>}
  {children}
