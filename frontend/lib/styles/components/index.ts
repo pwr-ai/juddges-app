@@ -85,8 +85,6 @@ export { SaveToCollectionPopover } from './save-to-collection-popover';
 export type { SaveToCollectionPopoverProps } from './save-to-collection-popover';
 export { ModalSaveButton } from './modal-save-button';
 export type { ModalSaveButtonProps } from './modal-save-button';
-export { GlassButton } from './glass-button';
-export type { GlassButtonProps } from './glass-button';
 export { showSuccessToast } from './success-toast';
 export type { SuccessToastProps } from './success-toast';
 export { CollectionCard } from './collection-card';

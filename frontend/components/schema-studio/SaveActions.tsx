@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { Save, Download, RotateCcw, Loader2 } from "lucide-react";
-import { PrimaryButton, SecondaryButton, DropdownButton, GlassButton } from "@/lib/styles/components";
+import { PrimaryButton, SecondaryButton, DropdownButton, VariantButton } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 
 /**
@@ -120,7 +120,7 @@ export function SaveActions({
  )} */}
 
  {/* Save button */}
- <GlassButton
+ <VariantButton intent="glass"
  onClick={onSave}
  disabled={!isDirty || isSaving}
  isLoading={isSaving}
@@ -136,7 +136,7 @@ export function SaveActions({
  <span>Save Schema</span>
  </>
  )}
- </GlassButton>
+ </VariantButton>
  </>
  )}
  </div>

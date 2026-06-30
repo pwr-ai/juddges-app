@@ -12,12 +12,14 @@
 "use client";
 
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   accentButtonSizes,
   accentButtonBase,
   textButtonClassName,
+  glassButtonClassName,
 } from './button-variants';
 
 type AccentProps = {
@@ -42,7 +44,18 @@ type TextProps = {
   iconPosition?: "left" | "right";
 };
 
-export type VariantButtonProps = AccentProps | TextProps;
+type GlassProps = {
+  intent: "glass";
+  children: React.ReactNode;
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
+  disabled?: boolean;
+  isLoading?: boolean;
+  className?: string;
+  type?: "button" | "submit" | "reset";
+  variant?: "blue" | "white";
+};
+
+export type VariantButtonProps = AccentProps | TextProps | GlassProps;
 
 function renderAccent(props: AccentProps): React.JSX.Element {
   const {
@@ -96,10 +109,42 @@ function renderText(props: TextProps): React.JSX.Element {
   );
 }
 
+function renderGlass(props: GlassProps): React.JSX.Element {
+  const {
+    children,
+    onClick,
+    disabled = false,
+    isLoading = false,
+    className,
+    type = "button",
+    variant = "blue",
+  } = props;
+  const isWhite = variant === "white";
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || isLoading}
+      className={glassButtonClassName(isWhite, className)}
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {children}
+        </>
+      ) : (
+        children
+      )}
+    </button>
+  );
+}
+
 export function VariantButton(props: VariantButtonProps): React.JSX.Element {
   switch (props.intent) {
     case "text":
       return renderText(props);
+    case "glass":
+      return renderGlass(props);
     case "accent":
     default:
       return renderAccent(props);
