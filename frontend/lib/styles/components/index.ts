@@ -59,8 +59,6 @@ export { SecondaryButton } from './secondary-button';
 export type { SecondaryButtonProps } from './secondary-button';
 export { VariantButton } from './variant-button';
 export type { VariantButtonProps } from './variant-button';
-export { TextButton } from './text-button';
-export type { TextButtonProps } from './text-button';
 export { IconButton } from './icon-button';
 export type { IconButtonProps } from './icon-button';
 export { ToggleButton } from './toggle-button';

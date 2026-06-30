@@ -9,7 +9,7 @@ import {
  PageContainer,
  DocumentDialog,
  SearchFilters,
- TextButton,
+ VariantButton,
  SearchForm,
  SearchEmptyState,
  SearchResultsSection,
@@ -581,9 +581,9 @@ function SearchPageContent(): React.JSX.Element | null {
  >
  {!((searchMetadata.length === 0 && query && hasPerformedSearch) || error) && (
  <div className="flex items-center justify-between mb-4">
- <TextButton onClick={handleBack} icon={ArrowLeft}>
+ <VariantButton intent="text" onClick={handleBack} icon={ArrowLeft}>
  Back
- </TextButton>
+ </VariantButton>
  {query && <SaveSearchDialog />}
  </div>
  )}

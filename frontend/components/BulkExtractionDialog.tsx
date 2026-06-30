@@ -9,7 +9,7 @@ import {
  SecondaryButton,
  LoadingIndicator,
  BaseCard,
- TextButton,
+ VariantButton,
  Badge,
 } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
@@ -290,9 +290,9 @@ export function BulkExtractionDialog({
  <span className="text-xs text-muted-foreground">
  {selectedSchemas.size} selected (max 10)
  </span>
- <TextButton onClick={handleSelectAll} className="text-xs">
+ <VariantButton intent="text" onClick={handleSelectAll} className="text-xs">
  {selectedSchemas.size === publishedSchemas.length ? 'Deselect All' : 'Select All'}
- </TextButton>
+ </VariantButton>
  </div>
  </div>
 

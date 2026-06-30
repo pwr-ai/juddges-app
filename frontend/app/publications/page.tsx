@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PublicationCard } from "@/components/publications/publication-card";
 import { publications as staticPublications, sortPublications, getPublicationYears } from "@/lib/data/publications";
 import { PublicationType, PublicationWithResources } from "@/types/publication";
-import { SecondaryButton, TextButton, DropdownButton } from "@/lib/styles/components";
+import { SecondaryButton, VariantButton, DropdownButton } from "@/lib/styles/components";
 import { BookOpen, Filter, Calendar, FileType, ArrowUpDown, Settings, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPublications } from "@/lib/api/publications";
@@ -117,12 +117,12 @@ export default function PublicationsPage() {
  <Filter className="h-4 w-4 text-primary"/>
  <span className="font-semibold text-foreground">Filter & Sort</span>
  {hasActiveFilters && (
- <TextButton
+ <VariantButton intent="text"
  onClick={resetFilters}
  className="ml-auto text-xs"
  >
  Clear filters
- </TextButton>
+ </VariantButton>
  )}
  </div>
 

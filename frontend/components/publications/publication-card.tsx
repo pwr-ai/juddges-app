@@ -4,7 +4,7 @@ import { FC, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { VariantButton, SecondaryButton, TextButton } from "@/lib/styles/components";
+import { VariantButton, SecondaryButton } from "@/lib/styles/components";
 import { PublicationWithResources, PublicationStatus } from "@/types/publication";
 import {
  FileText,
@@ -139,14 +139,14 @@ export const PublicationCard: FC<PublicationCardProps> = ({ publication, current
  )}>
  {publication.abstract}
  </p>
- <TextButton
+ <VariantButton intent="text"
  onClick={() => setIsExpanded(!isExpanded)}
  className="mt-2 text-xs"
  icon={isExpanded ? ChevronUp : ChevronDown}
  iconPosition="left"
  >
  {isExpanded ? "Show less": "Read more"}
- </TextButton>
+ </VariantButton>
  </div>
 
  {/* Tags */}

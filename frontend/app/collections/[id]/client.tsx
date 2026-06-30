@@ -15,7 +15,7 @@ import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, TextButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard, GlassButton } from "@/lib/styles/components";
+import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, VariantButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard, GlassButton } from "@/lib/styles/components";
 
 interface CollectionClientProps {
  id: string;
@@ -641,13 +641,13 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  <PageContainer width="standard"fillViewport>
  {/* Return to Collections Button and Add Document Button */}
  <div className="mb-4 flex items-center justify-between gap-4">
- <TextButton
+ <VariantButton intent="text"
  onClick={() => router.push('/collections')}
  icon={ArrowLeft}
  iconPosition="left"
  >
  Return to Collections
- </TextButton>
+ </VariantButton>
  {!isEditing && (
  <div className="flex items-center gap-2">
  <IconButton

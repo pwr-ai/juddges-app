@@ -19,7 +19,6 @@ import {
  PrimaryButton,
  SecondaryButton,
  VariantButton,
- TextButton,
  LoadingIndicator,
  EmptyState,
  DropdownButton,
@@ -1215,12 +1214,12 @@ function ExtractPageContent() {
  : 'No documents selected'
  }
  </div>
- <TextButton
+ <VariantButton intent="text"
  onClick={handleSelectAll}
  className="text-xs"
  >
  {selectedDocuments.size === collectionDocuments.length ? 'Deselect All' : 'Select All'}
- </TextButton>
+ </VariantButton>
  </div>
  <div className="space-y-2 max-h-64 overflow-y-auto">
  {collectionDocuments.map((doc) => {

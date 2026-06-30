@@ -21,7 +21,6 @@ import {
   PrimaryButton,
   SecondaryButton,
   VariantButton,
-  TextButton,
   IconButton,
   GlassButton,
 } from '@/lib/styles/components';
@@ -68,8 +67,8 @@ describe('button className baseline (#144)', () => {
   });
 
   describe('TextButton', () => {
-    it('default', () => expect(classOf(<TextButton>x</TextButton>)).toMatchSnapshot());
-    it('disabled', () => expect(classOf(<TextButton disabled>x</TextButton>)).toMatchSnapshot());
+    it('default', () => expect(classOf(<VariantButton intent="text">x</VariantButton>)).toMatchSnapshot());
+    it('disabled', () => expect(classOf(<VariantButton intent="text" disabled>x</VariantButton>)).toMatchSnapshot());
   });
 
   describe('IconButton', () => {
