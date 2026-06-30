@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ProfessionalAcknowledgment } from "./professional-acknowledgment";
 import { WelcomeModal } from "@/components/onboarding/welcome-modal";
+import { useTourStore } from "@/lib/store/tourStore";
 import { createClient } from "@/lib/supabase/client";
 import logger from "@/lib/logger";
 
@@ -12,6 +13,10 @@ export function LegalComplianceWrapper({ children }: { children: React.ReactNode
   const [showAcknowledgment, setShowAcknowledgment] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  // Manual "Show tour" re-trigger (e.g. from the Help page), independent of the
+  // first-visit Supabase metadata gate below.
+  const tourOpen = useTourStore((s) => s.isOpen);
+  const closeTour = useTourStore((s) => s.closeTour);
   const complianceLogger = logger.child("LegalComplianceWrapper");
 
   useEffect(() => {
@@ -93,8 +98,13 @@ export function LegalComplianceWrapper({ children }: { children: React.ReactNode
         }}
       />
       <WelcomeModal
-        open={showWelcome}
-        onOpenChange={setShowWelcome}
+        open={showWelcome || tourOpen}
+        onOpenChange={(open) => {
+          setShowWelcome(open);
+          if (!open) {
+            closeTour();
+          }
+        }}
         onComplete={handleWelcomeComplete}
       />
     </>
