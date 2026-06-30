@@ -9,7 +9,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { RotateCcw } from 'lucide-react';
 import { ErrorCard } from '../error-card';
-import { TextButton } from '../text-button';
+import { VariantButton } from '../variant-button';
 // Color definitions are in lib/styles/colors/message.ts for reference
 // Using static Tailwind classes for JIT compiler compatibility
 
@@ -264,9 +264,9 @@ export function ErrorMessage({
  {/* Regenerate button below the error card */}
  {onRetry && (
  <div className="mt-3 flex justify-end">
- <TextButton onClick={onRetry} icon={RotateCcw} iconPosition="left">
+ <VariantButton intent="text" onClick={onRetry} icon={RotateCcw} iconPosition="left">
  Regenerate Message
- </TextButton>
+ </VariantButton>
  </div>
  )}
  </div>
