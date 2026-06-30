@@ -31,9 +31,11 @@ import {
  AccordionItem,
  AccordionTrigger,
 } from "@/lib/styles/components/accordion";
+import { useTourStore } from "@/lib/store/tourStore";
 
 export default function HelpPage() {
  const [searchQuery, setSearchQuery] = useState("");
+ const openTour = useTourStore((s) => s.openTour);
 
  const categories = [
  {
@@ -308,6 +310,13 @@ export default function HelpPage() {
  >
  Contact Support
  </PrimaryButton>
+ <SecondaryButton
+ size="lg"
+ icon={Sparkles}
+ onClick={() => openTour()}
+ >
+ Show tour
+ </SecondaryButton>
  <SecondaryButton
  size="lg"
  icon={Mail}

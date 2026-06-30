@@ -15,6 +15,9 @@ import {
  FileSearch,
  Brain,
  MessageSquare,
+ FolderOpen,
+ FileJson,
+ PanelsTopLeft,
  Shield,
  ChevronRight,
  ChevronLeft,
@@ -39,41 +42,80 @@ const onboardingSteps: OnboardingStep[] = [
  {
  title: "Welcome to JuDDGES",
  description:
-"Your intelligent companion for judgments analysis and legal research. Let's take a quick tour of what you can do.",
+"Your companion for judicial-decision research across Polish and England & Wales case law. Here is a quick tour of what you can do.",
  icon: Brain,
  features: [
-"AI-powered legal document analysis",
-"Smart search across court judgments and case law",
-"Professional-grade research tools",
-"Secure and compliant platform",
+"AI-assisted analysis of court judgments",
+"Hybrid search across the full corpus",
+"Tools built for legal researchers and practitioners",
+"Secure, compliant, and citation-grounded",
  ],
- color: "text-blue-600",
+ color: "text-oxblood",
  },
  {
- title: "Intelligent Search",
+ title: "Search",
  description:
-"Find relevant legal documents and case law with powerful AI-enhanced search capabilities.",
+"Find judgments with text, semantic, or hybrid search — phrase a query as you would ask a colleague.",
  icon: FileSearch,
  features: [
-"Natural language queries in multiple languages",
-"Semantic search finds related concepts",
-"Filter by jurisdiction, date, and document type",
-"Save and organize search results in collections",
+"Text mode for exact phrases and citations",
+"Semantic mode surfaces related legal concepts",
+"Hybrid mode blends both for the best recall",
+"Filter by jurisdiction (PL · UK), court, date, and language",
  ],
- color: "text-green-600",
+ color: "text-oxblood",
  },
  {
- title: "AI Chat Assistant",
+ title: "Chat",
  description:
-"Ask questions and get AI-powered insights about legal documents and court decisions.",
+"Ask questions about judgments in natural language and get answers grounded in source documents.",
  icon: MessageSquare,
  features: [
-"Ask questions in plain language",
-"Get summaries and explanations",
-"Receive citations to source documents",
-"Remember: Always verify AI outputs professionally",
+"Ask in plain language — Polish or English",
+"Get summaries, explanations, and comparisons",
+"Every answer cites the source judgments",
+"Always verify AI output against primary sources",
  ],
- color: "text-purple-600",
+ color: "text-gold",
+ },
+ {
+ title: "Collections",
+ description:
+"Save and organize important judgments into reusable research sets that persist across sessions.",
+ icon: FolderOpen,
+ features: [
+"Group judgments by case, topic, or project",
+"Add results from search or the document view",
+"Rename, reorder, and edit collections inline",
+"Collections feed into extraction pipelines",
+ ],
+ color: "text-oxblood",
+ },
+ {
+ title: "Schema extraction",
+ description:
+"Extract structured data from judgments using a coding schema — turn free text into analysable fields.",
+ icon: FileJson,
+ features: [
+"Start from the base coding schema or define your own",
+"Extract dates, parties, outcomes, and citations",
+"Run extraction over a single judgment or a collection",
+"Export results for downstream analysis",
+ ],
+ color: "text-gold",
+ },
+ {
+ title: "Find your way around",
+ description:
+"Every feature lives in the sidebar — search, chat, collections, extraction, precedents, and argumentation analysis.",
+ icon: PanelsTopLeft,
+ features: [
+"Use the left sidebar to switch between tools",
+"Precedent search and argumentation analysis sit here too",
+"Re-open this tour any time from the Help page",
+"Your work stays available across sessions",
+ ],
+ color: "text-ink-soft",
  },
  {
  title: "Professional Responsibility",
@@ -86,7 +128,7 @@ const onboardingSteps: OnboardingStep[] = [
 "Maintain professional liability insurance",
 "Follow your jurisdiction's conduct rules",
  ],
- color: "text-amber-600",
+ color: "text-oxblood",
  },
 ];
 
@@ -126,7 +168,7 @@ export function WelcomeModal({ open, onOpenChange, onComplete }: WelcomeModalPro
  <DialogHeader>
  <div className="flex items-center justify-between mb-2">
  <DialogTitle className="text-2xl font-bold flex items-center gap-3">
- <div className={`p-2 rounded-lg bg-primary/10 ${step.color}`}>
+ <div className={`p-2 rounded-lg bg-gold-soft/50 ${step.color}`}>
  <StepIcon className="h-6 w-6"/>
  </div>
  {step.title}
