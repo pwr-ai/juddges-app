@@ -7,7 +7,7 @@ import {
  LoadingIndicator,
  EmptyState,
  Badge,
- PrimaryButton,
+ VariantButton,
  PageContainer,
 } from "@/lib/styles/components";
 import { Input } from "@/components/ui/input";
@@ -450,12 +450,12 @@ function ExtractionsContent() {
  </PopoverContent>
  </Popover>
  </div>
- <PrimaryButton
+ <VariantButton intent="primary"
  icon={Sparkles}
  onClick={() => router.push('/extract')}
  >
  New Extraction
- </PrimaryButton>
+ </VariantButton>
  </div>
 
  {/* Search Bar */}

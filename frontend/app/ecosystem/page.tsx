@@ -20,7 +20,7 @@ import {
   SectionHeader,
   SecondaryHeader,
   LightCard,
-  PrimaryButton,
+  VariantButton,
   SecondaryButton,
   PageContainer,
   Badge,
@@ -588,13 +588,13 @@ export default function EcosystemPage(): React.JSX.Element {
           or join the discussion.
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
-          <PrimaryButton
+          <VariantButton intent="primary"
             size="lg"
             icon={ArrowRight}
             onClick={() => router.push("/contact")}
           >
             Get in touch
-          </PrimaryButton>
+          </VariantButton>
           <SecondaryButton size="lg" onClick={() => router.push("/about")}>
             About JuDDGES
           </SecondaryButton>

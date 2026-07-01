@@ -20,7 +20,7 @@ import {
  PopoverContent,
  PopoverTrigger,
 } from "@/components/ui/popover";
-import { SecondaryButton, IconButton, PrimaryButton, VerifiedBadge } from "@/lib/styles/components";
+import { SecondaryButton, IconButton, VariantButton, VerifiedBadge } from "@/lib/styles/components";
 import { SchemaStatusSelector } from "@/lib/styles/components/schema-status-selector";
 import type { SchemaStatus } from "@/types/extraction_schemas";
 import { Label } from "@/components/ui/label";
@@ -515,7 +515,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  </div>
  <div className="flex justify-end gap-2 pt-2">
  <SecondaryButton onClick={() => { schemaLoad.setImportText(""); schemaLoad.setImportTab("load"); }} size="sm">Cancel</SecondaryButton>
- <PrimaryButton onClick={schemaLoad.handleImportFromJSON} icon={Upload} size="sm"disabled={!schemaLoad.importText.trim()}>Import Schema</PrimaryButton>
+ <VariantButton intent="primary" onClick={schemaLoad.handleImportFromJSON} icon={Upload} size="sm"disabled={!schemaLoad.importText.trim()}>Import Schema</VariantButton>
  </div>
  </div>
  </TabsContent>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, X, Share } from "lucide-react";
-import { PrimaryButton, SecondaryButton } from "@/lib/styles/components";
+import { VariantButton, SecondaryButton } from "@/lib/styles/components";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -120,14 +120,14 @@ export function PWAInstallPrompt() {
               >
                 Not now
               </SecondaryButton>
-              <PrimaryButton
+              <VariantButton intent="primary"
                 onClick={handleInstall}
                 icon={Download}
                 size="sm"
                 className="flex-1"
               >
                 Install
-              </PrimaryButton>
+              </VariantButton>
             </>
           )}
         </div>

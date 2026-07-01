@@ -15,7 +15,7 @@ import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Header, PrimaryButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, VariantButton, ItemEditingButtons, DocumentCard, PageContainer, LightCard } from "@/lib/styles/components";
+import { Header, VariantButton, SecondaryButton, IconButton, BaseCard, TipCard, EmptyState, SectionHeader, SubsectionHeader, DeleteConfirmationDialog, showSuccessToast, ItemEditingButtons, DocumentCard, PageContainer, LightCard } from "@/lib/styles/components";
 
 interface CollectionClientProps {
  id: string;
@@ -787,9 +787,9 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  />
  </div>
  <div className="flex gap-2 pt-2">
- <PrimaryButton onClick={handleUpdateCollection} size="sm"disabled={!editName.trim()}>
+ <VariantButton intent="primary" onClick={handleUpdateCollection} size="sm"disabled={!editName.trim()}>
  Save Changes
- </PrimaryButton>
+ </VariantButton>
  <SecondaryButton onClick={() => {
  setIsClosing(true);
  setTimeout(() => {
@@ -1221,14 +1221,14 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
  >
  <div className="mt-3 space-y-4">
  <p className="text-base text-muted-foreground leading-relaxed">Search for legal documents and add them directly from the results page.</p>
- <PrimaryButton
+ <VariantButton intent="primary"
  size="sm"
  icon={Search}
  onClick={() => router.push("/search")}
  className="w-full"
  >
  Go to Search
- </PrimaryButton>
+ </VariantButton>
  </div>
  </LightCard>
  <LightCard

@@ -4,9 +4,9 @@ import * as React from "react";
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Inbox, Trash2, FolderTree, ChevronDown, ChevronRight, GripVertical, Eye, ArrowUp, ArrowDown, Undo2, Redo2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PrimaryButton, SecondaryButton as SecondaryButtonStyled, DropdownButton } from "@/lib/styles/components";
+import { VariantButton, SecondaryButton as SecondaryButtonStyled, DropdownButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
-import { SecondaryButton, VariantButton, IconButton } from "@/lib/styles/components";
+import { SecondaryButton, IconButton } from "@/lib/styles/components";
 import {
  AlertDialog,
  AlertDialogAction,

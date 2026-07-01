@@ -8,7 +8,7 @@ import {
  Badge,
  LightCard,
  SecondaryButton,
- PrimaryButton,
+ VariantButton,
  PageContainer,
  SecondaryHeader,
 } from "@/lib/styles/components";

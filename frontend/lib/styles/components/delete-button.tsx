@@ -89,7 +89,7 @@ export function DeleteButton({
  sizeClasses[size],
 "transition-all duration-300",
  // Red gradient background following design system gradient pattern
- // Similar to PrimaryButton but with red semantic colors for destructive actions
+ // Similar to VariantButton but with red semantic colors for destructive actions
 "!bg-gradient-to-br !from-red-600 !via-red-700 !to-red-800",
 "",
 "hover:!from-red-700 hover:!via-red-800 hover:!to-red-900",

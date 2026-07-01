@@ -17,7 +17,7 @@ import {
  SelectTrigger,
  SelectValue,
 } from "@/components/ui/select";
-import { IconButton, PrimaryButton, SecondaryButton } from "@/lib/styles/components";
+import { IconButton, VariantButton, SecondaryButton } from "@/lib/styles/components";
 import {
  Edit2,
  Trash2,
@@ -618,13 +618,13 @@ export function FieldCard({
  >
  Cancel
  </SecondaryButton>
- <PrimaryButton
+ <VariantButton intent="primary"
  onClick={handleDeleteConfirm}
  size="sm"
  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground min-w-[80px]"
  >
  Delete
- </PrimaryButton>
+ </VariantButton>
  </AlertDialogFooter>
  </AlertDialogContent>
  </AlertDialog>

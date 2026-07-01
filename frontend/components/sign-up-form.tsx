@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { PrimaryButton, LightCard } from '@/lib/styles/components'
+import { VariantButton, LightCard } from '@/lib/styles/components'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Logo } from '@/components/ui/logo'
@@ -102,7 +102,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               </div>
 
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <PrimaryButton
+              <VariantButton intent="primary"
                 type="submit"
                 className="w-full"
                 disabled={isLoading}
@@ -118,7 +118,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 ) : (
                   <span>Sign up</span>
                 )}
-              </PrimaryButton>
+              </VariantButton>
             </div>
             <div className="mt-4 text-center text-sm">
               Already have an account?{' '}

@@ -12,6 +12,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ import {
   accentButtonBase,
   textButtonClassName,
   glassButtonClassName,
+  primaryButtonClassName,
 } from './button-variants';
 
 type AccentProps = {
@@ -55,7 +57,23 @@ type GlassProps = {
   variant?: "blue" | "white";
 };
 
-export type VariantButtonProps = AccentProps | TextProps | GlassProps;
+type PrimaryProps = {
+  intent: "primary";
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  icon?: React.ComponentType<{ className?: string }>;
+  isLoading?: boolean;
+  loadingText?: string;
+  size?: "sm" | "md" | "lg" | "xl";
+  /** Accepted for compatibility; currently a no-op (matches VariantButton). */
+  enhancedActive?: boolean;
+  href?: string;
+};
+
+export type VariantButtonProps = AccentProps | TextProps | GlassProps | PrimaryProps;
 
 function renderAccent(props: AccentProps): React.JSX.Element {
   const {
@@ -139,12 +157,74 @@ function renderGlass(props: GlassProps): React.JSX.Element {
   );
 }
 
+function renderPrimary(props: PrimaryProps): React.JSX.Element {
+  const {
+    children,
+    onClick,
+    className,
+    disabled = false,
+    type = "button",
+    icon: Icon,
+    isLoading = false,
+    loadingText,
+    size = "md",
+    href,
+  } = props;
+
+  const isDisabled = disabled || isLoading;
+  const isExtractionButton =
+    typeof children === "string" && children.includes("Start Extraction");
+  const commonClasses = primaryButtonClassName(
+    size,
+    isDisabled,
+    isExtractionButton,
+    className,
+  );
+
+  const content = (
+    <>
+      {isLoading ? (
+        <>
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+          {loadingText && <span>{loadingText}</span>}
+        </>
+      ) : (
+        <>
+          {Icon && <Icon className="h-4 w-4 mr-2" />}
+          <span>{children}</span>
+        </>
+      )}
+    </>
+  );
+
+  if (href && !isDisabled) {
+    return (
+      <Link href={href} className={commonClasses}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <Button
+      type={type}
+      onClick={onClick}
+      disabled={isDisabled}
+      className={commonClasses}
+    >
+      {content}
+    </Button>
+  );
+}
+
 export function VariantButton(props: VariantButtonProps): React.JSX.Element {
   switch (props.intent) {
     case "text":
       return renderText(props);
     case "glass":
       return renderGlass(props);
+    case "primary":
+      return renderPrimary(props);
     case "accent":
     default:
       return renderAccent(props);
