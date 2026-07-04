@@ -22,7 +22,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   LightCard,
-  PrimaryButton,
+  VariantButton,
   SecondaryButton,
   IconButton,
   Badge,
@@ -319,14 +319,14 @@ export function PostEditor({
             </div>
 
             <div className="space-y-2">
-              <PrimaryButton
+              <VariantButton intent="primary"
                 className="w-full"
                 icon={Send}
                 onClick={handlePublish}
                 disabled={!title || !excerpt || !content || isSaving}
               >
                 Publish Now
-              </PrimaryButton>
+              </VariantButton>
               <SecondaryButton
                 className="w-full"
                 icon={Save}

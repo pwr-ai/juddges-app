@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { SearchDocument } from "@/types/search";
 import {
  BaseCard,
- PrimaryButton,
+ VariantButton,
  SecondaryButton,
  LoadingIndicator,
  AIBadge,
@@ -416,7 +416,7 @@ export function SchemaGenerator({
  disabled={isLoadingDocuments}
  />
  </div>
- <PrimaryButton
+ <VariantButton intent="primary"
  onClick={handleGenerate}
  className="w-full"
  disabled={isLoadingDocuments}
@@ -424,7 +424,7 @@ export function SchemaGenerator({
  >
  Generate Schema
  {sampleDocuments.length > 0 &&"with Document Context"}
- </PrimaryButton>
+ </VariantButton>
  </div>
  )}
 
@@ -495,9 +495,9 @@ export function SchemaGenerator({
  </div>
 
  <div className="flex gap-2">
- <PrimaryButton onClick={handleAcceptSchema} className="flex-1">
+ <VariantButton intent="primary" onClick={handleAcceptSchema} className="flex-1">
  Accept & Use Schema
- </PrimaryButton>
+ </VariantButton>
  <SecondaryButton
  onClick={() => {
  setGeneratedSchema(null);

@@ -20,7 +20,7 @@ jest.mock('@/lib/styles/components', () => ({
       />
     </div>
   ),
-  PrimaryButton: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  VariantButton: ({ children, intent, ...props }: any) => <button {...props}>{children}</button>,
   SecondaryButton: ({ children, ...props }: any) => <button {...props}>{children}</button>,
   SaveToCollectionPopover: ({ documents, onClose }: any) => (
     <div>

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { BaseCard, PrimaryButton, SecondaryButton } from "@/lib/styles/components";
+import { BaseCard, VariantButton, SecondaryButton } from "@/lib/styles/components";
 
 interface EditCollectionFormProps {
   editName: string;
@@ -69,9 +69,9 @@ const EditCollectionForm: FC<EditCollectionFormProps> = ({
           />
         </div>
         <div className="flex gap-2 pt-2">
-          <PrimaryButton onClick={onSave} size="sm" disabled={!editName.trim()}>
+          <VariantButton intent="primary" onClick={onSave} size="sm" disabled={!editName.trim()}>
             Save Changes
-          </PrimaryButton>
+          </VariantButton>
           <SecondaryButton onClick={onCancel} size="sm">
             Cancel
           </SecondaryButton>

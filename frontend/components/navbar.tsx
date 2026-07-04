@@ -5,7 +5,7 @@ import { SidebarTrigger } from "./ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { PrimaryButton, SecondaryButton, UserAvatar, UserCard, IconButton, Badge } from "@/lib/styles/components";
+import { VariantButton, SecondaryButton, UserAvatar, UserCard, IconButton, Badge } from "@/lib/styles/components";
 import { AIBadge } from "@/lib/styles/components/ai-badge";
 
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -616,13 +616,13 @@ export function Navbar(): React.ReactElement {
               Login
             </SecondaryButton>
 
-            <PrimaryButton
+            <VariantButton intent="primary"
               size="sm"
               onClick={() => router.push("/auth/sign-up")}
               className="h-9 px-4"
             >
               Sign Up
-            </PrimaryButton>
+            </VariantButton>
           </>
         )}
       </div>

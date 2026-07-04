@@ -22,7 +22,7 @@ import {
   SearchInput,
   EmptyState,
   SecondaryButton,
-  PrimaryButton,
+  VariantButton,
   LightCard,
   IconButton,
   FilterToggleGroup,
@@ -395,9 +395,9 @@ export default function BlogPage(): React.JSX.Element {
             size="md"
             className="flex-1"
           />
-          <PrimaryButton size="md" icon={ArrowRight}>
+          <VariantButton intent="primary" size="md" icon={ArrowRight}>
             Subscribe
-          </PrimaryButton>
+          </VariantButton>
         </div>
       </LightCard>
     </PageContainer>

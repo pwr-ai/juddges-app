@@ -17,7 +17,7 @@ import {
  SectionHeader,
  SecondaryHeader,
  LightCard,
- PrimaryButton,
+ VariantButton,
  SecondaryButton,
  PageContainer,
  Badge,
@@ -380,12 +380,12 @@ export default function AboutPage(): React.JSX.Element {
  </div>
 
  <div className="pt-2">
- <PrimaryButton
+ <VariantButton intent="primary"
  icon={ArrowRight}
  onClick={() => router.push("/ecosystem")}
  >
  Explore the full ecosystem
- </PrimaryButton>
+ </VariantButton>
  </div>
  </div>
  </LightCard>
@@ -497,14 +497,14 @@ export default function AboutPage(): React.JSX.Element {
  Start using JuDDGES for AI-powered legal research
  </p>
  {user ? (
- <PrimaryButton size="lg"icon={ArrowRight} onClick={() => router.push('/')}>
+ <VariantButton intent="primary" size="lg"icon={ArrowRight} onClick={() => router.push('/')}>
  Go to Dashboard
- </PrimaryButton>
+ </VariantButton>
  ) : (
  <div className="flex gap-4 justify-center">
- <PrimaryButton size="lg"icon={ArrowRight} onClick={() => router.push('/auth/sign-up')}>
+ <VariantButton intent="primary" size="lg"icon={ArrowRight} onClick={() => router.push('/auth/sign-up')}>
  Get Started
- </PrimaryButton>
+ </VariantButton>
  <SecondaryButton size="lg"onClick={() => router.push('/auth/login')}>
  Sign In
  </SecondaryButton>

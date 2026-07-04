@@ -1,7 +1,7 @@
 "use client";
 
 import { Filter } from "lucide-react";
-import { PrimaryButton } from "../primary-button";
+import { VariantButton } from "../variant-button";
 import { SecondaryButton } from "../secondary-button";
 import { SaveToCollectionPopover } from "../save-to-collection-popover";
 import { InfiniteScrollTrigger } from "./InfiniteScrollTrigger";
@@ -113,13 +113,13 @@ export function SearchResultsSection({
               Select All
             </SecondaryButton>
           )}
-          <PrimaryButton
+          <VariantButton intent="primary"
             size="sm"
             disabled={selectedCount === 0}
             onClick={() => setShowSaveAllPopover(true)}
           >
             {selectedCount > 0 ? `Save Selected (${selectedCount})` : "Save Results"}
-          </PrimaryButton>
+          </VariantButton>
         </div>
       </div>
 

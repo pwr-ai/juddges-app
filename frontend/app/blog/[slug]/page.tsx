@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Badge, SecondaryButton, PrimaryButton, LightCard, PageContainer, IconButton, Header } from "@/lib/styles/components";
+import { Badge, SecondaryButton, VariantButton, LightCard, PageContainer, IconButton, Header } from "@/lib/styles/components";
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { MarkdownRenderer } from "@/components/blog/markdown-renderer";
 import {
@@ -501,12 +501,12 @@ export default function BlogPostPage() {
         {/* Actions */}
         <div className="flex flex-wrap gap-3">
           {isLoggedIn && (
-            <PrimaryButton
+            <VariantButton intent="primary"
               onClick={() => router.push(`/blog/admin/${post.id}`)}
               icon={Edit}
             >
               Edit Post
-            </PrimaryButton>
+            </VariantButton>
           )}
           <SecondaryButton
             onClick={() => setIsLiked(!isLiked)}
@@ -682,9 +682,9 @@ export default function BlogPostPage() {
           judgments analysis technology.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
-          <PrimaryButton size="lg" icon={ArrowRight} onClick={() => router.push("/blog")}>
+          <VariantButton intent="primary" size="lg" icon={ArrowRight} onClick={() => router.push("/blog")}>
             View All Articles
-          </PrimaryButton>
+          </VariantButton>
           <SecondaryButton size="lg" onClick={() => router.push("/search")}>
             Search Judgments
           </SecondaryButton>

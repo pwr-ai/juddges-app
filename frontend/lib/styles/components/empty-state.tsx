@@ -11,8 +11,13 @@ import { SearchX, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SecondaryButton } from './secondary-button';
 import type { SecondaryButtonProps } from './secondary-button';
-import { PrimaryButton } from './primary-button';
-import type { PrimaryButtonProps } from './primary-button';
+import { VariantButton } from './variant-button';
+import type { VariantButtonProps } from './variant-button';
+
+type PrimaryButtonProps = Omit<
+  Extract<VariantButtonProps, { intent: "primary" }>,
+  "intent"
+>;
 
 /**
  * Props for EmptyState component
@@ -199,7 +204,7 @@ export function EmptyState({
  </SecondaryButton>
  )}
  {primaryAction && (
- <PrimaryButton
+ <VariantButton intent="primary"
  onClick={primaryAction.onClick}
  icon={primaryAction.icon}
  size={primaryAction.size || "md"}
@@ -207,7 +212,7 @@ export function EmptyState({
  className={primaryAction.className}
  >
  {primaryAction.label}
- </PrimaryButton>
+ </VariantButton>
  )}
  {actions}
  </div>

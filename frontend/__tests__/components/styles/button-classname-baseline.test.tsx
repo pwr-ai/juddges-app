@@ -18,7 +18,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import {
-  PrimaryButton,
   SecondaryButton,
   VariantButton,
   IconButton,
@@ -42,12 +41,12 @@ const SIZES = ['sm', 'md', 'lg'] as const;
 describe('button className baseline (#144)', () => {
   describe('PrimaryButton', () => {
     for (const size of SIZES) {
-      it(`size=${size}`, () => expect(classOf(<PrimaryButton size={size}>x</PrimaryButton>)).toMatchSnapshot());
+      it(`size=${size}`, () => expect(classOf(<VariantButton intent="primary" size={size}>x</VariantButton>)).toMatchSnapshot());
     }
-    it('disabled', () => expect(classOf(<PrimaryButton disabled>x</PrimaryButton>)).toMatchSnapshot());
-    it('with icon', () => expect(classOf(<PrimaryButton icon={Icon}>x</PrimaryButton>)).toMatchSnapshot());
-    it('size=xl', () => expect(classOf(<PrimaryButton size="xl">x</PrimaryButton>)).toMatchSnapshot());
-    it('extraction variant', () => expect(classOf(<PrimaryButton>Start Extraction</PrimaryButton>)).toMatchSnapshot());
+    it('disabled', () => expect(classOf(<VariantButton intent="primary" disabled>x</VariantButton>)).toMatchSnapshot());
+    it('with icon', () => expect(classOf(<VariantButton intent="primary" icon={Icon}>x</VariantButton>)).toMatchSnapshot());
+    it('size=xl', () => expect(classOf(<VariantButton intent="primary" size="xl">x</VariantButton>)).toMatchSnapshot());
+    it('extraction variant', () => expect(classOf(<VariantButton intent="primary">Start Extraction</VariantButton>)).toMatchSnapshot());
   });
 
   describe('SecondaryButton', () => {

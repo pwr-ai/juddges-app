@@ -689,7 +689,7 @@ export function Calendar({
 "hover:scale-105",
 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
 "disabled:pointer-events-none disabled:opacity-50",
- // Selected state - PROMINENT gradient like PrimaryButton
+ // Selected state - PROMINENT gradient like VariantButton
  selected && cn(
 "bg-gradient-to-br from-blue-400/50 via-indigo-400/50 via-purple-400/50 to-purple-400/30",
 "",

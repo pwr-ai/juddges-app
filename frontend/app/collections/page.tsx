@@ -12,7 +12,7 @@ import { Plus, FolderOpen, BookMarked, Scale, Lightbulb, X, Search, Calendar, Cl
 import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { EmptyState, PrimaryButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, IconButton, PageContainer, VariantButton, Badge } from "@/lib/styles/components";
+import { EmptyState, VariantButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, IconButton, PageContainer, Badge } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -402,7 +402,7 @@ export default function CollectionsPage() {
 	 </ul>
  </div>
 
- <PrimaryButton
+ <VariantButton intent="primary"
  onClick={handleCreateCollection}
  disabled={isCreating || !newCollectionName.trim()}
  isLoading={isCreating}
@@ -410,7 +410,7 @@ export default function CollectionsPage() {
  className="w-full"
  >
  Create Collection
- </PrimaryButton>
+ </VariantButton>
  </div>
  </DialogContent>
  </Dialog>

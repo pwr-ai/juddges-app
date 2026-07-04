@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FolderTree, ChevronRight, X, Type, Plus } from "lucide-react";
-import { PrimaryButton, SecondaryButton as SecondaryButtonStyled, DropdownButton, IconButton } from "@/lib/styles/components";
+import { VariantButton, SecondaryButton as SecondaryButtonStyled, DropdownButton, IconButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
 import { cn } from "@/lib/utils";
 import type { SchemaField } from "@/hooks/schema-editor/types";
@@ -425,13 +425,13 @@ export function FieldGroupDialog({
  >
  Cancel
  </SecondaryButtonStyled>
- <PrimaryButton
+ <VariantButton intent="primary"
  onClick={handleFieldGroupNextPhase}
  size="sm"
  disabled={!fieldGroupName.trim()}
  >
  Continue
- </PrimaryButton>
+ </VariantButton>
  </>
  ) : (
  <>
@@ -447,13 +447,13 @@ export function FieldGroupDialog({
  >
  Cancel
  </SecondaryButtonStyled>
- <PrimaryButton
+ <VariantButton intent="primary"
  onClick={handleCreateFieldGroup}
  size="sm"
  disabled={!fieldGroupName.trim() || groupFields.some(f => !f.name.trim())}
  >
  {selectedField && selectedField.field_type === "object"? "Save Changes": "Create Group"}
- </PrimaryButton>
+ </VariantButton>
  </>
  )}
  </div>

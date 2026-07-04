@@ -21,7 +21,7 @@ import {
  Badge,
  LightCard,
  SecondaryHeader,
- PrimaryButton,
+ VariantButton,
  SecondaryButton,
 } from "@/lib/styles/components";
 import { SearchInput } from "@/lib/styles/components/search-input";
@@ -304,12 +304,12 @@ export default function HelpPage() {
  any questions or issues you may have.
  </p>
  <div className="flex flex-wrap justify-center gap-4">
- <PrimaryButton
+ <VariantButton intent="primary"
  size="lg"
  onClick={() => window.location.href = '/contact'}
  >
  Contact Support
- </PrimaryButton>
+ </VariantButton>
  <SecondaryButton
  size="lg"
  icon={Sparkles}

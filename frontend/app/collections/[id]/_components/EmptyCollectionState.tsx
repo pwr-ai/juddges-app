@@ -1,7 +1,7 @@
 import { FC } from "react";
 import { Plus, FileText, Search } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { EmptyState, PrimaryButton, LightCard, VariantButton } from "@/lib/styles/components";
+import { EmptyState, VariantButton, LightCard } from "@/lib/styles/components";
 
 interface EmptyCollectionStateProps {
   newDocumentIds: string;
@@ -43,14 +43,14 @@ const EmptyCollectionState: FC<EmptyCollectionStateProps> = ({
             >
               <div className="mt-3 space-y-4">
                 <p className="text-base text-muted-foreground leading-relaxed">Search for legal documents and add them directly from the results page.</p>
-                <PrimaryButton
+                <VariantButton intent="primary"
                   size="sm"
                   icon={Search}
                   onClick={onGoToSearch}
                   className="w-full"
                 >
                   Go to Search
-                </PrimaryButton>
+                </VariantButton>
               </div>
             </LightCard>
             <LightCard
