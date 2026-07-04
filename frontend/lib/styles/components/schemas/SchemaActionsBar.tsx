@@ -3,7 +3,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Search, X, Plus, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { SecondaryButton } from '@/lib/styles/components';
+import { VariantButton } from '@/lib/styles/components';
 import { cn } from '@/lib/utils';
 
 export interface SchemaActionsBarProps {
@@ -118,25 +118,25 @@ export function SchemaActionsBar({
  {/* Show Filters button */}
  {onToggleFilters && (
  <div className="relative">
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={Filter}
  onClick={onToggleFilters}
  >
  {showFilters ? 'Hide Filters' : 'Show Filters'}
- </SecondaryButton>
+ </VariantButton>
  </div>
  )}
 
  {/* Add Schema button */}
  {onAddSchema && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={Plus}
  onClick={onAddSchema}
  >
  Add Schema
- </SecondaryButton>
+ </VariantButton>
  )}
  </div>
  </div>

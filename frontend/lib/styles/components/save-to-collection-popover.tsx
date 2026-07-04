@@ -13,7 +13,7 @@ import { Loader2, Search, X, Folder, Plus, Check } from "lucide-react";
 import { getCollections, addDocumentToCollection, createCollection } from "@/lib/api/collections";
 import { CollectionWithDocuments } from "@/types/collection";
 import { SearchDocument } from "@/types/search";
-import { SecondaryButton, showSuccessToast } from "@/lib/styles/components";
+import { VariantButton, showSuccessToast } from "@/lib/styles/components";
 import { ModalSaveButton } from "@/lib/styles/components/modal-save-button";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -451,14 +451,14 @@ export function SaveToCollectionPopover({
 
           {/* V. The Footer - Primary Action */}
           <div className="flex justify-end gap-2 pt-3 border-t border-[rgba(0,0,0,0.05)]">
-            <SecondaryButton
+            <VariantButton intent="secondary"
               size="sm"
               onClick={onClose}
               className="h-11 px-6"
               aria-label="Cancel saving to collection"
             >
               Cancel
-            </SecondaryButton>
+            </VariantButton>
             <ModalSaveButton
               onClick={handleSave}
               disabled={saving || documents.length === 0 || !selectedCollection}

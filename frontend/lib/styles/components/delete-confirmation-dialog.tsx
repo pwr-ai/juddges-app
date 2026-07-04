@@ -16,7 +16,7 @@ import {
  DialogPortal,
  DialogOverlay,
 } from '@/components/ui/dialog';
-import { SecondaryButton } from './secondary-button';
+import { VariantButton } from './variant-button';
 import { DeleteButton } from './delete-button';
 import { IconButton } from './icon-button';
 import { cn } from '@/lib/utils';
@@ -208,7 +208,7 @@ export function DeleteConfirmationDialog({
  </DialogDescription>
  </DialogHeader>
  <DialogFooter>
- <SecondaryButton
+ <VariantButton intent="secondary"
  type="button"
  disabled={isDeleting}
  onClick={(e) => {
@@ -218,7 +218,7 @@ export function DeleteConfirmationDialog({
  }}
  >
  Cancel
- </SecondaryButton>
+ </VariantButton>
  <DeleteButton
  type="button"
  disabled={isDeleting}

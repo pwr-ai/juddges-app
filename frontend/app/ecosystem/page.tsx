@@ -15,16 +15,7 @@ import {
   Mail,
   GraduationCap,
 } from "lucide-react";
-import {
-  Header,
-  SectionHeader,
-  SecondaryHeader,
-  LightCard,
-  VariantButton,
-  SecondaryButton,
-  PageContainer,
-  Badge,
-} from "@/lib/styles/components";
+import { Header, SectionHeader, SecondaryHeader, LightCard, VariantButton, PageContainer, Badge } from "@/lib/styles/components";
 import { useRouter } from "next/navigation";
 import { MermaidDiagram } from "@/components/ecosystem/MermaidDiagram";
 
@@ -282,14 +273,14 @@ export default function EcosystemPage(): React.JSX.Element {
                     Maintained by: {project.team}
                   </p>
                 </div>
-                <SecondaryButton
+                <VariantButton intent="secondary"
                   onClick={() => window.open(project.href, "_blank")}
                   className="shrink-0"
                 >
                   <Github className="size-4 mr-2" />
                   View on GitHub
                   <ExternalLink className="size-3.5 ml-2 opacity-60" />
-                </SecondaryButton>
+                </VariantButton>
               </div>
 
               <p className="text-base leading-relaxed mb-5">{project.description}</p>
@@ -499,7 +490,7 @@ export default function EcosystemPage(): React.JSX.Element {
           Direct links to the repositories, project website, and shared resources.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <SecondaryButton
+          <VariantButton intent="secondary"
             className="h-auto py-6"
             onClick={() => window.open("https://juddges.org", "_blank")}
           >
@@ -512,9 +503,9 @@ export default function EcosystemPage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-          </SecondaryButton>
+          </VariantButton>
 
-          <SecondaryButton
+          <VariantButton intent="secondary"
             className="h-auto py-6"
             onClick={() =>
               window.open("https://github.com/pwr-ai/JuDDGES", "_blank")
@@ -529,9 +520,9 @@ export default function EcosystemPage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-          </SecondaryButton>
+          </VariantButton>
 
-          <SecondaryButton
+          <VariantButton intent="secondary"
             className="h-auto py-6"
             onClick={() =>
               window.open("https://github.com/tsantosh7/hitl-tool", "_blank")
@@ -546,9 +537,9 @@ export default function EcosystemPage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-          </SecondaryButton>
+          </VariantButton>
 
-          <SecondaryButton
+          <VariantButton intent="secondary"
             className="h-auto py-6"
             onClick={() =>
               window.open("https://github.com/pwr-ai/juddges-app", "_blank")
@@ -561,9 +552,9 @@ export default function EcosystemPage(): React.JSX.Element {
                 <div className="text-xs text-muted-foreground">This platform</div>
               </div>
             </div>
-          </SecondaryButton>
+          </VariantButton>
 
-          <SecondaryButton
+          <VariantButton intent="secondary"
             className="h-auto py-6"
             onClick={() => window.open("https://huggingface.co/JuDDGES", "_blank")}
           >
@@ -576,7 +567,7 @@ export default function EcosystemPage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-          </SecondaryButton>
+          </VariantButton>
         </div>
       </LightCard>
 
@@ -595,9 +586,9 @@ export default function EcosystemPage(): React.JSX.Element {
           >
             Get in touch
           </VariantButton>
-          <SecondaryButton size="lg" onClick={() => router.push("/about")}>
+          <VariantButton intent="secondary" size="lg" onClick={() => router.push("/about")}>
             About JuDDGES
-          </SecondaryButton>
+          </VariantButton>
         </div>
       </div>
     </PageContainer>

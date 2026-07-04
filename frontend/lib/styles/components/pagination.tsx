@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { PageSizeToggle } from './page-size-toggle';
 import { IconButton } from './icon-button';
-import { SecondaryButton } from './secondary-button';
+import { VariantButton } from './variant-button';
 import { SearchableDropdownButton } from './searchable-dropdown-button';
 
 /**
@@ -317,7 +317,7 @@ export function Pagination({
 
  if (isActive) {
  return (
- <SecondaryButton
+ <VariantButton intent="secondary"
  key={page}
  size="sm"
  onClick={() => onPageChange(page as number)}
@@ -327,12 +327,12 @@ export function Pagination({
  className="h-9 min-w-[36px] px-3 bg-white border-primary/50 text-foreground font-semibold"
  >
  {page}
- </SecondaryButton>
+ </VariantButton>
  );
  }
 
  return (
- <SecondaryButton
+ <VariantButton intent="secondary"
  key={page}
  size="sm"
  onClick={() => onPageChange(page as number)}
@@ -342,7 +342,7 @@ export function Pagination({
  className="h-9 min-w-[36px] px-3"
  >
  {page}
- </SecondaryButton>
+ </VariantButton>
  );
  })}
  </div>

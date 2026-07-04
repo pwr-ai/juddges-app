@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Home, Search, FileQuestion } from "lucide-react";
-import { ErrorCard, SecondaryButton, PageContainer } from "@/lib/styles/components";
+import { ErrorCard, VariantButton, PageContainer } from "@/lib/styles/components";
 
 export default function NotFound() {
   const router = useRouter();
@@ -32,13 +32,13 @@ export default function NotFound() {
               You might be looking for:
             </p>
             <div className="flex justify-center">
-              <SecondaryButton
+              <VariantButton intent="secondary"
                 onClick={() => router.push("/search")}
                 icon={Search}
                 size="sm"
               >
                 Search
-              </SecondaryButton>
+              </VariantButton>
             </div>
           </div>
         </div>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { VariantButton } from './variant-button';
-import { SecondaryButton } from './secondary-button';
 
 export interface PageSizeToggleProps {
   options: number[];
@@ -36,7 +35,7 @@ export function PageSizeToggle({
         }
 
         return (
-          <SecondaryButton
+          <VariantButton intent="secondary"
             key={size}
             size="sm"
             onClick={() => onChange(size)}
@@ -46,7 +45,7 @@ export function PageSizeToggle({
             className="h-9 min-w-[44px] px-3"
           >
             {size}
-          </SecondaryButton>
+          </VariantButton>
         );
       })}
     </div>

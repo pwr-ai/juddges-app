@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
  PageContainer,
  LightCard,
- SecondaryButton,
+ VariantButton,
  LoadingIndicator,
  ErrorCard,
  Badge,
@@ -154,16 +154,16 @@ export default function BaseSchemaPage(): React.JSX.Element {
  return (
  <PageContainer fillViewport width="wide">
  <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
- <SecondaryButton icon={ArrowLeft} onClick={() => router.push('/schemas')}>
+ <VariantButton intent="secondary" icon={ArrowLeft} onClick={() => router.push('/schemas')}>
  Back to Schemas
- </SecondaryButton>
+ </VariantButton>
  <div className="flex items-center gap-2">
- <SecondaryButton size="sm"icon={Copy} onClick={handleCopyJson}>
+ <VariantButton intent="secondary" size="sm"icon={Copy} onClick={handleCopyJson}>
  Copy JSON
- </SecondaryButton>
- <SecondaryButton size="sm"icon={Download} onClick={handleDownloadJson}>
+ </VariantButton>
+ <VariantButton intent="secondary" size="sm"icon={Download} onClick={handleDownloadJson}>
  Download JSON
- </SecondaryButton>
+ </VariantButton>
  </div>
  </div>
 

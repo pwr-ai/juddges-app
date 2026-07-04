@@ -9,13 +9,16 @@
 import React from 'react';
 import { SearchX, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SecondaryButton } from './secondary-button';
-import type { SecondaryButtonProps } from './secondary-button';
 import { VariantButton } from './variant-button';
 import type { VariantButtonProps } from './variant-button';
 
 type PrimaryButtonProps = Omit<
   Extract<VariantButtonProps, { intent: "primary" }>,
+  "intent"
+>;
+
+type SecondaryButtonProps = Omit<
+  Extract<VariantButtonProps, { intent: "secondary" }>,
   "intent"
 >;
 
@@ -193,7 +196,7 @@ export function EmptyState({
  {(primaryAction || secondaryAction || actions) && (
  <div className="flex flex-col sm:flex-row gap-3">
  {secondaryAction && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  onClick={secondaryAction.onClick}
  icon={secondaryAction.icon}
  size={secondaryAction.size || "md"}
@@ -201,7 +204,7 @@ export function EmptyState({
  className={secondaryAction.className}
  >
  {secondaryAction.label}
- </SecondaryButton>
+ </VariantButton>
  )}
  {primaryAction && (
  <VariantButton intent="primary"

@@ -2,7 +2,7 @@ import { FC } from "react";
 import { Search, X, LayoutGrid, Table as TableIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { SectionHeader, SecondaryButton } from "@/lib/styles/components";
+import { SectionHeader, VariantButton } from "@/lib/styles/components";
 
 interface DocumentsToolbarProps {
   loadedDocumentCount: number;
@@ -94,7 +94,7 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
             </button>
           </div>
           {!allDocumentsLoaded && totalDocumentCount > initialLoadLimit && viewMode === 'cards' && (
-            <SecondaryButton
+            <VariantButton intent="secondary"
               onClick={onLoadAllDocuments}
               disabled={isLoadingAll}
               size="sm"
@@ -108,7 +108,7 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
               ) : (
                 <>Load All {totalDocumentCount} Documents</>
               )}
-            </SecondaryButton>
+            </VariantButton>
           )}
         </div>
       </div>

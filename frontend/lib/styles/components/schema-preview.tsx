@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Eye, EyeOff, FileText, Calendar, Tag, User, Info, FileCode, Hash, List, CheckSquare, Link as LinkIcon } from "lucide-react";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { BaseCard } from "./base-card";
-import { SecondaryButton } from "./secondary-button";
+import { VariantButton } from './variant-button';
 import { SubsectionHeader } from "./subsection-header";
 import { cn } from "@/lib/utils";
 import { parseSchemaText, getFieldTypeLabel, formatSchemaFieldName } from "@/lib/schema-utils";
@@ -147,9 +147,9 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50"/>
  <p className="text-sm text-muted-foreground mb-4">Select a schema to preview its structure</p>
  {onGenerateNew && (
- <SecondaryButton onClick={onGenerateNew} size="md">
+ <VariantButton intent="secondary" onClick={onGenerateNew} size="md">
  Generate New Schema
- </SecondaryButton>
+ </VariantButton>
  )}
  </div>
  </BaseCard>
@@ -166,14 +166,14 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <div className="space-y-6 -mt-3">
  {/* Header with toggle - positioned to align with BaseCard header row */}
  <div className="relative -mt-8 -mr-2 mb-1 flex justify-end">
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => setShowRawSchema(!showRawSchema)}
  icon={showRawSchema ? EyeOff : Eye}
  aria-label={showRawSchema ? "Hide raw schema JSON view": "Show raw schema JSON view"}
  >
  {showRawSchema ? "Hide Raw": "Show Raw"}
- </SecondaryButton>
+ </VariantButton>
  </div>
 
  {/* Schema Metadata */}

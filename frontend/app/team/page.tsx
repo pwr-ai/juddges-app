@@ -3,15 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Linkedin, Mail, Users, ArrowRight } from "lucide-react";
-import {
- Header,
- Badge,
- LightCard,
- SecondaryButton,
- VariantButton,
- PageContainer,
- SecondaryHeader,
-} from "@/lib/styles/components";
+import { Header, Badge, LightCard, VariantButton, PageContainer, SecondaryHeader } from "@/lib/styles/components";
 
 interface TeamMember {
  name: string;
@@ -96,24 +88,24 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
  {/* Contact Links */}
  <div className="flex gap-2 w-full mt-auto">
  {member.linkedin && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  className="flex-1 !h-9 !min-h-[36px] !max-h-[36px]"
  onClick={() => window.open(member.linkedin, '_blank')}
  >
  <Linkedin className="h-4 w-4 mr-2"/>
  LinkedIn
- </SecondaryButton>
+ </VariantButton>
  )}
  {member.email && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  className="flex-1 !h-9 !min-h-[36px] !max-h-[36px]"
  onClick={() => window.location.href = `mailto:${member.email}`}
  >
  <Mail className="h-4 w-4 mr-2"/>
  Email
- </SecondaryButton>
+ </VariantButton>
  )}
  </div>
  </div>
@@ -154,13 +146,13 @@ export default function TeamPage() {
  We&apos;re always looking for talented researchers and engineers interested in AI and legal technology.
  If you&apos;re passionate about advancing legal research through artificial intelligence, we&apos;d love to hear from you.
  </p>
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="md"
  icon={ArrowRight}
  onClick={() => window.location.href = '/contact'}
  >
  Get in Touch
- </SecondaryButton>
+ </VariantButton>
  </div>
  </LightCard>
  </PageContainer>

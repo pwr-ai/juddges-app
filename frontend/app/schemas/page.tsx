@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { FileJson, Plus, ArrowUpDown, X, Globe } from 'lucide-react';
 import {
  PageContainer,
- SecondaryButton,
+ VariantButton,
  LoadingIndicator,
  EmptyState,
  ErrorCard,
@@ -356,13 +356,13 @@ export default function SchemasPage() {
  onToggleFilters={() => setShowFilters(!showFilters)}
  />
  <div className="mb-3 flex justify-end">
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={Globe}
  onClick={() => router.push('/schemas/base')}
  >
  View Base Schema (EN/PL)
- </SecondaryButton>
+ </VariantButton>
  </div>
 
  {/* Floating Filters Panel - Positioned next to Show Filters button */}

@@ -2,7 +2,6 @@
 
 import { Filter } from "lucide-react";
 import { VariantButton } from "../variant-button";
-import { SecondaryButton } from "../secondary-button";
 import { SaveToCollectionPopover } from "../save-to-collection-popover";
 import { InfiniteScrollTrigger } from "./InfiniteScrollTrigger";
 import { SearchDocumentCard } from "../search-document-card";
@@ -105,13 +104,13 @@ export function SearchResultsSection({
         </div>
         <div className="flex items-center gap-2">
           {selectedCount > 0 ? (
-            <SecondaryButton size="sm" onClick={clearSelection}>
+            <VariantButton intent="secondary" size="sm" onClick={clearSelection}>
               Deselect All
-            </SecondaryButton>
+            </VariantButton>
           ) : (
-            <SecondaryButton size="sm" onClick={() => selectAllDocuments()}>
+            <VariantButton intent="secondary" size="sm" onClick={() => selectAllDocuments()}>
               Select All
-            </SecondaryButton>
+            </VariantButton>
           )}
           <VariantButton intent="primary"
             size="sm"

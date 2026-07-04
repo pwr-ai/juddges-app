@@ -4,13 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import {
- SecondaryButton,
- LoadingIndicator,
- BaseCard,
- VariantButton,
- Badge,
-} from "@/lib/styles/components";
+import { VariantButton, LoadingIndicator, BaseCard, Badge } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import {
  Layers,
@@ -391,9 +385,9 @@ export function BulkExtractionDialog({
 
  {/* Actions */}
  <div className="flex justify-end gap-3">
- <SecondaryButton onClick={onClose}>
+ <VariantButton intent="secondary" onClick={onClose}>
  Cancel
- </SecondaryButton>
+ </VariantButton>
  <VariantButton intent="glass"
  onClick={handleSubmit}
  disabled={selectedSchemas.size === 0 || isSubmitting}
@@ -449,13 +443,13 @@ export function BulkExtractionDialog({
  </div>
  <div className="flex items-center gap-2">
  {isSuccess && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => handleExportJob(job.job_id)}
  icon={Download}
  >
  Export
- </SecondaryButton>
+ </VariantButton>
  )}
  <span className="text-xs text-muted-foreground">
  {job.status === 'rejected' ? 'Rejected' : currentStatus}
@@ -489,9 +483,9 @@ export function BulkExtractionDialog({
  )}
 
  <div className="flex justify-end">
- <SecondaryButton onClick={onClose}>
+ <VariantButton intent="secondary" onClick={onClose}>
  {isPolling ? 'Close (jobs continue in background)' : 'Close'}
- </SecondaryButton>
+ </VariantButton>
  </div>
  </div>
  )}

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { BaseCard, VariantButton, SecondaryButton } from "@/lib/styles/components";
+import { BaseCard, VariantButton } from "@/lib/styles/components";
 
 interface EditCollectionFormProps {
   editName: string;
@@ -72,9 +72,9 @@ const EditCollectionForm: FC<EditCollectionFormProps> = ({
           <VariantButton intent="primary" onClick={onSave} size="sm" disabled={!editName.trim()}>
             Save Changes
           </VariantButton>
-          <SecondaryButton onClick={onCancel} size="sm">
+          <VariantButton intent="secondary" onClick={onCancel} size="sm">
             Cancel
-          </SecondaryButton>
+          </VariantButton>
         </div>
       </div>
     </BaseCard>

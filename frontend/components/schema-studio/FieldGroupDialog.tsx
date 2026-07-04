@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FolderTree, ChevronRight, X, Type, Plus } from "lucide-react";
-import { VariantButton, SecondaryButton as SecondaryButtonStyled, DropdownButton, IconButton } from "@/lib/styles/components";
+import { VariantButton, DropdownButton, IconButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
 import { cn } from "@/lib/utils";
 import type { SchemaField } from "@/hooks/schema-editor/types";
@@ -250,13 +250,13 @@ export function FieldGroupDialog({
  <div className="space-y-4">
  <div className="flex items-center justify-between">
  <Label>Add Fields to Group</Label>
- <SecondaryButtonStyled
+ <VariantButton intent="secondary"
  onClick={handleAddGroupField}
  size="sm"
  icon={Plus}
  >
  Add Field
- </SecondaryButtonStyled>
+ </VariantButton>
  </div>
 
  {/* Tree view of added fields */}
@@ -419,12 +419,12 @@ export function FieldGroupDialog({
  <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-border/50">
  {fieldGroupPhase === 1 ? (
  <>
- <SecondaryButtonStyled
+ <VariantButton intent="secondary"
  onClick={() => onOpenChange(false)}
  size="sm"
  >
  Cancel
- </SecondaryButtonStyled>
+ </VariantButton>
  <VariantButton intent="primary"
  onClick={handleFieldGroupNextPhase}
  size="sm"
@@ -435,18 +435,18 @@ export function FieldGroupDialog({
  </>
  ) : (
  <>
- <SecondaryButtonStyled
+ <VariantButton intent="secondary"
  onClick={() => setFieldGroupPhase(1)}
  size="sm"
  >
  Back
- </SecondaryButtonStyled>
- <SecondaryButtonStyled
+ </VariantButton>
+ <VariantButton intent="secondary"
  onClick={() => onOpenChange(false)}
  size="sm"
  >
  Cancel
- </SecondaryButtonStyled>
+ </VariantButton>
  <VariantButton intent="primary"
  onClick={handleCreateFieldGroup}
  size="sm"

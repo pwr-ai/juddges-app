@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { Save, Download, RotateCcw, Loader2 } from "lucide-react";
-import { VariantButton, SecondaryButton, DropdownButton } from "@/lib/styles/components";
+import { VariantButton, DropdownButton } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 
 /**
@@ -109,14 +109,14 @@ export function SaveActions({
  <>
  {/* Discard button (only shown when dirty) - TEMPORARILY REMOVED */}
  {/* {isDirty && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => setShowDiscardDialog(true)}
  disabled={isSaving}
  icon={RotateCcw}
  >
  Discard
- </SecondaryButton>
+ </VariantButton>
  )} */}
 
  {/* Save button */}

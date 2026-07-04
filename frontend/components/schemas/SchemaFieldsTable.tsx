@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, FileCode, Calendar, List, Hash, CheckSquare, Link as LinkIcon, Check, X, Type } from "lucide-react";
 import { useState } from "react";
 import { FlatField, formatSchemaFieldName, getFieldTypeLabel } from "@/lib/schema-utils";
-import { Badge, SecondaryButton, DropdownButton } from "@/lib/styles/components";
+import { Badge, VariantButton, DropdownButton } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 
 interface SchemaFieldsTableProps {

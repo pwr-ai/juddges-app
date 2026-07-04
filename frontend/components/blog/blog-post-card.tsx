@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Badge, IconButton, SecondaryButton, LightCard } from "@/lib/styles/components";
+import { Badge, IconButton, VariantButton, LightCard } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import {
  Calendar,
@@ -252,7 +252,7 @@ export function BlogPostCard({
 
  {/* Hover CTA */}
  <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity z-10">
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={ArrowRight}
  className="shadow-lg hover:shadow-xl"
@@ -263,7 +263,7 @@ export function BlogPostCard({
  }}
  >
  Read More
- </SecondaryButton>
+ </VariantButton>
  </div>
  </LightCard>
  );

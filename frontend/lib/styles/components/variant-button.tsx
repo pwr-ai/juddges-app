@@ -22,6 +22,7 @@ import {
   textButtonClassName,
   glassButtonClassName,
   primaryButtonClassName,
+  secondaryButtonClassName,
 } from './button-variants';
 
 type AccentProps = {
@@ -73,7 +74,28 @@ type PrimaryProps = {
   href?: string;
 };
 
-export type VariantButtonProps = AccentProps | TextProps | GlassProps | PrimaryProps;
+type SecondaryProps = {
+  intent: "secondary";
+  children: React.ReactNode;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  className?: string;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  icon?: React.ComponentType<{ className?: string }>;
+  size?: "sm" | "md" | "lg";
+  enhancedHover?: boolean;
+  enhancedFocus?: boolean;
+  enhancedActive?: boolean;
+  "aria-label"?: string;
+  href?: string;
+};
+
+export type VariantButtonProps =
+  | AccentProps
+  | TextProps
+  | GlassProps
+  | PrimaryProps
+  | SecondaryProps;
 
 function renderAccent(props: AccentProps): React.JSX.Element {
   const {
@@ -217,6 +239,59 @@ function renderPrimary(props: PrimaryProps): React.JSX.Element {
   );
 }
 
+function renderSecondary(props: SecondaryProps): React.JSX.Element {
+  const {
+    children,
+    onClick,
+    className,
+    disabled = false,
+    type = "button",
+    icon: Icon,
+    size = "md",
+    enhancedHover = false,
+    enhancedFocus = false,
+    enhancedActive = false,
+    "aria-label": ariaLabel,
+    href,
+  } = props;
+
+  const commonClasses = secondaryButtonClassName({
+    size,
+    enhancedHover,
+    enhancedFocus,
+    enhancedActive,
+    className,
+  });
+
+  const content = (
+    <>
+      {Icon && <Icon className="mr-2 h-4 w-4" />}
+      {children}
+    </>
+  );
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} className={cn(commonClasses, "border")}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <Button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      variant="outline"
+      aria-label={ariaLabel}
+      className={commonClasses}
+    >
+      {content}
+    </Button>
+  );
+}
+
 export function VariantButton(props: VariantButtonProps): React.JSX.Element {
   switch (props.intent) {
     case "text":
@@ -225,6 +300,8 @@ export function VariantButton(props: VariantButtonProps): React.JSX.Element {
       return renderGlass(props);
     case "primary":
       return renderPrimary(props);
+    case "secondary":
+      return renderSecondary(props);
     case "accent":
     default:
       return renderAccent(props);

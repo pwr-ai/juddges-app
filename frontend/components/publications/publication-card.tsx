@@ -4,7 +4,7 @@ import { FC, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { VariantButton, SecondaryButton } from "@/lib/styles/components";
+import { VariantButton } from "@/lib/styles/components";
 import { PublicationWithResources, PublicationStatus } from "@/types/publication";
 import {
  FileText,
@@ -239,25 +239,25 @@ export const PublicationCard: FC<PublicationCardProps> = ({ publication, current
  </VariantButton>
  )}
  {publication.links.arxiv && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => window.open(publication.links.arxiv, '_blank', 'noopener,noreferrer')}
  icon={ExternalLink}
  >
  arXiv
- </SecondaryButton>
+ </VariantButton>
  )}
  {publication.links.code && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => window.open(publication.links.code, '_blank', 'noopener,noreferrer')}
  icon={Code}
  >
  Code
- </SecondaryButton>
+ </VariantButton>
  )}
  {publication.links.doi && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => window.open(
  publication.links.doi?.startsWith('http') ? publication.links.doi : `https://doi.org/${publication.links.doi}`,
@@ -267,25 +267,25 @@ export const PublicationCard: FC<PublicationCardProps> = ({ publication, current
  icon={ExternalLink}
  >
  DOI
- </SecondaryButton>
+ </VariantButton>
  )}
  {publication.links.website && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => window.open(publication.links.website, '_blank', 'noopener,noreferrer')}
  icon={ExternalLink}
  >
  Website
- </SecondaryButton>
+ </VariantButton>
  )}
  {publication.links.video && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  onClick={() => window.open(publication.links.video, '_blank', 'noopener,noreferrer')}
  icon={ExternalLink}
  >
  Video
- </SecondaryButton>
+ </VariantButton>
  )}
  </CardFooter>
  )}
