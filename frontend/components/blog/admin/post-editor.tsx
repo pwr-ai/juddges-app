@@ -20,13 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import {
-  LightCard,
-  VariantButton,
-  SecondaryButton,
-  IconButton,
-  Badge,
-} from "@/lib/styles/components";
+import { LightCard, VariantButton, IconButton, Badge } from "@/lib/styles/components";
 import {
   Sparkles,
   Image as ImageIcon,
@@ -192,13 +186,13 @@ export function PostEditor({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="content">Content *</Label>
-                <SecondaryButton
+                <VariantButton intent="secondary"
                   size="sm"
                   icon={Wand2}
                   onClick={() => {}}
                 >
                   AI Assist
-                </SecondaryButton>
+                </VariantButton>
               </div>
               <TiptapEditor
                 content={content}
@@ -248,9 +242,9 @@ export function PostEditor({
                 <p className="text-sm text-muted-foreground mb-2">
                   Drag and drop an image or click to browse
                 </p>
-                <SecondaryButton size="sm" icon={Upload}>
+                <VariantButton intent="secondary" size="sm" icon={Upload}>
                   Upload Image
-                </SecondaryButton>
+                </VariantButton>
               </div>
             )}
           </div>
@@ -269,14 +263,14 @@ export function PostEditor({
                   Let AI create a compelling summary of your post
                 </p>
               </div>
-              <SecondaryButton
+              <VariantButton intent="secondary"
                 size="sm"
                 icon={isGeneratingSummary ? Sparkles : Wand2}
                 onClick={handleGenerateSummary}
                 disabled={isGeneratingSummary || !content}
               >
                 {isGeneratingSummary ? "Generating..." : "Generate"}
-              </SecondaryButton>
+              </VariantButton>
             </div>
           </div>
           <div>
@@ -327,15 +321,15 @@ export function PostEditor({
               >
                 Publish Now
               </VariantButton>
-              <SecondaryButton
+              <VariantButton intent="secondary"
                 className="w-full"
                 icon={Save}
                 onClick={handleSave}
                 disabled={isSaving}
               >
                 {isSaving ? "Saving..." : "Save Draft"}
-              </SecondaryButton>
-              <SecondaryButton
+              </VariantButton>
+              <VariantButton intent="secondary"
                 className="w-full"
                 icon={Eye}
                 onClick={() => {
@@ -349,7 +343,7 @@ export function PostEditor({
                 }}
               >
                 Preview
-              </SecondaryButton>
+              </VariantButton>
             </div>
           </div>
         </LightCard>
@@ -380,13 +374,13 @@ export function PostEditor({
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Tags</h3>
-              <SecondaryButton
+              <VariantButton intent="secondary"
                 size="sm"
                 icon={Sparkles}
                 onClick={handleGenerateTags}
               >
                 AI Suggest
-              </SecondaryButton>
+              </VariantButton>
             </div>
           </div>
           <div className="space-y-3">

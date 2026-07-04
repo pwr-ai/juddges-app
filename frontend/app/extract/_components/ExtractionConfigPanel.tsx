@@ -1,13 +1,7 @@
 import { Wand2, Link as LinkIcon, Sparkles, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { SchemaPreview } from "@/lib/styles/components/schema-preview";
-import {
-  BaseCard,
-  SecondaryButton,
-  SearchableDropdownButton,
-  DropdownButton,
-  VariantButton,
-} from "@/lib/styles/components";
+import { BaseCard, VariantButton, SearchableDropdownButton, DropdownButton } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { Collection, CollectionDocument, formatName } from "./types";
 import { DocumentSelector } from "./DocumentSelector";
@@ -123,13 +117,13 @@ export function ExtractionConfigPanel({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Extraction Schema</label>
-                  <SecondaryButton
+                  <VariantButton intent="secondary"
                     size="sm"
                     onClick={onGenerateSchema}
                     icon={Wand2}
                   >
                     Generate New
-                  </SecondaryButton>
+                  </VariantButton>
                 </div>
                 <SearchableDropdownButton
                   icon={<FileCode size={16} />}
@@ -224,7 +218,7 @@ export function ExtractionConfigPanel({
                     </>
                   )}
                 </VariantButton>
-                <SecondaryButton
+                <VariantButton intent="secondary"
                   onClick={onOpenBulkExtraction}
                   disabled={
                     !selectedCollection ||
@@ -237,7 +231,7 @@ export function ExtractionConfigPanel({
                 >
                   <Layers className="h-4 w-4" />
                   Bulk
-                </SecondaryButton>
+                </VariantButton>
               </div>
             </div>
           </BaseCard>

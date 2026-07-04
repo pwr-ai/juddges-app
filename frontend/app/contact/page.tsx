@@ -8,7 +8,7 @@ import {
   Badge,
   LightCard,
   SecondaryHeader,
-  SecondaryButton,
+  VariantButton,
 } from "@/lib/styles/components";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -377,13 +377,13 @@ export default function ContactPage() {
         <p className="text-sm text-muted-foreground mb-6">
           Looking for immediate answers? Check out our comprehensive Help Center.
         </p>
-        <SecondaryButton
+        <VariantButton intent="secondary"
           size="lg"
           icon={HelpCircle}
           onClick={() => window.location.href = '/help'}
         >
           Visit Help Center
-        </SecondaryButton>
+        </VariantButton>
       </div>
     </PageContainer>
   );

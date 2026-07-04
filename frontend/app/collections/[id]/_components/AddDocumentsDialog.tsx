@@ -4,7 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Plus, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { IconButton, SecondaryButton, VariantButton } from "@/lib/styles/components";
+import { IconButton, VariantButton } from "@/lib/styles/components";
 
 interface AddDocumentsDialogProps {
   open: boolean;
@@ -81,7 +81,7 @@ const AddDocumentsDialog: FC<AddDocumentsDialogProps> = ({
             )}
           </div>
           <div className="flex justify-end gap-2">
-            <SecondaryButton
+            <VariantButton intent="secondary"
               onClick={() => {
                 setNewDocumentIds("");
                 onOpenChange(false);
@@ -89,7 +89,7 @@ const AddDocumentsDialog: FC<AddDocumentsDialogProps> = ({
               size="sm"
             >
               Cancel
-            </SecondaryButton>
+            </VariantButton>
             <VariantButton
               intent="glass"
               onClick={onAddDocuments}

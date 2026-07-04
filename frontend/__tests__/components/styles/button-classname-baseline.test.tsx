@@ -18,7 +18,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import {
-  SecondaryButton,
   VariantButton,
   IconButton,
 } from '@/lib/styles/components';
@@ -51,11 +50,11 @@ describe('button className baseline (#144)', () => {
 
   describe('SecondaryButton', () => {
     for (const size of SIZES) {
-      it(`size=${size}`, () => expect(classOf(<SecondaryButton size={size}>x</SecondaryButton>)).toMatchSnapshot());
+      it(`size=${size}`, () => expect(classOf(<VariantButton intent="secondary" size={size}>x</VariantButton>)).toMatchSnapshot());
     }
-    it('enhancedHover', () => expect(classOf(<SecondaryButton enhancedHover>x</SecondaryButton>)).toMatchSnapshot());
-    it('enhancedFocus', () => expect(classOf(<SecondaryButton enhancedFocus>x</SecondaryButton>)).toMatchSnapshot());
-    it('enhancedActive', () => expect(classOf(<SecondaryButton enhancedActive>x</SecondaryButton>)).toMatchSnapshot());
+    it('enhancedHover', () => expect(classOf(<VariantButton intent="secondary" enhancedHover>x</VariantButton>)).toMatchSnapshot());
+    it('enhancedFocus', () => expect(classOf(<VariantButton intent="secondary" enhancedFocus>x</VariantButton>)).toMatchSnapshot());
+    it('enhancedActive', () => expect(classOf(<VariantButton intent="secondary" enhancedActive>x</VariantButton>)).toMatchSnapshot());
   });
 
   describe('AccentButton', () => {

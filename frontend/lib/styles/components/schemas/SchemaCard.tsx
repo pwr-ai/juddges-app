@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { BaseCard } from '../base-card';
 import { SchemaStatusBadge, VerifiedBadge } from '../schema-status-badge';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../tooltip';
-import { SecondaryButton } from '../secondary-button';
+import { VariantButton } from '../variant-button';
 import { IconButton } from '../icon-button';
 import { DeleteConfirmationDialog } from '../delete-confirmation-dialog';
 import { ExtractionSchema, SchemaStatus } from '@/types/extraction_schemas';

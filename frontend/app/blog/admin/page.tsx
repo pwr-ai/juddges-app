@@ -19,15 +19,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import {
-  PageContainer,
-  Header,
-  VariantButton,
-  SecondaryButton,
-  IconButton,
-  SearchInput,
-  EmptyState,
-} from "@/lib/styles/components";
+import { PageContainer, Header, VariantButton, IconButton, SearchInput, EmptyState } from "@/lib/styles/components";
 import {
   Plus,
   Filter,
@@ -159,9 +151,9 @@ export default function AdminBlogPage(): React.JSX.Element {
             size="4xl"
           />
           <div className="flex flex-wrap gap-3">
-            <SecondaryButton size="lg" icon={Settings}>
+            <VariantButton intent="secondary" size="lg" icon={Settings}>
               Settings
-            </SecondaryButton>
+            </VariantButton>
             <VariantButton intent="primary"
               size="lg"
               icon={Plus}
@@ -262,10 +254,10 @@ export default function AdminBlogPage(): React.JSX.Element {
             {/* Bulk Actions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SecondaryButton className="gap-2 h-11">
+                <VariantButton intent="secondary" className="gap-2 h-11">
                   <MoreVertical className="size-4" />
                   Actions
-                </SecondaryButton>
+                </VariantButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>

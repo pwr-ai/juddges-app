@@ -7,7 +7,7 @@ import {
  BaseCard,
  LoadingIndicator,
  EmptyState,
- SecondaryButton,
+ VariantButton,
  Badge,
  PageContainer,
  SearchableDropdownButton,
@@ -339,12 +339,12 @@ function JobDetailsContent() {
  <PageContainer fillViewport={true}>
  {/* Back button */}
  <div className="flex items-center gap-4 mb-6 print:hidden">
- <SecondaryButton
+ <VariantButton intent="secondary"
  icon={ArrowLeft}
  onClick={() => router.push('/extractions')}
  >
  Back to Extractions
- </SecondaryButton>
+ </VariantButton>
  </div>
 
  <div className="space-y-4">
@@ -527,12 +527,12 @@ function JobDetailsContent() {
  />
  </div>
  {selectedDocumentId && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  icon={ExternalLink}
  onClick={handleViewDocument}
  >
  View Document
- </SecondaryButton>
+ </VariantButton>
  )}
  </div>
  </div>
@@ -636,13 +636,13 @@ function JobDetailsContent() {
  </TabsTrigger>
  </TabsList>
  </Tabs>
- <SecondaryButton
+ <VariantButton intent="secondary"
  icon={Printer}
  onClick={() => window.print()}
  size="sm"
  >
  Print
- </SecondaryButton>
+ </VariantButton>
  </div>
 
  {/* Tab content */}

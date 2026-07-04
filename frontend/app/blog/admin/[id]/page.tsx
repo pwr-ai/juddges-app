@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   PageContainer,
   Header,
-  SecondaryButton,
+  VariantButton,
   Badge,
   IconButton,
   LoadingIndicator,
@@ -134,9 +134,9 @@ export default function EditPostPage(): React.JSX.Element {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
-            <SecondaryButton onClick={() => router.push("/blog/admin")} icon={ArrowLeft}>
+            <VariantButton intent="secondary" onClick={() => router.push("/blog/admin")} icon={ArrowLeft}>
               Back to Admin
-            </SecondaryButton>
+            </VariantButton>
           </div>
         </div>
       </PageContainer>

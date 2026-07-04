@@ -6,13 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Wand2, CheckCircle, AlertCircle, FileText, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SearchDocument } from "@/types/search";
-import {
- BaseCard,
- VariantButton,
- SecondaryButton,
- LoadingIndicator,
- AIBadge,
-} from "@/lib/styles/components";
+import { BaseCard, VariantButton, LoadingIndicator, AIBadge } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 
@@ -498,14 +492,14 @@ export function SchemaGenerator({
  <VariantButton intent="primary" onClick={handleAcceptSchema} className="flex-1">
  Accept & Use Schema
  </VariantButton>
- <SecondaryButton
+ <VariantButton intent="secondary"
  onClick={() => {
  setGeneratedSchema(null);
  setGenerationSteps([]);
  }}
  >
  Generate Again
- </SecondaryButton>
+ </VariantButton>
  </div>
  </div>
  </div>

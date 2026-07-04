@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Badge, SecondaryButton, VariantButton, LightCard, PageContainer, IconButton, Header } from "@/lib/styles/components";
+import { Badge, VariantButton, LightCard, PageContainer, IconButton, Header } from "@/lib/styles/components";
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { MarkdownRenderer } from "@/components/blog/markdown-renderer";
 import {
@@ -417,9 +417,9 @@ export default function BlogPostPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
-            <SecondaryButton onClick={() => router.push("/blog")} icon={ArrowLeft}>
+            <VariantButton intent="secondary" onClick={() => router.push("/blog")} icon={ArrowLeft}>
               Back to Blog
-            </SecondaryButton>
+            </VariantButton>
           </div>
         </div>
       </PageContainer>
@@ -508,20 +508,20 @@ export default function BlogPostPage() {
               Edit Post
             </VariantButton>
           )}
-          <SecondaryButton
+          <VariantButton intent="secondary"
             onClick={() => setIsLiked(!isLiked)}
             icon={Heart}
             className={cn(isLiked && "bg-primary text-primary-foreground")}
           >
             {post.likes}
-          </SecondaryButton>
-          <SecondaryButton
+          </VariantButton>
+          <VariantButton intent="secondary"
             onClick={() => setIsBookmarked(!isBookmarked)}
             icon={Bookmark}
             className={cn(isBookmarked && "bg-primary text-primary-foreground")}
           >
             Save
-          </SecondaryButton>
+          </VariantButton>
           <DropdownShare onShare={handleShare} copySuccess={copySuccess} />
         </div>
       </div>
@@ -628,9 +628,9 @@ export default function BlogPostPage() {
                 <div className="text-sm text-muted-foreground mb-3">
                   {post.author.title}
                 </div>
-                <SecondaryButton size="sm" className="w-full">
+                <VariantButton intent="secondary" size="sm" className="w-full">
                   View Profile
-                </SecondaryButton>
+                </VariantButton>
               </div>
             </div>
           </LightCard>
@@ -653,12 +653,12 @@ export default function BlogPostPage() {
           <LightCard padding="md">
             <p className="text-sm font-semibold mb-4">Quick Actions</p>
             <div className="space-y-2">
-              <SecondaryButton size="sm" className="w-full" icon={Download}>
+              <VariantButton intent="secondary" size="sm" className="w-full" icon={Download}>
                 Export as PDF
-              </SecondaryButton>
-              <SecondaryButton size="sm" className="w-full" icon={Share2}>
+              </VariantButton>
+              <VariantButton intent="secondary" size="sm" className="w-full" icon={Share2}>
                 Share
-              </SecondaryButton>
+              </VariantButton>
             </div>
           </LightCard>
         </aside>
@@ -685,9 +685,9 @@ export default function BlogPostPage() {
           <VariantButton intent="primary" size="lg" icon={ArrowRight} onClick={() => router.push("/blog")}>
             View All Articles
           </VariantButton>
-          <SecondaryButton size="lg" onClick={() => router.push("/search")}>
+          <VariantButton intent="secondary" size="lg" onClick={() => router.push("/search")}>
             Search Judgments
-          </SecondaryButton>
+          </VariantButton>
         </div>
       </LightCard>
     </PageContainer>
@@ -703,7 +703,7 @@ function DropdownShare({
   copySuccess: boolean;
 }) {
   return (
-    <SecondaryButton
+    <VariantButton intent="secondary"
       onClick={() => {
         const result = onShare("copy");
         // Handle promise if async
@@ -716,6 +716,6 @@ function DropdownShare({
       icon={Share2}
     >
       {copySuccess ? "Copied!" : "Share"}
-    </SecondaryButton>
+    </VariantButton>
   );
 }

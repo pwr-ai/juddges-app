@@ -15,18 +15,7 @@ import {
 } from "lucide-react";
 import type { BlogPost, BlogCategory } from "@/types/blog";
 import { cn } from "@/lib/utils";
-import {
-  Header,
-  Badge,
-  PageContainer,
-  SearchInput,
-  EmptyState,
-  SecondaryButton,
-  VariantButton,
-  LightCard,
-  IconButton,
-  FilterToggleGroup,
-} from "@/lib/styles/components";
+import { Header, Badge, PageContainer, SearchInput, EmptyState, VariantButton, LightCard, IconButton, FilterToggleGroup } from "@/lib/styles/components";
 import { logger } from "@/lib/logger";
 
 // Mock data - replace with actual API calls
@@ -367,7 +356,7 @@ export default function BlogPage(): React.JSX.Element {
         {/* Load More */}
         {filteredPosts.length > 0 && !loading && (
           <div className="text-center mt-12">
-            <SecondaryButton
+            <VariantButton intent="secondary"
               size="md"
               icon={TrendingUp}
               onClick={() => {
@@ -375,7 +364,7 @@ export default function BlogPage(): React.JSX.Element {
               }}
             >
               Load More Posts
-            </SecondaryButton>
+            </VariantButton>
           </div>
         )}
       </div>

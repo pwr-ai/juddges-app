@@ -17,7 +17,7 @@ import {
  SelectTrigger,
  SelectValue,
 } from "@/components/ui/select";
-import { IconButton, VariantButton, SecondaryButton } from "@/lib/styles/components";
+import { IconButton, VariantButton } from "@/lib/styles/components";
 import {
  Edit2,
  Trash2,
@@ -611,13 +611,13 @@ export function FieldCard({
  </AlertDialogDescription>
  </AlertDialogHeader>
  <AlertDialogFooter className="gap-3 sm:gap-3">
- <SecondaryButton
+ <VariantButton intent="secondary"
  onClick={() => setShowDeleteDialog(false)}
  size="sm"
  className="min-w-[80px]"
  >
  Cancel
- </SecondaryButton>
+ </VariantButton>
  <VariantButton intent="primary"
  onClick={handleDeleteConfirm}
  size="sm"

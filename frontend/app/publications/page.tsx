@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PublicationCard } from "@/components/publications/publication-card";
 import { publications as staticPublications, sortPublications, getPublicationYears } from "@/lib/data/publications";
 import { PublicationType, PublicationWithResources } from "@/types/publication";
-import { SecondaryButton, VariantButton, DropdownButton } from "@/lib/styles/components";
+import { VariantButton, DropdownButton } from "@/lib/styles/components";
 import { BookOpen, Filter, Calendar, FileType, ArrowUpDown, Settings, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPublications } from "@/lib/api/publications";
@@ -199,9 +199,9 @@ export default function PublicationsPage() {
  <p className="text-foreground/80 mb-4">
  Try adjusting your filters to see more results.
  </p>
- <SecondaryButton onClick={resetFilters}>
+ <VariantButton intent="secondary" onClick={resetFilters}>
  Clear all filters
- </SecondaryButton>
+ </VariantButton>
  </div>
  )}
  </div>

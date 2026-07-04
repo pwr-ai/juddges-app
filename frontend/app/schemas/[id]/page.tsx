@@ -24,19 +24,7 @@ import { parseSchemaToFields, flattenSchemaFields, parseSchemaText, getFieldType
 import { SchemaFieldsTable } from '@/components/schemas/SchemaFieldsTable';
 import { SchemaPreview } from '@/lib/styles/components/schemas/SchemaPreview';
 import { useAuth } from '@/contexts/AuthContext';
-import {
- PageContainer,
- LightCard,
- SecondaryButton,
- VariantButton,
- LoadingIndicator,
- ErrorCard,
- Badge,
- AIBadge,
- SubsectionHeader,
- SchemaStatusBadge,
- VerifiedBadge,
-} from '@/lib/styles/components';
+import { PageContainer, LightCard, VariantButton, LoadingIndicator, ErrorCard, Badge, AIBadge, SubsectionHeader, SchemaStatusBadge, VerifiedBadge } from '@/lib/styles/components';
 import { cn } from '@/lib/utils';
 import { SchemaStatus } from '@/types/extraction_schemas';
 
@@ -191,12 +179,12 @@ export default function SchemaDetailPage() {
  <PageContainer fillViewport>
  {/* Back Button */}
  <div className="mb-6">
- <SecondaryButton
+ <VariantButton intent="secondary"
  icon={ArrowLeft}
  onClick={() => router.push('/schemas')}
  >
  Back to Schemas
- </SecondaryButton>
+ </VariantButton>
  </div>
 
  <LightCard
@@ -221,13 +209,13 @@ export default function SchemaDetailPage() {
  )}
  </div>
  <div className="flex gap-2 flex-wrap shrink-0">
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={Play}
  onClick={() => router.push(`/extract?schema=${schema.id}`)}
  >
  Configure Extraction
- </SecondaryButton>
+ </VariantButton>
  {isSchemaOwner() && (
  <VariantButton intent="accent"
  size="sm"
@@ -247,22 +235,22 @@ export default function SchemaDetailPage() {
  Duplicate
  </VariantButton>
  {isSchemaOwner() && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={Trash2}
  onClick={handleDeleteClick}
  className="text-red-600 hover:text-red-700 hover:bg-red-50"
  >
  Delete
- </SecondaryButton>
+ </VariantButton>
  )}
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="sm"
  icon={Download}
  onClick={handleExportSchema}
  >
  Export
- </SecondaryButton>
+ </VariantButton>
  </div>
  </div>
 

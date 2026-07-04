@@ -6,7 +6,6 @@
 
 import React, { memo } from 'react';
 import { VariantButton } from './variant-button';
-import { SecondaryButton } from './secondary-button';
 import { IconButton } from './icon-button';
 import { RefreshCw, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -218,20 +217,20 @@ export const ErrorCard = memo(function ErrorCard({
  </VariantButton>
  )}
  {secondaryAction && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  onClick={secondaryAction.onClick}
  icon={secondaryAction.icon}
  className="text-slate-700 hover:text-slate-900"
  >
  {secondaryAction.label}
- </SecondaryButton>
+ </VariantButton>
  )}
  {onDismiss && !showDismissIcon && (
- <SecondaryButton
+ <VariantButton intent="secondary"
  onClick={onDismiss}
  >
  {dismissLabel}
- </SecondaryButton>
+ </VariantButton>
  )}
  </div>
  ) : null}

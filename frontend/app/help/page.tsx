@@ -15,15 +15,7 @@ import {
  Mail,
 } from "lucide-react";
 
-import {
- PageContainer,
- Header,
- Badge,
- LightCard,
- SecondaryHeader,
- VariantButton,
- SecondaryButton,
-} from "@/lib/styles/components";
+import { PageContainer, Header, Badge, LightCard, SecondaryHeader, VariantButton } from "@/lib/styles/components";
 import { SearchInput } from "@/lib/styles/components/search-input";
 import {
  Accordion,
@@ -310,20 +302,20 @@ export default function HelpPage() {
  >
  Contact Support
  </VariantButton>
- <SecondaryButton
+ <VariantButton intent="secondary"
  size="lg"
  icon={Sparkles}
  onClick={() => openTour()}
  >
  Show tour
- </SecondaryButton>
- <SecondaryButton
+ </VariantButton>
+ <VariantButton intent="secondary"
  size="lg"
  icon={Mail}
  onClick={() => window.location.href = 'mailto:lukasz.augustyniak@pwr.edu.pl'}
  >
  Email Us
- </SecondaryButton>
+ </VariantButton>
  </div>
  </LightCard>
  </PageContainer>

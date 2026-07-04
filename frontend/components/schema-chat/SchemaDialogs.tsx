@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SecondaryButton, VariantButton } from "@/lib/styles/components";
+import { VariantButton } from "@/lib/styles/components";
 import { ExtractionDataViewer } from "@/lib/styles/components/extraction/ExtractionDataViewer";
 
 interface SchemaDialogsProps {
@@ -193,9 +193,9 @@ export function SchemaDialogs({
  </div>
 
  <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
- <SecondaryButton onClick={() => onSaveOpenChange(false)} disabled={isSaving} size="sm">
+ <VariantButton intent="secondary" onClick={() => onSaveOpenChange(false)} disabled={isSaving} size="sm">
  Cancel
- </SecondaryButton>
+ </VariantButton>
  <VariantButton intent="primary"
  onClick={onSave}
  disabled={!saveSchemaName.trim() || isSaving || fieldsCount === 0}

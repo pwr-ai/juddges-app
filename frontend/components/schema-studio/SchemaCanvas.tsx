@@ -4,9 +4,9 @@ import * as React from "react";
 import { useState, useEffect, useMemo } from "react";
 import { Plus, Inbox, Trash2, FolderTree, ChevronDown, ChevronRight, GripVertical, Eye, ArrowUp, ArrowDown, Undo2, Redo2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { VariantButton, SecondaryButton as SecondaryButtonStyled, DropdownButton } from "@/lib/styles/components";
+import { VariantButton, DropdownButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
-import { SecondaryButton, IconButton } from "@/lib/styles/components";
+import { IconButton } from "@/lib/styles/components";
 import {
  AlertDialog,
  AlertDialogAction,
@@ -716,9 +716,9 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
  </div>
  <div className="flex items-center gap-2">
  {onPreviewClick && (
- <SecondaryButton onClick={onPreviewClick} size="sm"icon={Eye}>
+ <VariantButton intent="secondary" onClick={onPreviewClick} size="sm"icon={Eye}>
  Preview
- </SecondaryButton>
+ </VariantButton>
  )}
  <VariantButton intent="accent" onClick={handleOpenFieldGroupDialog} size="sm"icon={Plus}>
  <span className="flex items-center gap-1.5">
@@ -764,9 +764,9 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
  Start by describing your needs in the chat, or manually add
  fields using the button above.
  </p>
- <SecondaryButton onClick={handleAddFieldSimple} size="sm"icon={Plus}>
+ <VariantButton intent="secondary" onClick={handleAddFieldSimple} size="sm"icon={Plus}>
  Add Your First Field
- </SecondaryButton>
+ </VariantButton>
  </div>
  </div>
  </div>
@@ -926,14 +926,14 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
 
  {/* Quick add button at bottom */}
  <div className="mt-3">
- <SecondaryButton
+ <VariantButton intent="secondary"
  onClick={handleAddFieldSimple}
  size="sm"
  icon={Plus}
  className="w-full border-dashed"
  >
  Add Another Field
- </SecondaryButton>
+ </VariantButton>
  </div>
  </div>
  </div>

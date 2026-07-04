@@ -12,16 +12,7 @@ import {
  Sparkles,
  Network,
 } from "lucide-react";
-import {
- Header,
- SectionHeader,
- SecondaryHeader,
- LightCard,
- VariantButton,
- SecondaryButton,
- PageContainer,
- Badge,
-} from "@/lib/styles/components";
+import { Header, SectionHeader, SecondaryHeader, LightCard, VariantButton, PageContainer, Badge } from "@/lib/styles/components";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -449,7 +440,7 @@ export default function AboutPage(): React.JSX.Element {
  />
  <p className="text-base text-muted-foreground mb-6">Get in touch for research inquiries, collaborations, or technical questions</p>
  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
- <SecondaryButton
+ <VariantButton intent="secondary"
  className="h-auto py-6"
  onClick={() => window.location.href = 'mailto:lukasz.augustyniak@pwr.edu.pl'}
  >
@@ -460,9 +451,9 @@ export default function AboutPage(): React.JSX.Element {
  <div className="text-xs text-muted-foreground">Email the team</div>
  </div>
  </div>
- </SecondaryButton>
+ </VariantButton>
 
- <SecondaryButton
+ <VariantButton intent="secondary"
  className="h-auto py-6"
  onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}
  >
@@ -473,9 +464,9 @@ export default function AboutPage(): React.JSX.Element {
  <div className="text-xs text-muted-foreground">View on GitHub</div>
  </div>
  </div>
- </SecondaryButton>
+ </VariantButton>
 
- <SecondaryButton
+ <VariantButton intent="secondary"
  className="h-auto py-6"
  onClick={() => router.push('/use-cases')}
  >
@@ -486,7 +477,7 @@ export default function AboutPage(): React.JSX.Element {
  <div className="text-xs text-muted-foreground">See examples</div>
  </div>
  </div>
- </SecondaryButton>
+ </VariantButton>
  </div>
  </LightCard>
 
@@ -505,9 +496,9 @@ export default function AboutPage(): React.JSX.Element {
  <VariantButton intent="primary" size="lg"icon={ArrowRight} onClick={() => router.push('/auth/sign-up')}>
  Get Started
  </VariantButton>
- <SecondaryButton size="lg"onClick={() => router.push('/auth/login')}>
+ <VariantButton intent="secondary" size="lg"onClick={() => router.push('/auth/login')}>
  Sign In
- </SecondaryButton>
+ </VariantButton>
  </div>
  )}
  </div>
