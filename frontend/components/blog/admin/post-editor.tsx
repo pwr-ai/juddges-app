@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { LightCard, VariantButton, IconButton, Badge } from "@/lib/styles/components";
+import { LightCard, VariantButton, Badge } from "@/lib/styles/components";
 import {
   Sparkles,
   Image as ImageIcon,
@@ -227,7 +227,7 @@ export function PostEditor({
                   alt="Featured"
                   className="w-full h-full object-cover"
                 />
-                <IconButton
+                <VariantButton intent="icon"
                   icon={X}
                   onClick={() => setFeaturedImage("")}
                   variant="error"
@@ -396,7 +396,7 @@ export function PostEditor({
                   }
                 }}
               />
-              <IconButton
+              <VariantButton intent="icon"
                 icon={Tag}
                 onClick={handleAddTag}
                 size="sm"

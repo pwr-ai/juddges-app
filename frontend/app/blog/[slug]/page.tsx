@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Badge, VariantButton, LightCard, PageContainer, IconButton, Header } from "@/lib/styles/components";
+import { Badge, VariantButton, LightCard, PageContainer, Header } from "@/lib/styles/components";
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { MarkdownRenderer } from "@/components/blog/markdown-renderer";
 import {
@@ -583,17 +583,17 @@ export default function BlogPostPage() {
           <div className="mt-8 pt-8 border-t border-border">
             <p className="text-sm font-semibold mb-4">Share this article</p>
             <div className="flex gap-2">
-              <IconButton
+              <VariantButton intent="icon"
                 onClick={() => handleShare("twitter")}
                 icon={Twitter}
                 aria-label="Share on Twitter"
               />
-              <IconButton
+              <VariantButton intent="icon"
                 onClick={() => handleShare("linkedin")}
                 icon={Linkedin}
                 aria-label="Share on LinkedIn"
               />
-              <IconButton
+              <VariantButton intent="icon"
                 onClick={() => handleShare("copy")}
                 icon={copySuccess ? Check : Link2}
                 aria-label="Copy link"

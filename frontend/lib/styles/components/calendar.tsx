@@ -28,7 +28,7 @@ import {
 import { enUS } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import { IconButton } from "./icon-button";
+import { VariantButton } from "./variant-button";
 
 /**
  * Props for Calendar component
@@ -374,7 +374,7 @@ export function Calendar({
  <>
  {precision === "day"? (
  <div className="flex items-center justify-between mb-3">
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronsLeft}
  onClick={() => setYearView((y) => y - 25)}
  aria-label="Previous years"
@@ -395,7 +395,7 @@ export function Calendar({
  >
  {currentYear}
  </button>
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronsRight}
  onClick={() => setYearView((y) => y + 25)}
  aria-label="Next years"
@@ -453,7 +453,7 @@ export function Calendar({
  ) : (
  <>
  <div className="flex items-center justify-between mb-3">
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronsLeft}
  onClick={() => setYearView((y) => y - 25)}
  aria-label="Previous years"
@@ -463,7 +463,7 @@ export function Calendar({
  <span className="text-sm font-medium text-foreground">
  {yearView - 12} - {yearView + 12}
  </span>
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronsRight}
  onClick={() => setYearView((y) => y + 25)}
  aria-label="Next years"
@@ -602,7 +602,7 @@ export function Calendar({
  {renderMonthYearPicker()}
  </div>
  ) : null}
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronLeft}
  onClick={prev}
  aria-label="Previous month"
@@ -625,7 +625,7 @@ export function Calendar({
  >
  {format(displayMonth,"LLLL yyyy", { locale: enUS })}
  </button>
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronRight}
  onClick={next}
  aria-label="Next month"

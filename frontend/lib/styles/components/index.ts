@@ -55,8 +55,6 @@ export { KeywordButton } from './keyword-button';
 export type { KeywordButtonProps } from './keyword-button';
 export { VariantButton } from './variant-button';
 export type { VariantButtonProps } from './variant-button';
-export { IconButton } from './icon-button';
-export type { IconButtonProps } from './icon-button';
 export { ToggleButton } from './toggle-button';
 export type { ToggleButtonProps } from './toggle-button';
 export { AIBadge } from './ai-badge';

@@ -12,7 +12,6 @@ import { BaseCard } from '../base-card';
 import { SchemaStatusBadge, VerifiedBadge } from '../schema-status-badge';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '../tooltip';
 import { VariantButton } from '../variant-button';
-import { IconButton } from '../icon-button';
 import { DeleteConfirmationDialog } from '../delete-confirmation-dialog';
 import { ExtractionSchema, SchemaStatus } from '@/types/extraction_schemas';
 import { cn } from '@/lib/utils';
@@ -195,7 +194,7 @@ export function SchemaCard({
  >
  <Tooltip>
  <TooltipTrigger asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={Eye}
  onClick={handleViewDetails}
  size="lg"
@@ -208,7 +207,7 @@ export function SchemaCard({
 
  <Tooltip>
  <TooltipTrigger asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={Play}
  onClick={handleStartExtraction}
  size="lg"
@@ -221,7 +220,7 @@ export function SchemaCard({
 
  <DropdownMenu>
  <DropdownMenuTrigger asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={MoreHorizontal}
  size="lg"
  variant="muted"

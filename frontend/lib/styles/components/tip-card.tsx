@@ -9,7 +9,7 @@
 import React, { memo } from 'react';
 import { LucideIcon, Lightbulb } from 'lucide-react';
 import { LightCard } from './light-card';
-import { IconButton } from './icon-button';
+import { VariantButton } from "./variant-button";
 import { X } from 'lucide-react';
 
 export interface TipCardProps {
@@ -101,7 +101,7 @@ export const TipCard = memo(function TipCard({
  </LightCard>
 
  {dismissible && onDismiss && (
- <IconButton
+ <VariantButton intent="icon"
  icon={X}
  onClick={onDismiss}
  variant="muted"

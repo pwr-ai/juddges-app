@@ -6,7 +6,6 @@ import { Plus, Inbox, Trash2, FolderTree, ChevronDown, ChevronRight, GripVertica
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VariantButton, DropdownButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
-import { IconButton } from "@/lib/styles/components";
 import {
  AlertDialog,
  AlertDialogAction,
@@ -779,7 +778,7 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
  <span className="text-sm text-muted-foreground">
  {selectedFields.size} selected
  </span>
- <IconButton
+ <VariantButton intent="icon"
  icon={Trash2}
  size="sm"
  variant="error"

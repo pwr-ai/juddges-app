@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   PageContainer,
   Header,
-  IconButton,
+  VariantButton,
 } from "@/lib/styles/components";
 import { logger } from "@/lib/logger";
 
@@ -93,7 +93,7 @@ export default function NewPostPage(): React.JSX.Element {
       <div className="mb-8 sticky top-0 z-10 bg-background pb-4 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <IconButton
+            <VariantButton intent="icon"
               icon={ArrowLeft}
               onClick={() => router.push("/blog/admin")}
               variant="muted"

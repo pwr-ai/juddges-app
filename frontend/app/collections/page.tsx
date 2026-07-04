@@ -12,7 +12,7 @@ import { Plus, FolderOpen, BookMarked, Scale, Lightbulb, X, Search, Calendar, Cl
 import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { EmptyState, VariantButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, IconButton, PageContainer, Badge } from "@/lib/styles/components";
+import { EmptyState, VariantButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, PageContainer, Badge } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -338,9 +338,9 @@ export default function CollectionsPage() {
  </VariantButton>
  </DialogTrigger>
  <DialogContent className="sm:max-w-[500px] [&>button:last-child]:hidden">
- {/* Custom close button using reusable IconButton */}
+ {/* Custom close button using reusable VariantButton */}
  <DialogPrimitive.Close asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={X}
  onClick={() => setIsDialogOpen(false)}
  variant="muted"

@@ -4,7 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Plus, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { IconButton, VariantButton } from "@/lib/styles/components";
+import { VariantButton } from "@/lib/styles/components";
 
 interface AddDocumentsDialogProps {
   open: boolean;
@@ -46,7 +46,7 @@ const AddDocumentsDialog: FC<AddDocumentsDialogProps> = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] [&>button:last-child]:hidden">
         <DialogPrimitive.Close asChild>
-          <IconButton
+          <VariantButton intent="icon"
             icon={X}
             onClick={() => {}}
             variant="muted"

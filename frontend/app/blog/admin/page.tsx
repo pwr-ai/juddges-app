@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { PageContainer, Header, VariantButton, IconButton, SearchInput, EmptyState } from "@/lib/styles/components";
+import { PageContainer, Header, VariantButton, SearchInput, EmptyState } from "@/lib/styles/components";
 import {
   Plus,
   Filter,
@@ -235,14 +235,14 @@ export default function AdminBlogPage(): React.JSX.Element {
 
             {/* View Toggle */}
             <div className="flex items-center gap-1 border rounded-lg p-1">
-              <IconButton
+              <VariantButton intent="icon"
                 icon={Grid3x3}
                 onClick={() => setViewMode("grid")}
                 aria-label="Grid view"
                 variant={viewMode === "grid" ? "default" : "muted"}
                 size="sm"
               />
-              <IconButton
+              <VariantButton intent="icon"
                 icon={List}
                 onClick={() => setViewMode("list")}
                 aria-label="List view"

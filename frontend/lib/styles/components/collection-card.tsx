@@ -9,7 +9,7 @@
 import React from 'react';
 import { LucideIcon, FolderOpen, FileText } from 'lucide-react';
 import { BaseCard } from './base-card';
-import { IconButton } from './icon-button';
+import { VariantButton } from "./variant-button";
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -95,7 +95,7 @@ export function CollectionCard({
 
         {/* Delete Button */}
         {onDelete && (
-          <IconButton
+          <VariantButton intent="icon"
             icon={Trash2}
             onClick={(e) => {
               e?.stopPropagation();

@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { PencilIcon, Save, Undo } from 'lucide-react';
-import { AIDisclaimerBadge, IconButton } from '@/lib/styles/components';
+import { AIDisclaimerBadge, VariantButton } from '@/lib/styles/components';
 import { ItemFeedback } from '../item-feedback';
 import { UserMessage, AssistantMessage, ErrorMessage } from './chat-message-styles';
 
@@ -405,7 +405,7 @@ export function ChatMessage({
  {/* Edit button - always visible below message, outside main container div */}
  {!isEditing && editable && onEdit && sender === 'user' && (
  <div className="mt-2 flex justify-end ml-auto max-w-lg">
- <IconButton icon={PencilIcon} onClick={() => setIsEditing(true)} aria-label="Edit message"variant="muted"size="sm"/>
+ <VariantButton intent="icon" icon={PencilIcon} onClick={() => setIsEditing(true)} aria-label="Edit message"variant="muted"size="sm"/>
  </div>
  )}
 
