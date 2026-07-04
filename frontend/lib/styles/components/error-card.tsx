@@ -6,7 +6,6 @@
 
 import React, { memo } from 'react';
 import { VariantButton } from './variant-button';
-import { IconButton } from './icon-button';
 import { RefreshCw, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -189,7 +188,7 @@ export const ErrorCard = memo(function ErrorCard({
  </div>
 
  {showDismissIcon && onDismiss && (
- <IconButton
+ <VariantButton intent="icon"
  icon={X}
  onClick={onDismiss}
  variant="error"

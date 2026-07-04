@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/dialog';
 import { VariantButton } from './variant-button';
 import { DeleteButton } from './delete-button';
-import { IconButton } from './icon-button';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, X } from 'lucide-react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
@@ -166,9 +165,9 @@ export function DeleteConfirmationDialog({
  }
  }}
  >
- {/* Custom close button using reusable IconButton */}
+ {/* Custom close button using reusable VariantButton */}
  <DialogPrimitive.Close asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={X}
  onClick={() => {
  if (!isDeleting) {

@@ -17,7 +17,7 @@ import {
  SelectTrigger,
  SelectValue,
 } from "@/components/ui/select";
-import { IconButton, VariantButton } from "@/lib/styles/components";
+import { VariantButton } from "@/lib/styles/components";
 import {
  Edit2,
  Trash2,
@@ -574,14 +574,14 @@ export function FieldCard({
  {/* Actions - shown when expanded */}
  {isActionsExpanded && (
  <>
- <IconButton
+ <VariantButton intent="icon"
  icon={Edit2}
  size="sm"
  variant="muted"
  onClick={() => onEdit(field)}
  aria-label="Edit field"
  />
- <IconButton
+ <VariantButton intent="icon"
  icon={Trash2}
  size="sm"
  variant="error"

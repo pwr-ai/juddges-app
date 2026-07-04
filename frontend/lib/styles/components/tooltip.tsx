@@ -62,7 +62,7 @@ export type TooltipProps = React.ComponentProps<typeof TooltipPrimitive.Root>;
  * ```tsx
  * <Tooltip>
  * <TooltipTrigger asChild>
- * <IconButton icon={Info} />
+ * <VariantButton intent="icon" icon={Info} />
  * </TooltipTrigger>
  * <TooltipContent>Additional information</TooltipContent>
  * </Tooltip>

@@ -11,7 +11,6 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText } from
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { PageSizeToggle } from './page-size-toggle';
-import { IconButton } from './icon-button';
 import { VariantButton } from './variant-button';
 import { SearchableDropdownButton } from './searchable-dropdown-button';
 
@@ -270,7 +269,7 @@ export function Pagination({
  navigationPosition === 'right' &&"justify-end"
  )}>
  {/* First Page Button */}
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronsLeft}
  onClick={() => onPageChange(1)}
  disabled={currentPage === 1}
@@ -285,7 +284,7 @@ export function Pagination({
  />
 
  {/* Previous Page Button */}
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronLeft}
  onClick={() => onPageChange(currentPage - 1)}
  disabled={currentPage === 1}
@@ -348,7 +347,7 @@ export function Pagination({
  </div>
 
  {/* Next Page Button */}
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronRight}
  onClick={() => onPageChange(currentPage + 1)}
  disabled={currentPage === totalPages}
@@ -363,7 +362,7 @@ export function Pagination({
  />
 
  {/* Last Page Button */}
- <IconButton
+ <VariantButton intent="icon"
  icon={ChevronsRight}
  onClick={() => onPageChange(totalPages)}
  disabled={currentPage === totalPages}

@@ -30,7 +30,7 @@ lowlight.register("bash", bash);
 lowlight.register("json", json);
 lowlight.register("xml", xml);
 import { Separator } from "@/components/ui/separator";
-import { IconButton, ToggleButton } from "@/lib/styles/components";
+import { VariantButton, ToggleButton } from "@/lib/styles/components";
 import {
   Bold,
   Italic,
@@ -407,7 +407,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }): React.JSX.Element | nul
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <IconButton
+                <VariantButton intent="icon"
                   icon={LinkIcon}
                   onClick={setLink}
                   variant={editor.isActive("link") ? "default" : "muted"}
@@ -422,7 +422,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }): React.JSX.Element | nul
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <IconButton
+                <VariantButton intent="icon"
                   icon={ImageIcon}
                   onClick={addImage}
                   variant="muted"
@@ -437,7 +437,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }): React.JSX.Element | nul
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <IconButton
+                <VariantButton intent="icon"
                   icon={TableIcon}
                   onClick={insertTable}
                   variant="muted"
@@ -452,7 +452,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }): React.JSX.Element | nul
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <IconButton
+                <VariantButton intent="icon"
                   icon={Minus}
                   onClick={() => editor.chain().focus().setHorizontalRule().run()}
                   variant="muted"
@@ -472,7 +472,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }): React.JSX.Element | nul
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <IconButton
+                <VariantButton intent="icon"
                   icon={Undo}
                   onClick={() => editor.chain().focus().undo().run()}
                   disabled={!editor.can().undo()}
@@ -488,7 +488,7 @@ const MenuBar = ({ editor }: { editor: Editor | null }): React.JSX.Element | nul
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <IconButton
+                <VariantButton intent="icon"
                   icon={Redo}
                   onClick={() => editor.chain().focus().redo().run()}
                   disabled={!editor.can().redo()}

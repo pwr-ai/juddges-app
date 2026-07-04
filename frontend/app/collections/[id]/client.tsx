@@ -4,7 +4,7 @@ import { FC } from "react";
 import { SearchDocument } from "@/types/search";
 import { Pencil, ArrowLeft } from "lucide-react";
 import CollectionDocumentsTable from "@/components/collection-documents-table";
-import { IconButton, TipCard, DeleteConfirmationDialog, VariantButton, PageContainer } from "@/lib/styles/components";
+import { VariantButton, TipCard, DeleteConfirmationDialog, PageContainer } from "@/lib/styles/components";
 import CollectionLoadingSkeleton from "./_components/CollectionLoadingSkeleton";
 import AddDocumentsDialog from "./_components/AddDocumentsDialog";
 import EditCollectionForm from "./_components/EditCollectionForm";
@@ -85,7 +85,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
         </VariantButton>
         {!isEditing && (
           <div className="flex items-center gap-2">
-            <IconButton
+            <VariantButton intent="icon"
               icon={Pencil}
               onClick={() => {
                 setEditName(collection.name);

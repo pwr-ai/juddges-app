@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Badge, IconButton, VariantButton, LightCard } from "@/lib/styles/components";
+import { Badge, VariantButton, LightCard } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import {
  Calendar,
@@ -121,7 +121,7 @@ export function BlogPostCard({
  {showActions && (
  <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
  {onEdit && (
- <IconButton
+ <VariantButton intent="icon"
  icon={Edit}
  onClick={(e) => {
  e?.preventDefault();
@@ -134,7 +134,7 @@ export function BlogPostCard({
  />
  )}
  {onDelete && (
- <IconButton
+ <VariantButton intent="icon"
  icon={Trash2}
  onClick={(e) => {
  e?.preventDefault();

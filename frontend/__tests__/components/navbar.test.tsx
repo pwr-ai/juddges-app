@@ -69,15 +69,14 @@ jest.mock('@/components/ui/input', () => ({
 }));
 
 jest.mock('@/lib/styles/components', () => ({
-  VariantButton: ({ children, intent, ...props }: any) => <button {...props}>{children}</button>,
-  SecondaryButton: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-  UserAvatar: (props: any) => <div data-testid="user-avatar" {...props}>Avatar</div>,
-  UserCard: (props: any) => <div data-testid="user-card" {...props}>UserCard</div>,
-  IconButton: ({ icon: Icon, ...props }: any) => (
+  VariantButton: ({ children, intent, icon: Icon, ...props }: any) => (
     <button {...props}>
       {Icon && <Icon className="w-4 h-4" />}
+      {children}
     </button>
   ),
+  UserAvatar: (props: any) => <div data-testid="user-avatar" {...props}>Avatar</div>,
+  UserCard: (props: any) => <div data-testid="user-card" {...props}>UserCard</div>,
   Badge: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 

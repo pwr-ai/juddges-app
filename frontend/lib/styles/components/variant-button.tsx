@@ -23,6 +23,7 @@ import {
   glassButtonClassName,
   primaryButtonClassName,
   secondaryButtonClassName,
+  iconButtonClassName,
 } from './button-variants';
 
 type AccentProps = {
@@ -90,12 +91,32 @@ type SecondaryProps = {
   href?: string;
 };
 
+type IconProps = {
+  intent: "icon";
+  icon: React.ComponentType<{ className?: string }>;
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
+  className?: string;
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  "aria-label"?: string;
+  size?: "sm" | "md" | "lg";
+  variant?: "default" | "error" | "primary" | "muted";
+  hoverStyle?: "background" | "color";
+  compact?: boolean;
+  iconHover?: "scale" | "rotate" | "none";
+  enhancedHover?: boolean;
+  enhancedFocus?: boolean;
+  enhancedActive?: boolean;
+  disableHover?: boolean;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "type">;
+
 export type VariantButtonProps =
   | AccentProps
   | TextProps
   | GlassProps
   | PrimaryProps
-  | SecondaryProps;
+  | SecondaryProps
+  | IconProps;
 
 function renderAccent(props: AccentProps): React.JSX.Element {
   const {
@@ -292,6 +313,62 @@ function renderSecondary(props: SecondaryProps): React.JSX.Element {
   );
 }
 
+function renderIcon(props: IconProps): React.JSX.Element {
+  const {
+    intent: _intent,
+    icon: Icon,
+    onClick,
+    className,
+    disabled = false,
+    type = "button",
+    "aria-label": ariaLabel,
+    size = "md",
+    variant = "default",
+    hoverStyle = "background",
+    compact = false,
+    iconHover = "scale",
+    enhancedHover = false,
+    enhancedFocus = false,
+    enhancedActive = false,
+    disableHover = false,
+    ...rest
+  } = props;
+
+  const iconSizes = { sm: "h-3 w-3", md: "h-4 w-4", lg: "h-5 w-5" };
+
+  return (
+    <button
+      type={type}
+      onClick={(e) => onClick?.(e)}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className={iconButtonClassName({
+        size,
+        variant,
+        hoverStyle,
+        compact,
+        enhancedHover,
+        enhancedFocus,
+        enhancedActive,
+        disableHover,
+        disabled,
+        className,
+      })}
+      {...rest}
+    >
+      <Icon
+        className={cn(
+          iconSizes[size],
+          "transition-transform duration-200",
+          iconHover === "scale" && "group-hover:scale-125",
+          iconHover === "rotate" && "group-hover:rotate-15",
+          iconHover === "none" && "",
+        )}
+      />
+    </button>
+  );
+}
+
 export function VariantButton(props: VariantButtonProps): React.JSX.Element {
   switch (props.intent) {
     case "text":
@@ -302,6 +379,8 @@ export function VariantButton(props: VariantButtonProps): React.JSX.Element {
       return renderPrimary(props);
     case "secondary":
       return renderSecondary(props);
+    case "icon":
+      return renderIcon(props);
     case "accent":
     default:
       return renderAccent(props);

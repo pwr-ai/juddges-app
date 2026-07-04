@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { IconButton } from './icon-button';
+import { VariantButton } from "./variant-button";
 import { cn } from '@/lib/utils';
 
 export interface ItemEditingButtonsProps {
@@ -45,7 +45,7 @@ export function ItemEditingButtons({
 }: ItemEditingButtonsProps): React.JSX.Element {
   return (
     <div className={cn("flex items-center -space-x-2", className)}>
-      <IconButton
+      <VariantButton intent="icon"
         icon={Pencil}
         onClick={onEdit}
         variant="muted"
@@ -55,7 +55,7 @@ export function ItemEditingButtons({
         iconHover="rotate"
         aria-label={`Edit ${itemLabel}`}
       />
-      <IconButton
+      <VariantButton intent="icon"
         icon={Trash2}
         onClick={onDelete}
         variant="error"

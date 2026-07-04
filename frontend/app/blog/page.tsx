@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { BlogPost, BlogCategory } from "@/types/blog";
 import { cn } from "@/lib/utils";
-import { Header, Badge, PageContainer, SearchInput, EmptyState, VariantButton, LightCard, IconButton, FilterToggleGroup } from "@/lib/styles/components";
+import { Header, Badge, PageContainer, SearchInput, EmptyState, VariantButton, LightCard, FilterToggleGroup } from "@/lib/styles/components";
 import { logger } from "@/lib/logger";
 
 // Mock data - replace with actual API calls
@@ -289,14 +289,14 @@ export default function BlogPage(): React.JSX.Element {
             </div>
 
             <div className="flex items-center gap-1 border rounded-lg p-1">
-              <IconButton
+              <VariantButton intent="icon"
                 icon={Grid3x3}
                 onClick={() => setViewMode("grid")}
                 aria-label="Grid view"
                 variant={viewMode === "grid" ? "default" : "muted"}
                 size="sm"
               />
-              <IconButton
+              <VariantButton intent="icon"
                 icon={List}
                 onClick={() => setViewMode("list")}
                 aria-label="List view"

@@ -5,7 +5,7 @@ import { SidebarTrigger } from "./ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { VariantButton, UserAvatar, UserCard, IconButton, Badge } from "@/lib/styles/components";
+import { VariantButton, UserAvatar, UserCard, Badge } from "@/lib/styles/components";
 import { AIBadge } from "@/lib/styles/components/ai-badge";
 
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -302,7 +302,7 @@ export function Navbar(): React.ReactElement {
           if (!shouldShowBackButton) return null;
 
           return (
-            <IconButton
+            <VariantButton intent="icon"
               icon={BackIcon}
               onClick={handleBack}
               aria-label={backButtonInfo.label}
@@ -369,7 +369,7 @@ export function Navbar(): React.ReactElement {
                 }}
                 className="text-xl font-bold text-center border-primary/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
               />
-              <IconButton
+              <VariantButton intent="icon"
                 icon={X}
                 onClick={handleTitleCancel}
                 variant="muted"
@@ -395,7 +395,7 @@ export function Navbar(): React.ReactElement {
                 {collectionName || collectionData.name}
               </h1>
               <div className="flex items-center shrink-0">
-                <IconButton
+                <VariantButton intent="icon"
                   icon={Pencil}
                   onClick={handleTitleClick}
                   variant="muted"
@@ -403,7 +403,7 @@ export function Navbar(): React.ReactElement {
                   aria-label="Edit collection name"
                   className="shrink-0"
                 />
-                <IconButton
+                <VariantButton intent="icon"
                   icon={Trash2}
                   onClick={handleDeleteCollection}
                   variant="muted"
@@ -461,7 +461,7 @@ export function Navbar(): React.ReactElement {
                 <div className="flex items-center gap-2 pl-3 border-l border-border/50">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <IconButton
+                      <VariantButton intent="icon"
                         icon={Printer}
                         onClick={handlePrint}
                         aria-label="Print Document"
@@ -474,7 +474,7 @@ export function Navbar(): React.ReactElement {
 
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <IconButton
+                      <VariantButton intent="icon"
                         icon={ExternalLink}
                         onClick={handleOpenInNewTab}
                         aria-label="Open in New Tab"
@@ -489,7 +489,7 @@ export function Navbar(): React.ReactElement {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <PopoverTrigger asChild>
-                          <IconButton
+                          <VariantButton intent="icon"
                             icon={BookmarkPlus}
                             aria-label="Add to Collection"
                             variant="muted"

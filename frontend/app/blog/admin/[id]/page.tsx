@@ -7,14 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import type { BlogPost } from "@/types/blog";
 import { fetchAdminPostById, updateAdminPost } from "@/lib/blog/admin-api";
 import { toast } from "sonner";
-import {
-  PageContainer,
-  Header,
-  VariantButton,
-  Badge,
-  IconButton,
-  LoadingIndicator,
-} from "@/lib/styles/components";
+import { PageContainer, Header, VariantButton, Badge, LoadingIndicator } from "@/lib/styles/components";
 import { logger } from "@/lib/logger";
 
 export default function EditPostPage(): React.JSX.Element {
@@ -149,7 +142,7 @@ export default function EditPostPage(): React.JSX.Element {
       <div className="mb-8 sticky top-0 z-10 bg-background pb-4 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <IconButton
+            <VariantButton intent="icon"
               icon={ArrowLeft}
               onClick={() => router.push("/blog/admin")}
               variant="muted"

@@ -19,7 +19,6 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import {
   VariantButton,
-  IconButton,
 } from '@/lib/styles/components';
 
 // Minimal icon stub — the variants only need a component that takes className.
@@ -69,15 +68,15 @@ describe('button className baseline (#144)', () => {
   });
 
   describe('IconButton', () => {
-    it('default', () => expect(classOf(<IconButton icon={Icon} aria-label="x" />)).toMatchSnapshot());
-    it('enhancedHover', () => expect(classOf(<IconButton icon={Icon} aria-label="x" enhancedHover />)).toMatchSnapshot());
-    it('variant=primary', () => expect(classOf(<IconButton icon={Icon} aria-label="x" variant="primary" />)).toMatchSnapshot());
-    it('variant=error', () => expect(classOf(<IconButton icon={Icon} aria-label="x" variant="error" />)).toMatchSnapshot());
-    it('hoverStyle=color', () => expect(classOf(<IconButton icon={Icon} aria-label="x" hoverStyle="color" />)).toMatchSnapshot());
-    it('enhancedActive', () => expect(classOf(<IconButton icon={Icon} aria-label="x" enhancedActive />)).toMatchSnapshot());
-    it('enhancedFocus', () => expect(classOf(<IconButton icon={Icon} aria-label="x" enhancedFocus />)).toMatchSnapshot());
-    it('disabled', () => expect(classOf(<IconButton icon={Icon} aria-label="x" disabled />)).toMatchSnapshot());
-    it('compact lg', () => expect(classOf(<IconButton icon={Icon} aria-label="x" compact size="lg" />)).toMatchSnapshot());
+    it('default', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" />)).toMatchSnapshot());
+    it('enhancedHover', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" enhancedHover />)).toMatchSnapshot());
+    it('variant=primary', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" variant="primary" />)).toMatchSnapshot());
+    it('variant=error', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" variant="error" />)).toMatchSnapshot());
+    it('hoverStyle=color', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" hoverStyle="color" />)).toMatchSnapshot());
+    it('enhancedActive', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" enhancedActive />)).toMatchSnapshot());
+    it('enhancedFocus', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" enhancedFocus />)).toMatchSnapshot());
+    it('disabled', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" disabled />)).toMatchSnapshot());
+    it('compact lg', () => expect(classOf(<VariantButton intent="icon" icon={Icon} aria-label="x" compact size="lg" />)).toMatchSnapshot());
   });
 
   describe('GlassButton', () => {

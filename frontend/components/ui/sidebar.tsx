@@ -8,7 +8,7 @@ import { PanelLeftIcon, LayoutGrid } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { IconButton } from "@/lib/styles/components/icon-button"
+import { VariantButton } from "@/lib/styles/components/variant-button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -359,7 +359,7 @@ function SidebarTrigger({
  }
 
  return (
- <IconButton
+ <VariantButton intent="icon"
  icon={iconMode ? LayoutGrid : PanelLeftIcon}
  data-sidebar="trigger"
  data-slot="sidebar-trigger"

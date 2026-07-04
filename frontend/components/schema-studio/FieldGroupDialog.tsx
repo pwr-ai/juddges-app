@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FolderTree, ChevronRight, X, Type, Plus } from "lucide-react";
-import { VariantButton, DropdownButton, IconButton } from "@/lib/styles/components";
+import { VariantButton, DropdownButton } from "@/lib/styles/components";
 import { getFieldTypeLabel } from "@/lib/schema-utils";
 import { cn } from "@/lib/utils";
 import type { SchemaField } from "@/hooks/schema-editor/types";
@@ -398,7 +398,7 @@ export function FieldGroupDialog({
  )}
  </div>
  {groupFields.length > 1 && (
- <IconButton
+ <VariantButton intent="icon"
  icon={X}
  size="sm"
  variant="error"

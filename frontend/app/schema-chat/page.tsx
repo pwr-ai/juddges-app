@@ -20,7 +20,7 @@ import {
  PopoverContent,
  PopoverTrigger,
 } from "@/components/ui/popover";
-import { VariantButton, IconButton, VerifiedBadge } from "@/lib/styles/components";
+import { VariantButton, VerifiedBadge } from "@/lib/styles/components";
 import { SchemaStatusSelector } from "@/lib/styles/components/schema-status-selector";
 import type { SchemaStatus } from "@/types/extraction_schemas";
 import { Label } from "@/components/ui/label";
@@ -237,7 +237,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  <TooltipProvider>
  <Tooltip>
  <TooltipTrigger asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={Plus}
  size="lg"
  variant="primary"
@@ -257,7 +257,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  <TooltipProvider>
  <Tooltip>
  <TooltipTrigger asChild>
- <IconButton
+ <VariantButton intent="icon"
  icon={Copy}
  size="lg"
  variant="muted"
@@ -306,8 +306,8 @@ export default function SchemaStudioPage(): React.JSX.Element {
  autoFocus
  className="h-8 w-48 text-sm font-semibold"
  />
- <IconButton icon={Check} size="sm"variant="muted"onClick={() => { if (metadataOps.tempSchemaName.trim()) metadataOps.handleSaveName(metadataOps.tempSchemaName); else metadataOps.setTempSchemaName(schemaName); metadataOps.setIsEditingSchemaName(false); }} aria-label="Save schema name"/>
- <IconButton icon={X} size="sm"variant="muted"onClick={() => { metadataOps.setTempSchemaName(schemaName); metadataOps.setIsEditingSchemaName(false); }} aria-label="Cancel editing"/>
+ <VariantButton intent="icon" icon={Check} size="sm"variant="muted"onClick={() => { if (metadataOps.tempSchemaName.trim()) metadataOps.handleSaveName(metadataOps.tempSchemaName); else metadataOps.setTempSchemaName(schemaName); metadataOps.setIsEditingSchemaName(false); }} aria-label="Save schema name"/>
+ <VariantButton intent="icon" icon={X} size="sm"variant="muted"onClick={() => { metadataOps.setTempSchemaName(schemaName); metadataOps.setIsEditingSchemaName(false); }} aria-label="Cancel editing"/>
  </div>
  ) : (
  <div className="flex items-center gap-2">
@@ -378,8 +378,8 @@ export default function SchemaStudioPage(): React.JSX.Element {
  autoFocus
  className="h-8 w-64 text-sm text-muted-foreground"
  />
- <IconButton icon={Check} size="sm"variant="muted"onClick={() => { metadataOps.handleSaveDescription(metadataOps.tempSchemaDescription); metadataOps.setIsEditingSchemaDescription(false); }} aria-label="Save schema description"/>
- <IconButton icon={X} size="sm"variant="muted"onClick={() => { metadataOps.setTempSchemaDescription(metadata?.description || ""); metadataOps.setIsEditingSchemaDescription(false); }} aria-label="Cancel editing"/>
+ <VariantButton intent="icon" icon={Check} size="sm"variant="muted"onClick={() => { metadataOps.handleSaveDescription(metadataOps.tempSchemaDescription); metadataOps.setIsEditingSchemaDescription(false); }} aria-label="Save schema description"/>
+ <VariantButton intent="icon" icon={X} size="sm"variant="muted"onClick={() => { metadataOps.setTempSchemaDescription(metadata?.description || ""); metadataOps.setIsEditingSchemaDescription(false); }} aria-label="Cancel editing"/>
  </div>
  ) : (
  <div
@@ -434,7 +434,7 @@ export default function SchemaStudioPage(): React.JSX.Element {
  <TabsContent value="load"className="space-y-3 mt-0">
  <div className="flex items-center justify-between">
  <h4 className="text-sm font-semibold text-foreground">Load Schema</h4>
- <IconButton icon={schemaLoad.isLoadingSchemas ? Loader2 : RefreshCw} onClick={schemaLoad.fetchSavedSchemas} disabled={schemaLoad.isLoadingSchemas} size="sm"variant="muted"aria-label="Refresh schemas"/>
+ <VariantButton intent="icon" icon={schemaLoad.isLoadingSchemas ? Loader2 : RefreshCw} onClick={schemaLoad.fetchSavedSchemas} disabled={schemaLoad.isLoadingSchemas} size="sm"variant="muted"aria-label="Refresh schemas"/>
  </div>
  <div className="space-y-2">
  <Input type="text"placeholder="Search schemas..."value={schemaLoad.schemaSearchQuery} onChange={(e) => schemaLoad.setSchemaSearchQuery(e.target.value)} className="h-9 text-sm"/>
