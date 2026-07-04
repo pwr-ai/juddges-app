@@ -10,11 +10,11 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PrimaryButton } from '@/lib/styles/components/primary-button';
+import { VariantButton } from '@/lib/styles/components';
 
 describe('PrimaryButton', () => {
   it('renders its children inside a button by default', () => {
-    render(<PrimaryButton>Search</PrimaryButton>);
+    render(<VariantButton intent="primary">Search</VariantButton>);
     const button = screen.getByRole('button', { name: 'Search' });
     expect(button).toBeInTheDocument();
     expect(button.tagName).toBe('BUTTON');
@@ -23,22 +23,22 @@ describe('PrimaryButton', () => {
   it('fires onClick when clicked', async () => {
     const onClick = jest.fn();
     const user = userEvent.setup();
-    render(<PrimaryButton onClick={onClick}>Go</PrimaryButton>);
+    render(<VariantButton intent="primary" onClick={onClick}>Go</VariantButton>);
     await user.click(screen.getByRole('button', { name: 'Go' }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('renders as a link when href is provided', () => {
-    render(<PrimaryButton href="/search">Search</PrimaryButton>);
+    render(<VariantButton intent="primary" href="/search">Search</VariantButton>);
     const link = screen.getByRole('link', { name: 'Search' });
     expect(link).toHaveAttribute('href', '/search');
   });
 
   it('shows loading text and disables while loading', () => {
     render(
-      <PrimaryButton isLoading loadingText="Saving...">
+      <VariantButton intent="primary" isLoading loadingText="Saving...">
         Save
-      </PrimaryButton>,
+      </VariantButton>,
     );
     expect(screen.getByText('Saving...')).toBeInTheDocument();
     expect(screen.getByRole('button')).toBeDisabled();
@@ -46,7 +46,7 @@ describe('PrimaryButton', () => {
 
   it('still accepts enhancedActive (the one live enhancement prop)', () => {
     // Sanity: the surviving enhancement prop remains in the public API.
-    render(<PrimaryButton enhancedActive>Press</PrimaryButton>);
+    render(<VariantButton intent="primary" enhancedActive>Press</VariantButton>);
     expect(screen.getByRole('button', { name: 'Press' })).toBeInTheDocument();
   });
 });

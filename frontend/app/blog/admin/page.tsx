@@ -22,7 +22,7 @@ import {
 import {
   PageContainer,
   Header,
-  PrimaryButton,
+  VariantButton,
   SecondaryButton,
   IconButton,
   SearchInput,
@@ -162,13 +162,13 @@ export default function AdminBlogPage(): React.JSX.Element {
             <SecondaryButton size="lg" icon={Settings}>
               Settings
             </SecondaryButton>
-            <PrimaryButton
+            <VariantButton intent="primary"
               size="lg"
               icon={Plus}
               onClick={() => router.push("/blog/admin/new")}
             >
               New Post
-            </PrimaryButton>
+            </VariantButton>
           </div>
         </div>
       </div>

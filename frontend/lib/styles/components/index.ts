@@ -53,8 +53,6 @@ export { FilterToggleGroup } from './filter-toggle-group';
 export type { FilterToggleGroupProps, FilterToggleOption } from './filter-toggle-group';
 export { KeywordButton } from './keyword-button';
 export type { KeywordButtonProps } from './keyword-button';
-export { PrimaryButton } from './primary-button';
-export type { PrimaryButtonProps } from './primary-button';
 export { SecondaryButton } from './secondary-button';
 export type { SecondaryButtonProps } from './secondary-button';
 export { VariantButton } from './variant-button';

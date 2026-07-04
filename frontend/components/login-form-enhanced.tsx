@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { PrimaryButton } from '@/lib/styles/components'
+import { VariantButton } from '@/lib/styles/components'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -339,7 +339,7 @@ export function LoginFormEnhanced({
             )}
 
             {/* Submit Button */}
-            <PrimaryButton
+            <VariantButton intent="primary"
               type="submit"
               className="w-full group"
               disabled={isLoading}
@@ -355,7 +355,7 @@ export function LoginFormEnhanced({
               ) : (
                 <span>Sign in</span>
               )}
-            </PrimaryButton>
+            </VariantButton>
 
             {/* Sign Up Link */}
             <div className="text-center text-sm">
