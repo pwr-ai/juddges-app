@@ -34,7 +34,7 @@ export interface SearchResultsSectionProps {
   selectAllDocuments: (ids?: string[]) => void;
   clearSelection: () => void;
   setShowSaveAllPopover: (open: boolean) => void;
-  filterVersion: number;
+  filtersKey: string;
   onLoadMore: () => Promise<void> | void;
   isLoadingMore: boolean;
   paginationMetadata: PaginationMetadata | null;
@@ -54,7 +54,7 @@ export function SearchResultsSection({
   selectAllDocuments,
   clearSelection,
   setShowSaveAllPopover,
-  filterVersion,
+  filtersKey,
   onLoadMore,
   isLoadingMore,
   paginationMetadata,
@@ -95,7 +95,7 @@ export function SearchResultsSection({
   }
 
   return (
-    <div key={filterVersion} className="space-y-4">
+    <div key={filtersKey} className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm">
           Showing <span className="font-semibold">{displayedCount}</span> of{" "}

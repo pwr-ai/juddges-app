@@ -298,7 +298,7 @@ export function useSearchUrlParams({
       }
     }
 
-    // Set filters from URL parameters - batch updates to avoid multiple filterVersion increments
+    // Set filters from URL parameters in a single batched store update.
     const currentState = useSearchStore.getState();
     const newFilters = {
       keywords: new Set<string>(),
@@ -372,10 +372,7 @@ export function useSearchUrlParams({
       legalDomainsParam ||
       customMetaParam
     ) {
-      useSearchStore.setState((state) => ({
-        filters: newFilters,
-        filterVersion: state.filterVersion + 1,
-      }));
+      useSearchStore.setState({ filters: newFilters });
     }
 
     // Mark as processed and allow URL updates again

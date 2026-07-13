@@ -81,7 +81,6 @@ function SearchPageContent(): React.JSX.Element | null {
  const [searchTimestamp, setSearchTimestamp] = useState<string>('');
 
  // Store state
- const filterVersion = useSearchStore((state) => state.filterVersion);
  const filters = useSearchStore((state) => state.filters);
  const {
  query,
@@ -111,7 +110,6 @@ function SearchPageContent(): React.JSX.Element | null {
  resetFilters,
  getActiveFilterCount,
  closeDocumentDialog,
- loadState,
  currentPage,
  setCurrentPage,
  pageSize,
@@ -138,28 +136,47 @@ function SearchPageContent(): React.JSX.Element | null {
  // Zustand store actions keep stable references across set() calls, so memoising
  // on `[getFilteredMetadata]` alone would freeze these on the first render's empty
  // state and never reflect new search results. Depend on the state slices they read.
+ // Stable signature of the active filters. Changes iff filter contents change,
+ // replacing the removed `filterVersion` counter as a remount key and memo dep.
+ const filtersKey = useMemo(
+   () =>
+     JSON.stringify({
+       keywords: Array.from(filters.keywords),
+       legalConcepts: Array.from(filters.legalConcepts),
+       issuingBodies: Array.from(filters.issuingBodies),
+       languages: Array.from(filters.languages),
+       jurisdictions: Array.from(filters.jurisdictions),
+       courtLevels: Array.from(filters.courtLevels),
+       legalDomains: Array.from(filters.legalDomains),
+       customMetadata: filters.customMetadata,
+       dateFrom: filters.dateFrom?.toISOString() ?? null,
+       dateTo: filters.dateTo?.toISOString() ?? null,
+     }),
+   [filters]
+ );
+
  const filteredMetadata = useMemo(
    () => getFilteredMetadata(),
    // eslint-disable-next-line react-hooks/exhaustive-deps
-   [getFilteredMetadata, searchMetadata, filters, filterVersion]
+   [getFilteredMetadata, searchMetadata, filters]
  );
 
  const filteredCount = useMemo(
    () => getFilteredMetadataCount(),
    // eslint-disable-next-line react-hooks/exhaustive-deps
-   [getFilteredMetadataCount, searchMetadata, filters, filterVersion]
+   [getFilteredMetadataCount, searchMetadata, filters]
  );
 
  const availableFilters = useMemo(
    () => getAvailableFiltersFromMetadata(),
    // eslint-disable-next-line react-hooks/exhaustive-deps
-   [getAvailableFiltersFromMetadata, searchMetadata, filters, filterVersion]
+   [getAvailableFiltersFromMetadata, searchMetadata, filters]
  );
 
  const activeFilterCount = useMemo(
    () => getActiveFilterCount(),
    // eslint-disable-next-line react-hooks/exhaustive-deps
-   [getActiveFilterCount, filters, filterVersion]
+   [getActiveFilterCount, filters]
  );
 
  const computedTotalPages = useMemo(() => {
@@ -206,21 +223,8 @@ function SearchPageContent(): React.JSX.Element | null {
  isSearching,
  });
 
- // Load state from localStorage on component mount
- useEffect(() => {
- const currentFilters = useSearchStore.getState().filters;
- const hasNoFilters =
- currentFilters.keywords.size === 0 &&
- currentFilters.legalConcepts.size === 0 &&
- currentFilters.issuingBodies.size === 0 &&
- !currentFilters.dateFrom &&
- !currentFilters.dateTo;
-
- if (hasNoFilters) {
- loadState();
- }
- // eslint-disable-next-line react-hooks/exhaustive-deps
- }, []);
+ // State hydration from localStorage is handled by the store's persist
+ // middleware (#143) — no manual loadState()/useEffect race here anymore.
 
  // Set mounted to true after component mounts
  useEffect(() => {
@@ -254,13 +258,8 @@ function SearchPageContent(): React.JSX.Element | null {
  };
  }, [isSearching]);
 
- // Reset to page 1 when filters change
- useEffect(() => {
- if (filterVersion > 0 && currentPage > 1) {
- setCurrentPage(1);
- }
- // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [filterVersion]);
+ // Page reset on filter change is handled inside the store's filter actions
+ // (they set currentPage: 1), so no separate effect is needed here.
 
  // Update URL when search parameters change
  useEffect(() => {
@@ -278,7 +277,7 @@ function SearchPageContent(): React.JSX.Element | null {
  useEffect(() => {
  if (!mounted || !urlParamsProcessed || updatingUrlRef.current || isSearching) return;
  updateUrlParams();
- }, [filterVersion, filters, updateUrlParams, mounted, urlParamsProcessed, isSearching, updatingUrlRef]);
+ }, [filters, updateUrlParams, mounted, urlParamsProcessed, isSearching, updatingUrlRef]);
 
  const toggleLanguage = (language: string): void => {
  const currentSelected = useSearchStore.getState().selectedLanguages;
@@ -635,7 +634,7 @@ function SearchPageContent(): React.JSX.Element | null {
  selectAllDocuments={selectAllDocuments}
  clearSelection={clearSelection}
  setShowSaveAllPopover={setShowSaveAllPopover}
- filterVersion={filterVersion}
+ filtersKey={filtersKey}
  onLoadMore={loadMore}
  isLoadingMore={isLoadingMore}
  paginationMetadata={paginationMetadata}
@@ -651,7 +650,7 @@ function SearchPageContent(): React.JSX.Element | null {
  <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
  <div className="sticky top-4 space-y-4">
  <SearchFilters
- key={filterVersion}
+ key={filtersKey}
  filters={filters}
  availableFilters={availableFilters}
  onFilterToggle={toggleFilter}

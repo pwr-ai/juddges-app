@@ -94,7 +94,7 @@ describe('SearchResultsSection', () => {
     selectAllDocuments: jest.fn(),
     clearSelection: jest.fn(),
     setShowSaveAllPopover: jest.fn(),
-    filterVersion: 1,
+    filtersKey: "test-filters-key",
     onLoadMore: jest.fn(),
     isLoadingMore: false,
     paginationMetadata: {

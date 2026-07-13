@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { SearchResult, SearchDocument, SearchChunk, LegalDocumentMetadata } from '@/types/search';
 import { PaginationMetadata } from '@/lib/api';
 import { parseISO, isValid } from 'date-fns';
@@ -87,8 +88,6 @@ interface SearchState {
   // Filters
   filters: SearchFilters;
   availableFilters: AvailableFilters | null;
-  // Force re-render when filters change (Zustand shallow equality issue with Date objects)
-  filterVersion: number;
 
   // Dialog
   selectedDoc: SearchDocument | null;
@@ -125,8 +124,6 @@ interface SearchState {
   setBaseFilter: (field: string, value: BaseFilterValue | undefined) => void;
   setBaseFilters: (filters: BaseFilters) => void;
   resetBaseFilters: () => void;
-  loadState: () => void;
-  saveState: () => void;
 
   // Computed
   getFilteredDocuments: () => SearchDocument[];
@@ -201,7 +198,9 @@ const normalizeLanguages = (languages: Set<string>): Set<string> => {
 };
 
 // Create the store with a simple implementation
-export const useSearchStore = create<SearchState>()((set, get) => ({
+export const useSearchStore = create<SearchState>()(
+  persist(
+    (set, get) => ({
   // Search params
   query: "",
   selectedLanguages: new Set(["uk", "pl"]),
@@ -247,7 +246,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
   },
 
   availableFilters: null,
-  filterVersion: 0,
 
   // Dialog
   selectedDoc: null,
@@ -334,9 +332,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
       return {
         filters: newFilters,
-        currentPage: 1, // Reset to page 1 when filters change
-        filterVersion: state.filterVersion + 1, // Increment to force re-render
-        totalResults: filteredCount,
+        currentPage: 1, // Reset to page 1 when filters change        totalResults: filteredCount,
         totalPages
       };
     });
@@ -358,9 +354,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
       return {
         filters: newFilters,
-        currentPage: 1, // Reset to page 1 when filters change
-        filterVersion: state.filterVersion + 1, // Increment to force re-render
-        totalResults: filteredCount,
+        currentPage: 1, // Reset to page 1 when filters change        totalResults: filteredCount,
         totalPages
       };
     });
@@ -392,9 +386,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
       return {
         filters: newFilters,
-        currentPage: 1,
-        filterVersion: state.filterVersion + 1,
-        totalResults: filteredCount,
+        currentPage: 1,        totalResults: filteredCount,
         totalPages,
       };
     });
@@ -409,9 +401,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
 
       return {
         filters: newFilters,
-        currentPage: 1,
-        filterVersion: state.filterVersion + 1,
-      };
+        currentPage: 1,      };
     });
   },
 
@@ -440,9 +430,7 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
           legalDomains: new Set<string>(),
           customMetadata: {},
         },
-        currentPage: 1, // Reset to page 1 when filters are reset
-        filterVersion: state.filterVersion + 1, // Increment to force re-render
-        totalResults: filteredCount,
+        currentPage: 1, // Reset to page 1 when filters are reset        totalResults: filteredCount,
         totalPages
       };
     });
@@ -467,135 +455,6 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
   setIsDialogOpen: (open: boolean) => set({ isDialogOpen: open }),
 
   setShowSaveAllPopover: (show: boolean) => set({ showSaveAllPopover: show }),
-
-  loadState: () => {
-    try {
-      const savedState = localStorage.getItem('searchState');
-      if (savedState) {
-        const parsedState = JSON.parse(savedState);
-
-        // Version check - if old format, skip loading and use defaults
-        // This helps with migration when we change defaults
-        const stateVersion = parsedState.stateVersion || 1;
-        const currentVersion = 2; // Increment this when you need to reset user state
-
-        if (stateVersion < currentVersion) {
-          storeLogger.debug('Outdated state version, using defaults', {
-            savedVersion: stateVersion,
-            currentVersion
-          });
-          localStorage.removeItem('searchState');
-          return;
-        }
-
-        // Get current state to preserve any existing filters (especially date filters)
-        const currentState = get();
-
-        // Convert arrays back to Sets for the filters
-        // CRITICAL: Merge with existing filters to preserve user-set date filters
-        const loadedFilters = {
-          keywords: arrayToSet(parsedState.filters?.keywords),
-          legalConcepts: arrayToSet(parsedState.filters?.legalConcepts),
-          issuingBodies: arrayToSet(parsedState.filters?.issuingBodies),
-          languages: arrayToSet(parsedState.filters?.languages),
-          dateFrom: parsedState.filters?.dateFrom ? new Date(parsedState.filters.dateFrom) : undefined,
-          dateTo: parsedState.filters?.dateTo ? new Date(parsedState.filters.dateTo) : undefined,
-          jurisdictions: arrayToSet(parsedState.filters?.jurisdictions),
-          courtLevels: arrayToSet(parsedState.filters?.courtLevels),
-          legalDomains: arrayToSet(parsedState.filters?.legalDomains),
-          customMetadata: parsedState.filters?.customMetadata || {},
-        };
-
-        // Merge loaded filters with existing filters
-        // Preserve existing date filters if they're set (user might have just set them)
-        const mergedFilters = {
-          ...loadedFilters,
-          // Preserve existing date filters if they exist and loaded ones don't
-          dateFrom: currentState.filters.dateFrom || loadedFilters.dateFrom,
-          dateTo: currentState.filters.dateTo || loadedFilters.dateTo,
-        };
-
-        // Convert array back to Set for selectedLanguages and normalize
-        let selectedLanguages = normalizeLanguages(arrayToSet(parsedState.selectedLanguages));
-
-        // Ensure at least one language is selected, default to both languages if empty
-        if (selectedLanguages.size === 0) {
-          selectedLanguages = new Set(["uk", "pl"]);
-        }
-
-        // Convert array back to Set for selectedDocumentIds
-        const selectedDocumentIds = arrayToSet(parsedState.selectedDocumentIds);
-
-        // Coerce away the broken hybrid mode. Meilisearch hybrid is currently
-        // a no-op because the bge-m3 embedder isn't registered in the index
-        // (see issue #200), so any returning user with searchMode='hybrid' in
-        // localStorage would land on a 502-loop. Fall back to text until the
-        // embedder is wired up; remove once #200 ships.
-        const restoredSearchMode: SearchMode =
-          parsedState.searchMode === 'hybrid' ? 'text' : parsedState.searchMode;
-
-        set({
-          ...parsedState,
-          searchMode: restoredSearchMode,
-          filters: mergedFilters,
-          selectedLanguages,
-          selectedDocumentIds,
-          // Don't restore these states
-          isSearching: false,
-          error: null,
-          isDialogOpen: false,
-          showSaveAllPopover: false,
-        });
-
-        storeLogger.debug('State loaded from localStorage', {
-          query: parsedState.query,
-          selectedLanguages: Array.from(selectedLanguages),
-          dateFrom: mergedFilters.dateFrom?.toISOString(),
-          dateTo: mergedFilters.dateTo?.toISOString(),
-        });
-      }
-    } catch (error) {
-      storeLogger.error('Error loading search state from localStorage', error);
-    }
-  },
-
-  saveState: () => {
-    try {
-      const state = get();
-      let languagesToSave = setToArray(state.selectedLanguages);
-      if (languagesToSave.length === 0) languagesToSave = ["pl", "uk"];
-
-      const stateToSave = {
-        stateVersion: 2,
-        ...state,
-        filters: {
-          ...state.filters,
-          keywords: setToArray(state.filters.keywords),
-          legalConcepts: setToArray(state.filters.legalConcepts),
-          issuingBodies: setToArray(state.filters.issuingBodies),
-          languages: setToArray(state.filters.languages),
-          dateFrom: state.filters.dateFrom?.toISOString() || undefined,
-          dateTo: state.filters.dateTo?.toISOString() || undefined,
-          jurisdictions: setToArray(state.filters.jurisdictions),
-          courtLevels: setToArray(state.filters.courtLevels),
-          legalDomains: setToArray(state.filters.legalDomains),
-          customMetadata: state.filters.customMetadata,
-        },
-        selectedLanguages: languagesToSave,
-        selectedDocumentIds: setToArray(state.selectedDocumentIds),
-        searchResults: null,
-        isSearching: false,
-        error: null,
-        selectedDoc: null,
-        selectedChunks: [],
-        isDialogOpen: false,
-        showSaveAllPopover: false,
-      };
-      localStorage.setItem('searchState', JSON.stringify(stateToSave));
-    } catch (error) {
-      storeLogger.error('Error saving search state to localStorage', error);
-    }
-  },
 
   // Computed data
   getFilteredDocuments: () => {
@@ -1226,25 +1085,68 @@ export const useSearchStore = create<SearchState>()((set, get) => ({
       return { feedbackVotes: updated };
     });
   },
-}));
-
-// Set up store subscription for auto-saving with debounce
-// CRITICAL: Without debounce, localStorage.setItem is called synchronously on EVERY state change
-// which blocks the main thread and causes UI freezing during search operations
-if (typeof window !== 'undefined') {
-  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-
-  useSearchStore.subscribe((state) => {
-    // Clear any pending save
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-
-    // Debounce: Wait 2 seconds after last state change before saving
-    // This prevents hundreds of synchronous localStorage writes during search
-    saveTimeout = setTimeout(() => {
-      (state as SearchState).saveState();
-      saveTimeout = null;
-    }, 2000);
-  });
-}
+    }),
+    {
+      // Zustand persist middleware replaces the former manual
+      // loadState/saveState/subscribe+debounce block and the loadState()
+      // useEffect race in app/search/page.tsx (#143).
+      name: "search-store",
+      version: 2,
+      // Custom (de)serialization so Set<string> and Date survive JSON.
+      storage: createJSONStorage(() => localStorage, {
+        replacer: (_key, value) => {
+          if (value instanceof Set) return { __type: "Set", value: Array.from(value) };
+          if (value instanceof Date) return { __type: "Date", value: value.toISOString() };
+          return value;
+        },
+        reviver: (_key, value) => {
+          if (value && typeof value === "object" && "__type" in value) {
+            const tagged = value as { __type: string; value: unknown };
+            if (tagged.__type === "Set") return new Set(tagged.value as string[]);
+            if (tagged.__type === "Date") return new Date(tagged.value as string);
+          }
+          return value;
+        },
+      }),
+      // Persist only durable user intent — never volatile search output
+      // (results/metadata/chunks) or session-only UI/feedback state.
+      partialize: (state) => ({
+        query: state.query,
+        selectedLanguages: state.selectedLanguages,
+        searchType: state.searchType,
+        searchMode: state.searchMode,
+        baseFilters: state.baseFilters,
+        pageSize: state.pageSize,
+        filters: state.filters,
+        selectedDocumentIds: state.selectedDocumentIds,
+      }),
+      // Apply the same coercions the old loadState() did.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SearchState>;
+        let selectedLanguages = normalizeLanguages(
+          p.selectedLanguages ?? new Set<string>(),
+        );
+        if (selectedLanguages.size === 0) selectedLanguages = new Set(["uk", "pl"]);
+        // Coerce away the broken hybrid mode (bge-m3 not registered — issue #200);
+        // a returning user with searchMode='hybrid' would 502-loop.
+        const searchMode: SearchMode =
+          p.searchMode === "hybrid" ? "text" : (p.searchMode ?? current.searchMode);
+        return {
+          ...current,
+          ...p,
+          selectedLanguages,
+          searchMode,
+          // Never restore transient runtime state.
+          isSearching: false,
+          error: null,
+          isDialogOpen: false,
+          showSaveAllPopover: false,
+        };
+      },
+      // Drop the orphaned pre-#143 localStorage key on first hydrate.
+      onRehydrateStorage: () => () => {
+        if (typeof window !== "undefined") localStorage.removeItem("searchState");
+      },
+    },
+  ),
+);

@@ -58,7 +58,6 @@ describe('searchStore', () => {
         customMetadata: {},
       },
       availableFilters: null,
-      filterVersion: 0,
       selectedDoc: null,
       selectedChunks: [],
       isDialogOpen: false,
@@ -129,10 +128,16 @@ describe('searchStore', () => {
       expect(useSearchStore.getState().filters.keywords.has('tax')).toBe(false);
     });
 
-    it('increments filterVersion on toggle', () => {
-      const v0 = useSearchStore.getState().filterVersion;
+    it('produces a fresh filters reference and resets to page 1 on toggle', () => {
+      useSearchStore.setState({ currentPage: 3 });
+      const before = useSearchStore.getState().filters;
       useSearchStore.getState().toggleFilter('languages', 'pl');
-      expect(useSearchStore.getState().filterVersion).toBe(v0 + 1);
+      const after = useSearchStore.getState().filters;
+      // New object identity is what lets useShallow selectors re-render without
+      // the old filterVersion counter.
+      expect(after).not.toBe(before);
+      expect(after.languages.has('pl')).toBe(true);
+      expect(useSearchStore.getState().currentPage).toBe(1);
     });
   });
 

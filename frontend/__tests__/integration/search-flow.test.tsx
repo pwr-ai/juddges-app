@@ -90,7 +90,6 @@ function createDefaultSearchStore(): Record<string, any> {
     setCurrentPage: jest.fn(),
     pageSize: 10,
     setPageSize: jest.fn(),
-    loadState: jest.fn(),
     selectedDocumentIds: new Set<string>(),
     getFilteredMetadata: jest.fn(() => [] as any[]),
     getFilteredMetadataCount: jest.fn(() => 0),
@@ -259,15 +258,15 @@ describe('Complete Search Flow Integration', () => {
       );
     });
 
-    it('should load persisted search state', async () => {
-      mockSearchStore.loadState.mockImplementation(() => {
-        mockSearchStore.query = 'tax law';
-      });
+    it('reflects persisted search state hydrated by the store', async () => {
+      // Persist middleware hydrates the store at init (#143), so the page simply
+      // renders whatever query the store already holds — no loadState() effect.
+      mockSearchStore.query = 'tax law';
 
       renderWithProviders(<SearchPage />);
 
       await waitFor(() => {
-        expect(mockSearchStore.loadState).toHaveBeenCalled();
+        expect(screen.getByRole('textbox')).toHaveValue('tax law');
       });
     });
   });
