@@ -332,7 +332,8 @@ export const useSearchStore = create<SearchState>()(
 
       return {
         filters: newFilters,
-        currentPage: 1, // Reset to page 1 when filters change        totalResults: filteredCount,
+        currentPage: 1, // Reset to page 1 when filters change
+        totalResults: filteredCount,
         totalPages
       };
     });
@@ -354,7 +355,8 @@ export const useSearchStore = create<SearchState>()(
 
       return {
         filters: newFilters,
-        currentPage: 1, // Reset to page 1 when filters change        totalResults: filteredCount,
+        currentPage: 1, // Reset to page 1 when filters change
+        totalResults: filteredCount,
         totalPages
       };
     });
@@ -386,7 +388,8 @@ export const useSearchStore = create<SearchState>()(
 
       return {
         filters: newFilters,
-        currentPage: 1,        totalResults: filteredCount,
+        currentPage: 1,
+        totalResults: filteredCount,
         totalPages,
       };
     });
@@ -401,7 +404,8 @@ export const useSearchStore = create<SearchState>()(
 
       return {
         filters: newFilters,
-        currentPage: 1,      };
+        currentPage: 1,
+      };
     });
   },
 
@@ -430,7 +434,8 @@ export const useSearchStore = create<SearchState>()(
           legalDomains: new Set<string>(),
           customMetadata: {},
         },
-        currentPage: 1, // Reset to page 1 when filters are reset        totalResults: filteredCount,
+        currentPage: 1, // Reset to page 1 when filters are reset
+        totalResults: filteredCount,
         totalPages
       };
     });
