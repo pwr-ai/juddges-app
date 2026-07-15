@@ -24,8 +24,9 @@
 --     that small set by the boosted score. Ranking stays index-friendly.
 --   * Lower default `match_threshold` to 0.2.
 --   * Tune `hnsw.ef_search` (100) inside the function.
---   * Apply language/jurisdiction as a post-filter over the candidate window
---     with a graceful fallback to the unfiltered set when it would be empty.
+--   * Push language/jurisdiction INTO the indexed scan; if the filtered pass
+--     returns nothing, retry dropping only the language filter (jurisdiction is
+--     preserved so a jurisdiction-scoped caller never leaks other regions).
 --
 -- Signature note: the argument list and RETURNS TABLE shape are UNCHANGED, so
 -- this is a true CREATE OR REPLACE (no overload) and every existing caller keeps
@@ -89,7 +90,7 @@ BEGIN
         SELECT cand.*,
                (1 - cand.dist)
                  * (CASE WHEN boost_key_sections AND cand.is_key_section
-                         THEN cand.relevance_weight ELSE 1 END) AS sim
+                         THEN COALESCE(cand.relevance_weight, 1) ELSE 1 END) AS sim
         FROM candidates cand
         WHERE (1 - cand.dist) > match_threshold
     )
@@ -100,12 +101,13 @@ BEGIN
         j.case_number, j.jurisdiction, j.court_name, j.decision_date, j.title
     FROM scored s
     JOIN public.judgments j ON s.document_id = j.id
-    ORDER BY s.sim DESC
+    ORDER BY s.sim DESC NULLS LAST
     LIMIT match_count;
 
     -- Pass 2 (fallback): only if the filtered scan returned nothing — e.g. the
-    -- candidate window for a rare language/jurisdiction was empty. Re-run
-    -- unfiltered so the caller still gets the best available chunks.
+    -- candidate window for a rare LANGUAGE was empty. Drop the language filter
+    -- but KEEP jurisdiction, so a jurisdiction-scoped caller never leaks
+    -- other-jurisdiction chunks.
     IF NOT FOUND THEN
         RETURN QUERY
         WITH candidates AS (
@@ -115,6 +117,9 @@ BEGIN
                 c.language, (c.embedding <=> query_embedding) AS dist
             FROM public.document_chunks c
             WHERE c.embedding IS NOT NULL
+              AND (filter_jurisdiction IS NULL OR EXISTS (
+                    SELECT 1 FROM public.judgments j
+                    WHERE j.id = c.document_id AND j.jurisdiction = filter_jurisdiction))
             ORDER BY c.embedding <=> query_embedding
             LIMIT cand_window
         ),
@@ -122,7 +127,7 @@ BEGIN
             SELECT cand.*,
                    (1 - cand.dist)
                      * (CASE WHEN boost_key_sections AND cand.is_key_section
-                             THEN cand.relevance_weight ELSE 1 END) AS sim
+                             THEN COALESCE(cand.relevance_weight, 1) ELSE 1 END) AS sim
             FROM candidates cand
             WHERE (1 - cand.dist) > match_threshold
         )
@@ -133,7 +138,7 @@ BEGIN
             j.case_number, j.jurisdiction, j.court_name, j.decision_date, j.title
         FROM scored s
         JOIN public.judgments j ON s.document_id = j.id
-        ORDER BY s.sim DESC
+        ORDER BY s.sim DESC NULLS LAST
         LIMIT match_count;
     END IF;
 END;

@@ -102,7 +102,8 @@ async def _search(client: httpx.AsyncClient, query: str) -> dict[str, Any]:
     return {"data": r.json(), "latency_ms": latency_ms}
 
 
-async def _judge(oai, intent: str, text: str) -> bool:
+async def _judge(oai, intent: str, text: str) -> bool | None:
+    """True/False = judged relevant/not; None = judge errored (excluded from P@K)."""
     if not text.strip():
         return False
     try:
@@ -111,8 +112,9 @@ async def _judge(oai, intent: str, text: str) -> bool:
             messages=[{"role": "system", "content": JUDGE_SYS},
                       {"role": "user", "content": f"INTENT:\n{intent}\n\nEXCERPT:\n{text[:1800]}"}])
         return bool(json.loads(c.choices[0].message.content or "{}").get("is_valid", False))
-    except Exception:
-        return False
+    except Exception as e:  # noqa: BLE001 — don't let a judge API failure look like a bad result
+        print(f"  judge error (excluded): {type(e).__name__}: {e}", file=sys.stderr)
+        return None
 
 
 async def main() -> int:
@@ -150,7 +152,9 @@ async def main() -> int:
             if oai is not None:
                 verdicts = await asyncio.gather(
                     *[_judge(oai, q["intent"], c.get("chunk_text", "") or "") for c in chunks])
-                row["precision_at_k"] = round(sum(verdicts) / len(verdicts), 3) if verdicts else 0.0
+                judged = [v for v in verdicts if v is not None]  # drop judge errors
+                row["precision_at_k"] = round(sum(judged) / len(judged), 3) if judged else 0.0
+                row["judged_n"] = len(judged)
             results.append(row)
 
     print(f"\n=== SEARCH BENCHMARK ({API_URL}) ===")
@@ -165,10 +169,13 @@ async def main() -> int:
         line += f"{r['latency_ms']:>9.0f}  {r['query_type']}"
         print(line)
 
-    lats = [r["latency_ms"] for r in results]
+    lats = [r["latency_ms"] for r in results if "error" not in r]  # exclude failed requests
+    n_err = sum(1 for r in results if "error" in r)
     print("\n--- aggregate ---")
-    print(f"queries: {len(results)}  min_hits_ok: {sum(r['min_hits_ok'] for r in results)}/{len(results)}")
-    print(f"latency mean/max ms: {statistics.mean(lats):.0f} / {max(lats):.0f}")
+    print(f"queries: {len(results)}  failed: {n_err}  "
+          f"min_hits_ok: {sum(r['min_hits_ok'] for r in results)}/{len(results)}")
+    if lats:
+        print(f"latency mean/max ms: {statistics.mean(lats):.0f} / {max(lats):.0f}")
     if oai is not None:
         precs = [r["precision_at_k"] for r in results if "precision_at_k" in r]
         if precs:
