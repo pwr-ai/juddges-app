@@ -221,6 +221,34 @@ Genuinely-optional misses log at **INFO** in dev (quiet local startup) and
 **WARNING** in prod (so real gaps are visible). Production-required misses are
 **fatal** — the process exits rather than silently degrading.
 
+## Database connection pooling (`DATABASE_URL`)
+
+`DATABASE_URL` is consumed by short-lived, per-request paths (LangGraph
+checkpointer pool in `backend/app/server.py`, the LLM cache, health checks,
+maintenance `VACUUM ANALYZE`). For that traffic pattern point it at the Supabase
+**transaction pooler** (host `...pooler.supabase.com`, **port 6543**), not the
+direct connection (port 5432):
+
+```
+DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres"
+```
+
+- **Transaction mode (6543)** returns a connection to the pool after every
+  transaction, so bursty request traffic doesn't exhaust Postgres backends and
+  p99 latency stays flat. This is the default choice for the backend.
+- **Prepared statements are unsupported in transaction mode.** The checkpointer
+  pool already sets `prepare_threshold=None` (see `server.py`, kwargs on
+  `AsyncConnectionPool`), so it is transaction-pooler-safe out of the box. Any
+  new psycopg pool added against `DATABASE_URL` must do the same.
+- **Use the session pooler (5432) only** for a client that genuinely needs
+  server-side prepared statements or session-scoped state — e.g. if
+  `langgraph-checkpoint-postgres` is ever run without `prepare_threshold=None`.
+  Keep that on a separate URL rather than downgrading the shared `DATABASE_URL`.
+
+> Verify in your deployment: the running backend's `DATABASE_URL` host contains
+> `pooler.supabase.com` and the port is `6543`. If it points at `db.<ref>...:5432`
+> (the direct connection), bursty traffic can exhaust connections under load.
+
 ## See Also
 
 - `.env.example` - Complete reference of all configuration options
