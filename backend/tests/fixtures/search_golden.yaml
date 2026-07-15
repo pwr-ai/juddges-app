@@ -1,0 +1,62 @@
+# Ground-truth relevance labels for chunk-level search quality (issue #318).
+#
+# Used by tests/integration/test_chunk_search_golden.py to measure, against the
+# live corpus, whether search_chunks_by_embedding surfaces known-relevant
+# judgments (recall@K) while keeping known-irrelevant ones out (negative leak).
+#
+#   positive_ids : topically distinctive judgments. Each MUST be retrievable —
+#                  querying with one of the doc's own chunks returns it in the
+#                  top-K (a semantic round-trip / embedding-integrity check).
+#                  Verified self-retrievable at rank 1; the dense, template-heavy
+#                  corpus makes arbitrary-ID recall@K on a topic query ill-posed
+#                  (hundreds of equally-relevant docs), so we test retrievability
+#                  and negative exclusion instead.
+#   negative_ids : SAME-LANGUAGE, different-topic judgments that MUST NOT appear
+#                  in the top-K for the topic query. Hard negatives — they share
+#                  the generic criminal vocabulary (kara, wyrok, oskarżony /
+#                  sentence, court) but are a different offence, so only real
+#                  topical ranking excludes them.
+#
+# IDs are stable judgment UUIDs. Extend this set as the corpus / query mix grows
+# (see the "adding examples" proposal on PR #319).
+
+queries:
+  - id: nietrzezwosc
+    query: "jazda w stanie nietrzeźwości prowadzenie pojazdu"
+    language: pl
+    positive_ids:  # cases about driving under the influence
+      - 283f1935-32a3-4ff0-b104-9d50bac8b24e
+      - 4b094d9f-3a60-431a-af63-1ded49c3e272
+    negative_ids:  # PL fraud/economic-crime cases (no drink-driving)
+      - 9e381728-88f6-4dca-bc45-b85cb9b75b50
+      - 72965fda-8bb5-48a8-a1b2-fb5fc1702098
+
+  - id: narkotyki
+    query: "posiadanie i obrót środkami odurzającymi narkotyki"
+    language: pl
+    positive_ids:  # drug-offence cases
+      - d60aea7c-32da-4338-b224-b0ba40d6c415
+      - b0e5c5ab-3c4b-42df-b1cb-832b3b0def91
+    negative_ids:
+      - 9e381728-88f6-4dca-bc45-b85cb9b75b50
+      - 1607c70f-b6b0-4c9b-945f-6ed4aeab30b6
+
+  - id: znecanie
+    query: "znęcanie się nad członkiem rodziny przemoc domowa"
+    language: pl
+    positive_ids:  # domestic-abuse cases (art. 207 k.k.)
+      - 9535601a-1cee-4e46-8cc3-5d4045dc2609
+      - 7e0e8e55-1500-4c14-bb52-67440d04de19
+    negative_ids:
+      - 72965fda-8bb5-48a8-a1b2-fb5fc1702098
+      - 1607c70f-b6b0-4c9b-945f-6ed4aeab30b6
+
+  - id: gbh
+    query: "sentencing for causing grievous bodily harm with intent"
+    language: en
+    positive_ids:  # UK GBH / s.18 cases
+      - 007ef8c6-9e97-4b5e-9815-caa7c58b9065
+      - 6f944566-08b9-4958-93f0-07d8ee2ec89d
+    negative_ids:  # UK theft/fraud cases (no GBH)
+      - 22fa82e4-4a49-4399-8181-2b1be4e4e198
+      - 97977181-fd78-477d-9b70-832038373530
