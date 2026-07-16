@@ -60,3 +60,87 @@ queries:
     negative_ids:  # UK theft/fraud cases (no GBH)
       - 22fa82e4-4a49-4399-8181-2b1be4e4e198
       - 97977181-fd78-477d-9b70-832038373530
+
+  # --- Expansion (#322): corpus-grounded topics from facet profiling. IDs
+  # curated keyword-first; positives verified self-retrievable, negatives
+  # verified absent from the topic query's top-10, against the live chunk RPC.
+
+  - id: oszustwo
+    query: "oszustwo wprowadzenie w błąd niekorzystne rozporządzenie mieniem"
+    language: pl
+    positive_ids:  # fraud cases (art. 286 §1 k.k.)
+      - 8044aaa1-ee5f-4954-a2e2-8e071c2dd5ec
+      - 46347554-56cf-496f-9786-3742dedf0ef2
+    negative_ids:  # homicide cases
+      - 7f13e8b0-9267-4f0e-a4de-9351a45c21c6
+      - 28ba407b-bddf-4e7a-bed1-d07eb18887f4
+
+  - id: zabojstwo
+    query: "zabójstwo z zamiarem bezpośrednim pozbawienie życia"
+    language: pl
+    positive_ids:  # homicide cases (art. 148 §1 k.k.)
+      - 1d6ce9d2-7b9e-4660-a1e1-a96079f4a17f
+      - d16f928a-27f7-4cc9-9a2c-3b7809355325
+    negative_ids:  # fraud cases
+      - b8993e1d-5fc7-4709-ae03-4f87c2a1bf73
+      - e671e3c9-e6fd-4c27-aea4-e7986278c779
+
+  - id: rozboj
+    query: "rozbój z użyciem niebezpiecznego narzędzia kradzież z przemocą"
+    language: pl
+    positive_ids:  # robbery cases (art. 280 §2 k.k.)
+      - f0161cfe-f966-436d-98c0-733f814f6e68
+      - 3762e4ec-73fe-45df-838f-075f1c526979
+    negative_ids:  # fiscal-crime cases (k.k.s.)
+      - aeb7cbbf-d96d-45d6-a1dd-7b510b9ae793
+      - 4b72f6c2-2ce2-4477-9bfb-f61c7bdff4cb
+
+  - id: wyrok_laczny
+    query: "wyrok łączny kara łączna zasady łączenia kar"
+    language: pl
+    positive_ids:  # cumulative-sentence cases (art. 85/86 k.k.)
+      - 03a675e7-264d-43ec-a7e9-9b2458853dab
+      - f1ea4a74-bfb8-41b9-8520-02413aed0893
+    negative_ids:  # homicide cases
+      - e3ed1292-4957-412d-ae40-538db5cbc3f5
+      - d058476b-2487-4065-a03f-12a02b6bb60d
+
+  - id: niesluszne_skazanie
+    query: "odszkodowanie i zadośćuczynienie za niesłuszne skazanie i tymczasowe aresztowanie"
+    language: pl
+    positive_ids:  # wrongful-conviction compensation (art. 552 §4 k.p.k.)
+      - c4bfbb27-386a-4aae-91d4-ec5882c403c6
+      - 970949e9-de1c-41a9-a841-ba52560feec8
+    negative_ids:  # drug-offence cases
+      - c5cffca8-e00f-404f-902b-f04d5b895a74
+      - ab708867-47c6-4019-b1e4-fc4452926def
+
+  - id: przedterminowe
+    query: "warunkowe przedterminowe zwolnienie z odbywania kary pozbawienia wolności"
+    language: pl
+    positive_ids:  # parole cases (art. 77 k.k.)
+      - a8928ad7-e166-4ceb-8aa6-78fb2eda17ec
+      - fa010edb-5805-459e-931c-00c9dbd6004c
+    negative_ids:  # fraud cases
+      - 60dd47c1-adea-4d77-8e64-e79c0733ceaa
+      - 5fcbd342-1019-4467-b1bc-3cb6c62aef11
+
+  - id: przewleklosc
+    query: "skarga na przewlekłość postępowania sądowego"
+    language: pl
+    positive_ids:  # undue-delay complaints
+      - a7d8f6e1-2dc0-4a72-a0bc-ca3829fa91b7
+      - 62c5eef9-4e33-41b7-9b1c-7970e74a22c6
+    negative_ids:  # robbery cases
+      - 94714908-604b-4108-a89f-43c50ef17b8c
+      - 6329e6f9-a629-4201-aca8-cf3e87534d21
+
+  - id: uk_confiscation
+    query: "confiscation order proceeds of crime realisable assets benefit"
+    language: en
+    positive_ids:  # UK confiscation / POCA cases
+      - 4cae9049-4b41-418a-a57f-5a1b64419b4c
+      - b09a81c4-ed7b-456a-8ac7-bb2e64abe3d4
+    negative_ids:  # UK GBH cases
+      - 25345591-3be7-450e-9bfe-084014c0e629
+      - 086a6cf6-187e-4e43-b0e2-7db6d0282e17

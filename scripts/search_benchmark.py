@@ -74,6 +74,23 @@ QUERIES: list[dict[str, Any]] = [
      "intent": "Sentencing for GBH / wounding with intent (s.18 OAPA); aggravating/mitigating factors.", "min_hits": 5},
     {"id": "Q10_appeal_conviction", "query": "appeal against conviction unsafe verdict fresh evidence",
      "intent": "Appeal against a criminal conviction — safety of the verdict, fresh evidence.", "min_hits": 5},
+    # Expansion (#322) — corpus-grounded topics from facet profiling.
+    {"id": "Q11_oszustwo", "query": "oszustwo wprowadzenie w błąd niekorzystne rozporządzenie mieniem",
+     "intent": "Oszustwo (art. 286 §1 k.k.) — wprowadzenie w błąd, niekorzystne rozporządzenie mieniem.", "min_hits": 5},
+    {"id": "Q12_zabojstwo", "query": "zabójstwo z zamiarem bezpośrednim pozbawienie życia",
+     "intent": "Zabójstwo (art. 148 k.k.) — pozbawienie życia, zamiar bezpośredni/ewentualny.", "min_hits": 5},
+    {"id": "Q13_rozboj", "query": "rozbój z użyciem niebezpiecznego narzędzia kradzież z przemocą",
+     "intent": "Rozbój (art. 280 k.k.) — zabór mienia z użyciem przemocy lub niebezpiecznego narzędzia.", "min_hits": 5},
+    {"id": "Q14_wyrok_laczny", "query": "wyrok łączny kara łączna zasady łączenia kar",
+     "intent": "Wyrok łączny / kara łączna — zasady łączenia kar (art. 85/86 k.k.).", "min_hits": 5},
+    {"id": "Q15_niesluszne_skazanie", "query": "odszkodowanie i zadośćuczynienie za niesłuszne skazanie i tymczasowe aresztowanie",
+     "intent": "Odszkodowanie i zadośćuczynienie za niesłuszne skazanie/tymczasowe aresztowanie (art. 552 k.p.k.).", "min_hits": 5},
+    {"id": "Q16_przedterminowe", "query": "warunkowe przedterminowe zwolnienie z odbywania kary pozbawienia wolności",
+     "intent": "Warunkowe przedterminowe zwolnienie (art. 77 k.k.) — przesłanki, odbywanie kary.", "min_hits": 5},
+    {"id": "Q17_przewleklosc", "query": "skarga na przewlekłość postępowania sądowego",
+     "intent": "Skarga na przewlekłość postępowania — nieuzasadniona zwłoka w rozpoznaniu sprawy.", "min_hits": 5},
+    {"id": "Q18_uk_confiscation", "query": "confiscation order proceeds of crime realisable assets benefit",
+     "intent": "UK confiscation under POCA — realisable assets, benefit figure, proceeds of crime.", "min_hits": 5},
 ]
 
 API_URL = (os.getenv("JUDDGES_BENCHMARK_API_URL") or os.getenv("BENCHMARK_API_URL")
