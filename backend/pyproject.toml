@@ -40,6 +40,7 @@ openpyxl = "^3.1.0"
 sentry-sdk = { version = "^2.0.0", extras = ["fastapi"], optional = true }
 strawberry-graphql = {extras = ["fastapi"], version = "^0.291.3"}
 cachetools = "^5.5.0"
+defusedxml = "^0.7.1"
 
 [tool.poetry.extras]
 observability = ["sentry-sdk"]
@@ -128,7 +129,7 @@ ignore = [
     "S608",    # SQL string concat (only in admin scripts)
     "PTH118",  # os.path.join (sys.path manipulation needs os.path)
     "PTH120",  # os.path.dirname (sys.path manipulation needs os.path)
-    "S314",    # XML parsing (xml_converter uses lxml safely)
+    "S314",    # XML parsing (xml_converter uses defusedxml)
     "S104",    # bind all interfaces (intentional for Docker)
 ]
 
