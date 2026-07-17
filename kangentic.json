@@ -28,21 +28,24 @@
       "name": "Code Review",
       "icon": "code",
       "color": "#f59e0b",
-      "autoSpawn": true
+      "autoSpawn": true,
+      "autoCommand": "/code-review"
     },
     {
       "id": "4635e839-8250-450f-ace3-9812eb630a0d",
       "name": "Tests",
       "icon": "flask-conical",
       "color": "#06b6d4",
-      "autoSpawn": true
+      "autoSpawn": true,
+      "autoCommand": "/daily-dev-skills:daily-dev-tdd Run the project test suite. Fix failures related to this task. Report final pass/fail output verbatim."
     },
     {
       "id": "37a2a461-c4c3-4242-ace3-18b0b36689da",
       "name": "Ship It",
       "icon": "sailboat",
       "color": "#F97316",
-      "autoSpawn": true
+      "autoSpawn": true,
+      "autoCommand": "/commit-commands:commit-push-pr"
     },
     {
       "id": "eae419fd-bab2-43f7-bb3f-f386e2b6fb03",
