@@ -17,12 +17,26 @@ import {
 import { BASE_FILTER_FIELDS } from "@/lib/extractions/filter-fields-map";
 import { FILTER_FIELD_BY_NAME } from "@/lib/extractions/base-schema-filter-config";
 import logger from '@/lib/logger';
+import { track } from '@/lib/analytics/track';
 
 const searchLogger = logger.child('useSearchResults');
 
 // Pagination configuration for infinite scroll
 const PAGE_SIZE = 10; // Documents per load (user preference)
 const DEFAULT_LIMIT_CHUNKS = 150; // Chunks to fetch per request
+
+// Product-analytics: interactions only, no raw query text (queries live in
+// search_analytics; app_events carries derived fields like query_length).
+function trackSearchOutcome(query: string, resultCount: number, mode: string): void {
+  track('search_submitted', {
+    result_count: resultCount,
+    query_length: query.length,
+    mode,
+  });
+  if (resultCount === 0) {
+    track('search_zero_results', { query_length: query.length, mode });
+  }
+}
 
 function rangeClause(field: string, range: BaseNumericRange): string | null {
   const parts: string[] = [];
@@ -445,6 +459,7 @@ export function useSearchResults() {
           setPageSize(PAGE_SIZE);
           clearSelection();
           setIsSearching(false);
+          trackSearchOutcome(searchQuery, metadata.length, searchMode);
           if (options?.onComplete) options.onComplete();
           return;
         } catch (err) {
@@ -575,6 +590,7 @@ export function useSearchResults() {
         setPageSize(10);
         clearSelection();
         setIsSearching(false);
+        trackSearchOutcome(searchQuery, metadata.length, searchMode);
 
         searchLogger.info('render ready', {
           metadataCount: metadata.length,

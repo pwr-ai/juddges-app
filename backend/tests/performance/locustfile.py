@@ -138,10 +138,16 @@ class PowerUser(HttpUser):
         )
 
     @task(1)
-    def analytics_query(self):
-        """Query analytics data."""
-        self.client.get(
-            "/api/analytics/summary", headers=self.headers, name="/api/analytics"
+    def track_events(self):
+        """Post a product-analytics event batch."""
+        self.client.post(
+            "/api/events",
+            json={
+                "events": [{"event_name": "judgment_viewed", "properties": {}}],
+                "surface": "web",
+            },
+            headers=self.headers,
+            name="/api/events",
         )
 
 

@@ -62,6 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Server-side signout first: clears auth cookies and emits the
+    // server-authoritative auth_signed_out event (app/api/auth/signout).
+    await fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
     const { error } = await createClient().auth.signOut();
     if (error) throw error;
     // Purge any per-user data the service worker may have cached during this

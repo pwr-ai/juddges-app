@@ -7,6 +7,7 @@ import type { SearchContextParams } from "./search/SearchResultsSection";
 import { SearchResultFeedback } from "./search-result-feedback";
 import type { SearchFeedbackContext } from "./search-result-feedback";
 import { useSearchStore } from "@/lib/store/searchStore";
+import { track } from "@/lib/analytics/track";
 
 export interface SearchDocumentCardProps {
   doc: SearchDocument;
@@ -85,11 +86,20 @@ export function SearchDocumentCard({
           />
         )}
       </div>
-      <DocumentCard
-        document={doc}
-        from="search"
-        query={searchContextParams?.searchQuery}
-      />
+      <div
+        onClickCapture={() =>
+          track("search_result_clicked", {
+            document_id: doc.document_id,
+            position: resultPosition,
+          })
+        }
+      >
+        <DocumentCard
+          document={doc}
+          from="search"
+          query={searchContextParams?.searchQuery}
+        />
+      </div>
     </div>
   );
 }

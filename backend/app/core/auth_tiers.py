@@ -91,7 +91,7 @@ Quick reference (as registered in server.py):
         admin_router            — /api/admin (require_admin on every endpoint)
 
     MIXED (API_KEY at router level + optional JWT per endpoint):
-        analytics_router        — /api/analytics (router: API_KEY,
+        events_router           — /api/events (router: API_KEY,
                                   endpoints: get_optional_user)
 
     MIXED (no router-level auth + optional JWT per endpoint):

@@ -1,5 +1,6 @@
 import { Collection, CollectionWithDocuments } from "@/types/collection";
 import { SearchDocument } from "@/types/search";
+import { track } from "../analytics/track";
 import { cleanDocumentIdForUrl } from "../document-utils";
 import { fetchDocumentsByIds } from "./documents";
 
@@ -26,7 +27,9 @@ export async function createCollection(collection: CreateCollection): Promise<Co
     throw new Error(errorData?.error || 'Failed to create collection');
   }
 
-  return await response.json();
+  const created: Collection = await response.json();
+  track('collection_created', { collection_id: created.id });
+  return created;
 }
 
 export async function getCollections(): Promise<CollectionWithDocuments[]> {
@@ -130,6 +133,8 @@ export async function addDocumentToCollection(
   if (!response.ok) {
     throw new Error("Failed to add document to collection");
   }
+
+  track("collection_item_added", { collection_id: collectionId, count: 1 });
 }
 
 export async function removeDocumentFromCollection(collectionId: string, documentId: string): Promise<void> {
@@ -212,5 +217,10 @@ export async function addDocumentsToCollection(
     throw new Error(errorData.error || "Failed to add documents to collection");
   }
 
-  return response.json();
+  const result: BatchAddResult = await response.json();
+  track("collection_item_added", {
+    collection_id: collectionId,
+    count: result.added.length,
+  });
+  return result;
 }

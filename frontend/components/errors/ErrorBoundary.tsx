@@ -4,6 +4,7 @@ import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from "@/lib/logger";
+import { track } from '@/lib/analytics/track';
 
 interface ErrorBoundaryProps {
  children: React.ReactNode;
@@ -54,6 +55,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
  // Log error details to console
  logger.error('Error caught by ErrorBoundary:', error, errorInfo);
+
+ track('error_boundary_triggered', {
+ error_name: error.name,
+ message: error.message?.slice(0, 200),
+ });
 
  // Call custom error handler if provided
  if (this.props.onError) {

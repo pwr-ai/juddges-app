@@ -381,6 +381,29 @@
         "title": "AnalyzeResearchResponse",
         "type": "object"
       },
+      "AppEventIn": {
+        "additionalProperties": false,
+        "description": "A single event inside the batch envelope.",
+        "properties": {
+          "event_name": {
+            "examples": [
+              "judgment_viewed"
+            ],
+            "title": "Event Name",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "title": "Properties",
+            "type": "object"
+          }
+        },
+        "required": [
+          "event_name"
+        ],
+        "title": "AppEventIn",
+        "type": "object"
+      },
       "Argument": {
         "description": "A structured legal argument with premises, conclusion, and analysis.",
         "properties": {
@@ -6242,194 +6265,6 @@
           "processing_time_ms"
         ],
         "title": "EventDetectionResult",
-        "type": "object"
-      },
-      "EventProperties": {
-        "description": "Generic event properties (flexible schema).",
-        "properties": {
-          "clicked_result_position": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Clicked Result Position"
-          },
-          "collection_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Collection Id"
-          },
-          "custom_properties": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Additional custom event properties",
-            "title": "Custom Properties"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "error_message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error Message"
-          },
-          "feature_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feature Name"
-          },
-          "feature_version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feature Version"
-          },
-          "filters_applied": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Filters Applied"
-          },
-          "query": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Query"
-          },
-          "result_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Result Count"
-          },
-          "search_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Search Type"
-          },
-          "success": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Success"
-          }
-        },
-        "title": "EventProperties",
-        "type": "object"
-      },
-      "EventResponse": {
-        "description": "Response for event tracking.",
-        "properties": {
-          "event_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "ID of the tracked event",
-            "title": "Event Id"
-          },
-          "message": {
-            "title": "Message",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "success",
-              "failed"
-            ],
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status",
-          "message"
-        ],
-        "title": "EventResponse",
         "type": "object"
       },
       "ExampleQuestionsResponse": {
@@ -14302,76 +14137,6 @@
         "title": "SessionResponse",
         "type": "object"
       },
-      "SessionSummary": {
-        "description": "Summary of a user session.",
-        "properties": {
-          "documents_viewed": {
-            "title": "Documents Viewed",
-            "type": "integer"
-          },
-          "duration_seconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Seconds"
-          },
-          "ended_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ended At"
-          },
-          "events_count": {
-            "title": "Events Count",
-            "type": "integer"
-          },
-          "searches_count": {
-            "title": "Searches Count",
-            "type": "integer"
-          },
-          "session_id": {
-            "title": "Session Id",
-            "type": "string"
-          },
-          "started_at": {
-            "title": "Started At",
-            "type": "string"
-          },
-          "user_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Id"
-          }
-        },
-        "required": [
-          "session_id",
-          "user_id",
-          "started_at",
-          "ended_at",
-          "duration_seconds",
-          "events_count",
-          "searches_count",
-          "documents_viewed"
-        ],
-        "title": "SessionSummary",
-        "type": "object"
-      },
       "SetActiveModelRequest": {
         "description": "Request to set the active embedding model.",
         "properties": {
@@ -15995,59 +15760,81 @@
         "title": "TopicsMetaResponse",
         "type": "object"
       },
-      "TrackEventRequest": {
-        "description": "Generic event tracking request.",
+      "TrackEventsRequest": {
+        "additionalProperties": false,
+        "description": "Batch envelope: identity fields apply to every event in the batch.",
         "properties": {
-          "event_name": {
-            "description": "Event name (e.g., 'search_performed', 'document_viewed')",
-            "examples": [
-              "search_performed",
-              "document_viewed",
-              "feature_used"
-            ],
-            "title": "Event Name",
-            "type": "string"
-          },
-          "properties": {
+          "app_version": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EventProperties"
+                "maxLength": 50,
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Event properties (flexible schema)"
+            "title": "App Version"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AppEventIn"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          },
+          "guest_session_id": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Session Id"
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
           },
           "session_id": {
             "anyOf": [
               {
+                "maxLength": 100,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "description": "Session ID (for tracking user sessions)",
             "title": "Session Id"
           },
-          "timestamp": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+          "surface": {
+            "default": "web",
+            "enum": [
+              "web",
+              "api"
             ],
-            "description": "Event timestamp (ISO 8601) - defaults to current time",
-            "title": "Timestamp"
+            "title": "Surface",
+            "type": "string"
           }
         },
         "required": [
-          "event_name"
+          "events"
         ],
-        "title": "TrackEventRequest",
+        "title": "TrackEventsRequest",
         "type": "object"
       },
       "TrackExperimentEventRequest": {
@@ -16137,77 +15924,6 @@
           "interaction_type"
         ],
         "title": "TrackInteractionRequest",
-        "type": "object"
-      },
-      "TrackSearchRequest": {
-        "description": "Search-specific tracking request.",
-        "properties": {
-          "clicked_result": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Information about clicked result (if any)",
-            "title": "Clicked Result"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Search duration in milliseconds",
-            "title": "Duration Ms"
-          },
-          "filters": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Filters applied (document types, languages, etc.)",
-            "title": "Filters"
-          },
-          "query": {
-            "description": "Search query text",
-            "title": "Query",
-            "type": "string"
-          },
-          "result_count": {
-            "description": "Number of results returned",
-            "title": "Result Count",
-            "type": "integer"
-          },
-          "session_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Session ID",
-            "title": "Session Id"
-          }
-        },
-        "required": [
-          "query",
-          "result_count"
-        ],
-        "title": "TrackSearchRequest",
         "type": "object"
       },
       "TrendingTopic": {
@@ -18947,268 +18663,6 @@
         ]
       }
     },
-    "/api/analytics/feature": {
-      "post": {
-        "description": "Track feature usage for product analytics.\n\nMonitors which features are used, by whom, and whether they succeed.\nHelps identify popular features and areas needing improvement.\n\nSupports both authenticated and anonymous users.\nIf authenticated, user_id is extracted from JWT token.\n\nArgs:\n    feature_name: Name of the feature used\n    session_id: Session identifier\n    success: Whether feature usage was successful\n    properties: Additional feature-specific properties\n    error_message: Error message if usage failed\n    user: Authenticated user (optional, extracted from JWT token)\n\nReturns:\n    EventResponse with status and usage_id",
-        "operationId": "track_feature_usage_api_analytics_feature_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "feature_name",
-            "required": true,
-            "schema": {
-              "title": "Feature Name",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "session_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Session Id"
-            }
-          },
-          {
-            "in": "query",
-            "name": "success",
-            "required": false,
-            "schema": {
-              "default": true,
-              "title": "Success",
-              "type": "boolean"
-            }
-          },
-          {
-            "in": "query",
-            "name": "error_message",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Error Message"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Properties"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Track Feature Usage",
-        "tags": [
-          "Analytics"
-        ]
-      }
-    },
-    "/api/analytics/search": {
-      "post": {
-        "description": "Track a search query for analytics.\n\nStores search query, filters, results count, and user interactions.\nUsed for understanding search behavior and improving ranking.\n\nSupports both authenticated and anonymous users.\nIf authenticated, user_id is extracted from JWT token.\n\nArgs:\n    request: Search tracking request\n    user: Authenticated user (optional, extracted from JWT token)\n\nReturns:\n    EventResponse with status and search_id",
-        "operationId": "track_search_api_analytics_search_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TrackSearchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Track Search",
-        "tags": [
-          "Analytics"
-        ]
-      }
-    },
-    "/api/analytics/session/{session_id}": {
-      "get": {
-        "description": "Get analytics summary for a specific session.\n\nReturns statistics about the session including:\n- Event counts\n- Search queries\n- Documents viewed\n- Session duration\n\nIf authenticated, only returns data for the user's own sessions.\nAnonymous users can only query their current session.\n\nArgs:\n    session_id: Session identifier\n    user: Authenticated user (optional, extracted from JWT token)\n\nReturns:\n    SessionSummary with session statistics",
-        "operationId": "get_session_summary_api_analytics_session__session_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "session_id",
-            "required": true,
-            "schema": {
-              "title": "Session Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionSummary"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Get Session Summary",
-        "tags": [
-          "Analytics"
-        ]
-      }
-    },
-    "/api/analytics/track": {
-      "post": {
-        "description": "Track a generic analytics event.\n\nUse for tracking any user action or system event.\nStores event in Supabase for later analysis.\n\nSupports both authenticated and anonymous users.\nIf authenticated, user_id is extracted from JWT token.\n\nArgs:\n    request: Event tracking request\n    user: Authenticated user (optional, extracted from JWT token)\n\nReturns:\n    EventResponse with status and event_id",
-        "operationId": "track_event_api_analytics_track_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TrackEventRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          },
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Track Event",
-        "tags": [
-          "Analytics"
-        ]
-      }
-    },
     "/api/audit/my-activity": {
       "get": {
         "description": "Get your own audit trail.\n\nRetrieves all logged activities for the authenticated user.\nData includes:\n- Search queries and analyses\n- Document access (views, downloads, uploads)\n- Data exports\n- System interactions\n\nAll sensitive data is sanitized in the audit logs.\n\nArgs:\n    user: Authenticated user (from JWT token)\n    start_date: Optional start date filter\n    end_date: Optional end date filter\n    action_types: Optional filter by action types\n    limit: Page size (max 1000)\n    offset: Pagination offset\n\nReturns:\n    AuditTrailResponse with user's activity history",
@@ -19621,6 +19075,72 @@
         "summary": "Update Consent",
         "tags": [
           "User Consent"
+        ]
+      }
+    },
+    "/api/events": {
+      "post": {
+        "description": "Ingest a batch of product-analytics events.\n\nTimestamps are server-side only (created_at DEFAULT now()); client-side\nbatching skew of up to ~5s is accepted.",
+        "operationId": "track_events_api_events_post",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "guest_session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guest Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackEventsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Track Events",
+        "tags": [
+          "Events"
         ]
       }
     },

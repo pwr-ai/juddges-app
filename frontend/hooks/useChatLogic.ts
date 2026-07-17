@@ -5,6 +5,7 @@ import type { Source } from "@/lib/styles/components";
 import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@/lib/supabase/client";
 import logger from "@/lib/logger";
+import { track } from "@/lib/analytics/track";
 
 function findPrevUserIndex(messages: Message[], fromIndex: number): number {
   for (let i = fromIndex - 1; i >= 0; i--) {
@@ -111,7 +112,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
           role: message.role,
           chatId,
         });
-        
+
         // If it's an assistant message with no content, use a fallback error message
         // This message format is recognized by ChatMessage component as an error (see error indicators)
         if (message.role === "assistant") {
@@ -208,7 +209,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
     setMessages([]);
     setFragments([]);
     stopGeneration();
-    
+
     // Always ensure isLoading is false after reset
     // This is critical for allowing new messages to be sent immediately after reset
     setIsLoading(false);
@@ -396,15 +397,15 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
 
       hookLogger.debug('Creating new assistant message', { assistantMessageId });
       setMessages((prev) => [...prev, assistantMessage]);
-      
+
       // Track this assistant message ID as the current one being generated
       currentAssistantMessageIdRef.current = assistantMessageId;
 
       // Make API call to get the answer with streaming
       const apiStartTime = Date.now();
-      
+
       let streamedDocumentIds: string[] | undefined;
-      
+
       await streamChatQuestion(
         query,
         {
@@ -445,7 +446,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                 chatId,
                 duration: `${apiDuration}ms`
               });
-              
+
               // Use fallback error message that matches ChatMessage error indicators
               fullText = "I apologize, but I'm having trouble generating a response right now. Please try again.";
             }
@@ -490,7 +491,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                 content: fullText,
                 document_ids: documentIds && documentIds.length > 0 ? documentIds : undefined,
               };
-              
+
               saveMessageToSupabase(finalMessage, chatId).catch((err) => {
                 hookLogger.error('Failed to save edited message to Supabase', err);
               });
@@ -499,7 +500,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
           onError: (error: Error) => {
             hookLogger.error('Error regenerating after edit', error);
             setMessages((prev) => prev.filter(m => m.id !== assistantMessageId));
-            
+
             const userMessage = getUserFriendlyErrorMessage(error, 'edit');
             const errorMessage: Message = {
               id: uuidv4(),
@@ -507,13 +508,13 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
               content: userMessage,
             };
             setMessages((prev) => [...prev, errorMessage]);
-            
+
             if (chatId) {
               saveMessageToSupabase(errorMessage, chatId).catch((err) => {
                 hookLogger.error('Failed to save error message', err);
               });
             }
-            
+
             setIsLoading(false);
             setAbortController(null);
             if (currentAssistantMessageIdRef.current === assistantMessageId) {
@@ -539,7 +540,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       });
 
       // Create user-friendly error message
-      const userMessage = error instanceof Error 
+      const userMessage = error instanceof Error
         ? getUserFriendlyErrorMessage(error, 'edit')
         : "I apologize, but I'm having trouble processing your edited message right now. Please try again, and if the problem persists, contact support.";
 
@@ -664,9 +665,9 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
 
       // Make API call to get the regenerated answer with streaming
       const apiStartTime = Date.now();
-      
+
       let streamedDocumentIds: string[] | undefined;
-      
+
       await streamChatQuestion(
         query,
         {
@@ -701,7 +702,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                 chatId,
                 duration: `${apiDuration}ms`
               });
-              
+
               // Use fallback error message that matches ChatMessage error indicators
               fullText = "I apologize, but I'm having trouble generating a response right now. Please try again.";
             }
@@ -753,7 +754,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                 content: fullText,
                 document_ids: documentIds && documentIds.length > 0 ? documentIds : undefined,
               };
-              
+
               saveMessageToSupabase(finalMessage, chatId).catch((err) => {
                 hookLogger.error('Failed to save regenerated message to Supabase', err);
               });
@@ -762,7 +763,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
           onError: (error: Error) => {
             hookLogger.error('Error regenerating message', error);
             setMessages((prev) => prev.filter(m => m.id !== assistantMessageId));
-            
+
             const userMessage = getUserFriendlyErrorMessage(error, 'regenerate');
             const errorMessage: Message = {
               id: uuidv4(),
@@ -770,13 +771,13 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
               content: userMessage,
             };
             setMessages((prev) => [...prev, errorMessage]);
-            
+
             if (chatId) {
               saveMessageToSupabase(errorMessage, chatId).catch((err) => {
                 hookLogger.error('Failed to save error message', err);
               });
             }
-            
+
             setIsLoading(false);
             setAbortController(null);
           },
@@ -799,7 +800,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       });
 
       // Create user-friendly error message
-      const userMessage = error instanceof Error 
+      const userMessage = error instanceof Error
         ? getUserFriendlyErrorMessage(error, 'regenerate')
         : "I apologize, but I'm having trouble regenerating that response right now. Please try again, and if the problem persists, contact support.";
 
@@ -838,6 +839,8 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       });
       return;
     }
+
+    track('chat_message_sent', { message_length: input.length });
 
     let currentChatId = chatId;
 
@@ -949,16 +952,16 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      
+
       // Track this assistant message ID as the current one being generated
       currentAssistantMessageIdRef.current = assistantMessageId;
 
       // Make API call to get the answer with streaming
       const apiStartTime = Date.now();
-      
+
       let streamedDocumentIds: string[] | undefined;
       let hasReceivedTokens = false;
-      
+
       await streamChatQuestion(
         query,
         {
@@ -1006,6 +1009,11 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
               hasReceivedTokens
             });
 
+            track('chat_response_received', {
+              duration_ms: apiDuration,
+              sources_count: documentIds?.length ?? 0,
+            });
+
             // Validate that we have actual content
             if (!fullText || fullText.trim().length === 0) {
               hookLogger.warn('Received empty response from API', {
@@ -1014,7 +1022,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                 duration: `${apiDuration}ms`,
                 hasReceivedTokens
               });
-              
+
               // Use fallback error message that matches ChatMessage error indicators
               fullText = "I apologize, but I'm having trouble generating a response right now. Please try again.";
             }
@@ -1071,7 +1079,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                   content: fullText,
                   document_ids: documentIds && documentIds.length > 0 ? documentIds : undefined,
                 };
-                
+
                 saveMessageToSupabase(finalMessage, currentChatId).catch((err) => {
                   hookLogger.error('Failed to save streaming message to Supabase', err);
                 });
@@ -1109,7 +1117,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
                 hookLogger.error('Failed to save error message', err);
               });
             }
-            
+
             // Ensure loading state is cleared on error
             setIsLoading(false);
             setAbortController(null);
@@ -1154,7 +1162,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       setMessages((prev) => prev.filter(m => !(m.role === "assistant" && !m.content)));
 
       // Create user-friendly error message
-      const userMessage = error instanceof Error 
+      const userMessage = error instanceof Error
         ? getUserFriendlyErrorMessage(error, 'send')
         : "I apologize, but I'm having trouble processing your request right now. Please try again, and if the problem persists, contact support.";
 
@@ -1172,7 +1180,7 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
       } else {
         hookLogger.warn('Cannot save error message - no chatId available', { context: 'handleSendMessage' });
       }
-      
+
       // Ensure loading state is cleared on error
       setIsLoading(false);
       setAbortController(null);
