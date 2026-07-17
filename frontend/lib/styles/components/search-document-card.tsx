@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { SearchDocument } from "@/types/search";
 import { DocumentCard } from "./document-card";
@@ -17,7 +18,7 @@ export interface SearchDocumentCardProps {
   searchContextParams?: SearchContextParams;
 }
 
-export function SearchDocumentCard({
+export const SearchDocumentCard = React.memo(function SearchDocumentCard({
   doc,
   isSelected,
   onToggleSelection,
@@ -102,4 +103,4 @@ export function SearchDocumentCard({
       </div>
     </div>
   );
-}
+});

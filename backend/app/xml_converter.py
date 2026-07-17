@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 
 def convert_xml_to_html(xml_content):
@@ -459,7 +459,7 @@ def convert_xml_to_html(xml_content):
 
         return "\n".join(html_parts)
 
-    except ET.ParseError as e:
-        return f"<html><body><h1>XML Parse Error</h1><p>Error parsing XML: {e}</p></body></html>"
-    except Exception as e:
-        return f"<html><body><h1>Conversion Error</h1><p>Error converting XML to HTML: {e}</p></body></html>"
+    except ET.ParseError:
+        return "<html><body><h1>XML Parse Error</h1><p>Error parsing the XML document.</p></body></html>"
+    except Exception:
+        return "<html><body><h1>Conversion Error</h1><p>Error converting XML to HTML.</p></body></html>"
