@@ -98,6 +98,12 @@ celery_app.conf.beat_schedule = {
         "task": "maintenance.vacuum_analyze",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
     },
+    # app_events monthly partition roll-forward — day 25 leaves a 5+ day
+    # buffer before rollover; 3:30 avoids the Sunday 3:00 vacuum job.
+    "app-events-roll-partitions-monthly": {
+        "task": "maintenance.roll_app_events_partitions",
+        "schedule": crontab(hour=3, minute=30, day_of_month=25),
+    },
     # Corpus-derived autocomplete suggestions (issue #153) — weekly rebuild,
     # offset to a low-traffic window away from the other Sunday jobs.
     "suggestions-rebuild-weekly": {

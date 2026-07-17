@@ -21,8 +21,6 @@ from psycopg_pool import AsyncConnectionPool
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.analytics import router as analytics_router
-
 # Import admin router (JWT + require_admin auth, no API key dependency)
 from app.api.admin import router as admin_router
 
@@ -30,6 +28,7 @@ from app.api.admin import router as admin_router
 from app.api.audit import router as audit_router
 from app.api.blog import router as blog_router
 from app.api.consent import router as consent_router
+from app.api.events import router as events_router
 from app.api.legal import router as legal_router
 from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
@@ -623,7 +622,7 @@ async def redirect_root_to_docs():
 #
 # ADMIN:     admin_router (/api/admin — require_admin on every endpoint)
 #
-# MIXED:     analytics_router — API_KEY at router level,
+# MIXED:     events_router    — API_KEY at router level,
 #                               get_optional_user per endpoint
 #            feedback_router  — no router-level auth (allows anonymous),
 #                               get_optional_user per endpoint
@@ -683,8 +682,9 @@ app.include_router(experiments_router)
 # Guest sessions - no API key required (public endpoint)
 app.include_router(guest_sessions_router)
 
-# Analytics - requires API key authentication to protect usage data
-app.include_router(analytics_router, dependencies=[Depends(verify_api_key)])
+# App events - requires API key authentication (browser traffic goes through
+# the Next.js /api/events proxy, which injects the key server-side)
+app.include_router(events_router, dependencies=[Depends(verify_api_key)])
 
 # Feedback - intentionally open (no API key) to allow anonymous feedback
 # submissions from unauthenticated users. Per-endpoint auth via

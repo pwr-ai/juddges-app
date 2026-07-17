@@ -9,6 +9,7 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
+import { track } from '@/lib/analytics/track';
 
 import type { DocumentMetadata, SimilarDocument } from './types';
 
@@ -48,6 +49,7 @@ export function useDocument(documentId: string) {
       if (!metadataRes.ok) throw new Error('Failed to fetch document metadata');
       const metadataData = await metadataRes.json();
       setMetadata(metadataData);
+      track('judgment_viewed', { document_id: documentId });
 
       const similarRes = await fetch(`/api/documents/${documentId}/similar?top_k=3`, { cache: 'no-store' });
       if (similarRes.ok) {

@@ -25,6 +25,7 @@ import {
   type CollectionExportPreset,
 } from "@/lib/collection-export";
 import { exportToCSV, exportToXLSX, type ExportFormat } from "@/lib/file-export";
+import { track } from "@/lib/analytics/track";
 import logger from "@/lib/logger";
 
 interface CollectionDocumentsTableProps {
@@ -105,6 +106,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
         exportToCSV(exportRows, filename);
       }
       toast.success(`Exported ${exportRows.length} documents as ${format.toUpperCase()}`);
+      track("judgment_exported", { format, count: exportRows.length, preset });
     } catch (error) {
       logger.error("Failed to export collection", error, {
         format,

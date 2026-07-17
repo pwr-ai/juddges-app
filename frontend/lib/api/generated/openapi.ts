@@ -223,145 +223,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/analytics/feature": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Track Feature Usage
-         * @description Track feature usage for product analytics.
-         *
-         *     Monitors which features are used, by whom, and whether they succeed.
-         *     Helps identify popular features and areas needing improvement.
-         *
-         *     Supports both authenticated and anonymous users.
-         *     If authenticated, user_id is extracted from JWT token.
-         *
-         *     Args:
-         *         feature_name: Name of the feature used
-         *         session_id: Session identifier
-         *         success: Whether feature usage was successful
-         *         properties: Additional feature-specific properties
-         *         error_message: Error message if usage failed
-         *         user: Authenticated user (optional, extracted from JWT token)
-         *
-         *     Returns:
-         *         EventResponse with status and usage_id
-         */
-        post: operations["track_feature_usage_api_analytics_feature_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/analytics/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Track Search
-         * @description Track a search query for analytics.
-         *
-         *     Stores search query, filters, results count, and user interactions.
-         *     Used for understanding search behavior and improving ranking.
-         *
-         *     Supports both authenticated and anonymous users.
-         *     If authenticated, user_id is extracted from JWT token.
-         *
-         *     Args:
-         *         request: Search tracking request
-         *         user: Authenticated user (optional, extracted from JWT token)
-         *
-         *     Returns:
-         *         EventResponse with status and search_id
-         */
-        post: operations["track_search_api_analytics_search_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/analytics/session/{session_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Session Summary
-         * @description Get analytics summary for a specific session.
-         *
-         *     Returns statistics about the session including:
-         *     - Event counts
-         *     - Search queries
-         *     - Documents viewed
-         *     - Session duration
-         *
-         *     If authenticated, only returns data for the user's own sessions.
-         *     Anonymous users can only query their current session.
-         *
-         *     Args:
-         *         session_id: Session identifier
-         *         user: Authenticated user (optional, extracted from JWT token)
-         *
-         *     Returns:
-         *         SessionSummary with session statistics
-         */
-        get: operations["get_session_summary_api_analytics_session__session_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/analytics/track": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Track Event
-         * @description Track a generic analytics event.
-         *
-         *     Use for tracking any user action or system event.
-         *     Stores event in Supabase for later analysis.
-         *
-         *     Supports both authenticated and anonymous users.
-         *     If authenticated, user_id is extracted from JWT token.
-         *
-         *     Args:
-         *         request: Event tracking request
-         *         user: Authenticated user (optional, extracted from JWT token)
-         *
-         *     Returns:
-         *         EventResponse with status and event_id
-         */
-        post: operations["track_event_api_analytics_track_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/audit/my-activity": {
         parameters: {
             query?: never;
@@ -580,6 +441,29 @@ export interface paths {
          *         ConsentUpdateResponse with updated status
          */
         post: operations["update_consent_api_consent_update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Track Events
+         * @description Ingest a batch of product-analytics events.
+         *
+         *     Timestamps are server-side only (created_at DEFAULT now()); client-side
+         *     batching skew of up to ~5s is accepted.
+         */
+        post: operations["track_events_api_events_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6391,6 +6275,21 @@ export interface components {
             topics: components["schemas"]["ResearchTopic"][];
         };
         /**
+         * AppEventIn
+         * @description A single event inside the batch envelope.
+         */
+        AppEventIn: {
+            /**
+             * Event Name
+             * @example judgment_viewed
+             */
+            event_name: string;
+            /** Properties */
+            properties?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * Argument
          * @description A structured legal argument with premises, conclusion, and analysis.
          */
@@ -9161,63 +9060,6 @@ export interface components {
             merges_detected: number;
             /** Processing Time Ms */
             processing_time_ms: number;
-        };
-        /**
-         * EventProperties
-         * @description Generic event properties (flexible schema).
-         */
-        EventProperties: {
-            /** Clicked Result Position */
-            clicked_result_position?: number | null;
-            /** Collection Id */
-            collection_id?: string | null;
-            /**
-             * Custom Properties
-             * @description Additional custom event properties
-             */
-            custom_properties?: {
-                [key: string]: unknown;
-            } | null;
-            /** Document Id */
-            document_id?: string | null;
-            /** Duration Ms */
-            duration_ms?: number | null;
-            /** Error Message */
-            error_message?: string | null;
-            /** Feature Name */
-            feature_name?: string | null;
-            /** Feature Version */
-            feature_version?: string | null;
-            /** Filters Applied */
-            filters_applied?: {
-                [key: string]: unknown;
-            } | null;
-            /** Query */
-            query?: string | null;
-            /** Result Count */
-            result_count?: number | null;
-            /** Search Type */
-            search_type?: string | null;
-            /** Success */
-            success?: boolean | null;
-        };
-        /**
-         * EventResponse
-         * @description Response for event tracking.
-         */
-        EventResponse: {
-            /**
-             * Event Id
-             * @description ID of the tracked event
-             */
-            event_id?: string | null;
-            /** Message */
-            message: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "success" | "failed";
         };
         /**
          * ExampleQuestionsResponse
@@ -13229,28 +13071,6 @@ export interface components {
             status: string;
         };
         /**
-         * SessionSummary
-         * @description Summary of a user session.
-         */
-        SessionSummary: {
-            /** Documents Viewed */
-            documents_viewed: number;
-            /** Duration Seconds */
-            duration_seconds: number | null;
-            /** Ended At */
-            ended_at: string | null;
-            /** Events Count */
-            events_count: number;
-            /** Searches Count */
-            searches_count: number;
-            /** Session Id */
-            session_id: string;
-            /** Started At */
-            started_at: string;
-            /** User Id */
-            user_id: string | null;
-        };
-        /**
          * SetActiveModelRequest
          * @description Request to set the active embedding model.
          */
@@ -14128,30 +13948,26 @@ export interface components {
             total_concepts: number;
         };
         /**
-         * TrackEventRequest
-         * @description Generic event tracking request.
+         * TrackEventsRequest
+         * @description Batch envelope: identity fields apply to every event in the batch.
          */
-        TrackEventRequest: {
-            /**
-             * Event Name
-             * @description Event name (e.g., 'search_performed', 'document_viewed')
-             * @example search_performed
-             * @example document_viewed
-             * @example feature_used
-             */
-            event_name: string;
-            /** @description Event properties (flexible schema) */
-            properties?: components["schemas"]["EventProperties"] | null;
-            /**
-             * Session Id
-             * @description Session ID (for tracking user sessions)
-             */
+        TrackEventsRequest: {
+            /** App Version */
+            app_version?: string | null;
+            /** Events */
+            events: components["schemas"]["AppEventIn"][];
+            /** Guest Session Id */
+            guest_session_id?: string | null;
+            /** Locale */
+            locale?: string | null;
+            /** Session Id */
             session_id?: string | null;
             /**
-             * Timestamp
-             * @description Event timestamp (ISO 8601) - defaults to current time
+             * Surface
+             * @default web
+             * @enum {string}
              */
-            timestamp?: string | null;
+            surface: "web" | "api";
         };
         /** TrackExperimentEventRequest */
         TrackExperimentEventRequest: {
@@ -14191,46 +14007,6 @@ export interface components {
              * @enum {string}
              */
             interaction_type: "view" | "search_click" | "bookmark" | "chat_reference" | "feedback_positive" | "feedback_negative";
-        };
-        /**
-         * TrackSearchRequest
-         * @description Search-specific tracking request.
-         */
-        TrackSearchRequest: {
-            /**
-             * Clicked Result
-             * @description Information about clicked result (if any)
-             */
-            clicked_result?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Duration Ms
-             * @description Search duration in milliseconds
-             */
-            duration_ms?: number | null;
-            /**
-             * Filters
-             * @description Filters applied (document types, languages, etc.)
-             */
-            filters?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Query
-             * @description Search query text
-             */
-            query: string;
-            /**
-             * Result Count
-             * @description Number of results returned
-             */
-            result_count: number;
-            /**
-             * Session Id
-             * @description Session ID
-             */
-            session_id?: string | null;
         };
         /**
          * TrendingTopic
@@ -15349,143 +15125,6 @@ export interface operations {
             };
         };
     };
-    track_feature_usage_api_analytics_feature_post: {
-        parameters: {
-            query: {
-                feature_name: string;
-                session_id?: string | null;
-                success?: boolean;
-                error_message?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                } | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EventResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    track_search_api_analytics_search_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TrackSearchRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EventResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_session_summary_api_analytics_session__session_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    track_event_api_analytics_track_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TrackEventRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EventResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_my_audit_trail_api_audit_my_activity_get: {
         parameters: {
             query?: {
@@ -15685,6 +15324,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConsentUpdateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    track_events_api_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                guest_session_id?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackEventsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
