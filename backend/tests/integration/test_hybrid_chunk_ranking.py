@@ -40,7 +40,7 @@ MIGRATION_PATH = (
     Path(__file__).resolve().parents[3]
     / "supabase"
     / "migrations"
-    / "20260715000003_hybrid_rank_by_best_chunk.sql"
+    / "20260719000001_hybrid_boost_highlight.sql"
 )
 
 
@@ -90,29 +90,53 @@ def _hybrid(conn, embed, query: str, language: str, limit: int = TOPK):
         return cur.fetchall()
 
 
-def test_top_result_snippet_is_a_real_chunk_not_summary(conn, embed):
-    """The vector-ranked top result must return the matched chunk text — i.e. a
-    row that actually exists in document_chunks — not the document summary the
-    pre-fix function returned. This is the headline behaviour of #320."""
+def _strip_marks(s: str) -> str:
+    return (s or "").replace("<mark>", "").replace("</mark>", "")
+
+
+def test_matched_snippet_derives_from_a_real_chunk(conn, embed):
+    """The vector-ranked top result's snippet must come from a real document_chunks
+    row (a ts_headline fragment of the matched chunk), not the document summary the
+    pre-fix function returned. Fragments (split on the ' ... ' delimiter, marks
+    stripped) must appear verbatim in the document's chunk text."""
     rows = _hybrid(
         conn, embed, "jazda w stanie nietrzeźwości prowadzenie pojazdu", "polish"
     )
     assert rows, "no results"
-    doc_id, chunk_text, _ctype, _vs = rows[0]
+    doc_id, snippet, _ctype, _vs = rows[0]
+    frags = [
+        f.strip() for f in _strip_marks(snippet).split("...") if len(f.strip()) > 40
+    ]
+    assert frags, "snippet has no substantive fragment"
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT EXISTS(SELECT 1 FROM public.document_chunks "
-            "WHERE document_id = %s AND chunk_text = %s)",
-            (doc_id, chunk_text),
+            "SELECT string_agg(chunk_text, ' ') FROM public.document_chunks "
+            "WHERE document_id = %s",
+            (doc_id,),
         )
-        is_real_chunk = cur.fetchone()[0]
+        all_chunks = cur.fetchone()[0] or ""
         cur.execute("SELECT summary FROM public.judgments WHERE id = %s", (doc_id,))
         summary = cur.fetchone()[0]
-    assert is_real_chunk, (
-        "top result snippet is not a document_chunks row — vector branch is not "
-        "returning the matched chunk (pre-fix behaviour returned the summary)"
+    assert any(f in all_chunks for f in frags), (
+        "snippet fragment not found in any document chunk — not derived from the matched chunk"
     )
-    assert chunk_text != summary, "snippet equals the boilerplate summary"
+    assert _strip_marks(snippet) != summary, "snippet equals the boilerplate summary"
+
+
+def test_matched_chunk_is_highlighted(conn, embed):
+    """When there is a search_text, the matched chunk is ts_headline'd, so the top
+    results carry <mark> spans. RED against the pre-highlight function (#320),
+    GREEN after #328."""
+    rows = _hybrid(
+        conn,
+        embed,
+        "oszustwo wprowadzenie w błąd niekorzystne rozporządzenie mieniem",
+        "polish",
+    )
+    assert rows, "no results"
+    assert any("<mark>" in (r[1] or "") for r in rows[:5]), (
+        "no <mark> highlight in top results — ts_headline not applied to the matched chunk"
+    )
 
 
 @pytest.mark.parametrize("case", _golden(), ids=lambda c: c["id"])
