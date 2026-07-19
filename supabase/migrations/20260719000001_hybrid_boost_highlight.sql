@@ -89,13 +89,16 @@ BEGIN
     vector_results AS (
         SELECT
             j.id,
-            bc.bscore AS similarity,
+            -- vector_score stays the raw cosine similarity in [0,1]; the boost
+            -- affects RANKING only (vrank / chunk selection), not the reported
+            -- score, and the threshold keeps its raw-similarity meaning.
+            (1 - bc.dist) AS similarity,
             bc.chunk_text AS matched_chunk_text,
             bc.chunk_type AS matched_chunk_type,
             ROW_NUMBER() OVER (ORDER BY bc.bscore DESC) AS vrank
         FROM best_chunk bc
         JOIN public.judgments j ON j.id = bc.document_id
-        WHERE bc.bscore > similarity_threshold
+        WHERE (1 - bc.dist) > similarity_threshold
             AND (filter_jurisdictions IS NULL OR j.jurisdiction = ANY(filter_jurisdictions))
             AND (filter_court_names IS NULL OR j.court_name = ANY(filter_court_names))
             AND (filter_court_levels IS NULL OR j.court_level = ANY(filter_court_levels))
@@ -259,7 +262,20 @@ BEGIN
         GROUP BY doc_id
     )
 
+    -- Outer projection: recompute chunk_end_pos from the ACTUAL returned
+    -- chunk_text (ts_headline may shorten the matched chunk), so
+    -- [chunk_start_pos, chunk_end_pos) spans the snippet the caller receives.
     SELECT
+        a.id, a.case_number, a.title, a.summary, a.full_text, a.jurisdiction,
+        a.court_name, a.court_level, a.case_type, a.decision_type, a.outcome,
+        a.decision_date, a.publication_date, a.keywords, a.legal_topics,
+        a.cited_legislation, a.judges, a.metadata, a.source_dataset,
+        a.source_id, a.source_url, a.vector_score, a.text_score,
+        a.combined_score, a.chunk_text, a.chunk_type, a.chunk_start_pos,
+        char_length(a.chunk_text) AS chunk_end_pos,
+        a.chunk_metadata
+    FROM (
+        SELECT
         j.id,
         j.case_number,
         j.title,
@@ -323,7 +339,7 @@ BEGIN
         END AS chunk_type,
 
         0 AS chunk_start_pos,
-        LENGTH(COALESCE(vr.matched_chunk_text, j.summary, LEFT(j.full_text, 500), j.title, '')) AS chunk_end_pos,
+        0 AS chunk_end_pos,  -- recomputed from chunk_text in the outer projection
 
         jsonb_build_object(
             'court_name', j.court_name,
@@ -339,11 +355,13 @@ BEGIN
             'rrf_score', rrf.rrf_score
         ) AS chunk_metadata
 
-    FROM rrf_scores rrf
-    JOIN public.judgments j ON rrf.doc_id = j.id
-    LEFT JOIN vector_results vr ON vr.id = rrf.doc_id
-    ORDER BY rrf.rrf_score DESC
-    LIMIT result_limit
-    OFFSET result_offset;
+        FROM rrf_scores rrf
+        JOIN public.judgments j ON rrf.doc_id = j.id
+        LEFT JOIN vector_results vr ON vr.id = rrf.doc_id
+        ORDER BY rrf.rrf_score DESC
+        LIMIT result_limit
+        OFFSET result_offset
+    ) a
+    ORDER BY a.combined_score DESC;
 END;
 $function$
