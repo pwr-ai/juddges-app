@@ -14,6 +14,14 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      # tiptap majors must move together — a lone extension on v3 with core on
+      # v2 breaks the build (see closed PRs #343-#345)
+      tiptap-major:
+        applies-to: version-updates
+        patterns:
+          - "@tiptap/*"
+        update-types:
+          - "major"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
