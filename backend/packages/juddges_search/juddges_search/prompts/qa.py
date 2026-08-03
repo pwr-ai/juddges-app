@@ -59,7 +59,7 @@ No relevant information found:
     "document_ids": []
 }
 
-JSON:"""  # noqa: E501
+JSON:"""
 
 
 IMPROVE_QUESTION_BASED_ON_CHAT_HISTORY = """Given the question and the following conversation, generate multiple search queries to improve search results across different search methods. Generate all queries in the same language as the original question.
@@ -102,4 +102,4 @@ Remember to:
 - Maintain the original language of the question
 - Focus term queries on exact words and phrases that would appear in relevant documents
 
-JSON:"""  # noqa: E501
+JSON:"""

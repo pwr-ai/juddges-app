@@ -14,13 +14,14 @@ Key Features:
 """
 
 import os
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from loguru import logger
-from supabase import create_client, Client
+from supabase import Client, create_client
 from supabase.client import ClientOptions
 
-from juddges_search.models import DocumentChunk
 from juddges_search.embeddings import embed_texts
+from juddges_search.models import DocumentChunk
 from juddges_search.retrieval.aggregation import reciprocal_rank_fusion
 
 
@@ -44,12 +45,12 @@ class SupabaseSearchClient:
 
     async def vector_search_chunks(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         match_count: int = 10,
         match_threshold: float = 0.5,
-        languages: Optional[List[str]] = None,
-        document_types: Optional[List[str]] = None,
-    ) -> List[DocumentChunk]:
+        languages: list[str] | None = None,
+        document_types: list[str] | None = None,
+    ) -> list[DocumentChunk]:
         """
         Perform pure vector similarity search on document chunks.
 
@@ -117,9 +118,9 @@ class SupabaseSearchClient:
         self,
         query: str,
         match_count: int = 10,
-        languages: Optional[List[str]] = None,
-        document_types: Optional[List[str]] = None,
-    ) -> List[DocumentChunk]:
+        languages: list[str] | None = None,
+        document_types: list[str] | None = None,
+    ) -> list[DocumentChunk]:
         """
         Perform full-text search on document chunks using PostgreSQL's ts_vector.
 
@@ -182,11 +183,11 @@ class SupabaseSearchClient:
         self,
         query: str,
         match_count: int = 10,
-        languages: Optional[List[str]] = None,
-        document_types: Optional[List[str]] = None,
+        languages: list[str] | None = None,
+        document_types: list[str] | None = None,
         vector_weight: float = 0.7,
         text_weight: float = 0.3,
-    ) -> List[DocumentChunk]:
+    ) -> list[DocumentChunk]:
         """
         Perform hybrid search combining vector similarity and full-text search.
 
@@ -232,12 +233,12 @@ class SupabaseSearchClient:
 
     def _merge_search_results(
         self,
-        vector_results: List[DocumentChunk],
-        text_results: List[DocumentChunk],
+        vector_results: list[DocumentChunk],
+        text_results: list[DocumentChunk],
         vector_weight: float,
         text_weight: float,
         limit: int,
-    ) -> List[DocumentChunk]:
+    ) -> list[DocumentChunk]:
         """
         Merge vector and text search results using weighted scoring.
 
@@ -252,7 +253,7 @@ class SupabaseSearchClient:
             Merged and re-ranked list of DocumentChunk objects
         """
         # Create a dictionary to track chunks and their scores
-        chunk_scores: Dict[str, Dict[str, Any]] = {}
+        chunk_scores: dict[str, dict[str, Any]] = {}
 
         # Process vector results
         for chunk in vector_results:
@@ -291,7 +292,7 @@ class SupabaseSearchClient:
 
 
 # Singleton instance
-_search_client: Optional[SupabaseSearchClient] = None
+_search_client: SupabaseSearchClient | None = None
 
 
 def get_search_client() -> SupabaseSearchClient:
@@ -306,9 +307,9 @@ def get_search_client() -> SupabaseSearchClient:
 async def search_chunks(
     query: str,
     max_chunks: int = 10,
-    languages: Optional[List[str]] = None,
-    document_types: Optional[List[str]] = None,
-) -> List[DocumentChunk]:
+    languages: list[str] | None = None,
+    document_types: list[str] | None = None,
+) -> list[DocumentChunk]:
     """
     Search for document chunks using hybrid search (vector + full-text).
 
@@ -336,9 +337,9 @@ async def search_chunks(
 async def search_chunks_vector(
     query: str,
     max_chunks: int = 10,
-    languages: Optional[List[str]] = None,
-    document_types: Optional[List[str]] = None,
-) -> List[DocumentChunk]:
+    languages: list[str] | None = None,
+    document_types: list[str] | None = None,
+) -> list[DocumentChunk]:
     """
     Search for document chunks using pure vector similarity.
 
@@ -365,9 +366,9 @@ async def search_chunks_vector(
 async def search_chunks_term(
     query: str,
     max_chunks: int = 10,
-    languages: Optional[List[str]] = None,
-    document_types: Optional[List[str]] = None,
-) -> List[DocumentChunk]:
+    languages: list[str] | None = None,
+    document_types: list[str] | None = None,
+) -> list[DocumentChunk]:
     """
     Search for document chunks using full-text search (BM25-style).
 
@@ -392,9 +393,9 @@ async def search_chunks_term(
 async def search_documents(
     query: str,
     max_results: int = 10,
-    languages: Optional[List[str]] = None,
-    document_types: Optional[List[str]] = None,
-) -> List[Dict[str, Any]]:
+    languages: list[str] | None = None,
+    document_types: list[str] | None = None,
+) -> list[dict[str, Any]]:
     """
     Search for full documents (not chunks) using hybrid search.
 

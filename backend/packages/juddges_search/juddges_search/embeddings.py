@@ -117,4 +117,3 @@ def close_client() -> None:
 def get_embedding_model():
     """Deprecated shim. Callers should use embed_texts() directly."""
     logger.warning("get_embedding_model() is deprecated; juddges_search now uses a remote TEI server. Returning None.")
-    return None

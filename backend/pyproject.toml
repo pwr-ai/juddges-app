@@ -130,12 +130,13 @@ ignore = [
     "PTH118",  # os.path.join (sys.path manipulation needs os.path)
     "PTH120",  # os.path.dirname (sys.path manipulation needs os.path)
     "S314",    # XML parsing (xml_converter uses defusedxml)
+    "UP042",   # str+Enum -> StrEnum (TODO: migrate incrementally; ruff 0.16)
     "S104",    # bind all interfaces (intentional for Docker)
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"tests/**/*.py" = ["S101", "S106", "SIM102"]
+"tests/**/*.py" = ["S101", "S106", "SIM102", "RUF059"]
 "scripts/**/*.py" = ["S608"]
 "examples/**/*.py" = ["S113"]
 

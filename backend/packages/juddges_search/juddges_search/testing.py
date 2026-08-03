@@ -47,5 +47,5 @@ class FakeChatModel(Runnable[Any, FakeMessage]):
     async def ainvoke(self, input: Any, config: Any = None, **kwargs: Any) -> FakeMessage:
         return self.invoke(input, config, **kwargs)
 
-    def with_config(self, **kwargs: Any) -> "FakeChatModel":
+    def with_config(self, **kwargs: Any) -> FakeChatModel:
         return self

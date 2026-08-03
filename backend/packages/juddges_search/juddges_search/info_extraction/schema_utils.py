@@ -13,8 +13,6 @@ from .oai_schema_validation import (
 class SchemaProcessingError(Exception):
     """Raised when schema processing fails due to invalid or missing required fields."""
 
-    pass
-
 
 # Fields in db that are required for the schema to be valid
 SCHEMA_DB_REQUIRED_FIELDS: Final[set[str]] = {

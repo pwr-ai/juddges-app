@@ -17,7 +17,7 @@ class NumericRange(BaseModel):
     max: float | None = Field(default=None)
 
     @model_validator(mode="after")
-    def _check_bounds(self) -> "NumericRange":
+    def _check_bounds(self) -> NumericRange:
         if self.min is not None and self.max is not None and self.min > self.max:
             raise ValueError("min must be <= max")
         return self
@@ -32,7 +32,7 @@ class DateRange(BaseModel):
     to: date | None = Field(default=None)
 
     @model_validator(mode="after")
-    def _check_order(self) -> "DateRange":
+    def _check_order(self) -> DateRange:
         if self.from_ is not None and self.to is not None and self.from_ > self.to:
             raise ValueError("from must be <= to")
         return self

@@ -1,6 +1,7 @@
-from juddges_search.settings import MAX_CHAT_LAST_MESSAGES
 from langchain.schema import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
+
+from juddges_search.settings import MAX_CHAT_LAST_MESSAGES
 
 
 def format_messages(input: dict, max_last_messages: int = MAX_CHAT_LAST_MESSAGES) -> list[BaseMessage]:

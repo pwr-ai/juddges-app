@@ -386,29 +386,26 @@ await AuditService.log_query(
     query="tax question",
     response={"answer": "..."},
     session_id="session-uuid",
-    model_used="gpt-4"
+    model_used="gpt-4",
 )
 
 # Log document access
 await AuditService.log_document_access(
-    user_id="user-uuid",
-    document_id="doc-123",
-    action="view",
-    session_id="session-uuid"
+    user_id="user-uuid", document_id="doc-123", action="view", session_id="session-uuid"
 )
 
 # Log export
 await AuditService.log_export(
     user_id="user-uuid",
     export_type="audit_trail",
-    data_range={"start_date": "...", "end_date": "..."}
+    data_range={"start_date": "...", "end_date": "..."},
 )
 
 # Get user audit trail
 result = await AuditService.get_user_audit_trail(
     user_id="user-uuid",
     start_date=datetime(2025, 1, 1),
-    end_date=datetime(2025, 12, 31)
+    end_date=datetime(2025, 12, 31),
 )
 ```
 
@@ -416,6 +413,7 @@ result = await AuditService.get_user_audit_trail(
 ```python
 from fastapi import BackgroundTasks
 from app.services import log_audit_background
+
 
 @router.post("/some-endpoint")
 async def endpoint(background_tasks: BackgroundTasks):
@@ -427,7 +425,7 @@ async def endpoint(background_tasks: BackgroundTasks):
         user_id="user-uuid",
         action_type="query",
         input_data={"query": "..."},
-        output_data={"result": "..."}
+        output_data={"result": "..."},
     )
 ```
 
@@ -445,15 +443,11 @@ result = await RetentionService.archive_expired_audit_logs()
 result = await RetentionService.cleanup_expired_sessions()
 
 # Export user data
-result = await RetentionService.export_user_data(
-    user_id="user-uuid",
-    format="json"
-)
+result = await RetentionService.export_user_data(user_id="user-uuid", format="json")
 
 # Request data deletion
 result = await RetentionService.request_data_deletion(
-    user_id="user-uuid",
-    request_type="full_deletion"
+    user_id="user-uuid", request_type="full_deletion"
 )
 ```
 
@@ -512,9 +506,7 @@ result = await RetentionService.request_data_deletion(
 
    # Test creating an audit log
    audit_id = await AuditService.log_action(
-       user_id="test-user",
-       action_type="query",
-       input_data={"test": "data"}
+       user_id="test-user", action_type="query", input_data={"test": "data"}
    )
    ```
 

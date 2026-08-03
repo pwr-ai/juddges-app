@@ -4,10 +4,11 @@ import json
 import uuid
 from collections import OrderedDict
 from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Any
 
 from loguru import logger
-from juddges_search.models import LegalDocument, LegalDocumentMetadata, DocumentChunk, DocumentType
+
+from juddges_search.models import DocumentChunk, DocumentType, LegalDocument, LegalDocumentMetadata
 from juddges_search.retrieval.config import MAX_INVALID_UUIDS_TO_SHOW
 
 
@@ -167,7 +168,7 @@ def convert_obj_to_legal_document(obj, include_vectors: bool = False, include_sc
     props = obj.properties if hasattr(obj, "properties") else {}
 
     # Helper to safely get optional string fields
-    def get_opt_str(key: str) -> Optional[str]:
+    def get_opt_str(key: str) -> str | None:
         val = props.get(key)
         if val is None or val == "":
             return None
@@ -266,7 +267,7 @@ def convert_obj_to_legal_document(obj, include_vectors: bool = False, include_sc
 
 
 def convert_obj_to_document_chunk(
-    obj, confidence_score: Optional[float] = None, extract_score: bool = True
+    obj, confidence_score: float | None = None, extract_score: bool = True
 ) -> DocumentChunk:
     """Convert a search result object to a DocumentChunk model.
 
@@ -287,7 +288,7 @@ def convert_obj_to_document_chunk(
         confidence_score = extract_score_from_obj(obj)
 
     # Helper to safely get optional fields
-    def get_opt_str(key: str) -> Optional[str]:
+    def get_opt_str(key: str) -> str | None:
         val = props.get(key)
         if val is None or val == "":
             return None
@@ -307,7 +308,7 @@ def convert_obj_to_document_chunk(
     )
 
 
-def get_chunk_score(chunk: Union[DocumentChunk, Any]) -> float:
+def get_chunk_score(chunk: DocumentChunk | Any) -> float:
     """Get confidence score from either DocumentChunk or a raw search result object.
 
     Args:
@@ -323,7 +324,7 @@ def get_chunk_score(chunk: Union[DocumentChunk, Any]) -> float:
         return extract_score_from_obj(chunk) or 0.0
 
 
-def get_chunk_document_id(chunk: Union[DocumentChunk, Any]) -> Optional[str]:
+def get_chunk_document_id(chunk: DocumentChunk | Any) -> str | None:
     """Get document_id from either DocumentChunk or a raw search result object.
 
     Args:
@@ -339,7 +340,7 @@ def get_chunk_document_id(chunk: Union[DocumentChunk, Any]) -> Optional[str]:
         return chunk.properties.get("document_id") if hasattr(chunk, "properties") else None
 
 
-def parse_date(date_value: Any) -> Optional[datetime]:
+def parse_date(date_value: Any) -> datetime | None:
     """Parse a date value (can be string, datetime, or None).
 
     Args:
@@ -373,7 +374,7 @@ def parse_date(date_value: Any) -> Optional[datetime]:
     return None
 
 
-def convert_obj_to_legal_document_metadata(obj, score: Optional[float] = None) -> LegalDocumentMetadata:
+def convert_obj_to_legal_document_metadata(obj, score: float | None = None) -> LegalDocumentMetadata:
     """Convert a search result object to a LegalDocumentMetadata model (lightweight version).
 
     Includes required fields and extended fields for DocumentCard display.
@@ -419,7 +420,7 @@ def convert_obj_to_legal_document_metadata(obj, score: Optional[float] = None) -
         score = extract_score_from_obj(obj)
 
     # Helper to safely get optional string fields
-    def get_opt_str(key: str) -> Optional[str]:
+    def get_opt_str(key: str) -> str | None:
         val = props.get(key)
         if val is None or val == "":
             return None
@@ -442,7 +443,7 @@ def convert_obj_to_legal_document_metadata(obj, score: Optional[float] = None) -
     )
 
 
-def extract_score_from_obj(obj: Any) -> Optional[float]:
+def extract_score_from_obj(obj: Any) -> float | None:
     """Extract confidence_score from search result object properties.
 
     Args:
@@ -489,7 +490,7 @@ def validate_uuids(document_uuids: list[str]) -> None:
 def validate_search_parameters(
     limit_docs: int,
     chunks_per_doc_multiplier: int,
-    limit_chunks: Optional[int],
+    limit_chunks: int | None,
     alpha: float,
     mode: str,
 ) -> int:
@@ -532,9 +533,9 @@ def validate_search_parameters(
 
 
 def group_chunks_by_document(
-    chunks: list[Union[DocumentChunk, Any]],
+    chunks: list[DocumentChunk | Any],
     limit_docs: int,
-) -> OrderedDict[str, Union[DocumentChunk, Any]]:
+) -> OrderedDict[str, DocumentChunk | Any]:
     """Group chunks by document_id, keeping only the best chunk per document.
 
     Chunks should be pre-sorted by relevance (RRF score or search score).
@@ -547,7 +548,7 @@ def group_chunks_by_document(
     Returns:
         OrderedDict mapping document_id to best chunk (stops at limit_docs)
     """
-    doc_to_chunk: OrderedDict[str, Union[DocumentChunk, Any]] = OrderedDict()
+    doc_to_chunk: OrderedDict[str, DocumentChunk | Any] = OrderedDict()
 
     for chunk in chunks:
         if len(doc_to_chunk) >= limit_docs:
@@ -564,7 +565,7 @@ def group_chunks_by_document(
     return doc_to_chunk
 
 
-def convert_mixed_chunks_to_document_chunks(chunks: OrderedDict[str, Union[DocumentChunk, Any]]) -> list[DocumentChunk]:
+def convert_mixed_chunks_to_document_chunks(chunks: OrderedDict[str, DocumentChunk | Any]) -> list[DocumentChunk]:
     """Convert mixed chunk types (DocumentChunk or raw search result objects) to DocumentChunk objects.
 
     Args:

@@ -6,10 +6,9 @@ For document fetching, use:
     from app.utils.judgment_fetcher import get_documents_by_id
 """
 
-from typing import Optional
-from juddges_search.models import LegalDocument
-
 import warnings
+
+from juddges_search.models import LegalDocument
 
 warnings.warn(
     "juddges_search.retrieval.fetch is deprecated. Use app.utils.judgment_fetcher.get_documents_by_id instead.",
@@ -19,7 +18,7 @@ warnings.warn(
 
 
 async def get_documents_by_id(
-    document_ids: list[str], return_vectors: bool = False, return_properties: Optional[list[str]] = None
+    document_ids: list[str], return_vectors: bool = False, return_properties: list[str] | None = None
 ) -> list[LegalDocument]:
     """DEPRECATED: Use app.utils.judgment_fetcher.get_documents_by_id instead.
 
@@ -34,7 +33,7 @@ async def get_documents_by_uuid(
     document_uuids: list[str],
     return_vectors: bool = False,
     include_scores: bool = False,
-    return_properties: Optional[list[str]] = None,
+    return_properties: list[str] | None = None,
 ) -> list[LegalDocument]:
     """DEPRECATED: Use app.utils.judgment_fetcher.get_documents_by_id instead.
 

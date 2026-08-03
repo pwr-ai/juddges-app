@@ -73,7 +73,7 @@ class JudgmentIngestionPipeline:
         self,
         supabase_url: str,
         supabase_key: str,
-        transformers_url: str | None | Any = _UNSET,
+        transformers_url: str | Any | None = _UNSET,
         batch_size: int = 50,
         progress_callback: ProgressCallback | None = None,
     ) -> None:

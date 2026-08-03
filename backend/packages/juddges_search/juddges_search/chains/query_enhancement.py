@@ -1,9 +1,8 @@
 """Query enhancement chain for 'thinking' mode search."""
 
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-
 
 # Query enhancement prompt
 QUERY_ENHANCEMENT_PROMPT = ChatPromptTemplate.from_messages(

@@ -1,7 +1,7 @@
 """Database operations for legal document retrieval and vector search."""
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import HTTPException
 from loguru import logger
@@ -81,7 +81,7 @@ _UUID_RE = re.compile(
 )
 
 
-def _csv_in_list(values: List[str]) -> str:
+def _csv_in_list(values: list[str]) -> str:
     """Render a value list for a PostgREST ``in.(...)`` filter.
 
     Each value is double-quoted (with embedded quotes/backslashes escaped) so
@@ -110,10 +110,10 @@ class SupabaseVectorDB(SupabaseClientMixin):
 
     async def search_by_vector(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         match_count: int = 10,
         match_threshold: float = 0.5,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Pure vector similarity search via `search_judgments_by_embedding` RPC.
 
         Translates the RPC's slim shape (`id, case_number, title, summary,
@@ -149,22 +149,22 @@ class SupabaseVectorDB(SupabaseClientMixin):
             ]
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Vector search failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Vector search failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Vector search failed: {e!s}")
 
     async def hybrid_search(
         self,
         query_text: str,
-        query_embedding: List[float],
-        document_type: Optional[str] = None,
-        court_name: Optional[str] = None,
-        language: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        country: Optional[str] = None,
+        query_embedding: list[float],
+        document_type: str | None = None,
+        court_name: str | None = None,
+        language: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        country: str | None = None,
         match_count: int = 10,
         vector_weight: float = 0.7,
         text_weight: float = 0.3,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Hybrid search combining vector similarity, full-text search, and metadata filters.
 
@@ -205,15 +205,15 @@ class SupabaseVectorDB(SupabaseClientMixin):
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Hybrid search failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Hybrid search failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Hybrid search failed: {e!s}")
 
     async def search_chunks(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         match_count: int = 20,
         match_threshold: float = 0.5,
         include_key_sections_only: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Chunk-level semantic search for RAG applications.
 
@@ -240,13 +240,13 @@ class SupabaseVectorDB(SupabaseClientMixin):
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Chunk search failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Chunk search failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Chunk search failed: {e!s}")
 
     async def get_document_chunks(
         self,
         document_id: str,
         include_embeddings: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get all chunks for a specific document.
 
@@ -269,13 +269,13 @@ class SupabaseVectorDB(SupabaseClientMixin):
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to get document chunks: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to get chunks: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to get chunks: {e!s}")
 
     async def get_document_by_id(
         self,
         document_id: str,
         return_vectors: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Fetch a single judgment by its UUID `id` or text `source_id`.
 
         Returns the raw row dict (judgment column shape). Downstream callers
@@ -298,9 +298,9 @@ class SupabaseVectorDB(SupabaseClientMixin):
 
     async def get_documents_by_ids(
         self,
-        document_ids: List[str],
+        document_ids: list[str],
         include_full_text: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Fetch multiple judgments by their UUIDs or source_ids.
 
         Callers may mix UUID `id` and text `source_id` values in one batch;
@@ -326,7 +326,7 @@ class SupabaseVectorDB(SupabaseClientMixin):
         # round-trip via a PostgREST OR filter (`id=in.(...),source_id=in.(...)`)
         # instead of two separate `.execute()` calls. Behaviour is identical:
         # rows are still deduplicated by `judgments.id`.
-        or_clauses: List[str] = []
+        or_clauses: list[str] = []
         if uuid_ids:
             or_clauses.append(f"id.in.({_csv_in_list(uuid_ids)})")
         if text_ids:
@@ -334,13 +334,13 @@ class SupabaseVectorDB(SupabaseClientMixin):
 
         try:
             r = self.client.table("judgments").select(cols).or_(",".join(or_clauses)).execute()
-            rows_by_id: Dict[str, Dict[str, Any]] = {row["id"]: row for row in (r.data or [])}
+            rows_by_id: dict[str, dict[str, Any]] = {row["id"]: row for row in (r.data or [])}
             return list(rows_by_id.values())
         except (PostgrestAPIError, StorageException) as e:
             logger.error(f"Failed to fetch judgments: {e}")
             return []
 
-    async def get_embedding_stats(self) -> Dict[str, Any]:
+    async def get_embedding_stats(self) -> dict[str, Any]:
         """Statistics about embedding coverage on `judgments`.
 
         Computed directly via two count queries (no `get_embedding_stats` RPC
@@ -367,7 +367,7 @@ class SupabaseVectorDB(SupabaseClientMixin):
 # ---------------------------------------------------------------------------
 # Singleton management
 # ---------------------------------------------------------------------------
-_vector_db: Optional[SupabaseVectorDB] = None
+_vector_db: SupabaseVectorDB | None = None
 
 
 def get_vector_db() -> SupabaseVectorDB:
@@ -378,7 +378,7 @@ def get_vector_db() -> SupabaseVectorDB:
             _vector_db = SupabaseVectorDB()
         except ValueError as e:
             logger.error(f"Vector database not configured: {e}")
-            raise HTTPException(status_code=500, detail=f"Vector database configuration error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Vector database configuration error: {e!s}")
     return _vector_db
 
 

@@ -21,11 +21,12 @@ from app.services import log_audit_background
 
 router = APIRouter()
 
+
 @router.post("/api/analyze")
 async def analyze_document(
     document_id: str,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Your business logic
     result = perform_analysis(document_id)
@@ -38,7 +39,7 @@ async def analyze_document(
         input_data={"document_id": document_id},
         output_data={"result": result},
         resource_type="document",
-        resource_id=document_id
+        resource_id=document_id,
     )
 
     return result
@@ -51,11 +52,12 @@ For search/query endpoints:
 ```python
 from app.services import AuditService
 
+
 @router.post("/api/search")
 async def search_documents(
     query: str,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Perform search
     results = search_engine.search(query)
@@ -67,7 +69,7 @@ async def search_documents(
         action_type="query",
         input_data={"query": query},
         output_data={"result_count": len(results)},
-        model_used="vector-search-v1"
+        model_used="vector-search-v1",
     )
 
     return results
@@ -82,7 +84,7 @@ Track document views and downloads:
 async def get_document(
     document_id: str,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Get document
     document = fetch_document(document_id)
@@ -93,16 +95,17 @@ async def get_document(
         user_id=user.id,
         document_id=document_id,
         action="view",
-        metadata={"title": document.title}
+        metadata={"title": document.title},
     )
 
     return document
+
 
 @router.get("/api/documents/{document_id}/download")
 async def download_document(
     document_id: str,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Generate download
     file_data = generate_download(document_id)
@@ -112,7 +115,7 @@ async def download_document(
         AuditService.log_document_access,
         user_id=user.id,
         document_id=document_id,
-        action="download"
+        action="download",
     )
 
     return StreamingResponse(file_data, media_type="application/pdf")
@@ -127,7 +130,7 @@ Track when users export data:
 async def export_my_data(
     format: str,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Generate export
     export_data = generate_export(user.id, format)
@@ -137,7 +140,7 @@ async def export_my_data(
         AuditService.log_export,
         user_id=user.id,
         export_type="user_data",
-        metadata={"format": format, "size": len(export_data)}
+        metadata={"format": format, "size": len(export_data)},
     )
 
     return export_data
@@ -152,11 +155,12 @@ Include HTTP details in audit logs:
 ```python
 from fastapi import Request
 
+
 @router.post("/api/action")
 async def perform_action(
     request: Request,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     # Your logic
     result = do_something()
@@ -169,7 +173,7 @@ async def perform_action(
         http_method=request.method,
         api_endpoint=str(request.url.path),
         ip_address=request.client.host,
-        user_agent=request.headers.get("user-agent")
+        user_agent=request.headers.get("user-agent"),
     )
 
     return result
@@ -182,11 +186,12 @@ Log request duration:
 ```python
 import time
 
+
 @router.post("/api/analysis")
 async def analyze(
     data: dict,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     start_time = time.time()
 
@@ -203,7 +208,7 @@ async def analyze(
         action_type="analysis",
         input_data=data,
         output_data=result,
-        duration_ms=duration_ms
+        duration_ms=duration_ms,
     )
 
     return result
@@ -218,7 +223,7 @@ Log failures for debugging:
 async def process_data(
     data: dict,
     background_tasks: BackgroundTasks,
-    user: AuthenticatedUser = Depends(get_current_user)
+    user: AuthenticatedUser = Depends(get_current_user),
 ):
     try:
         result = process(data)
@@ -230,7 +235,7 @@ async def process_data(
             action_type="process",
             input_data=data,
             output_data=result,
-            http_status_code=200
+            http_status_code=200,
         )
 
         return result
@@ -243,7 +248,7 @@ async def process_data(
             action_type="process",
             input_data=data,
             error_message=str(e),
-            http_status_code=500
+            http_status_code=500,
         )
 
         raise HTTPException(status_code=500, detail=str(e))
@@ -256,6 +261,7 @@ Create middleware to automatically log all requests:
 ```python
 from starlette.middleware.base import BaseHTTPMiddleware
 import time
+
 
 class AuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -279,10 +285,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 api_endpoint=str(request.url.path),
                 http_status_code=response.status_code,
                 duration_ms=duration_ms,
-                ip_address=request.client.host
+                ip_address=request.client.host,
             )
 
         return response
+
 
 # Add to app
 app.add_middleware(AuditMiddleware)
@@ -295,16 +302,14 @@ app.add_middleware(AuditMiddleware)
 ```python
 from app.services import AuditService
 
+
 @router.post("/api/authenticate")
-async def authenticate(
-    credentials: dict,
-    background_tasks: BackgroundTasks
-):
+async def authenticate(credentials: dict, background_tasks: BackgroundTasks):
     # Sanitize sensitive data before logging
     sanitized_input = {
         "username": credentials.get("username"),
         # Don't log password!
-        "password": "[REDACTED]"
+        "password": "[REDACTED]",
     }
 
     result = auth.login(credentials)
@@ -313,7 +318,7 @@ async def authenticate(
         background_tasks,
         user_id=result.user_id,
         action_type="user_login",
-        input_data=sanitized_input  # Use sanitized version
+        input_data=sanitized_input,  # Use sanitized version
     )
 
     return result
@@ -357,17 +362,18 @@ async def query(
 import pytest
 from unittest.mock import patch, AsyncMock
 
+
 @pytest.mark.asyncio
 async def test_audit_logging():
-    with patch('app.services.AuditService.log_action', new=AsyncMock()) as mock_log:
+    with patch("app.services.AuditService.log_action", new=AsyncMock()) as mock_log:
         # Call your endpoint
         response = await client.post("/api/action", json={...})
 
         # Verify audit log was created
         mock_log.assert_called_once()
         call_args = mock_log.call_args[1]
-        assert call_args['user_id'] == "test-user"
-        assert call_args['action_type'] == "action"
+        assert call_args["user_id"] == "test-user"
+        assert call_args["action_type"] == "action"
 ```
 
 ### 12. Integration Testing
@@ -381,12 +387,11 @@ async def test_audit_trail_creation():
 
     # Verify audit log was created
     audit_logs = await AuditService.get_user_audit_trail(
-        user_id="test-user",
-        start_date=datetime.now() - timedelta(minutes=5)
+        user_id="test-user", start_date=datetime.now() - timedelta(minutes=5)
     )
 
-    assert len(audit_logs['audit_logs']) >= 1
-    assert audit_logs['audit_logs'][0]['action_type'] == "action"
+    assert len(audit_logs["audit_logs"]) >= 1
+    assert audit_logs["audit_logs"][0]["action_type"] == "action"
 ```
 
 ## Best Practices
@@ -415,13 +420,16 @@ async def test_audit_trail_creation():
 ```python
 from app.services import RetentionService
 
+
 # Check audit log statistics
 async def check_audit_health():
     # Get recent log count
-    result = await supabase.table("audit_logs")\
-        .select("id", count="exact")\
-        .gte("created_at", datetime.now() - timedelta(days=7))\
+    result = (
+        await supabase.table("audit_logs")
+        .select("id", count="exact")
+        .gte("created_at", datetime.now() - timedelta(days=7))
         .execute()
+    )
 
     recent_logs = result.count
 
@@ -437,6 +445,7 @@ async def check_audit_health():
 import asyncio
 from app.services import RetentionService
 
+
 async def daily_cleanup_job():
     """Run this as a scheduled job (cron/scheduler)"""
 
@@ -448,6 +457,7 @@ async def daily_cleanup_job():
     if datetime.now().day == 1:
         result = await RetentionService.archive_expired_audit_logs()
         logger.info(f"Archived {result['archived_count']} audit logs")
+
 
 # Run with asyncio
 asyncio.run(daily_cleanup_job())

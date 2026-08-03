@@ -1,4 +1,5 @@
 import pytest
+
 from juddges_search.llm_provider import LLMProvider, get_llm_provider
 from juddges_search.testing import FakeChatModel
 

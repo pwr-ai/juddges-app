@@ -68,17 +68,15 @@ OAI_STRUCTURED_OUTPUT_SCHEMA_TYPES: Final[set[str]] = {
 VALID_STRUCTURED_OUTPUT_TYPES_STR: Final[str] = ", ".join(sorted(OAI_STRUCTURED_OUTPUT_SCHEMA_TYPES))
 
 __all__ = [
-    "validate_openai_schema",
-    "validate_draft202012_schema_syntax",
-    "OaiSchemaValidationError",
     "OAI_STRUCTURED_OUTPUT_AVAILABLE_PROPERTIES",
+    "OaiSchemaValidationError",
+    "validate_draft202012_schema_syntax",
+    "validate_openai_schema",
 ]
 
 
 class OaiSchemaValidationError(Exception):
     """Raised when a schema validation fails."""
-
-    pass
 
 
 def validate_draft202012_schema_syntax(json_schema: dict[str, Any]) -> list[str]:

@@ -1,7 +1,7 @@
 """Database operations for extraction schema management."""
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 from loguru import logger
@@ -29,13 +29,13 @@ class SupabaseDB(SupabaseClientMixin):
         self,
         schema_name: str,
         schema: str,
-        description: Optional[str] = None,
-        type: Optional[str] = None,
-        category: Optional[str] = None,
-        dates: Optional[Dict[str, Any]] = None,
-        status: Optional[str] = None,
-        is_verified: Optional[bool] = None,
-    ) -> Dict[str, Any]:
+        description: str | None = None,
+        type: str | None = None,
+        category: str | None = None,
+        dates: dict[str, Any] | None = None,
+        status: str | None = None,
+        is_verified: bool | None = None,
+    ) -> dict[str, Any]:
         """
         Adds a schema to the 'extraction_schemas' table.
         Verifies that the schema_name is unique before adding.
@@ -45,10 +45,10 @@ class SupabaseDB(SupabaseClientMixin):
             raise HTTPException(status_code=409, detail=f"Schema with name '{schema_name}' already exists.")
 
         try:
-            data: Dict[str, Any] = {
+            data: dict[str, Any] = {
                 "name": schema_name,
                 "text": schema,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
             if description:
                 data["description"] = description
@@ -74,19 +74,19 @@ class SupabaseDB(SupabaseClientMixin):
         schema_id: str,
         schema_name: str,
         schema: str,
-        description: Optional[str] = None,
-        type: Optional[str] = None,
-        category: Optional[str] = None,
-        dates: Optional[Dict[str, Any]] = None,
-        status: Optional[str] = None,
-        is_verified: Optional[bool] = None,
-    ) -> Dict[str, Any]:
+        description: str | None = None,
+        type: str | None = None,
+        category: str | None = None,
+        dates: dict[str, Any] | None = None,
+        status: str | None = None,
+        is_verified: bool | None = None,
+    ) -> dict[str, Any]:
         """Updates an existing schema in the 'extraction_schemas' table."""
         try:
-            data: Dict[str, Any] = {
+            data: dict[str, Any] = {
                 "name": schema_name,
                 "text": schema,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
             if description is not None:
                 data["description"] = description
@@ -108,7 +108,7 @@ class SupabaseDB(SupabaseClientMixin):
             self._handle_error("update_schema", e)
             return {}  # Unreachable
 
-    async def get_schemas(self, include_text: bool = True) -> List[Dict[str, Any]]:
+    async def get_schemas(self, include_text: bool = True) -> list[dict[str, Any]]:
         """
         Retrieves all schemas from the 'extraction_schemas' table.
         If include_text is False, the 'text' field is excluded.
@@ -127,7 +127,7 @@ class SupabaseDB(SupabaseClientMixin):
             self._handle_error("get_schemas", e)
             return []  # Unreachable
 
-    async def get_schema_by_name(self, schema_name: str) -> Optional[Dict[str, Any]]:
+    async def get_schema_by_name(self, schema_name: str) -> dict[str, Any] | None:
         """Retrieves a specific schema by its name."""
         try:
             response = (
@@ -146,7 +146,7 @@ class SupabaseDB(SupabaseClientMixin):
 # ---------------------------------------------------------------------------
 # Singleton management
 # ---------------------------------------------------------------------------
-_supabase_db: Optional[SupabaseDB] = None
+_supabase_db: SupabaseDB | None = None
 
 
 def get_supabase_db() -> SupabaseDB:

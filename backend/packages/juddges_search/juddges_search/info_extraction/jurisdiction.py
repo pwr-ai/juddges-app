@@ -9,7 +9,6 @@ from typing import Literal
 
 from loguru import logger
 
-
 Jurisdiction = Literal["en_uk", "en_us", "pl", "unknown"]
 
 

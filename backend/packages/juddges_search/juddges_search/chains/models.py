@@ -1,6 +1,7 @@
-from juddges_search.models import DocumentChunk
+from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage, AIMessage
+
+from juddges_search.models import DocumentChunk
 
 
 class QuestionDict(BaseModel):

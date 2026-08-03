@@ -1,13 +1,13 @@
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnableSequence
+
 from juddges_search.chains.callbacks import callbacks
 from juddges_search.chains.models import DocumentRetrievalInput, Response
 from juddges_search.chains.retrieve import retrieve_documents_runnable
 from juddges_search.llms import get_default_llm
 from juddges_search.prompts.formatters.documents import format_documents_with_metadata
 from juddges_search.prompts.qa import IMPROVE_QUESTION_BASED_ON_CHAT_HISTORY, SIMPLE_QA
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnableLambda, RunnableSequence
-
 
 prompt = ChatPromptTemplate.from_template(SIMPLE_QA, template_format="jinja2")
 model = get_default_llm(use_mini_model=False)

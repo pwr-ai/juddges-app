@@ -1,24 +1,26 @@
+from typing import Any
+
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import Runnable, RunnableBranch, RunnableLambda, RunnableSequence
+from loguru import logger
+
+from juddges_search import __version__
+from juddges_search.chains.callbacks import callbacks
 from juddges_search.chains.models import DocumentRetrievalInput, Response
 from juddges_search.chains.retrieve import retrieve_documents_runnable
-from juddges_search.chains.callbacks import callbacks
-from juddges_search.llm_provider import get_llm_provider, LLMProvider
-from juddges_search.prompts.formatters.documents import format_documents_with_metadata
+from juddges_search.llm_provider import LLMProvider, get_llm_provider
 from juddges_search.prompts.formatters.chat_history import format_chat_history_as_string
+from juddges_search.prompts.formatters.documents import format_documents_with_metadata
 from juddges_search.prompts.legal import (
-    LEGAL_SYSTEM_PROMPT,
-    LEGAL_INSTRUCTION_PROMPT,
-    SHORT_FORMAT_INSTRUCTIONS,
-    DETAILED_FORMAT_INSTRUCTIONS,
     ADAPTIVE_FORMAT_INSTRUCTIONS,
-    SHORT_RESPONSE_EXAMPLE,
+    DETAILED_FORMAT_INSTRUCTIONS,
     DETAILED_RESPONSE_EXAMPLE,
+    LEGAL_INSTRUCTION_PROMPT,
+    LEGAL_SYSTEM_PROMPT,
+    SHORT_FORMAT_INSTRUCTIONS,
+    SHORT_RESPONSE_EXAMPLE,
 )
-from juddges_search import __version__
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.runnables import RunnableLambda, RunnableSequence, RunnableBranch, Runnable
-from loguru import logger
-from typing import Any
 
 
 def _build_legal_prompt(response_format: str = "adaptive") -> str:
