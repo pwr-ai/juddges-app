@@ -25,7 +25,7 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
 research_agent = { path = "packages/research_agent", develop = true }
 langfuse = "^3.2.3"
 aiohttp = "^3.11.14"
-httpx = "^0.27.0"
+httpx = ">=0.27,<0.29"
 supabase = "^2.20.0"
 langgraph-checkpoint-postgres = "^2.0.23"
 psycopg-binary = "^3.2.10"
