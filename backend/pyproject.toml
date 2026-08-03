@@ -15,7 +15,7 @@ packages = [
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
 uvicorn = "^0.23.2"
-gunicorn = "^23.0.0"
+gunicorn = ">=23,<27"
 langserve = { extras = ["server"], version = "^0.3.2" }
 langchain = "^0.3"
 langchain-community = "^0.3.19"
@@ -25,7 +25,7 @@ schema_generator_agent = { path = "packages/schema_generator_agent", develop = t
 research_agent = { path = "packages/research_agent", develop = true }
 langfuse = "^3.2.3"
 aiohttp = "^3.11.14"
-httpx = "^0.27.0"
+httpx = ">=0.27,<0.29"
 supabase = "^2.20.0"
 langgraph-checkpoint-postgres = "^2.0.23"
 psycopg-binary = "^3.2.10"
@@ -35,10 +35,10 @@ slowapi = "^0.1.9"
 redis = "^5.2.0"
 pydantic = ">=2.11.7,<3.0.0"
 litellm = "^1.78.0"
-pandas = "^2.2.0"
+pandas = ">=2.2,<4.0"
 openpyxl = "^3.1.0"
 sentry-sdk = { version = "^2.0.0", extras = ["fastapi"], optional = true }
-strawberry-graphql = {extras = ["fastapi"], version = "^0.291.3"}
+strawberry-graphql = {extras = ["fastapi"], version = ">=0.291.3,<0.324.0"}
 cachetools = "^5.5.0"
 defusedxml = "^0.7.1"
 
@@ -52,7 +52,7 @@ ruff = "^0.11.0"
 pytest = "^8.3.4"
 pytest-asyncio = "^0.24.0"
 pytest-cov = "^6.0.0"
-poethepoet = "^0.29.0"
+poethepoet = ">=0.29,<0.49"
 mypy = "^1.19.1"
 radon = "^6.0.1"
 vulture = "^2.15"
