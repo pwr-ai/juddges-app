@@ -1,9 +1,10 @@
-from juddges_search.chains.models import DocumentRetrievalOutput
-from juddges_search.chains.qa import chain
 from loguru import logger
 from rich.console import Console
 from rich.table import Table
 from tqdm import tqdm
+
+from juddges_search.chains.models import DocumentRetrievalOutput
+from juddges_search.chains.qa import chain
 
 # Initialize Rich console
 console = Console()

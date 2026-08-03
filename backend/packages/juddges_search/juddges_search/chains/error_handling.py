@@ -6,17 +6,19 @@ for production-ready AI chains with proper logging and monitoring.
 """
 
 import functools
+import json
 import time
-from typing import Any, Callable, TypeVar, ParamSpec
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
+
+from langchain_core.runnables import Runnable, RunnableLambda
 from loguru import logger
-from langchain_core.runnables import RunnableLambda, Runnable
 from openai import (
-    RateLimitError,
     APIConnectionError,
     APITimeoutError,
     InternalServerError,
+    RateLimitError,
 )
-import json
 
 # Type variables for generic functions
 P = ParamSpec("P")
@@ -52,25 +54,17 @@ class ChainExecutionError(Exception):
 class RetryableChainError(ChainExecutionError):
     """Error that can be retried."""
 
-    pass
-
 
 class NonRetriableChainError(ChainExecutionError):
     """Error that should not be retried."""
-
-    pass
 
 
 class JSONParsingError(NonRetriableChainError):
     """Error parsing JSON output from LLM."""
 
-    pass
-
 
 class RetrievalError(RetryableChainError):
     """Error during document retrieval."""
-
-    pass
 
 
 def exponential_backoff(attempt: int, base_delay: float = 1.0, max_delay: float = 60.0) -> float:

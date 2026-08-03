@@ -1,13 +1,14 @@
 from operator import itemgetter
 
-from juddges_search.chains.callbacks import callbacks
-from juddges_search.llms import get_default_llm
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 
+from juddges_search.chains.callbacks import callbacks
+from juddges_search.llms import get_default_llm
+
 model_mini = get_default_llm(use_mini_model=True)
 
-ENHANCE_QUERY_PROMPT = """You are an expert at understanding tax-related questions and improving search queries. 
+ENHANCE_QUERY_PROMPT = """You are an expert at understanding tax-related questions and improving search queries.
 Your task is to enhance the given query to make it more effective for searching tax documents.
 
 Original query: {{query}}

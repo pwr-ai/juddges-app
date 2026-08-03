@@ -6,7 +6,7 @@ Import this module instead of chat.py to get the error-handled version:
 """
 
 from juddges_search.chains.chat import chat_chain as _base_chat_chain
-from juddges_search.chains.safe_wrappers import create_safe_chain_wrapper, create_chat_fallback_response
+from juddges_search.chains.safe_wrappers import create_chat_fallback_response, create_safe_chain_wrapper
 
 # Export error-handled version of chat chain
 chat_chain = create_safe_chain_wrapper(

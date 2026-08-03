@@ -4,21 +4,23 @@ Tests for error handling in LangChain chains.
 Tests retry logic, fallback mechanisms, and error recovery.
 """
 
-import pytest
 import time
-from unittest.mock import Mock, AsyncMock
-from openai import RateLimitError, APIConnectionError
+from unittest.mock import AsyncMock, Mock
+
+import pytest
+from openai import APIConnectionError, RateLimitError
+
 from juddges_search.chains.error_handling import (
+    JSONParsingError,
+    create_fallback_response,
     exponential_backoff,
     retry_with_exponential_backoff,
     safe_json_parse,
-    create_fallback_response,
-    JSONParsingError,
 )
 from juddges_search.chains.safe_wrappers import (
-    create_safe_chain_wrapper,
     create_chat_fallback_response,
     create_qa_fallback_response,
+    create_safe_chain_wrapper,
 )
 
 

@@ -1,6 +1,6 @@
 """Database operations for collections management."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import HTTPException
 from loguru import logger
@@ -25,7 +25,7 @@ class CollectionsDB(SupabaseClientMixin):
     def __init__(self):
         self._init_client("CollectionsDB")
 
-    async def get_user_collections(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_collections(self, user_id: str) -> list[dict[str, Any]]:
         try:
             # First get all collections for the user
             response = (
@@ -43,7 +43,7 @@ class CollectionsDB(SupabaseClientMixin):
             collection_ids = [c["id"] for c in collections]
 
             # Batch-fetch all judgments for all collections in a single query
-            all_docs: List[Dict[str, Any]] = []
+            all_docs: list[dict[str, Any]] = []
             page_size = 1000
             offset = 0
 
@@ -67,7 +67,7 @@ class CollectionsDB(SupabaseClientMixin):
                 offset += page_size
 
             # Group judgments by collection_id in Python
-            docs_by_collection: Dict[str, List[Dict[str, Any]]] = {c["id"]: [] for c in collections}
+            docs_by_collection: dict[str, list[dict[str, Any]]] = {c["id"]: [] for c in collections}
             for doc in all_docs:
                 cid = doc["collection_id"]
                 if cid in docs_by_collection:
@@ -84,8 +84,8 @@ class CollectionsDB(SupabaseClientMixin):
             return []
 
     async def find_collection(
-        self, collection_id: str, user_id: str, limit: Optional[int] = None, offset: int = 0
-    ) -> Optional[Dict[str, Any]]:
+        self, collection_id: str, user_id: str, limit: int | None = None, offset: int = 0
+    ) -> dict[str, Any] | None:
         try:
             # First get the collection
             response = (
@@ -155,7 +155,7 @@ class CollectionsDB(SupabaseClientMixin):
             logger.exception(f"Error finding collection: {e}")
             return None
 
-    async def create_collection(self, user_id: str, name: str, description: Optional[str] = None) -> Dict[str, Any]:
+    async def create_collection(self, user_id: str, name: str, description: str | None = None) -> dict[str, Any]:
         try:
             data = {"user_id": user_id, "name": name}
             if description:
@@ -174,9 +174,9 @@ class CollectionsDB(SupabaseClientMixin):
         user_id: str,
         name: str,
         description: Any = UNSET,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         try:
-            update_payload: Dict[str, Any] = {"name": name}
+            update_payload: dict[str, Any] = {"name": name}
             if description is not UNSET:
                 update_payload["description"] = description
             response = (
@@ -246,9 +246,9 @@ class CollectionsDB(SupabaseClientMixin):
                 return True
 
             logger.exception(f"Error adding judgment to collection: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to add judgment: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to add judgment: {e!s}")
 
-    async def bulk_add_documents(self, collection_id: str, judgment_ids: List[str], user_id: str) -> Dict[str, Any]:
+    async def bulk_add_documents(self, collection_id: str, judgment_ids: list[str], user_id: str) -> dict[str, Any]:
         """Add multiple judgments to a collection in a single upsert.
 
         Verifies collection ownership once (not per document), then performs
@@ -282,7 +282,7 @@ class CollectionsDB(SupabaseClientMixin):
             logger.exception(f"Bulk upsert failed for collection {collection_id}: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to bulk-add judgments: {str(e)}",
+                detail=f"Failed to bulk-add judgments: {e!s}",
             )
 
     async def remove_document(self, collection_id: str, judgment_id: str, user_id: str) -> bool:
@@ -304,9 +304,9 @@ class CollectionsDB(SupabaseClientMixin):
 
         except (PostgrestAPIError, StorageException) as e:
             logger.exception(f"Error removing judgment from collection: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to remove judgment: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to remove judgment: {e!s}")
 
-    async def get_collection_documents(self, collection_id: str, user_id: str) -> List[Dict[str, Any]]:
+    async def get_collection_documents(self, collection_id: str, user_id: str) -> list[dict[str, Any]]:
         """Get all judgments in a collection owned by `user_id`.
 
         Returns 404 (collection-not-found) for any caller who is not the owner —
@@ -324,7 +324,7 @@ class CollectionsDB(SupabaseClientMixin):
             raise
         except (PostgrestAPIError, StorageException) as e:
             logger.exception(f"Error checking collection existence: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to check collection: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to check collection: {e!s}")
 
         try:
             response = (
@@ -354,13 +354,13 @@ class CollectionsDB(SupabaseClientMixin):
 
         except (PostgrestAPIError, StorageException) as e:
             logger.exception(f"Error getting collection judgments: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to get documents: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to get documents: {e!s}")
 
 
 # ---------------------------------------------------------------------------
 # Singleton management
 # ---------------------------------------------------------------------------
-_collections_db: Optional[CollectionsDB] = None
+_collections_db: CollectionsDB | None = None
 
 
 def get_collections_db() -> CollectionsDB:
@@ -370,7 +370,7 @@ def get_collections_db() -> CollectionsDB:
             _collections_db = CollectionsDB()
         except ValueError as e:
             logger.error(f"Collections database not configured: {e}")
-            raise HTTPException(status_code=500, detail=f"Database configuration error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Database configuration error: {e!s}")
     return _collections_db
 
 

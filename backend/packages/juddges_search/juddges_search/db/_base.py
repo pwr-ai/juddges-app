@@ -51,12 +51,12 @@ class SupabaseClientMixin:
         elif "not found" in error_msg or "no rows" in error_msg:
             raise HTTPException(status_code=404, detail="Resource not found")
         else:
-            raise HTTPException(status_code=500, detail=f"Database error: {str(error)}")
+            raise HTTPException(status_code=500, detail=f"Database error: {error!s}")
 
 
 __all__ = [
-    "SupabaseClientMixin",
     "Client",
     "PostgrestAPIError",
     "StorageException",
+    "SupabaseClientMixin",
 ]

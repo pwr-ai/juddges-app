@@ -1,4 +1,5 @@
 import pytest
+
 from juddges_search.ingestion.batcher import batched
 
 

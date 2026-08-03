@@ -11,9 +11,9 @@ from juddges_search.chains.schema_generation import (
 )
 
 __all__ = [
+    "QueryRewriteResult",
     "build_query_rewrite_chain",
     "generate_schema",
     "query_rewrite_chain",
-    "QueryRewriteResult",
     "schema_generation_chain",  # Callable that returns the chain (lazy init)
 ]

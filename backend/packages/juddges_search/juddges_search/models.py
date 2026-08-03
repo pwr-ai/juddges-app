@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Any
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -29,30 +30,30 @@ class SegmentType(str, Enum):
 class IssuingBody(BaseModel):
     """Model for issuing body metadata."""
 
-    name: Optional[str] = Field(None, description="Name of the issuing body")
-    jurisdiction: Optional[str] = Field(None, description="Jurisdiction of the issuing body")
-    type: Optional[str] = Field(None, description="Type of the issuing body")
+    name: str | None = Field(None, description="Name of the issuing body")
+    jurisdiction: str | None = Field(None, description="Jurisdiction of the issuing body")
+    type: str | None = Field(None, description="Type of the issuing body")
 
 
 class LegalReference(BaseModel):
     """Model for legal reference metadata."""
 
-    ref_type: Optional[str] = Field(None, description="Type of legal reference")
-    text: Optional[str] = Field(None, description="Text of the reference")
-    normalized_citation: Optional[str] = Field(None, description="Normalized citation format")
+    ref_type: str | None = Field(None, description="Type of legal reference")
+    text: str | None = Field(None, description="Text of the reference")
+    normalized_citation: str | None = Field(None, description="Normalized citation format")
 
 
 class LegalConcept(BaseModel):
     """Model for legal concept metadata."""
 
-    concept_name: Optional[str] = Field(None, description="Name of the legal concept")
-    concept_type: Optional[str] = Field(None, description="Type of the legal concept")
+    concept_name: str | None = Field(None, description="Name of the legal concept")
+    concept_type: str | None = Field(None, description="Type of the legal concept")
 
 
 class DocumentMetadata(BaseModel):
     """Model for document metadata (e.g., scores, additional properties)."""
 
-    score: Optional[float] = Field(None, description="Relevance or similarity score")
+    score: float | None = Field(None, description="Relevance or similarity score")
 
 
 class LegalDocumentMetadata(BaseModel):
@@ -65,20 +66,20 @@ class LegalDocumentMetadata(BaseModel):
     uuid: str = Field(..., description="UUID of the document")
     document_id: str = Field(..., description="Document identifier (e.g., case number, statute reference)")
     document_type: DocumentType = Field(..., description="Type of legal document")
-    language: Optional[str] = Field(None, description="ISO 639-1 language code")
-    victims_count: Optional[int] = Field(None, description="Number of victims involved")
-    offenders_count: Optional[int] = Field(None, description="Number of offenders involved")
+    language: str | None = Field(None, description="ISO 639-1 language code")
+    victims_count: int | None = Field(None, description="Number of victims involved")
+    offenders_count: int | None = Field(None, description="Number of offenders involved")
     case_type: str = Field(default="criminal", description="Type of case (e.g., criminal, civil)")
-    keywords: List[str] = Field(default_factory=list, description="Keywords or tags")
-    date_issued: Optional[datetime] = Field(None, description="Date when the document was issued")
-    score: Optional[float] = Field(None, description="Relevance or similarity score from the search")
+    keywords: list[str] = Field(default_factory=list, description="Keywords or tags")
+    date_issued: datetime | None = Field(None, description="Date when the document was issued")
+    score: float | None = Field(None, description="Relevance or similarity score from the search")
 
     # Extended fields for DocumentCard display
-    title: Optional[str] = Field(None, description="Title or name of the document")
-    summary: Optional[str] = Field(None, description="Brief summary or abstract")
-    court_name: Optional[str] = Field(None, description="Name of the court")
-    document_number: Optional[str] = Field(None, description="Official document number or reference")
-    thesis: Optional[str] = Field(None, description="Thesis or main argument of the document")
+    title: str | None = Field(None, description="Title or name of the document")
+    summary: str | None = Field(None, description="Brief summary or abstract")
+    court_name: str | None = Field(None, description="Name of the court")
+    document_number: str | None = Field(None, description="Official document number or reference")
+    thesis: str | None = Field(None, description="Thesis or main argument of the document")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -105,47 +106,45 @@ class LegalDocument(BaseModel):
 
     document_id: str = Field(..., description="Unique identifier for the document")
     document_type: DocumentType = Field(..., description="Type of legal document")
-    title: Optional[str] = Field(None, description="Title or name of the document")
-    date_issued: Optional[datetime] = Field(None, description="Date when the document was issued")
-    issuing_body: Optional[IssuingBody] = Field(None, description="Authority or body that issued the document")
-    language: Optional[str] = Field(None, description="ISO 639-1 language code")
-    victims_count: Optional[int] = Field(None, description="Number of victims involved")
-    offenders_count: Optional[int] = Field(None, description="Number of offenders involved")
+    title: str | None = Field(None, description="Title or name of the document")
+    date_issued: datetime | None = Field(None, description="Date when the document was issued")
+    issuing_body: IssuingBody | None = Field(None, description="Authority or body that issued the document")
+    language: str | None = Field(None, description="ISO 639-1 language code")
+    victims_count: int | None = Field(None, description="Number of victims involved")
+    offenders_count: int | None = Field(None, description="Number of offenders involved")
     case_type: str = Field(default="criminal", description="Type of case (e.g., criminal, civil)")
-    document_number: Optional[str] = Field(None, description="Official document number or reference")
+    document_number: str | None = Field(None, description="Official document number or reference")
     country: str = Field(..., description="ISO 3166-1 alpha-2/3 country code")
     full_text: str = Field(..., description="Complete text of the document")
-    summary: Optional[str] = Field(None, description="Brief summary or abstract")
-    legal_references: Optional[List[LegalReference]] = Field(
+    summary: str | None = Field(None, description="Brief summary or abstract")
+    legal_references: list[LegalReference] | None = Field(
         default_factory=list, description="References to other legal documents"
     )
-    legal_concepts: Optional[List[LegalConcept]] = Field(
-        default_factory=list, description="Key legal concepts discussed"
-    )
-    keywords: Optional[List[str]] = Field(default_factory=list, description="Keywords or tags")
-    metadata: Optional[dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
-    vectors: Optional[dict[str, Any]] = Field(default_factory=dict, description="Documents vectors")
-    x: Optional[float] = Field(None, description="X coordinate for visualization (e.g., UMAP)")
-    y: Optional[float] = Field(None, description="Y coordinate for visualization (e.g., UMAP)")
+    legal_concepts: list[LegalConcept] | None = Field(default_factory=list, description="Key legal concepts discussed")
+    keywords: list[str] | None = Field(default_factory=list, description="Keywords or tags")
+    metadata: dict[str, Any] | None = Field(default_factory=dict, description="Additional metadata")
+    vectors: dict[str, Any] | None = Field(default_factory=dict, description="Documents vectors")
+    x: float | None = Field(None, description="X coordinate for visualization (e.g., UMAP)")
+    y: float | None = Field(None, description="Y coordinate for visualization (e.g., UMAP)")
 
     # Additional fields used in search operations
-    thesis: Optional[str] = Field(None, description="Thesis or main argument of the document")
-    ingestion_date: Optional[datetime] = Field(None, description="Date when document was ingested")
-    last_updated: Optional[datetime] = Field(None, description="Date when document was last updated")
-    processing_status: Optional[str] = Field(None, description="Processing status of the document")
-    source_url: Optional[str] = Field(None, description="Source URL of the document")
-    parties: Optional[str] = Field(None, description="Parties involved in the case")
-    outcome: Optional[str] = Field(None, description="Outcome or decision of the case")
-    publication_date: Optional[datetime] = Field(None, description="Date when document was published")
-    raw_content: Optional[str] = Field(None, description="Raw content of the document")
-    presiding_judge: Optional[str] = Field(None, description="Name of the presiding judge")
-    judges: Optional[List[str]] = Field(default_factory=list, description="List of judges")
-    legal_bases: Optional[List[str]] = Field(default_factory=list, description="Legal bases referenced")
-    court_name: Optional[str] = Field(None, description="Name of the court")
-    department_name: Optional[str] = Field(None, description="Name of the department")
-    extracted_legal_bases: Optional[str] = Field(None, description="Extracted legal bases from the document")
-    references: Optional[List[str]] = Field(default_factory=list, description="References to other documents")
-    base_fields: Optional[dict[str, Any]] = Field(
+    thesis: str | None = Field(None, description="Thesis or main argument of the document")
+    ingestion_date: datetime | None = Field(None, description="Date when document was ingested")
+    last_updated: datetime | None = Field(None, description="Date when document was last updated")
+    processing_status: str | None = Field(None, description="Processing status of the document")
+    source_url: str | None = Field(None, description="Source URL of the document")
+    parties: str | None = Field(None, description="Parties involved in the case")
+    outcome: str | None = Field(None, description="Outcome or decision of the case")
+    publication_date: datetime | None = Field(None, description="Date when document was published")
+    raw_content: str | None = Field(None, description="Raw content of the document")
+    presiding_judge: str | None = Field(None, description="Name of the presiding judge")
+    judges: list[str] | None = Field(default_factory=list, description="List of judges")
+    legal_bases: list[str] | None = Field(default_factory=list, description="Legal bases referenced")
+    court_name: str | None = Field(None, description="Name of the court")
+    department_name: str | None = Field(None, description="Name of the department")
+    extracted_legal_bases: str | None = Field(None, description="Extracted legal bases from the document")
+    references: list[str] | None = Field(default_factory=list, description="References to other documents")
+    base_fields: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Extracted base-schema columns (base_appellant, base_appeal_outcome, "
@@ -153,7 +152,7 @@ class LegalDocument(BaseModel):
             "requested; otherwise None to keep search/list responses lean."
         ),
     )
-    extraction_fields: Optional[dict[str, Any]] = Field(
+    extraction_fields: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Structural-segmentation (structure_*_summary, structure_confidence, …) "
@@ -186,32 +185,30 @@ class DocumentChunk(BaseModel):
     """Model representing a chunk or segment of a legal document with semantic structure."""
 
     document_id: str = Field(..., description="ID of the parent document")
-    document_type: Optional[str] = Field(None, description="Type of the parent document")
-    language: Optional[str] = Field(None, description="Language of the document chunk")
+    document_type: str | None = Field(None, description="Type of the parent document")
+    language: str | None = Field(None, description="Language of the document chunk")
     chunk_id: int = Field(..., description="Unique identifier for the chunk within the document")
     chunk_text: str = Field(..., description="Text content of the chunk")
-    segment_type: Optional[SegmentType] = Field(None, description="Type of segment")
-    position: Optional[int] = Field(None, ge=0, description="Position/order of the chunk in the document")
-    confidence_score: Optional[float] = Field(default=None, description="Confidence score for the chunk extraction")
-    cited_references: Optional[List[str]] = Field(default_factory=list, description="References cited in this chunk")
-    tags: Optional[List[str]] = Field(default_factory=list, description="Tags or labels for the chunk")
-    parent_segment_id: Optional[str] = Field(None, description="ID of the parent segment if hierarchical")
+    segment_type: SegmentType | None = Field(None, description="Type of segment")
+    position: int | None = Field(None, ge=0, description="Position/order of the chunk in the document")
+    confidence_score: float | None = Field(default=None, description="Confidence score for the chunk extraction")
+    cited_references: list[str] | None = Field(default_factory=list, description="References cited in this chunk")
+    tags: list[str] | None = Field(default_factory=list, description="Tags or labels for the chunk")
+    parent_segment_id: str | None = Field(None, description="ID of the parent segment if hierarchical")
 
     # Enhanced metadata fields for search results
-    chunk_type: Optional[str] = Field(
-        default="summary", description="Type of chunk content (summary, excerpt, full_text)"
-    )
-    chunk_start_pos: Optional[int] = Field(default=0, description="Start position of chunk in source document")
-    chunk_end_pos: Optional[int] = Field(default=0, description="End position of chunk in source document")
-    metadata: Optional[dict[str, Any]] = Field(
+    chunk_type: str | None = Field(default="summary", description="Type of chunk content (summary, excerpt, full_text)")
+    chunk_start_pos: int | None = Field(default=0, description="Start position of chunk in source document")
+    chunk_end_pos: int | None = Field(default=0, description="End position of chunk in source document")
+    metadata: dict[str, Any] | None = Field(
         default_factory=dict, description="Additional metadata (court info, scores, etc.)"
     )
 
     # Search scoring fields
-    similarity: Optional[float] = Field(default=None, description="Overall similarity/relevance score")
-    vector_score: Optional[float] = Field(default=None, description="Vector similarity score component")
-    text_score: Optional[float] = Field(default=None, description="Text search score component")
-    combined_score: Optional[float] = Field(default=None, description="Combined hybrid search score")
+    similarity: float | None = Field(default=None, description="Overall similarity/relevance score")
+    vector_score: float | None = Field(default=None, description="Vector similarity score component")
+    text_score: float | None = Field(default=None, description="Text search score component")
+    combined_score: float | None = Field(default=None, description="Combined hybrid search score")
 
     model_config = ConfigDict(
         json_schema_extra={

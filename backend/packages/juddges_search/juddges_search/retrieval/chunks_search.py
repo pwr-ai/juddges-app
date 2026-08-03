@@ -1,5 +1,8 @@
 import asyncio
 
+from loguru import logger
+from termcolor import colored
+
 from juddges_search.chains.models import DocumentRetrieval, QuestionDict
 from juddges_search.dict_utils import get_leaf_values
 from juddges_search.retrieval.supabase_search import (
@@ -8,8 +11,6 @@ from juddges_search.retrieval.supabase_search import (
     search_chunks_vector,
 )
 from juddges_search.settings import DEFAULT_MAX_RESULTS, MAX_DOCUMENTS_PER_SEARCH
-from loguru import logger
-from termcolor import colored
 
 
 async def prepare_retriever(input: "DocumentRetrieval | dict"):

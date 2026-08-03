@@ -1,4 +1,5 @@
 from loguru import logger
+
 from juddges_search.models import DocumentChunk
 
 

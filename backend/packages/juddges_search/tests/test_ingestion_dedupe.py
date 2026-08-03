@@ -1,4 +1,5 @@
 import pytest
+
 from juddges_search.ingestion.dedupe import dedupe_judgments
 
 

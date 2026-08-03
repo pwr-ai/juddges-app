@@ -1,15 +1,16 @@
 from datetime import datetime
 
 import typer
-from juddges_search.retrieval.supabase_search import (
-    search_chunks,
-    search_documents,
-)
 from rich.console import Console
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
+
+from juddges_search.retrieval.supabase_search import (
+    search_chunks,
+    search_documents,
+)
 
 app = typer.Typer(help="Search documents and chunks with nice formatting")
 console = Console()

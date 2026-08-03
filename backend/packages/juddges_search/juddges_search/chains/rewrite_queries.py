@@ -1,11 +1,12 @@
 from operator import itemgetter
 
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
 from juddges_search.chains.callbacks import callbacks
 from juddges_search.llms import get_default_llm
 from juddges_search.prompts.formatters.chat_history import format_chat_history
 from juddges_search.prompts.qa import IMPROVE_QUESTION_BASED_ON_CHAT_HISTORY
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
 
 model_mini = get_default_llm(use_mini_model=True)
 
