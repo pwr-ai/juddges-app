@@ -16,6 +16,7 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
         args: ['--maxkb=500']
+        exclude: 'poetry\.lock$'
       - id: check-merge-conflict
       - id: detect-private-key
 
