@@ -125,7 +125,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "chrome-launcher": "^1.2.1",
     "eslint": "^9.36.0",
-    "eslint-config-next": "15.5.7",
+    "eslint-config-next": "16.2.12",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "lighthouse": "^13.0.3",
