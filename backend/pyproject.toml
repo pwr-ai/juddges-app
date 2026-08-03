@@ -14,7 +14,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
-uvicorn = "^0.23.2"
+uvicorn = ">=0.23.2,<0.53.0"
 gunicorn = ">=23,<27"
 langserve = { extras = ["server"], version = "^0.3.2" }
 langchain = "^0.3"
