@@ -35,7 +35,6 @@ build/
 dist/
 
 # Poetry
-poetry.lock
 .venv/
 .venv-ingest/
 venv/
