@@ -39,7 +39,7 @@ pandas = ">=2.2,<4.0"
 openpyxl = "^3.1.0"
 sentry-sdk = { version = "^2.0.0", extras = ["fastapi"], optional = true }
 strawberry-graphql = {extras = ["fastapi"], version = ">=0.291.3,<0.324.0"}
-cachetools = "^5.5.0"
+cachetools = ">=5.5,<8.0"
 defusedxml = "^0.7.1"
 
 [tool.poetry.extras]
