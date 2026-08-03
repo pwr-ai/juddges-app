@@ -25,6 +25,8 @@ Monorepo:
 
 Source-of-truth for commands: `frontend/package.json` scripts and `backend/pyproject.toml` `[tool.poe.tasks]`. Use `npm run <task>` or `poetry run poe <task>`.
 
+Dependencies are pinned by committed lockfiles: `backend/poetry.lock` and `frontend/package-lock.json`. When changing backend deps, edit `backend/pyproject.toml`, run `poetry lock`, and commit both files — CI installs from the lock and fails if it is out of sync (`poetry check --lock` verifies locally). `poetry.lock` is exempt from the pre-commit large-file check.
+
 Most-used:
 ```bash
 # Frontend
