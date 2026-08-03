@@ -90,6 +90,27 @@ docker compose -f docker-compose.dev.yml up
 
 For detailed setup instructions, see [DEVELOPER_ONBOARDING.md](../getting-started/DEVELOPER_ONBOARDING.md).
 
+### Managing Dependencies
+
+Both lockfiles are committed and are the source of truth for installed versions:
+
+- **Backend**: `backend/poetry.lock` (Poetry). `poetry install` installs exactly what the lock pins.
+- **Frontend**: `frontend/package-lock.json` (npm). Use `npm ci` for reproducible installs.
+
+To change backend dependencies, edit the version range in `backend/pyproject.toml`, then regenerate the lock and commit **both** files:
+
+```bash
+cd backend
+
+# After editing pyproject.toml
+poetry lock
+
+# Or bump a single package within its existing range
+poetry update <package>
+```
+
+CI installs from the lockfile, so a stale `poetry.lock` (out of sync with `pyproject.toml`) will fail the build — `poetry check --lock` verifies consistency locally. Routine version bumps are automated by Dependabot (see `.github/dependabot.yml`), which updates the lockfiles in its PRs.
+
 ## Code Style
 
 ### General Principles

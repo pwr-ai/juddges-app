@@ -33,6 +33,26 @@ pip3 install poetry
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
+### Poetry Lock File Out of Sync
+
+**Problem:** `poetry install` or CI fails with `pyproject.toml changed significantly since poetry.lock was last generated`
+
+**Solution:**
+```bash
+cd backend
+
+# Verify the mismatch
+poetry check --lock
+
+# Regenerate the lock against current pyproject.toml ranges
+poetry lock
+
+# Commit BOTH files together
+git add pyproject.toml poetry.lock
+```
+
+`backend/poetry.lock` is committed and CI installs from it, so every change to `backend/pyproject.toml` dependencies must ship with a regenerated lock in the same commit.
+
 ### Node.js Version Mismatch
 
 **Problem:** `error: This project requires Node.js 20+`
