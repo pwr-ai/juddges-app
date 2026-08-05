@@ -202,6 +202,7 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
       : firstYear === lastYear
         ? String(firstYear)
         : `${firstYear}–${lastYear}`;
+  const displayedCourts = ukStats.topCourts.slice(0, 10);
 
   return (
     <PageContainer width="wide">
@@ -243,8 +244,8 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
           <Stat
             static
             size="sm"
-            value={ukStats.topCourts.length}
-            label="Courts represented"
+            value={displayedCourts.length}
+            label="Courts shown"
           />
           <Stat
             static
@@ -265,7 +266,7 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
           caption="Counts include only records explicitly classified with the UK jurisdiction."
           source={computedAt ? `Dashboard snapshot · ${computedAt}` : "Dashboard statistics"}
         >
-          {ukStats.topCourts.length === 0 ? (
+          {displayedCourts.length === 0 ? (
             <EmptyChart>No UK court distribution is available.</EmptyChart>
           ) : (
             <>
@@ -276,7 +277,7 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={ukStats.topCourts.slice(0, 10)}
+                    data={displayedCourts}
                     layout="vertical"
                     margin={{ top: 4, right: 20, bottom: 4, left: 12 }}
                   >
@@ -318,7 +319,7 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <AccessibleCourtData rows={ukStats.topCourts.slice(0, 10)} />
+              <AccessibleCourtData rows={displayedCourts} />
             </>
           )}
         </ChartFigure>

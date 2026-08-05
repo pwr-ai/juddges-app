@@ -50,6 +50,11 @@ const stats: DashboardStats = {
   top_courts: [
     { name: "Court of Appeal", count: 14, jurisdiction: "UK" },
     { name: "Supreme Court", count: 10, jurisdiction: "UK" },
+    ...Array.from({ length: 10 }, (_, index) => ({
+      name: `Regional Court ${index + 1}`,
+      count: 9 - index,
+      jurisdiction: "UK" as const,
+    })),
     { name: "Sąd Najwyższy", count: 70, jurisdiction: "PL" },
     { name: "Unscoped legacy court", count: 30 },
   ],
@@ -98,6 +103,9 @@ describe("UKJudgmentsAnalysisPage", () => {
       screen.getByRole("heading", { name: /United Kingdom judgments/i }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("uk-total-judgments")).toHaveTextContent("24");
+    expect(screen.getByText("Courts shown").parentElement).toHaveTextContent(
+      "10",
+    );
     expect(
       screen.getByRole("img", { name: /UK judgments by court/i }),
     ).toBeInTheDocument();
