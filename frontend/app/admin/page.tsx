@@ -137,7 +137,14 @@ export default function AdminDashboardPage() {
 
  {/* Data Quality tile (sub-metric for corpus) */}
  <div className="mb-10">
- {dashboardStatsQuery.isLoading ? (
+ {dashboardStatsQuery.isError ? (
+ <div
+ role="alert"
+ className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+ >
+ Failed to load corpus statistics: {(dashboardStatsQuery.error as Error).message}
+ </div>
+ ) : dashboardStatsQuery.isLoading ? (
  <StatCardSkeleton />
  ) : dashboardStats ? (
  <div className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4">

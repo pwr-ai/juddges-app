@@ -8,7 +8,7 @@ Run it explicitly:
 
     RUN_E2E_LIVE=1 BACKEND_API_KEY=... \
       JUDDGES_BENCHMARK_API_URL=http://localhost:8004 \
-      poetry run pytest -v -m integration tests/e2e_live/test_e2e_live.py
+      poetry run pytest -v -m e2e tests/e2e_live/test_e2e_live.py
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from .cases import build_cases
 from .engine import CaseContext, run_cases
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.e2e,
     pytest.mark.skipif(
         os.getenv("RUN_E2E_LIVE") != "1",
         reason="Set RUN_E2E_LIVE=1 to run the live e2e engine against a real backend",

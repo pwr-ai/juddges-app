@@ -45,6 +45,20 @@ interface LandingStats {
 interface LandingPageProps {
   stats?: LandingStats | null;
   statsLoading?: boolean;
+  statsError?: boolean;
+}
+
+function StatsUnavailable() {
+  return (
+    <div role="alert" className="border-l-2 border-oxblood pl-4">
+      <p className="font-serif text-lg italic text-oxblood">
+        Statistics are temporarily unavailable
+      </p>
+      <p className="mt-1 text-sm text-[color:var(--ink-soft)]">
+        Corpus figures could not be loaded. Please try again later.
+      </p>
+    </div>
+  );
 }
 
 // Demo queries — language is derived from the `lang` URL param in each href.
@@ -106,7 +120,7 @@ function Section({
 // Section 1: Hero — editorial nameplate
 // ─────────────────────────────────────────────
 
-function HeroSection({ stats, statsLoading }: LandingPageProps) {
+function HeroSection({ stats, statsLoading, statsError }: LandingPageProps) {
   const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
 
   return (
@@ -209,14 +223,18 @@ function HeroSection({ stats, statsLoading }: LandingPageProps) {
             <Rule weight="medium" className="mb-8" />
             <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[color:var(--rule)]">
               <div className="pb-6 sm:pb-0 sm:pr-8">
-                <Stat
-                  value={totalJudgments}
-                  suffix="+"
-                  label="Judgments indexed"
-                  marker="¹"
-                  size="md"
-                  loading={statsLoading}
-                />
+                {statsError ? (
+                  <StatsUnavailable />
+                ) : (
+                  <Stat
+                    value={totalJudgments}
+                    suffix="+"
+                    label="Judgments indexed"
+                    marker="¹"
+                    size="md"
+                    loading={statsLoading}
+                  />
+                )}
               </div>
               <div className="py-6 sm:py-0 sm:px-8">
                 <Stat
@@ -550,7 +568,11 @@ function CapabilitiesSection() {
 // Section 4: Data Authority
 // ─────────────────────────────────────────────
 
-function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
+function DataAuthoritySection({
+  stats,
+  statsLoading,
+  statsError,
+}: LandingPageProps) {
   const totalJudgments = stats?.judgments ?? stats?.total_documents ?? 0;
 
   const statItems: ReadonlyArray<{
@@ -610,29 +632,33 @@ function DataAuthoritySection({ stats, statsLoading }: LandingPageProps) {
             className="mb-16"
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-[color:var(--rule)]">
-            {statItems.map((item, i) => (
-              <motion.div
-                key={item.label}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="bg-[color:var(--parchment-deep)] p-6 sm:p-7"
-              >
-                <Stat
-                  value={item.value}
-                  suffix={item.suffix}
-                  label={item.label}
-                  detail={item.detail}
-                  static={item.static}
-                  loading={statsLoading}
-                  marker={item.marker}
-                  size="sm"
-                />
-              </motion.div>
-            ))}
-          </div>
+          {statsError ? (
+            <StatsUnavailable />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-[color:var(--rule)]">
+              {statItems.map((item, i) => (
+                <motion.div
+                  key={item.label}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className="bg-[color:var(--parchment-deep)] p-6 sm:p-7"
+                >
+                  <Stat
+                    value={item.value}
+                    suffix={item.suffix}
+                    label={item.label}
+                    detail={item.detail}
+                    static={item.static}
+                    loading={statsLoading}
+                    marker={item.marker}
+                    size="sm"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </PaperBackground>
     </Section>
@@ -787,13 +813,25 @@ function TrustCTASection() {
 // Main Landing Page
 // ─────────────────────────────────────────────
 
-export function LandingPage({ stats, statsLoading }: LandingPageProps) {
+export function LandingPage({
+  stats,
+  statsLoading,
+  statsError,
+}: LandingPageProps) {
   return (
     <PaperBackground grain className="min-h-screen">
-      <HeroSection stats={stats} statsLoading={statsLoading} />
+      <HeroSection
+        stats={stats}
+        statsLoading={statsLoading}
+        statsError={statsError}
+      />
       <AboutProjectSection />
       <CapabilitiesSection />
-      <DataAuthoritySection stats={stats} statsLoading={statsLoading} />
+      <DataAuthoritySection
+        stats={stats}
+        statsLoading={statsLoading}
+        statsError={statsError}
+      />
       <HowItWorksSection />
       <TrustCTASection />
     </PaperBackground>

@@ -10,6 +10,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.server import app
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.performance
 class TestSearchPerformance:

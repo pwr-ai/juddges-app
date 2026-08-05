@@ -60,8 +60,7 @@ async def test_search_documents_empty_query(authenticated_client: AsyncClient):
         "/documents/search", json={"query": "", "limit_docs": 10}
     )
 
-    # Should return validation error or empty results
-    assert response.status_code in [200, 422]
+    assert response.status_code == 400
 
 
 @pytest.mark.anyio
@@ -475,6 +474,7 @@ async def test_search_pagination_consistency(authenticated_client: AsyncClient):
 @pytest.mark.anyio
 @pytest.mark.api
 @pytest.mark.search
+@pytest.mark.integration
 async def test_search_injection_attempts(authenticated_client: AsyncClient):
     """Test search with SQL injection attempts."""
     malicious_queries = [
@@ -590,6 +590,7 @@ async def test_search_missing_content_type(authenticated_client: AsyncClient):
 @pytest.mark.anyio
 @pytest.mark.api
 @pytest.mark.search
+@pytest.mark.integration
 async def test_search_extra_fields(authenticated_client: AsyncClient):
     """Test search with extra unexpected fields."""
     response = await authenticated_client.post(
