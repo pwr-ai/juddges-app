@@ -3,6 +3,7 @@ import { isCanonicalUuid } from '@/lib/validation/canonical-uuid';
 export interface PublicRouteRequest {
   pathname: string;
   method: string;
+  searchParams?: Pick<URLSearchParams, 'get' | 'getAll'>;
 }
 
 const PUBLIC_READ_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);
@@ -77,11 +78,24 @@ function isPublicPage(pathname: string): boolean {
   );
 }
 
-function isPublicReadApi(pathname: string): boolean {
+function isPublicExtractionDetailRead(
+  pathname: string,
+  searchParams: PublicRouteRequest['searchParams'],
+): boolean {
+  if (pathname !== '/api/extractions' || !searchParams) return false;
+  const jobIds = searchParams.getAll('job_id');
+  return jobIds.length === 1 && isCanonicalUuid(jobIds[0]);
+}
+
+function isPublicReadApi(
+  pathname: string,
+  searchParams: PublicRouteRequest['searchParams'],
+): boolean {
   return (
     EXACT_PUBLIC_READ_APIS.has(pathname) ||
     matchesAnySegmentTree(pathname, PUBLIC_READ_API_SUBTREES) ||
-    isPublicChatMessagesRead(pathname)
+    isPublicChatMessagesRead(pathname) ||
+    isPublicExtractionDetailRead(pathname, searchParams)
   );
 }
 
@@ -103,9 +117,10 @@ function isPublicChatMessagesRead(pathname: string): boolean {
 export function isPublicRequest({
   pathname,
   method,
+  searchParams,
 }: PublicRouteRequest): boolean {
   if (pathname === '/api/graphql') return true;
   if (pathname === '/api/contact' && method === 'POST') return true;
   if (!PUBLIC_READ_METHODS.has(method)) return false;
-  return isPublicPage(pathname) || isPublicReadApi(pathname);
+  return isPublicPage(pathname) || isPublicReadApi(pathname, searchParams);
 }

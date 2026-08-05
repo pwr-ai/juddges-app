@@ -1,6 +1,7 @@
 import { isPublicRequest } from '@/lib/supabase/public-route-policy';
 
 const CHAT_ID = '11111111-2222-4333-8444-555555555555';
+const EXTRACTION_ID = '22222222-3333-4444-8555-666666666666';
 
 const EXACT_PUBLIC_PAGES = [
   '/',
@@ -131,6 +132,60 @@ describe('isPublicRequest', () => {
   it.each(PUBLIC_READ_APIS)('allows public API HEAD %s', (pathname) => {
     expect(isPublicRequest({ pathname, method: 'HEAD' })).toBe(true);
   });
+
+  it.each(['GET', 'HEAD'])(
+    'allows exact extraction detail BFF %s with one canonical job_id',
+    (method) => {
+      expect(
+        isPublicRequest({
+          pathname: '/api/extractions',
+          method,
+          searchParams: new URLSearchParams({ job_id: EXTRACTION_ID }),
+        }),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    new URLSearchParams(),
+    new URLSearchParams({ job_id: 'not-a-uuid' }),
+    new URLSearchParams({ job_id: '22222222-3333-3333-4555-666666666666' }),
+    new URLSearchParams(`job_id=${EXTRACTION_ID}&job_id=${EXTRACTION_ID}`),
+  ])('protects malformed extraction detail BFF query %s', (searchParams) => {
+    expect(
+      isPublicRequest({
+        pathname: '/api/extractions',
+        method: 'GET',
+        searchParams,
+      }),
+    ).toBe(false);
+  });
+
+  it.each(['/api/extractions/', '/api/extractions/detail'])(
+    'protects extraction detail BFF lookalike %s',
+    (pathname) => {
+      expect(
+        isPublicRequest({
+          pathname,
+          method: 'GET',
+          searchParams: new URLSearchParams({ job_id: EXTRACTION_ID }),
+        }),
+      ).toBe(false);
+    },
+  );
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
+    'protects extraction detail BFF method %s',
+    (method) => {
+      expect(
+        isPublicRequest({
+          pathname: '/api/extractions',
+          method,
+          searchParams: new URLSearchParams({ job_id: EXTRACTION_ID }),
+        }),
+      ).toBe(false);
+    },
+  );
 
   it.each([
     ['POST', '/api/health/invalidate'],

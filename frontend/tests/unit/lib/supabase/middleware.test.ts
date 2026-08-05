@@ -5,14 +5,19 @@
 import { NextRequest } from "next/server";
 
 const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
+const EXTRACTION_ID = "22222222-3333-4444-8555-666666666666";
 
 jest.mock("@supabase/ssr", () => ({
   createServerClient: jest.fn(() => ({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
   })),
 }));
 
-import { updateSession } from "@/lib/supabase/middleware";
+import {
+  updateSession,
+  updateSessionWithAuth,
+} from "@/lib/supabase/middleware";
 
 describe("Supabase middleware public route policy", () => {
   beforeEach(() => {
@@ -35,6 +40,8 @@ describe("Supabase middleware public route policy", () => {
     ["HEAD", "/api/blog/posts"],
     ["POST", "/api/contact"],
     ["POST", "/api/graphql"],
+    ["GET", `/api/extractions?job_id=${EXTRACTION_ID}`],
+    ["HEAD", `/api/extractions?job_id=${EXTRACTION_ID}`],
   ] as const)("passes through public %s %s", async (method, pathname) => {
     const response = await updateSession(
       new NextRequest(`http://localhost${pathname}`, { method }),
@@ -90,6 +97,16 @@ describe("Supabase middleware public route policy", () => {
       "/api/graphql/nested",
       "http://localhost/auth/login?next=%2Fapi%2Fgraphql%2Fnested",
     ],
+    [
+      "GET",
+      "/api/extractions?job_id=not-a-uuid",
+      "http://localhost/auth/login?next=%2Fapi%2Fextractions%3Fjob_id%3Dnot-a-uuid",
+    ],
+    [
+      "POST",
+      `/api/extractions?job_id=${EXTRACTION_ID}`,
+      `http://localhost/auth/login?next=%2Fapi%2Fextractions%3Fjob_id%3D${EXTRACTION_ID}`,
+    ],
   ] as const)(
     "redirects protected %s %s with exact next",
     async (method, pathname, expectedLocation) => {
@@ -114,5 +131,35 @@ describe("Supabase middleware public route policy", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("strips forged extraction proof headers before downstream handling", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/extractions/job.txt", {
+        headers: {
+          "x-juddges-extraction-snapshot": "spoofed",
+          "x-juddges-extraction-snapshot-signature": "forged",
+          "x-juddges-extraction-verified-user": "attacker",
+        },
+      })
+    );
+
+    expect(result.userId).toBe("user-1");
+    expect(result.accessToken).toBe("access-token");
+    expect(result.request.headers.get("x-juddges-extraction-snapshot")).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-snapshot-signature")
+    ).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-verified-user")
+    ).toBeNull();
   });
 });
