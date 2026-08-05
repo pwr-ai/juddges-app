@@ -2,86 +2,66 @@
  * @jest-environment node
  */
 
-const mockGetUser = jest.fn();
-const mockFetchMetadata = jest.fn();
-
-jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(async () => ({
-    auth: { getUser: mockGetUser },
-  })),
-}));
-
-jest.mock('@/lib/documents/server-metadata', () => ({
-  fetchDocumentMetadata: (...args: unknown[]) => mockFetchMetadata(...args),
-  isValidDocumentId: (id: string) => /^[a-zA-Z0-9_.-]{1,255}$/.test(id),
-  DocumentMetadataNotFoundError: class DocumentMetadataNotFoundError extends Error {},
-}));
-
+jest.mock('next/headers', () => ({ headers: jest.fn() }));
 jest.mock('next/navigation', () => ({
   notFound: jest.fn(() => {
     throw new Error('NEXT_NOT_FOUND');
   }),
-  redirect: jest.fn((target: string) => {
-    throw new Error(`NEXT_REDIRECT:${target}`);
-  }),
 }));
-
 jest.mock('@/app/documents/[id]/_components/DocumentPageClient', () => ({
   DocumentPageClient: (props: unknown) => props,
 }));
 
 import DocumentPage from '@/app/documents/[id]/page';
+import { encodeDocumentMetadataHeader } from '@/lib/documents/metadata-transport';
 
-const { notFound: mockNotFound } = jest.requireMock('next/navigation');
+const { headers: mockHeaders } = jest.requireMock('next/headers');
 
-describe('documents/[id] server page status decisions', () => {
+describe('documents/[id] trusted middleware hand-off', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: 'owner-1' } },
-      error: null,
-    });
   });
 
-  it('redirects anonymous callers before probing document existence', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-
-    await expect(
-      DocumentPage({ params: Promise.resolve({ id: 'secret-doc' }) })
-    ).rejects.toThrow('NEXT_REDIRECT:/auth/login?next=%2Fdocuments%2Fsecret-doc');
-    expect(mockFetchMetadata).not.toHaveBeenCalled();
-  });
-
-  it('returns the real Next not-found response for invalid IDs', async () => {
+  it('returns Next not-found for an invalid ID without reading metadata', async () => {
     await expect(
       DocumentPage({ params: Promise.resolve({ id: 'bad/id' }) })
     ).rejects.toThrow('NEXT_NOT_FOUND');
-    expect(mockFetchMetadata).not.toHaveBeenCalled();
+    expect(mockHeaders).not.toHaveBeenCalled();
   });
 
-  it('returns the real Next not-found response for missing or inaccessible metadata', async () => {
-    const { DocumentMetadataNotFoundError } = jest.requireMock(
-      '@/lib/documents/server-metadata'
-    );
-    mockFetchMetadata.mockRejectedValue(new DocumentMetadataNotFoundError());
+  it('fails as an availability error when the trusted result is absent', async () => {
+    mockHeaders.mockResolvedValue(new Headers());
 
     await expect(
       DocumentPage({ params: Promise.resolve({ id: 'doc-1' }) })
-    ).rejects.toThrow('NEXT_NOT_FOUND');
+    ).rejects.toThrow('Missing verified document metadata');
   });
 
-  it('does not collapse retryable upstream errors into not-found', async () => {
-    mockFetchMetadata.mockRejectedValue(new Error('upstream unavailable'));
+  it('rejects a trusted payload for a different document', async () => {
+    const value = await encodeDocumentMetadataHeader({
+      document_id: 'other-doc',
+      document_type: 'judgment',
+      language: 'en',
+    });
+    mockHeaders.mockResolvedValue(new Headers({
+      'x-juddges-document-metadata': value,
+    }));
 
     await expect(
       DocumentPage({ params: Promise.resolve({ id: 'doc-1' }) })
-    ).rejects.toThrow('upstream unavailable');
-    expect(mockNotFound).not.toHaveBeenCalled();
+    ).rejects.toThrow('Mismatched verified document metadata');
   });
 
-  it('renders the client surface with server-verified metadata', async () => {
-    const metadata = { document_id: 'doc-1', title: 'Visible judgment' };
-    mockFetchMetadata.mockResolvedValue(metadata);
+  it('renders from the one trusted middleware fetch without another lookup', async () => {
+    const metadata = {
+      document_id: 'doc-1',
+      document_type: 'judgment',
+      language: 'en',
+      title: 'Visible judgment',
+    };
+    mockHeaders.mockResolvedValue(new Headers({
+      'x-juddges-document-metadata': await encodeDocumentMetadataHeader(metadata),
+    }));
 
     const result = await DocumentPage({
       params: Promise.resolve({ id: 'doc-1' }),
@@ -91,6 +71,5 @@ describe('documents/[id] server page status decisions', () => {
       documentId: 'doc-1',
       initialMetadata: metadata,
     });
-    expect(mockFetchMetadata).toHaveBeenCalledWith('doc-1', 'owner-1');
   });
 });

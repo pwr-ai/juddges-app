@@ -125,15 +125,15 @@ describe('GET /api/documents/[id]/metadata', () => {
     expect((await response.json()).error).not.toBe('DOCUMENT_NOT_FOUND');
   });
 
-  it('maps a timeout to a retryable 503, never a 404', async () => {
+  it('maps a real timeout reason to a retryable 504, never a 404', async () => {
     (global.fetch as jest.Mock).mockRejectedValue(
-      new DOMException('The operation was aborted', 'AbortError')
+      new DOMException('The operation timed out', 'TimeoutError')
     );
 
     const response = await callRoute();
 
-    expect(response.status).toBe(503);
-    expect((await response.json()).error).toBe('DATABASE_UNAVAILABLE');
+    expect(response.status).toBe(504);
+    expect((await response.json()).error).toBe('INTERNAL_ERROR');
   });
 
   it('maps malformed success payloads to a retryable 502', async () => {

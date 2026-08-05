@@ -1,11 +1,15 @@
-import { notFound, redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 
 import {
-  DocumentMetadataNotFoundError,
-  fetchDocumentMetadata,
+  DOCUMENT_METADATA_HEADER,
+  decodeDocumentMetadataHeader,
+} from '@/lib/documents/metadata-transport';
+import {
+  DocumentMetadataUpstreamError,
   isValidDocumentId,
 } from '@/lib/documents/server-metadata';
-import { createClient } from '@/lib/supabase/server';
+import { ErrorCode } from '@/lib/errors';
 
 import { DocumentPageClient } from './_components/DocumentPageClient';
 
@@ -19,29 +23,31 @@ export default async function DocumentPage({
   params,
 }: DocumentPageProps): Promise<React.JSX.Element> {
   const { id: documentId } = await params;
+  if (!isValidDocumentId(documentId)) notFound();
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) {
-    redirect(`/auth/login?next=${encodeURIComponent(`/documents/${documentId}`)}`);
-  }
-
-  if (!isValidDocumentId(documentId)) {
-    notFound();
-  }
-
-  try {
-    const initialMetadata = await fetchDocumentMetadata(documentId, data.user.id);
-    return (
-      <DocumentPageClient
-        documentId={documentId}
-        initialMetadata={initialMetadata}
-      />
+  const requestHeaders = await headers();
+  const encodedMetadata = requestHeaders.get(DOCUMENT_METADATA_HEADER);
+  if (!encodedMetadata) {
+    throw new DocumentMetadataUpstreamError(
+      'Missing verified document metadata',
+      500,
+      ErrorCode.INTERNAL_ERROR
     );
-  } catch (error) {
-    if (error instanceof DocumentMetadataNotFoundError) {
-      notFound();
-    }
-    throw error;
   }
+
+  const initialMetadata = await decodeDocumentMetadataHeader(encodedMetadata);
+  if (initialMetadata.document_id !== documentId) {
+    throw new DocumentMetadataUpstreamError(
+      'Mismatched verified document metadata',
+      500,
+      ErrorCode.INTERNAL_ERROR
+    );
+  }
+
+  return (
+    <DocumentPageClient
+      documentId={documentId}
+      initialMetadata={initialMetadata}
+    />
+  );
 }

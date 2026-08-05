@@ -1,8 +1,37 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import {
+  DOCUMENT_METADATA_HEADER,
+  VERIFIED_USER_HEADER,
+} from '@/lib/documents/metadata-transport';
 
-export async function updateSession(request: NextRequest) {
+const DOCUMENT_METADATA_API_PATTERN =
+  /^\/api\/documents\/[a-zA-Z0-9_.-]{1,255}\/metadata$/;
+
+export interface SessionUpdate {
+  response: NextResponse;
+  userId: string | null;
+  request: NextRequest;
+}
+
+function sanitizedRequest(request: NextRequest): NextRequest {
+  const headers = new Headers(request.headers);
+  headers.delete(DOCUMENT_METADATA_HEADER);
+  headers.delete(VERIFIED_USER_HEADER);
+  return new NextRequest(request.url, {
+    method: request.method,
+    headers,
+    body: request.method === 'GET' || request.method === 'HEAD'
+      ? undefined
+      : request.body,
+  });
+}
+
+export async function updateSessionWithAuth(
+  incomingRequest: NextRequest
+): Promise<SessionUpdate> {
+  const request = sanitizedRequest(incomingRequest);
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -75,6 +104,13 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/api/health") &&
     !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
+    // Exact metadata GETs must reach their handler so anonymous API callers
+    // receive JSON 401 rather than an HTML login redirect. Lookalikes and all
+    // other methods remain protected by middleware.
+    !(
+      request.method === 'GET' &&
+      DOCUMENT_METADATA_API_PATTERN.test(request.nextUrl.pathname)
+    ) &&
     // The retired GraphQL bridge must reach the Next.js router and resolve as
     // 404. Keep this exact so lookalike paths remain protected.
     request.nextUrl.pathname !== "/api/graphql" &&
@@ -91,15 +127,11 @@ export async function updateSession(request: NextRequest) {
     if (nextTarget && nextTarget !== "/") {
       url.searchParams.set("next", nextTarget);
     }
-    return NextResponse.redirect(url);
-  }
-
-  // Internal hand-off to the top-level middleware. The middleware consumes
-  // and removes this header before returning a response to the browser.
-  // Keeping the verified ID on the response avoids a second Supabase lookup
-  // when a protected route needs an authorization-aware preflight.
-  if (user) {
-    supabaseResponse.headers.set('x-juddges-verified-user-id', user.id);
+    return {
+      response: NextResponse.redirect(url),
+      userId: null,
+      request,
+    };
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
@@ -115,5 +147,13 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  return supabaseResponse;
+  return {
+    response: supabaseResponse,
+    userId: user?.id ?? null,
+    request,
+  };
+}
+
+export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  return (await updateSessionWithAuth(request)).response;
 }

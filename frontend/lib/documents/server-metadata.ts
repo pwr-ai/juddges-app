@@ -3,9 +3,9 @@ import 'server-only';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import type { DocumentMetadata } from '@/app/documents/[id]/_components/types';
 import { ErrorCode } from '@/lib/errors';
+import { isDocumentMetadata } from '@/lib/documents/metadata-transport';
 
 const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
-const METADATA_TIMEOUT_MS = 10_000;
 
 export class DocumentMetadataNotFoundError extends Error {
   constructor() {
@@ -29,14 +29,23 @@ export function isValidDocumentId(documentId: string): boolean {
   return DOCUMENT_ID_PATTERN.test(documentId);
 }
 
-function isDocumentMetadata(value: unknown): value is DocumentMetadata {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const metadata = value as Record<string, unknown>;
-  return (
-    typeof metadata.document_id === 'string' &&
-    typeof metadata.document_type === 'string' &&
-    typeof metadata.language === 'string'
-  );
+function metadataTimeoutMs(): number {
+  const configured = Number(process.env.DOCUMENT_METADATA_TIMEOUT_MS ?? 10_000);
+  return Number.isFinite(configured) && configured > 0 ? configured : 10_000;
+}
+
+function isTimeoutFailure(error: unknown, signal: AbortSignal): boolean {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'TimeoutError'
+  ) return true;
+  return signal.aborted &&
+    typeof signal.reason === 'object' &&
+    signal.reason !== null &&
+    'name' in signal.reason &&
+    signal.reason.name === 'TimeoutError';
 }
 
 /**
@@ -54,11 +63,11 @@ export async function fetchDocumentMetadata(
     throw new DocumentMetadataNotFoundError();
   }
 
+  const timeoutSignal = AbortSignal.timeout(metadataTimeoutMs());
+  const signal = requestSignal
+    ? AbortSignal.any([requestSignal, timeoutSignal])
+    : timeoutSignal;
   try {
-    const timeoutSignal = AbortSignal.timeout(METADATA_TIMEOUT_MS);
-    const signal = requestSignal
-      ? AbortSignal.any([requestSignal, timeoutSignal])
-      : timeoutSignal;
     const response = await fetch(
       `${getBackendUrl()}/documents/${encodeURIComponent(documentId)}/metadata`,
       {
@@ -117,13 +126,13 @@ export async function fetchDocumentMetadata(
       throw error;
     }
 
-    const isTimeout = error instanceof Error && error.name === 'AbortError';
+    const isTimeout = isTimeoutFailure(error, signal);
     throw new DocumentMetadataUpstreamError(
       isTimeout
         ? 'The document service timed out. Please try again.'
         : 'The document service is unavailable. Please try again.',
-      503,
-      ErrorCode.DATABASE_UNAVAILABLE
+      isTimeout ? 504 : 503,
+      isTimeout ? ErrorCode.INTERNAL_ERROR : ErrorCode.DATABASE_UNAVAILABLE
     );
   }
 }
