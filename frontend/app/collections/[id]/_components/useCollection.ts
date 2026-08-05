@@ -63,14 +63,29 @@ export function useCollection(
 
   // Reset tip dismissal state when collection ID changes
   useEffect(() => {
+    setCollection(initialCollection ?? null);
+    setDocuments(new Map());
+    setLoadingDocuments(new Set());
+    setIsLoading(!initialCollection);
+    setEditName(initialCollection?.name ?? "");
+    setEditDescription(initialCollection?.description ?? "");
     setIsTipDismissed(false);
     setSearchQuery("");
     setCurrentPage(1);
-    setAllDocumentsLoaded(false);
-    setTotalDocumentCount(0);
+    const documentCount =
+      initialCollection?.document_count ??
+      initialCollection?.documents.length ??
+      0;
+    setAllDocumentsLoaded(
+      Boolean(
+        initialCollection &&
+          initialCollection.documents.length >= documentCount
+      )
+    );
+    setTotalDocumentCount(documentCount);
     setViewMode('cards');
     setFullTableProgress(null);
-  }, [id]);
+  }, [id, initialCollection]);
 
   // Reset page when search changes
   useEffect(() => {
@@ -319,8 +334,14 @@ export function useCollection(
   }, [collection?.documents, ensureAllDocumentsFetched, viewMode]);
 
   useEffect(() => {
+    if (initialCollection?.id === id) {
+      initialCollection.documents.forEach((documentId) => {
+        loadDocument(String(documentId));
+      });
+      return;
+    }
     loadCollection();
-  }, [loadCollection]);
+  }, [id, initialCollection, loadCollection, loadDocument]);
 
   const handleAddDocuments = async (): Promise<void> => {
     if (!newDocumentIds.trim()) {
