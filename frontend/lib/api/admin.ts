@@ -1,8 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8004";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,20 +95,8 @@ export interface ContentStats {
 // ---------------------------------------------------------------------------
 
 async function adminFetch<T>(path: string): Promise<T> {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error("Not authenticated");
-  }
-
-  const res = await fetch(`${BACKEND_URL}${path}`, {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
+  const res = await fetch(path, {
+    headers: { Accept: "application/json" },
   });
 
   if (!res.ok) {
