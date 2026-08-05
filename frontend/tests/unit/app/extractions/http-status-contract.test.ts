@@ -12,6 +12,10 @@ import {
   withProductionBuildLock,
 } from "@/tests/support/production-build-lock";
 import {
+  cleanupProductionContractBuild,
+  prepareProductionContractBuild,
+} from "@/tests/support/production-contract-build";
+import {
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
   PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
   PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
@@ -21,6 +25,9 @@ import {
 } from "@/tests/support/production-child-process";
 
 jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
+
+const EXTRACTIONS_CONTRACT_FILE =
+  "tests/unit/app/extractions/http-status-contract.test.ts";
 
 const IDS = {
   visible: "11111111-2222-4333-8444-555555555555",
@@ -95,6 +102,10 @@ function authenticatedCookie(): string {
 describe("extraction detail production HTTP status matrix", () => {
   it("keeps 404, upstream failures, methods, auth, and snapshot reads exact", async () => {
     await withProductionBuildLock(async () => {
+    const contractBuild = await prepareProductionContractBuild(
+      EXTRACTIONS_CONTRACT_FILE
+    );
+    try {
     const upstreamPort = await reservePort();
     const appPort = await reservePort();
     const extractionRequests: string[] = [];
@@ -138,6 +149,7 @@ describe("extraction detail production HTTP status matrix", () => {
 
     const environment: NodeJS.ProcessEnv = {
       ...process.env,
+      ...contractBuild.environment,
       NODE_ENV: "production",
       NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${upstreamPort}`,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
@@ -156,20 +168,20 @@ describe("extraction detail production HTTP status matrix", () => {
       timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
     });
     cpSync(
-      join(process.cwd(), ".next/static"),
-      join(process.cwd(), ".next/standalone/frontend/.next/static"),
+      join(contractBuild.buildPath, "static"),
+      join(contractBuild.buildPath, "standalone/frontend/.next/static"),
       { recursive: true }
     );
     cpSync(
       join(process.cwd(), "public"),
-      join(process.cwd(), ".next/standalone/frontend/public"),
+      join(contractBuild.buildPath, "standalone/frontend/public"),
       { recursive: true }
     );
 
     await listen(upstream, upstreamPort);
     const productionServer = spawnProductionChild({
       command: process.execPath,
-      args: [join(process.cwd(), ".next/standalone/frontend/server.js")],
+      args: [join(contractBuild.buildPath, "standalone/frontend/server.js")],
       label: "Next extraction detail standalone server",
       cwd: process.cwd(),
       env: {
@@ -282,7 +294,7 @@ describe("extraction detail production HTTP status matrix", () => {
       ).toBe(1);
 
       const manifest = JSON.parse(
-        readFileSync(join(process.cwd(), ".next/build-manifest.json"), "utf8")
+        readFileSync(join(contractBuild.buildPath, "build-manifest.json"), "utf8")
       ) as { polyfillFiles: string[] };
       const asset = await requestUntilReady(
         `${baseUrl}/_next/${manifest.polyfillFiles[0]}`
@@ -292,6 +304,9 @@ describe("extraction detail production HTTP status matrix", () => {
     } finally {
       await stopProductionChild(productionServer);
       await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    }
+    } finally {
+      await cleanupProductionContractBuild(contractBuild);
     }
     });
   });
