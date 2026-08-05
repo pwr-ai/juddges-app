@@ -34,19 +34,43 @@ function manifestEntryMatches(entry, pathname) {
   return new RegExp(entry.regex).test(pathname);
 }
 
+function normalizeAppPathKey(appPathKey) {
+  const segments = appPathKey.split('/').filter(Boolean);
+
+  if (segments.at(-1) === 'route') {
+    segments.pop();
+  }
+
+  const publicSegments = segments.filter(
+    (segment) =>
+      !(segment.startsWith('(') && segment.endsWith(')')) &&
+      !segment.startsWith('@')
+  );
+
+  return `/${publicSegments.join('/')}`;
+}
+
 function assertRetiredRoutesAbsent(appPathsManifest, routesManifest) {
   const routeEntries = [
     ...(routesManifest.dynamicRoutes ?? []),
     ...(routesManifest.staticRoutes ?? []),
   ];
   const rewrites = flattenRewrites(routesManifest.rewrites);
+  const appRoutes = Object.keys(appPathsManifest)
+    .filter((appPathKey) => appPathKey.endsWith('/route'))
+    .map((appPathKey) => ({
+      appPathKey,
+      pathname: normalizeAppPathKey(appPathKey),
+    }));
   const violations = [];
 
   for (const pathname of RETIRED_DEVELOPER_ROUTES) {
-    const appRoute = `${pathname}/route`;
-
-    if (Object.hasOwn(appPathsManifest, appRoute)) {
-      violations.push(`${pathname} is present in app-paths-manifest.json`);
+    for (const appRoute of appRoutes) {
+      if (appRoute.pathname === pathname) {
+        violations.push(
+          `${appRoute.appPathKey} exposes ${pathname} in app-paths-manifest.json`
+        );
+      }
     }
 
     for (const entry of routeEntries) {
@@ -96,4 +120,5 @@ module.exports = {
   RETIRED_DEVELOPER_ROUTES,
   assertBuiltManifests,
   assertRetiredRoutesAbsent,
+  normalizeAppPathKey,
 };

@@ -48,6 +48,30 @@ describe('retired developer API routes', () => {
       routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
     },
     {
+      label: 'a route hidden behind a root route group',
+      appPaths: {
+        '/(internal)/api/component-source/route':
+          'app/(internal)/api/component-source/route.js',
+      },
+      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+    },
+    {
+      label: 'a route hidden behind a nested route group',
+      appPaths: {
+        '/api/(internal)/component-source/route':
+          'app/api/(internal)/component-source/route.js',
+      },
+      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+    },
+    {
+      label: 'a route hidden behind a parallel slot',
+      appPaths: {
+        '/api/@slot/component-source/route':
+          'app/api/@slot/component-source/route.js',
+      },
+      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+    },
+    {
       label: 'a catch-all route',
       appPaths: {
         '/api/[[...path]]/route': 'app/api/[[...path]]/route.js',
