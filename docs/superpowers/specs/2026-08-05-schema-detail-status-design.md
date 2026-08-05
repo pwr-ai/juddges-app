@@ -1,398 +1,188 @@
 # Schema Detail HTTP Status Design
 
 - **Date:** 2026-08-05
+- **Updated:** 2026-08-06
 - **Status:** Approved design for issue #409
 - **Branch:** `fix/409-schemas-real-404`
-- **Affected surface:** `/schemas/[id]` and `GET /api/schemas/[id]`
+- **Affected surface:** `/schemas/[id]` and `/api/schemas/[id]`
 
-## 1. Problem
+## 1. Problem and goals
 
-`frontend/app/schemas/[id]/page.tsx` is currently a client component. It first
-returns a successful page response, then fetches `/api/schemas/[id]` in an
-effect. Missing schemas and load failures therefore render an error card under
-HTTP 200 instead of producing a server-side status.
+The schema detail page used to fetch its resource only after a successful HTTP
+200 page response. Missing, hidden, and failed reads therefore showed a client
+error card under the wrong status. The detail BFF also did not keep all auth,
+upstream, and not-found outcomes distinct.
 
-The BFF also collapses every failed `extraction_schemas` query into 404. A row
-hidden by Row Level Security and a genuinely missing row should be
-indistinguishable, but an explicit permission rejection and an unexpected
-database or authentication failure must remain distinct. The current route
-cannot make that distinction.
+Issue #409 must:
 
-## 2. Goals
+- return a real 404 for invalid, missing, and RLS-hidden schemas;
+- preserve real 401, 403, 500, 502, 503, and 504 failures;
+- render failures inside the application design system, with retry and back
+  actions, instead of returning hand-written HTML;
+- keep invalid, missing, and hidden API 404 responses exactly identical and
+  free of identifiers and upstream diagnostics;
+- perform one primary RLS-scoped schema lookup per successful page request;
+- enrich the creator email with at most one controlled, best-effort lookup;
+- hydrate the client from verified server data without another detail fetch;
+- preserve all existing owner and shared actions.
 
-- Return a real HTTP 404 for an invalid, missing, or RLS-hidden schema detail
-  request.
-- Preserve successful schema detail rendering and all existing client actions.
-- Give the BFF an exact, tested 200/401/403/404/500 contract.
-- Keep unexpected authentication and primary schema-query failures separate
-  from not-found.
-- Load the schema before rendering the page so the initial document has the
-  correct status and successful data is not fetched again after hydration.
-- Put ID validation, authentication, schema lookup, error classification, and
-  optional profile enrichment behind one typed server-only boundary shared by
-  the page and BFF.
-- Keep all detail responses private and non-cacheable.
+## 2. Non-goals
 
-## 3. Non-goals
+- No FastAPI endpoint, Supabase migration, or RLS-policy change.
+- No service-role lookup to distinguish missing from RLS-hidden rows.
+- No change to list, create, update, delete, versions, or statistics APIs.
+- No general loader framework for unrelated resources.
+- No redesign of the schema detail interface.
 
-- No backend schema endpoint or FastAPI change.
-- No Supabase migration, RLS-policy change, or schema-table change.
-- No middleware prefetch, request-header snapshot, signed payload, or change to
-  `frontend/middleware.ts` or `frontend/lib/supabase/middleware.ts`.
-- No redesign of schema cards, schema studio, deletion, duplication, export,
-  or extraction configuration.
-- No change to `GET /api/schemas`, schema create/update/delete endpoints, schema
-  versions, or schema statistics.
-- No generic detail-loader framework shared with chats, collections,
-  documents, or extractions.
-- No retry policy or background polling in this issue.
-
-## 4. Architecture
-
-### 4.1 Files and responsibilities
+## 3. Implemented architecture
 
 | Unit | Path | Responsibility |
 |---|---|---|
-| Server detail loader | `frontend/lib/server/schema-detail.ts` | Validate the ID, verify the Supabase user, read the visible schema, classify all outcomes, and optionally enrich the successful schema with the creator email. This is the only module allowed to interpret Supabase detail-read errors. |
-| Server page | `frontend/app/schemas/[id]/page.tsx` | Await the loader, call `notFound()` only for `not_found`, throw non-not-found failures, and render the client component for `ok`. |
-| Client detail view | `frontend/app/schemas/[id]/SchemaDetailClient.tsx` | Receive the successful schema as a prop and preserve the current interactive detail UI and actions. It does not perform the initial detail fetch. |
-| BFF route | `frontend/app/api/schemas/[id]/route.ts` | Call the same loader and translate its typed result into the exact JSON/status contract. It contains no independent Supabase classification logic. |
-| Loader tests | `frontend/__tests__/lib/server/schema-detail.test.ts` | Pin ID, auth, Supabase, enrichment, and result-union semantics. |
-| BFF tests | `frontend/__tests__/app/api/schemas/[id]/route.test.ts` | Pin exact status, body, cache header, and no-query behavior. |
-| Page tests | `frontend/__tests__/app/schemas/[id]/page.test.tsx` | Pin server branching and successful client handoff. |
-| Production HTTP contract | `frontend/tests/integration/schemas/detail-production.test.ts` | Build and start Next in production mode against controlled Supabase test doubles and assert actual HTTP statuses. |
+| Transport contract | `frontend/lib/schemas/detail-transport.ts` | Canonical UUID validation, payload validation, internal header names, and HMAC signing/verification bound to user, route, and payload. |
+| RLS-scoped reader | `frontend/lib/server/schema-detail.ts` | Read one visible schema with the user's bearer token, classify upstream outcomes, validate the payload, and optionally enrich the creator email. |
+| Session middleware | `frontend/lib/supabase/middleware.ts` | Verify/refresh the Supabase session, strip all caller-supplied internal schema headers, allow exact single-segment schema API reads to reach their handler, and keep nested/lookalike routes protected. |
+| Root middleware | `frontend/middleware.ts` | Preflight exact schema page reads, preserve real statuses, inject a signed success snapshot, or inject a sanitized failure status. |
+| Server page | `frontend/app/schemas/[id]/page.tsx` | Reject noncanonical IDs, verify the middleware proof, decode the snapshot, and choose the success or styled failure component. |
+| Client view | `frontend/app/schemas/[id]/client.tsx` | Render the supplied schema and preserve interactive actions without an initial fetch. |
+| Failure view | `frontend/components/schemas/SchemaDetailFailure.tsx` | Render the application `ErrorCard` with retry and back actions. |
+| BFF route | `frontend/app/api/schemas/[id]/route.ts` | Validate first, authenticate independently, invoke the RLS reader, and map results to stable JSON/status responses. |
 
-The existing `ExtractionSchema` type in
-`frontend/types/extraction_schemas.ts` remains the successful data contract.
-No parallel schema-detail DTO is introduced.
-
-### 4.2 Typed loader result
-
-The loader returns a discriminated union rather than throwing expected
-outcomes:
-
-```ts
-export type SchemaDetailResult =
-  | { kind: 'ok'; schema: ExtractionSchema }
-  | {
-      kind: 'not_found';
-      reason: 'invalid_id' | 'missing_or_hidden';
-    }
-  | { kind: 'unauthenticated' }
-  | { kind: 'forbidden' }
-  | {
-      kind: 'failure';
-      status: 500;
-      reason: 'authentication' | 'database';
-    };
-```
-
-The public loader signature is:
-
-```ts
-export async function loadSchemaDetail(
-  schemaId: string,
-): Promise<SchemaDetailResult>;
-```
-
-The module is server-only and uses `createClient()` from
-`frontend/lib/supabase/server.ts`. Callers never inspect PostgREST error codes
-themselves.
-
-### 4.3 Request flow
+### 3.1 Page request flow
 
 ```text
-GET /schemas/[id]
-        |
-        v
-async server page
-        |
-        v
-loadSchemaDetail(id) ---- invalid/missing/RLS-hidden ---> notFound() ---> 404
-        |
-        +-------------- unauthenticated/forbidden/failure ---> throw ---> error response
-        |
-        `-------------- ok(schema) ---> SchemaDetailClient(schema) ---> 200
-
-GET /api/schemas/[id]
-        |
-        v
-loadSchemaDetail(id)
-        |
-        `-------------- typed result ---> exact JSON + 200/401/403/404/500
+GET or HEAD /schemas/[id]
+  -> session middleware verifies/refreshes the user and strips internal headers
+  -> root middleware validates the exact route and preflights the schema
+     -> invalid, missing, or RLS-hidden: rewrite to unmatched app route, status 404
+     -> 401/403/500/502/503/504: continue with the same status and a trusted
+        internal failure-status header
+     -> success: sign {user, path, encoded schema} and continue
+  -> server page
+     -> failure header: render SchemaDetailFailure inside the app shell
+     -> valid HMAC snapshot: render SchemaDetailClient(initialSchema)
+     -> missing/forged proof: throw; never trust caller headers
 ```
 
-The page and BFF may be requested independently, but each request performs at
-most one primary schema lookup. A successful page render passes the loaded
-schema into the client component, so hydration does not trigger a second BFF
-request.
+The 404 rewrite targets `/__schema-not-found`, which deliberately has no route.
+Next.js therefore renders the application's existing `not-found.tsx` while the
+middleware preserves HTTP 404. Other known failures use `NextResponse.next`
+with the original status so the page can render the styled retry surface at the
+requested URL. The middleware strips the failure and snapshot headers before
+setting its own values.
 
-## 5. Classification contract
+The HMAC uses `BACKEND_API_KEY` and covers the user ID, pathname, and encoded
+schema. A snapshot cannot be moved to another user or route or modified without
+invalidating its signature.
 
-### 5.1 ID
+### 3.2 Data lookup and creator enrichment
 
-Schema detail IDs are canonical UUIDs. Validation happens before creating the
-Supabase client.
+`fetchSchemaDetail` uses `NEXT_PUBLIC_SUPABASE_URL`, the anon key, and the
+verified user's bearer token. It never uses the service-role key.
 
-- A canonical UUID continues to authentication and lookup.
-- An empty, malformed, encoded-slash, overlong, or non-canonical ID returns
-  `not_found` with reason `invalid_id`.
-- Invalid IDs do not call Supabase Auth or PostgREST.
-- Both page and BFF expose invalid IDs as 404. The response does not echo the
-  rejected value.
+The primary request is one `extraction_schemas` query with the canonical ID and
+`limit=1`:
 
-This keeps dynamic page lookup non-enumerable and avoids a separate 400
-contract not requested by #409.
+| Upstream outcome | Public status |
+|---|---:|
+| One valid, matching row | 200 |
+| Empty result, including RLS-hidden row | 404 |
+| Upstream 401 | 401 |
+| Upstream 403 | 403 |
+| Upstream 5xx | Preserved 5xx |
+| Other failed upstream response | 502 |
+| Transport failure | 503 |
+| Timeout | 504 |
+| Invalid or malformed success payload | 502 |
 
-### 5.2 Authentication
+After a confirmed schema, the reader may perform one `user_profiles` request
+for `select=email&id=eq.<creator>&limit=1`, using the same user-scoped bearer
+token. A missing, hidden, malformed, failed, or timed-out profile lookup is
+best-effort: it is logged without credentials and the confirmed schema remains
+successful without `user.email`. A schema without `user_id` skips enrichment.
 
-- A verified Supabase user continues to the schema query.
-- Missing user data, an absent session, an expired credential, or a recognized
-  invalid-session error returns `unauthenticated`.
-- A thrown auth lookup, retryable auth transport error, or auth-service 5xx
-  returns `failure` with reason `authentication`; it must not be reported as an
-  anonymous caller.
-- The BFF maps `unauthenticated` to 401 and authentication failure to 500.
-- Page requests without a valid session continue to be redirected by the
-  existing middleware to `/auth/login?next=/schemas/<id>`. This design does not
-  alter that redirect boundary. If middleware cannot verify a user, it may
-  redirect before the server page or BFF runs; the exact 401 and auth-failure
-  500 contracts in this design apply to the BFF handler once invoked and are
-  pinned by direct handler tests.
+### 3.3 API request flow
 
-### 5.3 Primary schema query
+Exact GET/HEAD requests matching `/api/schemas/<single-segment>` bypass the
+generic login redirect and reach the route handler. This applies to canonical
+and invalid segments so validation runs before authentication:
 
-The query reads one visible row from `extraction_schemas` by ID using
-`maybeSingle()` semantics.
+- invalid single segment: 404 without any auth or schema query;
+- canonical anonymous request: 401 from the route handler;
+- nested or lookalike path: remains behind the normal authentication redirect.
 
-| Supabase outcome | Loader result | BFF status | Page behavior |
-|---|---|---:|---|
-| Row returned | `ok` | 200 | Render client detail |
-| `data: null`, no error | `not_found: missing_or_hidden` | 404 | `notFound()` |
-| No-row error such as `PGRST116` | `not_found: missing_or_hidden` | 404 | `notFound()` |
-| Explicit insufficient-privilege result such as PostgreSQL `42501` or an authenticated query status 403 | `forbidden` | 403 | Throw as a non-not-found failure |
-| Any other PostgREST/database error | `failure: database` | 500 | Throw as a non-not-found failure |
+The handler verifies the user and bearer token independently, then invokes
+`fetchSchemaDetail`. All responses are `private, no-store`. `HEAD` returns the
+same status and headers as `GET`, with no body. Unsupported methods return 405
+with `Allow: GET, HEAD`.
 
-Missing rows and rows hidden by RLS deliberately share one result and response.
-The loader must not use a service-role client to distinguish them.
+The 404 body is one constant for invalid, missing, and RLS-hidden IDs:
 
-The current `BACKEND_API_KEY` check is removed from this detail path because
-the detail read does not call FastAPI. Missing backend configuration must not
-turn a valid Supabase detail request into 500.
-
-### 5.4 Optional creator profile enrichment
-
-After the primary schema is available, the loader may read the matching
-`user_profiles.email` and add `user: { email }` to the returned schema.
-
-- A found email is included.
-- Missing profile data, an RLS-hidden profile, or a profile-query failure is
-  logged without raw credentials and returns `ok` without `user.email`.
-- Optional enrichment never changes a confirmed schema from 200 to 404 or 500.
-
-This preserves the current best-effort display behavior while making the
-primary resource contract strict.
-
-## 6. Server page and client boundary
-
-`frontend/app/schemas/[id]/page.tsx` becomes an async server component with
-`dynamic = 'force-dynamic'` and `revalidate = 0`.
-
-Its branching is exhaustive:
-
-- `ok`: render `SchemaDetailClient` with the loaded schema.
-- `not_found`: call `notFound()`.
-- `unauthenticated`, `forbidden`, or `failure`: throw a typed server error.
-  These outcomes must never call `notFound()` or render the old missing-schema
-  error card.
-
-The production status guarantee for this issue is 404 only for the
-`not_found` branch. Unexpected auth/database failures remain real server
-failures rather than false 404s. Exact 401 and 403 are BFF contracts; normal
-page authentication continues to be enforced by the existing redirecting
-middleware.
-
-`SchemaDetailClient` receives:
-
-```ts
-interface SchemaDetailClientProps {
-  initialSchema: ExtractionSchema;
+```json
+{
+  "error": "SCHEMA_NOT_FOUND",
+  "message": "Schema not found",
+  "code": "SCHEMA_NOT_FOUND"
 }
 ```
 
-It initializes its schema state from `initialSchema` and keeps the existing:
+It contains no rejected ID, resource ID, RLS detail, or upstream message.
 
-- owner-only edit and delete controls;
-- duplicate action;
-- export action;
-- configure-extraction navigation;
+## 4. Client behavior contract
+
+`SchemaDetailClient` receives `initialSchema: ExtractionSchema` and performs no
+detail fetch during hydration. It preserves:
+
+- owner-only Edit and Delete;
+- shared Duplicate, Export, and Configure Extraction actions;
 - raw, YAML, table, and preview views;
-- delete confirmation and deletion error handling;
+- delete confirmation and existing delete request;
 - creator and timestamp metadata.
 
-The initial loading state, initial `useEffect`, `useParams()`, and initial
-`fetch('/api/schemas/<id>')` are removed. No successful page load performs a
-hydration refetch. Delete remains routed through the existing
-`DELETE /api/schemas?id=<id>` contract.
+## 5. Tests
 
-## 7. BFF response contract
-
-All BFF responses set `Cache-Control: private, no-store`.
-
-| Case | Status | Stable body requirements |
-|---|---:|---|
-| Success | 200 | Enriched `ExtractionSchema` |
-| Missing/expired session | 401 | `code: "UNAUTHORIZED"`; no schema ID disclosure |
-| Explicit permission rejection | 403 | `code: "FORBIDDEN"`; generic access-denied message |
-| Invalid, missing, or RLS-hidden schema | 404 | `code: "SCHEMA_NOT_FOUND"`; same body for all three |
-| Unexpected auth or primary database failure | 500 | `code: "INTERNAL_ERROR"`; generic message with no upstream diagnostics |
-
-Logs may include request ID, outcome kind, and safe Supabase error code. They
-must not include cookies, access tokens, service keys, query payloads, or raw
-database messages.
-
-## 8. Test matrices
-
-### 8.1 Loader unit matrix
-
-`frontend/__tests__/lib/server/schema-detail.test.ts` covers:
-
-| Input/fixture | Expected result | Required side-effect assertion |
+| Contract | Test path | Evidence |
 |---|---|---|
-| Invalid ID | `not_found: invalid_id` | No auth or table query |
-| Valid ID, verified user, visible row | `ok` | One primary lookup |
-| Valid ID, no user | `unauthenticated` | No table query |
-| Expired/invalid stored credential | `unauthenticated` | No table query |
-| Auth transport throw or auth 5xx | `failure: authentication` | No table query |
-| `data: null`, no query error | `not_found: missing_or_hidden` | Profile query not called |
-| `PGRST116` no-row result | `not_found: missing_or_hidden` | Profile query not called |
-| `42501`/authenticated 403 | `forbidden` | Profile query not called |
-| Unexpected PostgREST error | `failure: database` | Profile query not called |
-| Profile email found | `ok` with `user.email` | Exactly one profile lookup |
-| Profile absent or fails | `ok` without `user.email` | Primary schema preserved |
+| RLS reader and enrichment | `frontend/__tests__/lib/server/schema-detail.test.ts` | ID validation, one primary read, upstream status mapping, payload validation, zero/one creator lookup, optional enrichment failures. |
+| API mapping | `frontend/__tests__/app/api/schemas/[id]/route.test.ts` | Exact 200/401/403/404/5xx, identical 404 bodies, HEAD, cache headers, and 405 methods. |
+| Session routing | `frontend/tests/unit/lib/supabase/middleware.test.ts` | Anonymous canonical/invalid/dotted single segments reach the handler; nested paths redirect; caller proof headers are stripped. |
+| Page preflight | `frontend/__tests__/middleware/schema-detail.test.ts` | One primary preflight, one controlled profile lookup, signed proof replacement, real statuses, cookies, 405, and encoded aliases. |
+| Server page | `frontend/__tests__/app/schemas/[id]/page.test.tsx` | Signed success snapshot, trusted failure statuses, invalid IDs, and missing/forged proof rejection. |
+| Failure surface | `frontend/__tests__/app/schemas/[id]/failure-surface.test.tsx` | Application `ErrorCard`, Retry, and Back to Schemas. |
+| Client behavior | `frontend/__tests__/app/schemas/[id]/client.test.tsx` | Owner/non-owner controls, shared actions, creator rendering, and no hydration fetch. |
+| Production contract | `frontend/tests/unit/app/schemas/http-status-contract.test.ts` | Real Next production build and standalone server: page/API statuses, application surfaces, auth redirects, exact 404 equality, HEAD/405, spoof resistance, cookie refresh, profile enrichment, and one primary successful lookup. |
 
-### 8.2 BFF direct matrix
-
-`frontend/__tests__/app/api/schemas/[id]/route.test.ts` imports the route and
-mocks the shared loader. It asserts exact status and body for:
-
-- 200 success;
-- 401 unauthenticated;
-- 403 forbidden;
-- 404 invalid ID;
-- 404 missing schema;
-- 404 RLS-hidden schema using the same response body as missing;
-- 500 authentication failure;
-- 500 database failure.
-
-Every case asserts `Cache-Control: private, no-store`. Error cases assert that
-raw schema IDs, Supabase messages, and credentials are absent from the body.
-
-### 8.3 Server page unit matrix
-
-`frontend/__tests__/app/schemas/[id]/page.test.tsx` mocks the loader and
-`next/navigation` control-flow functions:
-
-- `ok` passes the exact schema object to `SchemaDetailClient`.
-- Both `not_found` reasons call `notFound()`.
-- `unauthenticated`, `forbidden`, authentication failure, and database failure
-  do not call `notFound()` and reject as server failures.
-
-The client component test confirms that the initial schema renders without an
-initial `/api/schemas/<id>` fetch and that existing edit, duplicate, export,
-configure, and delete actions remain wired.
-
-### 8.4 Production Next HTTP matrix
-
-`frontend/tests/integration/schemas/detail-production.test.ts` builds a
-dedicated production output directory, starts the standalone Next server, and
-uses local Supabase Auth/PostgREST test servers. It asserts actual response
-statuses rather than visible text:
-
-| Request | Expected HTTP status |
-|---|---:|
-| Authenticated, visible schema | 200 |
-| Authenticated, invalid ID | 404 |
-| Authenticated, missing schema | 404 |
-| Authenticated, RLS-hidden schema | 404 |
-| Authenticated, primary database failure | 500 |
-| Anonymous valid schema request | 307 to `/auth/login?next=/schemas/<id>` |
-
-The test also asserts that the hidden schema body never appears in either 404
-response, invalid IDs cause no PostgREST read, successful schema data is read
-once, and no case returns the old HTTP-200 error-card behavior.
-
-## 9. TDD sequence
-
-1. Add loader tests for ID and authentication outcomes and confirm they fail
-   because `loadSchemaDetail` does not exist.
-2. Add primary-query and enrichment tests, then implement the minimal typed
-   loader until the complete loader matrix passes.
-3. Add the BFF matrix against the loader result contract, then replace the
-   route's direct Supabase logic with the result-to-response mapping.
-4. Add page branching tests and a client handoff test, then split the existing
-   component without changing its actions or presentation.
-5. Add the production Next HTTP contract last and confirm it fails under the
-   old client-only page before accepting the server-rendered implementation.
-6. Run focused tests after every layer, then run full frontend validation and
-   inspect the final diff before review.
-
-## 10. Verification
-
-Focused commands:
+## 6. Verification commands
 
 ```bash
-cd frontend && npm test -- --runInBand \
-  __tests__/lib/server/schema-detail.test.ts \
-  __tests__/app/api/schemas/[id]/route.test.ts \
-  __tests__/app/schemas/[id]/page.test.tsx
+cd frontend
+npm test -- --runInBand --runTestsByPath \
+  '__tests__/lib/server/schema-detail.test.ts' \
+  '__tests__/app/api/schemas/[id]/route.test.ts' \
+  '__tests__/middleware/schema-detail.test.ts' \
+  '__tests__/app/schemas/[id]/page.test.tsx' \
+  '__tests__/app/schemas/[id]/failure-surface.test.tsx' \
+  '__tests__/app/schemas/[id]/client.test.tsx' \
+  'tests/unit/lib/supabase/middleware.test.ts'
 
-cd frontend && npm test -- --runInBand \
-  tests/integration/schemas/detail-production.test.ts
+npm test -- --runInBand --runTestsByPath \
+  'tests/unit/app/schemas/http-status-contract.test.ts'
+
+npm run validate
+npm test -- --runInBand
+
+git -C /home/laugustyniak/github/legal-ai/juddges-app/.worktrees/fix-409-schemas-real-404 diff --check
 ```
 
-Required repository checks:
+Passing only component tests or finding error text inside an HTTP-200 document
+is not sufficient. Completion requires the standalone production matrix plus
+the full frontend validation and Jest suites.
 
-```bash
-cd frontend && npm run validate
-cd frontend && npm test -- --runInBand
-git -C /home/laugustyniak/github/legal-ai/juddges-app/.worktrees/fix-409-schema-real-404 diff --check
-```
+## 7. Scope and follow-on
 
-Before claiming completion, record the focused status matrix results, full
-validation result, full Jest result, and `git diff --check` result. A test that
-only finds “not found” text in an HTTP-200 page is not acceptable evidence.
+This issue is schema-specific even though it necessarily touches the root and
+session middleware to establish the real page status before App Router render.
+It does not change chat, collection, document, or extraction loaders.
 
-## 11. Collision boundary
-
-Active detail-route work for #404, #407, and #408 changes middleware and
-related server-page contracts. #409 must remain isolated to the schema-specific
-files listed in section 4.1. In particular, it must not modify:
-
-- `frontend/middleware.ts`;
-- `frontend/lib/supabase/middleware.ts`;
-- chat, collection, or document detail loaders;
-- shared BFF proxy infrastructure.
-
-This boundary avoids conflicts while those worktrees are in flight. If one of
-those branches lands first, #409 may adopt naming conventions after merging
-main into its branch, but it must not broaden into a shared refactor.
-
-## 12. #410 follow-on pattern
-
-Issue #410 should reuse the architecture, not the schema implementation:
-
-- create an extraction-specific typed server loader;
-- enforce `job_id` plus authenticated `user_id` ownership before requesting
-  upstream job data;
-- map only missing or inaccessible jobs to `not_found`;
-- preserve upstream 422, 500, and 503;
-- distinguish timeout as 504, transport failure as 503, and malformed success
-  payload as 502;
-- make `/extractions/[id]` a server page that calls `notFound()` only for the
-  extraction loader's `not_found` result;
-- pass successful job data to a client component without an initial hydration
-  fetch.
-
-#410 must receive its own tests and worktree. It must not be bundled into the
-#409 implementation or generalized through a premature cross-domain loader.
+Issue #410 should reuse the verified principles, not the schema code: its own
+typed reader, ownership checks, exact upstream status mapping, server-provided
+initial data, and independent tests/worktree. It must not be bundled into #409.
