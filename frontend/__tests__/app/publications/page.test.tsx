@@ -64,9 +64,18 @@ const publication: PublicationWithResources = {
   links: {},
 };
 
+const olderWorkshop: PublicationWithResources = {
+  ...publication,
+  id: 'older-workshop',
+  title: 'An older workshop publication',
+  year: 2025,
+  type: PublicationType.WORKSHOP,
+};
+
 describe('PublicationsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(getPublications).mockReset();
   });
 
   it('shows real API records to an anonymous visitor', async () => {
@@ -80,8 +89,11 @@ describe('PublicationsPage', () => {
     expect(screen.getByText('Showing 1 publication')).toBeInTheDocument();
     expect(screen.queryByText('Manage Publications')).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/Unseen Influence: Computational Propaganda/i),
-    ).not.toBeInTheDocument();
+      screen.getByRole('heading', { name: 'Curated reference bibliography' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Unseen Influence: Computational Propaganda/i),
+    ).toBeInTheDocument();
   });
 
   it('shows an explicit empty catalog state without static fallback records', async () => {
@@ -98,6 +110,9 @@ describe('PublicationsPage', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText('Clear all filters')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Curated reference bibliography' }),
+    ).toBeInTheDocument();
   });
 
   it('shows an error with a retry that can recover to real data', async () => {
@@ -112,8 +127,11 @@ describe('PublicationsPage', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('We could not load the publications catalog.');
     expect(
-      screen.queryByText(/Unseen Influence: Computational Propaganda/i),
-    ).not.toBeInTheDocument();
+      screen.getByRole('heading', { name: 'Curated reference bibliography' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Unseen Influence: Computational Propaganda/i),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
@@ -122,5 +140,63 @@ describe('PublicationsPage', () => {
     });
     expect(getPublications).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('filters the live catalog by year', async () => {
+    const user = userEvent.setup();
+    jest.mocked(getPublications).mockResolvedValue([publication, olderWorkshop]);
+
+    render(<PublicationsPage />);
+    await screen.findByText('A real catalog publication');
+
+    await user.click(screen.getByRole('button', { name: /All years/i }));
+    await user.click(screen.getByRole('menuitem', { name: '2025' }));
+    await user.keyboard('{Escape}');
+
+    expect(screen.getByText('An older workshop publication')).toBeInTheDocument();
+    expect(screen.queryByText('A real catalog publication')).not.toBeInTheDocument();
+    expect(screen.getByText('Showing 1 publication (filtered)')).toBeInTheDocument();
+  });
+
+  it('filters the live catalog by publication type', async () => {
+    const user = userEvent.setup();
+    jest.mocked(getPublications).mockResolvedValue([publication, olderWorkshop]);
+
+    render(<PublicationsPage />);
+    await screen.findByText('A real catalog publication');
+
+    await user.click(screen.getByRole('button', { name: /All types/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Workshop' }));
+    await user.keyboard('{Escape}');
+
+    expect(screen.getByText('An older workshop publication')).toBeInTheDocument();
+    expect(screen.queryByText('A real catalog publication')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes filtered no-results from an empty catalog and resets filters', async () => {
+    const user = userEvent.setup();
+    jest.mocked(getPublications).mockResolvedValue([publication, olderWorkshop]);
+
+    render(<PublicationsPage />);
+    await screen.findByText('A real catalog publication');
+
+    await user.click(screen.getByRole('button', { name: /All types/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Conference' }));
+    await user.keyboard('{Escape}');
+
+    expect(
+      screen.getByRole('heading', { name: 'No publications match your filters' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'No publications available' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear all filters' }));
+
+    expect(screen.getByText('A real catalog publication')).toBeInTheDocument();
+    expect(screen.getByText('An older workshop publication')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'No publications match your filters' }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -42,7 +42,7 @@ describe('GET /api/publications', () => {
 
     const response = await GET(
       new Request(
-        'http://localhost/api/publications?project=JUDDGES&year=2026&status=published&type=journal',
+        'http://localhost/api/publications?project=JuDDGES&year=2026&status=published&type=journal',
       ),
     );
 
@@ -50,7 +50,7 @@ describe('GET /api/publications', () => {
     await expect(response.json()).resolves.toEqual(catalog);
     expect(createClient).not.toHaveBeenCalled();
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://backend.test/publications?project=JUDDGES&year=2026&status=published&type=journal',
+      'http://backend.test/publications?project=JuDDGES&year=2026&status=published&type=journal',
       {
         headers: {
           'X-API-Key': 'test-api-key',

@@ -2,7 +2,10 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { PublicationCard } from "@/components/publications/publication-card";
-import { sortPublications } from "@/lib/data/publications";
+import {
+ publications as referencePublications,
+ sortPublications,
+} from "@/lib/data/publications";
 import { PublicationType, PublicationWithResources } from "@/types/publication";
 import { DropdownButton } from "@/lib/styles/components";
 import {
@@ -29,6 +32,49 @@ type FilterYear = number |"all";
 type FilterType = PublicationType |"all";
 type SortOption ="date"|"title";
 type CatalogStatus = "loading" | "success" | "error";
+
+function ReferenceBibliography() {
+ const sortedReferences = sortPublications(referencePublications);
+
+ return (
+ <section className="mt-16" aria-labelledby="reference-bibliography-heading">
+ <Eyebrow as="p" tone="gold" className="mb-3">Editorial reference collection</Eyebrow>
+ <Headline
+ id="reference-bibliography-heading"
+ as="h2"
+ size="sm"
+ className="mb-4"
+ >
+ Curated reference bibliography
+ </Headline>
+ <p className="mb-8 max-w-3xl leading-relaxed text-[color:var(--ink-soft)]">
+ This bibliography is maintained editorially and displayed separately from the live catalog above.
+ Its entries are reference material, not API results or fallback data.
+ </p>
+ <div className="grid grid-cols-1 gap-px border border-[color:var(--rule)] bg-[color:var(--rule)] md:grid-cols-2">
+ {sortedReferences.map((publication) => (
+ <article
+ key={publication.id}
+ className="bg-[color:var(--parchment)] p-5 sm:p-6"
+ >
+ <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[color:var(--oxblood)]">
+ {publication.year} · {publication.type}
+ </p>
+ <h3 className="mb-3 font-serif text-2xl leading-tight text-[color:var(--ink)]">
+ {publication.title}
+ </h3>
+ <p className="mb-2 text-sm text-[color:var(--ink-soft)]">
+ {publication.authors.map((author) => author.name).join(", ")}
+ </p>
+ <p className="text-sm italic text-[color:var(--ink-soft)]">
+ {publication.venue}
+ </p>
+ </article>
+ ))}
+ </div>
+ </section>
+ );
+}
 
 export default function PublicationsPage() {
  const { user } = useAuth();
@@ -245,6 +291,8 @@ export default function PublicationsPage() {
  </div>
  </>
  )}
+
+ <ReferenceBibliography />
 
  {/* Footer note */}
  <div className="mt-12 border-t border-[color:var(--rule)] pt-6 text-center text-sm text-[color:var(--ink-soft)]">
