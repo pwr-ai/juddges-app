@@ -20,6 +20,28 @@ type ProxyOptions = {
   transformBody?: (body: unknown) => unknown;
 };
 
+type AuthenticationResult =
+  | {
+      ok: true;
+      accessToken: string;
+      apiKey: string;
+      userId: string;
+    }
+  | {
+      ok: false;
+      response: NextResponse;
+    };
+
+type JsonRequestResult =
+  | { ok: true; body: unknown }
+  | { ok: false; response: NextResponse };
+
+type UpstreamAbort = {
+  controller: AbortController;
+  cleanup: () => void;
+  stopTimeout: () => void;
+};
+
 function jsonResponse(
   body: unknown,
   status: number,
@@ -36,12 +58,7 @@ function jsonResponse(
 }
 
 async function parseJsonResponse(response: Response): Promise<unknown | undefined> {
-  let text: string;
-  try {
-    text = await response.text();
-  } catch {
-    return undefined;
-  }
+  const text = await response.text();
   if (!text.trim()) return undefined;
 
   try {
@@ -49,6 +66,83 @@ async function parseJsonResponse(response: Response): Promise<unknown | undefine
   } catch {
     return undefined;
   }
+}
+
+async function authenticateRequest(
+  request: NextRequest,
+): Promise<AuthenticationResult> {
+  const supabase = await createClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user?.id) {
+    return {
+      ok: false,
+      response: jsonResponse({ error: 'Not authenticated' }, 401),
+    };
+  }
+
+  const { data: sessionData, error: sessionError } =
+    await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (sessionError || !accessToken) {
+    return {
+      ok: false,
+      response: jsonResponse({ error: 'Not authenticated' }, 401),
+    };
+  }
+
+  const apiKey = process.env.BACKEND_API_KEY;
+  if (!apiKey) {
+    routeLogger.error('BACKEND_API_KEY is not configured', undefined, {
+      path: request.nextUrl.pathname,
+    });
+    return {
+      ok: false,
+      response: jsonResponse({ error: 'Backend service is not configured' }, 503),
+    };
+  }
+
+  return {
+    ok: true,
+    accessToken,
+    apiKey,
+    userId: userData.user.id,
+  };
+}
+
+async function readJsonRequest(request: NextRequest): Promise<JsonRequestResult> {
+  try {
+    const rawBody = await request.text();
+    if (!rawBody.trim()) throw new SyntaxError('Empty JSON body');
+    return { ok: true, body: JSON.parse(rawBody) as unknown };
+  } catch {
+    return {
+      ok: false,
+      response: jsonResponse({ error: 'Invalid JSON body' }, 400),
+    };
+  }
+}
+
+function createUpstreamAbort(request: NextRequest): UpstreamAbort {
+  const controller = new AbortController();
+  const cancelUpstream = (): void => {
+    controller.abort(
+      request.signal.reason ?? new DOMException('Client disconnected', 'AbortError'),
+    );
+  };
+  request.signal.addEventListener('abort', cancelUpstream, { once: true });
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException('Backend service timed out', 'TimeoutError'));
+  }, UPSTREAM_TIMEOUT_MS);
+  const stopTimeout = (): void => clearTimeout(timeout);
+
+  return {
+    controller,
+    stopTimeout,
+    cleanup: () => {
+      stopTimeout();
+      request.signal.removeEventListener('abort', cancelUpstream);
+    },
+  };
 }
 
 function isNamedError(error: unknown, name: string): boolean {
@@ -74,52 +168,19 @@ export async function proxyAuthenticatedJson(
   options: ProxyOptions,
 ): Promise<NextResponse> {
   try {
-    const supabase = await createClient();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user?.id) {
-      return jsonResponse({ error: 'Not authenticated' }, 401);
-    }
+    const authentication = await authenticateRequest(request);
+    if (!authentication.ok) return authentication.response;
+    const { accessToken, apiKey, userId } = authentication;
 
-    const { data: sessionData, error: sessionError } =
-      await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (sessionError || !accessToken) {
-      return jsonResponse({ error: 'Not authenticated' }, 401);
-    }
-
-    const apiKey = process.env.BACKEND_API_KEY;
-    if (!apiKey) {
-      routeLogger.error('BACKEND_API_KEY is not configured', undefined, {
-        path: request.nextUrl.pathname,
-      });
-      return jsonResponse({ error: 'Backend service is not configured' }, 503);
-    }
-
-    let body: unknown;
-    try {
-      const rawBody = await request.text();
-      if (!rawBody.trim()) throw new SyntaxError('Empty JSON body');
-      body = JSON.parse(rawBody) as unknown;
-    } catch {
-      return jsonResponse({ error: 'Invalid JSON body' }, 400);
-    }
+    const jsonRequest = await readJsonRequest(request);
+    if (!jsonRequest.ok) return jsonRequest.response;
+    const { body } = jsonRequest;
 
     if (request.signal.aborted) {
       return jsonResponse({ error: 'Request was cancelled' }, 499);
     }
 
-    const upstreamController = new AbortController();
-    const cancelUpstream = (): void => {
-      upstreamController.abort(
-        request.signal.reason ?? new DOMException('Client disconnected', 'AbortError'),
-      );
-    };
-    request.signal.addEventListener('abort', cancelUpstream, { once: true });
-    const timeout = setTimeout(() => {
-      upstreamController.abort(
-        new DOMException('Backend service timed out', 'TimeoutError'),
-      );
-    }, UPSTREAM_TIMEOUT_MS);
+    const upstreamAbort = createUpstreamAbort(request);
 
     try {
       const backendUrl = getBackendUrl().replace(/\/$/, '');
@@ -131,12 +192,12 @@ export async function proxyAuthenticatedJson(
           'Content-Type': 'application/json',
           'X-API-Key': apiKey,
           'X-RateLimit-Identity': createHash('sha256')
-            .update(userData.user.id)
+            .update(userId)
             .digest('hex'),
         },
         body: JSON.stringify(options.transformBody?.(body) ?? body),
         cache: 'no-store',
-        signal: upstreamController.signal,
+        signal: upstreamAbort.controller.signal,
       });
 
       const parsedBody = await parseJsonResponse(upstream);
@@ -177,7 +238,7 @@ export async function proxyAuthenticatedJson(
     } catch (error) {
       if (
         isNamedError(error, 'TimeoutError') ||
-        isNamedError(upstreamController.signal.reason, 'TimeoutError')
+        isNamedError(upstreamAbort.controller.signal.reason, 'TimeoutError')
       ) {
         return jsonResponse({ error: 'Backend service timed out' }, 504);
       }
@@ -189,11 +250,146 @@ export async function proxyAuthenticatedJson(
       });
       return jsonResponse({ error: 'Backend service is unavailable' }, 503);
     } finally {
-      clearTimeout(timeout);
-      request.signal.removeEventListener('abort', cancelUpstream);
+      upstreamAbort.cleanup();
     }
   } catch (error) {
     routeLogger.error('Authenticated AI proxy failed', error, {
+      path: request.nextUrl.pathname,
+    });
+    return jsonResponse({ error: 'Backend service is unavailable' }, 503);
+  }
+}
+
+export async function proxyAuthenticatedStream(
+  request: NextRequest,
+  options: ProxyOptions,
+): Promise<NextResponse> {
+  try {
+    const authentication = await authenticateRequest(request);
+    if (!authentication.ok) return authentication.response;
+    const { accessToken, apiKey, userId } = authentication;
+
+    const jsonRequest = await readJsonRequest(request);
+    if (!jsonRequest.ok) return jsonRequest.response;
+    const { body } = jsonRequest;
+
+    if (request.signal.aborted) {
+      return jsonResponse({ error: 'Request was cancelled' }, 499);
+    }
+
+    const upstreamAbort = createUpstreamAbort(request);
+
+    try {
+      const backendUrl = getBackendUrl().replace(/\/$/, '');
+      const upstream = await fetch(`${backendUrl}${options.upstreamPath}`, {
+        method: 'POST',
+        headers: {
+          Accept: 'text/event-stream',
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+          'X-RateLimit-Identity': createHash('sha256')
+            .update(userId)
+            .digest('hex'),
+        },
+        body: JSON.stringify(options.transformBody?.(body) ?? body),
+        cache: 'no-store',
+        signal: upstreamAbort.controller.signal,
+      });
+
+      upstreamAbort.stopTimeout();
+
+      if (upstream.status >= 500) {
+        upstreamAbort.cleanup();
+        routeLogger.error('AI stream backend returned a server error', undefined, {
+          path: request.nextUrl.pathname,
+          status: upstream.status,
+        });
+        return jsonResponse(
+          { error: 'Backend service is unavailable' },
+          upstream.status,
+          upstream.headers,
+        );
+      }
+
+      if (!upstream.ok) {
+        const parsedBody = await parseJsonResponse(upstream);
+        upstreamAbort.cleanup();
+        const semanticBody = semanticErrorBody(parsedBody);
+        if (SEMANTIC_ERROR_STATUSES.has(upstream.status) && semanticBody !== undefined) {
+          return jsonResponse(semanticBody, upstream.status, upstream.headers);
+        }
+        return jsonResponse(
+          { error: 'Backend rejected the request' },
+          upstream.status,
+          upstream.headers,
+        );
+      }
+
+      if (!upstream.body) {
+        upstreamAbort.cleanup();
+        return jsonResponse({ error: 'Backend returned an invalid response' }, 502);
+      }
+
+      const upstreamReader = upstream.body.getReader();
+      let finished = false;
+      const stream = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          try {
+            const { done, value } = await upstreamReader.read();
+            if (done) {
+              finished = true;
+              upstreamAbort.cleanup();
+              controller.close();
+              return;
+            }
+            controller.enqueue(value);
+          } catch (error) {
+            finished = true;
+            upstreamAbort.cleanup();
+            controller.error(error);
+          }
+        },
+        async cancel(reason) {
+          if (!finished) {
+            finished = true;
+            upstreamAbort.controller.abort(reason);
+            upstreamAbort.cleanup();
+            await upstreamReader.cancel(reason);
+          }
+        },
+      });
+
+      const headers = new Headers({ 'Cache-Control': 'no-store' });
+      const contentType = upstream.headers.get('content-type');
+      if (contentType) headers.set('Content-Type', contentType);
+      for (const name of SAFE_RESPONSE_HEADERS) {
+        const value = upstream.headers.get(name);
+        if (value) headers.set(name, value);
+      }
+
+      return new NextResponse(stream, {
+        status: upstream.status,
+        headers,
+      });
+    } catch (error) {
+      upstreamAbort.cleanup();
+      if (
+        isNamedError(error, 'TimeoutError') ||
+        isNamedError(upstreamAbort.controller.signal.reason, 'TimeoutError')
+      ) {
+        return jsonResponse({ error: 'Backend service timed out' }, 504);
+      }
+      if (request.signal.aborted) {
+        return jsonResponse({ error: 'Request was cancelled' }, 499);
+      }
+      routeLogger.error('AI stream backend request failed', error, {
+        path: request.nextUrl.pathname,
+      });
+      return jsonResponse({ error: 'Backend service is unavailable' }, 503);
+    }
+  } catch (error) {
+    routeLogger.error('Authenticated AI stream proxy failed', error, {
       path: request.nextUrl.pathname,
     });
     return jsonResponse({ error: 'Backend service is unavailable' }, 503);

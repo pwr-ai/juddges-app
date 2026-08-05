@@ -32,6 +32,7 @@ import * as topicModelingRoute from '@/app/api/topic-modeling/analyze/route';
 type RouteModule = {
   POST(request: NextRequest): Promise<Response>;
   GET(request: NextRequest): Response | Promise<Response>;
+  OPTIONS(request: NextRequest): Response | Promise<Response>;
 };
 
 type RouteCase = {
@@ -106,6 +107,10 @@ function authenticate(): void {
     data: { session: { access_token: 'verified-access-token' } },
     error: null,
   });
+}
+
+async function loadQaStreamRoute() {
+  return import('@/app/api/qa/stream/route').catch(() => null);
 }
 
 describe('authenticated AI BFF contracts', () => {
@@ -283,6 +288,46 @@ describe('authenticated AI BFF contracts', () => {
     expect(await response.json()).toEqual({ error: 'Backend service timed out' });
   });
 
+  it('maps a timeout while reading an upstream JSON body to 504', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      text: jest.fn().mockRejectedValue(
+        new DOMException('body read timed out', 'TimeoutError'),
+      ),
+    });
+
+    const response = await qaRoute.POST(request(routes[0]));
+
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({ error: 'Backend service timed out' });
+  });
+
+  it('maps downstream cancellation while reading an upstream JSON body to 499', async () => {
+    const controller = new AbortController();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+      text: jest.fn().mockImplementation(() => {
+        controller.abort(new DOMException('client disconnected', 'AbortError'));
+        return Promise.reject(controller.signal.reason);
+      }),
+    });
+    const cancelledDuringRead = new NextRequest(routes[0].url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(routes[0].requestBody),
+      signal: controller.signal,
+    });
+
+    const response = await qaRoute.POST(cancelledDuringRead);
+
+    expect(response.status).toBe(499);
+    expect(await response.json()).toEqual({ error: 'Request was cancelled' });
+  });
+
   it.each(routes)('$name propagates downstream cancellation without contacting a live upstream', async (routeCase) => {
     const controller = new AbortController();
     controller.abort(new DOMException('client disconnected', 'AbortError'));
@@ -306,6 +351,17 @@ describe('authenticated AI BFF contracts', () => {
   it.each(routes)('$name returns an explicit 405 contract for unsupported methods', async (routeCase) => {
     const response = await routeCase.route.GET(
       new NextRequest(routeCase.url, { method: 'GET' }),
+    );
+
+    expect(response.status).toBe(405);
+    expect(await response.json()).toEqual({ error: 'Method not allowed' });
+    expect(response.headers.get('allow')).toBe('POST');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(routes)('$name returns 405 for OPTIONS instead of Next automatic 204', async (routeCase) => {
+    const response = await routeCase.route.OPTIONS(
+      new NextRequest(routeCase.url, { method: 'OPTIONS' }),
     );
 
     expect(response.status).toBe(405);
@@ -345,6 +401,117 @@ describe('authenticated AI BFF contracts', () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'API route not found' });
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  describe('/api/qa/stream', () => {
+    it('rejects unauthenticated callers before opening a stream', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+      const streamRoute = await loadQaStreamRoute();
+      expect(streamRoute).not.toBeNull();
+
+      const response = await streamRoute!.POST(
+        new NextRequest('http://localhost/api/qa/stream', {
+          method: 'POST',
+          body: JSON.stringify({ question: 'What happened?' }),
+        }),
+      );
+
+      expect(response.status).toBe(401);
+      expect(await response.json()).toEqual({ error: 'Not authenticated' });
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('forwards a verified LangServe request and streams only safe headers', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue(
+        new Response('event: data\ndata: {"answer":"yes"}\n\n', {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'X-RateLimit-Remaining': '9',
+            'X-Internal-Trace': 'secret',
+            'Set-Cookie': 'secret=true',
+          },
+        }),
+      );
+      const streamRoute = await loadQaStreamRoute();
+      expect(streamRoute).not.toBeNull();
+
+      const response = await streamRoute!.POST(
+        new NextRequest('http://localhost/api/qa/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: 'What happened?' }),
+        }),
+      );
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://backend.test/qa/stream',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer verified-access-token',
+            'X-API-Key': 'server-api-key',
+          }),
+          body: JSON.stringify({
+            input: {
+              question: 'What happened?',
+              max_documents: 0,
+              score_threshold: 0,
+              chat_history: [],
+            },
+            config: {},
+            kwargs: {},
+          }),
+          signal: expect.any(AbortSignal),
+        }),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('text/event-stream');
+      expect(response.headers.get('x-ratelimit-remaining')).toBe('9');
+      expect(response.headers.get('x-internal-trace')).toBeNull();
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(await response.text()).toContain('data: {"answer":"yes"}');
+    });
+
+    it('maps stream connection timeouts to 504', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(
+        new DOMException('stream timed out', 'TimeoutError'),
+      );
+      const streamRoute = await loadQaStreamRoute();
+      expect(streamRoute).not.toBeNull();
+
+      const response = await streamRoute!.POST(
+        new NextRequest('http://localhost/api/qa/stream', {
+          method: 'POST',
+          body: JSON.stringify({ question: 'What happened?' }),
+        }),
+      );
+
+      expect(response.status).toBe(504);
+      expect(await response.json()).toEqual({ error: 'Backend service timed out' });
+    });
+
+    it('sanitizes upstream stream 5xx errors', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue(
+        new Response('database password=secret', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain', 'Retry-After': '10' },
+        }),
+      );
+      const streamRoute = await loadQaStreamRoute();
+      expect(streamRoute).not.toBeNull();
+
+      const response = await streamRoute!.POST(
+        new NextRequest('http://localhost/api/qa/stream', {
+          method: 'POST',
+          body: JSON.stringify({ question: 'What happened?' }),
+        }),
+      );
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'Backend service is unavailable' });
+      expect(response.headers.get('retry-after')).toBe('10');
+    });
   });
 
 });
