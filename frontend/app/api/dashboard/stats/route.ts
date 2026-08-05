@@ -20,7 +20,15 @@ export async function GET() {
     if (!response.ok) {
       const errorText = await response.text();
       logger.error("[Dashboard Stats] Error response: ", errorText);
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      return new Response(errorText, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: {
+          "Content-Type":
+            response.headers.get("Content-Type") || "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      });
     }
 
     const data = await response.json();
@@ -33,30 +41,12 @@ export async function GET() {
     });
   } catch (error) {
     logger.error("[Dashboard Stats] Error fetching dashboard stats: ", error);
-    // Return default values on error
-    const defaultData = {
-      total_judgments: 0,
-      jurisdictions: { PL: 0, UK: 0 },
-      court_levels: [],
-      top_courts: [],
-      decisions_per_year: [],
-      date_range: { oldest: null, newest: null },
-      case_types: [],
-      decision_types: [],
-      data_completeness: {
-        embeddings_pct: 0,
-        structure_extraction_pct: 0,
-        deep_analysis_pct: 0,
-        with_summary_pct: 0,
-        with_keywords_pct: 0,
-        with_legal_topics_pct: 0,
-        with_cited_legislation_pct: 0,
-        avg_text_length_chars: 0,
+    return NextResponse.json(
+      { detail: "Dashboard statistics service is unavailable" },
+      {
+        status: 502,
+        headers: { "Cache-Control": "no-store" },
       },
-      top_legal_domains: [],
-      top_keywords: [],
-      computed_at: null,
-    };
-    return NextResponse.json(defaultData);
+    );
   }
 }

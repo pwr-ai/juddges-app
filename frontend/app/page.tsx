@@ -225,7 +225,13 @@ export default function HomePage(): React.JSX.Element {
         }
       : null;
 
-    return <LandingPage stats={landingStats} statsLoading={statsLoading} />;
+    return (
+      <LandingPage
+        stats={landingStats}
+        statsLoading={statsLoading}
+        statsError={statsError}
+      />
+    );
   }
 
   // -- Derived figures for the featured stats card ---------------------------
