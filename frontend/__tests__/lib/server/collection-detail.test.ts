@@ -17,7 +17,12 @@ const COLLECTION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 function mockAuth(
   userId: string | null = USER_ID,
-  error: { message: string; code?: string; status?: number } | null =
+  error: {
+    message: string;
+    code?: string;
+    name?: string;
+    status?: number;
+  } | null =
     userId ? null : { message: "Auth session missing!", code: "session_not_found" }
 ) {
   (createClient as jest.Mock).mockResolvedValue({
@@ -61,6 +66,75 @@ describe("collection detail server loader", () => {
 
   it("returns unauthenticated when no verified user exists", async () => {
     mockAuth(null);
+
+    await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
+      kind: "unauthenticated",
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["bad JWT", "bad_jwt", 401],
+    ["expired session", "session_expired", 400],
+    ["already-used refresh token", "refresh_token_already_used", 400],
+  ])(
+    "treats a %s credential failure as unauthenticated",
+    async (_label, code, status) => {
+      mockAuth(null, {
+        message: "stored credentials are no longer valid",
+        code,
+        status,
+      });
+
+      await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
+        kind: "unauthenticated",
+      });
+      expect(global.fetch).not.toHaveBeenCalled();
+    }
+  );
+
+  it("keeps a retryable auth fetch failure available for retry", async () => {
+    mockAuth(null, {
+      message: "fetch failed",
+      status: 0,
+      name: "AuthRetryableFetchError",
+    });
+
+    await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
+      kind: "unavailable",
+      status: 503,
+      reason: "local_auth",
+    });
+  });
+
+  it("maps a thrown auth network failure to retryable 503", async () => {
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockRejectedValue(new TypeError("fetch failed")),
+      },
+    });
+
+    await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
+      kind: "unavailable",
+      status: 503,
+      reason: "local_auth",
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("treats a session cleared after user lookup as unauthenticated", async () => {
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: USER_ID } },
+          error: null,
+        }),
+        getSession: jest.fn().mockResolvedValue({
+          data: { session: null },
+          error: null,
+        }),
+      },
+    });
 
     await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
       kind: "unauthenticated",

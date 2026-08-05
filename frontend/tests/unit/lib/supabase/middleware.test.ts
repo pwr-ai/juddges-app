@@ -84,6 +84,71 @@ describe("Supabase middleware retired routes", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["bad_jwt", 401],
+    ["session_expired", 400],
+    ["refresh_token_already_used", 400],
+  ])(
+    "redirects stale-session error %s through the normal sign-in lifecycle",
+    async (code, status) => {
+      mockGetUser.mockResolvedValue({
+        data: { user: null },
+        error: {
+          name: "AuthApiError",
+          message: "stored credentials are no longer valid",
+          code,
+          status,
+        },
+      });
+
+      const response = await updateSession(
+        new NextRequest("http://localhost/collections/collection-1?tab=documents")
+      );
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(
+        "http://localhost/auth/login?next=%2Fcollections%2Fcollection-1%3Ftab%3Ddocuments"
+      );
+      expect(global.fetch).not.toHaveBeenCalled();
+    }
+  );
+
+  it("keeps AuthRetryableFetchError on the retryable 503 path", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        name: "AuthRetryableFetchError",
+        message: "network request failed",
+        status: 0,
+      },
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1")
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("redirects when the session is cleared after a successful user lookup", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1")
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/auth/login?next=%2Fcollections%2Fcollection-1"
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("uses the same 404 for an unexpected other-user collection payload", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1" } },

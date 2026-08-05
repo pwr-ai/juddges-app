@@ -83,6 +83,13 @@ describe("collection detail production status contract", () => {
   it("returns real 404 responses for missing, hidden, and invalid collection IDs", async () => {
     const authServer = createServer((request, response) => {
       if (request.url === "/auth/v1/user") {
+        if (request.headers.authorization === "Bearer bad-jwt-access-token") {
+          response.writeHead(401, { "content-type": "application/json" });
+          response.end(
+            JSON.stringify({ message: "JWT expired", code: "bad_jwt" })
+          );
+          return;
+        }
         if (
           request.headers.authorization ===
           "Bearer auth-service-failure-access-token"
@@ -276,6 +283,13 @@ describe("collection detail production status contract", () => {
           redirect: "manual",
         }
       );
+      const staleCredentials = await fetch(
+        `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
+        {
+          headers: { cookie: authCookie("bad-jwt-access-token") },
+          redirect: "manual",
+        }
+      );
       const upstreamResponses = await Promise.all(
         [
           [UPSTREAM_401_ID, 401],
@@ -308,6 +322,13 @@ describe("collection detail production status contract", () => {
       expect(post.status).toBe(405);
       expect(anonymous.status).toBe(307);
       expect(authUnavailable.status).toBe(503);
+      expect(staleCredentials.status).toBe(307);
+      expect(
+        new URL(staleCredentials.headers.get("location") as string).pathname +
+          new URL(staleCredentials.headers.get("location") as string).search
+      ).toBe(
+        `/auth/login?next=%2Fcollections%2F${OWN_COLLECTION_ID}`
+      );
       expect(upstreamResponses).toEqual([
         { actual: 401, expected: 401 },
         { actual: 403, expected: 403 },

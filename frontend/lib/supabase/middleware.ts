@@ -5,7 +5,7 @@ import { getBackendUrl } from "@/app/api/utils/backend-url";
 import {
   COLLECTION_SNAPSHOT_HEADER,
   encodeCollectionSnapshot,
-  isMissingAuthSessionError,
+  isUnauthenticatedAuthError,
   isValidCollectionId,
 } from "@/lib/collections/detail-contract";
 import type { CollectionWithDocuments } from "@/types/collection";
@@ -106,6 +106,20 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
+function loginRedirectResponse(
+  request: NextRequest,
+  sessionResponse: NextResponse
+): NextResponse {
+  const url = request.nextUrl.clone();
+  const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
+  url.pathname = "/auth/login";
+  url.search = "";
+  if (nextTarget && nextTarget !== "/") {
+    url.searchParams.set("next", nextTarget);
+  }
+  return copySessionCookies(sessionResponse, NextResponse.redirect(url));
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = nextSessionResponse(request);
 
@@ -146,13 +160,9 @@ export async function updateSession(request: NextRequest) {
 
     if (!error) {
       user = authUser;
-    } else if (
-      error.message !== "Auth session missing!" &&
-      !error.message.includes("refresh_token_not_found")
-    ) {
-      // Surface unexpected auth failures (expired tokens that won't refresh,
-      // project-ref mismatches, network errors). Benign anonymous-user errors
-      // are still ignored to avoid console spam.
+    } else if (!isUnauthenticatedAuthError(error)) {
+      // Surface retryable auth-service and network failures. Stale or invalid
+      // credentials follow the normal signed-out lifecycle without log noise.
       logger.warn("Auth session lookup failed in middleware", {
         path: request.nextUrl.pathname,
         message: error.message,
@@ -169,7 +179,7 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     authLookupError &&
-    !isMissingAuthSessionError(authLookupError) &&
+    !isUnauthenticatedAuthError(authLookupError) &&
     !isPublicPath(request.nextUrl.pathname)
   ) {
     return collectionStatusResponse(503, supabaseResponse);
@@ -191,7 +201,7 @@ export async function updateSession(request: NextRequest) {
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) {
-      return collectionStatusResponse(503, supabaseResponse);
+      return loginRedirectResponse(request, supabaseResponse);
     }
     if (accessToken) {
       try {
@@ -241,14 +251,7 @@ export async function updateSession(request: NextRequest) {
     // Preserve the originally-requested path (and query) so the login form
     // can return the user there after a successful sign-in instead of
     // dumping them on `/`.
-    const url = request.nextUrl.clone();
-    const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
-    url.pathname = "/auth/login";
-    url.search = "";
-    if (nextTarget && nextTarget !== "/") {
-      url.searchParams.set("next", nextTarget);
-    }
-    return NextResponse.redirect(url);
+    return loginRedirectResponse(request, supabaseResponse);
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

@@ -86,6 +86,27 @@ describe("GET /api/collections/[id]", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns 401 when Supabase rejects a stale JWT", async () => {
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: {
+            name: "AuthApiError",
+            message: "JWT expired",
+            code: "bad_jwt",
+            status: 401,
+          },
+        }),
+      },
+    });
+
+    const response = await GET(makeGetRequest(COLLECTION_ID));
+
+    expect(response.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when Supabase authentication lookup fails unexpectedly", async () => {
     (createClient as jest.Mock).mockResolvedValue({
       auth: {

@@ -2,7 +2,7 @@ import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import type { CollectionWithDocuments } from "@/types/collection";
 import {
-  isMissingAuthSessionError,
+  isUnauthenticatedAuthError,
   isValidCollectionId,
 } from "@/lib/collections/detail-contract";
 
@@ -74,21 +74,38 @@ export async function loadCollectionDetail(
   }
 
   const supabase = await createClient();
+  let userLookup: Awaited<ReturnType<typeof supabase.auth.getUser>>;
+  try {
+    userLookup = await supabase.auth.getUser();
+  } catch {
+    return { kind: "unavailable", status: 503, reason: "local_auth" };
+  }
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
-  if (userError && !isMissingAuthSessionError(userError)) {
+  } = userLookup;
+  if (userError && !isUnauthenticatedAuthError(userError)) {
     return { kind: "unavailable", status: 503, reason: "local_auth" };
   }
   if (!user) {
     return { kind: "unauthenticated" };
   }
 
-  const { data: sessionData } = await supabase.auth.getSession();
+  let sessionLookup: Awaited<ReturnType<typeof supabase.auth.getSession>>;
+  try {
+    sessionLookup = await supabase.auth.getSession();
+  } catch {
+    return { kind: "unavailable", status: 503, reason: "local_auth" };
+  }
+  if (sessionLookup.error) {
+    return isUnauthenticatedAuthError(sessionLookup.error)
+      ? { kind: "unauthenticated" }
+      : { kind: "unavailable", status: 503, reason: "local_auth" };
+  }
+  const { data: sessionData } = sessionLookup;
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) {
-    return { kind: "unavailable", status: 503, reason: "local_auth" };
+    return { kind: "unauthenticated" };
   }
 
   const params = new URLSearchParams();
