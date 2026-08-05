@@ -18,7 +18,8 @@ export type ProductionChildResult = {
   output: string;
   timedOut: boolean;
   exited: boolean;
-  closed: true;
+  closed: boolean;
+  closeTimedOut: boolean;
   spawnError?: Error;
 };
 
@@ -29,9 +30,11 @@ export type ProductionChild = {
   label: string;
   timeoutMs: number;
   terminationGraceMs: number;
+  closeMarginMs: number;
   stopPromise?: Promise<void>;
   isClosed: () => boolean;
   detached: boolean;
+  forceCloseAfterTimeout: () => void;
 };
 
 export type SpawnProductionChildOptions = Omit<
@@ -43,6 +46,7 @@ export type SpawnProductionChildOptions = Omit<
   label: string;
   timeoutMs: number;
   terminationGraceMs?: number;
+  closeMarginMs?: number;
 };
 
 function signalChild(handle: ProductionChild, signal: NodeJS.Signals): void {
@@ -67,6 +71,7 @@ function signalChild(handle: ProductionChild, signal: NodeJS.Signals): void {
 
 async function waitForCompletionOrGrace(
   handle: ProductionChild,
+  waitMs: number,
 ): Promise<boolean> {
   let graceTimer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -75,7 +80,7 @@ async function waitForCompletionOrGrace(
       new Promise<false>((resolve) => {
         graceTimer = setTimeout(
           () => resolve(false),
-          handle.terminationGraceMs,
+          waitMs,
         );
         graceTimer.unref();
       }),
@@ -97,11 +102,19 @@ export async function stopProductionChild(
       // stdio pipes open. Signal the detached process group until `close`, not
       // merely until the direct child reports `exit`.
       signalChild(handle, "SIGTERM");
-      if (!(await waitForCompletionOrGrace(handle)) && !handle.isClosed()) {
+      if (
+        !(await waitForCompletionOrGrace(handle, handle.terminationGraceMs)) &&
+        !handle.isClosed()
+      ) {
         signalChild(handle, "SIGKILL");
       }
     }
-    // `close` follows `exit` after all stdio descriptors have closed.
+    if (
+      !handle.isClosed() &&
+      !(await waitForCompletionOrGrace(handle, handle.closeMarginMs))
+    ) {
+      handle.forceCloseAfterTimeout();
+    }
     await handle.completed;
   })();
   return handle.stopPromise;
@@ -126,6 +139,9 @@ export function spawnProductionChild(
   let exitSignal: NodeJS.Signals | null = null;
   let timedOut = false;
   let closed = false;
+  let closeTimedOut = false;
+  let completedResult = false;
+  let resolveCompleted: (result: ProductionChildResult) => void = () => undefined;
 
   child.stdout.on("data", (chunk) => {
     output += String(chunk);
@@ -134,7 +150,24 @@ export function spawnProductionChild(
     output += String(chunk);
   });
 
+  const finish = (didClose: boolean): void => {
+    if (completedResult) return;
+    completedResult = true;
+    clearTimeout(timeoutTimer);
+    resolveCompleted({
+      code: exitCode,
+      signal: exitSignal,
+      output,
+      timedOut,
+      exited,
+      closed: didClose,
+      closeTimedOut,
+      spawnError,
+    });
+  };
+
   const completed = new Promise<ProductionChildResult>((resolve) => {
+    resolveCompleted = resolve;
     child.once("error", (error) => {
       spawnError = error;
     });
@@ -145,16 +178,9 @@ export function spawnProductionChild(
     });
     child.once("close", (code, signal) => {
       closed = true;
-      clearTimeout(timeoutTimer);
-      resolve({
-        code: exitCode ?? code,
-        signal: exitSignal ?? signal,
-        output,
-        timedOut,
-        exited,
-        closed: true,
-        spawnError,
-      });
+      exitCode ??= code;
+      exitSignal ??= signal;
+      finish(true);
     });
   });
 
@@ -166,8 +192,22 @@ export function spawnProductionChild(
     timeoutMs: options.timeoutMs,
     terminationGraceMs:
       options.terminationGraceMs ?? PRODUCTION_CHILD_TERMINATION_GRACE_MS,
+    closeMarginMs: options.closeMarginMs ?? PRODUCTION_CHILD_CLOSE_MARGIN_MS,
     isClosed: () => closed,
     detached,
+    forceCloseAfterTimeout: () => {
+      if (completedResult) return;
+      closeTimedOut = true;
+      child.stdin.destroy();
+      child.stdout.destroy();
+      child.stderr.destroy();
+      for (const stream of [child.stdin, child.stdout, child.stderr]) {
+        const unref = (stream as typeof stream & { unref?: () => void }).unref;
+        unref?.call(stream);
+      }
+      child.unref();
+      finish(false);
+    },
   };
   const timeoutTimer = setTimeout(() => {
     timedOut = true;

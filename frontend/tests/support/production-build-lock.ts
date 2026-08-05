@@ -25,6 +25,7 @@ export type ProductionBuildLockOptions = {
     onStaleEmptyLockDetected?: () => void | Promise<void>;
     onStaleEmptyLockRemoved?: () => void | Promise<void>;
     onLockDirectoryCreated?: () => void | Promise<void>;
+    onFreshLeaseObserved?: (leaseName: string) => void | Promise<void>;
   };
 };
 
@@ -57,6 +58,7 @@ async function removeStaleLock(
   onStaleLeaseMoved?: () => void | Promise<void>,
   onStaleEmptyLockDetected?: () => void | Promise<void>,
   onStaleEmptyLockRemoved?: () => void | Promise<void>,
+  onFreshLeaseObserved?: (leaseName: string) => void | Promise<void>,
 ): Promise<boolean> {
   let leaseName: string | undefined;
   try {
@@ -103,7 +105,10 @@ async function removeStaleLock(
     if (hasCode(error, "ENOENT")) return true;
     throw error;
   }
-  if (Date.now() - leaseStats.mtimeMs <= staleMs) return false;
+  if (Date.now() - leaseStats.mtimeMs <= staleMs) {
+    await onFreshLeaseObserved?.(leaseName);
+    return false;
+  }
 
   const stalePath = `${lockPath}.${leaseName}.stale-${randomUUID()}`;
   try {
@@ -142,7 +147,16 @@ export async function acquireProductionBuildLock(
   const leaseName = `${LEASE_PREFIX}${ownerToken}`;
   const leasePath = resolve(lockPath, leaseName);
 
+  const throwIfDeadlineReached = (): void => {
+    if (Date.now() - startedAt >= timeoutMs) {
+      throw new Error(
+        `Timed out waiting for production build lock at ${lockPath}`,
+      );
+    }
+  };
+
   for (;;) {
+    throwIfDeadlineReached();
     try {
       await mkdir(lockPath);
       await options.testHooks?.onLockDirectoryCreated?.();
@@ -160,6 +174,7 @@ export async function acquireProductionBuildLock(
         if (hasCode(error, "ENOENT")) {
           // A stale-lock reclaimer can remove the empty directory between our
           // mkdir and lease write. Restart acquisition instead of failing.
+          throwIfDeadlineReached();
           continue;
         }
         throw error;
@@ -194,17 +209,14 @@ export async function acquireProductionBuildLock(
         options.testHooks?.onStaleLeaseMoved,
         options.testHooks?.onStaleEmptyLockDetected,
         options.testHooks?.onStaleEmptyLockRemoved,
+        options.testHooks?.onFreshLeaseObserved,
       )
     ) {
       continue;
     }
 
     const elapsedMs = Date.now() - startedAt;
-    if (elapsedMs >= timeoutMs) {
-      throw new Error(
-        `Timed out waiting for production build lock at ${lockPath}`,
-      );
-    }
+    throwIfDeadlineReached();
     await new Promise((resolveDelay) =>
       setTimeout(
         resolveDelay,

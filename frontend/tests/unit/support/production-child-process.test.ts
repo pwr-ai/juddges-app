@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 
+import { once } from "node:events";
+
 import {
   runProductionChild,
   spawnProductionChild,
@@ -110,6 +112,55 @@ describe("production child process runner", () => {
         closed: true,
       });
       expect(handle.output()).toContain("descendant-stopped");
+    },
+  );
+
+  itOnPosix(
+    "bounds close waiting when an escaped descendant inherits stdio",
+    async () => {
+      const escapedScript = [
+        "process.on('SIGTERM', () => undefined)",
+        "process.send(process.pid)",
+        "setTimeout(() => process.exit(0), 500)",
+        "setInterval(() => undefined, 1000)",
+      ].join(";");
+      const parentScript = [
+        "const { spawn } = require('node:child_process')",
+        `const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(escapedScript)}], { detached: true, stdio: ['ignore', 'inherit', 'inherit', 'ipc'] })`,
+        "descendant.once('message', (pid) => { process.stdout.write(`escaped:${pid}`); descendant.disconnect(); descendant.unref(); process.exit(0) })",
+      ].join(";");
+      const handle = spawnProductionChild({
+        command: process.execPath,
+        args: ["-e", parentScript],
+        label: "exited parent with escaped descendant",
+        timeoutMs: 10_000,
+        terminationGraceMs: 20,
+        closeMarginMs: 20,
+      });
+
+      await waitForOutput(handle, "escaped:");
+      if (handle.child.exitCode === null) {
+        await once(handle.child, "exit");
+      }
+      expect(handle.isClosed()).toBe(false);
+      const escapedPid = Number(handle.output().match(/escaped:(\d+)/)?.[1]);
+      expect(escapedPid).toBeGreaterThan(0);
+
+      try {
+        await stopProductionChild(handle);
+        await expect(handle.completed).resolves.toMatchObject({
+          exited: true,
+          closeTimedOut: true,
+        });
+        expect(handle.child.stdout.destroyed).toBe(true);
+        expect(handle.child.stderr.destroyed).toBe(true);
+      } finally {
+        try {
+          process.kill(-escapedPid, "SIGKILL");
+        } catch (error) {
+          expect(error).toMatchObject({ code: "ESRCH" });
+        }
+      }
     },
   );
 

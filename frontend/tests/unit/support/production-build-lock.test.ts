@@ -97,15 +97,26 @@ describe("withProductionBuildLock", () => {
     await firstEntered;
 
     let secondEntered = false;
+    let signalFirstLeaseObserved: () => void = () => undefined;
+    const firstLeaseObserved = new Promise<void>((resolve) => {
+      signalFirstLeaseObserved = resolve;
+    });
     const second = withProductionBuildLock(
       async () => {
         secondEntered = true;
         return "second";
       },
-      { lockPath, timeoutMs: 1_000, pollIntervalMs: 5 },
+      {
+        lockPath,
+        timeoutMs: 1_000,
+        pollIntervalMs: 5,
+        testHooks: {
+          onFreshLeaseObserved: () => signalFirstLeaseObserved(),
+        },
+      },
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await firstLeaseObserved;
     expect(secondEntered).toBe(false);
 
     releaseFirst();
@@ -241,6 +252,10 @@ describe("withProductionBuildLock", () => {
     const newOwnerMayWrite = new Promise<void>((resolve) => {
       resumeNewOwnerWrite = resolve;
     });
+    let signalNewLeaseObserved: () => void = () => undefined;
+    const newLeaseObserved = new Promise<void>((resolve) => {
+      signalNewLeaseObserved = resolve;
+    });
 
     const staleReclaimer = acquireProductionBuildLock({
       lockPath,
@@ -256,6 +271,7 @@ describe("withProductionBuildLock", () => {
           signalReplacementRemoved();
           await reclaimerMayContinue;
         },
+        onFreshLeaseObserved: () => signalNewLeaseObserved(),
       },
     });
 
@@ -279,14 +295,7 @@ describe("withProductionBuildLock", () => {
         },
       });
 
-      await expect(
-        Promise.race([
-          newDirectoryCreated.then(() => "created" as const),
-          new Promise<"timed-out">((resolve) =>
-            setTimeout(() => resolve("timed-out"), 100),
-          ),
-        ]),
-      ).resolves.toBe("created");
+      await newDirectoryCreated;
 
       resumeStaleReclaimer();
       await replacementRemoved;
@@ -297,7 +306,7 @@ describe("withProductionBuildLock", () => {
       expect(newLeaseName).toMatch(/^lease-[0-9a-f-]+$/);
 
       resumeAfterReplacementRemoved();
-      await new Promise((resolve) => setTimeout(resolve, 25));
+      await newLeaseObserved;
       await expect(readdir(lockPath)).resolves.toEqual([newLeaseName]);
 
       await releaseNewOwner();
@@ -341,6 +350,10 @@ describe("withProductionBuildLock", () => {
       resumeTakeover = resolve;
     });
     let contenderAcquired = false;
+    let signalNewerLeaseObserved: () => void = () => undefined;
+    const newerLeaseObserved = new Promise<void>((resolve) => {
+      signalNewerLeaseObserved = resolve;
+    });
     const contender = acquireProductionBuildLock({
       lockPath,
       timeoutMs: 1_000,
@@ -351,27 +364,19 @@ describe("withProductionBuildLock", () => {
           signalStaleLeaseMoved();
           await takeoverMayResume;
         },
+        onFreshLeaseObserved: () => signalNewerLeaseObserved(),
       },
     }).then((release) => {
       contenderAcquired = true;
       return release;
     });
 
-    const firstEvent = await Promise.race([
-      staleLeaseMoved.then(() => "stale-moved" as const),
-      contender.then(() => "contender-acquired" as const),
-    ]);
-    if (firstEvent !== "stale-moved") {
-      await (await contender)();
-      await firstRelease();
-      expect(firstEvent).toBe("stale-moved");
-      return;
-    }
+    await staleLeaseMoved;
 
     await firstRelease();
     const newerRelease = await acquireProductionBuildLock({ lockPath });
     resumeTakeover();
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await newerLeaseObserved;
 
     expect(contenderAcquired).toBe(false);
     await expect(readdir(lockPath)).resolves.toEqual([
@@ -381,6 +386,85 @@ describe("withProductionBuildLock", () => {
     await newerRelease();
     const contenderRelease = await contender;
     await contenderRelease();
+  });
+
+  it("times out after repeated ENOENT initialization churn", async () => {
+    let now = 0;
+    const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+    let attempts = 0;
+
+    try {
+      const outcome = await acquireProductionBuildLock({
+        lockPath,
+        timeoutMs: 10,
+        staleMs: 60_000,
+        pollIntervalMs: 5,
+        testHooks: {
+          onLockDirectoryCreated: async () => {
+            attempts += 1;
+            now += 4;
+            if (attempts <= 3) {
+              await rm(lockPath, { recursive: true, force: true });
+            }
+          },
+        },
+      }).then(
+        async (release) => {
+          await release();
+          return "acquired" as const;
+        },
+        (error: unknown) => {
+          expect(error).toEqual(
+            new Error(`Timed out waiting for production build lock at ${lockPath}`),
+          );
+          return "timed-out" as const;
+        },
+      );
+
+      expect(outcome).toBe("timed-out");
+      expect(attempts).toBe(3);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("checks the deadline before retrying after stale-lock recovery", async () => {
+    await mkdir(lockPath);
+    await utimes(lockPath, new Date(0), new Date(0));
+    let now = 120_000;
+    const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => now);
+    let recovered = 0;
+
+    try {
+      const outcome = await acquireProductionBuildLock({
+        lockPath,
+        timeoutMs: 10,
+        staleMs: 60_000,
+        pollIntervalMs: 5,
+        testHooks: {
+          onStaleEmptyLockRemoved: () => {
+            recovered += 1;
+            now += 20;
+          },
+        },
+      }).then(
+        async (release) => {
+          await release();
+          return "acquired" as const;
+        },
+        (error: unknown) => {
+          expect(error).toEqual(
+            new Error(`Timed out waiting for production build lock at ${lockPath}`),
+          );
+          return "timed-out" as const;
+        },
+      );
+
+      expect(outcome).toBe("timed-out");
+      expect(recovered).toBe(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it("releases the lock when the build operation fails", async () => {
