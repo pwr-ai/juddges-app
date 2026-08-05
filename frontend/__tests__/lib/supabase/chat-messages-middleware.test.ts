@@ -143,12 +143,25 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
     expect(handlerResponse.status).toBe(401);
   });
 
+  it("accepts an uppercase UUID without relaxing the literal API path", async () => {
+    const response = await updateSession(
+      new NextRequest(
+        `http://localhost:3000/api/chats/${CHAT_ID.toUpperCase()}/messages`,
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it.each([
     "/api/chats",
     "/api/chats/not-a-uuid/messages",
     "/api/chats/11111111-2222-3333-4444-555555555555/messages",
     "/api/chats/11111111-2222-9333-8444-555555555555/messages",
     "/api/chats/11111111-2222-4333-7444-555555555555/messages",
+    `/API/chats/${CHAT_ID}/messages`,
+    `/api/CHATS/${CHAT_ID}/messages`,
     `/api/chats/${CHAT_ID}/export`,
     `/api/chats/${CHAT_ID}/messages/extra`,
     `/api/chats/${CHAT_ID}/messages-archive`,
@@ -184,10 +197,54 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
   });
 
   it.each([
+    "refresh_token_not_found",
+    "refresh_token_already_used",
+    "session_expired",
+  ])("treats auth code %s as an anonymous chat request", async (code) => {
+    (createServerClient as jest.Mock).mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: { code, message: "opaque auth error" },
+        }),
+      },
+    });
+
+    const response = await updateSession(
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/auth/login");
+  });
+
+  it("does not let fallback text hide an unexpected auth error code", async () => {
+    (createServerClient as jest.Mock).mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: {
+            code: "auth_service_unavailable",
+            message: "refresh_token_not_found while contacting auth service",
+          },
+        }),
+      },
+    });
+
+    const response = await updateSession(
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+    );
+
+    expect(response.status).toBe(503);
+  });
+
+  it.each([
     "/chat/not-a-uuid",
     "/chat/11111111-2222-3333-4444-555555555555",
     "/chat/11111111-2222-9333-8444-555555555555",
     "/chat/11111111-2222-4333-7444-555555555555",
+    `/CHAT/${CHAT_ID}`,
+    `/Chat/${CHAT_ID}`,
     `/chat/${CHAT_ID}/extra`,
     `/chat/${CHAT_ID}%2Fextra`,
   ])("does not open neighboring chat page %s on auth failure", async (path) => {
@@ -225,6 +282,22 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
     const response = await updateSession(
       new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`, {
         headers: { [TRUSTED_CHAT_HEADER]: "spoofed-chat-id" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(
+      response.headers.get(`x-middleware-request-${TRUSTED_CHAT_HEADER}`),
+    ).toBe(CHAT_ID);
+  });
+
+  it("preflights an authenticated HEAD request as the owner", async () => {
+    const { from } = mockAuthenticatedChatLookup({ data: { id: CHAT_ID } });
+
+    const response = await updateSession(
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`, {
+        method: "HEAD",
       }),
     );
 

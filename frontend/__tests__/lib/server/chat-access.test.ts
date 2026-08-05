@@ -23,7 +23,7 @@ function mockSupabase({
   waitForAbort = false,
 }: {
   userId?: string | null;
-  authError?: { message: string; status?: number };
+  authError?: { code?: string; message: string; status?: number };
   result?: ChatQueryResult;
   waitForAbort?: boolean;
 } = {}) {
@@ -92,6 +92,37 @@ describe("resolveOwnedChatAccess", () => {
       statusCode: 503,
     });
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "refresh_token_not_found",
+    "refresh_token_already_used",
+    "session_expired",
+  ])("classifies auth code %s as anonymous", async (code) => {
+    const { client, from } = mockSupabase({
+      userId: null,
+      authError: { code, message: "opaque auth error" },
+    });
+
+    await expect(resolveOwnedChatAccess(client, CHAT_ID)).resolves.toEqual({
+      kind: "anonymous",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("does not let fallback text override an unexpected auth code", async () => {
+    const { client } = mockSupabase({
+      userId: null,
+      authError: {
+        code: "auth_service_unavailable",
+        message: "refresh_token_not_found while contacting auth service",
+      },
+    });
+
+    await expect(resolveOwnedChatAccess(client, CHAT_ID)).rejects.toMatchObject({
+      code: "DATABASE_UNAVAILABLE",
+      statusCode: 503,
+    });
   });
 
   it("rejects an invalid chat id before issuing a PostgREST query", async () => {

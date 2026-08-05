@@ -9,12 +9,15 @@ import type { AddressInfo } from "node:net";
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const OTHER_USER_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
 const OWNER_CHAT_ID = "33333333-4444-4555-8666-777777777777";
+const HEAD_OWNER_CHAT_ID = "44444444-5555-4666-8777-888888888888";
 const MISSING_CHAT_ID = "11111111-2222-4333-8444-555555555555";
 const RLS_HIDDEN_CHAT_ID = "22222222-3333-4444-8555-666666666666";
+const DATABASE_ERROR_CHAT_ID = "55555555-6666-4777-8888-999999999999";
 const ACCESS_TOKEN = "test-access-token";
 
 const CHAT_ROWS = new Map([
   [OWNER_CHAT_ID, USER_ID],
+  [HEAD_OWNER_CHAT_ID, USER_ID],
   [RLS_HIDDEN_CHAT_ID, OTHER_USER_ID],
 ]);
 
@@ -62,18 +65,30 @@ async function waitForNext(baseUrl: string, processOutput: () => string): Promis
   throw new Error(`Next server did not become ready:\n${processOutput()}`);
 }
 
-async function stopChild(child: ChildProcessWithoutNullStreams): Promise<void> {
-  if (child.exitCode !== null) return;
-  child.kill("SIGTERM");
-  await new Promise<void>((resolve) => {
-    const fallback = setTimeout(() => {
-      child.kill("SIGKILL");
-      resolve();
-    }, 5_000);
+async function stopChild(
+  child: ChildProcessWithoutNullStreams | undefined,
+): Promise<void> {
+  if (!child || child.exitCode !== null) return;
+  await new Promise<void>((resolve, reject) => {
+    const forceKill = setTimeout(() => child.kill("SIGKILL"), 5_000);
+    const giveUp = setTimeout(
+      () => reject(new Error(`Next server process ${child.pid} did not exit`)),
+      10_000,
+    );
+    child.once("error", reject);
     child.once("exit", () => {
-      clearTimeout(fallback);
+      clearTimeout(forceKill);
+      clearTimeout(giveUp);
       resolve();
     });
+    child.kill("SIGTERM");
+  });
+}
+
+async function closeServer(server: Server | undefined): Promise<void> {
+  if (!server?.listening) return;
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
   });
 }
 
@@ -127,93 +142,134 @@ function sessionCookie(): string {
 }
 
 describe("/chat/[id] through a real Next server", () => {
-  let fakeSupabase: Server;
-  let nextProcess: ChildProcessWithoutNullStreams;
+  let fakeSupabase: Server | undefined;
+  let nextProcess: ChildProcessWithoutNullStreams | undefined;
   let baseUrl: string;
   let output = "";
   const postgrestChatRequests: PostgrestChatRequest[] = [];
 
+  async function cleanupTestResources(): Promise<unknown[]> {
+    const child = nextProcess;
+    const server = fakeSupabase;
+    nextProcess = undefined;
+    fakeSupabase = undefined;
+    const results = await Promise.allSettled([
+      stopChild(child),
+      closeServer(server),
+    ]);
+    return results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+  }
+
   beforeAll(async () => {
-    fakeSupabase = createServer((request, response) => {
-      const url = new URL(request.url ?? "/", "http://127.0.0.1");
-      if (url.pathname === "/auth/v1/user") {
-        if (request.headers.authorization !== `Bearer ${ACCESS_TOKEN}`) {
-          json(response, 401, { message: "Invalid access token" });
+    let setupFailure: unknown;
+    try {
+      fakeSupabase = createServer((request, response) => {
+        const url = new URL(request.url ?? "/", "http://127.0.0.1");
+        if (url.pathname === "/auth/v1/user") {
+          if (request.headers.authorization !== `Bearer ${ACCESS_TOKEN}`) {
+            json(response, 401, { message: "Invalid access token" });
+            return;
+          }
+          json(response, 200, {
+            id: USER_ID,
+            aud: "authenticated",
+            role: "authenticated",
+            email: "owner@example.test",
+            app_metadata: { provider: "email", providers: ["email"] },
+            user_metadata: {},
+            created_at: "2026-08-05T00:00:00.000Z",
+            updated_at: "2026-08-05T00:00:00.000Z",
+          });
           return;
         }
-        json(response, 200, {
-          id: USER_ID,
-          aud: "authenticated",
-          role: "authenticated",
-          email: "owner@example.test",
-          app_metadata: { provider: "email", providers: ["email"] },
-          user_metadata: {},
-          created_at: "2026-08-05T00:00:00.000Z",
-          updated_at: "2026-08-05T00:00:00.000Z",
-        });
-        return;
+        if (url.pathname === "/rest/v1/chats") {
+          const chatIdFilter = url.searchParams.get("id");
+          const userIdFilter = url.searchParams.get("user_id");
+          const authorization = request.headers.authorization;
+          postgrestChatRequests.push({
+            authorization,
+            chatIdFilter,
+            userIdFilter,
+          });
+
+          const chatId = chatIdFilter?.replace(/^eq\./, "") ?? null;
+          const queriedUserId = userIdFilter?.replace(/^eq\./, "") ?? null;
+          const rowOwnerId = chatId ? CHAT_ROWS.get(chatId) : undefined;
+          if (chatId === DATABASE_ERROR_CHAT_ID) {
+            json(response, 503, {
+              code: "XX000",
+              message: "database unavailable",
+            });
+            return;
+          }
+          const isVisible =
+            authorization === `Bearer ${ACCESS_TOKEN}` &&
+            queriedUserId === USER_ID &&
+            rowOwnerId === USER_ID;
+          const rows = isVisible && chatId ? [{ id: chatId }] : [];
+          response.writeHead(200, {
+            "Content-Type": "application/json",
+            "Content-Range": rows.length === 1 ? "0-0/1" : "*/0",
+          });
+          response.end(JSON.stringify(rows));
+          return;
+        }
+        json(response, 404, { message: "Unexpected fake Supabase request" });
+      });
+      const supabasePort = await listen(fakeSupabase);
+      const nextPort = await reservePort();
+      baseUrl = `http://127.0.0.1:${nextPort}`;
+
+      const nextBin = require.resolve("next/dist/bin/next");
+      const nextEnvironment: NodeJS.ProcessEnv = {
+        ...process.env,
+        NODE_ENV: "production",
+        NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+        NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:9",
+        NEXT_TELEMETRY_DISABLED: "1",
+      };
+      output += await runNextBuild(nextBin, nextEnvironment);
+      nextProcess = spawn(
+        process.execPath,
+        [nextBin, "start", "-H", "127.0.0.1", "-p", String(nextPort)],
+        {
+          cwd: process.cwd(),
+          env: nextEnvironment,
+          stdio: "pipe",
+        },
+      );
+      nextProcess.stdout.on("data", (chunk) => {
+        output += String(chunk);
+      });
+      nextProcess.stderr.on("data", (chunk) => {
+        output += String(chunk);
+      });
+
+      await waitForNext(baseUrl, () => output);
+    } catch (error) {
+      setupFailure = error;
+      throw error;
+    } finally {
+      if (setupFailure) {
+        const cleanupFailures = await cleanupTestResources();
+        if (cleanupFailures.length > 0) {
+          throw new AggregateError(
+            [setupFailure, ...cleanupFailures],
+            "Production test setup and cleanup failed",
+          );
+        }
       }
-      if (url.pathname === "/rest/v1/chats") {
-        const chatIdFilter = url.searchParams.get("id");
-        const userIdFilter = url.searchParams.get("user_id");
-        const authorization = request.headers.authorization;
-        postgrestChatRequests.push({
-          authorization,
-          chatIdFilter,
-          userIdFilter,
-        });
-
-        const chatId = chatIdFilter?.replace(/^eq\./, "") ?? null;
-        const queriedUserId = userIdFilter?.replace(/^eq\./, "") ?? null;
-        const rowOwnerId = chatId ? CHAT_ROWS.get(chatId) : undefined;
-        const isVisible =
-          authorization === `Bearer ${ACCESS_TOKEN}` &&
-          queriedUserId === USER_ID &&
-          rowOwnerId === USER_ID;
-        const rows = isVisible && chatId ? [{ id: chatId }] : [];
-        response.writeHead(200, {
-          "Content-Type": "application/json",
-          "Content-Range": rows.length === 1 ? "0-0/1" : "*/0",
-        });
-        response.end(JSON.stringify(rows));
-        return;
-      }
-      json(response, 404, { message: "Unexpected fake Supabase request" });
-    });
-    const supabasePort = await listen(fakeSupabase);
-    const nextPort = await reservePort();
-    baseUrl = `http://127.0.0.1:${nextPort}`;
-
-    const nextBin = require.resolve("next/dist/bin/next");
-    const nextEnvironment: NodeJS.ProcessEnv = {
-      ...process.env,
-      NODE_ENV: "production",
-      NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
-      NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:9",
-      NEXT_TELEMETRY_DISABLED: "1",
-    };
-    output += await runNextBuild(nextBin, nextEnvironment);
-    nextProcess = spawn(process.execPath, [nextBin, "start", "-H", "127.0.0.1", "-p", String(nextPort)], {
-      cwd: process.cwd(),
-      env: nextEnvironment,
-      stdio: "pipe",
-    });
-    nextProcess.stdout.on("data", (chunk) => {
-      output += String(chunk);
-    });
-    nextProcess.stderr.on("data", (chunk) => {
-      output += String(chunk);
-    });
-
-    await waitForNext(baseUrl, () => output);
+    }
   });
 
   afterAll(async () => {
-    await stopChild(nextProcess);
-    await new Promise<void>((resolve, reject) => {
-      fakeSupabase.close((error) => (error ? reject(error) : resolve()));
-    });
+    const cleanupFailures = await cleanupTestResources();
+    if (cleanupFailures.length > 0) {
+      throw new AggregateError(cleanupFailures, "Production test cleanup failed");
+    }
   });
 
   it.each([
@@ -252,5 +308,42 @@ describe("/chat/[id] through a real Next server", () => {
         userIdFilter: `eq.${USER_ID}`,
       },
     ]);
+  });
+
+  it("returns HTTP 200 for an owner HEAD request with one preflight", async () => {
+    const response = await fetch(`${baseUrl}/chat/${HEAD_OWNER_CHAT_ID}`, {
+      method: "HEAD",
+      headers: { Cookie: sessionCookie() },
+      redirect: "manual",
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
+    expect(
+      postgrestChatRequests.filter(
+        ({ chatIdFilter }) => chatIdFilter === `eq.${HEAD_OWNER_CHAT_ID}`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("redirects an anonymous chat request to login", async () => {
+    const response = await fetch(`${baseUrl}/chat/${MISSING_CHAT_ID}`, {
+      redirect: "manual",
+    });
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain(
+      `/auth/login?next=%2Fchat%2F${MISSING_CHAT_ID}`,
+    );
+  });
+
+  it("keeps a database failure distinct from not found", async () => {
+    const response = await fetch(`${baseUrl}/chat/${DATABASE_ERROR_CHAT_ID}`, {
+      headers: { Cookie: sessionCookie() },
+      redirect: "manual",
+    });
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("location")).toBeNull();
   });
 });
