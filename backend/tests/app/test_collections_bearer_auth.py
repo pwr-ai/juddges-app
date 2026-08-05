@@ -76,8 +76,8 @@ async def test_collections_rejects_x_user_id_without_bearer(
 
     response = await client.get("/collections", headers=headers)
 
-    assert response.status_code in (401, 403), (
-        f"Expected 401/403 when only X-User-ID is supplied; got {response.status_code}. "
+    assert response.status_code == 401, (
+        f"Expected 401 when only X-User-ID is supplied; got {response.status_code}. "
         "Bearer JWT is now required."
     )
 
@@ -110,6 +110,6 @@ async def test_collections_missing_all_auth_returns_unauthorized(
     """API key alone (no Bearer, no X-User-ID) must be rejected."""
     response = await client.get("/collections", headers=valid_api_headers)
 
-    assert response.status_code in (401, 403), (
-        f"Expected 401/403 when no user credential is supplied; got {response.status_code}."
+    assert response.status_code == 401, (
+        f"Expected 401 when no user credential is supplied; got {response.status_code}."
     )
