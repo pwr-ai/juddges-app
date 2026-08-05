@@ -6,6 +6,8 @@
 import { test, expect, type APIResponse } from '@playwright/test';
 import { test as authTest } from '../helpers/auth-fixture';
 
+const E2E_BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3006';
+
 const PUBLIC_HTML_PAGES = [
   '/',
   '/about',
@@ -130,7 +132,7 @@ function expectLoginRedirect(
   const location = response.headers().location;
   expect(location).toBeTruthy();
   if (!location) throw new Error('Login redirect is missing Location');
-  const redirect = new URL(location);
+  const redirect = new URL(location, E2E_BASE_URL);
   expect(redirect.pathname).toBe('/auth/login');
   expect(redirect.searchParams.get('next')).toBe(expectedNext);
 }
