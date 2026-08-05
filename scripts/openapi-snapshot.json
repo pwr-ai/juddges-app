@@ -3710,8 +3710,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/YearlyDecisionCount"
                 },
                 "type": "array"
               },
@@ -3720,6 +3719,13 @@
               }
             ],
             "title": "Decisions Per Year"
+          },
+          "decisions_per_year_by_jurisdiction": {
+            "items": {
+              "$ref": "#/components/schemas/JurisdictionYearlyDecisionCount"
+            },
+            "title": "Decisions Per Year By Jurisdiction",
+            "type": "array"
           },
           "jurisdictions": {
             "$ref": "#/components/schemas/JurisdictionCounts",
@@ -3764,6 +3770,9 @@
             "type": "integer"
           }
         },
+        "required": [
+          "decisions_per_year_by_jurisdiction"
+        ],
         "title": "DashboardStats",
         "type": "object"
       },
@@ -7719,6 +7728,33 @@
           }
         },
         "title": "JurisdictionCounts",
+        "type": "object"
+      },
+      "JurisdictionYearlyDecisionCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "jurisdiction": {
+            "enum": [
+              "PL",
+              "UK"
+            ],
+            "title": "Jurisdiction",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "count",
+          "jurisdiction"
+        ],
+        "title": "JurisdictionYearlyDecisionCount",
         "type": "object"
       },
       "KeyPointArgument": {
@@ -17167,6 +17203,24 @@
           "total_versions"
         ],
         "title": "VersionHistoryResponse",
+        "type": "object"
+      },
+      "YearlyDecisionCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "count"
+        ],
+        "title": "YearlyDecisionCount",
         "type": "object"
       },
       "ZeroResultQueryItem": {
