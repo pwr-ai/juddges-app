@@ -31,6 +31,8 @@ export interface DropdownButtonProps {
  disabled?: boolean;
  className?: string;
  align?: 'start' | 'end' | 'center';
+ /** Accessible name that remains available when the visual label is hidden on mobile. */
+ ariaLabel?: string;
 }
 
 /**
@@ -61,6 +63,7 @@ export function DropdownButton({
  disabled = false,
  className,
  align = 'start',
+ ariaLabel,
 }: DropdownButtonProps): React.JSX.Element {
  const selectedOption = options.find((opt) => opt.value === value);
  const displayLabel = selectedOption?.label || label;
@@ -70,6 +73,7 @@ export function DropdownButton({
  <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
  <DropdownMenuTrigger asChild disabled={disabled}>
  <Button
+ aria-label={ariaLabel ?? displayLabel}
  variant="ghost"
  size="sm"
  className={cn(

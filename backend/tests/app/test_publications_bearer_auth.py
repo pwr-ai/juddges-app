@@ -387,6 +387,24 @@ async def test_list_publications_is_publicly_accessible(
     assert isinstance(response.json(), list)
 
 
+async def test_list_publications_accepts_canonical_filtered_query(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+    db_only_override,
+) -> None:
+    """The frontend's exact filter values must satisfy FastAPI validation."""
+    response = await client.get(
+        "/publications?project=JuDDGES&year=2026&status=published&type=journal",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code == 200, (
+        f"Canonical publication filters returned {response.status_code}; "
+        f"expected 200. Body: {response.text[:300]}"
+    )
+    assert isinstance(response.json(), list)
+
+
 # ---------------------------------------------------------------------------
 # Sub-resource endpoints — schemas (require admin)
 # ---------------------------------------------------------------------------
