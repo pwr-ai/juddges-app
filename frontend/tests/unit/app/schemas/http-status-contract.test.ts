@@ -1,13 +1,26 @@
 /** @jest-environment node */
 
-import { spawn, spawnSync } from "node:child_process";
-import { once } from "node:events";
 import { cpSync, readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 
-jest.setTimeout(180_000);
+import {
+  acquireProductionBuildLock,
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+} from "@/tests/support/production-build-lock";
+import {
+  type ProductionChild,
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_POLL_INTERVAL_MS,
+  PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+  runProductionChild,
+  spawnProductionChild,
+  stopProductionChild,
+} from "@/tests/support/production-child-process";
+
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 const ids = {
   visible: "00000000-0000-4000-8000-000000000001",
@@ -50,10 +63,16 @@ async function requestUntilReady(
   let lastError: unknown;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
-      return await fetch(url, { redirect: "manual", ...options });
+      return await fetch(url, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(PRODUCTION_READINESS_REQUEST_TIMEOUT_MS),
+        ...options,
+      });
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) =>
+        setTimeout(resolve, PRODUCTION_READINESS_POLL_INTERVAL_MS)
+      );
     }
   }
   throw lastError;
@@ -89,7 +108,7 @@ function schema(id: string) {
     description: "Schema loaded from the RLS-scoped data service",
     type: "legal",
     category: "contract",
-    text: { type: "object", properties: {} },
+    text: { legalDefinition: "x".repeat(147_000) },
     dates: {},
     status: "published",
     is_verified: true,
@@ -100,7 +119,7 @@ function schema(id: string) {
 }
 
 describe("schemas production HTTP/auth status matrix", () => {
-  it("keeps page, API, auth, method, proof, and single-fetch contracts exact", async () => {
+  it("keeps page, API, auth, method, proof, and bounded-read contracts exact", async () => {
     const upstreamPort = await reservePort();
     const appPort = await reservePort();
     const upstreamRequests: string[] = [];
@@ -165,40 +184,46 @@ describe("schemas production HTTP/auth status matrix", () => {
       SCHEMA_DETAIL_TIMEOUT_MS: "250",
     };
     const nextBin = join(process.cwd(), "node_modules/next/dist/bin/next");
-    const build = spawnSync(process.execPath, [nextBin, "build"], {
-      cwd: process.cwd(),
-      env: commonEnv,
-      encoding: "utf8",
-      timeout: 150_000,
-    });
-    if (build.status !== 0) {
-      throw new Error(`Production build failed:\n${build.stdout}\n${build.stderr}`);
-    }
-    cpSync(
-      join(process.cwd(), ".next/static"),
-      join(process.cwd(), ".next/standalone/frontend/.next/static"),
-      { recursive: true }
-    );
-    cpSync(
-      join(process.cwd(), "public"),
-      join(process.cwd(), ".next/standalone/frontend/public"),
-      { recursive: true }
-    );
-
-    await listen(upstream, upstreamPort);
-    const serverPath = join(process.cwd(), ".next/standalone/frontend/server.js");
-    const productionServer = spawn(process.execPath, [serverPath], {
-      cwd: process.cwd(),
-      env: { ...commonEnv, PORT: String(appPort), HOSTNAME: "127.0.0.1" },
-      stdio: ["ignore", "pipe", "pipe"],
-    });
     let output = "";
-    productionServer.stdout?.on("data", (chunk: Buffer) => (output += chunk.toString()));
-    productionServer.stderr?.on("data", (chunk: Buffer) => (output += chunk.toString()));
+    let productionServer: ProductionChild | undefined;
+    let upstreamListening = false;
+    let contractFailure: Error | undefined;
+    const releaseProductionBuildLock = await acquireProductionBuildLock();
     const appUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authCookie() };
 
     try {
+      output += await runProductionChild({
+        command: process.execPath,
+        args: [nextBin, "build"],
+        label: "Next production build",
+        cwd: process.cwd(),
+        env: commonEnv,
+        timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+      });
+      cpSync(
+        join(process.cwd(), ".next/static"),
+        join(process.cwd(), ".next/standalone/frontend/.next/static"),
+        { recursive: true }
+      );
+      cpSync(
+        join(process.cwd(), "public"),
+        join(process.cwd(), ".next/standalone/frontend/public"),
+        { recursive: true }
+      );
+
+      await listen(upstream, upstreamPort);
+      upstreamListening = true;
+      const serverPath = join(process.cwd(), ".next/standalone/frontend/server.js");
+      productionServer = spawnProductionChild({
+        command: process.execPath,
+        args: [serverPath],
+        label: "Next standalone production server",
+        cwd: process.cwd(),
+        env: { ...commonEnv, PORT: String(appPort), HOSTNAME: "127.0.0.1" },
+        timeoutMs: PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+      });
+
       const pageStatuses: Record<string, number> = {
         [ids.missing]: 404,
         [ids.hidden]: 404,
@@ -346,10 +371,21 @@ describe("schemas production HTTP/auth status matrix", () => {
       const visibleBody = await visible.text();
       expect(visibleBody).toContain("Visible contract schema");
       expect(visibleBody).toContain("creator@example.test");
+      expect(visibleBody).toContain("x".repeat(128));
+      const visibleRequests = upstreamRequests.filter((item) =>
+        item.includes(`id=eq.${ids.visible}`)
+      );
+      expect(visibleRequests).toHaveLength(beforeVisible + 2);
       expect(
-        upstreamRequests.filter((item) => item.includes(`id=eq.${ids.visible}`)).length -
-          beforeVisible
-      ).toBe(1);
+        visibleRequests.slice(beforeVisible).map((item) => {
+          const requestUrl = item.slice(item.indexOf(" ") + 1);
+          return new URL(requestUrl, `http://127.0.0.1:${upstreamPort}`)
+            .searchParams.get("select");
+        })
+      ).toEqual([
+        "id",
+        "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id",
+      ]);
 
       const refreshedMissing = await requestUntilReady(
         `${appUrl}/schemas/${ids.missing}`,
@@ -370,28 +406,44 @@ describe("schemas production HTTP/auth status matrix", () => {
       expect(staticAsset.status).toBe(200);
       await staticAsset.text();
     } catch (error) {
-      throw new Error(
+      contractFailure = new Error(
         `Production schema contract failed: ${String(error)}\nRequests: ${upstreamRequests.join(
           ", "
-        )}\n${output}`
+        )}\n${output}${productionServer?.output() ?? ""}`
       );
     } finally {
-      if (productionServer.exitCode === null) {
-        const exited = once(productionServer, "exit");
-        productionServer.kill("SIGTERM");
-        let exitTimer: ReturnType<typeof setTimeout> | undefined;
-        await Promise.race([
-          exited,
-          new Promise((resolve) => {
-            exitTimer = setTimeout(resolve, 5_000);
-            exitTimer.unref();
-          }),
-        ]);
-        if (exitTimer) clearTimeout(exitTimer);
-        if (productionServer.exitCode === null) productionServer.kill("SIGKILL");
+      const cleanupFailures: unknown[] = [];
+      try {
+        await stopProductionChild(productionServer);
+      } catch (error) {
+        cleanupFailures.push(error);
       }
-      upstream.closeAllConnections();
-      await close(upstream);
+      if (upstreamListening) {
+        upstream.closeAllConnections();
+        try {
+          await close(upstream);
+        } catch (error) {
+          cleanupFailures.push(error);
+        }
+      }
+      try {
+        await releaseProductionBuildLock();
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
+      if (contractFailure && cleanupFailures.length > 0) {
+        throw new AggregateError(
+          [contractFailure, ...cleanupFailures],
+          "Production schema contract and cleanup failed"
+        );
+      }
+      if (contractFailure) throw contractFailure;
+      if (cleanupFailures.length > 0) {
+        throw new AggregateError(
+          cleanupFailures,
+          "Production schema contract cleanup failed"
+        );
+      }
     }
   });
 });
