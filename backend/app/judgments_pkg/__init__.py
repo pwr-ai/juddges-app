@@ -257,6 +257,14 @@ async def get_facets(
 
     Used to display filter counts in UI, e.g., "Criminal (234)" or "Supreme Court (45)".
     Supports optional pre-filtering by jurisdiction and date range.
+
+    Args:
+        jurisdiction: Optional jurisdiction filter (PL or UK)
+        date_from: Optional start date filter (YYYY-MM-DD)
+        date_to: Optional end date filter (YYYY-MM-DD)
+
+    Returns:
+        Facets grouped by type with counts for each value
     """
     try:
         from app.core.supabase import get_supabase_client
