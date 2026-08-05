@@ -48,6 +48,10 @@ class _FakeItem:
 
 
 def _collect(marker: str, path: str, env: dict[str, str] | None = None):
+    collection_env = os.environ.copy() if env is None else env.copy()
+    if marker == "e2e":
+        collection_env["RUN_E2E_LIVE"] = "1"
+
     return subprocess.run(  # noqa: S603 - arguments are fixed test paths and markers
         [
             sys.executable,
@@ -60,7 +64,7 @@ def _collect(marker: str, path: str, env: dict[str, str] | None = None):
             path,
         ],
         cwd=BACKEND_DIR,
-        env=env,
+        env=collection_env,
         capture_output=True,
         text=True,
         check=False,
@@ -96,8 +100,12 @@ def test_local_profile_has_no_pre_collection_path_filter():
     assert not hasattr(pytest_conftest, "pytest_ignore_collect")
 
 
-def test_e2e_tier_collects_live_e2e_suite():
-    result = _collect("e2e", "tests/e2e_live/test_e2e_live.py")
+def test_e2e_tier_collects_live_e2e_suite_from_local_profile():
+    env = os.environ.copy()
+    env["JUDDGES_PYTEST_PROFILE"] = "local"
+    env.pop("RUN_E2E_LIVE", None)
+
+    result = _collect("e2e", "tests/e2e_live/test_e2e_live.py", env=env)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "tests/e2e_live/test_e2e_live.py: 3" in result.stdout
