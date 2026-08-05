@@ -938,7 +938,7 @@ Creating new components involves:
 7. ✅ **Verify Touch Targets** - Minimum 44x44px
 8. ✅ **Test Accessibility** - Contrast, keyboard, colorblind
 9. ✅ **Test Thoroughly** - All states and modes
-10. ✅ **Document** - Add to style-demo and guides
+10. ✅ **Document** - Cover supported states in the consuming page, tests, and relevant guides
 
 **Result**: Consistent, accessible, maintainable components that follow design system standards.
 
