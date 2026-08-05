@@ -661,6 +661,41 @@ class TestGetExtractionJobEndpoint:
             assert "prompt_id" not in selected_fields
 
     @pytest.mark.unit
+    async def test_lightweight_poll_omits_terminal_results(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_result = MagicMock()
+        mock_result.state = "SUCCESS"
+        mock_result.info = {"completed_documents": 1}
+        mock_result.ready.return_value = True
+        mock_result.failed.return_value = False
+        mock_result.get.return_value = [_stored_result("doc-1", "completed")]
+        mock_supabase = _owned_job_store(
+            {"job_id": _GET_JOB_ID, "user_id": _USER_001, "status": "SUCCESS"}
+        )
+
+        with (
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router.update_job_status_in_supabase",
+                return_value=True,
+            ),
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}?include_results=false",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "COMPLETED"
+        assert response.json()["results"] is None
+
+    @pytest.mark.unit
     async def test_get_job_owned_by_another_user_is_indistinguishable_from_missing(
         self, client, valid_api_headers
     ) -> None:

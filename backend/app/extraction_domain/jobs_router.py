@@ -91,6 +91,15 @@ def _in_progress_batch_response(job_id: str) -> BatchExtractionResponse:
     return BatchExtractionResponse(task_id=job_id, status="IN_PROGRESS", results=None)
 
 
+def _with_optional_results(
+    response: BatchExtractionResponse, include_results: bool
+) -> BatchExtractionResponse:
+    """Strip heavy result payloads from ownership/status-only reads."""
+    if include_results:
+        return response
+    return response.model_copy(update={"results": None})
+
+
 def _worker_unavailable_error() -> HTTPException:
     """Create standardized worker-unavailable HTTP error."""
     return HTTPException(
@@ -815,6 +824,9 @@ async def create_bulk_extraction(
 )
 async def get_extraction_job(
     job_id: str = Path(..., description="Extraction job ID (task ID)"),
+    include_results: bool = Query(
+        True, description="Include per-document extraction results"
+    ),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> BatchExtractionResponse:
     """
@@ -840,18 +852,22 @@ async def get_extraction_job(
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
-            return _resolve_pending_job(job_id, user.id, job_record)
+            return _with_optional_results(
+                _resolve_pending_job(job_id, user.id, job_record), include_results
+            )
 
         if task_state == "PENDING" and not task_result.info:
-            return _resolve_pending_job(job_id, user.id, job_record)
+            return _with_optional_results(
+                _resolve_pending_job(job_id, user.id, job_record), include_results
+            )
 
         not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
         if not_ready_response:
-            return not_ready_response
+            return _with_optional_results(not_ready_response, include_results)
 
         failed_response = _handle_failed_task(task_result, task_state, job_id)
         if failed_response:
-            return failed_response
+            return _with_optional_results(failed_response, include_results)
 
         try:
             results = task_result.get()
@@ -868,10 +884,13 @@ async def get_extraction_job(
                 update_job_status_in_supabase(
                     job_id, simplified_status, error_message=str(error_msg)
                 )
-                return BatchExtractionResponse(
-                    task_id=job_id,
-                    status=simplified_status,
-                    results=[],
+                return _with_optional_results(
+                    BatchExtractionResponse(
+                        task_id=job_id,
+                        status=simplified_status,
+                        results=[],
+                    ),
+                    include_results,
                 )
 
             responses, normalized_results = _parse_task_results(results)
@@ -883,10 +902,13 @@ async def get_extraction_job(
                 completed_documents=processed_count,
                 results=normalized_results,
             )
-            return BatchExtractionResponse(
-                task_id=job_id,
-                status=simplified_status,
-                results=responses,
+            return _with_optional_results(
+                BatchExtractionResponse(
+                    task_id=job_id,
+                    status=simplified_status,
+                    results=responses,
+                ),
+                include_results,
             )
         except Exception as get_error:
             # Broad catch: Celery task.get() can raise backend errors, celery.exceptions,
