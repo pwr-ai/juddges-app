@@ -77,7 +77,7 @@ async function proxyRequest(
     routeLogger.error("BACKEND_API_KEY is not configured");
     return NextResponse.json(
       { detail: "Embeddings API is not configured" },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 

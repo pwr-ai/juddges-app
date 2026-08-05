@@ -164,7 +164,7 @@ describe("embeddings BFF", () => {
     );
   });
 
-  it("returns 503 when the service key is missing", async () => {
+  it("returns a controlled 500 when the service key is missing", async () => {
     mockUser();
     delete process.env.BACKEND_API_KEY;
 
@@ -172,7 +172,7 @@ describe("embeddings BFF", () => {
       new NextRequest("http://localhost/api/embeddings?endpoint=models"),
     );
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(500);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
