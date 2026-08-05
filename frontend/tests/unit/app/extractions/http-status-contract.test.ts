@@ -2,13 +2,25 @@
  * @jest-environment node
  */
 
-import { spawn, spawnSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { cpSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-jest.setTimeout(180_000);
+import {
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+  withProductionBuildLock,
+} from "@/tests/support/production-build-lock";
+import {
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+  runProductionChild,
+  spawnProductionChild,
+  stopProductionChild,
+} from "@/tests/support/production-child-process";
+
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 const IDS = {
   visible: "11111111-2222-4333-8444-555555555555",
@@ -48,7 +60,11 @@ async function requestUntilReady(
   let lastError: unknown;
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
-      return await fetch(url, { redirect: "manual", ...options });
+      return await fetch(url, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(PRODUCTION_READINESS_REQUEST_TIMEOUT_MS),
+        ...options,
+      });
     } catch (error) {
       lastError = error;
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -78,6 +94,7 @@ function authenticatedCookie(): string {
 
 describe("extraction detail production HTTP status matrix", () => {
   it("keeps 404, upstream failures, methods, auth, and snapshot reads exact", async () => {
+    await withProductionBuildLock(async () => {
     const upstreamPort = await reservePort();
     const appPort = await reservePort();
     const extractionRequests: string[] = [];
@@ -87,7 +104,9 @@ describe("extraction detail production HTTP status matrix", () => {
         response.end(JSON.stringify({ id: "owner-1", email: "owner@example.test" }));
         return;
       }
-      const jobId = request.url?.match(/^\/extractions\/([^/?]+)$/)?.[1];
+      const jobId = request.url?.match(
+        /^\/extractions\/([^/?]+)(?:\?.*)?$/
+      )?.[1];
       if (!jobId) {
         response.writeHead(404).end();
         return;
@@ -128,15 +147,14 @@ describe("extraction detail production HTTP status matrix", () => {
       NEXT_TELEMETRY_DISABLED: "1",
     };
     const nextBin = join(process.cwd(), "node_modules/next/dist/bin/next");
-    const build = spawnSync(process.execPath, [nextBin, "build"], {
+    await runProductionChild({
+      command: process.execPath,
+      args: [nextBin, "build"],
+      label: "Next extraction detail production build",
       cwd: process.cwd(),
       env: environment,
-      encoding: "utf8",
-      timeout: 150_000,
+      timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
     });
-    if (build.status !== 0) {
-      throw new Error(`Production build failed:\n${build.stdout}\n${build.stderr}`);
-    }
     cpSync(
       join(process.cwd(), ".next/static"),
       join(process.cwd(), ".next/standalone/frontend/.next/static"),
@@ -149,22 +167,18 @@ describe("extraction detail production HTTP status matrix", () => {
     );
 
     await listen(upstream, upstreamPort);
-    const productionServer = spawn(
-      process.execPath,
-      [join(process.cwd(), ".next/standalone/frontend/server.js")],
-      {
-        cwd: process.cwd(),
-        env: {
-          ...environment,
-          PORT: String(appPort),
-          HOSTNAME: "127.0.0.1",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-      }
-    );
-    let output = "";
-    productionServer.stdout?.on("data", (chunk) => (output += String(chunk)));
-    productionServer.stderr?.on("data", (chunk) => (output += String(chunk)));
+    const productionServer = spawnProductionChild({
+      command: process.execPath,
+      args: [join(process.cwd(), ".next/standalone/frontend/server.js")],
+      label: "Next extraction detail standalone server",
+      cwd: process.cwd(),
+      env: {
+        ...environment,
+        PORT: String(appPort),
+        HOSTNAME: "127.0.0.1",
+      },
+      timeoutMs: PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+    });
     const baseUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authenticatedCookie() };
 
@@ -276,15 +290,9 @@ describe("extraction detail production HTTP status matrix", () => {
       expect(asset.status).toBe(200);
       await asset.text();
     } finally {
-      productionServer.kill("SIGTERM");
-      await new Promise<void>((resolve) => {
-        if (productionServer.exitCode !== null) resolve();
-        else productionServer.once("exit", () => resolve());
-      });
+      await stopProductionChild(productionServer);
       await new Promise<void>((resolve) => upstream.close(() => resolve()));
-      if (productionServer.exitCode && productionServer.exitCode !== 0) {
-        throw new Error(`Production server failed:\n${output}`);
-      }
     }
+    });
   });
 });
