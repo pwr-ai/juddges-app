@@ -3,15 +3,14 @@
  */
 
 import { NextRequest } from 'next/server';
+import { createHash } from 'node:crypto';
 
 const mockGetUser = jest.fn();
-const mockGetSession = jest.fn();
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(async () => ({
     auth: {
       getUser: mockGetUser,
-      getSession: mockGetSession,
     },
   })),
 }));
@@ -33,14 +32,9 @@ import { GET as compareJudges } from '@/app/api/judge-fingerprint/compare/route'
 import { GET as getJudgeProfile } from '@/app/api/judge-fingerprint/profile/[judgeName]/route';
 
 const authenticatedUser = { id: 'user-1' };
-const accessToken = 'user-access-token';
 
 function authenticate(): void {
   mockGetUser.mockResolvedValue({ data: { user: authenticatedUser }, error: null });
-  mockGetSession.mockResolvedValue({
-    data: { session: { access_token: accessToken } },
-    error: null,
-  });
 }
 
 describe('judge fingerprint BFF routes', () => {
@@ -63,19 +57,7 @@ describe('judge fingerprint BFF routes', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('rejects authenticated users whose session has no bearer token', async () => {
-    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
-
-    const response = await searchJudges(
-      new NextRequest('http://localhost/api/judge-fingerprint/search?q=smith'),
-    );
-
-    expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: 'Not authenticated' });
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('forwards search query, server API key, and user bearer token', async () => {
+  it('forwards search query, server API key, and a verified-user rate-limit key', async () => {
     (global.fetch as jest.Mock).mockResolvedValue(
       new Response(JSON.stringify([{ judge_name: 'Lady Smith', case_count: 4 }]), {
         status: 200,
@@ -93,13 +75,34 @@ describe('judge fingerprint BFF routes', () => {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          Authorization: `Bearer ${accessToken}`,
           'X-API-Key': 'server-api-key',
+          'X-RateLimit-Identity': createHash('sha256').update('user-1').digest('hex'),
         },
       }),
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([{ judge_name: 'Lady Smith', case_count: 4 }]);
+  });
+
+  it('uses separate rate-limit identities for separate verified users', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    await searchJudges(
+      new NextRequest('http://localhost/api/judge-fingerprint/search?q=smith'),
+    );
+    const firstHeaders = (global.fetch as jest.Mock).mock.calls[0][1].headers;
+
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-2' } }, error: null });
+    await searchJudges(
+      new NextRequest('http://localhost/api/judge-fingerprint/search?q=smith'),
+    );
+    const secondHeaders = (global.fetch as jest.Mock).mock.calls[1][1].headers;
+
+    expect(firstHeaders['X-RateLimit-Identity']).not.toBe(secondHeaders['X-RateLimit-Identity']);
+    expect(firstHeaders).not.toHaveProperty('Authorization');
+    expect(secondHeaders).not.toHaveProperty('Authorization');
   });
 
   it('encodes a profile path and preserves an upstream error status and body', async () => {
@@ -141,6 +144,34 @@ describe('judge fingerprint BFF routes', () => {
     );
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ detail: 'At least 2 judges are required' });
+  });
+
+  it('preserves 429 status, body, and safe rate-limit headers', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Rate limit exceeded: 60 per 1 hour' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '42',
+          'X-RateLimit-Limit': '60',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': '1785945600',
+          'X-Internal-Trace': 'must-not-leak',
+        },
+      }),
+    );
+
+    const response = await searchJudges(
+      new NextRequest('http://localhost/api/judge-fingerprint/search?q=smith'),
+    );
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ error: 'Rate limit exceeded: 60 per 1 hour' });
+    expect(response.headers.get('retry-after')).toBe('42');
+    expect(response.headers.get('x-ratelimit-limit')).toBe('60');
+    expect(response.headers.get('x-ratelimit-remaining')).toBe('0');
+    expect(response.headers.get('x-ratelimit-reset')).toBe('1785945600');
+    expect(response.headers.get('x-internal-trace')).toBeNull();
   });
 
   it('returns 503 when the backend cannot be reached', async () => {
