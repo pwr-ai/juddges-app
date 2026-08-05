@@ -133,24 +133,73 @@ def _safe_get_task_state(task_result: AsyncResult, job_id: str) -> str | None:
         raise _worker_unavailable_error()
 
 
-def _load_job_record(job_id: str) -> dict | None:
-    """Load extraction job row from Supabase."""
+def _load_owned_job_record(job_id: str, user_id: str) -> dict:
+    """Load one caller-owned job without revealing hidden rows.
+
+    The user filter is part of the same database read as the job filter.  A
+    missing row and an RLS-hidden/other-user row therefore share the exact 404
+    contract, while database failures stay distinguishable as 503.
+    """
     if not supabase:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Extraction job store unavailable",
+        )
     try:
-        job_data = (
+        response = (
             supabase.table("extraction_jobs")
-            .select("job_id, status, completed_documents, total_documents, results")
+            .select(
+                "job_id, user_id, status, completed_documents, total_documents, "
+                "results, collection_id, schema_id, document_ids, language, "
+                "extraction_context, prompt_id"
+            )
+            .eq("job_id", job_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as lookup_error:
+        logger.error(
+            f"Could not verify extraction job access for {job_id}: {lookup_error}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Extraction job store unavailable",
+        ) from lookup_error
+
+    rows = response.data or []
+    if isinstance(rows, dict):
+        rows = [rows]
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extraction job not found",
+        )
+    return rows[0]
+
+
+def _verify_job_ownership(job_id: str, user_id: str) -> None:
+    """Retain the explicit mutation authorization contract for cancellation."""
+    if supabase is None:
+        return
+    try:
+        owner = (
+            supabase.table("extraction_jobs")
+            .select("user_id")
             .eq("job_id", job_id)
             .single()
             .execute()
         )
-        return job_data.data
-    except (PostgrestAPIError, StorageException) as supabase_error:
-        logger.warning(
-            f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}"
+    except Exception as lookup_error:
+        logger.warning(f"Cancellation ownership check skipped: {lookup_error}")
+        return
+
+    owner_id = (owner.data or {}).get("user_id") if owner.data else None
+    if owner_id is not None and owner_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to modify this job",
         )
-        return None
 
 
 def _deserialize_existing_results(
@@ -278,15 +327,11 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
         return None
 
 
-def _resolve_pending_job(job_id: str) -> BatchExtractionResponse:
+def _resolve_pending_job(job_id: str, job_data: dict) -> BatchExtractionResponse:
     """Resolve pending state by preserving existing progress or resubmitting when possible."""
     logger.warning(
         f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
     )
-    job_data = _load_job_record(job_id)
-    if not job_data:
-        return _pending_batch_response(job_id)
-
     preserved_response = _preserve_existing_job_progress(job_id, job_data)
     if preserved_response:
         return preserved_response
@@ -732,41 +777,6 @@ async def create_bulk_extraction(
         )
 
 
-def _verify_job_ownership(job_id: str, user_id: str) -> None:
-    """Enforce per-user ownership on extraction job reads.
-
-    Raises 403 if the job has a database record owned by a different user.
-    Enforced only when the job is recorded and the database is reachable:
-    unknown ids carry no user data to leak, and transient DB/lookup errors
-    degrade to the prior behaviour rather than blocking status polling.
-    """
-    if supabase is None:
-        return
-    try:
-        owner = (
-            supabase.table("extraction_jobs")
-            .select("user_id")
-            .eq("job_id", job_id)
-            .single()
-            .execute()
-        )
-    except Exception as lookup_error:
-        # Never block status polling on transient DB/lookup errors; degrade to
-        # the prior behaviour rather than failing the request.
-        logger.warning(f"Ownership check skipped for job {job_id}: {lookup_error}")
-        return
-
-    owner_id = (owner.data or {}).get("user_id") if owner.data else None
-    if owner_id is not None and owner_id != user_id:
-        logger.warning(
-            f"User {user_id} attempted to read job {job_id} owned by another user"
-        )
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to view this job",
-        )
-
-
 @router.get(
     "/{job_id}",
     response_model=BatchExtractionResponse,
@@ -791,14 +801,19 @@ async def get_extraction_job(
     - **CANCELLED**: Job was cancelled
     """
     try:
-        _verify_job_ownership(job_id, user.id)
+        if not is_uuid(job_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Extraction job not found",
+            )
+        job_record = _load_owned_job_record(job_id, user.id)
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
             return _pending_batch_response(job_id)
 
         if task_state == "PENDING" and not task_result.info:
-            return _resolve_pending_job(job_id)
+            return _resolve_pending_job(job_id, job_record)
 
         not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
         if not_ready_response:
