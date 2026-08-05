@@ -330,7 +330,7 @@ async def get_post(slug: str):
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching post: {e}", exc_info=True)
+        logger.exception("Error fetching post: {}", e)
         raise HTTPException(status_code=500, detail="Failed to fetch blog post")
 
 
