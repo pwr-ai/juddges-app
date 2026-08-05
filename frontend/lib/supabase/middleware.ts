@@ -1,14 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { OWNED_CHAT_ID_HEADER } from "@/lib/chat-route-contract";
 import { logger } from "@/lib/logger";
+import { CANONICAL_UUID_PATH_SEGMENT } from "@/lib/validation/canonical-uuid";
 
-const UUID_PATH_SEGMENT =
-  "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const CHAT_MESSAGES_HANDLER_PATH = new RegExp(
-  `^/api/chats/${UUID_PATH_SEGMENT}/messages$`,
+  `^/api/chats/${CANONICAL_UUID_PATH_SEGMENT}/messages$`,
   "i",
 );
-const CHAT_DETAIL_PAGE_PATH = new RegExp(`^/chat/${UUID_PATH_SEGMENT}$`, "i");
+const CHAT_DETAIL_PAGE_PATH = new RegExp(
+  `^/chat/${CANONICAL_UUID_PATH_SEGMENT}$`,
+  "i",
+);
 const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
 
 function canAnonymousRequestReachHandler(request: NextRequest): boolean {
@@ -41,9 +44,29 @@ function chatPageError(status: 503 | 504): NextResponse {
   );
 }
 
+function sanitizedRequestHeaders(
+  request: NextRequest,
+  ownedChatId?: string,
+): Headers {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(OWNED_CHAT_ID_HEADER);
+  if (ownedChatId) requestHeaders.set(OWNED_CHAT_ID_HEADER, ownedChatId);
+  return requestHeaders;
+}
+
+function preserveSupabaseCookies(
+  response: NextResponse,
+  supabaseResponse: NextResponse,
+): NextResponse {
+  for (const cookie of supabaseResponse.cookies.getAll()) {
+    response.cookies.set(cookie);
+  }
+  return response;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
-    request,
+    request: { headers: sanitizedRequestHeaders(request) },
   });
 
   const supabase = createServerClient(
@@ -59,7 +82,7 @@ export async function updateSession(request: NextRequest) {
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
-            request,
+            request: { headers: sanitizedRequestHeaders(request) },
           });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -106,7 +129,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (authLookupFailed && isExactChatPageRequest(request)) {
-    return chatPageError(503);
+    return preserveSupabaseCookies(chatPageError(503), supabaseResponse);
   }
 
   const requestedChatId = user ? chatPageId(request) : null;
@@ -130,24 +153,39 @@ export async function updateSession(request: NextRequest) {
         logger.error("Chat access lookup failed in middleware", error, {
           path: request.nextUrl.pathname,
         });
-        return chatPageError(503);
+        return preserveSupabaseCookies(chatPageError(503), supabaseResponse);
       }
       if (!chat) {
         const notFoundUrl = request.nextUrl.clone();
         notFoundUrl.pathname = "/__chat-not-found";
-        return NextResponse.rewrite(notFoundUrl, { status: 404 });
+        return preserveSupabaseCookies(
+          NextResponse.rewrite(notFoundUrl, {
+            status: 404,
+            request: { headers: sanitizedRequestHeaders(request) },
+          }),
+          supabaseResponse,
+        );
       }
+
+      return preserveSupabaseCookies(
+        NextResponse.next({
+          request: {
+            headers: sanitizedRequestHeaders(request, requestedChatId),
+          },
+        }),
+        supabaseResponse,
+      );
     } catch (error) {
       if (
         controller.signal.aborted &&
         controller.signal.reason === timeoutReason
       ) {
-        return chatPageError(504);
+        return preserveSupabaseCookies(chatPageError(504), supabaseResponse);
       }
       logger.error("Chat access lookup failed in middleware", error, {
         path: request.nextUrl.pathname,
       });
-      return chatPageError(503);
+      return preserveSupabaseCookies(chatPageError(503), supabaseResponse);
     } finally {
       clearTimeout(timeout);
     }
@@ -182,7 +220,10 @@ export async function updateSession(request: NextRequest) {
     if (nextTarget && nextTarget !== "/") {
       url.searchParams.set("next", nextTarget);
     }
-    return NextResponse.redirect(url);
+    return preserveSupabaseCookies(
+      NextResponse.redirect(url),
+      supabaseResponse,
+    );
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

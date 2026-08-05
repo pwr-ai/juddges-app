@@ -1,7 +1,8 @@
-import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 
-import { isValidChatId, resolveOwnedChatAccess } from "@/lib/server/chat-access";
-import { createClient } from "@/lib/supabase/server";
+import { OWNED_CHAT_ID_HEADER } from "@/lib/chat-route-contract";
+import { isValidChatId } from "@/lib/server/chat-access";
 
 import ChatDetailClient from "./ChatDetailClient";
 
@@ -17,13 +18,8 @@ export default async function ChatDetailPage({
     notFound();
   }
 
-  const supabase = await createClient();
-  const access = await resolveOwnedChatAccess(supabase, chatId);
-
-  if (access.kind === "anonymous") {
-    redirect(`/auth/login?next=${encodeURIComponent(`/chat/${chatId}`)}`);
-  }
-  if (access.kind === "not_found") {
+  const requestHeaders = await headers();
+  if (requestHeaders.get(OWNED_CHAT_ID_HEADER) !== chatId) {
     notFound();
   }
 

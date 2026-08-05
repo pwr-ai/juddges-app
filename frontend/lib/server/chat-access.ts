@@ -1,9 +1,8 @@
 import { AppError, DatabaseError, ErrorCode } from "@/lib/errors";
 import type { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
+import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
 
 const DEFAULT_CHAT_LOOKUP_TIMEOUT_MS = 8_000;
-const chatIdSchema = z.string().uuid();
 
 export type ChatAccessSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -26,7 +25,7 @@ function chatLookupTimeout(): AppError {
 }
 
 export function isValidChatId(chatId: string): boolean {
-  return chatIdSchema.safeParse(chatId).success;
+  return isCanonicalUuid(chatId);
 }
 
 function isAnonymousAuthError(error: { message?: string } | null): boolean {
