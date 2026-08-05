@@ -55,6 +55,29 @@ describe('GET /api/documents/[id]/metadata', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it('returns a safe 500 when auth lookup throws unexpectedly', async () => {
+    mockGetUser.mockRejectedValue(new Error('auth network crashed'));
+
+    const response = await callRoute();
+
+    expect(response.status).toBe(500);
+    expect((await response.json()).error).toBe('INTERNAL_ERROR');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('returns a retryable 503 for an auth infrastructure error', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'upstream unavailable', status: 503 },
+    });
+
+    const response = await callRoute();
+
+    expect(response.status).toBe(503);
+    expect((await response.json()).error).toBe('DATABASE_UNAVAILABLE');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid IDs before contacting upstream', async () => {
     const response = await callRoute('bad%2Fid');
 
@@ -144,6 +167,23 @@ describe('GET /api/documents/[id]/metadata', () => {
     });
 
     const response = await callRoute();
+
+    expect(response.status).toBe(502);
+    expect((await response.json()).error).toBe('INTERNAL_ERROR');
+  });
+
+  it('rejects metadata for a different document as malformed upstream data', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        document_id: 'other-doc',
+        document_type: 'judgment',
+        language: 'en',
+      }),
+    });
+
+    const response = await callRoute('doc-1');
 
     expect(response.status).toBe(502);
     expect((await response.json()).error).toBe('INTERNAL_ERROR');

@@ -46,6 +46,11 @@ describe("Supabase middleware retired routes", () => {
     const exact = await updateSession(
       new NextRequest('http://localhost/api/documents/doc-1/metadata')
     );
+    const exactHead = await updateSession(
+      new NextRequest('http://localhost/api/documents/doc-1/metadata', {
+        method: 'HEAD',
+      })
+    );
     const wrongMethod = await updateSession(
       new NextRequest('http://localhost/api/documents/doc-1/metadata', {
         method: 'POST',
@@ -57,6 +62,8 @@ describe("Supabase middleware retired routes", () => {
 
     expect(exact.status).toBe(200);
     expect(exact.headers.get('location')).toBeNull();
+    expect(exactHead.status).toBe(200);
+    expect(exactHead.headers.get('location')).toBeNull();
     expect(wrongMethod.status).toBe(307);
     expect(nested.status).toBe(307);
   });

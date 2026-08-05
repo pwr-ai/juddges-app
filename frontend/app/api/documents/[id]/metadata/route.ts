@@ -28,7 +28,24 @@ export async function GET(
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
+    if (error) {
+      const status = Number(error.status);
+      const message = error.message ?? '';
+      if (
+        status === 401 ||
+        status === 403 ||
+        message === 'Auth session missing!' ||
+        message.includes('refresh_token_not_found')
+      ) {
+        throw new UnauthorizedError();
+      }
+      throw new AppError(
+        'Authentication service is temporarily unavailable.',
+        ErrorCode.DATABASE_UNAVAILABLE,
+        503
+      );
+    }
+    if (!data.user) {
       throw new UnauthorizedError();
     }
 
@@ -73,19 +90,23 @@ export async function GET(
       );
     }
 
-    if (error instanceof AppError) {
+    if (error instanceof UnauthorizedError) {
       return NextResponse.json(error.toErrorDetail(), {
-        status: error.statusCode,
+        status: 401,
       });
+    }
+
+    if (error instanceof AppError) {
+      return NextResponse.json(error.toErrorDetail(), { status: error.statusCode });
     }
 
     return NextResponse.json(
       new AppError(
-        'Unable to authenticate the document request.',
-        ErrorCode.UNAUTHORIZED,
-        401
+        'An unexpected error occurred while authenticating the request.',
+        ErrorCode.INTERNAL_ERROR,
+        500
       ).toErrorDetail(),
-      { status: 401 }
+      { status: 500 }
     );
   }
 }

@@ -109,7 +109,7 @@ export async function fetchDocumentMetadata(
       );
     }
 
-    if (!isDocumentMetadata(payload)) {
+    if (!isDocumentMetadata(payload) || payload.document_id !== documentId) {
       throw new DocumentMetadataUpstreamError(
         'The document service returned malformed metadata.',
         502,

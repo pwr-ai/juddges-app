@@ -110,7 +110,7 @@ export async function updateSessionWithAuth(
     // receive JSON 401 rather than an HTML login redirect. Lookalikes and all
     // other methods remain protected by middleware.
     !(
-      request.method === 'GET' &&
+      (request.method === 'GET' || request.method === 'HEAD') &&
       DOCUMENT_METADATA_API_PATTERN.test(request.nextUrl.pathname)
     ) &&
     // The retired GraphQL bridge must reach the Next.js router and resolve as

@@ -219,7 +219,15 @@ describe('documents production HTTP/auth status matrix', () => {
         `${appUrl}/api/documents/visible-doc/metadata`
       );
       expect(anonymousBff.status).toBe(401);
+      const anonymousContentType = anonymousBff.headers.get('content-type');
       expect((await anonymousBff.json()).error).toBe('UNAUTHORIZED');
+      const anonymousBffHead = await requestUntilReady(
+        `${appUrl}/api/documents/visible-doc/metadata`,
+        { method: 'HEAD' }
+      );
+      expect(anonymousBffHead.status).toBe(401);
+      expect(anonymousBffHead.headers.get('content-type')).toBe(anonymousContentType);
+      expect(await anonymousBffHead.text()).toBe('');
       const anonymousLookalike = await requestUntilReady(
         `${appUrl}/api/documents/visible-doc/metadata/nested`
       );

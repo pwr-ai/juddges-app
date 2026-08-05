@@ -212,17 +212,25 @@ export async function middleware(incomingRequest: NextRequest) {
 
   if (
     !userId &&
-    request.method === 'GET' &&
+    (request.method === 'GET' || request.method === 'HEAD') &&
     DOCUMENT_METADATA_API_PATTERN.test(request.nextUrl.pathname)
   ) {
     return finishResponse(
-      NextResponse.json(
+      new NextResponse(
+        request.method === 'HEAD'
+          ? null
+          : JSON.stringify({
+              error: 'UNAUTHORIZED',
+              code: 'UNAUTHORIZED',
+              message: 'Authentication required',
+            }),
         {
-          error: 'UNAUTHORIZED',
-          code: 'UNAUTHORIZED',
-          message: 'Authentication required',
-        },
-        { status: 401 }
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'private, no-store',
+          },
+        }
       ),
       sessionResponse,
       locale,
