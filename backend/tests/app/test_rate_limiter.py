@@ -2,6 +2,7 @@
 Unit tests for rate_limiter.py — proxy-aware IP resolution.
 
 Tests cover:
+- API-key-authenticated BFF identities receive isolated quota keys.
 - Trusted proxy mode uses leftmost X-Forwarded-For address (real client).
 - Trusted proxy mode falls back to X-Real-IP when X-Forwarded-For absent.
 - Trusted proxy mode falls back to socket address when no proxy headers.
@@ -21,6 +22,8 @@ def _make_request(
     client_host: str = "10.0.0.1",
     forwarded_for: str | None = None,
     real_ip: str | None = None,
+    api_key: str | None = None,
+    rate_limit_identity: str | None = None,
 ) -> MagicMock:
     """Build a minimal Starlette-like Request mock."""
     request = MagicMock()
@@ -32,12 +35,63 @@ def _make_request(
         headers["X-Forwarded-For"] = forwarded_for
     if real_ip is not None:
         headers["X-Real-IP"] = real_ip
+    if api_key is not None:
+        headers["X-API-Key"] = api_key
+    if rate_limit_identity is not None:
+        headers["X-RateLimit-Identity"] = rate_limit_identity
 
     # Starlette Headers supports .get()
     request.headers = MagicMock()
     request.headers.get = lambda key, default="": headers.get(key, default)
 
     return request
+
+
+@pytest.mark.unit
+class TestVerifiedIdentityQuotaKeys:
+    """BFF-authenticated users must not share the proxy container's quota."""
+
+    def test_verified_identities_have_isolated_quota_keys(self):
+        import app.rate_limiter as rl_module
+
+        identity_a = "a" * 64
+        identity_b = "b" * 64
+        with patch.dict(os.environ, {"BACKEND_API_KEY": "server-api-key"}):
+            key_a = rl_module.get_client_ip(
+                _make_request(
+                    client_host="172.18.0.2",
+                    api_key="server-api-key",
+                    rate_limit_identity=identity_a,
+                )
+            )
+            key_b = rl_module.get_client_ip(
+                _make_request(
+                    client_host="172.18.0.2",
+                    api_key="server-api-key",
+                    rate_limit_identity=identity_b,
+                )
+            )
+
+        assert key_a == f"user:{identity_a}"
+        assert key_b == f"user:{identity_b}"
+        assert key_a != key_b
+
+    def test_identity_is_ignored_without_the_matching_service_key(self):
+        import app.rate_limiter as rl_module
+
+        with (
+            patch.dict(os.environ, {"BACKEND_API_KEY": "server-api-key"}),
+            patch("app.rate_limiter.get_remote_address", return_value="172.18.0.2"),
+        ):
+            key = rl_module.get_client_ip(
+                _make_request(
+                    client_host="172.18.0.2",
+                    api_key="wrong-key",
+                    rate_limit_identity="a" * 64,
+                )
+            )
+
+        assert key == "172.18.0.2"
 
 
 @pytest.mark.unit
