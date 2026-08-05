@@ -1,0 +1,103 @@
+/** @jest-environment node */
+
+import React from "react";
+
+jest.mock("next/headers", () => ({ headers: jest.fn() }));
+jest.mock("next/navigation", () => ({
+  notFound: jest.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+}));
+jest.mock("@/app/schemas/[id]/client", () => ({
+  __esModule: true,
+  default: jest.fn((props: unknown) =>
+    React.createElement("div", { "data-testid": "schema-client" }, JSON.stringify(props))
+  ),
+}));
+
+import SchemaDetailPage from "@/app/schemas/[id]/page";
+import SchemaDetailClient from "@/app/schemas/[id]/client";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import {
+  SCHEMA_SNAPSHOT_HEADER,
+  SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
+  SCHEMA_SNAPSHOT_USER_HEADER,
+  encodeSchemaSnapshot,
+  signSchemaSnapshot,
+} from "@/lib/schemas/detail-transport";
+
+const mockHeaders = jest.mocked(headers);
+const mockNotFound = jest.mocked(notFound);
+const mockClient = jest.mocked(SchemaDetailClient);
+
+const ID = "abcdef01-1234-4abc-8def-1234567890ab";
+const schema = {
+  id: ID,
+  name: "Contract schema",
+  description: null,
+  type: "legal",
+  category: "contract",
+  text: { type: "object", properties: {} },
+  dates: {},
+  status: "published" as const,
+  is_verified: true,
+  created_at: "2026-08-05T00:00:00Z",
+  updated_at: "2026-08-05T00:00:00Z",
+  user_id: "owner-1",
+};
+
+describe("schema detail server page", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.BACKEND_API_KEY = "snapshot-secret";
+  });
+
+  it("renders the client from one signed middleware snapshot", async () => {
+    const encoded = encodeSchemaSnapshot(schema);
+    const signature = await signSchemaSnapshot(
+      encoded,
+      "owner-1",
+      `/schemas/${ID}`,
+      "snapshot-secret"
+    );
+    const values = new Map([
+      [SCHEMA_SNAPSHOT_HEADER, encoded],
+      [SCHEMA_SNAPSHOT_SIGNATURE_HEADER, signature],
+      [SCHEMA_SNAPSHOT_USER_HEADER, "owner-1"],
+    ]);
+    mockHeaders.mockResolvedValue(
+      new Headers(Object.fromEntries(values)) as unknown as Awaited<ReturnType<typeof headers>>
+    );
+
+    const result = await SchemaDetailPage({ params: Promise.resolve({ id: ID }) });
+
+    expect(React.isValidElement(result)).toBe(true);
+    expect(result.type).toBe(mockClient);
+    expect(result.props).toEqual(expect.objectContaining({ initialSchema: schema }));
+  });
+
+  it("turns a noncanonical route ID into not found", async () => {
+    await expect(
+      SchemaDetailPage({ params: Promise.resolve({ id: `${ID}.css` }) })
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mockNotFound).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [null, null, null],
+    ["forged", "forged", "attacker"],
+  ])("never trusts a missing or forged middleware snapshot", async (payload, signature, user) => {
+    const values: Record<string, string> = {};
+    if (payload) values[SCHEMA_SNAPSHOT_HEADER] = payload;
+    if (signature) values[SCHEMA_SNAPSHOT_SIGNATURE_HEADER] = signature;
+    if (user) values[SCHEMA_SNAPSHOT_USER_HEADER] = user;
+    mockHeaders.mockResolvedValue(
+      new Headers(values) as unknown as Awaited<ReturnType<typeof headers>>
+    );
+    await expect(
+      SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
+    ).rejects.toThrow(/verified schema snapshot/i);
+    expect(mockClient).not.toHaveBeenCalled();
+  });
+});

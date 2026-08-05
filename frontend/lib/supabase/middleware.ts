@@ -1,27 +1,112 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
 import { logger } from "@/lib/logger";
+import {
+  SCHEMA_SNAPSHOT_HEADER,
+  SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
+  SCHEMA_SNAPSHOT_USER_HEADER,
+  isCanonicalSchemaId,
+  isUnauthenticatedSchemaAuthError,
+} from "@/lib/schemas/detail-transport";
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
+const SCHEMA_API_PATTERN = new RegExp(
+  `^/api/schemas/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$`
+);
+const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
+
+export type SessionAuthFailure = "unauthenticated" | "unavailable" | null;
+
+export interface SessionUpdate {
+  response: NextResponse;
+  request: NextRequest;
+  userId: string | null;
+  accessToken: string | null;
+  authFailure: SessionAuthFailure;
+}
+
+function sanitizedRequest(incoming: NextRequest): NextRequest {
+  const headers = new Headers(incoming.headers);
+  headers.delete(SCHEMA_SNAPSHOT_HEADER);
+  headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);
+  headers.delete(SCHEMA_SNAPSHOT_USER_HEADER);
+  return new NextRequest(incoming.url, {
+    method: incoming.method,
+    headers,
+    body:
+      incoming.method === "GET" || incoming.method === "HEAD"
+        ? undefined
+        : incoming.body,
   });
+}
 
+function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
+  for (const cookie of source.cookies.getAll()) target.cookies.set(cookie);
+  return target;
+}
+
+function isSchemaReadApi(request: NextRequest): boolean {
+  return (
+    (request.method === "GET" || request.method === "HEAD") &&
+    SCHEMA_API_PATTERN.test(request.nextUrl.pathname)
+  );
+}
+
+function isSchemaPage(request: NextRequest): boolean {
+  const match = SCHEMA_PAGE_PATTERN.exec(request.nextUrl.pathname);
+  if (!match) return false;
+  try {
+    return isCanonicalSchemaId(decodeURIComponent(match[1]));
+  } catch {
+    return false;
+  }
+}
+
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/about") ||
+    pathname.startsWith("/ecosystem") ||
+    pathname.startsWith("/opengraph-image") ||
+    pathname.startsWith("/twitter-image") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/api/health") ||
+    pathname.startsWith("/api/dashboard/stats") ||
+    pathname === "/api/graphql" ||
+    pathname.startsWith("/status") ||
+    pathname.startsWith("/offline")
+  );
+}
+
+function loginRedirect(
+  request: NextRequest,
+  sessionResponse: NextResponse
+): NextResponse {
+  const url = request.nextUrl.clone();
+  const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
+  url.pathname = "/auth/login";
+  url.search = "";
+  if (nextTarget && nextTarget !== "/") url.searchParams.set("next", nextTarget);
+  return copyCookies(sessionResponse, NextResponse.redirect(url));
+}
+
+export async function updateSessionWithAuth(
+  incomingRequest: NextRequest
+): Promise<SessionUpdate> {
+  const request = sanitizedRequest(incomingRequest);
+  let supabaseResponse = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
+        getAll: () => request.cookies.getAll(),
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -30,82 +115,72 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  // IMPORTANT: DO NOT REMOVE auth.getUser()
-
-  let user = null;
+  let userId: string | null = null;
+  let accessToken: string | null = null;
+  let authFailure: SessionAuthFailure = null;
   try {
-    const {
-      data: { user: authUser },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (!error) {
-      user = authUser;
-    } else if (
-      error.message !== "Auth session missing!" &&
-      !error.message.includes("refresh_token_not_found")
-    ) {
-      // Surface unexpected auth failures (expired tokens that won't refresh,
-      // project-ref mismatches, network errors). Benign anonymous-user errors
-      // are still ignored to avoid console spam.
-      logger.warn("Auth session lookup failed in middleware", {
-        path: request.nextUrl.pathname,
-        message: error.message,
-        status: error.status,
-      });
+    const userLookup = await supabase.auth.getUser();
+    if (userLookup.error) {
+      authFailure = isUnauthenticatedSchemaAuthError(userLookup.error)
+        ? "unauthenticated"
+        : "unavailable";
+      if (authFailure === "unavailable") {
+        logger.warn("Auth session lookup failed in middleware", {
+          path: request.nextUrl.pathname,
+          message: userLookup.error.message,
+          status: userLookup.error.status,
+        });
+      }
+    } else if (!userLookup.data.user) {
+      authFailure = "unauthenticated";
+    } else {
+      userId = userLookup.data.user.id;
+      const sessionLookup = await supabase.auth.getSession();
+      if (sessionLookup.error) {
+        authFailure = isUnauthenticatedSchemaAuthError(sessionLookup.error)
+          ? "unauthenticated"
+          : "unavailable";
+        userId = null;
+      } else {
+        accessToken = sessionLookup.data.session?.access_token ?? null;
+        if (!accessToken) {
+          userId = null;
+          authFailure = "unauthenticated";
+        }
+      }
     }
   } catch (error) {
-    // Catch any unexpected errors and continue without user
     logger.error("Unexpected error in auth middleware: ", error);
+    authFailure = "unavailable";
   }
 
+  const schemaFailureNeedsExactStatus =
+    authFailure === "unavailable" &&
+    (isSchemaReadApi(request) || isSchemaPage(request));
   if (
-    !user &&
-    request.nextUrl.pathname !== "/" &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/about") &&
-    !request.nextUrl.pathname.startsWith("/ecosystem") &&
-    // Metadata image routes must be reachable by social/search crawlers.
-    !request.nextUrl.pathname.startsWith("/opengraph-image") &&
-    !request.nextUrl.pathname.startsWith("/twitter-image") &&
-    !request.nextUrl.pathname.startsWith("/onboarding") &&
-    !request.nextUrl.pathname.startsWith("/api/health") &&
-    !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
-    // The retired GraphQL bridge must reach the Next.js router and resolve as
-    // 404. Keep this exact so lookalike paths remain protected.
-    request.nextUrl.pathname !== "/api/graphql" &&
-    !request.nextUrl.pathname.startsWith("/status") &&
-    !request.nextUrl.pathname.startsWith("/offline")
+    !userId &&
+    !isPublicPath(request.nextUrl.pathname) &&
+    !isSchemaReadApi(request) &&
+    !schemaFailureNeedsExactStatus
   ) {
-    // Preserve the originally-requested path (and query) so the login form
-    // can return the user there after a successful sign-in instead of
-    // dumping them on `/`.
-    const url = request.nextUrl.clone();
-    const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
-    url.pathname = "/auth/login";
-    url.search = "";
-    if (nextTarget && nextTarget !== "/") {
-      url.searchParams.set("next", nextTarget);
-    }
-    return NextResponse.redirect(url);
+    return {
+      response: loginRedirect(request, supabaseResponse),
+      request,
+      userId: null,
+      accessToken: null,
+      authFailure,
+    };
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is.
-  // If you're creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+  return {
+    response: supabaseResponse,
+    request,
+    userId,
+    accessToken,
+    authFailure,
+  };
+}
 
-  return supabaseResponse;
+export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  return (await updateSessionWithAuth(request)).response;
 }

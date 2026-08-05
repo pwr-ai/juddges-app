@@ -1,123 +1,170 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import logger from '@/lib/logger';
+
 import {
-  UnauthorizedError,
-  DatabaseError,
   AppError,
   ErrorCode,
-  SchemaNotFoundError
-} from '@/lib/errors';
-import { getBackendUrl } from '@/app/api/utils/backend-url';
+  SchemaNotFoundError,
+  UnauthorizedError,
+} from "@/lib/errors";
+import logger from "@/lib/logger";
+import {
+  SchemaDetailNotFoundError,
+  SchemaDetailUpstreamError,
+  fetchSchemaDetail,
+} from "@/lib/server/schema-detail";
+import {
+  isCanonicalSchemaId,
+  isUnauthenticatedSchemaAuthError,
+} from "@/lib/schemas/detail-transport";
+import { createClient } from "@/lib/supabase/server";
 
-const apiLogger = logger.child('schemas-api');
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-/**
- * GET /api/schemas/[id] - Get a single schema by ID
- */
-export async function GET(
+const apiLogger = logger.child("schema-detail-api");
+type RouteContext = { params: Promise<{ id: string }> };
+
+function jsonError(error: AppError, head: boolean): NextResponse {
+  const body = head ? null : JSON.stringify(error.toErrorDetail());
+  return new NextResponse(body, {
+    status: error.statusCode,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "private, no-store",
+    },
+  });
+}
+
+async function handleRead(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: RouteContext,
+  head: boolean
 ): Promise<NextResponse> {
-  const requestId = crypto.randomUUID();
   const { id } = await params;
-
   try {
-    apiLogger.info('GET /api/schemas/[id] started', { requestId, schemaId: id });
+    if (!isCanonicalSchemaId(id)) {
+      throw new SchemaDetailNotFoundError();
+    }
 
-    // Get the authenticated user
     const supabase = await createClient();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData?.user) {
-      throw new UnauthorizedError("Authentication required");
-    }
-
-    // Get backend URL and API key
-    const backendUrl = getBackendUrl();
-    const apiKey = process.env.BACKEND_API_KEY;
-
-    if (!apiKey) {
-      apiLogger.error("BACKEND_API_KEY not configured", { requestId });
+    let userLookup: Awaited<ReturnType<typeof supabase.auth.getUser>>;
+    try {
+      userLookup = await supabase.auth.getUser();
+    } catch {
       throw new AppError(
-        "Backend API key not configured",
-        ErrorCode.INTERNAL_ERROR
+        "Authentication service is temporarily unavailable.",
+        ErrorCode.DATABASE_UNAVAILABLE,
+        503
       );
     }
-
-    // Fetch schema from Supabase directly
-    const { data: schema, error: fetchError } = await supabase
-      .from('extraction_schemas')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !schema) {
-      throw new SchemaNotFoundError(id);
-    }
-
-    // Get user email if user_id exists
-    let userEmail: string | undefined;
-    if (schema.user_id) {
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('id', schema.user_id)
-          .single();
-
-        if (!profileError && profile?.email) {
-          userEmail = profile.email;
-        } else {
-          apiLogger.warn("Failed to fetch user email from profile", { 
-            error: profileError, 
-            requestId, 
-            schemaId: id,
-            userId: schema.user_id 
-          });
-        }
-      } catch (error) {
-        apiLogger.warn("Failed to fetch user email", { error, requestId, schemaId: id });
+    if (userLookup.error) {
+      if (isUnauthenticatedSchemaAuthError(userLookup.error)) {
+        throw new UnauthorizedError();
       }
-    }
-
-    // Enrich schema with user email
-    const enrichedSchema = {
-      ...schema,
-      user: schema.user_id && userEmail
-        ? { email: userEmail }
-        : undefined
-    };
-
-    apiLogger.info('GET /api/schemas/[id] completed', {
-      requestId,
-      schemaId: id
-    });
-
-    return NextResponse.json(enrichedSchema, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-      },
-    });
-
-  } catch (error) {
-    apiLogger.error("GET /api/schemas/[id] failed", error, { requestId, schemaId: id });
-
-    if (error instanceof AppError) {
-      return NextResponse.json(
-        error.toErrorDetail(),
-        { status: error.statusCode }
+      throw new AppError(
+        "Authentication service is temporarily unavailable.",
+        ErrorCode.DATABASE_UNAVAILABLE,
+        503
       );
     }
+    if (!userLookup.data.user) throw new UnauthorizedError();
 
-    return NextResponse.json(
+    let sessionLookup: Awaited<ReturnType<typeof supabase.auth.getSession>>;
+    try {
+      sessionLookup = await supabase.auth.getSession();
+    } catch {
+      throw new AppError(
+        "Authentication service is temporarily unavailable.",
+        ErrorCode.DATABASE_UNAVAILABLE,
+        503
+      );
+    }
+    if (sessionLookup.error) {
+      if (isUnauthenticatedSchemaAuthError(sessionLookup.error)) {
+        throw new UnauthorizedError();
+      }
+      throw new AppError(
+        "Authentication service is temporarily unavailable.",
+        ErrorCode.DATABASE_UNAVAILABLE,
+        503
+      );
+    }
+    const accessToken = sessionLookup.data.session?.access_token;
+    if (!accessToken) throw new UnauthorizedError();
+
+    const schema = await fetchSchemaDetail(id, accessToken, request.signal);
+    if (head) {
+      return new NextResponse(null, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "private, no-store",
+        },
+      });
+    }
+    return NextResponse.json(schema, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  } catch (error) {
+    apiLogger.error("Schema detail request failed", error, { schemaId: id });
+    if (error instanceof SchemaDetailNotFoundError) {
+      return jsonError(new SchemaNotFoundError(id), head);
+    }
+    if (error instanceof SchemaDetailUpstreamError) {
+      const code =
+        error.statusCode === 401
+          ? ErrorCode.UNAUTHORIZED
+          : error.statusCode === 403
+            ? ErrorCode.FORBIDDEN
+            : error.statusCode === 503
+              ? ErrorCode.DATABASE_UNAVAILABLE
+              : ErrorCode.INTERNAL_ERROR;
+      return jsonError(
+        new AppError(error.message, code, error.statusCode),
+        head
+      );
+    }
+    if (error instanceof AppError) return jsonError(error, head);
+    return jsonError(
       new AppError(
-        "Failed to fetch schema",
-        ErrorCode.INTERNAL_ERROR
-      ).toErrorDetail(),
-      { status: 500 }
+        "Failed to fetch schema.",
+        ErrorCode.INTERNAL_ERROR,
+        500
+      ),
+      head
     );
   }
 }
 
+export async function GET(
+  request: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
+  return handleRead(request, context, false);
+}
 
+export async function HEAD(
+  request: NextRequest,
+  context: RouteContext
+): Promise<NextResponse> {
+  return handleRead(request, context, true);
+}
+
+function methodNotAllowed(): NextResponse {
+  return NextResponse.json(
+    { error: "METHOD_NOT_ALLOWED", message: "Method not allowed" },
+    {
+      status: 405,
+      headers: {
+        Allow: "GET, HEAD",
+        "Cache-Control": "private, no-store",
+      },
+    }
+  );
+}
+
+export const POST = methodNotAllowed;
+export const PUT = methodNotAllowed;
+export const PATCH = methodNotAllowed;
+export const DELETE = methodNotAllowed;
+export const OPTIONS = methodNotAllowed;

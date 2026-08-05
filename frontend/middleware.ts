@@ -1,94 +1,231 @@
-import { updateSession } from '@/lib/supabase/middleware'
-import { type NextRequest } from 'next/server'
-import { LOCALE_COOKIE_NAME, DEFAULT_LOCALE, isValidLocale } from '@/lib/i18n/config'
-import type { LocaleCode } from '@/lib/i18n/types'
+import { NextResponse, type NextRequest } from "next/server";
 
-/**
- * Detect the best locale from the request
- * Priority: Cookie > Accept-Language header > Default
- */
+import { DEFAULT_LOCALE, isValidLocale, LOCALE_COOKIE_NAME } from "@/lib/i18n/config";
+import type { LocaleCode } from "@/lib/i18n/types";
+import { logger } from "@/lib/logger";
+import {
+  SCHEMA_SNAPSHOT_HEADER,
+  SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
+  SCHEMA_SNAPSHOT_USER_HEADER,
+  encodeSchemaSnapshot,
+  isCanonicalSchemaId,
+  signSchemaSnapshot,
+} from "@/lib/schemas/detail-transport";
+import {
+  SchemaDetailNotFoundError,
+  SchemaDetailUpstreamError,
+  fetchSchemaDetail,
+} from "@/lib/server/schema-detail";
+import { updateSessionWithAuth } from "@/lib/supabase/middleware";
+
+const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
+const SCHEMA_API_PATTERN =
+  /^\/api\/schemas\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 function detectLocale(request: NextRequest): LocaleCode {
-  // 1. Check cookie first (user's explicit preference)
-  const cookieLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value
-  if (cookieLocale && isValidLocale(cookieLocale)) {
-    return cookieLocale
-  }
-
-  // 2. Try Accept-Language header
-  const acceptLanguage = request.headers.get('accept-language')
+  const cookieLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value;
+  if (cookieLocale && isValidLocale(cookieLocale)) return cookieLocale;
+  const acceptLanguage = request.headers.get("accept-language");
   if (acceptLanguage) {
-    // Parse Accept-Language header (e.g., "en-US,en;q=0.9,pl;q=0.8")
     const languages = acceptLanguage
-      .split(',')
-      .map((lang) => {
-        const [code, q = '1'] = lang.trim().split(';q=')
+      .split(",")
+      .map((language) => {
+        const [code, quality = "1"] = language.trim().split(";q=");
         return {
-          code: code.split('-')[0].toLowerCase(), // Get primary language code
-          quality: parseFloat(q),
-        }
+          code: code.split("-")[0].toLowerCase(),
+          quality: Number.parseFloat(quality),
+        };
       })
-      .sort((a, b) => b.quality - a.quality)
-
-    // Find the first matching supported locale
-    for (const lang of languages) {
-      if (isValidLocale(lang.code)) {
-        return lang.code
-      }
+      .sort((left, right) => right.quality - left.quality);
+    for (const language of languages) {
+      if (isValidLocale(language.code)) return language.code;
     }
   }
-
-  // 3. Fall back to default
-  return DEFAULT_LOCALE
+  return DEFAULT_LOCALE;
 }
 
-export async function middleware(request: NextRequest) {
-  // Detect locale
-  const locale = detectLocale(request)
-
-  // Get the session response from Supabase middleware
-  const response = await updateSession(request)
-
-  // Only (re)write the locale cookie when it is missing or actually changed.
-  // Rewriting it on every request adds a needless Set-Cookie header to every
-  // RSC navigation (issue #178).
-  const existingLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value
-  const localeNeedsWrite = existingLocale !== locale
-
-  // If updateSession returned a redirect, return it as-is
-  if (response.status >= 300 && response.status < 400) {
-    if (localeNeedsWrite) {
-      response.cookies.set(LOCALE_COOKIE_NAME, locale, {
-        path: '/',
-        maxAge: 31536000, // 1 year
-        sameSite: 'lax',
-      })
-    }
-    return response
+function finishResponse(
+  target: NextResponse,
+  sessionResponse: NextResponse,
+  locale: LocaleCode,
+  localeNeedsWrite: boolean
+): NextResponse {
+  if (target !== sessionResponse) {
+    for (const cookie of sessionResponse.cookies.getAll()) target.cookies.set(cookie);
   }
-
   if (localeNeedsWrite) {
-    response.cookies.set(LOCALE_COOKIE_NAME, locale, {
-      path: '/',
-      maxAge: 31536000, // 1 year
-      sameSite: 'lax',
-    })
+    target.cookies.set(LOCALE_COOKIE_NAME, locale, {
+      path: "/",
+      maxAge: 31_536_000,
+      sameSite: "lax",
+    });
+  }
+  target.headers.set("x-locale", locale);
+  return target;
+}
+
+function schemaPageStatus(status: number, method: string): NextResponse {
+  const notFound = status === 404;
+  const title = notFound ? "Schema not found" : "Schema temporarily unavailable";
+  const message = notFound
+    ? "The requested schema does not exist or is not accessible."
+    : "The schema service could not load this schema. Please try again.";
+  const html =
+    method === "HEAD"
+      ? null
+      : `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head><body><main><h1>${title}</h1><p>${message}</p></main></body></html>`;
+  return new NextResponse(html, {
+    status,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "private, no-store",
+    },
+  });
+}
+
+function schemaApiAuthStatus(status: 401 | 503, method: string): NextResponse {
+  const error = status === 401 ? "UNAUTHORIZED" : "DATABASE_UNAVAILABLE";
+  return new NextResponse(
+    method === "HEAD"
+      ? null
+      : JSON.stringify({
+          error,
+          code: error,
+          message:
+            status === 401
+              ? "Authentication required"
+              : "Authentication service is temporarily unavailable.",
+        }),
+    {
+      status,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "private, no-store",
+      },
+    }
+  );
+}
+
+export async function middleware(incomingRequest: NextRequest) {
+  const locale = detectLocale(incomingRequest);
+  const localeNeedsWrite =
+    incomingRequest.cookies.get(LOCALE_COOKIE_NAME)?.value !== locale;
+  const session = await updateSessionWithAuth(incomingRequest);
+  const { response: sessionResponse, request, userId, accessToken, authFailure } = session;
+
+  if (sessionResponse.status >= 300 && sessionResponse.status < 400) {
+    return finishResponse(sessionResponse, sessionResponse, locale, localeNeedsWrite);
   }
 
-  // Add locale header for server components to read
-  response.headers.set('x-locale', locale)
+  const isRead = request.method === "GET" || request.method === "HEAD";
+  if (isRead && SCHEMA_API_PATTERN.test(request.nextUrl.pathname) && !userId) {
+    return finishResponse(
+      schemaApiAuthStatus(authFailure === "unavailable" ? 503 : 401, request.method),
+      sessionResponse,
+      locale,
+      localeNeedsWrite
+    );
+  }
 
-  return response
+  const pageMatch = SCHEMA_PAGE_PATTERN.exec(request.nextUrl.pathname);
+  if (pageMatch && !userId && authFailure === "unavailable") {
+    return finishResponse(
+      schemaPageStatus(503, request.method),
+      sessionResponse,
+      locale,
+      localeNeedsWrite
+    );
+  }
+
+  if (pageMatch && userId) {
+    if (!isRead) {
+      return finishResponse(
+        NextResponse.json(
+          { error: "METHOD_NOT_ALLOWED", message: "Method not allowed" },
+          { status: 405, headers: { Allow: "GET, HEAD" } }
+        ),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+
+    let schemaId: string;
+    try {
+      schemaId = decodeURIComponent(pageMatch[1]);
+    } catch {
+      return finishResponse(
+        schemaPageStatus(404, request.method),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+    if (
+      pageMatch[1] !== schemaId ||
+      !isCanonicalSchemaId(schemaId) ||
+      !accessToken
+    ) {
+      return finishResponse(
+        schemaPageStatus(accessToken ? 404 : 401, request.method),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+
+    try {
+      const schema = await fetchSchemaDetail(schemaId, accessToken, request.signal);
+      const encoded = encodeSchemaSnapshot(schema);
+      const headers = new Headers(request.headers);
+      headers.delete(SCHEMA_SNAPSHOT_HEADER);
+      headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);
+      headers.delete(SCHEMA_SNAPSHOT_USER_HEADER);
+      headers.set(SCHEMA_SNAPSHOT_HEADER, encoded);
+      headers.set(
+        SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
+        await signSchemaSnapshot(
+          encoded,
+          userId,
+          request.nextUrl.pathname,
+          process.env.BACKEND_API_KEY ?? ""
+        )
+      );
+      headers.set(SCHEMA_SNAPSHOT_USER_HEADER, userId);
+      return finishResponse(
+        NextResponse.next({ request: { headers } }),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    } catch (error) {
+      const status =
+        error instanceof SchemaDetailNotFoundError
+          ? 404
+          : error instanceof SchemaDetailUpstreamError
+            ? error.statusCode
+            : 500;
+      logger.warn("Schema detail preflight failed", {
+        schemaId,
+        status,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return finishResponse(
+        schemaPageStatus(status, request.method),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+  }
+
+  return finishResponse(sessionResponse, sessionResponse, locale, localeNeedsWrite);
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|chunk-error-handler\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|map|txt|xml|ico)$).*)',
+    "/schemas/:path*",
+    "/api/schemas/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|chunk-error-handler\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|map|txt|xml|ico)$).*)",
   ],
-}
+};
