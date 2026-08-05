@@ -94,6 +94,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Internal hand-off to the top-level middleware. The middleware consumes
+  // and removes this header before returning a response to the browser.
+  // Keeping the verified ID on the response avoids a second Supabase lookup
+  // when a protected route needs an authorization-aware preflight.
+  if (user) {
+    supabaseResponse.headers.set('x-juddges-verified-user-id', user.id);
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

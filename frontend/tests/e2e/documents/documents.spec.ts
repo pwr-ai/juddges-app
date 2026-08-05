@@ -479,7 +479,11 @@ test.describe('Document View Flow', () => {
         })
       );
 
-      await page.goto('/documents/does-not-exist-9999');
+      const response = await page.goto('/documents/does-not-exist-9999');
+
+      // Visible error copy is not sufficient: this route must carry the real
+      // HTTP status for crawlers, caches, and monitoring.
+      expect(response?.status()).toBe(404);
 
       // The page must not crash — either an error card or a "not found" message
       const errorVisible = await page
