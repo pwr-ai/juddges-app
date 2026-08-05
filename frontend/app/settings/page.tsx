@@ -7,7 +7,7 @@
  * that were previously scattered across the navigation
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -29,12 +29,8 @@ import {
  ExternalLink,
  Settings as SettingsIcon,
  Brain,
- Check,
  Loader2,
  AlertCircle,
- Zap,
- Globe,
- Cpu,
  Mail,
  MessageSquare,
  Webhook,
@@ -46,224 +42,7 @@ import {
 import { Header } from "@/lib/styles/components";
 import { useEmailAlertStore } from "@/lib/store/emailAlertStore";
 import type { EmailAlertSubscription, CreateEmailAlertInput, UpdateEmailAlertInput } from "@/types/email-alert";
-
-interface EmbeddingModel {
- id: string;
- provider: string;
- model_name: string;
- dimensions: number;
- max_input_length: number;
- description: string;
- is_default: boolean;
- is_active: boolean;
- api_key_configured: boolean;
-}
-
-function EmbeddingModelsSection() {
- const [models, setModels] = useState<EmbeddingModel[]>([]);
- const [activeModelId, setActiveModelId] = useState<string>("");
- const [loading, setLoading] = useState(true);
- const [switching, setSwitching] = useState<string | null>(null);
- const [testing, setTesting] = useState<string | null>(null);
- const [testResult, setTestResult] = useState<{ modelId: string; success: boolean; message: string } | null>(null);
- const [error, setError] = useState<string | null>(null);
-
- const fetchModels = useCallback(async () => {
- try {
- setLoading(true);
- const response = await fetch("/api/embeddings?endpoint=models");
- if (!response.ok) throw new Error("Failed to fetch models");
- const data = await response.json();
- setModels(data.models || []);
- setActiveModelId(data.active_model_id || "");
- setError(null);
- } catch (err) {
- setError("Failed to load embedding models. The backend may be unavailable.");
- } finally {
- setLoading(false);
- }
- }, []);
-
- useEffect(() => {
- fetchModels();
- }, [fetchModels]);
-
- const handleSetActive = async (modelId: string) => {
- setSwitching(modelId);
- setTestResult(null);
- try {
- const response = await fetch("/api/embeddings?action=set-active", {
- method: "POST",
- headers: {"Content-Type": "application/json"},
- body: JSON.stringify({ model_id: modelId }),
- });
- if (!response.ok) {
- const err = await response.json().catch(() => ({ detail: "Failed to switch model"}));
- throw new Error(err.detail || "Failed to switch model");
- }
- setActiveModelId(modelId);
- setModels((prev) =>
- prev.map((m) => ({ ...m, is_active: m.id === modelId }))
- );
- } catch (err) {
- setError(err instanceof Error ? err.message : "Failed to switch model");
- } finally {
- setSwitching(null);
- }
- };
-
- const handleTestModel = async (modelId: string) => {
- setTesting(modelId);
- setTestResult(null);
- try {
- const response = await fetch("/api/embeddings?action=test", {
- method: "POST",
- headers: {"Content-Type": "application/json"},
- body: JSON.stringify({
- text: "Przepisy dotyczące podatku VAT w kontekście transakcji wewnątrzwspólnotowych",
- model_id: modelId,
- }),
- });
- const data = await response.json();
- if (!response.ok) {
- setTestResult({ modelId, success: false, message: data.detail || "Test failed"});
- } else {
- setTestResult({ modelId, success: true, message: `${data.dimensions}-dim embedding generated` });
- }
- } catch {
- setTestResult({ modelId, success: false, message: "Connection error"});
- } finally {
- setTesting(null);
- }
- };
-
- const providerIcon = (provider: string) => {
- switch (provider) {
- case"openai": return <Zap className="h-4 w-4"/>;
- case"cohere": return <Globe className="h-4 w-4"/>;
- case"local": return <Cpu className="h-4 w-4"/>;
- default: return <Brain className="h-4 w-4"/>;
- }
- };
-
- const providerColor = (provider: string) => {
- switch (provider) {
- case"openai": return"bg-green-100 text-green-800";
- case"cohere": return"bg-purple-100 text-purple-800";
- case"local": return"bg-blue-100 text-blue-800";
- default: return"bg-gray-100 text-gray-800";
- }
- };
-
- if (loading) {
- return (
- <div className="flex items-center justify-center py-12">
- <Loader2 className="h-6 w-6 animate-spin text-muted-foreground"/>
- <span className="ml-2 text-sm text-muted-foreground">Loading embedding models...</span>
- </div>
- );
- }
-
- const isAllowed = (model: EmbeddingModel) => model.model_name === "BAAI/bge-m3";
-
- return (
- <div className="space-y-4">
- {error && (
- <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
- <AlertCircle className="h-4 w-4 flex-shrink-0"/>
- {error}
- </div>
- )}
-
- <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 text-amber-800 text-sm border border-amber-200">
- <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
- <span>
- Only <strong>BAAI/bge-m3</strong> can be activated at the moment. Other models are listed
- for reference — in the future we plan to investigate how different embeddings perform on
- Polish legal texts and re-enable selection.
- </span>
- </div>
-
- {models.map((model) => (
- <div
- key={model.id}
- className={`p-4 rounded-lg border transition-colors ${
- model.is_active
- ? "border-primary bg-primary/5"
- : "border-border hover:border-muted-foreground/30"
- }`}
- >
- <div className="flex items-start justify-between gap-4">
- <div className="flex-1 min-w-0">
- <div className="flex items-center gap-2 flex-wrap">
- <span className="font-medium">{model.model_name}</span>
- <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${providerColor(model.provider)}`}>
- {providerIcon(model.provider)}
- {model.provider}
- </span>
- {model.is_active && (
- <Badge variant="default"className="text-xs">
- <Check className="h-3 w-3 mr-1"/>
- Active
- </Badge>
- )}
- {!model.api_key_configured && (
- <Badge variant="outline"className="text-xs text-amber-600 border-amber-300">
- <AlertCircle className="h-3 w-3 mr-1"/>
- API key missing
- </Badge>
- )}
- </div>
- <p className="text-sm text-muted-foreground mt-1">{model.description}</p>
- <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
- <span>{model.dimensions} dimensions</span>
- <span>Max input: {model.max_input_length} chars</span>
- </div>
- {testResult && testResult.modelId === model.id && (
- <div
- className={`mt-2 text-xs px-2 py-1 rounded ${
- testResult.success
- ? "bg-green-50 text-green-700"
- : "bg-red-50 text-red-700"
- }`}
- >
- {testResult.success ? "Test passed": "Test failed"}: {testResult.message}
- </div>
- )}
- </div>
- <div className="flex gap-2 flex-shrink-0">
- <Button
- variant="outline"
- size="sm"
- onClick={() => handleTestModel(model.id)}
- disabled={testing === model.id || !model.api_key_configured}
- >
- {testing === model.id ? (
- <Loader2 className="h-3 w-3 animate-spin mr-1"/>
- ) : null}
- Test
- </Button>
- {!model.is_active && (
- <Button
- variant="default"
- size="sm"
- onClick={() => handleSetActive(model.id)}
- disabled={switching === model.id || !model.api_key_configured || !isAllowed(model)}
- title={!isAllowed(model) ? "Only BAAI/bge-m3 can be activated right now": undefined}
- >
- {switching === model.id ? (
- <Loader2 className="h-3 w-3 animate-spin mr-1"/>
- ) : null}
- Activate
- </Button>
- )}
- </div>
- </div>
- </div>
- ))}
- </div>
- );
-}
+import { EmbeddingModelsSection } from "./_components/embedding-models-section";
 
 /** Channel display config for badges and icons */
 const CHANNEL_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -622,6 +401,7 @@ function DigestSubscriptionsSection() {
 
 export default function SettingsPage() {
  const { user } = useAuth();
+ const isAdmin = user?.app_metadata?.is_admin === true || user?.role === "service_role";
 
  return (
  <div className="container mx-auto px-6 py-8 max-w-6xl">
@@ -734,7 +514,7 @@ export default function SettingsPage() {
  </CardDescription>
  </CardHeader>
  <CardContent>
- <EmbeddingModelsSection />
+ <EmbeddingModelsSection isAdmin={isAdmin} />
  </CardContent>
  </Card>
 
