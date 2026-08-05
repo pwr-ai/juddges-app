@@ -71,7 +71,12 @@ describe("schema detail server page", () => {
       error: null,
     });
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: "verified-token" } },
+      data: {
+        session: {
+          access_token: "verified-token",
+          user: { id: "owner-1" },
+        },
+      },
       error: null,
     });
     mockFetchSchemaDetail.mockResolvedValue(schema);
@@ -136,6 +141,37 @@ describe("schema detail server page", () => {
     await expect(
       SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
     ).rejects.toThrow(/verified schema user/i);
+    expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
+  });
+
+  it("does not use a token when its session user differs from the verified user", async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "attacker-token",
+          user: { id: "attacker" },
+        },
+      },
+      error: null,
+    });
+    const encoded = encodeSchemaSnapshot(schema);
+    const signature = await signSchemaSnapshot(
+      encoded,
+      "owner-1",
+      `/schemas/${ID}`,
+      "snapshot-secret"
+    );
+    mockHeaders.mockResolvedValue(
+      new Headers({
+        [SCHEMA_SNAPSHOT_HEADER]: encoded,
+        [SCHEMA_SNAPSHOT_SIGNATURE_HEADER]: signature,
+        [SCHEMA_SNAPSHOT_USER_HEADER]: "owner-1",
+      }) as unknown as Awaited<ReturnType<typeof headers>>
+    );
+
+    await expect(
+      SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
+    ).rejects.toThrow(/verified schema session/i);
     expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
   });
 

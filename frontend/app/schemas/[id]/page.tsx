@@ -68,10 +68,16 @@ export default async function SchemaDetailPage({
     throw new Error("Invalid verified schema user");
   }
   const sessionLookup = await supabase.auth.getSession();
-  const accessToken = sessionLookup.data.session?.access_token;
-  if (sessionLookup.error || !accessToken) {
+  const session = sessionLookup.data.session;
+  if (
+    sessionLookup.error ||
+    !session ||
+    session.user.id !== userId ||
+    !session.access_token
+  ) {
     throw new Error("Verified schema session is unavailable");
   }
+  const accessToken = session.access_token;
   let schema;
   try {
     schema = await fetchSchemaDetail(id, accessToken);
