@@ -1,8 +1,38 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import {
+  EXTRACTION_SNAPSHOT_HEADER,
+  EXTRACTION_SNAPSHOT_SIGNATURE_HEADER,
+  EXTRACTION_VERIFIED_USER_HEADER,
+} from "@/lib/extractions/detail-contract";
 
-export async function updateSession(request: NextRequest) {
+export interface SessionUpdate {
+  response: NextResponse;
+  userId: string | null;
+  accessToken: string | null;
+  request: NextRequest;
+}
+
+function sanitizedRequest(incomingRequest: NextRequest): NextRequest {
+  const headers = new Headers(incomingRequest.headers);
+  headers.delete(EXTRACTION_SNAPSHOT_HEADER);
+  headers.delete(EXTRACTION_SNAPSHOT_SIGNATURE_HEADER);
+  headers.delete(EXTRACTION_VERIFIED_USER_HEADER);
+  return new NextRequest(incomingRequest.url, {
+    method: incomingRequest.method,
+    headers,
+    body:
+      incomingRequest.method === "GET" || incomingRequest.method === "HEAD"
+        ? undefined
+        : incomingRequest.body,
+  });
+}
+
+export async function updateSessionWithAuth(
+  incomingRequest: NextRequest
+): Promise<SessionUpdate> {
+  const request = sanitizedRequest(incomingRequest);
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -37,6 +67,7 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
   let user = null;
+  let accessToken: string | null = null;
   try {
     const {
       data: { user: authUser },
@@ -63,6 +94,11 @@ export async function updateSession(request: NextRequest) {
     logger.error("Unexpected error in auth middleware: ", error);
   }
 
+  if (user) {
+    const { data } = await supabase.auth.getSession();
+    accessToken = data.session?.access_token ?? null;
+  }
+
   if (
     !user &&
     request.nextUrl.pathname !== "/" &&
@@ -75,6 +111,13 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/api/health") &&
     !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
+    // Exact extraction-detail reads return JSON 401 from the BFF. Other
+    // methods and extraction API shapes retain the normal protected policy.
+    !(
+      (request.method === "GET" || request.method === "HEAD") &&
+      request.nextUrl.pathname === "/api/extractions" &&
+      request.nextUrl.searchParams.has("job_id")
+    ) &&
     // The retired GraphQL bridge must reach the Next.js router and resolve as
     // 404. Keep this exact so lookalike paths remain protected.
     request.nextUrl.pathname !== "/api/graphql" &&
@@ -91,7 +134,12 @@ export async function updateSession(request: NextRequest) {
     if (nextTarget && nextTarget !== "/") {
       url.searchParams.set("next", nextTarget);
     }
-    return NextResponse.redirect(url);
+    return {
+      response: NextResponse.redirect(url),
+      userId: null,
+      accessToken: null,
+      request,
+    };
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
@@ -107,5 +155,14 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  return supabaseResponse;
+  return {
+    response: supabaseResponse,
+    userId: user?.id ?? null,
+    accessToken,
+    request,
+  };
+}
+
+export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  return (await updateSessionWithAuth(request)).response;
 }

@@ -467,6 +467,55 @@ describe("GET /api/extractions", () => {
 
     expect(response.status).toBe(404);
   });
+
+  it.each([422, 500, 503])(
+    "preserves backend status %s instead of collapsing it to not-found",
+    async (status) => {
+      mockSupabaseAuth(USER_ID);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status,
+        text: async () => JSON.stringify({ detail: `upstream ${status}` }),
+      });
+
+      const response = await GET(makeGetRequest(JOB_ID));
+
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: `upstream ${status}` })
+      );
+    }
+  );
+
+  it("returns 504 when the extraction backend times out", async () => {
+    mockSupabaseAuth(USER_ID);
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    (global.fetch as jest.Mock).mockRejectedValue(timeout);
+
+    const response = await GET(makeGetRequest(JOB_ID));
+
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ code: "EXTRACTION_TIMEOUT" })
+    );
+  });
+
+  it("returns 502 when the backend success payload is malformed", async () => {
+    mockSupabaseAuth(USER_ID);
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ unexpected: true }),
+    });
+
+    const response = await GET(makeGetRequest(JOB_ID));
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ code: "MALFORMED_EXTRACTION_RESPONSE" })
+    );
+  });
 });
 
 describe("DELETE /api/extractions", () => {
