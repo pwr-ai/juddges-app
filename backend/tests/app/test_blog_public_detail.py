@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from supabase import PostgrestAPIError
 
+from app.server import app
+
 if TYPE_CHECKING:
     from httpx import AsyncClient
 
@@ -244,3 +246,14 @@ def test_public_blog_detail_rpc_is_batched_private_and_deterministic() -> None:
     assert "revoke all on function public.get_public_blog_post" in normalized
     assert "grant execute on function public.get_public_blog_post" in normalized
     assert "to service_role" in normalized
+
+
+@pytest.mark.unit
+def test_public_blog_detail_openapi_declares_success_and_error_contracts() -> None:
+    operation = app.openapi()["paths"]["/blog/posts/{slug}"]["get"]
+
+    assert operation["responses"]["200"]["content"]["application/json"]["schema"] == {
+        "$ref": "#/components/schemas/PublicBlogPostResponse"
+    }
+    assert operation["responses"]["404"]["description"] == "Published post not found"
+    assert operation["responses"]["500"]["description"] == "Blog service failure"

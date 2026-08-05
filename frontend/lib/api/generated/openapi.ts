@@ -11173,6 +11173,107 @@ export interface components {
             /** Variables */
             variables: string[];
         };
+        /** PublicBlogAuthorResponse */
+        PublicBlogAuthorResponse: {
+            /** Avatar */
+            avatar?: string | null;
+            /** Id */
+            id: string | null;
+            /** Name */
+            name: string;
+            /** Title */
+            title: string;
+        };
+        /** PublicBlogPostCardResponse */
+        PublicBlogPostCardResponse: {
+            /** Ai Summary */
+            ai_summary?: string | null;
+            author: components["schemas"]["PublicBlogAuthorResponse"];
+            /** Category */
+            category: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Featured Image */
+            featured_image?: string | null;
+            /** Id */
+            id: string;
+            /** Likes Count */
+            likes_count: number;
+            /** Published At */
+            published_at?: string | null;
+            /** Read Time */
+            read_time?: number | null;
+            /** Slug */
+            slug: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "published";
+            /** Tags */
+            tags: string[];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Views */
+            views: number;
+        };
+        /** PublicBlogPostResponse */
+        PublicBlogPostResponse: {
+            /** Ai Summary */
+            ai_summary?: string | null;
+            author: components["schemas"]["PublicBlogAuthorResponse"];
+            /** Category */
+            category: string;
+            /** Content */
+            content?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Featured Image */
+            featured_image?: string | null;
+            /** Id */
+            id: string;
+            /** Likes Count */
+            likes_count: number;
+            /** Published At */
+            published_at?: string | null;
+            /** Read Time */
+            read_time?: number | null;
+            /** Related Posts */
+            related_posts?: components["schemas"]["PublicBlogPostCardResponse"][];
+            /** Slug */
+            slug: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "published";
+            /** Tags */
+            tags: string[];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Views */
+            views: number;
+        };
         /** PublicationAuthor */
         PublicationAuthor: {
             /** Affiliation */
@@ -16749,8 +16850,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PublicBlogPostResponse"];
                 };
+            };
+            /** @description Published post not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -16760,6 +16868,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Blog service failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

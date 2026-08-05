@@ -4,7 +4,7 @@ Blog API endpoints for managing blog posts, categories, tags, likes, and bookmar
 
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -80,6 +80,37 @@ class BlogPostResponse(BaseModel):
     likes_count: int
     ai_summary: str | None
     related_posts: list[dict] | None = None
+
+
+class PublicBlogAuthorResponse(BaseModel):
+    id: str | None
+    name: str
+    avatar: str | None = None
+    title: str
+
+
+class PublicBlogPostCardResponse(BaseModel):
+    id: str
+    slug: str
+    title: str
+    excerpt: str
+    featured_image: str | None = None
+    author: PublicBlogAuthorResponse
+    category: str
+    tags: list[str]
+    status: Literal["published"]
+    published_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+    read_time: int | None = None
+    views: int
+    likes_count: int
+    ai_summary: str | None = None
+
+
+class PublicBlogPostResponse(PublicBlogPostCardResponse):
+    content: str | None = None
+    related_posts: list[PublicBlogPostCardResponse] = Field(default_factory=list)
 
 
 class BlogStatsResponse(BaseModel):
@@ -277,7 +308,14 @@ async def list_posts(
         raise HTTPException(status_code=500, detail="Failed to fetch blog posts")
 
 
-@router.get("/posts/{slug}")
+@router.get(
+    "/posts/{slug}",
+    response_model=PublicBlogPostResponse,
+    responses={
+        404: {"description": "Published post not found"},
+        500: {"description": "Blog service failure"},
+    },
+)
 async def get_post(slug: str):
     """
     Get a single published blog post by slug.
