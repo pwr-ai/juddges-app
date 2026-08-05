@@ -1,5 +1,7 @@
 import { isPublicRequest } from '@/lib/supabase/public-route-policy';
 
+const CHAT_ID = '11111111-2222-4333-8444-555555555555';
+
 const EXACT_PUBLIC_PAGES = [
   '/',
   '/about',
@@ -43,6 +45,8 @@ const PUBLIC_READ_APIS = [
   '/api/blog/posts/published-slug',
   '/api/publications',
   '/api/publications/publication-1',
+  `/api/chats/${CHAT_ID}/messages`,
+  `/api/chats/${CHAT_ID.toUpperCase()}/messages`,
 ] as const;
 
 const PROTECTED_PAGE_CASES = [
@@ -71,6 +75,11 @@ const LOOKALIKE_CASES = [
   '/api/contact-form',
   '/api/graphql/',
   '/api/graphql/nested',
+  '/api/chats/not-a-uuid/messages',
+  '/api/chats/11111111-2222-3333-4444-555555555555/messages',
+  `/api/chats/${CHAT_ID}/messages/extra`,
+  `/api/chats/${CHAT_ID}/messages-archive`,
+  `/api/chats/${CHAT_ID}//messages`,
 ] as const;
 
 describe('isPublicRequest', () => {
@@ -137,6 +146,8 @@ describe('isPublicRequest', () => {
     ['PUT', '/api/contact'],
     ['DELETE', '/api/contact'],
     ['POST', '/api/contact/nested'],
+    ['POST', `/api/chats/${CHAT_ID}/messages`],
+    ['OPTIONS', `/api/chats/${CHAT_ID}/messages`],
     ['GET', '/api/contact/'],
     ['GET', '/api/dashboard/stats/'],
     ['GET', '/api/blog/categories/'],

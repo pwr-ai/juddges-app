@@ -2,13 +2,26 @@
  * @jest-environment node
  */
 
-import { spawn, spawnSync } from 'node:child_process';
-import { once } from 'node:events';
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 
-jest.setTimeout(180_000);
+import {
+  acquireProductionBuildLock,
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+} from '@/tests/support/production-build-lock';
+import {
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_POLL_INTERVAL_MS,
+  PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
+  PRODUCTION_REQUEST_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+  runProductionChild,
+  spawnProductionChild,
+  stopProductionChild,
+} from '@/tests/support/production-child-process';
+
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 async function reservePort(): Promise<number> {
   const server = createServer();
@@ -39,10 +52,13 @@ async function requestUntilReady(url: string): Promise<Response> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: '{ __typename }' }),
         redirect: 'manual',
+        signal: AbortSignal.timeout(PRODUCTION_READINESS_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) =>
+        setTimeout(resolve, PRODUCTION_READINESS_POLL_INTERVAL_MS)
+      );
     }
   }
   throw lastError;
@@ -55,88 +71,78 @@ describe('GraphQL browser surface contract', () => {
   });
 
   it('returns 404 for the retired route in a real production build', async () => {
-    const nextBin = join(process.cwd(), 'node_modules/next/dist/bin/next');
-    const build = spawnSync(process.execPath, [nextBin, 'build'], {
-      cwd: process.cwd(),
-      env: { ...process.env, NODE_ENV: 'production' },
-      encoding: 'utf8',
-      timeout: 150_000,
-    });
-
-    if (build.status !== 0) {
-      throw new Error(`Production build failed:\n${build.stdout}\n${build.stderr}`);
-    }
-
-    const manifestPath = join(process.cwd(), '.next/server/app-paths-manifest.json');
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, string>;
-    expect(Object.keys(manifest)).not.toContain('/api/graphql/route');
-
-    const port = await reservePort();
-    const serverPath = join(process.cwd(), '.next/standalone/frontend/server.js');
-    const productionServer = spawn(process.execPath, [serverPath], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        NODE_ENV: 'production',
-        PORT: String(port),
-        HOSTNAME: '127.0.0.1',
-        NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    let output = '';
-    productionServer.stdout?.on('data', (chunk) => {
-      output += chunk.toString();
-    });
-    productionServer.stderr?.on('data', (chunk) => {
-      output += chunk.toString();
-    });
-
+    const releaseProductionBuildLock = await acquireProductionBuildLock();
     try {
-      const retiredRoute = await requestUntilReady(
-        `http://127.0.0.1:${port}/api/graphql`
-      );
-      const lookalikeRoute = await fetch(
-        `http://127.0.0.1:${port}/api/graphql/nested`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-          redirect: 'manual',
-        }
-      );
+      const nextBin = join(process.cwd(), 'node_modules/next/dist/bin/next');
+      await runProductionChild({
+        command: process.execPath,
+        args: [nextBin, 'build'],
+        label: 'Next production build',
+        cwd: process.cwd(),
+        env: { ...process.env, NODE_ENV: 'production' },
+        timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+      });
 
-      expect(retiredRoute.status).toBe(404);
-      expect(lookalikeRoute.status).toBe(307);
-      expect(lookalikeRoute.headers.get('location')).toBe(
-        `http://localhost:${port}/auth/login?next=%2Fapi%2Fgraphql%2Fnested`
+      const manifestPath = join(
+        process.cwd(),
+        '.next/server/app-paths-manifest.json'
       );
-      await Promise.all([retiredRoute.text(), lookalikeRoute.text()]);
-    } catch (error) {
-      throw new Error(`Production route check failed: ${String(error)}\n${output}`);
-    } finally {
-      if (productionServer.exitCode === null) {
-        const exited = once(productionServer, 'exit');
-        productionServer.kill('SIGTERM');
-        let exitTimeout: ReturnType<typeof setTimeout> | undefined;
-        try {
-          await Promise.race([
-            exited,
-            new Promise((resolve) => {
-              exitTimeout = setTimeout(resolve, 5_000);
-              exitTimeout.unref();
-            }),
-          ]);
-        } finally {
-          if (exitTimeout) {
-            clearTimeout(exitTimeout);
+      const manifest = JSON.parse(
+        readFileSync(manifestPath, 'utf8')
+      ) as Record<string, string>;
+      expect(Object.keys(manifest)).not.toContain('/api/graphql/route');
+
+      const port = await reservePort();
+      const serverPath = join(
+        process.cwd(),
+        '.next/standalone/frontend/server.js'
+      );
+      const productionServer = spawnProductionChild({
+        command: process.execPath,
+        args: [serverPath],
+        label: 'Next standalone production server',
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          NODE_ENV: 'production',
+          PORT: String(port),
+          HOSTNAME: '127.0.0.1',
+          NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        },
+        timeoutMs: PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+      });
+
+      try {
+        const retiredRoute = await requestUntilReady(
+          `http://127.0.0.1:${port}/api/graphql`
+        );
+        const lookalikeRoute = await fetch(
+          `http://127.0.0.1:${port}/api/graphql/nested`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+            redirect: 'manual',
+            signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
           }
-        }
-        if (productionServer.exitCode === null) {
-          productionServer.kill('SIGKILL');
-        }
+        );
+
+        expect(retiredRoute.status).toBe(404);
+        expect(lookalikeRoute.status).toBe(307);
+        expect(lookalikeRoute.headers.get('location')).toBe(
+          `http://localhost:${port}/auth/login?next=%2Fapi%2Fgraphql%2Fnested`
+        );
+        await Promise.all([retiredRoute.text(), lookalikeRoute.text()]);
+      } catch (error) {
+        throw new Error(
+          `Production route check failed: ${String(error)}\n${productionServer.output()}`
+        );
+      } finally {
+        await stopProductionChild(productionServer);
       }
+    } finally {
+      await releaseProductionBuildLock();
     }
   });
 });

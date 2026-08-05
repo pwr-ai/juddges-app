@@ -4,9 +4,14 @@ import logger from '@/lib/logger';
 import {
   UnauthorizedError,
   DatabaseError,
+  ValidationError,
   AppError,
   ErrorCode
 } from '@/lib/errors';
+import {
+  resolveOwnedChatAccess,
+  runChatQueryWithTimeout,
+} from "@/lib/server/chat-access";
 
 const apiLogger = logger.child('chat-messages-api');
 
@@ -28,49 +33,43 @@ export async function GET(
 
     const supabase = await createClient();
 
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const access = await resolveOwnedChatAccess(supabase, chatId);
+    if (access.kind === "anonymous") {
       throw new UnauthorizedError("Authentication required");
     }
-
-    // Verify the chat belongs to the current user
-    const { data: chat, error: chatError } = await supabase
-      .from("chats")
-      .select("id")
-      .eq("id", chatId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (chatError || !chat) {
+    if (access.kind === "invalid_id") {
+      throw new ValidationError("Invalid chat ID format");
+    }
+    if (access.kind === "not_found") {
       apiLogger.warn("Chat not found or unauthorized", {
         requestId,
         chatId,
-        userId: user.id,
-        error: chatError?.message
+        userId: "authenticated",
       });
       throw new AppError(
         "Chat not found",
-        ErrorCode.NOT_FOUND,
+        ErrorCode.CHAT_NOT_FOUND,
         404,
-        { chatId }
       );
     }
 
     // Fetch messages for the chat
-    const { data: messages, error: messagesError } = await supabase
-      .from("messages")
-      .select("id, role, content, document_ids, created_at")
-      .eq("chat_id", chatId)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
+    const { data: messages, error: messagesError } = await runChatQueryWithTimeout(
+      (signal) =>
+        supabase
+          .from("messages")
+          .select("id, role, content, document_ids, created_at")
+          .eq("chat_id", chatId)
+          .eq("user_id", access.userId)
+          .order("created_at", { ascending: true })
+          .abortSignal(signal),
+    );
 
     if (messagesError) {
       apiLogger.error("Failed to fetch messages", messagesError, {
         requestId,
         chatId,
-        userId: user.id
+        userId: access.userId
       });
       throw new DatabaseError(
         "Failed to fetch chat messages",
@@ -81,7 +80,7 @@ export async function GET(
     apiLogger.info('GET /api/chats/[id]/messages completed', {
       requestId,
       chatId,
-      userId: user.id,
+      userId: access.userId,
       messageCount: messages?.length || 0
     });
 

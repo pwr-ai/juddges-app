@@ -1,3 +1,5 @@
+import { isCanonicalUuid } from '@/lib/validation/canonical-uuid';
+
 export interface PublicRouteRequest {
   pathname: string;
   method: string;
@@ -47,6 +49,9 @@ const PUBLIC_READ_API_SUBTREES = [
   '/api/publications',
 ] as const;
 
+const CHAT_MESSAGES_PREFIX = '/api/chats/';
+const CHAT_MESSAGES_SUFFIX = '/messages';
+
 function matchesSegmentTree(pathname: string, root: string): boolean {
   return pathname === root || pathname.startsWith(`${root}/`);
 }
@@ -75,8 +80,24 @@ function isPublicPage(pathname: string): boolean {
 function isPublicReadApi(pathname: string): boolean {
   return (
     EXACT_PUBLIC_READ_APIS.has(pathname) ||
-    matchesAnySegmentTree(pathname, PUBLIC_READ_API_SUBTREES)
+    matchesAnySegmentTree(pathname, PUBLIC_READ_API_SUBTREES) ||
+    isPublicChatMessagesRead(pathname)
   );
+}
+
+function isPublicChatMessagesRead(pathname: string): boolean {
+  if (
+    !pathname.startsWith(CHAT_MESSAGES_PREFIX) ||
+    !pathname.endsWith(CHAT_MESSAGES_SUFFIX)
+  ) {
+    return false;
+  }
+
+  const chatId = pathname.slice(
+    CHAT_MESSAGES_PREFIX.length,
+    -CHAT_MESSAGES_SUFFIX.length,
+  );
+  return isCanonicalUuid(chatId);
 }
 
 export function isPublicRequest({
