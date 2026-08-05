@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   methodNotAllowed,
-  proxyAuthenticatedJson,
+  proxyAuthenticatedStream,
 } from '@/app/api/_lib/authenticated-json-proxy';
 import { buildQaRequest } from '@/app/api/qa/_request';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  return proxyAuthenticatedJson(request, {
-    upstreamPath: '/qa/invoke',
+  return proxyAuthenticatedStream(request, {
+    upstreamPath: '/qa/stream',
     transformBody: buildQaRequest,
   });
 }
