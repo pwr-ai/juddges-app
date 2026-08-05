@@ -6,7 +6,10 @@ import { access, mkdir, mkdtemp, rm, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { withProductionBuildLock } from "@/tests/support/production-build-lock";
+import {
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+  withProductionBuildLock,
+} from "@/tests/support/production-build-lock";
 
 describe("withProductionBuildLock", () => {
   let temporaryDirectory: string;
@@ -19,6 +22,12 @@ describe("withProductionBuildLock", () => {
 
   afterEach(async () => {
     await rm(temporaryDirectory, { recursive: true, force: true });
+  });
+
+  it("budgets lock wait plus a slow production lifecycle", () => {
+    expect(PRODUCTION_BUILD_TEST_TIMEOUT_MS).toBeGreaterThanOrEqual(
+      12 * 60_000,
+    );
   });
 
   it("serializes contending build operations", async () => {

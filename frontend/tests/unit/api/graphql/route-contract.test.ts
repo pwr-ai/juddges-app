@@ -8,9 +8,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 
-import { acquireProductionBuildLock } from '@/tests/support/production-build-lock';
+import {
+  acquireProductionBuildLock,
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+} from '@/tests/support/production-build-lock';
 
-jest.setTimeout(180_000);
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 async function reservePort(): Promise<number> {
   const server = createServer();

@@ -16,6 +16,9 @@ export type ProductionBuildLockOptions = {
   pollIntervalMs?: number;
 };
 
+// Covers waiting for another production lifecycle plus a slow CI build/run.
+export const PRODUCTION_BUILD_TEST_TIMEOUT_MS = 12 * 60_000;
+
 const DEFAULT_TIMEOUT_MS = 170_000;
 const DEFAULT_STALE_MS = 5 * 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 100;

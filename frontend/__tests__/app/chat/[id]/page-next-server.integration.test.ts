@@ -6,7 +6,10 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { acquireProductionBuildLock } from "@/tests/support/production-build-lock";
+import {
+  acquireProductionBuildLock,
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+} from "@/tests/support/production-build-lock";
 
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const OTHER_USER_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
@@ -29,7 +32,7 @@ type PostgrestChatRequest = {
   userIdFilter: string | null;
 };
 
-jest.setTimeout(180_000);
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 function json(response: import("node:http").ServerResponse, status: number, body: unknown): void {
   response.writeHead(status, { "Content-Type": "application/json" });
