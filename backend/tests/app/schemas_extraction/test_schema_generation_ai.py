@@ -16,6 +16,8 @@ import os
 import pytest
 from httpx import AsyncClient
 
+pytestmark = pytest.mark.legacy
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")

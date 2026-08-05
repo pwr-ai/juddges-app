@@ -16,6 +16,7 @@ import pytest
 from httpx import AsyncClient
 
 RUN_AI_TESTS = os.getenv("RUN_AI_TESTS", "").lower() in {"1", "true", "yes"}
+pytestmark = pytest.mark.legacy
 
 
 @pytest.mark.integration
