@@ -32,7 +32,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // Call backend API
-    const response = await fetch(`${API_BASE_URL}/documents/search/enhance`, {
+    const response = await fetch(`${API_BASE_URL}/enhance_query/invoke`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new AppError(
         `Query enhancement failed: ${response.status}`,
         ErrorCode.INTERNAL_ERROR,
-        response.status >= 500 ? 503 : response.status,
+        response.status,
         {
           backendStatus: response.status,
           backendError: errorBody,
