@@ -40,12 +40,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as HeadersInit,
       body: JSON.stringify({
         input: {
-          query: validated.query,
-          context: validated.context,
-          language: validated.language
-        },
-        config: {},
-        kwargs: {},
+          query: validated.query
+        }
       }),
     });
 
@@ -65,16 +61,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         apiLogger.error('Failed to read error response', e, { requestId });
       }
 
-      throw new AppError(
-        `Query enhancement failed: ${response.status}`,
-        ErrorCode.INTERNAL_ERROR,
-        response.status,
-        {
-          backendStatus: response.status,
-          backendError: errorBody,
-          duration
-        }
-      );
+      const contentType = response.headers.get('content-type');
+      return new NextResponse(errorBody, {
+        status: response.status,
+        headers: contentType ? { 'Content-Type': contentType } : undefined
+      });
     }
 
     const data = await response.json();

@@ -51,21 +51,24 @@ describe('POST /api/enhance_query', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
-          input: { query: 'VAT', language: 'pl' },
-          config: {},
-          kwargs: {},
+          input: { query: 'VAT' },
         }),
       }),
     );
   });
 
-  it('propagates the upstream HTTP status', async () => {
+  it('propagates the upstream error status, body, and content type', async () => {
     global.fetch = jest.fn(async () =>
-      new Response('bad gateway', { status: 502 }),
+      new Response(JSON.stringify({ detail: 'bad gateway' }), {
+        status: 502,
+        headers: { 'content-type': 'application/problem+json' },
+      }),
     ) as unknown as typeof global.fetch;
 
     const response = await POST(buildRequest({ query: 'VAT' }) as never);
 
     expect(response.status).toBe(502);
+    expect(response.headers.get('content-type')).toBe('application/problem+json');
+    expect(await response.text()).toBe(JSON.stringify({ detail: 'bad gateway' }));
   });
 });
