@@ -17,6 +17,7 @@ A denied request must not reach the database.
 """
 
 import pytest
+from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from juddges_search.db.supabase_db import get_publications_db
 
@@ -50,8 +51,9 @@ def _user(user_id: str, *, is_admin: bool = False) -> AuthenticatedUser:
 class _StubPublicationsDb:
     """Publications db stub that records whether a mutation was attempted."""
 
-    def __init__(self, owner_id: str = OWNER_ID) -> None:
+    def __init__(self, owner_id: str | None = OWNER_ID) -> None:
         self.owner_id = owner_id
+        self.read_error: HTTPException | None = None
         self.update_calls: list[tuple[str, dict]] = []
         self.delete_calls: list[str] = []
 
@@ -83,6 +85,8 @@ class _StubPublicationsDb:
         }
 
     async def get_publication(self, publication_id: str) -> dict | None:
+        if self.read_error is not None:
+            raise self.read_error
         if publication_id == MISSING_PUBLICATION_ID:
             return None
         return self._row()
@@ -168,6 +172,43 @@ async def test_delete_rejects_non_owner(
     assert db.delete_calls == []
 
 
+async def test_update_rejects_non_admin_for_legacy_unowned_publication(
+    client: AsyncClient,
+    as_user,
+    stub_db: _StubPublicationsDb,
+    valid_api_headers: dict[str, str],
+) -> None:
+    stub_db.owner_id = None
+    db = as_user(_user(OTHER_ID))
+
+    response = await client.put(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+        json=UPDATE_BODY,
+    )
+
+    assert response.status_code == 403
+    assert db.update_calls == []
+
+
+async def test_delete_rejects_non_admin_for_legacy_unowned_publication(
+    client: AsyncClient,
+    as_user,
+    stub_db: _StubPublicationsDb,
+    valid_api_headers: dict[str, str],
+) -> None:
+    stub_db.owner_id = None
+    db = as_user(_user(OTHER_ID))
+
+    response = await client.delete(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code == 403
+    assert db.delete_calls == []
+
+
 # ---------------------------------------------------------------------------
 # Allowed: the owner
 # ---------------------------------------------------------------------------
@@ -236,6 +277,43 @@ async def test_delete_allows_admin_on_foreign_publication(
     assert db.delete_calls == [PUBLICATION_ID]
 
 
+async def test_update_allows_admin_for_legacy_unowned_publication(
+    client: AsyncClient,
+    as_user,
+    stub_db: _StubPublicationsDb,
+    valid_api_headers: dict[str, str],
+) -> None:
+    stub_db.owner_id = None
+    db = as_user(_user(ADMIN_ID, is_admin=True))
+
+    response = await client.put(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+        json=UPDATE_BODY,
+    )
+
+    assert response.status_code == 200
+    assert len(db.update_calls) == 1
+
+
+async def test_delete_allows_admin_for_legacy_unowned_publication(
+    client: AsyncClient,
+    as_user,
+    stub_db: _StubPublicationsDb,
+    valid_api_headers: dict[str, str],
+) -> None:
+    stub_db.owner_id = None
+    db = as_user(_user(ADMIN_ID, is_admin=True))
+
+    response = await client.delete(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code == 200
+    assert db.delete_calls == [PUBLICATION_ID]
+
+
 # ---------------------------------------------------------------------------
 # Missing records are 404, and stay distinguishable from 403
 # ---------------------------------------------------------------------------
@@ -267,6 +345,47 @@ async def test_delete_missing_publication_is_404(
     )
 
     assert response.status_code == 404
+    assert db.delete_calls == []
+
+
+async def test_update_database_read_failure_is_500_without_mutation(
+    client: AsyncClient,
+    as_user,
+    stub_db: _StubPublicationsDb,
+    valid_api_headers: dict[str, str],
+) -> None:
+    stub_db.read_error = HTTPException(
+        status_code=500, detail="Database error: database unavailable"
+    )
+    db = as_user(_user(OWNER_ID))
+
+    response = await client.put(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+        json=UPDATE_BODY,
+    )
+
+    assert response.status_code == 500
+    assert db.update_calls == []
+
+
+async def test_delete_database_read_failure_is_500_without_mutation(
+    client: AsyncClient,
+    as_user,
+    stub_db: _StubPublicationsDb,
+    valid_api_headers: dict[str, str],
+) -> None:
+    stub_db.read_error = HTTPException(
+        status_code=500, detail="Database error: database unavailable"
+    )
+    db = as_user(_user(OWNER_ID))
+
+    response = await client.delete(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code == 500
     assert db.delete_calls == []
 
 

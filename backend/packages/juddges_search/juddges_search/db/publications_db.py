@@ -69,8 +69,8 @@ class PublicationsDB(SupabaseClientMixin):
 
             return response.data[0] if response.data else None
         except (PostgrestAPIError, StorageException) as e:
-            logger.exception(f"Error getting publication: {e}")
-            return None
+            self._handle_error("get_publication", e)
+            return None  # Unreachable, as _handle_error always raises
 
     async def create_publication(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new publication."""
