@@ -35,14 +35,17 @@ GOOGLE_ALLOWED_KEYS = [
 ]
 
 
-def test_schema_discovery_ignores_metadata_files(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("extension", [".json", ".yaml", ".yml"])
+def test_schema_discovery_supports_schema_files_and_ignores_metadata(
+    tmp_path, monkeypatch: pytest.MonkeyPatch, extension: str
 ) -> None:
-    (tmp_path / "example.json").touch()
-    (tmp_path / "example.meta.json").write_text("{}")
+    schema_content = '{"type": "object", "description": "Example"}'
+    (tmp_path / f"example{extension}").write_text(schema_content)
+    (tmp_path / f"example.meta{extension}").write_text("{}")
     monkeypatch.setattr(InformationExtractor, "SCHEMA_DIR", tmp_path)
 
     assert InformationExtractor.list_schemas() == ["example"]
+    assert InformationExtractor.get_schema("example")["type"] == "object"
 
     with pytest.raises(ValueError, match=r"Schema name example\.meta not found"):
         InformationExtractor.get_schema("example.meta")

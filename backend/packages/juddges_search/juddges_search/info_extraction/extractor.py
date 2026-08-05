@@ -177,7 +177,7 @@ class InformationExtractor:
             raise ValueError(f"Schema name {schema_name} not found")
 
         schema_file, *_ = schema_files
-        if schema_file.suffix == ".yaml":
+        if schema_file.suffix in {".yaml", ".yml"}:
             with open(schema_file, "r") as f:
                 schema = yaml.safe_load(f)
         elif schema_file.suffix == ".json":
