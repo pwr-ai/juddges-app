@@ -553,6 +553,7 @@ class ZeroResultQueryItem(BaseModel):
 @limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def popular_queries(
     request: Request,
+    response: Response,
     days: int = Query(7, ge=1, le=90, description="Lookback window in days"),
     limit: int = Query(20, ge=1, le=100),
     api_key: str = Depends(verify_api_key),
@@ -566,6 +567,7 @@ async def popular_queries(
 @limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def zero_result_queries_endpoint(
     request: Request,
+    response: Response,
     days: int = Query(7, ge=1, le=90, description="Lookback window in days"),
     limit: int = Query(20, ge=1, le=100),
     api_key: str = Depends(verify_api_key),
@@ -645,6 +647,7 @@ class EvalExportResponse(BaseModel):
 @limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def eval_queries_endpoint(
     request: Request,
+    response: Response,
     days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
     min_frequency: int = Query(
         1, ge=1, le=100, description="Minimum query frequency to include"
