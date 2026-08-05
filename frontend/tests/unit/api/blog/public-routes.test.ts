@@ -36,11 +36,12 @@ describe('public blog BFF routes', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       'http://backend.test/blog/posts?page=2&limit=6&category=Research&tag=AI&search=case+law&sort=views&order=asc',
-      {
+      expect.objectContaining({
         method: 'GET',
         headers: { Accept: 'application/json', 'X-API-Key': 'server-only-key' },
         cache: 'no-store',
-      },
+        signal: expect.any(AbortSignal),
+      }),
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(payload);
@@ -86,13 +87,16 @@ describe('public blog BFF routes', () => {
       }),
     );
 
-    const response = await getCategories();
+    const response = await getCategories(
+      new NextRequest('http://localhost/api/blog/categories'),
+    );
 
-    expect(global.fetch).toHaveBeenCalledWith('http://backend.test/blog/categories', {
+    expect(global.fetch).toHaveBeenCalledWith('http://backend.test/blog/categories', expect.objectContaining({
       method: 'GET',
       headers: { Accept: 'application/json', 'X-API-Key': 'server-only-key' },
       cache: 'no-store',
-    });
+      signal: expect.any(AbortSignal),
+    }));
     await expect(response.json()).resolves.toEqual(payload);
   });
 
@@ -113,12 +117,75 @@ describe('public blog BFF routes', () => {
   it('returns a stable 502 response when the backend cannot be reached', async () => {
     (global.fetch as jest.Mock).mockRejectedValue(new TypeError('fetch failed'));
 
-    const response = await getCategories();
+    const response = await getCategories(
+      new NextRequest('http://localhost/api/blog/categories'),
+    );
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({
       detail: 'Blog service is unavailable',
     });
     expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('propagates downstream cancellation to the backend request', async () => {
+    const controller = new AbortController();
+    (global.fetch as jest.Mock).mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) => {
+        const signal = init?.signal;
+        if (!signal) return Promise.reject(new Error('missing upstream signal'));
+        return new Promise<Response>((_resolve, reject) => {
+          signal.addEventListener(
+            'abort',
+            () => reject(signal.reason ?? new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        });
+      },
+    );
+
+    const pending = getPosts(
+      new NextRequest('http://localhost/api/blog/posts?page=1', {
+        signal: controller.signal,
+      }),
+    );
+    controller.abort(new DOMException('Client disconnected', 'AbortError'));
+    const response = await pending;
+
+    expect(response.status).toBe(499);
+    expect((global.fetch as jest.Mock).mock.calls[0][1].signal.aborted).toBe(true);
+  });
+
+  it('bounds backend requests with an eight-second timeout', async () => {
+    jest.useFakeTimers();
+    try {
+      (global.fetch as jest.Mock).mockImplementation(
+        (_input: RequestInfo | URL, init?: RequestInit) => {
+          const signal = init?.signal;
+          if (!signal) return Promise.reject(new Error('missing upstream signal'));
+          return new Promise<Response>((_resolve, reject) => {
+            signal.addEventListener(
+              'abort',
+              () => reject(signal.reason ?? new DOMException('Aborted', 'AbortError')),
+              { once: true },
+            );
+          });
+        },
+      );
+
+      const pending = getCategories(
+        new NextRequest('http://localhost/api/blog/categories'),
+      );
+      await jest.advanceTimersByTimeAsync(8_000);
+      const response = await pending;
+
+      expect(response.status).toBe(504);
+      await expect(response.json()).resolves.toEqual({
+        detail: 'Blog service timed out',
+      });
+      expect((global.fetch as jest.Mock).mock.calls[0][1].signal.aborted).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

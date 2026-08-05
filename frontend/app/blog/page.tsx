@@ -98,8 +98,10 @@ export default function BlogPage(): React.JSX.Element {
   const [postsError, setPostsError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
+  const [postsRetryKey, setPostsRetryKey] = useState(0);
+  const [categoriesRetryKey, setCategoriesRetryKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [committedSearch, setCommittedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const filterGeneration = useRef(0);
@@ -130,7 +132,21 @@ export default function BlogPage(): React.JSX.Element {
 
     void loadCategories();
     return () => controller.abort();
-  }, [retryKey]);
+  }, [categoriesRetryKey]);
+
+  useEffect(() => {
+    const pendingLoadMore = loadMoreController.current;
+    pendingLoadMore?.abort();
+    if (loadMoreController.current === pendingLoadMore) {
+      loadMoreController.current = null;
+      setLoadingMore(false);
+    }
+
+    const debounce = setTimeout(() => {
+      setCommittedSearch(searchQuery.trim());
+    }, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -147,7 +163,7 @@ export default function BlogPage(): React.JSX.Element {
         const body = await fetchPosts(
           1,
           selectedCategory,
-          searchQuery,
+          committedSearch,
           controller.signal,
         );
         setPosts(normalizePosts(body.data));
@@ -172,7 +188,7 @@ export default function BlogPage(): React.JSX.Element {
         loadMoreController.current = null;
       }
     };
-  }, [retryKey, searchQuery, selectedCategory]);
+  }, [committedSearch, postsRetryKey, selectedCategory]);
 
   const loadMore = useCallback(async (): Promise<void> => {
     if (!pagination?.has_next || loadingMore) return;
@@ -187,7 +203,7 @@ export default function BlogPage(): React.JSX.Element {
       const body = await fetchPosts(
         pagination.page + 1,
         selectedCategory,
-        searchQuery,
+        committedSearch,
         controller.signal,
       );
       if (
@@ -215,10 +231,11 @@ export default function BlogPage(): React.JSX.Element {
         setLoadingMore(false);
       }
     }
-  }, [loadingMore, pagination, searchQuery, selectedCategory]);
+  }, [committedSearch, loadingMore, pagination, selectedCategory]);
 
-  const loading = postsLoading || categoriesLoading;
-  const error = postsError || categoriesError;
+  const loading = postsLoading;
+  const error = postsError;
+  const searchPending = searchQuery.trim() !== committedSearch;
   const total = pagination?.total ?? posts.length;
 
   return (
@@ -275,6 +292,24 @@ export default function BlogPage(): React.JSX.Element {
 
           {/* Categories Filter */}
           <LightCard padding="md">
+            {categoriesLoading && (
+              <span className="sr-only">Loading blog categories…</span>
+            )}
+            {categoriesError && (
+              <div
+                role="status"
+                className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"
+              >
+                <span>Categories are temporarily unavailable. Showing all posts.</span>
+                <VariantButton
+                  intent="secondary"
+                  size="sm"
+                  onClick={() => setCategoriesRetryKey((current) => current + 1)}
+                >
+                  Retry Categories
+                </VariantButton>
+              </div>
+            )}
             <FilterToggleGroup
               label=""
               options={[
@@ -351,7 +386,7 @@ export default function BlogPage(): React.JSX.Element {
             <VariantButton
               intent="secondary"
               className="mt-5"
-              onClick={() => setRetryKey((current) => current + 1)}
+              onClick={() => setPostsRetryKey((current) => current + 1)}
             >
               Try Again
             </VariantButton>
@@ -393,7 +428,7 @@ export default function BlogPage(): React.JSX.Element {
         )}
 
         {/* Load More */}
-        {posts.length > 0 && !loading && pagination?.has_next && (
+        {posts.length > 0 && !loading && !searchPending && pagination?.has_next && (
           <div className="text-center mt-12">
             {loadMoreError && (
               <p role="alert" className="mb-3 text-sm text-destructive">

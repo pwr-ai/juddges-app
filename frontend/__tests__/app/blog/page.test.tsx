@@ -255,6 +255,59 @@ describe('BlogPage', () => {
     expect(postAttempts).toBe(2);
   });
 
+  it('keeps loaded posts visible when optional categories fail', async () => {
+    (global.fetch as jest.Mock).mockImplementation(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/blog/categories') {
+        return jsonResponse({ detail: 'Categories unavailable' }, 503);
+      }
+      return postsResponse([researchPost]);
+    });
+
+    render(<BlogPage />);
+
+    expect(await screen.findByText('Real research post')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Categories are temporarily unavailable. Showing all posts.',
+    );
+    expect(screen.queryByText('Unable to load blog posts')).toBeNull();
+  });
+
+  it('commits search only after the debounce interval', async () => {
+    jest.useFakeTimers();
+    try {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      (global.fetch as jest.Mock).mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/blog/categories') return jsonResponse({ data: [] });
+        if (url.includes('search=appeal')) return postsResponse([tutorialPost]);
+        return postsResponse([researchPost]);
+      });
+
+      render(<BlogPage />);
+      await act(async () => Promise.resolve());
+      expect(await screen.findByText('Real research post')).toBeInTheDocument();
+
+      await user.type(screen.getByPlaceholderText('Search blog posts...'), 'appeal');
+      expect(
+        (global.fetch as jest.Mock).mock.calls.some(([url]) =>
+          String(url).includes('search='),
+        ),
+      ).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(await screen.findByText('Real tutorial post')).toBeInTheDocument();
+      const searchCalls = (global.fetch as jest.Mock).mock.calls.filter(([url]) =>
+        String(url).includes('search=appeal'),
+      );
+      expect(searchCalls).toHaveLength(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('renders the empty state when the backend returns no posts', async () => {
     (global.fetch as jest.Mock).mockImplementation(async (input: RequestInfo | URL) => {
       if (String(input) === '/api/blog/categories') return jsonResponse({ data: [] });
