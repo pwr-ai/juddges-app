@@ -16,7 +16,7 @@ import type {
   RelatedLinesResponse,
 } from '@/types/reasoning-lines';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+const API_BASE = '/api';
 
 /**
  * Discover reasoning line clusters from the judgment corpus.
