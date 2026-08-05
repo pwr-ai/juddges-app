@@ -19,10 +19,7 @@ import {
   askChatQuestion,
   searchDocuments,
   getExampleQuestions,
-  searchDocumentsDirect,
-  getChunksForDocuments,
   searchChunks,
-  fetchChunksByUuid,
   fetchDocumentsByIds,
   summarizeDocuments,
   extractKeyPoints,
@@ -262,38 +259,7 @@ describe('API client functions', () => {
     });
   });
 
-  // ── searchDocumentsDirect ──────────────────────────────────────────────
 
-  describe('searchDocumentsDirect', () => {
-    it('sends POST to /api/documents/search/direct', async () => {
-      const mockResult = { documents: [], total_count: 0, is_capped: false };
-      mockFetch.mockResolvedValueOnce(okResponse(mockResult));
-
-      const result = await searchDocumentsDirect({ query: 'test', mode: 'rabbit' });
-      expect(mockFetch).toHaveBeenCalledWith('/api/documents/search/direct', expect.any(Object));
-      expect(result.total_count).toBe(0);
-    });
-
-    it('throws on error', async () => {
-      mockFetch.mockResolvedValueOnce(errorResponse(500));
-      await expect(searchDocumentsDirect({ query: 'x', mode: 'rabbit' })).rejects.toThrow('Document search failed');
-    });
-  });
-
-  // ── getChunksForDocuments ──────────────────────────────────────────────
-
-  describe('getChunksForDocuments', () => {
-    it('sends POST to /api/documents/chunks/by-document-ids', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ chunks_by_document: {} }));
-      await getChunksForDocuments({ query: 'q', document_ids: ['d1'] });
-      expect(mockFetch).toHaveBeenCalledWith('/api/documents/chunks/by-document-ids', expect.any(Object));
-    });
-
-    it('throws on error', async () => {
-      mockFetch.mockResolvedValueOnce(errorResponse(500));
-      await expect(getChunksForDocuments({ query: 'q', document_ids: [] })).rejects.toThrow('Failed to load document chunks');
-    });
-  });
 
   // ── searchChunks ───────────────────────────────────────────────────────
 
@@ -308,20 +274,6 @@ describe('API client functions', () => {
     });
   });
 
-  // ── fetchChunksByUuid ──────────────────────────────────────────────────
-
-  describe('fetchChunksByUuid', () => {
-    it('sends POST to /api/documents/chunks/fetch', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ chunks: [], total_chunks: 0 }));
-      const result = await fetchChunksByUuid({ chunk_uuids: ['uuid-1'] });
-      expect(result.total_chunks).toBe(0);
-    });
-
-    it('throws on error', async () => {
-      mockFetch.mockResolvedValueOnce(errorResponse(404));
-      await expect(fetchChunksByUuid({ chunk_uuids: [] })).rejects.toThrow('Failed to fetch chunk details');
-    });
-  });
 
   // ── fetchDocumentsByIds ────────────────────────────────────────────────
 

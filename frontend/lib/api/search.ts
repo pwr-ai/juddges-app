@@ -1,13 +1,6 @@
-import { SearchDocumentsDirectResponse, SearchChunk, SearchDocument } from "@/types/search";
+import { SearchChunk, SearchDocument } from "@/types/search";
 import { apiLogger } from './client';
 import { logger } from "@/lib/logger";
-
-export interface SearchDocumentsDirectInput {
-  query: string;
-  mode: "rabbit" | "thinking";
-  languages?: string[];
-  return_properties?: string[];
-}
 
 export interface SearchChunksInput {
   query: string;
@@ -88,40 +81,6 @@ export async function searchDocuments(
   }
 
   return await response.json();
-}
-
-export async function searchDocumentsDirect(
-  input: SearchDocumentsDirectInput
-): Promise<SearchDocumentsDirectResponse> {
-  apiLogger.info('searchDocumentsDirect called', {
-    query: input.query,
-    mode: input.mode,
-    languages: input.languages,
-    return_properties: input.return_properties,
-  });
-
-  const response = await fetch(`/api/documents/search/direct`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Failed to search documents' }));
-    apiLogger.error('Search direct API error:', response.status, errorData);
-    throw new Error('Document search failed. Please try again.');
-  }
-
-  const result = await response.json();
-  apiLogger.info('searchDocumentsDirect response', {
-    documentCount: result.documents?.length,
-    totalCount: result.total_count,
-    isCapped: result.is_capped,
-  });
-
-  return result;
 }
 
 export interface MeilisearchDocumentHit {
