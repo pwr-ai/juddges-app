@@ -151,6 +151,15 @@ describe('LandingPage', () => {
       expect(screen.getAllByText(/Free/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText(/Academic access/i).length).toBeGreaterThanOrEqual(1);
     });
+
+    it('shows an unavailable state instead of zero corpus statistics', () => {
+      render(<LandingPage stats={null} statsLoading={false} statsError />);
+
+      expect(screen.getAllByRole('alert')).not.toHaveLength(0);
+      expect(
+        screen.getAllByText(/statistics are temporarily unavailable/i),
+      ).not.toHaveLength(0);
+    });
   });
 
   describe('capabilities section', () => {
