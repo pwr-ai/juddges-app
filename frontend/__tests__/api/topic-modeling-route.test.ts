@@ -14,6 +14,15 @@ jest.mock("@/lib/logger", () => ({
   },
 }));
 
+const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
+
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(async () => ({
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
+  })),
+}));
+
 global.fetch = jest.fn();
 
 import { NextRequest } from "next/server";
@@ -24,6 +33,14 @@ describe("POST /api/topic-modeling/analyze", () => {
     jest.clearAllMocks();
     process.env.API_BASE_URL = "http://backend:8000";
     process.env.BACKEND_API_KEY = "test-api-key";
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "verified-user" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "verified-token" } },
+      error: null,
+    });
   });
 
   function buildRequest(body: unknown): NextRequest {
@@ -35,11 +52,12 @@ describe("POST /api/topic-modeling/analyze", () => {
   }
 
   it("forwards the body and API key to the backend", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ topics: [], statistics: {} }),
-    });
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ topics: [], statistics: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
 
     const payload = { sample_size: 200, num_topics: 8 };
     const response = await POST(buildRequest(payload));
@@ -52,6 +70,7 @@ describe("POST /api/topic-modeling/analyze", () => {
         headers: expect.objectContaining({
           "X-API-Key": "test-api-key",
           "Content-Type": "application/json",
+          Authorization: "Bearer verified-token",
         }),
         body: JSON.stringify(payload),
       }),
@@ -59,11 +78,12 @@ describe("POST /api/topic-modeling/analyze", () => {
   });
 
   it("surfaces the backend error detail and status", async () => {
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: false,
-      status: 429,
-      json: async () => ({ detail: "Rate limit exceeded" }),
-    });
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Rate limit exceeded" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
 
     const response = await POST(buildRequest({}));
     const data = await response.json();
@@ -79,6 +99,6 @@ describe("POST /api/topic-modeling/analyze", () => {
     const data = await response.json();
 
     expect(response.status).toBe(503);
-    expect(data.error).toBe("Failed to connect to backend service");
+    expect(data.error).toBe("Backend service is unavailable");
   });
 });
