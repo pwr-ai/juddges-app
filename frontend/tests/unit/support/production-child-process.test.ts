@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 
+import { once } from "node:events";
+
 import {
   runProductionChild,
   spawnProductionChild,
@@ -65,6 +67,102 @@ describe("production child process runner", () => {
     });
     expect(() => process.kill(pid!, 0)).toThrow();
   });
+
+  const itOnPosix = process.platform === "win32" ? it.skip : it;
+
+  itOnPosix(
+    "kills a hanging descendant after its parent exits but keeps stdio open",
+    async () => {
+      const descendantScript = [
+        "process.on('SIGTERM', () => { process.stdout.write('descendant-stopped'); process.exit(0) })",
+        "process.send(process.pid)",
+        "setInterval(() => undefined, 1000)",
+      ].join(";");
+      const parentScript = [
+        "const { spawn } = require('node:child_process')",
+        `const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(descendantScript)}], { stdio: ['ignore', 'inherit', 'inherit', 'ipc'] })`,
+        "descendant.once('message', (pid) => { process.stdout.write(`descendant:${pid}`); descendant.disconnect(); process.exit(0) })",
+      ].join(";");
+      const handle = spawnProductionChild({
+        command: process.execPath,
+        args: ["-e", parentScript],
+        label: "exited parent with hanging descendant",
+        timeoutMs: 10_000,
+        terminationGraceMs: 20,
+      });
+
+      await waitForOutput(handle, "descendant:");
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        if (handle.child.exitCode !== null && !handle.isClosed()) break;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(handle.child.exitCode).toBe(0);
+      expect(handle.isClosed()).toBe(false);
+      const descendantPid = Number(
+        handle.output().match(/descendant:(\d+)/)?.[1],
+      );
+      expect(descendantPid).toBeGreaterThan(0);
+
+      await stopProductionChild(handle);
+
+      await expect(handle.completed).resolves.toMatchObject({
+        code: 0,
+        signal: null,
+        exited: true,
+        closed: true,
+      });
+      expect(handle.output()).toContain("descendant-stopped");
+    },
+  );
+
+  itOnPosix(
+    "bounds close waiting when an escaped descendant inherits stdio",
+    async () => {
+      const escapedScript = [
+        "process.on('SIGTERM', () => undefined)",
+        "process.send(process.pid)",
+        "setTimeout(() => process.exit(0), 500)",
+        "setInterval(() => undefined, 1000)",
+      ].join(";");
+      const parentScript = [
+        "const { spawn } = require('node:child_process')",
+        `const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(escapedScript)}], { detached: true, stdio: ['ignore', 'inherit', 'inherit', 'ipc'] })`,
+        "descendant.once('message', (pid) => { process.stdout.write(`escaped:${pid}`); descendant.disconnect(); descendant.unref(); process.exit(0) })",
+      ].join(";");
+      const handle = spawnProductionChild({
+        command: process.execPath,
+        args: ["-e", parentScript],
+        label: "exited parent with escaped descendant",
+        timeoutMs: 10_000,
+        terminationGraceMs: 20,
+        closeMarginMs: 20,
+      });
+
+      await waitForOutput(handle, "escaped:");
+      if (handle.child.exitCode === null) {
+        await once(handle.child, "exit");
+      }
+      expect(handle.isClosed()).toBe(false);
+      const escapedPid = Number(handle.output().match(/escaped:(\d+)/)?.[1]);
+      expect(escapedPid).toBeGreaterThan(0);
+
+      try {
+        await stopProductionChild(handle);
+        await expect(handle.completed).resolves.toMatchObject({
+          exited: true,
+          closeTimedOut: true,
+        });
+        expect(handle.child.stdout.destroyed).toBe(true);
+        expect(handle.child.stderr.destroyed).toBe(true);
+      } finally {
+        try {
+          process.kill(-escapedPid, "SIGKILL");
+        } catch (error) {
+          expect(error).toMatchObject({ code: "ESRCH" });
+        }
+      }
+    },
+  );
 
   it("reports output from a failed child after its streams close", async () => {
     await expect(
