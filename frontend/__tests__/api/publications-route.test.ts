@@ -61,11 +61,11 @@ describe('GET /api/publications', () => {
     );
   });
 
-  it('propagates an upstream error instead of replacing it with catalog data', async () => {
-    const body = JSON.stringify({ detail: 'Catalog unavailable' });
+  it('propagates an upstream database error instead of replacing it with catalog data', async () => {
+    const body = JSON.stringify({ detail: 'Database error: catalog unavailable' });
     global.fetch = jest.fn(async () =>
       new Response(body, {
-        status: 503,
+        status: 500,
         headers: { 'content-type': 'application/problem+json' },
       }),
     ) as typeof global.fetch;
@@ -74,7 +74,7 @@ describe('GET /api/publications', () => {
       new Request('http://localhost/api/publications'),
     );
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(500);
     expect(response.headers.get('content-type')).toBe('application/problem+json');
     expect(await response.text()).toBe(body);
   });

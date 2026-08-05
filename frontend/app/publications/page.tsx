@@ -136,10 +136,15 @@ export default function PublicationsPage() {
  return (
  <PaperBackground className="min-h-[520px]">
  <div className="container mx-auto max-w-[1200px] px-6 py-8 md:px-8 lg:px-12">
- <div className="flex items-center justify-center min-h-[400px]">
+ <div
+ role="status"
+ aria-live="polite"
+ aria-label="Loading publications"
+ className="flex items-center justify-center min-h-[400px]"
+ >
  <Loader2
  className="h-8 w-8 animate-spin text-[color:var(--oxblood)]"
- aria-label="Loading publications"
+ aria-hidden="true"
  />
  </div>
  </div>
@@ -213,6 +218,7 @@ export default function PublicationsPage() {
  <div>
  <label className="text-sm font-semibold mb-2 block text-foreground">Year</label>
  <DropdownButton
+ ariaLabel={`Year filter: ${filterYear === "all" ? "All years" : filterYear}`}
  icon={<Calendar size={16} />}
  label="All years"
  value={String(filterYear)}
@@ -229,6 +235,11 @@ export default function PublicationsPage() {
  <div>
  <label className="text-sm font-semibold mb-2 block text-foreground">Type</label>
  <DropdownButton
+ ariaLabel={`Type filter: ${
+ filterType === "all"
+ ? "All types"
+ : filterType.charAt(0).toUpperCase() + filterType.slice(1)
+ }`}
  icon={<FileType size={16} />}
  label="All types"
  value={filterType}
@@ -248,6 +259,9 @@ export default function PublicationsPage() {
  <div>
  <label className="text-sm font-semibold mb-2 block text-foreground">Sort by</label>
  <DropdownButton
+ ariaLabel={`Sort publications: ${
+ sortBy === "date" ? "Date (newest first)" : "Title (A-Z)"
+ }`}
  icon={<ArrowUpDown size={16} />}
  label="Sort by"
  value={sortBy}

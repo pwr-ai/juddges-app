@@ -94,6 +94,24 @@ describe('PublicationsPage', () => {
     expect(
       screen.getByText(/Unseen Influence: Computational Propaganda/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Year filter: All years' }),
+    ).toHaveAttribute('aria-label', 'Year filter: All years');
+    expect(
+      screen.getByRole('button', { name: 'Type filter: All types' }),
+    ).toHaveAttribute('aria-label', 'Type filter: All types');
+    expect(
+      screen.getByRole('button', { name: 'Sort publications: Date (newest first)' }),
+    ).toHaveAttribute('aria-label', 'Sort publications: Date (newest first)');
+  });
+
+  it('announces the loading state to assistive technology', () => {
+    jest.mocked(getPublications).mockReturnValue(new Promise(() => undefined));
+
+    render(<PublicationsPage />);
+
+    const status = screen.getByRole('status', { name: 'Loading publications' });
+    expect(status).toHaveAttribute('aria-live', 'polite');
   });
 
   it('shows an explicit empty catalog state without static fallback records', async () => {
@@ -149,7 +167,7 @@ describe('PublicationsPage', () => {
     render(<PublicationsPage />);
     await screen.findByText('A real catalog publication');
 
-    await user.click(screen.getByRole('button', { name: /All years/i }));
+    await user.click(screen.getByRole('button', { name: 'Year filter: All years' }));
     await user.click(screen.getByRole('menuitem', { name: '2025' }));
     await user.keyboard('{Escape}');
 
@@ -165,7 +183,7 @@ describe('PublicationsPage', () => {
     render(<PublicationsPage />);
     await screen.findByText('A real catalog publication');
 
-    await user.click(screen.getByRole('button', { name: /All types/i }));
+    await user.click(screen.getByRole('button', { name: 'Type filter: All types' }));
     await user.click(screen.getByRole('menuitem', { name: 'Workshop' }));
     await user.keyboard('{Escape}');
 
@@ -180,7 +198,7 @@ describe('PublicationsPage', () => {
     render(<PublicationsPage />);
     await screen.findByText('A real catalog publication');
 
-    await user.click(screen.getByRole('button', { name: /All types/i }));
+    await user.click(screen.getByRole('button', { name: 'Type filter: All types' }));
     await user.click(screen.getByRole('menuitem', { name: 'Conference' }));
     await user.keyboard('{Escape}');
 

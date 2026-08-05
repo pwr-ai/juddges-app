@@ -1,15 +1,17 @@
 import {
-  Publication,
+  PublicationProject,
+  PublicationStatus,
+  PublicationType,
   PublicationWithResources,
   CreatePublicationRequest,
   UpdatePublicationRequest,
 } from "@/types/publication";
 
 export interface PublicationFilters {
-  project?: string;
+  project?: PublicationProject;
   year?: number;
-  status?: string;
-  type?: string;
+  status?: PublicationStatus;
+  type?: PublicationType;
 }
 
 export async function getPublications(filters?: PublicationFilters): Promise<PublicationWithResources[]> {
