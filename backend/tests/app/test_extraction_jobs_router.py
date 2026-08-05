@@ -302,7 +302,7 @@ class TestCreateExtractionJobEndpoint:
 
     @pytest.mark.unit
     async def test_create_job_empty_documents(self, client, valid_api_headers) -> None:
-        """Test that empty document list returns 400."""
+        """An explicitly empty document list is a request validation error."""
         response = await client.post(
             "/extractions",
             json={
@@ -313,7 +313,71 @@ class TestCreateExtractionJobEndpoint:
             },
             headers=valid_api_headers,
         )
-        assert response.status_code == 400
+        assert response.status_code == 422
+        assert response.json()["detail"][0]["loc"][-1] == "document_ids"
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("language", ["pl", "en"])
+    async def test_create_db_job_accepts_frontend_payload(
+        self, client, valid_api_headers, language: str
+    ) -> None:
+        """The Next BFF payload reaches the canonical DB-backed submit route."""
+        with (
+            patch(
+                "app.extraction_domain.jobs_router._fetch_schema_from_db",
+                return_value={
+                    "name": "Contract schema",
+                    "description": "Extract contract data",
+                    "text": {
+                        "contract_date": {
+                            "type": "string",
+                            "description": "Contract date",
+                            "required": True,
+                        }
+                    },
+                },
+            ),
+            patch(
+                "app.extraction_domain.jobs_router._submit_extraction_task",
+                return_value="task-frontend-123",
+            ),
+        ):
+            response = await client.post(
+                "/extractions/db",
+                json={
+                    "collection_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                    "schema_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                    "document_ids": ["eeeeeeee-eeee-4eee-8eee-eeeeeeeee001"],
+                    "extraction_context": "Extract structured contract data",
+                    "language": language,
+                },
+                headers=valid_api_headers,
+            )
+
+        assert response.status_code == 202
+        assert response.json() == {
+            "job_id": "task-frontend-123",
+            "status": "accepted",
+            "message": "The extraction job has been accepted and is processing in the background.",
+        }
+
+    @pytest.mark.unit
+    async def test_create_db_job_rejects_unsupported_language(
+        self, client, valid_api_headers
+    ) -> None:
+        response = await client.post(
+            "/extractions/db",
+            json={
+                "collection_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                "schema_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                "document_ids": ["eeeeeeee-eeee-4eee-8eee-eeeeeeeee001"],
+                "extraction_context": "Extract structured contract data",
+                "language": "uk",
+            },
+            headers=valid_api_headers,
+        )
+
+        assert response.status_code == 422
 
     @pytest.mark.unit
     async def test_create_job_missing_collection_id(

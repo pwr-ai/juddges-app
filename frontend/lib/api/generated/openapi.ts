@@ -8407,9 +8407,9 @@ export interface components {
              * Language
              * @description Language of the extraction
              * @default pl
-             * @constant
+             * @enum {string}
              */
-            language: "pl";
+            language: "pl" | "en";
             /**
              * Llm Kwargs
              * @description Keyword arguments to pass to the LLM (to disable thinking in gemini pass llm_kwargs): {'extra_body': {'thinking': {'budget_tokens': 0}}})
@@ -13206,10 +13206,11 @@ export interface components {
             extraction_context: string;
             /**
              * Language
-             * @description Language for extraction (e.g., 'pl', 'en')
+             * @description Language for extraction ('pl' or 'en')
              * @default pl
+             * @enum {string}
              */
-            language: string;
+            language: "pl" | "en";
             /**
              * Schema Id
              * @description Schema ID (alphanumeric, hyphens, underscores, dots only)
