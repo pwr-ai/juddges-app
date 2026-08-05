@@ -27446,6 +27446,18 @@
               "title": "Job Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Include per-document extraction results",
+            "in": "query",
+            "name": "include_results",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include per-document extraction results",
+              "title": "Include Results",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

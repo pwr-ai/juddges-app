@@ -5,14 +5,18 @@
 import { NextRequest } from "next/server";
 
 const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
 
 jest.mock("@supabase/ssr", () => ({
   createServerClient: jest.fn(() => ({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
   })),
 }));
 
-import { updateSession } from "@/lib/supabase/middleware";
+import {
+  updateSession,
+  updateSessionWithAuth,
+} from "@/lib/supabase/middleware";
 
 describe("Supabase middleware retired routes", () => {
   beforeEach(() => {
@@ -37,5 +41,35 @@ describe("Supabase middleware retired routes", () => {
     expect(lookalikeRoute.headers.get("location")).toBe(
       "http://localhost/auth/login?next=%2Fapi%2Fgraphql%2Fnested"
     );
+  });
+
+  it("strips forged extraction proof headers before downstream handling", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/extractions/job.txt", {
+        headers: {
+          "x-juddges-extraction-snapshot": "spoofed",
+          "x-juddges-extraction-snapshot-signature": "forged",
+          "x-juddges-extraction-verified-user": "attacker",
+        },
+      })
+    );
+
+    expect(result.userId).toBe("user-1");
+    expect(result.accessToken).toBe("access-token");
+    expect(result.request.headers.get("x-juddges-extraction-snapshot")).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-snapshot-signature")
+    ).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-verified-user")
+    ).toBeNull();
   });
 });

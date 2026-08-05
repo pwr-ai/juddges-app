@@ -20168,7 +20168,10 @@ export interface operations {
     };
     get_extraction_job_extractions__job_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include per-document extraction results */
+                include_results?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Extraction job ID (task ID) */

@@ -438,7 +438,16 @@ describe("GET /api/extractions", () => {
       json: async () => ({
         job_id: JOB_ID,
         status: "SUCCESS",
-        results: [{ status: "completed", document_id: DOC_ID_1 }],
+        results: [
+          {
+            collection_id: COLLECTION_ID,
+            status: "completed",
+            document_id: DOC_ID_1,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:01:00Z",
+            extracted_data: {},
+          },
+        ],
         progress: { completed: 1, total: 1 },
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:01:00Z",
@@ -466,6 +475,79 @@ describe("GET /api/extractions", () => {
     const response = await GET(makeGetRequest(JOB_ID));
 
     expect(response.status).toBe(404);
+  });
+
+  it.each([422, 500, 503])(
+    "preserves backend status %s instead of collapsing it to not-found",
+    async (status) => {
+      mockSupabaseAuth(USER_ID);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status,
+        text: async () => JSON.stringify({ detail: `upstream ${status}` }),
+      });
+
+      const response = await GET(makeGetRequest(JOB_ID));
+
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual(
+        expect.objectContaining({ message: `upstream ${status}` })
+      );
+    }
+  );
+
+  it("returns 504 when the extraction backend times out", async () => {
+    mockSupabaseAuth(USER_ID);
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    (global.fetch as jest.Mock).mockRejectedValue(timeout);
+
+    const response = await GET(makeGetRequest(JOB_ID));
+
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ code: "EXTRACTION_TIMEOUT" })
+    );
+  });
+
+  it("returns 502 when the backend success payload is malformed", async () => {
+    mockSupabaseAuth(USER_ID);
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ unexpected: true }),
+    });
+
+    const response = await GET(makeGetRequest(JOB_ID));
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ code: "MALFORMED_EXTRACTION_RESPONSE" })
+    );
+  });
+
+  it.each([
+    { job_id: JOB_ID, status: "SUCCESS", results: [null] },
+    {
+      job_id: JOB_ID,
+      status: "SUCCESS",
+      results: [],
+      progress: { completed: "1", total: 1 },
+    },
+  ])("returns 502 for invalid nested backend data", async (payload) => {
+    mockSupabaseAuth(USER_ID);
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => payload,
+    });
+
+    const response = await GET(makeGetRequest(JOB_ID));
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ code: "MALFORMED_EXTRACTION_RESPONSE" })
+    );
   });
 });
 
