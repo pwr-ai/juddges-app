@@ -1,20 +1,5 @@
-import { ChunksByDocumentIdsResponse, SearchChunk, SearchDocument } from "@/types/search";
+import { SearchDocument } from "@/types/search";
 import { apiLogger } from './client';
-
-export interface GetChunksForDocumentsInput {
-  query: string;
-  document_ids: string[];
-  return_properties?: string[];
-}
-
-export interface FetchChunksByUuidInput {
-  chunk_uuids: string[];
-}
-
-export interface FetchChunksByUuidResponse {
-  chunks: SearchChunk[];
-  total_chunks: number;
-}
 
 // Batch fetch documents by IDs
 export interface FetchDocumentsByIdsInput {
@@ -48,56 +33,6 @@ export async function getExampleQuestions(
 
   const data = await response.json();
   return data.questions;
-}
-
-export async function getChunksForDocuments(
-  input: GetChunksForDocumentsInput
-): Promise<ChunksByDocumentIdsResponse> {
-  const response = await fetch(`/api/documents/chunks/by-document-ids`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Failed to fetch chunks' }));
-    apiLogger.error('Get chunks API error:', response.status, errorData);
-    throw new Error('Failed to load document chunks. Please try again.');
-  }
-
-  return await response.json();
-}
-
-export async function fetchChunksByUuid(
-  input: FetchChunksByUuidInput
-): Promise<FetchChunksByUuidResponse> {
-  apiLogger.info('fetchChunksByUuid called', {
-    chunkUuidCount: input.chunk_uuids.length,
-  });
-
-  const response = await fetch(`/api/documents/chunks/fetch`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Failed to fetch chunks by UUID' }));
-    apiLogger.error('Fetch chunks by UUID API error:', response.status, errorData);
-    throw new Error('Failed to fetch chunk details. Please try again.');
-  }
-
-  const result = await response.json();
-  apiLogger.info('fetchChunksByUuid response', {
-    chunkCount: result.chunks?.length,
-    totalChunks: result.total_chunks,
-  });
-
-  return result;
 }
 
 export async function fetchDocumentsByIds(
