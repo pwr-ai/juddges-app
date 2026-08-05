@@ -6,6 +6,78 @@ import {
   CreatePublicationRequest,
   UpdatePublicationRequest,
 } from "@/types/publication";
+import type { components } from "@/lib/api/generated/openapi";
+
+type ApiPublication = components["schemas"]["PublicationWithResources"];
+
+const publicationProjects: Record<ApiPublication["project"], PublicationProject> = {
+  JuDDGES: PublicationProject.JUDDGES,
+};
+
+const publicationTypes: Record<ApiPublication["type"], PublicationType> = {
+  journal: PublicationType.JOURNAL,
+  conference: PublicationType.CONFERENCE,
+  preprint: PublicationType.PREPRINT,
+  workshop: PublicationType.WORKSHOP,
+};
+
+const publicationStatuses: Record<ApiPublication["status"], PublicationStatus> = {
+  published: PublicationStatus.PUBLISHED,
+  accepted: PublicationStatus.ACCEPTED,
+  under_review: PublicationStatus.UNDER_REVIEW,
+  preprint: PublicationStatus.PREPRINT,
+};
+
+function normalizePublication(publication: ApiPublication): PublicationWithResources {
+  return {
+    id: publication.id,
+    title: publication.title,
+    authors: publication.authors.map((author) => ({
+      name: author.name,
+      affiliation: author.affiliation ?? undefined,
+      url: author.url ?? undefined,
+    })),
+    venue: publication.venue,
+    venueShort: publication.venue_short ?? undefined,
+    year: publication.year,
+    month: publication.month ?? undefined,
+    abstract: publication.abstract,
+    project: publicationProjects[publication.project],
+    type: publicationTypes[publication.type],
+    status: publicationStatuses[publication.status],
+    links: {
+      pdf: publication.links.pdf ?? undefined,
+      arxiv: publication.links.arxiv ?? undefined,
+      doi: publication.links.doi ?? undefined,
+      code: publication.links.code ?? undefined,
+      website: publication.links.website ?? undefined,
+      video: publication.links.video ?? undefined,
+    },
+    tags: publication.tags ?? undefined,
+    citations: publication.citations ?? undefined,
+    manuscriptNumber: publication.manuscript_number ?? undefined,
+    acceptanceDate: publication.acceptance_date ?? undefined,
+    publicationDate: publication.publication_date ?? undefined,
+    createdAt: publication.created_at,
+    updatedAt: publication.updated_at,
+    schemas: publication.schemas.map((schema) => ({
+      schemaId: schema.schema_id,
+      description: schema.description ?? undefined,
+      createdAt: schema.created_at ?? undefined,
+    })),
+    collections: publication.collections.map((collection) => ({
+      collectionId: collection.collection_id,
+      description: collection.description ?? undefined,
+      createdAt: collection.created_at ?? undefined,
+    })),
+    extractionJobs: publication.extraction_jobs.map((job) => ({
+      jobId: job.job_id,
+      jobStatus: job.job_status ?? undefined,
+      description: job.description ?? undefined,
+      createdAt: job.created_at ?? undefined,
+    })),
+  };
+}
 
 export interface PublicationFilters {
   project?: PublicationProject;
@@ -35,7 +107,8 @@ export async function getPublications(filters?: PublicationFilters): Promise<Pub
     throw new Error("Failed to fetch publications");
   }
 
-  return response.json();
+  const publications: ApiPublication[] = await response.json();
+  return publications.map(normalizePublication);
 }
 
 export async function getPublication(id: string): Promise<PublicationWithResources> {
