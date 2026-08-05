@@ -24883,9 +24883,7 @@
         },
         "security": [
           {
-            "APIKeyHeader": []
-          },
-          {
+            "APIKeyHeader": [],
             "HTTPBearer": []
           }
         ],

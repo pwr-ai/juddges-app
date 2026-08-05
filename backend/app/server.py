@@ -351,6 +351,18 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown completed successfully")
 
 
+def _apply_openapi_security_contracts(openapi_schema: dict) -> dict:
+    """Express conjunctive auth requirements that FastAPI renders as OR."""
+    set_active_model = (
+        openapi_schema.get("paths", {}).get("/embeddings/models/active", {}).get("post")
+    )
+    if set_active_model is not None:
+        set_active_model["security"] = [
+            {"APIKeyHeader": [], "HTTPBearer": []},
+        ]
+    return openapi_schema
+
+
 def custom_openapi():
     """
     Custom OpenAPI schema generation that handles LangServe route issues.
@@ -371,7 +383,7 @@ def custom_openapi():
             description=app.description,
             routes=app.routes,
         )
-        app.openapi_schema = openapi_schema
+        app.openapi_schema = _apply_openapi_security_contracts(openapi_schema)
         return app.openapi_schema
     except Exception as e:
         logger.error(f"Failed to generate full OpenAPI schema: {e}")
@@ -395,7 +407,7 @@ def custom_openapi():
                 + " (Note: LangServe endpoints excluded from schema)",
                 routes=filtered_routes,
             )
-            app.openapi_schema = openapi_schema
+            app.openapi_schema = _apply_openapi_security_contracts(openapi_schema)
             return app.openapi_schema
         except Exception as fallback_error:
             logger.error(

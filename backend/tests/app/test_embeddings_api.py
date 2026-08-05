@@ -287,11 +287,10 @@ class TestSetActiveModelEndpoint:
         from app.server import app
 
         operation = app.openapi()["paths"]["/embeddings/models/active"]["post"]
-        schemes = {
-            scheme for requirement in operation["security"] for scheme in requirement
-        }
 
-        assert {"APIKeyHeader", "HTTPBearer"} <= schemes
+        assert operation["security"] == [
+            {"APIKeyHeader": [], "HTTPBearer": []},
+        ]
 
 
 @pytest.mark.unit
