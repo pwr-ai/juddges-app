@@ -9,6 +9,8 @@ from supabase import PostgrestAPIError, StorageException
 
 from ._base import SupabaseClientMixin
 
+_PUBLICATION_READ_ERROR_DETAIL = "Failed to retrieve publication"
+
 
 class PublicationsDB(SupabaseClientMixin):
     """Database operations for publications management."""
@@ -69,8 +71,14 @@ class PublicationsDB(SupabaseClientMixin):
 
             return response.data[0] if response.data else None
         except (PostgrestAPIError, StorageException) as e:
-            self._handle_error("get_publication", e)
-            return None  # Unreachable, as _handle_error always raises
+            logger.exception(
+                "Supabase error while retrieving publication {}",
+                publication_id,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=_PUBLICATION_READ_ERROR_DETAIL,
+            ) from e
 
     async def create_publication(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new publication."""

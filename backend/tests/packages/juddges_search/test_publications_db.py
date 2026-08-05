@@ -56,4 +56,6 @@ async def test_get_publication_translates_database_failure_to_http_500() -> None
         await db.get_publication("11111111-1111-4111-a111-111111111111")
 
     assert exc_info.value.status_code == 500
-    assert "Database error" in str(exc_info.value.detail)
+    assert exc_info.value.detail == "Failed to retrieve publication"
+    for sentinel in ("database unavailable", "XX000"):
+        assert sentinel not in str(exc_info.value.detail)

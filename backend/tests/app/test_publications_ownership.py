@@ -19,7 +19,9 @@ A denied request must not reach the database.
 import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
+from juddges_search.db.publications_db import PublicationsDB
 from juddges_search.db.supabase_db import get_publications_db
+from supabase import PostgrestAPIError
 
 from app.core.auth_jwt import AuthenticatedUser
 from app.core.auth_jwt import get_current_user as jwt_get_current_user
@@ -36,6 +38,7 @@ MISSING_PUBLICATION_ID = "22222222-2222-4222-a222-222222222222"
 
 UPDATE_BODY = {"title": "Edited by someone"}
 OWNERSHIP_LOOKUP_ERROR_DETAIL = "Failed to verify publication ownership"
+PUBLICATION_READ_ERROR_DETAIL = "Failed to retrieve publication"
 RAW_DATABASE_ERROR = (
     "Database error: raw-message-sentinel; code=raw-code-sentinel; "
     "hint=raw-hint-sentinel; details=raw-details-sentinel"
@@ -103,6 +106,29 @@ class _StubPublicationsDb:
     async def delete_publication(self, publication_id: str) -> bool:
         self.delete_calls.append(publication_id)
         return True
+
+
+class _FailingPublicationReadQuery:
+    def select(self, *_args, **_kwargs):
+        return self
+
+    def eq(self, *_args, **_kwargs):
+        return self
+
+    def execute(self):
+        raise PostgrestAPIError(
+            {
+                "message": "raw-message-sentinel",
+                "code": "raw-code-sentinel",
+                "hint": "raw-hint-sentinel",
+                "details": "raw-details-sentinel",
+            }
+        )
+
+
+class _FailingPublicationReadClient:
+    def table(self, _name: str) -> _FailingPublicationReadQuery:
+        return _FailingPublicationReadQuery()
 
 
 @pytest.fixture
@@ -351,6 +377,32 @@ async def test_delete_missing_publication_is_404(
 
     assert response.status_code == 404
     assert db.delete_calls == []
+
+
+async def test_get_database_read_failure_is_500_without_raw_details(
+    client: AsyncClient,
+    valid_api_headers: dict[str, str],
+) -> None:
+    db = PublicationsDB.__new__(PublicationsDB)
+    db.client = _FailingPublicationReadClient()
+
+    async def _db_resolver() -> PublicationsDB:
+        return db
+
+    app.dependency_overrides[get_publications_db] = _db_resolver
+
+    try:
+        response = await client.get(
+            f"/publications/{PUBLICATION_ID}",
+            headers=valid_api_headers,
+        )
+    finally:
+        app.dependency_overrides.pop(get_publications_db, None)
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": PUBLICATION_READ_ERROR_DETAIL}
+    for sentinel in ("raw-message", "raw-code", "raw-hint", "raw-details"):
+        assert sentinel not in response.text
 
 
 async def test_update_database_read_failure_is_500_without_mutation(
