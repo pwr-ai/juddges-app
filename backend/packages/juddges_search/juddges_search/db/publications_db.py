@@ -51,8 +51,7 @@ class PublicationsDB(SupabaseClientMixin):
 
             return response.data or []
         except (PostgrestAPIError, StorageException) as e:
-            logger.exception(f"Error getting publications: {e}")
-            return []
+            self._handle_error("get_publications", e)
 
     async def get_publication(self, publication_id: str) -> dict[str, Any] | None:
         """Get a single publication by ID with linked schemas, collections, and extraction jobs."""
