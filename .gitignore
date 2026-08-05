@@ -38,6 +38,9 @@ dist/
 .venv/
 .venv-ingest/
 venv/
+# Sub-package locks are never installed from: juddges_search and
+# schema_generator_agent are editable path deps resolved by backend/poetry.lock.
+backend/packages/*/poetry.lock
 
 # Python virtual environments (top-level only — do NOT match nested code dirs like frontend/lib/env/)
 /env/
