@@ -12,6 +12,7 @@ import {
 import {
   type ProductionChild,
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_POLL_INTERVAL_MS,
   PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
   PRODUCTION_REQUEST_TIMEOUT_MS,
   PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
@@ -76,7 +77,9 @@ async function waitForNext(baseUrl: string, processOutput: () => string): Promis
     } catch {
       // The child has not bound its port yet.
     }
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) =>
+      setTimeout(resolve, PRODUCTION_READINESS_POLL_INTERVAL_MS),
+    );
   }
   throw new Error(`Next server did not become ready:\n${processOutput()}`);
 }

@@ -10,6 +10,11 @@ import {
 } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import {
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+} from "./production-child-process";
+
 export type ProductionBuildLockOptions = {
   lockPath?: string;
   timeoutMs?: number;
@@ -18,12 +23,19 @@ export type ProductionBuildLockOptions = {
   testHooks?: {
     onStaleLeaseMoved?: () => void | Promise<void>;
     onStaleEmptyLockDetected?: () => void | Promise<void>;
+    onStaleEmptyLockRemoved?: () => void | Promise<void>;
+    onLockDirectoryCreated?: () => void | Promise<void>;
   };
 };
 
-// Covers waiting for another production lifecycle plus a slow CI build/run.
-export const PRODUCTION_BUILD_TEST_TIMEOUT_MS = 12 * 60_000;
 export const PRODUCTION_BUILD_LOCK_TIMEOUT_MS = 4 * 60_000;
+export const PRODUCTION_BUILD_CLEANUP_MARGIN_MS = 60_000;
+// Covers lock contention, both child lifecycles, and bounded cleanup/reaping.
+export const PRODUCTION_BUILD_TEST_TIMEOUT_MS =
+  PRODUCTION_BUILD_LOCK_TIMEOUT_MS +
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS +
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS +
+  PRODUCTION_BUILD_CLEANUP_MARGIN_MS;
 
 const DEFAULT_TIMEOUT_MS = PRODUCTION_BUILD_LOCK_TIMEOUT_MS;
 const DEFAULT_STALE_MS = PRODUCTION_BUILD_TEST_TIMEOUT_MS + 60_000;
@@ -44,6 +56,7 @@ async function removeStaleLock(
   staleMs: number,
   onStaleLeaseMoved?: () => void | Promise<void>,
   onStaleEmptyLockDetected?: () => void | Promise<void>,
+  onStaleEmptyLockRemoved?: () => void | Promise<void>,
 ): Promise<boolean> {
   let leaseName: string | undefined;
   try {
@@ -66,6 +79,7 @@ async function removeStaleLock(
         // `rmdir` is the atomic check-and-remove operation: it cannot remove
         // the directory if a delayed owner has installed a lease meanwhile.
         await rmdir(lockPath);
+        await onStaleEmptyLockRemoved?.();
         return true;
       } catch (error) {
         if (hasCode(error, "ENOENT")) return true;
@@ -131,6 +145,7 @@ export async function acquireProductionBuildLock(
   for (;;) {
     try {
       await mkdir(lockPath);
+      await options.testHooks?.onLockDirectoryCreated?.();
       try {
         await writeFile(leasePath, `${process.pid}:${ownerToken}`, {
           encoding: "utf8",
@@ -141,6 +156,11 @@ export async function acquireProductionBuildLock(
           await rmdir(lockPath);
         } catch {
           // Preserve any lease that appeared while initialization failed.
+        }
+        if (hasCode(error, "ENOENT")) {
+          // A stale-lock reclaimer can remove the empty directory between our
+          // mkdir and lease write. Restart acquisition instead of failing.
+          continue;
         }
         throw error;
       }
@@ -173,6 +193,7 @@ export async function acquireProductionBuildLock(
         staleMs,
         options.testHooks?.onStaleLeaseMoved,
         options.testHooks?.onStaleEmptyLockDetected,
+        options.testHooks?.onStaleEmptyLockRemoved,
       )
     ) {
       continue;

@@ -12,6 +12,7 @@ import {
 } from '@/tests/support/production-build-lock';
 import {
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_POLL_INTERVAL_MS,
   PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
   PRODUCTION_REQUEST_TIMEOUT_MS,
   PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
@@ -55,7 +56,9 @@ async function requestUntilReady(url: string): Promise<Response> {
       });
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) =>
+        setTimeout(resolve, PRODUCTION_READINESS_POLL_INTERVAL_MS)
+      );
     }
   }
   throw lastError;

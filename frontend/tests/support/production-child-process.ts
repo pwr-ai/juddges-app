@@ -6,7 +6,10 @@ import {
 
 export const PRODUCTION_BUILD_PROCESS_TIMEOUT_MS = 4 * 60_000;
 export const PRODUCTION_SERVER_PROCESS_TIMEOUT_MS = 4 * 60_000;
+export const PRODUCTION_CHILD_TERMINATION_GRACE_MS = 5_000;
+export const PRODUCTION_CHILD_CLOSE_MARGIN_MS = 5_000;
 export const PRODUCTION_READINESS_REQUEST_TIMEOUT_MS = 5_000;
+export const PRODUCTION_READINESS_POLL_INTERVAL_MS = 250;
 export const PRODUCTION_REQUEST_TIMEOUT_MS = 30_000;
 
 export type ProductionChildResult = {
@@ -161,7 +164,8 @@ export function spawnProductionChild(
     output: () => output,
     label: options.label,
     timeoutMs: options.timeoutMs,
-    terminationGraceMs: options.terminationGraceMs ?? 5_000,
+    terminationGraceMs:
+      options.terminationGraceMs ?? PRODUCTION_CHILD_TERMINATION_GRACE_MS,
     isClosed: () => closed,
     detached,
   };
