@@ -30,23 +30,33 @@ export async function GET(request: Request) {
         'X-API-Key': API_KEY,
         'Content-Type': 'application/json',
       } as HeadersInit,
+      cache: 'no-store',
     });
 
     if (!response.ok) {
       logger.error(`Backend API returned error status: ${response.status}`);
-      return NextResponse.json(
-        { error: "Failed to fetch publications from backend" },
-        { status: response.status }
-      );
+      return new Response(await response.arrayBuffer(), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: {
+          'Content-Type': response.headers.get('Content-Type') ?? 'application/json',
+          'Cache-Control': 'no-store',
+        },
+      });
     }
 
     const publications = await response.json();
-    return NextResponse.json(publications);
+    return NextResponse.json(publications, {
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error) {
     logger.error("Error in GET publications: ", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
+      { error: "Publications service is unavailable" },
+      {
+        status: 502,
+        headers: { 'Cache-Control': 'no-store' },
+      }
     );
   }
 }

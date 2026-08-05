@@ -1,51 +1,60 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { PublicationCard } from "@/components/publications/publication-card";
-import { publications as staticPublications, sortPublications, getPublicationYears } from "@/lib/data/publications";
+import { sortPublications } from "@/lib/data/publications";
 import { PublicationType, PublicationWithResources } from "@/types/publication";
-import { VariantButton, DropdownButton } from "@/lib/styles/components";
-import { BookOpen, Filter, Calendar, FileType, ArrowUpDown, Settings, Loader2 } from "lucide-react";
+import { DropdownButton } from "@/lib/styles/components";
+import {
+ BookOpen,
+ Filter,
+ Calendar,
+ FileType,
+ ArrowUpDown,
+ Loader2,
+ AlertTriangle,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPublications } from "@/lib/api/publications";
 import { logger } from "@/lib/logger";
+import {
+ EditorialButton,
+ Eyebrow,
+ Headline,
+ PaperBackground,
+ Rule,
+} from "@/components/editorial";
 
 type FilterYear = number |"all";
 type FilterType = PublicationType |"all";
 type SortOption ="date"|"title";
+type CatalogStatus = "loading" | "success" | "error";
 
 export default function PublicationsPage() {
  const { user } = useAuth();
  const isAdmin = user?.app_metadata?.is_admin === true;
  const [publications, setPublications] = useState<PublicationWithResources[]>([]);
- const [loading, setLoading] = useState(true);
+ const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("loading");
  const [filterYear, setFilterYear] = useState<FilterYear>("all");
  const [filterType, setFilterType] = useState<FilterType>("all");
  const [sortBy, setSortBy] = useState<SortOption>("date");
 
- // Fetch publications from API on mount
- useEffect(() => {
- const fetchPublications = async () => {
+ const fetchPublications = useCallback(async () => {
+ setCatalogStatus("loading");
  try {
  const data = await getPublications();
- // Use the static seed list when the DB has not been populated yet.
- setPublications(
- data.length > 0
- ? data
- : (staticPublications as PublicationWithResources[]),
- );
+ setPublications(data);
+ setCatalogStatus("success");
  } catch (error) {
- logger.error("Failed to fetch publications from API, using static data: ", error);
- // Fallback to static publications if API fails
- setPublications(staticPublications as PublicationWithResources[]);
- } finally {
- setLoading(false);
+ logger.error("Failed to fetch publications from API: ", error);
+ setPublications([]);
+ setCatalogStatus("error");
  }
- };
-
- fetchPublications();
  }, []);
+
+ useEffect(() => {
+ fetchPublications();
+ }, [fetchPublications]);
 
  const years = useMemo(() => {
  const pubYears = publications.map(p => p.year);
@@ -77,52 +86,79 @@ export default function PublicationsPage() {
 
  const hasActiveFilters = filterYear !=="all"|| filterType !=="all";
 
- if (loading) {
+ if (catalogStatus === "loading") {
  return (
- <div className="container mx-auto px-6 py-8 md:px-8 lg:px-12 max-w-[1200px]">
+ <PaperBackground className="min-h-[520px]">
+ <div className="container mx-auto max-w-[1200px] px-6 py-8 md:px-8 lg:px-12">
  <div className="flex items-center justify-center min-h-[400px]">
- <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+ <Loader2
+ className="h-8 w-8 animate-spin text-[color:var(--oxblood)]"
+ aria-label="Loading publications"
+ />
  </div>
  </div>
+ </PaperBackground>
  );
  }
 
  return (
- <div className="container mx-auto px-6 py-8 md:px-8 lg:px-12 max-w-[1200px]">
+ <PaperBackground className="min-h-screen">
+ <main className="container mx-auto max-w-[1200px] px-6 py-10 md:px-8 lg:px-12">
  {/* Header */}
- <div className="mb-8">
- <div className="flex items-center gap-3 mb-4">
- <BookOpen className="h-8 w-8 text-primary"/>
- <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 via-slate-600 to-slate-800 bg-clip-text text-transparent">
- Publications
- </h1>
+ <header className="mb-10">
+ <div className="mb-4 flex items-start justify-between gap-6">
+ <div>
+ <Eyebrow as="p" tone="oxblood" className="mb-3">Research archive</Eyebrow>
+ <Headline as="h1" size="md">Publications</Headline>
+ </div>
  {isAdmin && (
- <Link
- href="/publications/admin"
- className="ml-auto flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
- >
- <Settings className="h-4 w-4"/>
+ <EditorialButton href="/publications/admin" variant="secondary" size="sm">
  Manage Publications
- </Link>
+ </EditorialButton>
  )}
  </div>
- <p className="text-lg text-foreground/80 max-w-3xl leading-relaxed">
+ <p className="max-w-3xl text-lg leading-relaxed text-[color:var(--ink-soft)]">
  Research publications from the JuDDGES project for court judgment analysis and extraction.
  </p>
- </div>
+ </header>
+
+ {catalogStatus === "error" ? (
+ <section
+ role="alert"
+ className="border-y border-[color:var(--rule-strong)] bg-[color:var(--parchment-deep)] px-6 py-12 text-center"
+ >
+ <AlertTriangle className="mx-auto mb-4 h-9 w-9 text-[color:var(--oxblood)]" />
+ <Headline as="h2" size="xs" className="mb-3">
+ Publications are temporarily unavailable
+ </Headline>
+ <p className="mx-auto mb-6 max-w-xl text-[color:var(--ink-soft)]">
+ We could not load the publications catalog. The catalog has not been replaced with sample records.
+ </p>
+ <EditorialButton onClick={fetchPublications}>Try again</EditorialButton>
+ </section>
+ ) : publications.length === 0 ? (
+ <section className="border-y border-[color:var(--rule)] px-6 py-14 text-center">
+ <BookOpen className="mx-auto mb-4 h-10 w-10 text-[color:var(--gold)]" />
+ <Headline as="h2" size="xs" className="mb-3">No publications available</Headline>
+ <p className="mx-auto max-w-xl text-[color:var(--ink-soft)]">
+ The research catalog is currently empty. Published work will appear here when it is added.
+ </p>
+ </section>
+ ) : (
+ <>
 
  {/* Filters */}
- <div className="mb-8 p-6 border border-slate-200/50 rounded-lg bg-gradient-to-br from-blue-400/10 via-indigo-400/10 via-purple-400/10 to-purple-400/5 backdrop-blur-sm">
+ <section className="mb-8 border border-[color:var(--rule)] bg-[color:var(--parchment-deep)] p-6">
  <div className="flex items-center gap-2 mb-4">
- <Filter className="h-4 w-4 text-primary"/>
- <span className="font-semibold text-foreground">Filter & Sort</span>
+ <Filter className="h-4 w-4 text-[color:var(--oxblood)]"/>
+ <span className="font-semibold text-[color:var(--ink)]">Filter & Sort</span>
  {hasActiveFilters && (
- <VariantButton intent="text"
+ <EditorialButton variant="ghost" size="sm"
  onClick={resetFilters}
- className="ml-auto text-xs"
+ className="ml-auto"
  >
  Clear filters
- </VariantButton>
+ </EditorialButton>
  )}
  </div>
 
@@ -178,13 +214,15 @@ export default function PublicationsPage() {
  />
  </div>
  </div>
- </div>
+ </section>
 
  {/* Results count */}
- <div className="mb-4 text-sm text-muted-foreground">
+ <div className="mb-4 font-mono text-xs uppercase tracking-[0.14em] text-[color:var(--ink-soft)]">
  Showing {filteredPublications.length} {filteredPublications.length === 1 ? 'publication' : 'publications'}
  {hasActiveFilters && ' (filtered)'}
  </div>
+
+ <Rule className="mb-6" />
 
  {/* Publications list */}
  <div className="space-y-6">
@@ -193,25 +231,28 @@ export default function PublicationsPage() {
  <PublicationCard key={publication.id} publication={publication} currentUserId={user?.id} />
  ))
  ) : (
- <div className="text-center py-12 border border-slate-200/50 rounded-lg bg-gradient-to-br from-slate-50/30 via-white/20 to-slate-50/30">
- <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50"/>
- <h3 className="text-lg font-semibold mb-2 text-foreground">No publications found</h3>
- <p className="text-foreground/80 mb-4">
+ <div className="border-y border-[color:var(--rule)] py-12 text-center">
+ <BookOpen className="mx-auto mb-4 h-10 w-10 text-[color:var(--gold)]"/>
+ <Headline as="h2" size="xs" className="mb-2">No publications match your filters</Headline>
+ <p className="mb-4 text-[color:var(--ink-soft)]">
  Try adjusting your filters to see more results.
  </p>
- <VariantButton intent="secondary" onClick={resetFilters}>
+ <EditorialButton variant="secondary" onClick={resetFilters}>
  Clear all filters
- </VariantButton>
+ </EditorialButton>
  </div>
  )}
  </div>
+ </>
+ )}
 
  {/* Footer note */}
- <div className="mt-12 pt-6 border-t border-slate-200/50 text-center text-sm text-foreground/70">
+ <div className="mt-12 border-t border-[color:var(--rule)] pt-6 text-center text-sm text-[color:var(--ink-soft)]">
  <p>
  For citations, please refer to the publication venue or contact the authors directly.
  </p>
  </div>
- </div>
+ </main>
+ </PaperBackground>
  );
 }
