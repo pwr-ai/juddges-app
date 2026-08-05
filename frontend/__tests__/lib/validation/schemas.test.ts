@@ -4,7 +4,7 @@
  * Covers: extractionRequestSchema, jobIdQuerySchema, schemaCreationRequestSchema,
  * collectionCreationRequestSchema, searchQuerySchema, chatMessageSchema,
  * paginationSchema, documentSampleQuerySchema, similarDocumentsQuerySchema,
- * similarityGraphQuerySchema, validateRequestBody, validateQueryParams.
+ * validateRequestBody, validateQueryParams.
  */
 
 import {
@@ -17,7 +17,6 @@ import {
   paginationSchema,
   documentSampleQuerySchema,
   similarDocumentsQuerySchema,
-  similarityGraphQuerySchema,
   validateRequestBody,
   validateQueryParams,
 } from '@/lib/validation/schemas';
@@ -290,33 +289,6 @@ describe('similarDocumentsQuerySchema', () => {
 
   it('rejects top_k over 100', () => {
     const result = similarDocumentsQuerySchema.safeParse({ top_k: 101 });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe('similarityGraphQuerySchema', () => {
-  it('applies all defaults', () => {
-    const result = similarityGraphQuerySchema.safeParse({});
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.sample_size).toBe(50);
-      expect(result.data.similarity_threshold).toBe(0.7);
-      expect(result.data.include_clusters).toBe(false);
-    }
-  });
-
-  it('rejects similarity_threshold over 1', () => {
-    const result = similarityGraphQuerySchema.safeParse({ similarity_threshold: 1.1 });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects similarity_threshold below 0', () => {
-    const result = similarityGraphQuerySchema.safeParse({ similarity_threshold: -0.1 });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects sample_size over 500', () => {
-    const result = similarityGraphQuerySchema.safeParse({ sample_size: 501 });
     expect(result.success).toBe(false);
   });
 });

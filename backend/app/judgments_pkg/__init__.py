@@ -243,6 +243,68 @@ async def get_citation_network(
 
 
 @router.get(
+    "/facets",
+    response_model=FacetsResponse,
+    summary="Get facet counts for filters",
+)
+async def get_facets(
+    jurisdiction: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+):
+    """
+    Get aggregated counts for each filter option (facets).
+
+    Used to display filter counts in UI, e.g., "Criminal (234)" or "Supreme Court (45)".
+    Supports optional pre-filtering by jurisdiction and date range.
+
+    Args:
+        jurisdiction: Optional jurisdiction filter (PL or UK)
+        date_from: Optional start date filter (YYYY-MM-DD)
+        date_to: Optional end date filter (YYYY-MM-DD)
+
+    Returns:
+        Facets grouped by type with counts for each value
+    """
+    try:
+        from app.core.supabase import get_supabase_client
+
+        supabase = get_supabase_client()
+
+        if not supabase:
+            raise HTTPException(
+                status_code=500, detail="Database client not initialized"
+            )
+
+        response = supabase.rpc(
+            "get_judgment_facets",
+            {
+                "pre_filter_jurisdictions": [jurisdiction] if jurisdiction else None,
+                "pre_filter_date_from": date_from,
+                "pre_filter_date_to": date_to,
+            },
+        ).execute()
+
+        grouped_facets: dict[str, list] = {}
+        for row in response.data or []:
+            facet_type = row["facet_type"]
+            if facet_type not in grouped_facets:
+                grouped_facets[facet_type] = []
+            grouped_facets[facet_type].append(
+                {"value": row["facet_value"], "count": row["facet_count"]}
+            )
+
+        logger.info(f"Retrieved facets: {len(grouped_facets)} facet types")
+        return FacetsResponse(facets=grouped_facets)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Facets retrieval error: {e!s}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get facets: {e!s}")
+
+
+@router.get(
     "/{document_id}/metadata",
     response_model=dict,
     summary="Get document metadata only",
@@ -763,70 +825,6 @@ async def search_documents_legacy(request: DocumentRetrievalRequest):
         documents=result.documents,
         pagination=result.pagination,
     )
-
-
-@router.get(
-    "/facets",
-    response_model=FacetsResponse,
-    summary="Get facet counts for filters",
-)
-async def get_facets(
-    jurisdiction: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
-):
-    """
-    Get aggregated counts for each filter option (facets).
-
-    Used to display filter counts in UI, e.g., "Criminal (234)" or "Supreme Court (45)".
-    Supports optional pre-filtering by jurisdiction and date range.
-
-    Args:
-        jurisdiction: Optional jurisdiction filter (PL or UK)
-        date_from: Optional start date filter (YYYY-MM-DD)
-        date_to: Optional end date filter (YYYY-MM-DD)
-
-    Returns:
-        Facets grouped by type with counts for each value
-    """
-    try:
-        from app.core.supabase import get_supabase_client
-
-        supabase = get_supabase_client()
-
-        if not supabase:
-            raise HTTPException(
-                status_code=500, detail="Database client not initialized"
-            )
-
-        # Call faceting function
-        response = supabase.rpc(
-            "get_judgment_facets",
-            {
-                "pre_filter_jurisdictions": [jurisdiction] if jurisdiction else None,
-                "pre_filter_date_from": date_from,
-                "pre_filter_date_to": date_to,
-            },
-        ).execute()
-
-        # Group facets by type
-        grouped_facets: dict[str, list] = {}
-        for row in response.data or []:
-            facet_type = row["facet_type"]
-            if facet_type not in grouped_facets:
-                grouped_facets[facet_type] = []
-            grouped_facets[facet_type].append(
-                {"value": row["facet_value"], "count": row["facet_count"]}
-            )
-
-        logger.info(f"Retrieved facets: {len(grouped_facets)} facet types")
-        return FacetsResponse(facets=grouped_facets)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Facets retrieval error: {e!s}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to get facets: {e!s}")
 
 
 # ===== POST Endpoints - Similar Documents =====
