@@ -119,10 +119,20 @@ describe('GraphQL browser surface contract', () => {
       if (productionServer.exitCode === null) {
         const exited = once(productionServer, 'exit');
         productionServer.kill('SIGTERM');
-        await Promise.race([
-          exited,
-          new Promise((resolve) => setTimeout(resolve, 5_000)),
-        ]);
+        let exitTimeout: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            exited,
+            new Promise((resolve) => {
+              exitTimeout = setTimeout(resolve, 5_000);
+              exitTimeout.unref();
+            }),
+          ]);
+        } finally {
+          if (exitTimeout) {
+            clearTimeout(exitTimeout);
+          }
+        }
         if (productionServer.exitCode === null) {
           productionServer.kill('SIGKILL');
         }
