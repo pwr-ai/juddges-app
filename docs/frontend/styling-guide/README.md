@@ -21,7 +21,7 @@ This directory contains the design system documentation for Legal Glassmorphism 
 
 - **[creating-components.md](./creating-components.md)** — Step-by-step component creation (templates, checklist, testing guidelines)
 - **[migration-examples.md](./migration-examples.md)** — Before/after migration examples from 1.0 to 2.0
-- **[demo-page.md](./demo-page.md)** — How to add components to the style demo page
+- **[demo-page.md](./demo-page.md)** — Archived showcase history and the current component validation workflow
 
 ---
 
@@ -60,6 +60,7 @@ This directory contains the design system documentation for Legal Glassmorphism 
 
 ## Related
 
-- **Style Demo Page**: `/app/style-demo/page.tsx`
+- **Canonical Design Specification**: [Editorial Jurisprudence](../../reference/DESIGN.md)
+- **Shared Editorial Components**: `/frontend/components/editorial/`
 - **Color Definitions**: `/lib/styles/colors/`
 - **Style Components**: `/lib/styles/components/`

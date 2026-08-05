@@ -10,6 +10,7 @@
     "dev:stable": "next dev -p 3026",
     "dev:clean": "rm -rf .next node_modules/.cache && next dev --turbopack -p 3026",
     "build": "next build",
+    "postbuild": "node scripts/assert-retired-routes-absent.js",
     "gen:openapi": "openapi-typescript ../scripts/openapi-snapshot.json -o lib/api/generated/openapi.ts",
     "start": "next start -p 3006",
     "lint": "eslint app components contexts hooks lib types --ext .js,.jsx,.ts,.tsx",
