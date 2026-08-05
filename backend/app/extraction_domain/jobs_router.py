@@ -71,9 +71,10 @@ _WORKER_UNAVAILABLE_MARKERS = (
 _RESULT_METADATA_MARKERS = ("started_at", "elapsed_time_seconds", "exc_type")
 _JOB_STATE_FIELDS = "job_id, user_id, status, completed_documents, total_documents"
 _JOB_RECOVERY_FIELDS = (
-    f"{_JOB_STATE_FIELDS}, results, collection_id, schema_id, document_ids, "
+    f"{_JOB_STATE_FIELDS}, collection_id, schema_id, document_ids, "
     "language, extraction_context, prompt_id"
 )
+_JOB_RESULTS_FIELDS = "job_id, user_id, results"
 _TERMINAL_DOCUMENT_STATUSES = {
     DocumentProcessingStatus.COMPLETED.value,
     DocumentProcessingStatus.FAILED.value,
@@ -194,8 +195,13 @@ def _load_owned_job_record(job_id: str, user_id: str) -> dict:
 
 
 def _load_owned_job_recovery_record(job_id: str, user_id: str) -> dict:
-    """Load heavy recovery fields only after Celery has lost the task state."""
+    """Load resubmission fields only after Celery has lost the task state."""
     return _load_owned_job_fields(job_id, user_id, _JOB_RECOVERY_FIELDS)
+
+
+def _load_owned_job_results_record(job_id: str, user_id: str) -> dict:
+    """Load persisted results only when the caller requested result details."""
+    return _load_owned_job_fields(job_id, user_id, _JOB_RESULTS_FIELDS)
 
 
 def _verify_job_ownership(job_id: str, user_id: str) -> None:
@@ -245,6 +251,7 @@ def _preserve_existing_job_progress(
 
     failure_statuses = {"FAILURE", "FAILED"}
     cancellation_statuses = {"CANCELLED", "CANCELED", "REVOKED"}
+    successful_statuses = {"SUCCESS", "COMPLETED"}
 
     if existing_status in failure_statuses:
         final_status = "FAILED"
@@ -267,7 +274,9 @@ def _preserve_existing_job_progress(
             final_status = "FAILED"
         elif "failed" in result_statuses or "partially_completed" in result_statuses:
             final_status = "PARTIALLY_COMPLETED"
-        elif completed_documents >= total_documents and total_documents > 0:
+        elif existing_status in successful_statuses or (
+            completed_documents >= total_documents and total_documents > 0
+        ):
             final_status = "COMPLETED"
         elif completed_documents > 0:
             final_status = "PARTIALLY_COMPLETED"
@@ -277,7 +286,11 @@ def _preserve_existing_job_progress(
     if (
         completed_documents <= 0
         and not existing_results
-        and existing_status not in failure_statuses | cancellation_statuses
+        and existing_status
+        not in failure_statuses
+        | cancellation_statuses
+        | successful_statuses
+        | {"PARTIALLY_COMPLETED"}
     ):
         return None
 
@@ -363,17 +376,36 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
 
 
 def _resolve_pending_job(
-    job_id: str, user_id: str, job_state: dict
+    job_id: str,
+    user_id: str,
+    job_state: dict,
+    include_results: bool = True,
 ) -> BatchExtractionResponse:
     """Resolve pending state by preserving existing progress or resubmitting when possible."""
     logger.warning(
         f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
     )
+    preserved_response = _preserve_existing_job_progress(job_id, job_state)
+    if preserved_response:
+        if not include_results:
+            return preserved_response
+        result_data = _load_owned_job_results_record(job_id, user_id)
+        return (
+            _preserve_existing_job_progress(job_id, {**job_state, **result_data})
+            or preserved_response
+        )
+
     recovery_data = _load_owned_job_recovery_record(job_id, user_id)
     job_data = {**job_state, **recovery_data}
     preserved_response = _preserve_existing_job_progress(job_id, job_data)
     if preserved_response:
-        return preserved_response
+        if not include_results:
+            return preserved_response
+        result_data = _load_owned_job_results_record(job_id, user_id)
+        return (
+            _preserve_existing_job_progress(job_id, {**job_data, **result_data})
+            or preserved_response
+        )
 
     logger.info(f"Job {job_id} has no progress, attempting to resubmit")
     resubmitted_response = _try_resubmit_job(job_id, job_data)
@@ -853,12 +885,18 @@ async def get_extraction_job(
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
             return _with_optional_results(
-                _resolve_pending_job(job_id, user.id, job_record), include_results
+                _resolve_pending_job(
+                    job_id, user.id, job_record, include_results=include_results
+                ),
+                include_results,
             )
 
         if task_state == "PENDING" and not task_result.info:
             return _with_optional_results(
-                _resolve_pending_job(job_id, user.id, job_record), include_results
+                _resolve_pending_job(
+                    job_id, user.id, job_record, include_results=include_results
+                ),
+                include_results,
             )
 
         not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
@@ -868,6 +906,16 @@ async def get_extraction_job(
         failed_response = _handle_failed_task(task_result, task_state, job_id)
         if failed_response:
             return _with_optional_results(failed_response, include_results)
+
+        if not include_results:
+            persisted_response = _preserve_existing_job_progress(job_id, job_record)
+            if persisted_response:
+                return _with_optional_results(persisted_response, False)
+            return BatchExtractionResponse(
+                task_id=job_id,
+                status=simplify_job_status(task_state),
+                results=None,
+            )
 
         try:
             results = task_result.get()
