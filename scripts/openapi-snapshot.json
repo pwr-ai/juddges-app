@@ -4631,6 +4631,7 @@
                 "items": {
                   "type": "string"
                 },
+                "minItems": 1,
                 "type": "array"
               },
               {
@@ -4646,9 +4647,12 @@
             "type": "string"
           },
           "language": {
-            "const": "pl",
             "default": "pl",
             "description": "Language of the extraction",
+            "enum": [
+              "pl",
+              "en"
+            ],
             "title": "Language",
             "type": "string"
           },
@@ -14378,6 +14382,7 @@
                 "items": {
                   "type": "string"
                 },
+                "minItems": 1,
                 "type": "array"
               },
               {
@@ -14394,7 +14399,11 @@
           },
           "language": {
             "default": "pl",
-            "description": "Language for extraction (e.g., 'pl', 'en')",
+            "description": "Language for extraction ('pl' or 'en')",
+            "enum": [
+              "pl",
+              "en"
+            ],
             "title": "Language",
             "type": "string"
           },

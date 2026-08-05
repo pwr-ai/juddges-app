@@ -34,7 +34,8 @@ export const extractionRequestSchema = z.object({
     .min(1, 'Extraction context cannot be empty')
     .max(5000, 'Extraction context is too long (max 5000 characters)')
     .describe('Context to guide the extraction process (required)'),
-  language: languageSchema.describe('Language for extraction (pl, en, or uk). Defaults to pl if not provided.'),
+  language: z.enum(['pl', 'en']).default('pl')
+    .describe('Language for extraction (pl or en). Defaults to pl if not provided.'),
   additional_instructions: z
     .string()
     .max(5000, 'Additional instructions are too long (max 5000 characters)')
