@@ -90,7 +90,7 @@ In `/app/style-demo/page.tsx`, add the imports:
 #### Import the Component
 
 ```typescript
-import { 
+import {
   [ComponentName],
   // ... other components
 } from "@/lib/styles/components";
@@ -107,7 +107,7 @@ import {
 
 **Example**:
 ```typescript
-import { 
+import {
   BaseCard,
   // ... other components
 } from "@/lib/styles/components";
@@ -229,7 +229,7 @@ For components that belong to a family (like buttons, badges, headers), use `Fam
           // Add more examples as needed
         ]}
       />
-      
+
       {/* Color Configuration Section */}
       <AsyncColorConfigurationSection
         getColors={get[ComponentName]Colors}
@@ -492,7 +492,8 @@ Group related components into families:
 1. Check that the component path in `extractColorsFromComponentPath()` is correct
 2. Verify the component file exists at the specified path
 3. Check browser console for errors
-4. Ensure the API route `/api/component-source` is accessible
+4. Do not add a runtime API that reads component source files; production routes
+   must not expose the repository filesystem
 5. Verify the component uses Tailwind classes (not inline styles)
 
 ### Gradient Names Not Descriptive
@@ -558,4 +559,3 @@ When adding a component to the demo page:
 
 **Last Updated**: Based on automatic color extraction system
 **Status**: ✅ Complete and up-to-date
-
