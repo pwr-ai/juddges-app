@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { EmbeddingModelsSection } from "@/app/settings/page";
+import { EmbeddingModelsSection } from "@/app/settings/_components/embedding-models-section";
 
 const modelsResponse = {
   models: [
