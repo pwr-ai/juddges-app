@@ -290,7 +290,7 @@ async def get_post(slug: str):
         ).execute()
         payload = response.data
 
-        if not payload:
+        if payload is None:
             raise HTTPException(status_code=404, detail="Post not found")
         if not isinstance(payload, dict):
             raise HTTPException(status_code=500, detail="Invalid blog post data")

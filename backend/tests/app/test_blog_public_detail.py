@@ -136,15 +136,13 @@ async def test_public_detail_uses_one_rpc_and_allowlists_all_authors(
 @pytest.mark.anyio
 @pytest.mark.unit
 @pytest.mark.api
-@pytest.mark.parametrize("missing_payload", [None, {}])
 async def test_public_detail_hides_drafts_and_missing_posts_as_404(
     authenticated_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
-    missing_payload: Any,
 ) -> None:
     monkeypatch.setattr(
         "app.api.blog.get_admin_supabase_client",
-        lambda: DetailRpcSupabase(missing_payload),
+        lambda: DetailRpcSupabase(None),
     )
 
     response = await authenticated_client.get("/blog/posts/not-public")
@@ -174,13 +172,41 @@ async def test_public_detail_preserves_database_failure_as_500(
 @pytest.mark.unit
 @pytest.mark.api
 @pytest.mark.parametrize(
+    "malformed_payload",
+    [
+        {},
+        [],
+        "",
+        0,
+    ],
+)
+async def test_public_detail_rejects_falsy_malformed_rpc_payload(
+    authenticated_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    malformed_payload: Any,
+) -> None:
+    monkeypatch.setattr(
+        "app.api.blog.get_admin_supabase_client",
+        lambda: DetailRpcSupabase(malformed_payload),
+    )
+
+    response = await authenticated_client.get("/blog/posts/published-post")
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Invalid blog post data"}
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+@pytest.mark.api
+@pytest.mark.parametrize(
     ("field", "invalid_value"),
     [
         ("related_posts", {"unexpected": "object"}),
         ("author", "private-author-id"),
     ],
 )
-async def test_public_detail_rejects_malformed_rpc_payload(
+async def test_public_detail_rejects_malformed_rpc_fields(
     authenticated_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
     field: str,
