@@ -141,6 +141,9 @@ export async function POST(request: NextRequest) {
           requestId,
           collection_id
         });
+        if (error instanceof ValidationError) {
+          throw error;
+        }
         throw new DatabaseError(
           "Failed to fetch documents from the collection.",
           { collection_id, originalError: error instanceof Error ? error.message : String(error) }
@@ -191,14 +194,13 @@ export async function POST(request: NextRequest) {
 
       try {
         const errorData = await response.json();
-        if (errorData.detail) {
-          errorDetails = typeof errorData.detail === 'string'
-            ? errorData.detail
-            : JSON.stringify(errorData.detail);
+        const detail = errorData.detail;
+        if (detail) {
+          errorDetails = typeof detail === 'string'
+            ? detail
+            : detail.message || detail.error || JSON.stringify(detail);
         }
-        if (errorData.code) {
-          errorCode = errorData.code;
-        }
+        errorCode = detail?.code || errorData.code || errorCode;
       } catch {
         // If we can't parse the error, use the status text
         errorDetails = `${errorDetails}: ${response.statusText}`;
@@ -243,7 +245,7 @@ export async function POST(request: NextRequest) {
           code: errorCode,
           status: response.status
         },
-        { status: response.status === 503 ? 503 : 500 }
+        { status: response.status }
       );
     }
 
@@ -291,11 +293,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Updated: Backend now returns job_id instead of task_id
-    return NextResponse.json({
-      job_id: jobId,
-      status: extractionResults.status,
-      message: extractionResults.message || 'Extraction job created successfully'
-    });
+    return NextResponse.json(
+      {
+        job_id: jobId,
+        status: extractionResults.status,
+        message: extractionResults.message || 'Extraction job created successfully'
+      },
+      { status: 202 }
+    );
   } catch (error) {
     apiLogger.error("Error in extractions route", error, { requestId });
 

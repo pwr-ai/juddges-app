@@ -74,6 +74,14 @@ describe('extractionRequestSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects languages unsupported by the extraction backend', () => {
+    const result = extractionRequestSchema.safeParse({
+      ...validPayload,
+      language: 'uk',
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects unknown properties (strict mode)', () => {
     const result = extractionRequestSchema.safeParse({
       ...validPayload,
