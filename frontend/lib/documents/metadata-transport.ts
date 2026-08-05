@@ -65,13 +65,15 @@ async function importSigningKey(secret: string): Promise<CryptoKey> {
 
 export async function signDocumentMetadataHeader(
   value: string,
+  userId: string,
+  documentId: string,
   secret: string
 ): Promise<string> {
   if (!secret) throw new Error('Document metadata signing secret is missing');
   const signature = await crypto.subtle.sign(
     'HMAC',
     await importSigningKey(secret),
-    new TextEncoder().encode(value)
+    metadataSigningPayload(value, userId, documentId)
   );
   return bytesToBase64Url(new Uint8Array(signature));
 }
@@ -79,6 +81,8 @@ export async function signDocumentMetadataHeader(
 export async function verifyDocumentMetadataHeader(
   value: string,
   signature: string,
+  userId: string,
+  documentId: string,
   secret: string
 ): Promise<boolean> {
   if (!secret || !signature) return false;
@@ -87,9 +91,21 @@ export async function verifyDocumentMetadataHeader(
       'HMAC',
       await importSigningKey(secret),
       base64UrlToBytes(signature) as Uint8Array<ArrayBuffer>,
-      new TextEncoder().encode(value)
+      metadataSigningPayload(value, userId, documentId)
     );
   } catch {
     return false;
   }
+}
+
+function metadataSigningPayload(
+  value: string,
+  userId: string,
+  documentId: string
+): Uint8Array<ArrayBuffer> {
+  // Length-prefix every field so no combination of tuple values can produce
+  // an ambiguous HMAC message. All values are bound to one request context.
+  return new TextEncoder().encode(
+    `${userId.length}:${userId}${documentId.length}:${documentId}${value.length}:${value}`
+  ) as Uint8Array<ArrayBuffer>;
 }

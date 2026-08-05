@@ -18,7 +18,7 @@ const DOCUMENT_METADATA_API_PATTERN =
 
 type DocumentPreflight =
   | { kind: 'not-document' }
-  | { kind: 'metadata'; value: string }
+  | { kind: 'metadata'; value: string; documentId: string }
   | { kind: 'response'; response: NextResponse }
 
 function documentStatusResponse(status: number): NextResponse {
@@ -145,6 +145,7 @@ async function preflightDocumentPage(
     return {
       kind: 'metadata',
       value: await encodeDocumentMetadataHeader(payload),
+      documentId,
     }
   } catch (error) {
     const status = isTimeoutFailure(error, timeoutSignal) ? 504 : 503
@@ -249,6 +250,8 @@ export async function middleware(incomingRequest: NextRequest) {
         DOCUMENT_METADATA_SIGNATURE_HEADER,
         await signDocumentMetadataHeader(
           preflight.value,
+          userId,
+          preflight.documentId,
           process.env.BACKEND_API_KEY ?? ''
         )
       )

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import {
   DOCUMENT_METADATA_HEADER,
   DOCUMENT_METADATA_SIGNATURE_HEADER,
+  VERIFIED_USER_HEADER,
   decodeDocumentMetadataHeader,
   verifyDocumentMetadataHeader,
 } from '@/lib/documents/metadata-transport';
@@ -32,6 +33,7 @@ export default async function DocumentPage({
   const metadataSignature = requestHeaders.get(
     DOCUMENT_METADATA_SIGNATURE_HEADER
   );
+  const verifiedUserId = requestHeaders.get(VERIFIED_USER_HEADER);
   if (!encodedMetadata) {
     throw new DocumentMetadataUpstreamError(
       'Missing verified document metadata',
@@ -42,9 +44,12 @@ export default async function DocumentPage({
 
   if (
     !metadataSignature ||
+    !verifiedUserId ||
     !(await verifyDocumentMetadataHeader(
       encodedMetadata,
       metadataSignature,
+      verifiedUserId,
+      documentId,
       process.env.BACKEND_API_KEY ?? ''
     ))
   ) {

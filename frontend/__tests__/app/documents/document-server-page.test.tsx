@@ -16,6 +16,7 @@ import DocumentPage from '@/app/documents/[id]/page';
 import {
   encodeDocumentMetadataHeader,
   signDocumentMetadataHeader,
+  VERIFIED_USER_HEADER,
 } from '@/lib/documents/metadata-transport';
 
 const { headers: mockHeaders } = jest.requireMock('next/headers');
@@ -51,13 +52,16 @@ describe('documents/[id] trusted middleware hand-off', () => {
       'x-juddges-document-metadata': value,
       'x-juddges-document-metadata-signature': await signDocumentMetadataHeader(
         value,
+        'owner-1',
+        'other-doc',
         'test-backend-secret'
       ),
+      [VERIFIED_USER_HEADER]: 'owner-1',
     }));
 
     await expect(
       DocumentPage({ params: Promise.resolve({ id: 'doc-1' }) })
-    ).rejects.toThrow('Mismatched verified document metadata');
+    ).rejects.toThrow('Invalid verified document metadata provenance');
   });
 
   it('renders from the one trusted middleware fetch without another lookup', async () => {
@@ -72,8 +76,11 @@ describe('documents/[id] trusted middleware hand-off', () => {
       'x-juddges-document-metadata': value,
       'x-juddges-document-metadata-signature': await signDocumentMetadataHeader(
         value,
+        'owner-1',
+        'doc-1',
         'test-backend-secret'
       ),
+      [VERIFIED_USER_HEADER]: 'owner-1',
     }));
 
     const result = await DocumentPage({
@@ -95,6 +102,48 @@ describe('documents/[id] trusted middleware hand-off', () => {
     mockHeaders.mockResolvedValue(new Headers({
       'x-juddges-document-metadata': value,
       'x-juddges-document-metadata-signature': 'attacker-signature',
+      [VERIFIED_USER_HEADER]: 'attacker',
+    }));
+
+    await expect(
+      DocumentPage({ params: Promise.resolve({ id: 'doc-1' }) })
+    ).rejects.toThrow('Invalid verified document metadata provenance');
+  });
+
+  it('rejects a user A snapshot replayed into user B context', async () => {
+    const value = await encodeDocumentMetadataHeader({
+      document_id: 'doc-1',
+      document_type: 'judgment',
+      language: 'en',
+    });
+    const userASignature = await signDocumentMetadataHeader(
+      value,
+      'user-a',
+      'doc-1',
+      'test-backend-secret'
+    );
+    mockHeaders.mockResolvedValue(new Headers({
+      'x-juddges-document-metadata': value,
+      'x-juddges-document-metadata-signature': userASignature,
+      [VERIFIED_USER_HEADER]: 'user-b',
+    }));
+
+    await expect(
+      DocumentPage({ params: Promise.resolve({ id: 'doc-1' }) })
+    ).rejects.toThrow('Invalid verified document metadata provenance');
+  });
+
+  it('fails closed when the signing key is missing', async () => {
+    process.env.BACKEND_API_KEY = '';
+    const value = await encodeDocumentMetadataHeader({
+      document_id: 'doc-1',
+      document_type: 'judgment',
+      language: 'en',
+    });
+    mockHeaders.mockResolvedValue(new Headers({
+      'x-juddges-document-metadata': value,
+      'x-juddges-document-metadata-signature': 'replayed-signature',
+      [VERIFIED_USER_HEADER]: 'owner-1',
     }));
 
     await expect(
