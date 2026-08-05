@@ -2,15 +2,28 @@
  * @jest-environment node
  */
 
-import { access, mkdtemp, readdir, rm, utimes } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readdir,
+  rm,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
   acquireProductionBuildLock,
+  PRODUCTION_BUILD_LOCK_TIMEOUT_MS,
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
   withProductionBuildLock,
 } from "@/tests/support/production-build-lock";
+import {
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+} from "@/tests/support/production-child-process";
 
 describe("withProductionBuildLock", () => {
   let temporaryDirectory: string;
@@ -26,8 +39,13 @@ describe("withProductionBuildLock", () => {
   });
 
   it("budgets lock wait plus a slow production lifecycle", () => {
+    expect(PRODUCTION_BUILD_LOCK_TIMEOUT_MS).toBeGreaterThanOrEqual(
+      PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+    );
     expect(PRODUCTION_BUILD_TEST_TIMEOUT_MS).toBeGreaterThanOrEqual(
-      12 * 60_000,
+      PRODUCTION_BUILD_LOCK_TIMEOUT_MS +
+        PRODUCTION_BUILD_PROCESS_TIMEOUT_MS +
+        PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
     );
   });
 
@@ -132,6 +150,49 @@ describe("withProductionBuildLock", () => {
     ).resolves.toBe("built");
     await expect(access(lockPath)).rejects.toMatchObject({ code: "ENOENT" });
     await abandonedRelease();
+  });
+
+  it("atomically recovers an abandoned empty lock directory", async () => {
+    await mkdir(lockPath);
+    const staleTimestamp = new Date(Date.now() - 120_000);
+    await utimes(lockPath, staleTimestamp, staleTimestamp);
+
+    await expect(
+      withProductionBuildLock(async () => "built", {
+        lockPath,
+        timeoutMs: 1_000,
+        staleMs: 10,
+        pollIntervalMs: 5,
+      }),
+    ).resolves.toBe("built");
+    await expect(access(lockPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("does not remove a new lease during empty-lock recovery", async () => {
+    await mkdir(lockPath);
+    const staleTimestamp = new Date(Date.now() - 120_000);
+    await utimes(lockPath, staleTimestamp, staleTimestamp);
+    const newLeasePath = join(lockPath, "lease-new-owner");
+    let hookCalls = 0;
+
+    await expect(
+      acquireProductionBuildLock({
+        lockPath,
+        timeoutMs: 20,
+        staleMs: 60_000,
+        pollIntervalMs: 5,
+        testHooks: {
+          onStaleEmptyLockDetected: async () => {
+            hookCalls += 1;
+            if (hookCalls === 1) {
+              await writeFile(newLeasePath, "new owner", { flag: "wx" });
+            }
+          },
+        },
+      }),
+    ).rejects.toThrow("Timed out waiting for production build lock");
+
+    await expect(readdir(lockPath)).resolves.toEqual(["lease-new-owner"]);
   });
 
   it("does not remove a newer lease during stale takeover", async () => {

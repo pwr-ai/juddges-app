@@ -89,7 +89,10 @@ export async function stopProductionChild(
   if (handle.stopPromise) return handle.stopPromise;
 
   handle.stopPromise = (async () => {
-    if (!handle.isClosed() && handle.child.exitCode === null) {
+    if (!handle.isClosed()) {
+      // A parent can exit while one of its descendants keeps the inherited
+      // stdio pipes open. Signal the detached process group until `close`, not
+      // merely until the direct child reports `exit`.
       signalChild(handle, "SIGTERM");
       if (!(await waitForCompletionOrGrace(handle)) && !handle.isClosed()) {
         signalChild(handle, "SIGKILL");
