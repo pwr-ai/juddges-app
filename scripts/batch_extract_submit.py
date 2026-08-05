@@ -132,7 +132,7 @@ def load_schema_files(jurisdiction: str) -> Dict[str, Any]:
     additional_instructions = instructions_data.get("content", "")
 
     # Load jurisdiction mappings for extraction context
-    mappings_path = config_base / "schema" / "jurisdiction_mappings.yaml"
+    mappings_path = config_base / "schema" / "jurisdiction_mappings.meta.yaml"
     if not mappings_path.exists():
         raise FileNotFoundError(f"Jurisdiction mappings not found: {mappings_path}")
 
