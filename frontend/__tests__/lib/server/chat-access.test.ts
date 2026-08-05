@@ -17,10 +17,12 @@ type ChatQueryResult = {
 
 function mockSupabase({
   userId = USER_ID,
+  authError,
   result = { data: { id: CHAT_ID }, error: null },
   waitForAbort = false,
 }: {
   userId?: string | null;
+  authError?: { message: string; status?: number };
   result?: ChatQueryResult;
   waitForAbort?: boolean;
 } = {}) {
@@ -46,8 +48,8 @@ function mockSupabase({
   const select = jest.fn(() => ({ eq: chatEq }));
   const from = jest.fn(() => ({ select }));
   const getUser = jest.fn().mockResolvedValue({
-    data: { user: userId ? { id: userId } : null },
-    error: userId ? null : { message: "Auth session missing!" },
+      data: { user: userId ? { id: userId } : null },
+      error: authError ?? (userId ? null : { message: "Auth session missing!" }),
   });
 
   return {
@@ -66,6 +68,28 @@ describe("resolveOwnedChatAccess", () => {
 
     await expect(resolveOwnedChatAccess(client, CHAT_ID)).resolves.toEqual({
       kind: "anonymous",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("keeps an authentication upstream failure distinct from anonymous", async () => {
+    const { client, from } = mockSupabase({
+      userId: null,
+      authError: { message: "authentication service unavailable", status: 503 },
+    });
+
+    await expect(resolveOwnedChatAccess(client, CHAT_ID)).rejects.toMatchObject({
+      code: "DATABASE_UNAVAILABLE",
+      statusCode: 503,
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid chat id before issuing a PostgREST query", async () => {
+    const { client, from } = mockSupabase();
+
+    await expect(resolveOwnedChatAccess(client, "not-a-uuid")).resolves.toEqual({
+      kind: "invalid_id",
     });
     expect(from).not.toHaveBeenCalled();
   });

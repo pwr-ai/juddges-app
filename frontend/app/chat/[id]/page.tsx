@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 
-import { resolveOwnedChatAccess } from "@/lib/server/chat-access";
+import { isValidChatId, resolveOwnedChatAccess } from "@/lib/server/chat-access";
 import { createClient } from "@/lib/supabase/server";
 
 import ChatDetailClient from "./ChatDetailClient";
@@ -13,6 +13,10 @@ export default async function ChatDetailPage({
   params,
 }: ChatDetailPageProps): Promise<React.JSX.Element> {
   const { id: chatId } = await params;
+  if (!isValidChatId(chatId)) {
+    notFound();
+  }
+
   const supabase = await createClient();
   const access = await resolveOwnedChatAccess(supabase, chatId);
 

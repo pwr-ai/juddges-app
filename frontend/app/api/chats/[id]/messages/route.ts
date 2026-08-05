@@ -4,6 +4,7 @@ import logger from '@/lib/logger';
 import {
   UnauthorizedError,
   DatabaseError,
+  ValidationError,
   AppError,
   ErrorCode
 } from '@/lib/errors';
@@ -35,6 +36,9 @@ export async function GET(
     const access = await resolveOwnedChatAccess(supabase, chatId);
     if (access.kind === "anonymous") {
       throw new UnauthorizedError("Authentication required");
+    }
+    if (access.kind === "invalid_id") {
+      throw new ValidationError("Invalid chat ID format");
     }
     if (access.kind === "not_found") {
       apiLogger.warn("Chat not found or unauthorized", {

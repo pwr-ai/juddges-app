@@ -2,6 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 
+const CHAT_MESSAGES_HANDLER_PATH = /^\/api\/chats\/[^/]+\/messages$/;
+
+function canAnonymousRequestReachHandler(request: NextRequest): boolean {
+  return (
+    request.method === "GET" &&
+    CHAT_MESSAGES_HANDLER_PATH.test(request.nextUrl.pathname)
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -78,6 +87,7 @@ export async function updateSession(request: NextRequest) {
     // The retired GraphQL bridge must reach the Next.js router and resolve as
     // 404. Keep this exact so lookalike paths remain protected.
     request.nextUrl.pathname !== "/api/graphql" &&
+    !canAnonymousRequestReachHandler(request) &&
     !request.nextUrl.pathname.startsWith("/status") &&
     !request.nextUrl.pathname.startsWith("/offline")
   ) {

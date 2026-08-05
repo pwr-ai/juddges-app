@@ -1,12 +1,15 @@
 import { AppError, DatabaseError, ErrorCode } from "@/lib/errors";
 import type { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
 
 const DEFAULT_CHAT_LOOKUP_TIMEOUT_MS = 8_000;
+const chatIdSchema = z.string().uuid();
 
 export type ChatAccessSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 export type OwnedChatAccess =
   | { kind: "anonymous" }
+  | { kind: "invalid_id" }
   | { kind: "not_found" }
   | { kind: "owner"; userId: string };
 
@@ -19,6 +22,18 @@ function chatLookupTimeout(): AppError {
     "Chat lookup timed out",
     ErrorCode.DATABASE_UNAVAILABLE,
     504,
+  );
+}
+
+export function isValidChatId(chatId: string): boolean {
+  return chatIdSchema.safeParse(chatId).success;
+}
+
+function isAnonymousAuthError(error: { message?: string } | null): boolean {
+  if (!error) return false;
+  return (
+    error.message === "Auth session missing!" ||
+    error.message?.includes("refresh_token_not_found") === true
   );
 }
 
@@ -47,11 +62,26 @@ export async function resolveOwnedChatAccess(
   chatId: string,
   { timeoutMs = DEFAULT_CHAT_LOOKUP_TIMEOUT_MS }: ResolveChatAccessOptions = {},
 ): Promise<OwnedChatAccess> {
+  let authResult: Awaited<ReturnType<typeof supabase.auth.getUser>>;
+  try {
+    authResult = await supabase.auth.getUser();
+  } catch {
+    throw new DatabaseError("Failed to verify authentication");
+  }
+
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+    error: authError,
+  } = authResult;
+
+  if (authError && !isAnonymousAuthError(authError)) {
+    throw new DatabaseError("Failed to verify authentication", {
+      authStatus: authError.status,
+    });
+  }
 
   if (!user) return { kind: "anonymous" };
+  if (!isValidChatId(chatId)) return { kind: "invalid_id" };
 
   try {
     const { data: chat, error } = await runChatQueryWithTimeout(

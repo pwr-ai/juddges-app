@@ -43,10 +43,13 @@ jest.mock("framer-motion", () => ({
 }));
 
 jest.mock("@/lib/supabase/server");
-jest.mock("@/lib/server/chat-access");
+jest.mock("@/lib/server/chat-access", () => ({
+  isValidChatId: jest.fn(),
+  resolveOwnedChatAccess: jest.fn(),
+}));
 
 import { AppError, DatabaseError, ErrorCode } from "@/lib/errors";
-import { resolveOwnedChatAccess } from "@/lib/server/chat-access";
+import { isValidChatId, resolveOwnedChatAccess } from "@/lib/server/chat-access";
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import ChatDetailPage from "@/app/chat/[id]/page";
@@ -69,6 +72,7 @@ describe("/chat/[id] server access boundary", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (createClient as jest.Mock).mockResolvedValue(supabase);
+    (isValidChatId as jest.Mock).mockReturnValue(true);
     notFoundMock.mockImplementation(() => {
       throw notFoundError;
     });
@@ -99,6 +103,14 @@ describe("/chat/[id] server access boundary", () => {
       props: expect.objectContaining({ chatId: CHAT_ID }),
     }));
     expect(notFoundMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a 404 for an invalid chat id without touching Supabase", async () => {
+    (isValidChatId as jest.Mock).mockReturnValue(false);
+
+    await expect(renderPage()).rejects.toBe(notFoundError);
+    expect(createClient).not.toHaveBeenCalled();
+    expect(resolveOwnedChatAccess).not.toHaveBeenCalled();
   });
 
   it.each(["missing", "inaccessible to the current user"])(

@@ -42,6 +42,7 @@ function abortableResult<T>(
 
 function mockSupabase({
   userId = USER_ID,
+  authError,
   chatResult = { data: { id: CHAT_ID }, error: null },
   messagesResult = {
     data: [
@@ -59,6 +60,7 @@ function mockSupabase({
   messagesTimeout = false,
 }: {
   userId?: string | null;
+  authError?: { message: string; status?: number };
   chatResult?: QueryResult<{ id: string } | null>;
   messagesResult?: QueryResult<Array<Record<string, unknown>> | null>;
   chatTimeout?: boolean;
@@ -108,7 +110,7 @@ function mockSupabase({
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user: userId ? { id: userId } : null },
-        error: userId ? null : { message: "Auth session missing!" },
+        error: authError ?? (userId ? null : { message: "Auth session missing!" }),
       }),
     },
     from: jest.fn((table: string) => ({
@@ -119,13 +121,13 @@ function mockSupabase({
   };
   (createClient as jest.Mock).mockResolvedValue(supabase);
 
-  return { chatAbortSignal, messagesAbortSignal };
+  return { chatAbortSignal, from: supabase.from, messagesAbortSignal };
 }
 
-async function requestMessages(): Promise<Response> {
+async function requestMessages(chatId = CHAT_ID): Promise<Response> {
   return GET(
-    new NextRequest(`http://localhost:3000/api/chats/${CHAT_ID}/messages`),
-    { params: Promise.resolve({ id: CHAT_ID }) },
+    new NextRequest(`http://localhost:3000/api/chats/${chatId}/messages`),
+    { params: Promise.resolve({ id: chatId }) },
   );
 }
 
@@ -139,6 +141,28 @@ describe("GET /api/chats/[id]/messages", () => {
     mockSupabase({ userId: null });
 
     await expect(requestMessages()).resolves.toMatchObject({ status: 401 });
+  });
+
+  it("returns 503 when authentication verification fails upstream", async () => {
+    mockSupabase({
+      userId: null,
+      authError: { message: "authentication service unavailable", status: 503 },
+    });
+
+    await expect(requestMessages()).resolves.toMatchObject({ status: 503 });
+  });
+
+  it("returns 400 for an invalid id without issuing a PostgREST query", async () => {
+    const { from } = mockSupabase();
+
+    const response = await requestMessages("not-a-uuid");
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: "Invalid chat ID format",
+    });
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("returns messages for the owner", async () => {
