@@ -36,29 +36,6 @@ logger.remove()
 # If you need a session-scoped event loop, use: pytest.mark.asyncio(scope="session")
 
 
-# Pytest configuration for integration tests
-def pytest_configure(config):
-    """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers",
-        "integration: marks tests as integration tests (require external services)",
-    )
-    config.addinivalue_line(
-        "markers", "unit: marks tests as unit tests (no external dependencies)"
-    )
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow-running tests (e.g., full workflow tests)"
-    )
-    config.addinivalue_line("markers", "api: marks tests as API integration tests")
-    config.addinivalue_line("markers", "auth: marks tests as authentication tests")
-    config.addinivalue_line(
-        "markers", "ai: marks tests that require a live LLM/API key"
-    )
-    config.addinivalue_line(
-        "markers", "legacy: marks tests for deprecated API surfaces"
-    )
-
-
 def _has_real_openai_key() -> bool:
     key = os.getenv("OPENAI_API_KEY", "").strip()
     return bool(key) and not key.startswith("test-")
@@ -123,11 +100,10 @@ def pytest_ignore_collect(collection_path, config):
 
 
 def pytest_collection_modifyitems(config, items):
-    """
-    Modify test collection to add markers based on test names.
+    """Apply the default unit tier and local-profile selection rules.
 
-    This automatically marks tests that interact with external services
-    as integration tests.
+    Tests that require external services must opt into ``integration``
+    explicitly. Names and paths never determine a test's tier.
     """
     local_profile = _is_local_test_profile()
     run_integration = (
@@ -142,12 +118,17 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         nodeid = item.nodeid.replace("\\", "/")
 
-        # Auto-mark tests that use database or search as integration tests
-        if "search" in item.name.lower():
-            item.add_marker(pytest.mark.integration)
-
-        # Auto-mark tests that don't require external services as unit tests
-        elif not any(marker.name == "integration" for marker in item.iter_markers()):
+        tier_markers = {
+            marker.name
+            for marker in item.iter_markers()
+            if marker.name in {"unit", "integration"}
+        }
+        if len(tier_markers) > 1:
+            raise pytest.UsageError(
+                f"{nodeid} has conflicting pytest tiers: "
+                f"{', '.join(sorted(tier_markers))}"
+            )
+        if not tier_markers:
             item.add_marker(pytest.mark.unit)
 
         is_legacy_schema_suite = nodeid.startswith("tests/app/schemas_extraction/")

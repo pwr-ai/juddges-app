@@ -106,8 +106,19 @@ filterwarnings = [
     "ignore:validate_yaml_schema\\(\\) needs refactoring\\..*:PendingDeprecationWarning:juddges_search\\.info_extraction\\.extractor",
 ]
 markers = [
+    "ai: marks tests that require a live LLM or API key",
+    "api: marks API boundary tests",
+    "auth: marks authentication and authorization tests",
+    "collections: marks collection management tests",
     "integration: marks tests as integration tests (require external services)",
-    "unit: marks tests as unit tests",
+    "legacy: marks tests for deprecated API surfaces",
+    "performance: marks opt-in performance tests",
+    "schemas: marks schema management tests",
+    "search: marks search functionality tests",
+    "security: marks security-related tests",
+    "slow: marks slow-running tests",
+    "timing: marks tests that measure timing-sensitive behavior",
+    "unit: marks tests as unit tests (no external services)",
 ]
 
 [tool.ruff]
