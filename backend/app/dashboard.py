@@ -234,7 +234,10 @@ async def _compute_fallback_stats() -> DashboardStats:
         )
     except (PostgrestAPIError, StorageException) as e:
         logger.error(f"Fallback stats computation failed: {e}", exc_info=True)
-        return DashboardStats()
+        raise HTTPException(
+            status_code=503,
+            detail="Dashboard statistics are unavailable",
+        ) from e
 
 
 # ---------------------------------------------------------------------------
