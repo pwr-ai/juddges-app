@@ -6,6 +6,8 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
+import { acquireProductionBuildLock } from "@/tests/support/production-build-lock";
+
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const OTHER_USER_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
 const OWNER_CHAT_ID = "33333333-4444-4555-8666-777777777777";
@@ -144,6 +146,7 @@ function sessionCookie(): string {
 describe("/chat/[id] through a real Next server", () => {
   let fakeSupabase: Server | undefined;
   let nextProcess: ChildProcessWithoutNullStreams | undefined;
+  let releaseProductionBuildLock: (() => Promise<void>) | undefined;
   let baseUrl: string;
   let output = "";
   const postgrestChatRequests: PostgrestChatRequest[] = [];
@@ -151,13 +154,18 @@ describe("/chat/[id] through a real Next server", () => {
   async function cleanupTestResources(): Promise<unknown[]> {
     const child = nextProcess;
     const server = fakeSupabase;
+    const releaseLock = releaseProductionBuildLock;
     nextProcess = undefined;
     fakeSupabase = undefined;
-    const results = await Promise.allSettled([
+    releaseProductionBuildLock = undefined;
+    const resourceResults = await Promise.allSettled([
       stopChild(child),
       closeServer(server),
     ]);
-    return results.flatMap((result) =>
+    const lockResults = await Promise.allSettled([
+      releaseLock?.() ?? Promise.resolve(),
+    ]);
+    return [...resourceResults, ...lockResults].flatMap((result) =>
       result.status === "rejected" ? [result.reason] : [],
     );
   }
@@ -165,6 +173,7 @@ describe("/chat/[id] through a real Next server", () => {
   beforeAll(async () => {
     let setupFailure: unknown;
     try {
+      releaseProductionBuildLock = await acquireProductionBuildLock();
       fakeSupabase = createServer((request, response) => {
         const url = new URL(request.url ?? "/", "http://127.0.0.1");
         if (url.pathname === "/auth/v1/user") {
