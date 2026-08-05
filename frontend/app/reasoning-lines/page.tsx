@@ -1161,7 +1161,11 @@ function DAGTab({
       {dagData && dagData.nodes.length === 0 && (
         <EmptyState
           title="Brak danych w grafie"
-          description="Zapisz linie orzecznicze i wykryj zdarzenia, aby zobaczyc graf DAG."
+          description={
+            canDetectEvents
+              ? 'Zapisz linie orzecznicze i wykryj zdarzenia, aby zobaczyc graf DAG.'
+              : 'Brak zapisanych linii lub zdarzen do wyswietlenia w grafie DAG.'
+          }
           icon={Network}
         />
       )}

@@ -420,7 +420,9 @@ export default function ReasoningLineDetailPage() {
         )}
         {timelineQuery.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Brak danych osi czasu. Sklasyfikuj orzeczenia, aby wygenerowac os czasu.
+            {isAdmin
+              ? 'Brak danych osi czasu. Sklasyfikuj orzeczenia, aby wygenerowac os czasu.'
+              : 'Brak danych osi czasu do wyswietlenia.'}
           </div>
         )}
         {timelineQuery.data && timelineQuery.data.points.length > 0 && (
@@ -441,7 +443,9 @@ export default function ReasoningLineDetailPage() {
         )}
         {timelineQuery.data && timelineQuery.data.points.length === 0 && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Brak sklasyfikowanych orzeczen. Uzyj przycisku powyzej, aby sklasyfikowac.
+            {isAdmin
+              ? 'Brak sklasyfikowanych orzeczen. Uzyj przycisku powyzej, aby sklasyfikowac.'
+              : 'Brak sklasyfikowanych orzeczen do wyswietlenia.'}
           </div>
         )}
       </div>
@@ -487,7 +491,9 @@ export default function ReasoningLineDetailPage() {
 
         {!driftData && !driftMutation.isPending && !driftMutation.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Kliknij &quot;Analizuj dryf&quot;, aby zbadac zmiany w jezyku orzeczen w czasie.
+            {isAdmin
+              ? 'Kliknij "Analizuj dryf", aby zbadac zmiany w jezyku orzeczen w czasie.'
+              : 'Brak danych analizy dryfu.'}
           </div>
         )}
       </div>

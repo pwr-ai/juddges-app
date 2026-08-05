@@ -144,6 +144,10 @@ describe('reasoning-lines admin-only controls', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Graf DAG' }));
     await waitFor(() => expect(mockGetReasoningLineDAG).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: 'Wykryj zdarzenia' })).not.toBeInTheDocument();
+    expect(
+      await screen.findByText('Brak zapisanych linii lub zdarzen do wyswietlenia w grafie DAG.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Zapisz linie orzecznicze i wykryj zdarzenia/)).not.toBeInTheDocument();
   });
 
   it('shows save and event detection controls to an admin user', async () => {
@@ -173,6 +177,10 @@ describe('reasoning-lines admin-only controls', () => {
     expect(screen.queryByRole('button', { name: 'Usun linie' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Klasyfikuj orzeczenia' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Analizuj dryf' })).not.toBeInTheDocument();
+    expect(screen.getByText('Brak sklasyfikowanych orzeczen do wyswietlenia.')).toBeInTheDocument();
+    expect(screen.getByText('Brak danych analizy dryfu.')).toBeInTheDocument();
+    expect(screen.queryByText(/Uzyj przycisku powyzej/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Kliknij "Analizuj dryf"/)).not.toBeInTheDocument();
   });
 
   it('shows detail mutations to an admin user', async () => {
@@ -186,5 +194,7 @@ describe('reasoning-lines admin-only controls', () => {
     expect(await screen.findByRole('button', { name: 'Usun linie' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Klasyfikuj orzeczenia' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Analizuj dryf' })).toBeInTheDocument();
+    expect(screen.getByText(/Uzyj przycisku powyzej/)).toBeInTheDocument();
+    expect(screen.getByText(/Kliknij "Analizuj dryf"/)).toBeInTheDocument();
   });
 });
