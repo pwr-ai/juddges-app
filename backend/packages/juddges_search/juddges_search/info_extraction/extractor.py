@@ -38,6 +38,7 @@ class InformationExtractor:
     SCHEMA_DIR = PACKAGE_ROOT / "config" / "schema"
     EXTRACTION_CONTEXT_DIR = PACKAGE_ROOT / "config" / "extraction_contexts"
     SCHEMA_EXTENSIONS: list[str] = [".yaml", ".yml", ".json"]
+    SCHEMA_METADATA_SUFFIX = ".meta"
     SCHEMA_REQUIRED_FIELDS: list[str] = [
         "type",
         "description",
@@ -156,20 +157,27 @@ class InformationExtractor:
 
     @classmethod
     def list_schemas(cls) -> list[str]:
-        return [f.stem for f in cls.SCHEMA_DIR.iterdir() if f.suffix in cls.SCHEMA_EXTENSIONS]
+        return [f.stem for f in cls.SCHEMA_DIR.iterdir() if cls.is_schema_file(f)]
+
+    @classmethod
+    def is_schema_file(cls, path: Path) -> bool:
+        """Return whether a filesystem artifact is an extraction schema."""
+        return (
+            path.is_file()
+            and path.suffix in cls.SCHEMA_EXTENSIONS
+            and not path.stem.endswith(cls.SCHEMA_METADATA_SUFFIX)
+        )
 
     @classmethod
     def get_schema(cls, schema_name: str) -> dict[str, Any]:
-        schema_files = [
-            f for f in cls.SCHEMA_DIR.iterdir() if f.stem == schema_name and f.suffix in cls.SCHEMA_EXTENSIONS
-        ]
+        schema_files = [f for f in cls.SCHEMA_DIR.iterdir() if f.stem == schema_name and cls.is_schema_file(f)]
         if len(schema_files) > 1:
             raise ValueError(f"Schema name {schema_name} found ambiguous")
         if len(schema_files) == 0:
             raise ValueError(f"Schema name {schema_name} not found")
 
         schema_file, *_ = schema_files
-        if schema_file.suffix == ".yaml":
+        if schema_file.suffix in {".yaml", ".yml"}:
             with open(schema_file, "r") as f:
                 schema = yaml.safe_load(f)
         elif schema_file.suffix == ".json":
