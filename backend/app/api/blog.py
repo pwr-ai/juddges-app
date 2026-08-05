@@ -161,32 +161,6 @@ def public_author(author: dict[str, Any] | None, author_id: str | None = None) -
     }
 
 
-async def get_public_post_author(supabase, author_id: str) -> dict:
-    """Load only fields that may be exposed by public blog endpoints."""
-    try:
-        response = (
-            supabase.table("user_profiles")
-            .select("id, name, avatar, title")
-            .eq("id", author_id)
-            .single()
-            .execute()
-        )
-        return public_author(response.data, author_id)
-    except (PostgrestAPIError, StorageException) as e:
-        logger.warning(f"Could not fetch public author profile for {author_id}: {e}")
-        return public_author(None, author_id)
-
-
-async def increment_view_count(supabase, post_id: str):
-    """Increment view count for a post."""
-    try:
-        supabase.table("blog_posts").update(
-            {"views": supabase.rpc("increment", {"x": 1})}
-        ).eq("id", post_id).execute()
-    except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error incrementing view count: {e}", exc_info=True)
-
-
 def ensure_user_can_access_post(
     post: dict[str, Any], current_user: AuthenticatedUser
 ) -> None:
@@ -310,48 +284,48 @@ async def get_post(slug: str):
     """
     try:
         supabase = get_admin_supabase_client()
+        response = supabase.rpc(
+            "get_public_blog_post",
+            {"p_slug": slug, "p_related_limit": 3},
+        ).execute()
+        payload = response.data
 
-        # Get post
-        response = (
-            supabase.table("blog_posts")
-            .select(_BLOG_POST_COLS)
-            .eq("slug", slug)
-            .eq("status", "published")
-            .is_("deleted_at", "null")
-            .single()
-            .execute()
-        )
-
-        if not response.data:
+        if not payload:
             raise HTTPException(status_code=404, detail="Post not found")
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=500, detail="Invalid blog post data")
 
-        post = response.data
-
-        # Get tags and author
-        tags = await get_post_tags(supabase, post["id"])
-        author = await get_public_post_author(supabase, post["author_id"])
-
-        # Get related posts (same category, different post)
-        related_response = (
-            supabase.table("blog_posts")
-            .select("id, slug, title, excerpt, featured_image, category, read_time")
-            .eq("category", post["category"])
-            .neq("id", post["id"])
-            .eq("status", "published")
-            .is_("deleted_at", "null")
-            .limit(3)
-            .execute()
-        )
-
-        # Increment view count (async, non-blocking)
-        await increment_view_count(supabase, post["id"])
-
-        return {
-            **post,
-            "tags": tags,
-            "author": author,
-            "related_posts": related_response.data or [],
+        required_fields = {
+            "id",
+            "slug",
+            "title",
+            "excerpt",
+            "author",
+            "status",
+            "related_posts",
         }
+        related_posts = payload.get("related_posts")
+        if (
+            not required_fields.issubset(payload)
+            or payload.get("status") != "published"
+            or not isinstance(payload.get("author"), dict)
+            or not isinstance(related_posts, list)
+            or any(
+                not isinstance(related, dict)
+                or related.get("status") != "published"
+                or not isinstance(related.get("author"), dict)
+                for related in related_posts
+            )
+        ):
+            raise HTTPException(status_code=500, detail="Invalid blog post data")
+
+        safe_post = dict(payload)
+        safe_post["author"] = public_author(payload.get("author"))
+        safe_post["related_posts"] = [
+            {**related, "author": public_author(related.get("author"))}
+            for related in related_posts
+        ]
+        return safe_post
 
     except HTTPException:
         raise
