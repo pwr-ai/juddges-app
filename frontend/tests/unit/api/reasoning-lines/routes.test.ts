@@ -215,6 +215,27 @@ describe('reasoning-lines BFF routes', () => {
     expect(response.headers.get('x-internal-trace')).toBeNull();
   });
 
+  it('forwards the upstream authentication challenge on 401 responses', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify({ detail: 'Invalid bearer token' }), {
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json',
+          'WWW-Authenticate': 'Bearer',
+          'Set-Cookie': 'must-not-leak=true',
+        },
+      }),
+    );
+
+    const response = await listReasoningLines(
+      new NextRequest('http://localhost/api/reasoning-lines'),
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('www-authenticate')).toBe('Bearer');
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
   it('fails closed when the backend API key is missing', async () => {
     delete process.env.BACKEND_API_KEY;
 

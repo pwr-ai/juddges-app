@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 const routeLogger = logger.child('reasoning-lines-api');
 const FORWARDED_RESPONSE_HEADERS = [
   'retry-after',
+  'www-authenticate',
   'x-ratelimit-limit',
   'x-ratelimit-remaining',
   'x-ratelimit-reset',
