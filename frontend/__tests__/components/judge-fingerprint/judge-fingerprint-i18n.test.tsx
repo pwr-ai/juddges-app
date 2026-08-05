@@ -99,8 +99,8 @@ describe('JudgeProfileCard i18n', () => {
 
   it('formats the case period in the active locale, not a hardcoded pl-PL', () => {
     const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-    const enDate = new Date(PROFILE.period.first_case).toLocaleDateString('en', opts);
-    const plDate = new Date(PROFILE.period.first_case).toLocaleDateString('pl', opts);
+    const enDate = new Date(PROFILE.period.first_case!).toLocaleDateString('en', opts);
+    const plDate = new Date(PROFILE.period.first_case!).toLocaleDateString('pl', opts);
     // Sanity: the two locales must format differently, else the test can't bite.
     expect(enDate).not.toBe(plDate);
 

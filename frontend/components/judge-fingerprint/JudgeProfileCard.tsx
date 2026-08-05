@@ -25,7 +25,8 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
   };
 
   /** Format a date string to a locale-friendly display */
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '—';
     try {
       return new Date(dateStr).toLocaleDateString(locale, {
         year: 'numeric',

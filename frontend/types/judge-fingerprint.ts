@@ -16,14 +16,14 @@ export interface StyleScores {
 export interface SampleCase {
   document_id: string;
   title: string;
-  date: string;
+  date: string | null;
   reasoning_pattern: keyof StyleScores;
 }
 
 /** The time period over which cases were analyzed */
 export interface JudgePeriod {
-  first_case: string;
-  last_case: string;
+  first_case: string | null;
+  last_case: string | null;
 }
 
 /** Full profile for a single judge */
