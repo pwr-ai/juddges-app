@@ -5,7 +5,7 @@ import os
 import re
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from loguru import logger
@@ -70,8 +70,13 @@ def get_supabase_client() -> Client:
 
 supabase: Client = get_supabase_client()
 
-# Cache for dashboard stats with TTL
-_stats_cache = {"data": None, "timestamp": None}
+# Cache for dashboard stats with TTL. The version is part of both the Redis key
+# and payload so deployments never deserialize a cache produced for an older
+# response contract.
+DASHBOARD_STATS_CACHE_VERSION = 2
+DASHBOARD_STATS_CACHE_KEY = f"dashboard:stats:v{DASHBOARD_STATS_CACHE_VERSION}"
+LEGACY_DASHBOARD_STATS_CACHE_KEY = "dashboard:stats"
+_stats_cache = {"data": None, "timestamp": None, "version": None}
 _cache_ttl = 14400  # 4 hours
 
 
@@ -91,6 +96,15 @@ class DistributionItem(BaseModel):
     jurisdiction: str | None = None
 
 
+class YearlyDecisionCount(BaseModel):
+    year: int
+    count: int
+
+
+class JurisdictionYearlyDecisionCount(YearlyDecisionCount):
+    jurisdiction: Literal["PL", "UK"]
+
+
 class DataCompleteness(BaseModel):
     embeddings_pct: float = 0.0
     structure_extraction_pct: float = 0.0
@@ -107,7 +121,8 @@ class DashboardStats(BaseModel):
     jurisdictions: JurisdictionCounts = JurisdictionCounts()
     court_levels: list[DistributionItem] = []
     top_courts: list[DistributionItem] = []
-    decisions_per_year: list[dict] | None = None
+    decisions_per_year: list[YearlyDecisionCount] | None = None
+    decisions_per_year_by_jurisdiction: list[JurisdictionYearlyDecisionCount]
     date_range: dict[str, str | None] | None = None
     case_types: list[DistributionItem] = []
     decision_types: list[DistributionItem] = []
@@ -158,8 +173,15 @@ async def _get_cached_dashboard_stats(
         try:
             cached_data = await redis_client.get(cache_key)
             if cached_data:
+                payload = json.loads(cached_data)
+                if (
+                    not isinstance(payload, dict)
+                    or payload.get("version") != DASHBOARD_STATS_CACHE_VERSION
+                    or not isinstance(payload.get("data"), dict)
+                ):
+                    raise ValueError("Unsupported dashboard cache payload version")
                 logger.debug("Returning Redis cached dashboard stats")
-                return DashboardStats(**json.loads(cached_data))
+                return DashboardStats.model_validate(payload["data"])
         except (json.JSONDecodeError, ValueError, KeyError) as e:
             logger.warning(f"Redis cache read failed (bad data): {e}")
         except Exception as e:
@@ -170,6 +192,7 @@ async def _get_cached_dashboard_stats(
     if (
         _stats_cache["data"] is not None
         and _stats_cache["timestamp"] is not None
+        and _stats_cache["version"] == DASHBOARD_STATS_CACHE_VERSION
         and (now - _stats_cache["timestamp"]).total_seconds() < _cache_ttl
     ):
         logger.debug("Returning in-memory cached dashboard stats")
@@ -185,7 +208,14 @@ async def _update_dashboard_cache(
     if REDIS_AVAILABLE and redis_client:
         try:
             await redis_client.setex(
-                cache_key, _cache_ttl, json.dumps(stats.model_dump())
+                cache_key,
+                _cache_ttl,
+                json.dumps(
+                    {
+                        "version": DASHBOARD_STATS_CACHE_VERSION,
+                        "data": stats.model_dump(),
+                    }
+                ),
             )
             logger.debug("Updated Redis dashboard stats cache")
         except Exception as e:
@@ -195,6 +225,7 @@ async def _update_dashboard_cache(
 
     _stats_cache["data"] = stats
     _stats_cache["timestamp"] = now
+    _stats_cache["version"] = DASHBOARD_STATS_CACHE_VERSION
     logger.debug("Updated in-memory dashboard stats cache")
 
 
@@ -202,6 +233,7 @@ def _clear_stats_cache() -> None:
     """Clear the in-memory stats cache."""
     _stats_cache["data"] = None
     _stats_cache["timestamp"] = None
+    _stats_cache["version"] = None
     logger.info("Cleared in-memory dashboard stats cache")
 
 
@@ -231,6 +263,7 @@ async def _compute_fallback_stats() -> DashboardStats:
         return DashboardStats(
             total_judgments=total.count or 0,
             jurisdictions=JurisdictionCounts(PL=pl.count or 0, UK=uk.count or 0),
+            decisions_per_year_by_jurisdiction=[],
         )
     except (PostgrestAPIError, StorageException) as e:
         logger.opt(exception=True).error("Fallback stats computation failed: {}", e)
@@ -253,7 +286,7 @@ async def get_dashboard_stats(
     api_key: str = Depends(verify_api_key),
 ):
     """Get precomputed dashboard statistics."""
-    cache_key = "dashboard:stats"
+    cache_key = DASHBOARD_STATS_CACHE_KEY
     now = datetime.now(UTC)
     cached_stats = await _get_cached_dashboard_stats(cache_key, now)
     if cached_stats:
@@ -299,6 +332,9 @@ async def get_dashboard_stats(
                 for x in stats_map.get("top_courts", [])
             ],
             decisions_per_year=stats_map.get("decisions_per_year"),
+            decisions_per_year_by_jurisdiction=stats_map.get(
+                "decisions_per_year_by_jurisdiction", []
+            ),
             date_range=stats_map.get("date_range"),
             case_types=[
                 DistributionItem(
@@ -364,7 +400,9 @@ async def refresh_dashboard_stats(
     # Clear caches regardless of RPC outcome so stale data is not served
     if REDIS_AVAILABLE and redis_client:
         try:
-            await redis_client.delete("dashboard:stats")
+            await redis_client.delete(
+                DASHBOARD_STATS_CACHE_KEY, LEGACY_DASHBOARD_STATS_CACHE_KEY
+            )
             logger.info("Cleared Redis cache")
         except Exception as e:
             # Broad catch: redis.exceptions.RedisError and connection errors
