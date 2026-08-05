@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
+from loguru import logger
 
 from app import dashboard as dashboard_module
 from app.server import app
@@ -17,6 +19,61 @@ if TYPE_CHECKING:
 def anyio_backend() -> str:
     """Force asyncio backend for this module (trio has known baseline issues)."""
     return "asyncio"
+
+
+class _FailingFallbackQuery:
+    def select(self, *args, **kwargs):
+        return self
+
+    def eq(self, *args, **kwargs):
+        return self
+
+    def execute(self):
+        raise dashboard_module.PostgrestAPIError(
+            {
+                "message": "database unavailable",
+                "code": "XX000",
+                "hint": None,
+                "details": None,
+            }
+        )
+
+
+class _PrecomputedQuery(_FailingFallbackQuery):
+    def __init__(self, *, fail: bool) -> None:
+        self.fail = fail
+
+    def execute(self):
+        if self.fail:
+            return super().execute()
+        return SimpleNamespace(data=[])
+
+
+class _DashboardFailureClient:
+    def __init__(self, *, precomputed_error: bool) -> None:
+        self.precomputed_error = precomputed_error
+
+    def table(self, name: str):
+        if name != "dashboard_precomputed_stats":
+            return _FailingFallbackQuery()
+        return _PrecomputedQuery(fail=self.precomputed_error)
+
+
+@pytest.fixture
+def failed_dashboard_sources(monkeypatch):
+    dashboard_module._clear_stats_cache()
+    monkeypatch.setattr(dashboard_module, "REDIS_AVAILABLE", False)
+    yield
+    dashboard_module._clear_stats_cache()
+
+
+@pytest.fixture
+def active_dashboard_log_sink():
+    sink_id = logger.add(lambda _message: None, format="{message}")
+    try:
+        yield
+    finally:
+        logger.remove(sink_id)
 
 
 def test_dashboard_supabase_client_uses_backend_env(monkeypatch):
@@ -54,6 +111,48 @@ def test_dashboard_supabase_client_requires_backend_url(monkeypatch):
 
     with pytest.raises(RuntimeError, match="SUPABASE_URL"):
         dashboard_module.get_supabase_client()
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+async def test_dashboard_stats_returns_503_when_empty_precomputed_fallback_fails(
+    authenticated_client: AsyncClient,
+    active_dashboard_log_sink,
+    failed_dashboard_sources,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        dashboard_module,
+        "supabase",
+        _DashboardFailureClient(precomputed_error=False),
+    )
+
+    response = await authenticated_client.get("/dashboard/stats")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Dashboard statistics are unavailable"}
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+@pytest.mark.anyio
+@pytest.mark.api
+async def test_dashboard_stats_returns_503_when_precomputed_and_fallback_fail(
+    authenticated_client: AsyncClient,
+    active_dashboard_log_sink,
+    failed_dashboard_sources,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        dashboard_module,
+        "supabase",
+        _DashboardFailureClient(precomputed_error=True),
+    )
+
+    response = await authenticated_client.get("/dashboard/stats")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Dashboard statistics are unavailable"}
+    assert response.headers["Cache-Control"] == "no-store"
 
 
 @pytest.mark.anyio
