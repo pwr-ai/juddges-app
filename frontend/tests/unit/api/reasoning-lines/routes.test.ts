@@ -6,10 +6,11 @@ import { createHash } from 'node:crypto';
 import { NextRequest } from 'next/server';
 
 const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(async () => ({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
   })),
 }));
 
@@ -30,10 +31,16 @@ import {
 } from '@/app/api/reasoning-lines/[...path]/route';
 
 const authenticatedUser = { id: 'user-1' };
+const accessToken = 'verified-session-token';
+const lineId = '11111111-1111-4111-8111-111111111111';
 
 function authenticate(): void {
   mockGetUser.mockResolvedValue({
     data: { user: authenticatedUser },
+    error: null,
+  });
+  mockGetSession.mockResolvedValue({
+    data: { session: { access_token: accessToken } },
     error: null,
   });
 }
@@ -76,6 +83,7 @@ describe('reasoning-lines BFF routes', () => {
         method: 'GET',
         headers: expect.objectContaining({
           Accept: 'application/json',
+          Authorization: `Bearer ${accessToken}`,
           'X-API-Key': 'server-api-key',
           'X-RateLimit-Identity': createHash('sha256').update('user-1').digest('hex'),
         }),
@@ -86,7 +94,7 @@ describe('reasoning-lines BFF routes', () => {
     expect(await response.json()).toEqual([]);
   });
 
-  it('forwards encoded dynamic paths and JSON request bodies', async () => {
+  it('forwards allowed dynamic paths and JSON request bodies', async () => {
     (global.fetch as jest.Mock).mockResolvedValue(
       new Response(JSON.stringify({ results: [] }), {
         status: 200,
@@ -115,13 +123,70 @@ describe('reasoning-lines BFF routes', () => {
       new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
     );
     await getReasoningLine(
-      new NextRequest('http://localhost/api/reasoning-lines/line%2Fone/related'),
-      { params: Promise.resolve({ path: ['line/one', 'related'] }) },
+      new NextRequest(`http://localhost/api/reasoning-lines/${lineId}/related`),
+      { params: Promise.resolve({ path: [lineId, 'related'] }) },
     );
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://backend.test/reasoning-lines/line%2Fone/related',
+      `http://backend.test/reasoning-lines/${lineId}/related`,
       expect.any(Object),
     );
+  });
+
+  it.each([
+    ['GET', ['internal', 'metrics']],
+    ['POST', ['future-operation']],
+    ['GET', ['not-a-reasoning-line-id']],
+  ])('rejects unknown or internal %s paths before contacting the backend', async (method, path) => {
+    const response = await getReasoningLine(
+      new NextRequest(`http://localhost/api/reasoning-lines/${path.join('/')}`, { method }),
+      { params: Promise.resolve({ path }) },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Reasoning-lines route not found' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects a method that is not allowed for a known path', async () => {
+    const response = await postReasoningLineOperation(
+      new NextRequest('http://localhost/api/reasoning-lines/dag', { method: 'POST' }),
+      { params: Promise.resolve({ path: ['dag'] }) },
+    );
+
+    expect(response.status).toBe(405);
+    expect(await response.json()).toEqual({ error: 'Method not allowed' });
+    expect(response.headers.get('allow')).toBe('GET');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['POST', ['discover']],
+    ['POST', ['create']],
+    ['GET', ['dag']],
+    ['POST', ['detect-events']],
+    ['POST', ['search']],
+    ['GET', [lineId]],
+    ['DELETE', [lineId]],
+    ['GET', [lineId, 'timeline']],
+    ['POST', [lineId, 'drift-analysis']],
+    ['POST', [lineId, 'analyze-outcomes']],
+    ['GET', [lineId, 'related']],
+  ])('allows the explicit %s /%s operation', async (method, path) => {
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+    const response = await getReasoningLine(
+      new NextRequest(`http://localhost/api/reasoning-lines/${path.join('/')}`, {
+        method,
+        body: method === 'POST' ? '{}' : undefined,
+        headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+      }),
+      { params: Promise.resolve({ path }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('preserves upstream status, body, content type, and safe rate-limit headers', async () => {
@@ -138,8 +203,8 @@ describe('reasoning-lines BFF routes', () => {
     );
 
     const response = await deleteReasoningLine(
-      new NextRequest('http://localhost/api/reasoning-lines/missing', { method: 'DELETE' }),
-      { params: Promise.resolve({ path: ['missing'] }) },
+      new NextRequest(`http://localhost/api/reasoning-lines/${lineId}`, { method: 'DELETE' }),
+      { params: Promise.resolve({ path: [lineId] }) },
     );
 
     expect(response.status).toBe(404);
@@ -159,6 +224,18 @@ describe('reasoning-lines BFF routes', () => {
 
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: 'Backend service is not configured' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the verified session has no access token', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    const response = await listReasoningLines(
+      new NextRequest('http://localhost/api/reasoning-lines'),
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Not authenticated' });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
