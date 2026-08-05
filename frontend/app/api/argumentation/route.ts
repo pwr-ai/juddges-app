@@ -1,46 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import logger from '@/lib/logger';
 
-const routeLogger = logger.child('argumentation');
+import {
+  methodNotAllowed,
+  proxyAuthenticatedJson,
+} from '@/app/api/_lib/authenticated-json-proxy';
 
-/**
- * POST /api/argumentation - Analyze legal arguments in documents
- */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await request.json();
-    const backendUrl = process.env.API_BASE_URL || 'http://backend:8000';
-    const apiKey = process.env.BACKEND_API_KEY || '';
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (apiKey) {
-      headers['X-API-Key'] = apiKey;
-    }
-
-    const response = await fetch(`${backendUrl}/argumentation/analyze`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      routeLogger.error('Backend error', { status: response.status, data });
-      return NextResponse.json(
-        { error: data.detail || 'Failed to analyze arguments' },
-        { status: response.status }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    routeLogger.error('Error in argumentation proxy', error);
-    return NextResponse.json(
-      { error: 'Failed to connect to backend service' },
-      { status: 503 }
-    );
-  }
+  return proxyAuthenticatedJson(request, {
+    upstreamPath: '/argumentation/analyze',
+  });
 }
+
+export const GET = methodNotAllowed;
+export const PUT = methodNotAllowed;
+export const PATCH = methodNotAllowed;
+export const DELETE = methodNotAllowed;
