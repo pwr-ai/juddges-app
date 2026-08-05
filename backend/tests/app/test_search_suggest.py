@@ -86,6 +86,36 @@ class TestSuggestEndpoint:
         assert hit["weight"] == 412
 
     @pytest.mark.anyio
+    async def test_valid_request_succeeds_with_runtime_rate_limit_headers(
+        self, client, valid_api_headers
+    ):
+        from app.api.search import get_search_service
+        from app.server import app
+        from app.services.search import MeiliSearchService
+
+        mock_service = MagicMock(spec=MeiliSearchService)
+        mock_service.configured = True
+        mock_service.suggest = AsyncMock(
+            return_value={
+                "suggestion_hits": [],
+                "query": "fraud",
+                "processingTimeMs": 1,
+                "estimatedTotalHits": 0,
+            }
+        )
+        app.dependency_overrides[get_search_service] = lambda: mock_service
+        app.state.limiter.enabled = True
+        try:
+            response = await client.get(
+                "/api/search/suggest?q=fraud&limit=5", headers=valid_api_headers
+            )
+        finally:
+            app.state.limiter.enabled = False
+
+        assert response.status_code == 200
+        assert int(response.headers["X-RateLimit-Limit"]) > 0
+
+    @pytest.mark.anyio
     async def test_passes_language_and_category_filters(
         self, client, valid_api_headers
     ):
