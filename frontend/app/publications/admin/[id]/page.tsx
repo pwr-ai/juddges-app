@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, use, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -16,8 +15,7 @@ interface EditPublicationPageProps {
 
 export default function EditPublicationPage({ params }: EditPublicationPageProps) {
   const { id } = use(params);
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const userId = user?.id;
   const [publication, setPublication] = useState<PublicationWithResources | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,26 +41,17 @@ export default function EditPublicationPage({ params }: EditPublicationPageProps
   }, [id, userId]);
 
   useEffect(() => {
-    if (!authLoading && !userId) {
-      router.push(`/auth/login?redirect=/publications/admin/${id}`);
-      return;
-    }
-
     if (userId && id) {
       loadPublication();
     }
-  }, [authLoading, userId, router, id, loadPublication]);
+  }, [userId, id, loadPublication]);
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   if (error) {
