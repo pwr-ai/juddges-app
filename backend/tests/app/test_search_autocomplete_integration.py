@@ -85,6 +85,50 @@ async def test_autocomplete_returns_topic_hits_from_search_service(
     assert payload["topic_hits"][0]["label_pl"] == "Kredyty frankowe"
 
 
+async def test_autocomplete_succeeds_with_runtime_rate_limit_headers(
+    authenticated_client,
+):
+    """The production limiter must not turn a valid request into an error."""
+    from app.api.search import get_search_service
+
+    class FakeSearchService:
+        configured = True
+
+        async def autocomplete(
+            self, query: str, limit: int = 10, filters: str | None = None
+        ) -> dict[str, Any]:
+            return {
+                "topic_hits": [],
+                "query": query,
+                "processingTimeMs": 1,
+                "estimatedTotalHits": 0,
+            }
+
+    app.dependency_overrides[get_search_service] = lambda: FakeSearchService()
+    app.state.limiter.enabled = True
+    try:
+        response = await authenticated_client.get(
+            "/api/search/autocomplete", params={"q": "vat", "limit": 5}
+        )
+    finally:
+        app.state.limiter.enabled = False
+
+    assert response.status_code == 200
+    assert int(response.headers["X-RateLimit-Limit"]) > 0
+
+
+@pytest.mark.parametrize("limit", [0, 51])
+async def test_autocomplete_rejects_out_of_range_limit(
+    authenticated_client,
+    limit: int,
+):
+    response = await authenticated_client.get(
+        "/api/search/autocomplete", params={"q": "vat", "limit": limit}
+    )
+
+    assert response.status_code == 422
+
+
 async def test_autocomplete_returns_502_when_search_backend_fails(
     authenticated_client,
 ):
