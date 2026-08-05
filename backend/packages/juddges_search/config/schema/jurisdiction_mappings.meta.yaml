@@ -1,4 +1,4 @@
-# Jurisdiction Field Mappings for Universal Legal Document Schema
+# Jurisdiction metadata mappings for the universal legal document schema
 # Maps field names and descriptions between English (UK) and Polish jurisdictions
 # Used to generate localized extraction prompts
 

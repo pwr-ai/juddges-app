@@ -79,7 +79,7 @@ def _create_backup(schema_id: str) -> None:
     existing_files = [
         f
         for f in schema_dir.iterdir()
-        if f.stem == schema_id and f.suffix in InformationExtractor.SCHEMA_EXTENSIONS
+        if f.stem == schema_id and InformationExtractor.is_schema_file(f)
     ]
 
     if existing_files:

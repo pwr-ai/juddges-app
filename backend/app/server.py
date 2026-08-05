@@ -581,6 +581,10 @@ async def add_cache_headers(request, call_next):
     """Add HTTP cache headers for static and cacheable content."""
     response = await call_next(request)
 
+    if response.status_code >= 400:
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     path = request.url.path
     for fragments, cache_control in _CACHE_CONTROL_RULES:
         if any(fragment in path for fragment in fragments):
