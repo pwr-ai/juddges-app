@@ -132,10 +132,10 @@ describe("POST /api/extractions", () => {
 
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      status: 200,
+      status: 202,
       json: async () => ({
         job_id: JOB_ID,
-        status: "PENDING",
+        status: "accepted",
         message: "Job created",
       }),
     });
@@ -149,10 +149,10 @@ describe("POST /api/extractions", () => {
       })
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(202);
     const body = await response.json();
     expect(body.job_id).toBe(JOB_ID);
-    expect(body.status).toBe("PENDING");
+    expect(body.status).toBe("accepted");
 
     // Verify the backend was called with correct payload
     expect(global.fetch).toHaveBeenCalledWith(
@@ -196,7 +196,7 @@ describe("POST /api/extractions", () => {
       })
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(202);
     const body = await response.json();
     expect(body.job_id).toBe(JOB_ID);
 
@@ -226,9 +226,43 @@ describe("POST /api/extractions", () => {
       })
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error).toBeDefined();
+  });
+
+  it("preserves backend validation status and error code", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 422,
+      statusText: "Unprocessable Entity",
+      json: async () => ({
+        detail: {
+          error: "Validation Error",
+          message: "At least one document is required",
+          code: "EMPTY_DOCUMENT_LIST",
+        },
+      }),
+    });
+
+    const response = await POST(
+      makePostRequest({
+        collection_id: COLLECTION_ID,
+        schema_id: SCHEMA_ID,
+        document_ids: [DOC_ID_1],
+        extraction_context: "Extract data",
+      })
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({
+        code: "EMPTY_DOCUMENT_LIST",
+        details: "At least one document is required",
+      })
+    );
   });
 
   it("returns 500 when backend returns no job_id", async () => {
@@ -271,10 +305,9 @@ describe("POST /api/extractions", () => {
       })
     );
 
-    // Empty collection throws ValidationError inside try/catch that wraps it as DatabaseError (503)
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.code).toBe("DATABASE_UNAVAILABLE");
+    expect(body.code).toBe("VALIDATION_ERROR");
   });
 
   it("includes additional_instructions when provided", async () => {
