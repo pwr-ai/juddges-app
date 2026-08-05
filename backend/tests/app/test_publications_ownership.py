@@ -16,6 +16,8 @@ Both                      → 404 when the publication does not exist
 A denied request must not reach the database.
 """
 
+from types import SimpleNamespace
+
 import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
@@ -39,6 +41,8 @@ MISSING_PUBLICATION_ID = "22222222-2222-4222-a222-222222222222"
 UPDATE_BODY = {"title": "Edited by someone"}
 OWNERSHIP_LOOKUP_ERROR_DETAIL = "Failed to verify publication ownership"
 PUBLICATION_READ_ERROR_DETAIL = "Failed to retrieve publication"
+UPDATE_MUTATION_ERROR_DETAIL = "Failed to update publication"
+DELETE_MUTATION_ERROR_DETAIL = "Failed to delete publication"
 RAW_DATABASE_ERROR = (
     "Database error: raw-message-sentinel; code=raw-code-sentinel; "
     "hint=raw-hint-sentinel; details=raw-details-sentinel"
@@ -131,6 +135,58 @@ class _FailingPublicationReadClient:
         return _FailingPublicationReadQuery()
 
 
+class _FailingPublicationMutationQuery:
+    def __init__(self, client: "_FailingPublicationMutationClient") -> None:
+        self.client = client
+        self.operation: str | None = None
+        self.payload: dict | None = None
+
+    def select(self, *_args, **_kwargs):
+        self.operation = "select"
+        return self
+
+    def update(self, data: dict):
+        self.operation = "update"
+        self.payload = data
+        return self
+
+    def delete(self):
+        self.operation = "delete"
+        return self
+
+    def eq(self, *_args, **_kwargs):
+        return self
+
+    def execute(self):
+        if self.operation == "select":
+            self.client.read_calls += 1
+            return SimpleNamespace(data=[self.client.publication])
+        if self.operation == "update":
+            self.client.update_calls.append(dict(self.payload or {}))
+        elif self.operation == "delete":
+            self.client.delete_calls += 1
+
+        raise PostgrestAPIError(
+            {
+                "message": "raw-message-sentinel",
+                "code": "raw-code-sentinel",
+                "hint": "raw-hint-sentinel",
+                "details": "raw-details-sentinel",
+            }
+        )
+
+
+class _FailingPublicationMutationClient:
+    def __init__(self) -> None:
+        self.publication = _StubPublicationsDb()._row()
+        self.read_calls = 0
+        self.update_calls: list[dict] = []
+        self.delete_calls = 0
+
+    def table(self, _name: str) -> _FailingPublicationMutationQuery:
+        return _FailingPublicationMutationQuery(self)
+
+
 @pytest.fixture
 def valid_api_headers() -> dict[str, str]:
     return {"X-API-Key": "test-api-key-12345"}
@@ -162,6 +218,26 @@ def as_user(stub_db: _StubPublicationsDb):
         app.dependency_overrides[jwt_get_current_user] = _user_resolver
         app.dependency_overrides[get_publications_db] = _db_resolver
         return stub_db
+
+    yield _bind
+
+    app.dependency_overrides.pop(jwt_get_current_user, None)
+    app.dependency_overrides.pop(get_publications_db, None)
+
+
+@pytest.fixture
+def as_user_with_db():
+    """Bind a caller identity and a concrete database adapter to the app."""
+
+    def _bind(user: AuthenticatedUser, db: PublicationsDB) -> None:
+        async def _user_resolver() -> AuthenticatedUser:
+            return user
+
+        async def _db_resolver() -> PublicationsDB:
+            return db
+
+        app.dependency_overrides[jwt_get_current_user] = _user_resolver
+        app.dependency_overrides[get_publications_db] = _db_resolver
 
     yield _bind
 
@@ -446,6 +522,55 @@ async def test_delete_database_read_failure_is_500_without_mutation(
     for sentinel in ("raw-message", "raw-code", "raw-hint", "raw-details"):
         assert sentinel not in response.text
     assert db.delete_calls == []
+
+
+async def test_update_database_mutation_failure_is_sanitized(
+    client: AsyncClient,
+    as_user_with_db,
+    valid_api_headers: dict[str, str],
+) -> None:
+    db = PublicationsDB.__new__(PublicationsDB)
+    failing_client = _FailingPublicationMutationClient()
+    db.client = failing_client
+    as_user_with_db(_user(OWNER_ID), db)
+
+    response = await client.put(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+        json=UPDATE_BODY,
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": UPDATE_MUTATION_ERROR_DETAIL}
+    for sentinel in ("raw-message", "raw-code", "raw-hint", "raw-details"):
+        assert sentinel not in response.text
+    assert failing_client.read_calls == 1
+    assert len(failing_client.update_calls) == 1
+    assert failing_client.delete_calls == 0
+
+
+async def test_delete_database_mutation_failure_is_sanitized(
+    client: AsyncClient,
+    as_user_with_db,
+    valid_api_headers: dict[str, str],
+) -> None:
+    db = PublicationsDB.__new__(PublicationsDB)
+    failing_client = _FailingPublicationMutationClient()
+    db.client = failing_client
+    as_user_with_db(_user(OWNER_ID), db)
+
+    response = await client.delete(
+        f"/publications/{PUBLICATION_ID}",
+        headers=valid_api_headers,
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": DELETE_MUTATION_ERROR_DETAIL}
+    for sentinel in ("raw-message", "raw-code", "raw-hint", "raw-details"):
+        assert sentinel not in response.text
+    assert failing_client.read_calls == 1
+    assert failing_client.update_calls == []
+    assert failing_client.delete_calls == 1
 
 
 async def test_non_owner_cannot_distinguish_denial_from_a_real_edit(
