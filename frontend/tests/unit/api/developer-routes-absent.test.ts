@@ -2,51 +2,103 @@
  * @jest-environment node
  */
 
-import { existsSync, lstatSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const retiredDeveloperRoutes = [
-  'app/api/component-source/route.ts',
-  'app/api/extractions/debug/route.ts',
-  'app/api/mock/jobs/route.ts',
-  'app/api/mock/schemas/route.ts',
-  'app/api/mock/extractions/route.ts',
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { assertRetiredRoutesAbsent } = require('../../../scripts/assert-retired-routes-absent');
+
+const retiredDeveloperRouteDirectories = [
+  'app/api/component-source',
+  'app/api/extractions/debug',
+  'app/api/mock/jobs',
+  'app/api/mock/schemas',
+  'app/api/mock/extractions',
 ];
 
-const componentSourceTraversalRequests = [
-  '/api/component-source?path=lib/styles/components/../../../../.env',
-  '/api/component-source?path=lib/styles/components/%2e%2e/%2e%2e/%2e%2e/.env',
-  '/api/component-source?path=lib/styles/components/source-link',
-];
-
-function routeFileForRequest(requestPath: string): string {
-  const pathname = new URL(requestPath, 'http://localhost').pathname;
-  return join(process.cwd(), 'app', pathname, 'route.ts');
-}
+const routeExtensions = ['js', 'jsx', 'ts', 'tsx'];
 
 describe('retired developer API routes', () => {
-  it.each(retiredDeveloperRoutes)('does not ship %s', (relativePath) => {
-    const routePath = join(process.cwd(), relativePath);
-
-    expect(existsSync(routePath)).toBe(false);
-  });
-
-  it.each(componentSourceTraversalRequests)(
-    'cannot read files through an absent endpoint: %s',
-    (requestPath) => {
-      const routePath = routeFileForRequest(requestPath);
-
-      expect(existsSync(routePath)).toBe(false);
+  it.each(retiredDeveloperRouteDirectories)(
+    'does not ship a handler with any supported extension in %s',
+    (relativeDirectory) => {
+      for (const extension of routeExtensions) {
+        expect(
+          existsSync(join(process.cwd(), relativeDirectory, `route.${extension}`))
+        ).toBe(false);
+      }
     }
   );
 
-  it('does not replace the retired component-source handler with a symlink', () => {
-    const routePath = join(
-      process.cwd(),
-      'app/api/component-source/route.ts'
-    );
+  it('accepts a production manifest without retired routes', () => {
+    expect(() =>
+      assertRetiredRoutesAbsent(
+        { '/api/documents/route': 'app/api/documents/route.js' },
+        { dynamicRoutes: [], staticRoutes: [], rewrites: {} }
+      )
+    ).not.toThrow();
+  });
 
-    expect(existsSync(routePath)).toBe(false);
-    expect(() => lstatSync(routePath)).toThrow();
+  it.each([
+    {
+      label: 'a JavaScript route compiled from any source extension or symlink',
+      appPaths: {
+        '/api/component-source/route': 'app/api/component-source/route.js',
+      },
+      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+    },
+    {
+      label: 'a catch-all route',
+      appPaths: {
+        '/api/[[...path]]/route': 'app/api/[[...path]]/route.js',
+      },
+      routes: {
+        dynamicRoutes: [
+          { page: '/api/[[...path]]', regex: '^/api(?:/(.*))?/?$' },
+        ],
+        staticRoutes: [],
+        rewrites: {},
+      },
+    },
+    {
+      label: 'a rewrite',
+      appPaths: {},
+      routes: {
+        dynamicRoutes: [],
+        staticRoutes: [],
+        rewrites: {
+          beforeFiles: [
+            {
+              source: '/api/component-source',
+              destination: '/api/documents',
+              regex: '^/api/component-source(?:/)?$',
+            },
+          ],
+        },
+      },
+    },
+  ])('rejects $label', ({ appPaths, routes }) => {
+    expect(() => assertRetiredRoutesAbsent(appPaths, routes)).toThrow(
+      /retired developer API route/i
+    );
+  });
+
+  it('treats traversal and symlink query variants as the same retired route', () => {
+    const appPaths = {
+      '/api/component-source/route': 'app/api/component-source/route.js',
+    };
+    const routes = { dynamicRoutes: [], staticRoutes: [], rewrites: {} };
+    const requests = [
+      '/api/component-source?path=lib/styles/components/../../../../.env',
+      '/api/component-source?path=lib/styles/components/%2e%2e/%2e%2e/.env',
+      '/api/component-source?path=lib/styles/components/source-link',
+    ];
+
+    for (const request of requests) {
+      expect(new URL(request, 'http://localhost').pathname).toBe(
+        '/api/component-source'
+      );
+      expect(() => assertRetiredRoutesAbsent(appPaths, routes)).toThrow();
+    }
   });
 });
