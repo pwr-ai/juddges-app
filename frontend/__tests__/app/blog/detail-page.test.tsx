@@ -5,12 +5,28 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
+let mockRequestCache = new Map<string, Promise<unknown>>();
 const mockNotFound = jest.fn(() => {
   throw new Error('NEXT_NOT_FOUND');
 });
 const mockLoadPublicBlogPost = jest.fn();
 
 jest.mock('next/navigation', () => ({ notFound: () => mockNotFound() }));
+jest.mock('react', () => {
+  const actual = jest.requireActual('react');
+  return {
+    ...actual,
+    cache:
+      (loader: (slug: string) => Promise<unknown>) =>
+      (slug: string): Promise<unknown> => {
+        const cached = mockRequestCache.get(slug);
+        if (cached) return cached;
+        const result = loader(slug);
+        mockRequestCache.set(slug, result);
+        return result;
+      },
+  };
+});
 jest.mock('@/lib/blog/public-api', () => ({
   loadPublicBlogPost: (...args: unknown[]) => mockLoadPublicBlogPost(...args),
 }));
@@ -72,6 +88,7 @@ const publishedPost = {
 describe('BlogPostPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRequestCache = new Map();
   });
 
   it.each([
@@ -121,5 +138,19 @@ describe('BlogPostPage', () => {
       title: 'First real post',
       description: 'Loaded from the backend',
     });
+  });
+
+  it('shares one request-scoped post snapshot between metadata and page rendering', async () => {
+    mockLoadPublicBlogPost.mockResolvedValue(publishedPost);
+    const params = Promise.resolve({ slug: 'one-request-snapshot' });
+
+    const metadata = await generateMetadata({ params });
+    const view = await BlogPostPage({ params });
+    render(view);
+
+    expect(metadata.title).toBe('First real post');
+    expect(screen.getByRole('heading', { level: 1, name: 'First real post' })).toBeInTheDocument();
+    expect(mockLoadPublicBlogPost).toHaveBeenCalledTimes(1);
+    expect(mockLoadPublicBlogPost).toHaveBeenCalledWith('one-request-snapshot');
   });
 });

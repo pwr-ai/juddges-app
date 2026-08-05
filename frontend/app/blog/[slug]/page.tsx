@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, Clock, Eye, User } from "lucide-react";
+import { cache } from "react";
 
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { MarkdownRenderer } from "@/components/blog/markdown-renderer";
@@ -22,6 +23,11 @@ import type { BlogPost } from "@/types/blog";
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
 }
+
+// Next invokes metadata and the page within one server request. React cache
+// keeps both consumers on the same validated upstream snapshot while the
+// underlying backend fetch remains explicitly no-store.
+const getPublicBlogPost = cache(loadPublicBlogPost);
 
 function formatDate(value?: string | null): string {
   if (!value) return "Publication date unavailable";
@@ -64,7 +70,7 @@ export async function generateMetadata({
   params,
 }: BlogPostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await loadPublicBlogPost(slug);
+  const post = await getPublicBlogPost(slug);
   if (!post) return { title: "Article not found" };
 
   return {
@@ -83,7 +89,7 @@ export async function generateMetadata({
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params;
-  const post = await loadPublicBlogPost(slug);
+  const post = await getPublicBlogPost(slug);
   if (!post) notFound();
 
   return (
