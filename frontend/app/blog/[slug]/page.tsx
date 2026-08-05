@@ -18,6 +18,7 @@ import {
   loadPublicBlogPost,
   type PublicBlogPost,
 } from "@/lib/blog/public-api";
+import { normalizeBlogImageSource } from "@/lib/blog/image-policy";
 import type { BlogPost } from "@/types/blog";
 
 interface BlogPostPageProps {
@@ -72,6 +73,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPublicBlogPost(slug);
   if (!post) return { title: "Article not found" };
+  const featuredImage = normalizeBlogImageSource(post.featured_image);
 
   return {
     title: post.title,
@@ -82,7 +84,7 @@ export async function generateMetadata({
       description: post.excerpt,
       publishedTime: post.published_at ?? undefined,
       modifiedTime: post.updated_at,
-      images: post.featured_image ? [post.featured_image] : undefined,
+      images: featuredImage ? [featuredImage] : undefined,
     },
   };
 }
@@ -91,6 +93,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const { slug } = await params;
   const post = await getPublicBlogPost(slug);
   if (!post) notFound();
+  const featuredImage = normalizeBlogImageSource(post.featured_image);
 
   return (
     <PaperBackground grain className="min-h-screen py-12 md:py-16">
@@ -135,16 +138,29 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </div>
         </header>
 
-        {post.featured_image ? (
+        {featuredImage ? (
           <div className="relative mt-10 aspect-[2/1] overflow-hidden border border-[var(--rule)]">
             <Image
-              src={post.featured_image}
+              src={featuredImage}
               alt=""
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 960px"
               className="object-cover"
             />
+          </div>
+        ) : post.featured_image ? (
+          <div
+            role="img"
+            aria-label="Article image unavailable"
+            className="mt-10 flex aspect-[2/1] items-center justify-center border border-[var(--rule)] bg-[var(--parchment-deep)]"
+          >
+            <span
+              aria-hidden="true"
+              className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--ink-soft)]"
+            >
+              Article image unavailable
+            </span>
           </div>
         ) : null}
 
