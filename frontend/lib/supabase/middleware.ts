@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
+import { isPublicRequest } from "@/lib/supabase/public-route-policy";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -65,21 +66,10 @@ export async function updateSession(request: NextRequest) {
 
   if (
     !user &&
-    request.nextUrl.pathname !== "/" &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/about") &&
-    !request.nextUrl.pathname.startsWith("/ecosystem") &&
-    // Metadata image routes must be reachable by social/search crawlers.
-    !request.nextUrl.pathname.startsWith("/opengraph-image") &&
-    !request.nextUrl.pathname.startsWith("/twitter-image") &&
-    !request.nextUrl.pathname.startsWith("/onboarding") &&
-    !request.nextUrl.pathname.startsWith("/api/health") &&
-    !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
-    // The retired GraphQL bridge must reach the Next.js router and resolve as
-    // 404. Keep this exact so lookalike paths remain protected.
-    request.nextUrl.pathname !== "/api/graphql" &&
-    !request.nextUrl.pathname.startsWith("/status") &&
-    !request.nextUrl.pathname.startsWith("/offline")
+    !isPublicRequest({
+      pathname: request.nextUrl.pathname,
+      method: request.method,
+    })
   ) {
     // Preserve the originally-requested path (and query) so the login form
     // can return the user there after a successful sign-in instead of

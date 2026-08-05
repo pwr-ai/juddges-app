@@ -1,200 +1,239 @@
 /**
- * Middleware route-matrix coverage.
- *
- * Exhaustively exercises the public/protected allow-list enforced by the
- * Supabase auth middleware. Each route in PUBLIC_PAGES / PUBLIC_API /
- * PROTECTED below mirrors the conditions in
- * `frontend/lib/supabase/middleware.ts` (the `if (!user && !startsWith(...))`
- * block around lines 66-83 at the time of writing). If you add or remove
- * a path there, update the matching list below — otherwise this matrix
- * silently drifts out of sync with the real allow-list and stops catching
- * regressions.
- *
- * Test groups:
- *   1. PUBLIC_PAGES, anonymous browser → load without bouncing to /auth/login.
- *   2. PROTECTED, anonymous browser  → redirect to /auth/login.
- *   3. PUBLIC_API, anonymous request → no auth-bounce, no 5xx.
- *   4. PROTECTED, authenticated      → load to themselves (no redirect).
- *
- * Each route is its own `test(...)` so a single allow-list drift fails
- * one specific entry rather than masking failures behind a single test.
+ * Representative real-HTTP coverage for the central public route policy.
+ * The pure Jest policy matrix is exhaustive; this file proves that anonymous
+ * requests reach real pages/handlers or receive exact login redirects.
  */
-
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIResponse } from '@playwright/test';
 import { test as authTest } from '../helpers/auth-fixture';
 
-// ---------------------------------------------------------------------------
-// Mirrors the allow-list in `frontend/lib/supabase/middleware.ts`.
-// If you add a path there, update this list.
-// ---------------------------------------------------------------------------
-const PUBLIC_PAGES = [
+const PUBLIC_HTML_PAGES = [
   '/',
   '/about',
   '/ecosystem',
+  '/onboarding',
+  '/status',
+  '/accessibility',
+  '/contact',
+  '/cookies',
+  '/privacy',
+  '/team',
+  '/terms',
+  '/legal/disclaimer',
+  '/legal/terms',
+  '/blog',
+  '/publications',
+  '/use-cases',
+  '/use-cases/uk-judgments',
   '/auth/login',
   '/auth/sign-up',
   '/auth/forgot-password',
-  '/status',
-  '/offline',
 ] as const;
 
-// Mirrors the allow-list in `frontend/lib/supabase/middleware.ts`.
-// If you add a path there, update this list.
-const PUBLIC_API = [
-  '/api/health',
+const PUBLIC_ASSET_ROUTES = ['/opengraph-image', '/twitter-image'] as const;
+
+const PUBLIC_API_ROUTES = [
+  '/api/health/status',
   '/api/dashboard/stats',
+  '/api/contact',
+  '/api/blog/categories',
+  '/api/blog/posts',
+  '/api/publications',
 ] as const;
 
-// Routes NOT in the middleware allow-list, which therefore require auth.
-// Mirrors the allow-list in `frontend/lib/supabase/middleware.ts`.
-// If you add a path to the allow-list there, remove it from this list.
-const PROTECTED = ['/search', '/chat', '/collections', '/documents'] as const;
+const PROTECTED_REQUESTS = [
+  {
+    method: 'GET',
+    url: '/search?q=vat&court=appeal',
+    next: '/search?q=vat&court=appeal',
+  },
+  { method: 'GET', url: '/chat', next: '/chat' },
+  { method: 'GET', url: '/collections', next: '/collections' },
+  { method: 'GET', url: '/documents', next: '/documents' },
+  { method: 'GET', url: '/blog/admin', next: '/blog/admin' },
+  { method: 'GET', url: '/blog/admin/new', next: '/blog/admin/new' },
+  {
+    method: 'GET',
+    url: '/publications/admin',
+    next: '/publications/admin',
+  },
+  { method: 'POST', url: '/api/publications', next: '/api/publications' },
+  {
+    method: 'PUT',
+    url: '/api/publications/publication-1',
+    next: '/api/publications/publication-1',
+  },
+  {
+    method: 'DELETE',
+    url: '/api/publications/publication-1',
+    next: '/api/publications/publication-1',
+  },
+  {
+    method: 'POST',
+    url: '/api/health/invalidate',
+    next: '/api/health/invalidate',
+  },
+  {
+    method: 'POST',
+    url: '/api/blog/admin/posts',
+    next: '/api/blog/admin/posts',
+  },
+  { method: 'PUT', url: '/api/contact', next: '/api/contact' },
+] as const;
 
-/**
- * Escape a string for safe interpolation into a RegExp literal. Used to
- * build the per-URL "page stayed on this path" assertion below.
- */
+const LOOKALIKE_REQUESTS = [
+  '/about-private',
+  '/about/team',
+  '/authentic',
+  '/blogger',
+  '/blog-private',
+  '/publications-private',
+  '/use-cases-private',
+  '/api/healthcheck',
+  '/api/dashboard/stats-preview',
+  '/api/blogger',
+  '/api/publications-private',
+  '/api/contact-form',
+  '/api/graphql/nested',
+] as const;
+
+const AUTHENTICATED_PAGES = [
+  '/search',
+  '/chat',
+  '/collections',
+  '/documents',
+] as const;
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// ---------------------------------------------------------------------------
-// 1. PUBLIC_PAGES, anonymous browser
-// ---------------------------------------------------------------------------
-test.describe.parallel('middleware allow-list — public pages, anonymous', () => {
-  // Cookie-less context: regardless of any future fixture-level state we
-  // pick up, we want this group to test the truly-anonymous path.
+interface StatusResponse {
+  status(): number;
+}
+
+function expect2xx(response: StatusResponse, label: string): void {
+  expect(
+    response.status(),
+    `${label} returned ${response.status()}`,
+  ).toBeGreaterThanOrEqual(200);
+  expect(
+    response.status(),
+    `${label} returned ${response.status()}`,
+  ).toBeLessThan(300);
+}
+
+function expectLoginRedirect(
+  response: APIResponse,
+  expectedNext: string,
+): void {
+  expect(response.status()).toBe(307);
+  const location = response.headers().location;
+  expect(location).toBeTruthy();
+  if (!location) throw new Error('Login redirect is missing Location');
+  const redirect = new URL(location);
+  expect(redirect.pathname).toBe('/auth/login');
+  expect(redirect.searchParams.get('next')).toBe(expectedNext);
+}
+
+test.describe.parallel('public pages — anonymous', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  for (const url of PUBLIC_PAGES) {
-    test(`GET ${url} loads without bouncing to /auth/login`, async ({ page }) => {
-      const response = await page.goto(url, { waitUntil: 'load' });
-
-      // Public routes must NOT be auth-bounced by middleware. The contract
-      // we test:
-      //   - For URLs OTHER than /auth/login itself: final URL must not be
-      //     `/auth/login` (the canonical bounce target).
-      //   - For ALL URLs (including the auth-* pages): the final pathname
-      //     must still match the requested path. Catches a hypothetical
-      //     bounce that goes somewhere unexpected (e.g. to `/`).
-      const finalPath = new URL(page.url()).pathname;
-      if (url !== '/auth/login') {
-        expect(
-          finalPath,
-          `Public page ${url} was auth-bounced to /auth/login. ` +
-            `Middleware allow-list may have drifted.`,
-        ).not.toBe('/auth/login');
-      }
-      expect(
-        finalPath === url || finalPath.startsWith(url + '/'),
-        `Public page ${url} ended up at ${finalPath} ` +
-          `(expected pathname to equal ${url} or start with ${url}/).`,
-      ).toBe(true);
-
-      // `page.goto` follows redirects, so the final URL check above is
-      // primary. Additionally guard against unexpected 5xx errors that
-      // would mask real bugs behind a "didn't redirect to login" pass.
-      expect(
-        response,
-        `Expected a navigation response for public page ${url}`,
-      ).not.toBeNull();
-      const status = response!.status();
-      expect(
-        status,
-        `Public page ${url} returned ${status}; should be < 500.`,
-      ).toBeLessThan(500);
+  for (const url of PUBLIC_HTML_PAGES) {
+    test(`GET ${url} returns a real page`, async ({ page }) => {
+      const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+      expect(response, `Expected a navigation response for ${url}`).not.toBeNull();
+      expect2xx(response!, `Public page ${url}`);
+      expect(new URL(page.url()).pathname).toBe(url);
+      await expect(page).not.toHaveURL(/\/auth\/login/);
     });
   }
 });
 
-// ---------------------------------------------------------------------------
-// 2. PROTECTED routes, anonymous browser — must redirect to /auth/login
-// ---------------------------------------------------------------------------
-test.describe.parallel('middleware allow-list — protected pages, anonymous', () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
-
-  for (const url of PROTECTED) {
-    test(`GET ${url} redirects anonymous user to /auth/login`, async ({ page }) => {
-      await page.goto(url, { waitUntil: 'load' });
-      // Middleware issues a 307 to /auth/login; Playwright follows the
-      // redirect so the final URL is the login page. We assert on the
-      // pathname only — middleware preserves search params via
-      // `url.clone()`, so a `?next=...` query may be appended in future.
-      await expect(page).toHaveURL(/\/auth\/login/);
+test.describe.parallel('public metadata routes — anonymous', () => {
+  for (const url of PUBLIC_ASSET_ROUTES) {
+    test(`GET ${url} returns a real asset`, async ({ request }) => {
+      const response = await request.get(url, { maxRedirects: 0 });
+      expect2xx(response, `Public asset ${url}`);
     });
   }
 });
 
-// ---------------------------------------------------------------------------
-// 3. PUBLIC_API, anonymous request — must NOT auth-bounce
-// ---------------------------------------------------------------------------
-test.describe.parallel('middleware allow-list — public API, anonymous', () => {
-  for (const url of PUBLIC_API) {
-    test(`GET ${url} is not auth-bounced for anonymous caller`, async ({ request }) => {
-      const response = await request.get(url, {
-        // Don't follow redirects — we want the raw middleware response,
-        // not its target.
+test.describe.parallel('public APIs — anonymous', () => {
+  for (const url of PUBLIC_API_ROUTES) {
+    test(`GET ${url} returns 2xx`, async ({ request }) => {
+      const response = await request.get(url, { maxRedirects: 0 });
+      expect2xx(response, `Public API GET ${url}`);
+      expect(response.headers().location).toBeUndefined();
+    });
+
+    test(`HEAD ${url} returns 2xx`, async ({ request }) => {
+      const response = await request.fetch(url, {
+        method: 'HEAD',
         maxRedirects: 0,
       });
-      const status = response.status();
-      const location = response.headers()['location'] ?? '';
+      expect2xx(response, `Public API HEAD ${url}`);
+      expect(response.headers().location).toBeUndefined();
+    });
+  }
 
-      // Contract: middleware does NOT redirect this URL to /auth/login.
-      // The endpoint itself may 200 (happy path), 4xx (legitimate input
-      // error), or 404 (route not implemented in this build). It must
-      // NOT be a 3xx whose Location header points at /auth/login.
-      const isAuthBounce =
-        status >= 300 && status < 400 && /\/auth\/login/.test(location);
-      expect(
-        isAuthBounce,
-        `Public API ${url} was auth-bounced (status=${status}, location=${location}). ` +
-          `Middleware allow-list may have drifted.`,
-      ).toBe(false);
+  test('POST /api/contact reaches validation without side effects', async ({
+    request,
+  }) => {
+    const response = await request.post('/api/contact', {
+      data: { name: 'A', email: 'bad', company: '', message: 'short' },
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(400);
+    expect(response.headers().location).toBeUndefined();
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ error: 'VALIDATION_ERROR' }),
+    );
+  });
 
-      // Also guard against 5xx — those would mask real bugs behind a
-      // "no auth-bounce" pass.
-      expect(
-        status,
-        `Public API ${url} returned ${status}; should be < 500.`,
-      ).toBeLessThan(500);
+  test('POST /api/graphql reaches the retired route 404', async ({ request }) => {
+    const response = await request.post('/api/graphql', {
+      data: {},
+      maxRedirects: 0,
+    });
+    expect(response.status()).toBe(404);
+    expect(response.headers().location).toBeUndefined();
+  });
+});
+
+test.describe.parallel('protected requests — anonymous', () => {
+  for (const routeCase of PROTECTED_REQUESTS) {
+    test(`${routeCase.method} ${routeCase.url} redirects with next`, async ({
+      request,
+    }) => {
+      const response = await request.fetch(routeCase.url, {
+        method: routeCase.method,
+        maxRedirects: 0,
+      });
+      expectLoginRedirect(response, routeCase.next);
+    });
+  }
+
+  for (const url of LOOKALIKE_REQUESTS) {
+    test(`GET ${url} remains protected`, async ({ request }) => {
+      const response = await request.get(url, { maxRedirects: 0 });
+      expectLoginRedirect(response, url);
     });
   }
 });
 
-// ---------------------------------------------------------------------------
-// 4. PROTECTED routes, authenticated — must load to themselves
-// ---------------------------------------------------------------------------
-authTest.describe.parallel(
-  'middleware allow-list — protected pages, authenticated',
-  () => {
-    // Scoped CI skip: the PUBLIC_PAGES / PROTECTED-anonymous / PUBLIC_API
-    // blocks above don't need real creds and stay running in CI. Only this
-    // describe depends on the real-auth `setup` project's storage state
-    // (see tests/e2e/auth.setup.ts). Skip MUST be inside the describe so it
-    // doesn't bubble up to a file-level skip that would also skip the
-    // anonymous blocks.
-    authTest.skip(
-      !!process.env.CI && (!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD),
-      'authenticated route checks require real Supabase credentials — set TEST_USER_EMAIL/TEST_USER_PASSWORD to enable',
-    );
+authTest.describe.parallel('protected pages — authenticated', () => {
+  authTest.skip(
+    !!process.env.CI &&
+      (!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD),
+    'authenticated route checks require real Supabase credentials',
+  );
 
-    for (const url of PROTECTED) {
-      authTest(
-        `GET ${url} loads to itself for authenticated user`,
-        async ({ authenticatedPage }) => {
-          await authenticatedPage.goto(url, { waitUntil: 'load' });
-
-          // Some protected routes may legitimately redirect to a deeper
-          // path (e.g. `/documents` → `/documents/<id>` if the app maps
-          // the index to a default detail page). Allow either:
-          //   - exact: ^<url>(/|?|#|$)
-          //   - deeper: ^<url>/...
-          // by anchoring on `^[^?#]*<url>` and forbidding /auth/login.
-          const pathPattern = new RegExp('^[^?#]*' + escapeRegex(url));
-          await expect(authenticatedPage).toHaveURL(pathPattern);
-          await expect(authenticatedPage).not.toHaveURL(/\/auth\/login/);
-        },
-      );
-    }
-  },
-);
+  for (const url of AUTHENTICATED_PAGES) {
+    authTest(`GET ${url} stays authenticated`, async ({ authenticatedPage }) => {
+      await authenticatedPage.goto(url, { waitUntil: 'load' });
+      const pathPattern = new RegExp('^[^?#]*' + escapeRegex(url));
+      await expect(authenticatedPage).toHaveURL(pathPattern);
+      await expect(authenticatedPage).not.toHaveURL(/\/auth\/login/);
+    });
+  }
+});
