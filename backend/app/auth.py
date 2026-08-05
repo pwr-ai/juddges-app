@@ -31,6 +31,10 @@ async def verify_api_key(api_key: str = Depends(api_key_header)):
 
     if not secrets.compare_digest(api_key, API_KEY):
         logger.warning("Invalid API key attempt from request")
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "APIKey"},
+        )
 
     return api_key

@@ -131,6 +131,17 @@ class TestExactAuthStatusContracts:
             assert response.json() == {"detail": "Not authenticated"}, endpoint
             assert response.headers["WWW-Authenticate"] == "Bearer", endpoint
 
+    async def test_invalid_api_key_is_401(
+        self, client: AsyncClient, invalid_api_headers: dict[str, str]
+    ):
+        """An invalid API key is an authentication failure with its scheme."""
+        for endpoint in self.API_KEY_ENDPOINTS:
+            response = await client.get(endpoint, headers=invalid_api_headers)
+
+            assert response.status_code == 401, endpoint
+            assert response.json() == {"detail": "Invalid API key"}, endpoint
+            assert response.headers["WWW-Authenticate"] == "APIKey", endpoint
+
     @patch("app.core.auth_jwt.get_admin_supabase_client")
     async def test_invalid_bearer_token_is_401(
         self,
