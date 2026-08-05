@@ -1,4 +1,4 @@
-"""Integration tests for the topics-only autocomplete endpoint."""
+"""API integration tests for autocomplete using in-process fakes only."""
 
 from typing import Any
 from unittest.mock import patch
@@ -6,6 +6,8 @@ from unittest.mock import patch
 import pytest
 
 from app.server import app
+
+pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)

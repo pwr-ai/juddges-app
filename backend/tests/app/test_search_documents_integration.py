@@ -1,10 +1,12 @@
-"""Integration tests for the Meilisearch-backed /api/search/documents endpoint."""
+"""API integration tests for document search using in-process fakes only."""
 
 from typing import Any
 
 import pytest
 
 from app.server import app
+
+pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)
@@ -47,6 +49,7 @@ async def test_documents_search_returns_pagination_metadata(authenticated_client
             limit: int = 10,
             offset: int = 0,
             filters: str | None = None,
+            semantic_ratio: float = 0.6,
         ) -> dict[str, Any]:
             assert query == "appeal"
             assert limit == 5
@@ -100,6 +103,7 @@ async def test_documents_search_signals_no_more_pages(authenticated_client):
             limit: int = 10,
             offset: int = 0,
             filters: str | None = None,
+            semantic_ratio: float = 0.6,
         ) -> dict[str, Any]:
             return {
                 "hits": [{"id": "doc-1"}],
@@ -132,6 +136,7 @@ async def test_documents_search_returns_502_on_backend_failure(authenticated_cli
             limit: int = 10,
             offset: int = 0,
             filters: str | None = None,
+            semantic_ratio: float = 0.6,
         ) -> dict[str, Any]:
             raise RuntimeError("upstream timeout")
 
@@ -158,6 +163,7 @@ async def test_documents_search_accepts_empty_query(authenticated_client):
             limit: int = 10,
             offset: int = 0,
             filters: str | None = None,
+            semantic_ratio: float = 0.6,
         ) -> dict[str, Any]:
             assert query == ""
             return {
