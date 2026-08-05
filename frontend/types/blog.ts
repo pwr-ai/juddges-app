@@ -25,8 +25,7 @@ export interface BlogPost {
 export interface BlogCategory {
   id: string;
   name: string;
-  slug: string;
   description?: string;
-  color: string; // Tailwind color class
-  icon?: string;
+  created_at?: string;
+  post_count?: number;
 }
