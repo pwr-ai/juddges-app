@@ -2,12 +2,42 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
 
-const CHAT_MESSAGES_HANDLER_PATH = /^\/api\/chats\/[^/]+\/messages$/;
+const UUID_PATH_SEGMENT =
+  "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const CHAT_MESSAGES_HANDLER_PATH = new RegExp(
+  `^/api/chats/${UUID_PATH_SEGMENT}/messages$`,
+  "i",
+);
+const CHAT_DETAIL_PAGE_PATH = new RegExp(`^/chat/${UUID_PATH_SEGMENT}$`, "i");
+const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
 
 function canAnonymousRequestReachHandler(request: NextRequest): boolean {
   return (
     request.method === "GET" &&
     CHAT_MESSAGES_HANDLER_PATH.test(request.nextUrl.pathname)
+  );
+}
+
+function isExactChatPageRequest(request: NextRequest): boolean {
+  return (
+    request.method === "GET" &&
+    CHAT_DETAIL_PAGE_PATH.test(request.nextUrl.pathname)
+  );
+}
+
+function chatPageId(request: NextRequest): string | null {
+  if (request.method !== "GET") return null;
+  const match = request.nextUrl.pathname.match(CHAT_DETAIL_PAGE_PATH);
+  return match ? match[0].slice("/chat/".length) : null;
+}
+
+function chatPageError(status: 503 | 504): NextResponse {
+  return NextResponse.json(
+    {
+      message:
+        status === 504 ? "Chat lookup timed out" : "Chat service unavailable",
+    },
+    { status, headers: { "Cache-Control": "no-store" } },
   );
 }
 
@@ -46,6 +76,7 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
   let user = null;
+  let authLookupFailed = false;
   try {
     const {
       data: { user: authUser },
@@ -58,6 +89,7 @@ export async function updateSession(request: NextRequest) {
       error.message !== "Auth session missing!" &&
       !error.message.includes("refresh_token_not_found")
     ) {
+      authLookupFailed = true;
       // Surface unexpected auth failures (expired tokens that won't refresh,
       // project-ref mismatches, network errors). Benign anonymous-user errors
       // are still ignored to avoid console spam.
@@ -69,7 +101,56 @@ export async function updateSession(request: NextRequest) {
     }
   } catch (error) {
     // Catch any unexpected errors and continue without user
+    authLookupFailed = true;
     logger.error("Unexpected error in auth middleware: ", error);
+  }
+
+  if (authLookupFailed && isExactChatPageRequest(request)) {
+    return chatPageError(503);
+  }
+
+  const requestedChatId = user ? chatPageId(request) : null;
+  if (user && requestedChatId) {
+    const controller = new AbortController();
+    const timeoutReason = new DOMException("Chat lookup timed out", "TimeoutError");
+    const timeout = setTimeout(
+      () => controller.abort(timeoutReason),
+      CHAT_PAGE_LOOKUP_TIMEOUT_MS,
+    );
+    try {
+      const { data: chat, error } = await supabase
+        .from("chats")
+        .select("id")
+        .eq("id", requestedChatId)
+        .eq("user_id", user.id)
+        .abortSignal(controller.signal)
+        .maybeSingle();
+
+      if (error) {
+        logger.error("Chat access lookup failed in middleware", error, {
+          path: request.nextUrl.pathname,
+        });
+        return chatPageError(503);
+      }
+      if (!chat) {
+        const notFoundUrl = request.nextUrl.clone();
+        notFoundUrl.pathname = "/__chat-not-found";
+        return NextResponse.rewrite(notFoundUrl, { status: 404 });
+      }
+    } catch (error) {
+      if (
+        controller.signal.aborted &&
+        controller.signal.reason === timeoutReason
+      ) {
+        return chatPageError(504);
+      }
+      logger.error("Chat access lookup failed in middleware", error, {
+        path: request.nextUrl.pathname,
+      });
+      return chatPageError(503);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   if (
