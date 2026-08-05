@@ -150,6 +150,33 @@ async def get_post_author(supabase, author_id: str) -> dict:
     return {"id": author_id, "name": "Anonymous", "title": "Researcher", "avatar": None}
 
 
+def public_author(author: dict[str, Any] | None, author_id: str | None = None) -> dict:
+    """Return the allowlisted author shape for unauthenticated responses."""
+    author = author or {}
+    return {
+        "id": author.get("id") or author_id,
+        "name": author.get("name") or "Anonymous",
+        "avatar": author.get("avatar"),
+        "title": author.get("title") or "Researcher",
+    }
+
+
+async def get_public_post_author(supabase, author_id: str) -> dict:
+    """Load only fields that may be exposed by public blog endpoints."""
+    try:
+        response = (
+            supabase.table("user_profiles")
+            .select("id, name, avatar, title")
+            .eq("id", author_id)
+            .single()
+            .execute()
+        )
+        return public_author(response.data, author_id)
+    except (PostgrestAPIError, StorageException) as e:
+        logger.warning(f"Could not fetch public author profile for {author_id}: {e}")
+        return public_author(None, author_id)
+
+
 async def increment_view_count(supabase, post_id: str):
     """Increment view count for a post."""
     try:
@@ -216,24 +243,6 @@ def ensure_unique_slug(
         candidate = f"{base_slug}-{attempt}"
 
 
-def apply_public_post_filters(
-    query: Any,
-    *,
-    category: str | None,
-    search: str | None,
-    tagged_post_ids: list[str] | None,
-) -> Any:
-    """Apply the same public filters to data and count queries."""
-    query = query.eq("status", "published").is_("deleted_at", "null")
-    if category:
-        query = query.eq("category", category)
-    if search:
-        query = query.or_(f"title.ilike.%{search}%,excerpt.ilike.%{search}%")
-    if tagged_post_ids is not None:
-        query = query.in_("id", tagged_post_ids)
-    return query
-
-
 # ==============================================
 # PUBLIC ENDPOINTS
 # ==============================================
@@ -256,62 +265,25 @@ async def list_posts(
     """
     try:
         supabase = get_admin_supabase_client()
-
-        tagged_post_ids: list[str] | None = None
-        if tag:
-            tag_response = (
-                supabase.table("blog_tags").select("post_id").eq("tag", tag).execute()
-            )
-            tagged_post_ids = list(
-                dict.fromkeys(row["post_id"] for row in (tag_response.data or []))
-            )
-            if not tagged_post_ids:
-                return {
-                    "data": [],
-                    "pagination": {
-                        "total": 0,
-                        "page": page,
-                        "limit": limit,
-                        "total_pages": 0,
-                        "has_next": False,
-                        "has_prev": page > 1,
-                    },
-                }
-
-        query = apply_public_post_filters(
-            supabase.table("blog_posts").select("*, author_id"),
-            category=category,
-            search=search,
-            tagged_post_ids=tagged_post_ids,
-        )
-
-        # Sorting
-        query = query.order(sort, desc=(order == "desc"))
-
-        # Pagination
-        offset = (page - 1) * limit
-        query = query.range(offset, offset + limit - 1)
-
-        # Execute query
-        response = query.execute()
-
-        # Enrich posts with tags and author
+        response = supabase.rpc(
+            "list_public_blog_posts",
+            {
+                "p_page": page,
+                "p_limit": limit,
+                "p_category": category,
+                "p_tag": tag,
+                "p_search": search,
+                "p_sort": sort,
+                "p_order": order,
+            },
+        ).execute()
+        payload = response.data or {}
+        total = int(payload.get("total") or 0)
         posts = []
-        for post in response.data:
-            tags = await get_post_tags(supabase, post["id"])
-            author = await get_post_author(supabase, post["author_id"])
-
-            posts.append({**post, "tags": tags, "author": author})
-
-        count_query = apply_public_post_filters(
-            supabase.table("blog_posts").select("id", count="exact"),
-            category=category,
-            search=search,
-            tagged_post_ids=tagged_post_ids,
-        )
-        count_response = count_query.execute()
-
-        total = count_response.count or 0
+        for post in payload.get("data") or []:
+            safe_post = dict(post)
+            safe_post["author"] = public_author(post.get("author"))
+            posts.append(safe_post)
         total_pages = (total + limit - 1) // limit
 
         return {
@@ -357,7 +329,7 @@ async def get_post(slug: str):
 
         # Get tags and author
         tags = await get_post_tags(supabase, post["id"])
-        author = await get_post_author(supabase, post["author_id"])
+        author = await get_public_post_author(supabase, post["author_id"])
 
         # Get related posts (same category, different post)
         related_response = (
