@@ -25100,7 +25100,7 @@
     },
     "/embeddings/models": {
       "get": {
-        "description": "List all available embedding models and their configurations.",
+        "description": "List models for API-key-authenticated read-only callers.",
         "operationId": "list_models_embeddings_models_get",
         "responses": {
           "200": {
@@ -25127,7 +25127,7 @@
     },
     "/embeddings/models/active": {
       "get": {
-        "description": "Get the currently active embedding model configuration.",
+        "description": "Get the active model for API-key-authenticated read-only callers.",
         "operationId": "get_active_model_embeddings_models_active_get",
         "responses": {
           "200": {
@@ -25150,7 +25150,7 @@
         ]
       },
       "post": {
-        "description": "Set the active embedding model for search and indexing.",
+        "description": "Set the global model; requires a service API key and admin Bearer token.",
         "operationId": "set_active_model_endpoint_embeddings_models_active_post",
         "requestBody": {
           "content": {
@@ -25186,7 +25186,8 @@
         },
         "security": [
           {
-            "APIKeyHeader": []
+            "APIKeyHeader": [],
+            "HTTPBearer": []
           }
         ],
         "summary": "Set the active embedding model",
@@ -25197,7 +25198,7 @@
     },
     "/embeddings/test": {
       "post": {
-        "description": "Generate a test embedding to verify model connectivity.",
+        "description": "Test a model without changing global state; API-key auth is sufficient.",
         "operationId": "test_embedding_embeddings_test_post",
         "requestBody": {
           "content": {

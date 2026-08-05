@@ -2693,7 +2693,7 @@ export interface paths {
         };
         /**
          * List available embedding models
-         * @description List all available embedding models and their configurations.
+         * @description List models for API-key-authenticated read-only callers.
          */
         get: operations["list_models_embeddings_models_get"];
         put?: never;
@@ -2713,13 +2713,13 @@ export interface paths {
         };
         /**
          * Get the currently active embedding model
-         * @description Get the currently active embedding model configuration.
+         * @description Get the active model for API-key-authenticated read-only callers.
          */
         get: operations["get_active_model_embeddings_models_active_get"];
         put?: never;
         /**
          * Set the active embedding model
-         * @description Set the active embedding model for search and indexing.
+         * @description Set the global model; requires a service API key and admin Bearer token.
          */
         post: operations["set_active_model_endpoint_embeddings_models_active_post"];
         delete?: never;
@@ -2739,7 +2739,7 @@ export interface paths {
         put?: never;
         /**
          * Test embedding generation
-         * @description Generate a test embedding to verify model connectivity.
+         * @description Test a model without changing global state; API-key auth is sufficient.
          */
         post: operations["test_embedding_embeddings_test_post"];
         delete?: never;
