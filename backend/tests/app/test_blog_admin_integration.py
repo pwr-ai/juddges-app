@@ -51,6 +51,7 @@ class FakeQuery:
         self.update_value: dict[str, Any] | None = None
         self.delete_mode = False
         self.count_exact = False
+        self.search_value: str | None = None
 
     def select(self, _fields: str = "*", count: str | None = None) -> FakeQuery:
         self.count_exact = count == "exact"
@@ -68,8 +69,14 @@ class FakeQuery:
         self.filters.append(("is", key, value))
         return self
 
-    def or_(self, _clause: str) -> FakeQuery:
-        # Search filtering is not needed for these tests.
+    def in_(self, key: str, values: list[Any]) -> FakeQuery:
+        self.filters.append(("in", key, values))
+        return self
+
+    def or_(self, clause: str) -> FakeQuery:
+        prefix = "title.ilike.%"
+        if clause.startswith(prefix):
+            self.search_value = clause[len(prefix) :].split("%", 1)[0].casefold()
         return self
 
     def limit(self, value: int) -> FakeQuery:
@@ -106,11 +113,18 @@ class FakeQuery:
                 return False
             if op == "neq" and row.get(key) == value:
                 return False
+            if op == "in" and row.get(key) not in value:
+                return False
             if op == "is":
                 if value == "null" and row.get(key) is not None:
                     return False
                 if value != "null" and row.get(key) != value:
                     return False
+        if self.search_value:
+            title = str(row.get("title", "")).casefold()
+            excerpt = str(row.get("excerpt", "")).casefold()
+            if self.search_value not in title and self.search_value not in excerpt:
+                return False
         return True
 
     def _filtered_rows(self) -> list[dict[str, Any]]:
@@ -285,6 +299,117 @@ async def test_blog_admin_crud_happy_path(
         assert delete_response.json()["success"] is True
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+@pytest.mark.api
+async def test_public_blog_filters_before_pagination_and_counts_filtered_rows(
+    authenticated_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+):
+    fake_supabase = FakeSupabase()
+
+    def published_post(
+        post_id: str,
+        title: str,
+        category: str,
+        published_at: str,
+    ) -> dict[str, Any]:
+        return {
+            "id": post_id,
+            "slug": post_id,
+            "title": title,
+            "excerpt": f"Excerpt for {title}",
+            "content": title,
+            "featured_image": None,
+            "author_id": "user-1",
+            "category": category,
+            "status": "published",
+            "published_at": published_at,
+            "read_time": 1,
+            "ai_summary": None,
+            "views": 0,
+            "likes_count": 0,
+            "created_at": published_at,
+            "updated_at": published_at,
+            "deleted_at": None,
+        }
+
+    fake_supabase.tables["blog_posts"] = [
+        # These newer rows would consume page 1 before the old tag-after-range fix.
+        published_post(
+            "other-1", "Appeal distraction one", "Research", "2026-08-07T00:00:00Z"
+        ),
+        published_post(
+            "other-2", "Appeal distraction two", "Research", "2026-08-06T00:00:00Z"
+        ),
+        published_post(
+            "match-1", "Appeal match one", "Research", "2026-08-05T00:00:00Z"
+        ),
+        published_post(
+            "match-2", "Appeal match two", "Research", "2026-08-04T00:00:00Z"
+        ),
+        published_post(
+            "match-3", "Appeal match three", "Research", "2026-08-03T00:00:00Z"
+        ),
+        published_post(
+            "wrong-category", "Appeal tutorial", "Tutorials", "2026-08-02T00:00:00Z"
+        ),
+        published_post(
+            "wrong-search", "Contract match", "Research", "2026-08-01T00:00:00Z"
+        ),
+    ]
+    fake_supabase.tables["blog_tags"] = [
+        {"post_id": "other-1", "tag": "other"},
+        {"post_id": "other-2", "tag": "other"},
+        {"post_id": "match-1", "tag": "target"},
+        {"post_id": "match-2", "tag": "target"},
+        {"post_id": "match-3", "tag": "target"},
+        {"post_id": "wrong-category", "tag": "target"},
+        {"post_id": "wrong-search", "tag": "target"},
+    ]
+    monkeypatch.setattr("app.api.blog.get_admin_supabase_client", lambda: fake_supabase)
+
+    first_page = await authenticated_client.get(
+        "/blog/posts",
+        params={
+            "page": 1,
+            "limit": 2,
+            "category": "Research",
+            "search": "appeal",
+            "tag": "target",
+        },
+    )
+    second_page = await authenticated_client.get(
+        "/blog/posts",
+        params={
+            "page": 2,
+            "limit": 2,
+            "category": "Research",
+            "search": "appeal",
+            "tag": "target",
+        },
+    )
+
+    assert first_page.status_code == 200
+    assert [post["id"] for post in first_page.json()["data"]] == [
+        "match-1",
+        "match-2",
+    ]
+    assert first_page.json()["pagination"] == {
+        "total": 3,
+        "page": 1,
+        "limit": 2,
+        "total_pages": 2,
+        "has_next": True,
+        "has_prev": False,
+    }
+
+    assert second_page.status_code == 200
+    assert [post["id"] for post in second_page.json()["data"]] == ["match-3"]
+    assert second_page.json()["pagination"]["total"] == 3
+    assert second_page.json()["pagination"]["total_pages"] == 2
+    assert second_page.json()["pagination"]["has_next"] is False
 
 
 @pytest.mark.anyio

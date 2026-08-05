@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BlogPostCard } from "@/components/blog/blog-post-card";
 import { toast } from "sonner";
 import {
@@ -102,6 +102,8 @@ export default function BlogPage(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const filterGeneration = useRef(0);
+  const loadMoreController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,6 +134,10 @@ export default function BlogPage(): React.JSX.Element {
 
   useEffect(() => {
     const controller = new AbortController();
+    filterGeneration.current += 1;
+    loadMoreController.current?.abort();
+    loadMoreController.current = null;
+    setLoadingMore(false);
 
     const loadFirstPage = async (): Promise<void> => {
       try {
@@ -158,16 +164,38 @@ export default function BlogPage(): React.JSX.Element {
     };
 
     void loadFirstPage();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      const pendingLoadMore = loadMoreController.current;
+      pendingLoadMore?.abort();
+      if (loadMoreController.current === pendingLoadMore) {
+        loadMoreController.current = null;
+      }
+    };
   }, [retryKey, searchQuery, selectedCategory]);
 
   const loadMore = useCallback(async (): Promise<void> => {
     if (!pagination?.has_next || loadingMore) return;
 
+    const controller = new AbortController();
+    const requestGeneration = filterGeneration.current;
+    loadMoreController.current = controller;
+
     try {
       setLoadingMore(true);
       setLoadMoreError(null);
-      const body = await fetchPosts(pagination.page + 1, selectedCategory, searchQuery);
+      const body = await fetchPosts(
+        pagination.page + 1,
+        selectedCategory,
+        searchQuery,
+        controller.signal,
+      );
+      if (
+        controller.signal.aborted ||
+        requestGeneration !== filterGeneration.current
+      ) {
+        return;
+      }
       const nextPosts = normalizePosts(body.data);
       setPosts((current) => {
         const unique = new Map(current.map((post) => [post.id, post]));
@@ -176,12 +204,16 @@ export default function BlogPage(): React.JSX.Element {
       });
       setPagination(body.pagination);
     } catch (error) {
+      if (controller.signal.aborted || isAbortError(error)) return;
       logger.error("Error loading more blog posts", error);
       const message = error instanceof Error ? error.message : "Failed to load more blog posts";
       setLoadMoreError(message);
       toast.error("Failed to load more blog posts", { description: message });
     } finally {
-      setLoadingMore(false);
+      if (loadMoreController.current === controller) {
+        loadMoreController.current = null;
+        setLoadingMore(false);
+      }
     }
   }, [loadingMore, pagination, searchQuery, selectedCategory]);
 

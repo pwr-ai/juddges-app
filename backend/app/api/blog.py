@@ -216,6 +216,24 @@ def ensure_unique_slug(
         candidate = f"{base_slug}-{attempt}"
 
 
+def apply_public_post_filters(
+    query: Any,
+    *,
+    category: str | None,
+    search: str | None,
+    tagged_post_ids: list[str] | None,
+) -> Any:
+    """Apply the same public filters to data and count queries."""
+    query = query.eq("status", "published").is_("deleted_at", "null")
+    if category:
+        query = query.eq("category", category)
+    if search:
+        query = query.or_(f"title.ilike.%{search}%,excerpt.ilike.%{search}%")
+    if tagged_post_ids is not None:
+        query = query.in_("id", tagged_post_ids)
+    return query
+
+
 # ==============================================
 # PUBLIC ENDPOINTS
 # ==============================================
@@ -239,20 +257,33 @@ async def list_posts(
     try:
         supabase = get_admin_supabase_client()
 
-        # Build query
-        query = (
-            supabase.table("blog_posts")
-            .select("*, author_id")
-            .eq("status", "published")
-            .is_("deleted_at", "null")
+        tagged_post_ids: list[str] | None = None
+        if tag:
+            tag_response = (
+                supabase.table("blog_tags").select("post_id").eq("tag", tag).execute()
+            )
+            tagged_post_ids = list(
+                dict.fromkeys(row["post_id"] for row in (tag_response.data or []))
+            )
+            if not tagged_post_ids:
+                return {
+                    "data": [],
+                    "pagination": {
+                        "total": 0,
+                        "page": page,
+                        "limit": limit,
+                        "total_pages": 0,
+                        "has_next": False,
+                        "has_prev": page > 1,
+                    },
+                }
+
+        query = apply_public_post_filters(
+            supabase.table("blog_posts").select("*, author_id"),
+            category=category,
+            search=search,
+            tagged_post_ids=tagged_post_ids,
         )
-
-        # Apply filters
-        if category:
-            query = query.eq("category", category)
-
-        if search:
-            query = query.or_(f"title.ilike.%{search}%,excerpt.ilike.%{search}%")
 
         # Sorting
         query = query.order(sort, desc=(order == "desc"))
@@ -270,20 +301,15 @@ async def list_posts(
             tags = await get_post_tags(supabase, post["id"])
             author = await get_post_author(supabase, post["author_id"])
 
-            # Filter by tag if specified
-            if tag and tag not in tags:
-                continue
-
             posts.append({**post, "tags": tags, "author": author})
 
-        # Get total count
-        count_response = (
-            supabase.table("blog_posts")
-            .select("id", count="exact")
-            .eq("status", "published")
-            .is_("deleted_at", "null")
-            .execute()
+        count_query = apply_public_post_filters(
+            supabase.table("blog_posts").select("id", count="exact"),
+            category=category,
+            search=search,
+            tagged_post_ids=tagged_post_ids,
         )
+        count_response = count_query.execute()
 
         total = count_response.count or 0
         total_pages = (total + limit - 1) // limit

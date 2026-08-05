@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 jest.mock('@/components/blog/blog-post-card', () => ({
@@ -196,6 +196,44 @@ describe('BlogPage', () => {
       expect.any(Object),
     );
     expect(screen.queryByRole('button', { name: 'Load More Posts' })).toBeNull();
+  });
+
+  it('does not append an old Load More response after the active filters change', async () => {
+    const user = userEvent.setup();
+    let resolveOldPage: ((response: Response) => void) | undefined;
+    const oldPage = new Promise<Response>((resolve) => {
+      resolveOldPage = resolve;
+    });
+    const stalePost = {
+      ...researchPost,
+      id: 'post-stale',
+      slug: 'stale-page',
+      title: 'Stale page result',
+    };
+
+    (global.fetch as jest.Mock).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/blog/categories') return jsonResponse({ data: [] });
+      if (url.includes('page=2')) return oldPage;
+      if (url.includes('search=appeal')) return postsResponse([tutorialPost]);
+      return postsResponse([researchPost], 1, true);
+    });
+
+    render(<BlogPage />);
+    await screen.findByText('Real research post');
+
+    await user.click(screen.getByRole('button', { name: 'Load More Posts' }));
+    await waitFor(() => expect(String((global.fetch as jest.Mock).mock.calls.at(-1)?.[0])).toContain('page=2'));
+    await user.type(screen.getByPlaceholderText('Search blog posts...'), 'appeal');
+    expect(await screen.findByText('Real tutorial post')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveOldPage?.(postsResponse([stalePost], 2, false));
+      await oldPage;
+    });
+
+    await waitFor(() => expect(screen.queryByText('Stale page result')).toBeNull());
+    expect(screen.getByText('Real tutorial post')).toBeInTheDocument();
   });
 
   it('renders an error state and retries the failed request', async () => {
