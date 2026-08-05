@@ -6,6 +6,11 @@ export interface DashboardStats {
   court_levels: { name: string; count: number; jurisdiction?: string }[];
   top_courts: { name: string; count: number; jurisdiction?: string }[];
   decisions_per_year: { year: number; count: number }[] | null;
+  decisions_per_year_by_jurisdiction: {
+    year: number;
+    count: number;
+    jurisdiction: "PL" | "UK";
+  }[];
   date_range: { oldest: string | null; newest: string | null } | null;
   case_types: { name: string; count: number }[];
   decision_types: { name: string; count: number }[];
