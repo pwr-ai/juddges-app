@@ -75,6 +75,9 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/onboarding") &&
     !request.nextUrl.pathname.startsWith("/api/health") &&
     !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
+    // The retired GraphQL bridge must reach the Next.js router and resolve as
+    // 404. Keep this exact so lookalike paths remain protected.
+    request.nextUrl.pathname !== "/api/graphql" &&
     !request.nextUrl.pathname.startsWith("/status") &&
     !request.nextUrl.pathname.startsWith("/offline")
   ) {
