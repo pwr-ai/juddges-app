@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,25 +30,13 @@ import { PublicationWithResources } from "@/types/publication";
 import { getPublications, deletePublication } from "@/lib/api/publications";
 
 export default function PublicationsAdminPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [publications, setPublications] = useState<PublicationWithResources[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth/login?redirect=/publications/admin");
-      return;
-    }
-
-    if (user) {
-      loadPublications();
-    }
-  }, [user, authLoading, router]);
-
-  const loadPublications = async () => {
+  const loadPublications = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getPublications();
@@ -59,7 +46,13 @@ export default function PublicationsAdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadPublications();
+    }
+  }, [loadPublications, user]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -93,16 +86,12 @@ export default function PublicationsAdminPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (
