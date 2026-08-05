@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { ExtractionJobClient } from "@/app/extractions/[id]/_components/ExtractionJobClient";
 import type { ExtractionJobSnapshot } from "@/lib/extractions/detail-contract";
@@ -17,7 +17,6 @@ const JOB_ID = "22222222-3333-4444-8555-666666666666";
 const pendingJob: ExtractionJobSnapshot = {
   job_id: JOB_ID,
   status: "PENDING",
-  results: [],
 };
 
 function deferred<T>() {
@@ -26,6 +25,17 @@ function deferred<T>() {
     resolve = resolvePromise;
   });
   return { promise, resolve };
+}
+
+function completedResult(value: string) {
+  return {
+    collection_id: "collection-1",
+    document_id: "document-1",
+    status: "completed",
+    created_at: "2026-08-06T00:00:00Z",
+    updated_at: "2026-08-06T00:01:00Z",
+    extracted_data: { value },
+  };
 }
 
 describe("ExtractionJobClient", () => {
@@ -38,11 +48,16 @@ describe("ExtractionJobClient", () => {
     jest.useRealTimers();
   });
 
-  it("renders the verified snapshot without an immediate duplicate fetch", () => {
+  it("loads full results once after rendering the minimal verified snapshot", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ job_id: JOB_ID, status: "PENDING", results: [] }),
+    });
     render(<ExtractionJobClient jobId={JOB_ID} initialJob={pendingJob} />);
 
     expect(screen.getByText("PENDING")).toBeInTheDocument();
-    expect(global.fetch).not.toHaveBeenCalled();
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
   });
 
   it("keeps verified data visible and labels a polling backend failure", async () => {
@@ -66,7 +81,12 @@ describe("ExtractionJobClient", () => {
     expect(screen.queryByText("Job Not Found")).not.toBeInTheDocument();
   });
 
-  it("does not poll terminal jobs", () => {
+  it("loads terminal results once without scheduling another poll", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ job_id: JOB_ID, status: "SUCCESS", results: [] }),
+    });
     render(
       <ExtractionJobClient
         jobId={JOB_ID}
@@ -74,8 +94,9 @@ describe("ExtractionJobClient", () => {
       />
     );
 
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
     act(() => jest.advanceTimersByTime(10_000));
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("stops polling when a live job reaches a terminal status", async () => {
@@ -95,6 +116,40 @@ describe("ExtractionJobClient", () => {
       jest.advanceTimersByTime(9_000);
     });
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("derives the selected result from the latest poll response", async () => {
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          job_id: JOB_ID,
+          status: "PENDING",
+          results: [completedResult("old")],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          job_id: JOB_ID,
+          status: "PENDING",
+          results: [completedResult("new")],
+        }),
+      });
+
+    render(<ExtractionJobClient jobId={JOB_ID} initialJob={pendingJob} />);
+    await waitFor(() => expect(screen.getByRole("tab", { name: "Document" })).toBeVisible());
+    fireEvent.click(screen.getByRole("tab", { name: "Document" }));
+    await waitFor(() => expect(screen.getByText("old")).toBeVisible());
+
+    await act(async () => {
+      jest.advanceTimersByTime(3_000);
+    });
+
+    await waitFor(() => expect(screen.getByText("new")).toBeVisible());
+    expect(screen.queryByText("old")).not.toBeInTheDocument();
   });
 
   it("never overlaps status requests while the previous poll is pending", async () => {

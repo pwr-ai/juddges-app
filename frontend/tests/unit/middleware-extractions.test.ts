@@ -14,7 +14,10 @@ jest.mock("@/lib/supabase/middleware", () => ({
 global.fetch = jest.fn();
 
 import { config, middleware } from "@/middleware";
-import { verifyExtractionSnapshot } from "@/lib/extractions/detail-contract";
+import {
+  decodeExtractionSnapshot,
+  verifyExtractionSnapshot,
+} from "@/lib/extractions/detail-contract";
 
 const JOB_ID = "22222222-3333-4444-8555-666666666666";
 
@@ -174,6 +177,63 @@ describe("extraction detail middleware", () => {
       )
     ).toBe("user-1");
     expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledWith(
+      `http://backend.test/extractions/${JOB_ID}?include_results=false`,
+      expect.any(Object)
+    );
+  });
+
+  it("keeps the signed request header bounded and excludes extraction results", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        job_id: JOB_ID,
+        status: "SUCCESS",
+        results: [
+          {
+            collection_id: "collection-1",
+            document_id: "document-1",
+            status: "completed",
+            created_at: "2026-08-06T00:00:00Z",
+            updated_at: "2026-08-06T00:01:00Z",
+            extracted_data: { text: "x".repeat(100_000) },
+          },
+        ],
+      }),
+    });
+
+    const response = await middleware(request());
+    const encoded = response.headers.get(
+      "x-middleware-request-x-juddges-extraction-snapshot"
+    );
+
+    expect(response.status).toBe(200);
+    expect(encoded).toBeTruthy();
+    expect(encoded!.length).toBeLessThanOrEqual(4_096);
+    expect(decodeExtractionSnapshot(encoded!, JOB_ID)).not.toHaveProperty(
+      "results"
+    );
+  });
+
+  it("fails safely when minimal snapshot metadata exceeds the header budget", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        job_id: JOB_ID,
+        status: "SUCCESS",
+        results: [],
+        collection_name: "x".repeat(8_000),
+      }),
+    });
+
+    const response = await middleware(request());
+
+    expect(response.status).toBe(502);
+    expect(
+      response.headers.get("x-middleware-request-x-juddges-extraction-snapshot")
+    ).toBeNull();
   });
 
   it("signs an encoded UUID request against the decoded canonical route", async () => {

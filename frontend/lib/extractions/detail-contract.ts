@@ -8,6 +8,7 @@ export const EXTRACTION_SNAPSHOT_SIGNATURE_HEADER =
   "x-juddges-extraction-snapshot-signature";
 export const EXTRACTION_VERIFIED_USER_HEADER =
   "x-juddges-extraction-verified-user";
+export const MAX_EXTRACTION_SNAPSHOT_HEADER_LENGTH = 4_096;
 
 const JOB_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -19,7 +20,6 @@ export interface ExtractionJobSnapshot {
   schema_id?: string | null;
   schema_name?: string | null;
   status: string;
-  results: DocumentExtractionResult[];
   progress?: {
     completed: number;
     total: number;
@@ -29,6 +29,10 @@ export interface ExtractionJobSnapshot {
   updated_at?: string | null;
 }
 
+export interface ExtractionJobResponse extends ExtractionJobSnapshot {
+  results: DocumentExtractionResult[];
+}
+
 export function isValidExtractionJobId(jobId: string): boolean {
   return JOB_ID_PATTERN.test(jobId);
 }
@@ -36,7 +40,7 @@ export function isValidExtractionJobId(jobId: string): boolean {
 export function normalizeExtractionJobPayload(
   payload: unknown,
   expectedJobId: string
-): ExtractionJobSnapshot | null {
+): ExtractionJobResponse | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return null;
   }
@@ -76,6 +80,13 @@ export function normalizeExtractionJobPayload(
     schema_id: optionalString(record.schema_id),
     schema_name: optionalString(record.schema_name),
   };
+}
+
+export function toExtractionJobSnapshot(
+  response: ExtractionJobResponse
+): ExtractionJobSnapshot {
+  const { results: _results, ...snapshot } = response;
+  return snapshot;
 }
 
 const OPTIONAL_STRING_FIELDS = [
@@ -213,21 +224,61 @@ function signingPayload(
   ) as Uint8Array<ArrayBuffer>;
 }
 
-export function encodeExtractionSnapshot(snapshot: ExtractionJobSnapshot): string {
-  return bytesToBase64Url(
-    new TextEncoder().encode(JSON.stringify(snapshot))
+export function encodeExtractionSnapshot(
+  snapshot: ExtractionJobSnapshot
+): string | null {
+  const { results: _results, ...headerSnapshot } = snapshot as ExtractionJobSnapshot & {
+    results?: unknown;
+  };
+  const encoded = bytesToBase64Url(
+    new TextEncoder().encode(JSON.stringify(headerSnapshot))
   );
+  return encoded.length <= MAX_EXTRACTION_SNAPSHOT_HEADER_LENGTH ? encoded : null;
 }
 
 export function decodeExtractionSnapshot(
   encoded: string,
   expectedJobId: string
 ): ExtractionJobSnapshot | null {
+  if (encoded.length > MAX_EXTRACTION_SNAPSHOT_HEADER_LENGTH) return null;
   try {
     const payload: unknown = JSON.parse(
       new TextDecoder().decode(base64UrlToBytes(encoded))
     );
-    return normalizeExtractionJobPayload(payload, expectedJobId);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+    const record = payload as Record<string, unknown>;
+    const responseJobId = record.job_id ?? record.task_id;
+    if (
+      "results" in record ||
+      typeof responseJobId !== "string" ||
+      responseJobId !== expectedJobId ||
+      typeof record.status !== "string" ||
+      record.status.trim().length === 0 ||
+      !optionalStringFieldsAreValid(record) ||
+      (record.progress !== undefined &&
+        record.progress !== null &&
+        !isProgress(record.progress))
+    ) {
+      return null;
+    }
+    return {
+      job_id: expectedJobId,
+      status: record.status,
+      progress:
+        record.progress === null
+          ? null
+          : isProgress(record.progress)
+            ? record.progress
+            : undefined,
+      created_at: optionalString(record.created_at),
+      updated_at: optionalString(record.updated_at),
+      collection_id: optionalString(record.collection_id),
+      collection_name: optionalString(record.collection_name),
+      schema_id: optionalString(record.schema_id),
+      schema_name: optionalString(record.schema_name),
+    };
   } catch {
     return null;
   }

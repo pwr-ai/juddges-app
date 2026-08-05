@@ -36,6 +36,7 @@ import { logger } from "@/lib/logger";
 import {
  isTerminalExtractionStatus,
  normalizeExtractionJobPayload,
+ type ExtractionJobResponse,
  type ExtractionJobSnapshot,
 } from "@/lib/extractions/detail-contract";
 import"../print.css";
@@ -92,11 +93,17 @@ const POLL_TIMEOUT_MS = 10_000;
 
 export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientProps) {
  const router = useRouter();
- const [jobData, setJobData] = useState<ExtractionJobSnapshot>(initialJob);
+ const [jobData, setJobData] = useState<ExtractionJobResponse>({
+ ...initialJob,
+ results: [],
+ });
  const [pollError, setPollError] = useState<PollError | null>(null);
- const [selectedResult, setSelectedResult] = useState<DocumentExtractionResult | null>(null);
+ const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
  const [resultsView, setResultsView] = useState<'document' | 'table'>('table');
  const [viewMode, setViewMode] = useState<'formatted' | 'json'>('formatted');
+ const selectedResult = jobData.results.find(
+ (result) => result.document_id === selectedResultId
+ ) ?? null;
 
  // Update document title when a specific document is selected
  useEffect(() => {
@@ -108,16 +115,16 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  }
  }, [selectedResult, jobData]);
 
- // Continue polling live jobs without repeating the middleware's initial read.
+ // Load full results once, then continue polling only while the job is live.
  useEffect(() => {
- if (isTerminalExtractionStatus(jobData.status)) return;
  let active = true;
+ let currentStatus = initialJob.status;
  let pollTimer: number | undefined;
  let requestTimeout: number | undefined;
  let requestController: AbortController | undefined;
 
  const schedulePoll = () => {
- if (!active) return;
+ if (!active || isTerminalExtractionStatus(currentStatus)) return;
  pollTimer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
  };
 
@@ -151,14 +158,18 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  });
  }
  if (!active) return;
- setJobData((currentJob) =>
+ setJobData((currentJob) => {
+ if (
  isTerminalExtractionStatus(currentJob.status) &&
  !isTerminalExtractionStatus(nextJob.status)
- ? currentJob
- : nextJob
- );
+ ) {
+ currentStatus = currentJob.status;
+ return currentJob;
+ }
+ currentStatus = nextJob.status;
+ return nextJob;
+ });
  setPollError(null);
- if (isTerminalExtractionStatus(nextJob.status)) return;
  } catch (error) {
  if (!active) return;
  const status =
@@ -179,14 +190,14 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  }
  schedulePoll();
  };
- schedulePoll();
+ void poll();
  return () => {
  active = false;
  if (pollTimer !== undefined) window.clearTimeout(pollTimer);
  if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
  requestController?.abort();
  };
- }, [jobData.status, jobId]);
+ }, [initialJob.status, jobId]);
 
  useEffect(() => {
  const dateStr = new Date().toLocaleDateString();
@@ -201,7 +212,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  };
 
  // Get all results and filter by status
- const allResults = jobData?.results || [];
+ const allResults = jobData.results;
  const completedResults = allResults.filter((r: DocumentExtractionResult) => {
  const status = normalizeStatus(r.status);
  return status === DocumentProcessingStatus.COMPLETED ||
@@ -251,11 +262,11 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
 
  // Auto-select first completed result if available, otherwise first result
  useEffect(() => {
- if (!selectedResult && jobData) {
+ if (!selectedResult) {
  if (completedResults.length > 0) {
- setSelectedResult(completedResults[0]);
+ setSelectedResultId(completedResults[0].document_id);
  } else if (allResults.length > 0) {
- setSelectedResult(allResults[0]);
+ setSelectedResultId(allResults[0].document_id);
  }
  }
  // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -302,7 +313,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  const selectedDocumentId = selectedResult?.document_id;
  const handleDocumentChange = (documentId: string) => {
  const result = allResults.find(r => r.document_id === documentId);
- setSelectedResult(result || null);
+ setSelectedResultId(result?.document_id ?? null);
  };
 
  // Handler for viewing the document
@@ -491,7 +502,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  onRowClick={(row) => {
  const result = completedResults.find(r => r.document_id === row.document_id);
  if (result) {
- setSelectedResult(result);
+ setSelectedResultId(result.document_id);
  setResultsView('document');
  }
  }}

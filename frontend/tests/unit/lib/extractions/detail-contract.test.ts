@@ -99,28 +99,42 @@ describe("extraction detail transport", () => {
     );
     expect(snapshot).not.toBeNull();
     const encoded = encodeExtractionSnapshot(snapshot!);
+    expect(encoded).not.toBeNull();
     const signature = await signExtractionSnapshot(
-      encoded,
+      encoded!,
       "user-1",
       ROUTE,
       "secret"
     );
 
     expect(
-      await verifyExtractionSnapshot(encoded, signature, "user-1", ROUTE, "secret")
+      await verifyExtractionSnapshot(encoded!, signature, "user-1", ROUTE, "secret")
     ).toBe(true);
     expect(
-      await verifyExtractionSnapshot(encoded, signature, "user-2", ROUTE, "secret")
+      await verifyExtractionSnapshot(encoded!, signature, "user-2", ROUTE, "secret")
     ).toBe(false);
     expect(
       await verifyExtractionSnapshot(
-        encoded,
+        encoded!,
         signature,
         "user-1",
         `${ROUTE}/nested`,
         "secret"
       )
     ).toBe(false);
-    expect(decodeExtractionSnapshot(encoded, JOB_ID)).toEqual(snapshot);
+    expect(decodeExtractionSnapshot(encoded!, JOB_ID)).toEqual(
+      expect.objectContaining({ job_id: JOB_ID, status: "SUCCESS" })
+    );
+    expect(decodeExtractionSnapshot(encoded!, JOB_ID)).not.toHaveProperty("results");
+  });
+
+  it("refuses to encode an oversized snapshot header", () => {
+    const encoded = encodeExtractionSnapshot({
+      job_id: JOB_ID,
+      status: "SUCCESS",
+      collection_name: "x".repeat(8_000),
+    });
+
+    expect(encoded).toBeNull();
   });
 });

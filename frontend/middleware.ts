@@ -11,6 +11,7 @@ import {
   isValidExtractionJobId,
   normalizeExtractionJobPayload,
   signExtractionSnapshot,
+  toExtractionJobSnapshot,
 } from '@/lib/extractions/detail-contract'
 
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/([^/]+)$/
@@ -196,7 +197,7 @@ export async function middleware(incomingRequest: NextRequest) {
 
     try {
       const upstream = await fetch(
-        `${getBackendUrl()}/extractions/${encodeURIComponent(jobId)}`,
+        `${getBackendUrl()}/extractions/${encodeURIComponent(jobId)}?include_results=false`,
         {
           cache: 'no-store',
           headers: {
@@ -235,8 +236,8 @@ export async function middleware(incomingRequest: NextRequest) {
           localeNeedsWrite,
         )
       }
-      const snapshot = normalizeExtractionJobPayload(payload, jobId)
-      if (!snapshot) {
+      const job = normalizeExtractionJobPayload(payload, jobId)
+      if (!job) {
         return finishResponse(
           extractionStatusResponse(502, request.method),
           sessionResponse,
@@ -245,7 +246,15 @@ export async function middleware(incomingRequest: NextRequest) {
         )
       }
 
-      const encoded = encodeExtractionSnapshot(snapshot)
+      const encoded = encodeExtractionSnapshot(toExtractionJobSnapshot(job))
+      if (!encoded) {
+        return finishResponse(
+          extractionStatusResponse(502, request.method),
+          sessionResponse,
+          locale,
+          localeNeedsWrite,
+        )
+      }
       const headers = new Headers(request.headers)
       headers.delete(EXTRACTION_SNAPSHOT_HEADER)
       headers.delete(EXTRACTION_SNAPSHOT_SIGNATURE_HEADER)
