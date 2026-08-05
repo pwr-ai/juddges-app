@@ -136,7 +136,9 @@ class SimpleExtractionRequest(BaseModel):
         description="Schema ID (alphanumeric, hyphens, underscores, dots only)",
     )
     document_ids: list[str] | None = Field(
-        default=None, description="List of document IDs to extract"
+        default=None,
+        min_length=1,
+        description="List of document IDs to extract",
     )
     extraction_context: str = Field(
         description="Context of the extraction, e.g. 'The task is to extract information from court judgments related drug abuse'"
@@ -145,8 +147,8 @@ class SimpleExtractionRequest(BaseModel):
         default=None,
         description="Additional qualitative instructions for the extraction",
     )
-    language: str = Field(
-        default="pl", description="Language for extraction (e.g., 'pl', 'en')"
+    language: Literal["pl", "en"] = Field(
+        default="pl", description="Language for extraction ('pl' or 'en')"
     )
 
     @field_validator("collection_id")
@@ -265,7 +267,7 @@ class DocumentExtractionRequest(SimpleExtractionRequest):
         "gpt-5-mini",
         description="Name of the LLM to use for extraction",
     )
-    language: Literal["pl"] = Field(  # en language temporaly disabled
+    language: Literal["pl", "en"] = Field(
         "pl",
         description="Language of the extraction",
     )
