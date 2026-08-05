@@ -74,6 +74,18 @@ class _StubPublicationsDb:
     async def get_publications(self, **_kwargs) -> list[dict]:
         return []
 
+    async def get_publication(self, _pub_id: str) -> dict:
+        """Return a record owned by ``fake_user``.
+
+        PUT and DELETE load the publication to check ownership (#420), so this
+        stub attributes it to the same synthetic user these tests authenticate
+        as — keeping them focused on the Bearer contract rather than ownership,
+        which ``test_publications_ownership.py`` covers.
+        """
+        publication = await self.create_publication({})
+        publication["user_id"] = "00000000-0000-4000-a000-000000000abc"
+        return publication
+
     async def create_publication(self, data: dict) -> dict:
         return {
             "id": "stub-pub-id",

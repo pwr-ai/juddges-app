@@ -290,6 +290,34 @@ async def create_publication(
     return transform_publication(publication)
 
 
+async def _authorize_publication_mutation(
+    publication_id: str, db, user: AuthenticatedUser
+) -> dict:
+    """Load a publication and confirm the caller is allowed to mutate it.
+
+    Ownership is recorded at creation time as ``user_id``. The backend reaches
+    Supabase with the service-role key, which bypasses row-level security, so
+    this check is the only gate standing between a valid JWT and someone else's
+    record. Rows predating ``user_id`` carry ``None`` and are therefore
+    admin-only, which fails closed.
+    """
+    publication = await db.get_publication(publication_id)
+    if not publication:
+        raise HTTPException(status_code=404, detail="Publication not found")
+
+    if not user.is_admin() and publication.get("user_id") != user.id:
+        logger.warning(
+            f"User {user.id} attempted to mutate publication {publication_id} "
+            "owned by another user"
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to modify this publication",
+        )
+
+    return publication
+
+
 @router.get("/{publication_id}", response_model=PublicationWithResources)
 async def get_publication(
     publication_id: str = Path(..., description="Publication ID to retrieve"),
@@ -321,6 +349,8 @@ async def update_publication(
     except ValueError as e:
         logger.warning(f"Invalid publication_id format: {publication_id}")
         raise HTTPException(status_code=400, detail=str(e))
+
+    await _authorize_publication_mutation(publication_id, db, user)
 
     # Only include non-None fields
     data = {}
@@ -376,6 +406,8 @@ async def delete_publication(
     except ValueError as e:
         logger.warning(f"Invalid publication_id format: {publication_id}")
         raise HTTPException(status_code=400, detail=str(e))
+
+    await _authorize_publication_mutation(publication_id, db, user)
 
     success = await db.delete_publication(publication_id)
     if not success:
