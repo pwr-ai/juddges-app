@@ -10,16 +10,74 @@ const RETIRED_DEVELOPER_ROUTES = [
   '/api/mock/extractions',
 ];
 
-function flattenRewrites(rewrites = {}) {
-  if (Array.isArray(rewrites)) {
-    return rewrites;
+function flattenRewrites(rewrites) {
+  return [
+    ...rewrites.beforeFiles,
+    ...rewrites.afterFiles,
+    ...rewrites.fallback,
+  ];
+}
+
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasStringProperties(entry, properties) {
+  return (
+    isRecord(entry) &&
+    properties.every((property) => typeof entry[property] === 'string')
+  );
+}
+
+function assertSupportedManifestSchema(appPathsManifest, routesManifest) {
+  const appPathsAreSupported =
+    isRecord(appPathsManifest) &&
+    Object.entries(appPathsManifest).every(
+      ([appPathKey, outputPath]) =>
+        appPathKey.startsWith('/') && typeof outputPath === 'string'
+    );
+  const rewrites = routesManifest?.rewrites;
+  const rewriteCollectionsAreSupported =
+    isRecord(rewrites) &&
+    Array.isArray(rewrites.beforeFiles) &&
+    Array.isArray(rewrites.afterFiles) &&
+    Array.isArray(rewrites.fallback);
+  const routeCollectionsAreSupported =
+    routesManifest?.version === 3 &&
+    Array.isArray(routesManifest.redirects) &&
+    Array.isArray(routesManifest.dynamicRoutes) &&
+    Array.isArray(routesManifest.staticRoutes);
+
+  if (
+    !appPathsAreSupported ||
+    !rewriteCollectionsAreSupported ||
+    !routeCollectionsAreSupported
+  ) {
+    throw new Error(
+      'Unsupported or incomplete Next.js routes manifest: expected version 3 with complete route, redirect, and rewrite collections.'
+    );
   }
 
-  return [
-    ...(rewrites.beforeFiles ?? []),
-    ...(rewrites.afterFiles ?? []),
-    ...(rewrites.fallback ?? []),
-  ];
+  const routeEntriesAreSupported = [
+    ...routesManifest.dynamicRoutes,
+    ...routesManifest.staticRoutes,
+  ].every((entry) => hasStringProperties(entry, ['page', 'regex']));
+  const redirectsAreSupported = routesManifest.redirects.every((entry) =>
+    hasStringProperties(entry, ['source', 'destination', 'regex'])
+  );
+  const rewritesAreSupported = flattenRewrites(rewrites).every((entry) =>
+    hasStringProperties(entry, ['source', 'destination', 'regex'])
+  );
+
+  if (
+    !routeEntriesAreSupported ||
+    !redirectsAreSupported ||
+    !rewritesAreSupported
+  ) {
+    throw new Error(
+      'Unsupported or incomplete Next.js routes manifest: route entries do not match the supported version 3 schema.'
+    );
+  }
 }
 
 function manifestEntryMatches(entry, pathname) {
@@ -51,10 +109,13 @@ function normalizeAppPathKey(appPathKey) {
 }
 
 function assertRetiredRoutesAbsent(appPathsManifest, routesManifest) {
+  assertSupportedManifestSchema(appPathsManifest, routesManifest);
+
   const routeEntries = [
     ...(routesManifest.dynamicRoutes ?? []),
     ...(routesManifest.staticRoutes ?? []),
   ];
+  const redirects = routesManifest.redirects;
   const rewrites = flattenRewrites(routesManifest.rewrites);
   const appRoutes = Object.keys(appPathsManifest)
     .filter((appPathKey) => appPathKey.endsWith('/route'))
@@ -82,6 +143,14 @@ function assertRetiredRoutesAbsent(appPathsManifest, routesManifest) {
     for (const rewrite of rewrites) {
       if (manifestEntryMatches(rewrite, pathname)) {
         violations.push(`rewrite ${rewrite.source ?? rewrite.regex} matches ${pathname}`);
+      }
+    }
+
+    for (const redirect of redirects) {
+      if (manifestEntryMatches(redirect, pathname)) {
+        violations.push(
+          `redirect ${redirect.source ?? redirect.regex} matches ${pathname}`
+        );
       }
     }
   }
@@ -120,5 +189,6 @@ module.exports = {
   RETIRED_DEVELOPER_ROUTES,
   assertBuiltManifests,
   assertRetiredRoutesAbsent,
+  assertSupportedManifestSchema,
   normalizeAppPathKey,
 };

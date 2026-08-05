@@ -1,22 +1,41 @@
 /**
  * @jest-environment node
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { assertRetiredRoutesAbsent } = require('../../../scripts/assert-retired-routes-absent');
+const {
+  RETIRED_DEVELOPER_ROUTES,
+  assertRetiredRoutesAbsent,
+} = require('../../../scripts/assert-retired-routes-absent');
 
-const retiredDeveloperRouteDirectories = [
-  'app/api/component-source',
-  'app/api/extractions/debug',
-  'app/api/mock/jobs',
-  'app/api/mock/schemas',
-  'app/api/mock/extractions',
-];
-
+const componentSourceRoute = RETIRED_DEVELOPER_ROUTES.find(
+  (pathname: string) => pathname.endsWith('/component-source')
+);
+if (!componentSourceRoute) {
+  throw new Error('The retired component-source route is missing from the guard');
+}
+const retiredDeveloperRouteDirectories: string[] = RETIRED_DEVELOPER_ROUTES.map(
+  (pathname: string) => join('app', pathname.replace(/^\//, ''))
+);
 const routeExtensions = ['js', 'jsx', 'ts', 'tsx'];
+
+function validRoutesManifest(overrides: Record<string, unknown> = {}) {
+  return {
+    version: 3,
+    redirects: [],
+    dynamicRoutes: [],
+    staticRoutes: [],
+    rewrites: {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: [],
+    },
+    ...overrides,
+  };
+}
 
 describe('retired developer API routes', () => {
   it.each(retiredDeveloperRouteDirectories)(
@@ -30,11 +49,11 @@ describe('retired developer API routes', () => {
     }
   );
 
-  it('accepts a production manifest without retired routes', () => {
+  it('accepts a supported production manifest without retired routes', () => {
     expect(() =>
       assertRetiredRoutesAbsent(
         { '/api/documents/route': 'app/api/documents/route.js' },
-        { dynamicRoutes: [], staticRoutes: [], rewrites: {} }
+        validRoutesManifest()
       )
     ).not.toThrow();
   });
@@ -43,63 +62,74 @@ describe('retired developer API routes', () => {
     {
       label: 'a JavaScript route compiled from any source extension or symlink',
       appPaths: {
-        '/api/component-source/route': 'app/api/component-source/route.js',
+        [`${componentSourceRoute}/route`]: 'app/api/component-source/route.js',
       },
-      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+      routes: validRoutesManifest(),
     },
     {
       label: 'a route hidden behind a root route group',
       appPaths: {
-        '/(internal)/api/component-source/route':
+        [`/(internal)${componentSourceRoute}/route`]:
           'app/(internal)/api/component-source/route.js',
       },
-      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+      routes: validRoutesManifest(),
     },
     {
       label: 'a route hidden behind a nested route group',
       appPaths: {
-        '/api/(internal)/component-source/route':
+        [`${componentSourceRoute.replace('/api/', '/api/(internal)/')}/route`]:
           'app/api/(internal)/component-source/route.js',
       },
-      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+      routes: validRoutesManifest(),
     },
     {
       label: 'a route hidden behind a parallel slot',
       appPaths: {
-        '/api/@slot/component-source/route':
+        [`${componentSourceRoute.replace('/api/', '/api/@slot/')}/route`]:
           'app/api/@slot/component-source/route.js',
       },
-      routes: { dynamicRoutes: [], staticRoutes: [], rewrites: {} },
+      routes: validRoutesManifest(),
     },
     {
       label: 'a catch-all route',
       appPaths: {
         '/api/[[...path]]/route': 'app/api/[[...path]]/route.js',
       },
-      routes: {
+      routes: validRoutesManifest({
         dynamicRoutes: [
           { page: '/api/[[...path]]', regex: '^/api(?:/(.*))?/?$' },
         ],
-        staticRoutes: [],
-        rewrites: {},
-      },
+      }),
     },
     {
       label: 'a rewrite',
       appPaths: {},
-      routes: {
-        dynamicRoutes: [],
-        staticRoutes: [],
+      routes: validRoutesManifest({
         rewrites: {
           beforeFiles: [
             {
-              source: '/api/component-source',
+              source: componentSourceRoute,
               destination: '/api/documents',
-              regex: '^/api/component-source(?:/)?$',
+              regex: `^${componentSourceRoute}(?:/)?$`,
             },
           ],
+          afterFiles: [],
+          fallback: [],
         },
-      },
+      }),
+    },
+    {
+      label: 'a redirect',
+      appPaths: {},
+      routes: validRoutesManifest({
+        redirects: [
+          {
+            source: componentSourceRoute,
+            destination: '/api/documents',
+            regex: `^${componentSourceRoute}(?:/)?$`,
+          },
+        ],
+      }),
     },
   ])('rejects $label', ({ appPaths, routes }) => {
     expect(() => assertRetiredRoutesAbsent(appPaths, routes)).toThrow(
@@ -107,20 +137,39 @@ describe('retired developer API routes', () => {
     );
   });
 
+  it.each([
+    ['an unknown manifest version', validRoutesManifest({ version: 99 })],
+    [
+      'a missing redirects collection',
+      (() => {
+        const { redirects: _redirects, ...incomplete } = validRoutesManifest();
+        return incomplete;
+      })(),
+    ],
+    [
+      'an incomplete rewrites schema',
+      validRoutesManifest({ rewrites: { beforeFiles: [] } }),
+    ],
+  ])('fails closed for %s', (_label, routes) => {
+    expect(() => assertRetiredRoutesAbsent({}, routes)).toThrow(
+      /unsupported or incomplete next\.js routes manifest/i
+    );
+  });
+
   it('treats traversal and symlink query variants as the same retired route', () => {
     const appPaths = {
-      '/api/component-source/route': 'app/api/component-source/route.js',
+      [`${componentSourceRoute}/route`]: 'app/api/component-source/route.js',
     };
-    const routes = { dynamicRoutes: [], staticRoutes: [], rewrites: {} };
+    const routes = validRoutesManifest();
     const requests = [
-      '/api/component-source?path=lib/styles/components/../../../../.env',
-      '/api/component-source?path=lib/styles/components/%2e%2e/%2e%2e/.env',
-      '/api/component-source?path=lib/styles/components/source-link',
+      `${componentSourceRoute}?path=lib/styles/components/../../../../.env`,
+      `${componentSourceRoute}?path=lib/styles/components/%2e%2e/%2e%2e/.env`,
+      `${componentSourceRoute}?path=lib/styles/components/source-link`,
     ];
 
     for (const request of requests) {
       expect(new URL(request, 'http://localhost').pathname).toBe(
-        '/api/component-source'
+        componentSourceRoute
       );
       expect(() => assertRetiredRoutesAbsent(appPaths, routes)).toThrow();
     }

@@ -60,6 +60,7 @@ This directory contains the design system documentation for Legal Glassmorphism 
 
 ## Related
 
-- **Style Demo Page**: `/app/style-demo/page.tsx`
+- **Canonical Design Specification**: [Editorial Jurisprudence](../../reference/DESIGN.md)
+- **Shared Editorial Components**: `/frontend/components/editorial/`
 - **Color Definitions**: `/lib/styles/colors/`
 - **Style Components**: `/lib/styles/components/`
