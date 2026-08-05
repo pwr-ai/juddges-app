@@ -110,6 +110,7 @@ markers = [
     "api: marks API boundary tests",
     "auth: marks authentication and authorization tests",
     "collections: marks collection management tests",
+    "e2e: marks tests that require a live deployed application stack",
     "integration: marks tests as integration tests (require external services)",
     "legacy: marks tests for deprecated API surfaces",
     "performance: marks opt-in performance tests",

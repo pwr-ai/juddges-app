@@ -5,6 +5,8 @@ from juddges_search.models import DocumentType
 from langchain_openai import ChatOpenAI
 from schema_generator_agent.agents.schema_generator import SchemaGenerator, load_prompts
 
+pytestmark = pytest.mark.ai
+
 
 @pytest.fixture
 def llm():
