@@ -148,7 +148,7 @@ describe("/chat/[id] through a real Next server", () => {
     baseUrl = `http://127.0.0.1:${nextPort}`;
 
     const nextBin = require.resolve("next/dist/bin/next");
-    const nextEnvironment = {
+    const nextEnvironment: NodeJS.ProcessEnv = {
       ...process.env,
       NODE_ENV: "production",
       NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
