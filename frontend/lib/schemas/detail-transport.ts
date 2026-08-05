@@ -5,6 +5,7 @@ export const SCHEMA_SNAPSHOT_SIGNATURE_HEADER =
   "x-juddges-schema-snapshot-signature";
 export const SCHEMA_SNAPSHOT_USER_HEADER = "x-juddges-schema-snapshot-user";
 export const SCHEMA_FAILURE_STATUS_HEADER = "x-juddges-schema-failure-status";
+export const MAX_SCHEMA_SNAPSHOT_HEADER_LENGTH = 512;
 
 const CANONICAL_SCHEMA_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -58,26 +59,54 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function isExtractionSchema(value: unknown): value is ExtractionSchema {
-  if (!isObject(value)) return false;
+export interface SchemaDetailProof {
+  id: string;
+}
+
+export function normalizeExtractionSchema(
+  value: unknown
+): ExtractionSchema | null {
+  if (!isObject(value)) return null;
   const description = value.description;
   const status = value.status;
-  return (
-    typeof value.id === "string" &&
-    isCanonicalSchemaId(value.id) &&
-    typeof value.name === "string" &&
-    (typeof description === "string" || description === null) &&
-    typeof value.type === "string" &&
-    typeof value.category === "string" &&
-    isObject(value.text) &&
-    isObject(value.dates) &&
-    (status === null ||
-      (typeof status === "string" && SCHEMA_STATUSES.has(status))) &&
-    typeof value.is_verified === "boolean" &&
-    typeof value.created_at === "string" &&
-    typeof value.updated_at === "string" &&
-    (typeof value.user_id === "string" || value.user_id === null)
-  );
+  if (
+    typeof value.id !== "string" ||
+    !isCanonicalSchemaId(value.id) ||
+    typeof value.name !== "string" ||
+    !(typeof description === "string" || description === null) ||
+    typeof value.type !== "string" ||
+    typeof value.category !== "string" ||
+    !isObject(value.text) ||
+    !isObject(value.dates) ||
+    !(
+      status === null ||
+      (typeof status === "string" && SCHEMA_STATUSES.has(status))
+    ) ||
+    typeof value.is_verified !== "boolean" ||
+    typeof value.created_at !== "string" ||
+    typeof value.updated_at !== "string" ||
+    !(typeof value.user_id === "string" || value.user_id === null)
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    name: value.name,
+    description,
+    type: value.type,
+    category: value.category,
+    text: value.text,
+    dates: value.dates as Record<string, string>,
+    status: status as ExtractionSchema["status"],
+    is_verified: value.is_verified,
+    created_at: value.created_at,
+    updated_at: value.updated_at,
+    user_id: value.user_id,
+  };
+}
+
+export function isExtractionSchema(value: unknown): value is ExtractionSchema {
+  return normalizeExtractionSchema(value) !== null;
 }
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -100,24 +129,37 @@ function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   ) as Uint8Array<ArrayBuffer>;
 }
 
-export function encodeSchemaSnapshot(schema: ExtractionSchema): string {
-  return bytesToBase64Url(
-    new TextEncoder().encode(JSON.stringify(schema))
+export function encodeSchemaSnapshot(schema: Pick<ExtractionSchema, "id">): string {
+  const encoded = bytesToBase64Url(
+    new TextEncoder().encode(JSON.stringify({ id: schema.id }))
   );
+  if (encoded.length > MAX_SCHEMA_SNAPSHOT_HEADER_LENGTH) {
+    throw new Error("Verified schema proof exceeds the header budget");
+  }
+  return encoded;
 }
 
 export function decodeSchemaSnapshot(
   encoded: string,
   expectedId: string
-): ExtractionSchema {
+): SchemaDetailProof {
+  if (encoded.length > MAX_SCHEMA_SNAPSHOT_HEADER_LENGTH) {
+    throw new Error("Invalid verified schema snapshot");
+  }
   try {
     const value: unknown = JSON.parse(
       new TextDecoder().decode(base64UrlToBytes(encoded))
     );
-    if (!isExtractionSchema(value) || value.id !== expectedId) {
+    if (
+      !isObject(value) ||
+      Object.keys(value).length !== 1 ||
+      typeof value.id !== "string" ||
+      !isCanonicalSchemaId(value.id) ||
+      value.id !== expectedId
+    ) {
       throw new Error("invalid");
     }
-    return value;
+    return { id: value.id };
   } catch {
     throw new Error("Invalid verified schema snapshot");
   }

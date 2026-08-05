@@ -64,6 +64,12 @@ describe("fetchSchemaDetail", () => {
         headers: expect.objectContaining({ Authorization: "Bearer verified-token" }),
       })
     );
+    const schemaUrl = new URL(
+      String((global.fetch as jest.Mock).mock.calls[0][0])
+    );
+    expect(schemaUrl.searchParams.get("select")).toBe(
+      "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id"
+    );
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/rest\/v1\/user_profiles\?/),
       expect.objectContaining({
@@ -72,6 +78,29 @@ describe("fetchSchemaDetail", () => {
         headers: expect.objectContaining({ Authorization: "Bearer verified-token" }),
       })
     );
+  });
+
+  it("preserves a large legal schema but drops unselected future columns", async () => {
+    const largeText = { legalDefinition: "x".repeat(147_000) };
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            ...visibleSchema,
+            text: largeText,
+            user_id: null,
+            future_secret: "must-not-cross-the-boundary",
+          },
+        ]),
+        { status: 200 }
+      )
+    );
+
+    const result = await fetchSchemaDetail(ID, "verified-token");
+
+    expect(result.text).toEqual(largeText);
+    expect(result).not.toHaveProperty("future_secret");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it.each([

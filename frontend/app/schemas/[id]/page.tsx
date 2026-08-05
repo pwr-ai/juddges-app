@@ -13,6 +13,11 @@ import {
 
 import SchemaDetailClient from "./client";
 import SchemaDetailFailure from "@/components/schemas/SchemaDetailFailure";
+import {
+  SchemaDetailNotFoundError,
+  fetchSchemaDetail,
+} from "@/lib/server/schema-detail";
+import { createClient } from "@/lib/supabase/server";
 
 interface SchemaDetailPageProps {
   params: Promise<{ id: string }>;
@@ -52,6 +57,27 @@ export default async function SchemaDetailPage({
     throw new Error("Missing or invalid verified schema snapshot");
   }
 
-  const schema = decodeSchemaSnapshot(encoded, id);
+  decodeSchemaSnapshot(encoded, id);
+  const supabase = await createClient();
+  const userLookup = await supabase.auth.getUser();
+  if (
+    userLookup.error ||
+    !userLookup.data.user ||
+    userLookup.data.user.id !== userId
+  ) {
+    throw new Error("Invalid verified schema user");
+  }
+  const sessionLookup = await supabase.auth.getSession();
+  const accessToken = sessionLookup.data.session?.access_token;
+  if (sessionLookup.error || !accessToken) {
+    throw new Error("Verified schema session is unavailable");
+  }
+  let schema;
+  try {
+    schema = await fetchSchemaDetail(id, accessToken);
+  } catch (error) {
+    if (error instanceof SchemaDetailNotFoundError) notFound();
+    throw error;
+  }
   return <SchemaDetailClient initialSchema={schema} />;
 }

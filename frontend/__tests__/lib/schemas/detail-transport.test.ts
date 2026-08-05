@@ -32,11 +32,33 @@ describe("schema detail transport", () => {
   });
 
   it("round-trips a validated schema snapshot", () => {
-    expect(decodeSchemaSnapshot(encodeSchemaSnapshot(schema), schema.id)).toEqual(schema);
+    expect(decodeSchemaSnapshot(encodeSchemaSnapshot(schema), schema.id)).toEqual({
+      id: schema.id,
+    });
+  });
+
+  it("keeps a 147 KB schema and future columns out of the bounded header", () => {
+    const largeFutureSchema = {
+      ...schema,
+      text: { legalDefinition: "x".repeat(147_000) },
+      future_secret: "must-not-cross-the-boundary",
+    };
+    const encoded = encodeSchemaSnapshot(largeFutureSchema);
+
+    expect(encoded.length).toBeLessThanOrEqual(512);
+    expect(decodeSchemaSnapshot(encoded, schema.id)).toEqual({ id: schema.id });
+    expect(Buffer.from(encoded, "base64url").toString("utf8")).not.toContain(
+      "legalDefinition"
+    );
+    expect(Buffer.from(encoded, "base64url").toString("utf8")).not.toContain(
+      "future_secret"
+    );
   });
 
   it("rejects malformed and mismatched snapshots", () => {
-    const malformed = Buffer.from(JSON.stringify({ id: schema.id })).toString("base64url");
+    const malformed = Buffer.from(
+      JSON.stringify({ id: schema.id, extra: true })
+    ).toString("base64url");
     expect(() => decodeSchemaSnapshot(malformed, schema.id)).toThrow(
       "Invalid verified schema snapshot"
     );

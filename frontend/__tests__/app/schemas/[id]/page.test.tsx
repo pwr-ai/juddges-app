@@ -8,6 +8,17 @@ jest.mock("next/navigation", () => ({
     throw new Error("NEXT_NOT_FOUND");
   }),
 }));
+const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(async () => ({
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
+  })),
+}));
+jest.mock("@/lib/server/schema-detail", () => {
+  const actual = jest.requireActual("@/lib/server/schema-detail");
+  return { ...actual, fetchSchemaDetail: jest.fn() };
+});
 jest.mock("@/app/schemas/[id]/client", () => ({
   __esModule: true,
   default: jest.fn((props: unknown) =>
@@ -20,6 +31,7 @@ import SchemaDetailClient from "@/app/schemas/[id]/client";
 import SchemaDetailFailure from "@/components/schemas/SchemaDetailFailure";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { fetchSchemaDetail } from "@/lib/server/schema-detail";
 import {
   SCHEMA_FAILURE_STATUS_HEADER,
   SCHEMA_SNAPSHOT_HEADER,
@@ -32,6 +44,7 @@ import {
 const mockHeaders = jest.mocked(headers);
 const mockNotFound = jest.mocked(notFound);
 const mockClient = jest.mocked(SchemaDetailClient);
+const mockFetchSchemaDetail = jest.mocked(fetchSchemaDetail);
 
 const ID = "abcdef01-1234-4abc-8def-1234567890ab";
 const schema = {
@@ -53,9 +66,23 @@ describe("schema detail server page", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.BACKEND_API_KEY = "snapshot-secret";
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "owner-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "verified-token" } },
+      error: null,
+    });
+    mockFetchSchemaDetail.mockResolvedValue(schema);
   });
 
-  it("renders the client from one signed middleware snapshot", async () => {
+  it("renders a large schema from one user-scoped full read after signed proof", async () => {
+    const largeSchema = {
+      ...schema,
+      text: { legalDefinition: "x".repeat(147_000) },
+    };
+    mockFetchSchemaDetail.mockResolvedValue(largeSchema);
     const encoded = encodeSchemaSnapshot(schema);
     const signature = await signSchemaSnapshot(
       encoded,
@@ -76,7 +103,40 @@ describe("schema detail server page", () => {
 
     expect(React.isValidElement(result)).toBe(true);
     expect(result.type).toBe(mockClient);
-    expect(result.props).toEqual(expect.objectContaining({ initialSchema: schema }));
+    expect(result.props).toEqual(
+      expect.objectContaining({ initialSchema: largeSchema })
+    );
+    expect(mockFetchSchemaDetail).toHaveBeenCalledTimes(1);
+    expect(mockFetchSchemaDetail).toHaveBeenCalledWith(
+      ID,
+      "verified-token"
+    );
+  });
+
+  it("does not perform the full read when proof user differs from auth user", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "attacker" } },
+      error: null,
+    });
+    const encoded = encodeSchemaSnapshot(schema);
+    const signature = await signSchemaSnapshot(
+      encoded,
+      "owner-1",
+      `/schemas/${ID}`,
+      "snapshot-secret"
+    );
+    mockHeaders.mockResolvedValue(
+      new Headers({
+        [SCHEMA_SNAPSHOT_HEADER]: encoded,
+        [SCHEMA_SNAPSHOT_SIGNATURE_HEADER]: signature,
+        [SCHEMA_SNAPSHOT_USER_HEADER]: "owner-1",
+      }) as unknown as Awaited<ReturnType<typeof headers>>
+    );
+
+    await expect(
+      SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
+    ).rejects.toThrow(/verified schema user/i);
+    expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
   });
 
   it("turns a noncanonical route ID into not found", async () => {

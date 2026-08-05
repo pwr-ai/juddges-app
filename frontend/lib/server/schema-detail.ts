@@ -1,11 +1,13 @@
 import type { ExtractionSchema } from "@/types/extraction_schemas";
 import {
   isCanonicalSchemaId,
-  isExtractionSchema,
+  normalizeExtractionSchema,
 } from "@/lib/schemas/detail-transport";
 import logger from "@/lib/logger";
 
 const schemaLogger = logger.child("schema-detail");
+const SCHEMA_DETAIL_SELECT =
+  "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id";
 
 export type SchemaDetailFailureReason =
   | "upstream_auth"
@@ -101,7 +103,7 @@ export async function fetchSchemaDetail(
   }
 
   const query = new URLSearchParams({
-    select: "*",
+    select: SCHEMA_DETAIL_SELECT,
     id: `eq.${schemaId}`,
     limit: "1",
   });
@@ -146,19 +148,21 @@ export async function fetchSchemaDetail(
     if (payload === null || (Array.isArray(payload) && payload.length === 0)) {
       throw new SchemaDetailNotFoundError();
     }
-    if (
-      !Array.isArray(payload) ||
-      payload.length !== 1 ||
-      !isExtractionSchema(payload[0]) ||
-      payload[0].id !== schemaId
-    ) {
+    if (!Array.isArray(payload) || payload.length !== 1) {
       throw new SchemaDetailUpstreamError(
         "Schema service returned malformed data.",
         502,
         "malformed"
       );
     }
-    const schema = payload[0];
+    const schema = normalizeExtractionSchema(payload[0]);
+    if (!schema || schema.id !== schemaId) {
+      throw new SchemaDetailUpstreamError(
+        "Schema service returned malformed data.",
+        502,
+        "malformed"
+      );
+    }
     if (!schema.user_id) return schema;
 
     const profileQuery = new URLSearchParams({
@@ -206,6 +210,102 @@ export async function fetchSchemaDetail(
       });
       return schema;
     }
+  } catch (error) {
+    if (
+      error instanceof SchemaDetailNotFoundError ||
+      error instanceof SchemaDetailUpstreamError
+    ) {
+      throw error;
+    }
+    const timeout = isTimeoutFailure(error, signal);
+    throw new SchemaDetailUpstreamError(
+      timeout
+        ? "Schema service timed out."
+        : "Schema service is temporarily unavailable.",
+      timeout ? 504 : 503,
+      timeout ? "timeout" : "transport"
+    );
+  }
+}
+
+export async function fetchSchemaDetailProof(
+  schemaId: string,
+  accessToken: string,
+  requestSignal?: AbortSignal
+): Promise<{ id: string }> {
+  if (!isCanonicalSchemaId(schemaId)) {
+    throw new SchemaDetailNotFoundError();
+  }
+
+  const timeoutSignal = AbortSignal.timeout(timeoutMs());
+  const signal = combineSignals(requestSignal, timeoutSignal);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) {
+    throw new SchemaDetailUpstreamError(
+      "Schema service is not configured.",
+      500,
+      "upstream"
+    );
+  }
+  const query = new URLSearchParams({
+    select: "id",
+    id: `eq.${schemaId}`,
+    limit: "1",
+  });
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/extraction_schemas?${query.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: "no-store",
+        signal,
+      }
+    );
+    if (!response.ok) {
+      const upstreamAuth = response.status === 401 || response.status === 403;
+      throw new SchemaDetailUpstreamError(
+        upstreamAuth
+          ? "Schema service authorization failed."
+          : "Schema service failed while loading the schema.",
+        response.status >= 500 || upstreamAuth ? response.status : 502,
+        upstreamAuth ? "upstream_auth" : "upstream"
+      );
+    }
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new SchemaDetailUpstreamError(
+        "Schema service returned malformed data.",
+        502,
+        "malformed"
+      );
+    }
+    if (payload === null || (Array.isArray(payload) && payload.length === 0)) {
+      throw new SchemaDetailNotFoundError();
+    }
+    if (
+      !Array.isArray(payload) ||
+      payload.length !== 1 ||
+      typeof payload[0] !== "object" ||
+      payload[0] === null ||
+      !("id" in payload[0]) ||
+      payload[0].id !== schemaId
+    ) {
+      throw new SchemaDetailUpstreamError(
+        "Schema service returned malformed data.",
+        502,
+        "malformed"
+      );
+    }
+    return { id: schemaId };
   } catch (error) {
     if (
       error instanceof SchemaDetailNotFoundError ||

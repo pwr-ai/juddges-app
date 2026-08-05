@@ -13,6 +13,7 @@ import {
   SCHEMA_SNAPSHOT_HEADER,
   SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
   SCHEMA_SNAPSHOT_USER_HEADER,
+  decodeSchemaSnapshot,
 } from "@/lib/schemas/detail-transport";
 
 const mockUpdateSessionWithAuth = jest.mocked(updateSessionWithAuth);
@@ -62,7 +63,7 @@ describe("schema detail middleware preflight", () => {
     global.fetch = originalFetch;
   });
 
-  it("preflights once, replaces spoofed proof headers, and preserves refresh cookies", async () => {
+  it("preflights minimally, replaces spoofed proof headers, and preserves refresh cookies", async () => {
     const request = new NextRequest(`http://localhost/schemas/${ID}`, {
       headers: {
         [SCHEMA_SNAPSHOT_HEADER]: "forged",
@@ -75,17 +76,16 @@ describe("schema detail middleware preflight", () => {
     const response = await middleware(request);
 
     expect(response.status).toBe(200);
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("/rest/v1/extraction_schemas?"),
       expect.any(Object)
     );
-    expect(global.fetch).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining("/rest/v1/user_profiles?"),
-      expect.any(Object)
+    const preflightUrl = new URL(
+      String((global.fetch as jest.Mock).mock.calls[0][0])
     );
+    expect(preflightUrl.searchParams.get("select")).toBe("id");
     expect(response.cookies.get("sb-refresh")?.value).toBe("rotated");
     expect(response.headers.get("x-middleware-request-x-juddges-schema-snapshot")).not.toBe(
       "forged"
@@ -96,6 +96,33 @@ describe("schema detail middleware preflight", () => {
     expect(response.headers.get("x-middleware-request-x-juddges-schema-snapshot-user")).toBe(
       "owner-1"
     );
+  });
+
+  it("returns 200 with a bounded proof for a 147 KB schema", async () => {
+    const request = new NextRequest(`http://localhost/schemas/${ID}`);
+    mockUpdateSessionWithAuth.mockResolvedValue(sessionResult(request));
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            ...schema,
+            text: { legalDefinition: "x".repeat(147_000) },
+            future_secret: "must-not-cross-the-boundary",
+          },
+        ]),
+        { status: 200 }
+      )
+    );
+
+    const response = await middleware(request);
+    const encoded = response.headers.get(
+      "x-middleware-request-x-juddges-schema-snapshot"
+    );
+
+    expect(response.status).toBe(200);
+    expect(encoded).toBeTruthy();
+    expect(encoded!.length).toBeLessThanOrEqual(512);
+    expect(decodeSchemaSnapshot(encoded!, ID)).toEqual({ id: ID });
   });
 
   it.each([

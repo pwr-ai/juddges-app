@@ -21,7 +21,8 @@ Issue #409 must:
   actions, instead of returning hand-written HTML;
 - keep invalid, missing, and hidden API 404 responses exactly identical and
   free of identifiers and upstream diagnostics;
-- perform one primary RLS-scoped schema lookup per successful page request;
+- perform one minimal RLS-scoped preflight followed by one explicitly projected,
+  user-scoped full read for a successful page request;
 - enrich the creator email with at most one controlled, best-effort lookup;
 - hydrate the client from verified server data without another detail fetch;
 - preserve all existing owner and shared actions.
@@ -39,10 +40,10 @@ Issue #409 must:
 | Unit | Path | Responsibility |
 |---|---|---|
 | Transport contract | `frontend/lib/schemas/detail-transport.ts` | Canonical UUID validation, payload validation, internal header names, and HMAC signing/verification bound to user, route, and payload. |
-| RLS-scoped reader | `frontend/lib/server/schema-detail.ts` | Read one visible schema with the user's bearer token, classify upstream outcomes, validate the payload, and optionally enrich the creator email. |
+| RLS-scoped reader | `frontend/lib/server/schema-detail.ts` | Preflight visibility by ID, then read only the explicit fields required by the UI with the user's bearer token, classify upstream outcomes, validate/project the payload, and optionally enrich the creator email. |
 | Session middleware | `frontend/lib/supabase/middleware.ts` | Verify/refresh the Supabase session, strip all caller-supplied internal schema headers, allow exact single-segment schema API reads to reach their handler, and keep nested/lookalike routes protected. |
-| Root middleware | `frontend/middleware.ts` | Preflight exact schema page reads, preserve real statuses, inject a signed success snapshot, or inject a sanitized failure status. |
-| Server page | `frontend/app/schemas/[id]/page.tsx` | Reject noncanonical IDs, verify the middleware proof, decode the snapshot, and choose the success or styled failure component. |
+| Root middleware | `frontend/middleware.ts` | Preflight exact schema page reads, preserve real statuses, inject a bounded signed ID proof, or inject a sanitized failure status. |
+| Server page | `frontend/app/schemas/[id]/page.tsx` | Reject noncanonical IDs, verify the middleware proof and current user, perform the single full user-scoped read, and choose the success or styled failure component. |
 | Client view | `frontend/app/schemas/[id]/client.tsx` | Render the supplied schema and preserve interactive actions without an initial fetch. |
 | Failure view | `frontend/components/schemas/SchemaDetailFailure.tsx` | Render the application `ErrorCard` with retry and back actions. |
 | BFF route | `frontend/app/api/schemas/[id]/route.ts` | Validate first, authenticate independently, invoke the RLS reader, and map results to stable JSON/status responses. |
@@ -56,10 +57,12 @@ GET or HEAD /schemas/[id]
      -> invalid, missing, or RLS-hidden: rewrite to unmatched app route, status 404
      -> 401/403/500/502/503/504: continue with the same status and a trusted
         internal failure-status header
-     -> success: sign {user, path, encoded schema} and continue
+     -> success: sign {user, path, bounded schema-ID proof} and continue
   -> server page
      -> failure header: render SchemaDetailFailure inside the app shell
-     -> valid HMAC snapshot: render SchemaDetailClient(initialSchema)
+     -> valid HMAC proof: verify the same user, fetch the explicitly projected
+        full schema with that user's bearer token, and render
+        SchemaDetailClient(initialSchema)
      -> missing/forged proof: throw; never trust caller headers
 ```
 
@@ -70,17 +73,28 @@ with the original status so the page can render the styled retry surface at the
 requested URL. The middleware strips the failure and snapshot headers before
 setting its own values.
 
-The HMAC uses `BACKEND_API_KEY` and covers the user ID, pathname, and encoded
-schema. A snapshot cannot be moved to another user or route or modified without
-invalidating its signature.
+The HMAC uses `BACKEND_API_KEY` and covers the user ID, pathname, and a bounded
+proof containing only the canonical schema ID. A proof cannot be moved to
+another user or route or modified without invalidating its signature. The full
+schema definition is deliberately never copied into a request header.
 
 ### 3.2 Data lookup and creator enrichment
 
 `fetchSchemaDetail` uses `NEXT_PUBLIC_SUPABASE_URL`, the anon key, and the
 verified user's bearer token. It never uses the service-role key.
 
-The primary request is one `extraction_schemas` query with the canonical ID and
-`limit=1`:
+The middleware preflight selects only `id` with the canonical ID and `limit=1`.
+After the proof is verified, the server page performs exactly one full read with
+an explicit projection of the fields used by the UI:
+`id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id`.
+Both reads use the same user's bearer token and remain subject to RLS.
+
+This two-read design is intentional. Real legal schema JSON is known to reach
+about 147 KB, which is valid application data but far beyond a safe HTTP request
+header budget. The small proof keeps the internal header bounded while the full
+definition travels as a normal Supabase response and React server payload.
+Future database columns are excluded by both the PostgREST projection and an
+explicit object projection before the schema crosses the server boundary.
 
 | Upstream outcome | Public status |
 |---|---:|
@@ -134,7 +148,9 @@ detail fetch during hydration. It preserves:
 
 - owner-only Edit and Delete;
 - shared Duplicate, Export, and Configure Extraction actions;
-- raw, YAML, table, and preview views;
+- table and preview views, plus the existing JSON export action;
+- raw JSON and YAML tabs remain hidden/disabled and are not promised by this
+  contract;
 - delete confirmation and existing delete request;
 - creator and timestamp metadata.
 
@@ -142,14 +158,14 @@ detail fetch during hydration. It preserves:
 
 | Contract | Test path | Evidence |
 |---|---|---|
-| RLS reader and enrichment | `frontend/__tests__/lib/server/schema-detail.test.ts` | ID validation, one primary read, upstream status mapping, payload validation, zero/one creator lookup, optional enrichment failures. |
+| RLS reader and enrichment | `frontend/__tests__/lib/server/schema-detail.test.ts` | ID validation, exact UI projection, large valid payloads, future-column exclusion, upstream status mapping, zero/one creator lookup, and optional enrichment failures. |
 | API mapping | `frontend/__tests__/app/api/schemas/[id]/route.test.ts` | Exact 200/401/403/404/5xx, identical 404 bodies, HEAD, cache headers, and 405 methods. |
 | Session routing | `frontend/tests/unit/lib/supabase/middleware.test.ts` | Anonymous canonical/invalid/dotted single segments reach the handler; nested paths redirect; caller proof headers are stripped. |
-| Page preflight | `frontend/__tests__/middleware/schema-detail.test.ts` | One primary preflight, one controlled profile lookup, signed proof replacement, real statuses, cookies, 405, and encoded aliases. |
-| Server page | `frontend/__tests__/app/schemas/[id]/page.test.tsx` | Signed success snapshot, trusted failure statuses, invalid IDs, and missing/forged proof rejection. |
+| Page preflight | `frontend/__tests__/middleware/schema-detail.test.ts` | One ID-only preflight, bounded signed proof replacement, large valid payload handling, real statuses, cookies, 405, and encoded aliases. |
+| Server page | `frontend/__tests__/app/schemas/[id]/page.test.tsx` | Signed ID proof, same-user verification, one full projected read, large schema rendering, trusted failure statuses, invalid IDs, and missing/forged proof rejection. |
 | Failure surface | `frontend/__tests__/app/schemas/[id]/failure-surface.test.tsx` | Application `ErrorCard`, Retry, and Back to Schemas. |
 | Client behavior | `frontend/__tests__/app/schemas/[id]/client.test.tsx` | Owner/non-owner controls, shared actions, creator rendering, and no hydration fetch. |
-| Production contract | `frontend/tests/unit/app/schemas/http-status-contract.test.ts` | Real Next production build and standalone server: page/API statuses, application surfaces, auth redirects, exact 404 equality, HEAD/405, spoof resistance, cookie refresh, profile enrichment, and one primary successful lookup. |
+| Production contract | `frontend/tests/unit/app/schemas/http-status-contract.test.ts` | Real Next production build and standalone server: page/API statuses, application surfaces, auth redirects, exact 404 equality, HEAD/405, spoof resistance, cookie refresh, profile enrichment, and successful page lookup behavior. |
 
 ## 6. Verification commands
 
