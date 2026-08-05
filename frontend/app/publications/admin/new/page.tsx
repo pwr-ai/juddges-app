@@ -1,35 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { ArrowLeft } from "lucide-react";
 import { PublicationForm } from "@/components/publications/admin/publication-form";
 
 export default function NewPublicationPage() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth/login?redirect=/publications/admin/new");
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">

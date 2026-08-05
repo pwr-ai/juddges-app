@@ -7884,9 +7884,9 @@ export interface components {
              */
             decision_types: components["schemas"]["DistributionItem"][];
             /** Decisions Per Year */
-            decisions_per_year?: {
-                [key: string]: unknown;
-            }[] | null;
+            decisions_per_year?: components["schemas"]["YearlyDecisionCount"][] | null;
+            /** Decisions Per Year By Jurisdiction */
+            decisions_per_year_by_jurisdiction: components["schemas"]["JurisdictionYearlyDecisionCount"][];
             /**
              * @default {
              *       "PL": 0,
@@ -9854,6 +9854,18 @@ export interface components {
              * @default 0
              */
             UK: number;
+        };
+        /** JurisdictionYearlyDecisionCount */
+        JurisdictionYearlyDecisionCount: {
+            /** Count */
+            count: number;
+            /**
+             * Jurisdiction
+             * @enum {string}
+             */
+            jurisdiction: "PL" | "UK";
+            /** Year */
+            year: number;
         };
         /**
          * KeyPointArgument
@@ -14416,6 +14428,13 @@ export interface components {
             total_versions: number;
             /** Versions */
             versions: components["schemas"]["DocumentVersion"][];
+        };
+        /** YearlyDecisionCount */
+        YearlyDecisionCount: {
+            /** Count */
+            count: number;
+            /** Year */
+            year: number;
         };
         /** ZeroResultQueryItem */
         ZeroResultQueryItem: {
