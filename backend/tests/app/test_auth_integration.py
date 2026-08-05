@@ -5,7 +5,14 @@ Tests API key verification, JWT authentication, and access control.
 """
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
+
+
+def _assert_api_key_error(response: Response, detail: str) -> None:
+    """Assert the exact API-key authentication contract."""
+    assert response.status_code == 401
+    assert response.json() == {"detail": detail}
+    assert response.headers["WWW-Authenticate"] == "APIKey"
 
 
 @pytest.mark.anyio
@@ -21,9 +28,7 @@ async def test_api_key_required_for_protected_endpoints(client: AsyncClient):
 
     for endpoint in protected_endpoints:
         response = await client.get(endpoint)
-        assert response.status_code in [401, 403], (
-            f"Endpoint {endpoint} should require authentication"
-        )
+        _assert_api_key_error(response, "Not authenticated")
 
 
 @pytest.mark.anyio
@@ -34,12 +39,7 @@ async def test_invalid_api_key_rejected(
 ):
     """Test that invalid API keys are rejected."""
     response = await client.get("/documents", headers=invalid_api_headers)
-    assert response.status_code == 401
-
-    # Check error message
-    data = response.json()
-    assert "detail" in data
-    assert "Invalid API key" in data["detail"] or "Unauthorized" in str(data)
+    _assert_api_key_error(response, "Invalid API key")
 
 
 @pytest.mark.anyio
@@ -66,7 +66,7 @@ async def test_api_key_case_sensitivity(client: AsyncClient, test_api_key: str):
 
     # Should be rejected if original key was lowercase
     if test_api_key != test_api_key.upper():
-        assert response.status_code == 401
+        _assert_api_key_error(response, "Invalid API key")
 
 
 @pytest.mark.anyio
@@ -77,7 +77,7 @@ async def test_api_key_header_name(client: AsyncClient, test_api_key: str):
     # Wrong header name
     headers = {"Authorization": test_api_key}
     response = await client.get("/documents", headers=headers)
-    assert response.status_code in [401, 403]
+    _assert_api_key_error(response, "Not authenticated")
 
     # Correct header name
     headers = {"X-API-Key": test_api_key}
@@ -92,7 +92,7 @@ async def test_empty_api_key_rejected(client: AsyncClient):
     """Test that empty API key is rejected."""
     headers = {"X-API-Key": ""}
     response = await client.get("/documents", headers=headers)
-    assert response.status_code in [401, 403]
+    _assert_api_key_error(response, "Not authenticated")
 
 
 @pytest.mark.anyio
@@ -259,7 +259,7 @@ async def test_api_key_in_query_param_rejected(client: AsyncClient, test_api_key
     response = await client.get(f"/documents?api_key={test_api_key}")
 
     # Should require header-based authentication
-    assert response.status_code in [401, 403]
+    _assert_api_key_error(response, "Not authenticated")
 
 
 @pytest.mark.anyio
@@ -269,14 +269,8 @@ async def test_authentication_error_messages(client: AsyncClient):
     """Test that authentication error messages are appropriate."""
     # No credentials
     response = await client.get("/documents")
-    assert response.status_code in [401, 403]
-    data = response.json()
-    assert "detail" in data
+    _assert_api_key_error(response, "Not authenticated")
 
     # Invalid credentials
     response = await client.get("/documents", headers={"X-API-Key": "invalid"})
-    assert response.status_code == 401
-    data = response.json()
-    assert "detail" in data
-    # Should not leak implementation details
-    assert "Invalid API key" in data["detail"] or "Unauthorized" in str(data)
+    _assert_api_key_error(response, "Invalid API key")
