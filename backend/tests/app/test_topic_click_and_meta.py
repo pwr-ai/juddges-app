@@ -5,10 +5,9 @@ Security additions (issues #165, #214):
   inputs are rejected at the model level (ValidationError) and surfaced as HTTP
   422 by FastAPI.
 - The /topic-click and /autocomplete endpoints now carry @limiter.limit()
-  decorators. Because the autouse ``disable_rate_limiter`` fixture sets
-  ``limiter.enabled = False`` during tests, 429 responses are not observable
-  in unit tests. Tests instead verify that (a) the endpoints still return 200
-  within limits and (b) over-length inputs are rejected with 422.
+  decorators. Contract tests explicitly re-enable the limiter to verify that
+  valid requests receive rate-limit headers, while over-length inputs are
+  still rejected with 422.
 """
 
 from __future__ import annotations
@@ -225,6 +224,33 @@ class TestTopicClickEndpoint:
         mock_record.assert_called_once_with(
             topic_id="homicide",
             query="zabójstwo",
+            jurisdiction=None,
+            user_id=None,
+        )
+
+    @pytest.mark.anyio
+    @patch("app.api.search.record_topic_click")
+    async def test_valid_payload_succeeds_with_runtime_rate_limit_headers(
+        self, mock_record, client, valid_api_headers
+    ):
+        """Production limiter headers must be emitted for a valid JSON body."""
+        from app.server import app
+
+        app.state.limiter.enabled = True
+        try:
+            response = await client.post(
+                "/api/search/topic-click",
+                json={"topic_id": "fraud", "query": "fra", "jurisdiction": None},
+                headers=valid_api_headers,
+            )
+        finally:
+            app.state.limiter.enabled = False
+
+        assert response.status_code == 200
+        assert int(response.headers["X-RateLimit-Limit"]) > 0
+        mock_record.assert_called_once_with(
+            topic_id="fraud",
+            query="fra",
             jurisdiction=None,
             user_id=None,
         )

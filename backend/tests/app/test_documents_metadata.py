@@ -56,7 +56,7 @@ async def test_get_document_metadata_requires_authentication(client: AsyncClient
     """Test that metadata endpoint requires authentication."""
     response = await client.get("/documents/test-id/metadata")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
@@ -247,7 +247,7 @@ async def test_get_citation_network_requires_authentication(client: AsyncClient)
     """Test that citation network requires authentication."""
     response = await client.get("/documents/citation-network")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio

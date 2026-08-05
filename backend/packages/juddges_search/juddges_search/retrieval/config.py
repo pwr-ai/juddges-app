@@ -31,9 +31,6 @@ OPTIMIZED_CHUNK_FETCH_LIMIT = 150
 # 0.5 provides balanced keyword + semantic search
 OPTIMIZED_CHUNK_ALPHA = 0.5
 
-# Maximum number of chunks that can be fetched in a single request via the /chunks/fetch endpoint
-MAX_CHUNKS_PER_FETCH_REQUEST = 200
-
 # ===== Python GroupBy Chunk Search Defaults =====
 
 # Default number of documents returned when using Python-side GroupBy

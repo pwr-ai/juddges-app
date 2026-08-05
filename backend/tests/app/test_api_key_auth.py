@@ -11,7 +11,14 @@ Tests for API key authentication including security measures like:
 import time
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
+
+
+def _assert_api_key_error(response: Response, detail: str) -> None:
+    """Assert the exact API-key authentication contract."""
+    assert response.status_code == 401
+    assert response.json() == {"detail": detail}
+    assert response.headers["WWW-Authenticate"] == "APIKey"
 
 
 @pytest.mark.anyio
@@ -33,12 +40,7 @@ class TestAPIKeyAuthentication:
         """Test that requests without API key are rejected with 401."""
         response = await client.get("/documents")
 
-        assert response.status_code in [401, 403], (
-            "Missing API key should return 401 or 403"
-        )
-
-        data = response.json()
-        assert "detail" in data, "Error response should contain detail field"
+        _assert_api_key_error(response, "Not authenticated")
 
     async def test_invalid_api_key_rejected(
         self, client: AsyncClient, invalid_api_headers: dict[str, str]
@@ -46,18 +48,14 @@ class TestAPIKeyAuthentication:
         """Test that invalid API key is rejected with 401."""
         response = await client.get("/documents", headers=invalid_api_headers)
 
-        assert response.status_code == 401, "Invalid API key should return 401"
-
-        data = response.json()
-        assert "detail" in data
-        assert "Invalid API key" in data["detail"] or "Unauthorized" in str(data)
+        _assert_api_key_error(response, "Invalid API key")
 
     async def test_empty_api_key_rejected(self, client: AsyncClient):
         """Test that empty API key is rejected."""
         headers = {"X-API-Key": ""}
         response = await client.get("/documents", headers=headers)
 
-        assert response.status_code in [401, 403], "Empty API key should be rejected"
+        _assert_api_key_error(response, "Not authenticated")
 
     async def test_api_key_with_whitespace_rejected(self, client: AsyncClient):
         """Test that API key with leading/trailing whitespace is rejected."""
@@ -72,9 +70,7 @@ class TestAPIKeyAuthentication:
         for api_key in test_cases:
             headers = {"X-API-Key": api_key}
             response = await client.get("/documents", headers=headers)
-            assert response.status_code == 401, (
-                f"API key with whitespace should be rejected: {api_key!r}"
-            )
+            _assert_api_key_error(response, "Invalid API key")
 
     async def test_api_key_case_sensitivity(
         self, client: AsyncClient, test_api_key: str
@@ -95,14 +91,10 @@ class TestAPIKeyAuthentication:
 
         # Different case should be rejected (if original is not all same case)
         if test_api_key != test_api_key.upper():
-            assert response_upper.status_code == 401, (
-                "Uppercase API key should be rejected if original is not uppercase"
-            )
+            _assert_api_key_error(response_upper, "Invalid API key")
 
         if test_api_key != test_api_key.lower():
-            assert response_lower.status_code == 401, (
-                "Lowercase API key should be rejected if original is not lowercase"
-            )
+            _assert_api_key_error(response_lower, "Invalid API key")
 
     async def test_api_key_timing_attack_protection(self, client: AsyncClient):
         """
@@ -164,9 +156,7 @@ class TestAPIKeyAuthentication:
 
         for headers in wrong_headers:
             response = await client.get("/documents", headers=headers)
-            assert response.status_code in [401, 403], (
-                f"Wrong header {next(iter(headers.keys()))} should be rejected"
-            )
+            _assert_api_key_error(response, "Not authenticated")
 
         # Header names are case-insensitive per HTTP spec, so this variant is valid.
         response = await client.get("/documents", headers={"X-Api-Key": test_api_key})
@@ -179,15 +169,11 @@ class TestAPIKeyAuthentication:
         # API keys should NEVER be in query params (can be logged)
         response = await client.get(f"/documents?api_key={test_api_key}")
 
-        assert response.status_code in [401, 403], (
-            "API key in query param should be rejected"
-        )
+        _assert_api_key_error(response, "Not authenticated")
 
         response = await client.get(f"/documents?X-API-Key={test_api_key}")
 
-        assert response.status_code in [401, 403], (
-            "API key in query param should be rejected"
-        )
+        _assert_api_key_error(response, "Not authenticated")
 
     async def test_multiple_api_keys_rejected(
         self, client: AsyncClient, test_api_key: str
@@ -212,10 +198,7 @@ class TestAPIKeyAuthentication:
         headers = {"X-API-Key": long_key}
         response = await client.get("/documents", headers=headers)
 
-        assert response.status_code == 401, "Very long API key should be rejected"
-        assert response.status_code < 500, (
-            "Very long API key should not cause server error"
-        )
+        _assert_api_key_error(response, "Invalid API key")
 
     async def test_special_characters_in_api_key(self, client: AsyncClient):
         """Test that API keys with special characters are handled correctly."""
@@ -230,12 +213,7 @@ class TestAPIKeyAuthentication:
             headers = {"X-API-Key": key}
             response = await client.get("/documents", headers=headers)
 
-            assert response.status_code == 401, (
-                f"Special character key should be rejected: {key!r}"
-            )
-            assert response.status_code < 500, (
-                f"Special character key should not cause server error: {key!r}"
-            )
+            _assert_api_key_error(response, "Invalid API key")
 
     async def test_api_key_works_across_endpoints(
         self, client: AsyncClient, valid_api_headers: dict[str, str]
@@ -271,6 +249,8 @@ class TestAPIKeyAuthentication:
     async def test_api_key_error_messages_no_leakage(self, client: AsyncClient):
         """Test that error messages don't leak sensitive information."""
         response = await client.get("/documents", headers={"X-API-Key": "wrong-key"})
+
+        _assert_api_key_error(response, "Invalid API key")
 
         data = response.json()
         detail = str(data.get("detail", "")).lower()

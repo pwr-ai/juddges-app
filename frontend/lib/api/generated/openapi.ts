@@ -7884,9 +7884,9 @@ export interface components {
              */
             decision_types: components["schemas"]["DistributionItem"][];
             /** Decisions Per Year */
-            decisions_per_year?: {
-                [key: string]: unknown;
-            }[] | null;
+            decisions_per_year?: components["schemas"]["YearlyDecisionCount"][] | null;
+            /** Decisions Per Year By Jurisdiction */
+            decisions_per_year_by_jurisdiction: components["schemas"]["JurisdictionYearlyDecisionCount"][];
             /**
              * @default {
              *       "PL": 0,
@@ -8407,9 +8407,9 @@ export interface components {
              * Language
              * @description Language of the extraction
              * @default pl
-             * @constant
+             * @enum {string}
              */
-            language: "pl";
+            language: "pl" | "en";
             /**
              * Llm Kwargs
              * @description Keyword arguments to pass to the LLM (to disable thinking in gemini pass llm_kwargs): {'extra_body': {'thinking': {'budget_tokens': 0}}})
@@ -9854,6 +9854,18 @@ export interface components {
              * @default 0
              */
             UK: number;
+        };
+        /** JurisdictionYearlyDecisionCount */
+        JurisdictionYearlyDecisionCount: {
+            /** Count */
+            count: number;
+            /**
+             * Jurisdiction
+             * @enum {string}
+             */
+            jurisdiction: "PL" | "UK";
+            /** Year */
+            year: number;
         };
         /**
          * KeyPointArgument
@@ -13206,10 +13218,11 @@ export interface components {
             extraction_context: string;
             /**
              * Language
-             * @description Language for extraction (e.g., 'pl', 'en')
+             * @description Language for extraction ('pl' or 'en')
              * @default pl
+             * @enum {string}
              */
-            language: string;
+            language: "pl" | "en";
             /**
              * Schema Id
              * @description Schema ID (alphanumeric, hyphens, underscores, dots only)
@@ -14415,6 +14428,13 @@ export interface components {
             total_versions: number;
             /** Versions */
             versions: components["schemas"]["DocumentVersion"][];
+        };
+        /** YearlyDecisionCount */
+        YearlyDecisionCount: {
+            /** Count */
+            count: number;
+            /** Year */
+            year: number;
         };
         /** ZeroResultQueryItem */
         ZeroResultQueryItem: {

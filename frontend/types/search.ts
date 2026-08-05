@@ -134,17 +134,6 @@ export interface LegalDocumentMetadata {
   } | null;
 }
 
-export interface SearchDocumentsDirectResponse {
-  documents: LegalDocumentMetadata[];
-  total_count: number;
-  is_capped: boolean;
-}
-
-export interface ChunksByDocumentIdsResponse {
-  chunks: SearchChunk[];
-  query: string;
-}
-
 export interface DocumentExtractionResult {
   collection_id: string;
   document_id: string;

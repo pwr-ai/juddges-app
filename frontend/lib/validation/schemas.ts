@@ -34,7 +34,8 @@ export const extractionRequestSchema = z.object({
     .min(1, 'Extraction context cannot be empty')
     .max(5000, 'Extraction context is too long (max 5000 characters)')
     .describe('Context to guide the extraction process (required)'),
-  language: languageSchema.describe('Language for extraction (pl, en, or uk). Defaults to pl if not provided.'),
+  language: z.enum(['pl', 'en']).default('pl')
+    .describe('Language for extraction (pl or en). Defaults to pl if not provided.'),
   additional_instructions: z
     .string()
     .max(5000, 'Additional instructions are too long (max 5000 characters)')
@@ -155,35 +156,6 @@ export const similarDocumentsQuerySchema = z.object({
 });
 
 export type SimilarDocumentsQuery = z.infer<typeof similarDocumentsQuerySchema>;
-
-/**
- * Document similarity graph query parameters (GET /api/documents/similarity-graph)
- */
-export const similarityGraphQuerySchema = z.object({
-  sample_size: z.coerce
-    .number()
-    .int('Sample size must be an integer')
-    .positive('Sample size must be positive')
-    .max(500, 'Sample size cannot exceed 500')
-    .default(50)
-    .describe('Number of documents to sample for the graph'),
-  similarity_threshold: z.coerce
-    .number()
-    .min(0, 'Similarity threshold must be between 0 and 1')
-    .max(1, 'Similarity threshold must be between 0 and 1')
-    .default(0.7)
-    .describe('Minimum similarity score for creating edges'),
-  document_types: z
-    .string()
-    .optional()
-    .describe('Comma-separated list of document types to filter'),
-  include_clusters: z.coerce
-    .boolean()
-    .default(false)
-    .describe('Whether to include cluster information in the response')
-}).strict();
-
-export type SimilarityGraphQuery = z.infer<typeof similarityGraphQuerySchema>;
 
 /**
  * Helper function to validate request body

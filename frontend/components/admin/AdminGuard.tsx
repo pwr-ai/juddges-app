@@ -1,12 +1,23 @@
 "use client";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { ShieldAlert } from "lucide-react";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !user) {
+      const searchParams = new URLSearchParams({ next: pathname || "/" });
+      router.replace(`/auth/login?${searchParams.toString()}`);
+    }
+  }, [loading, pathname, router, user]);
+
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="size-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -16,7 +27,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.app_metadata?.is_admin === true;
 
-  if (!user || !isAdmin) {
+  if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md px-6">
