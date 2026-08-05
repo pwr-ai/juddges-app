@@ -2,13 +2,26 @@
  * @jest-environment node
  */
 
-import { spawn, spawnSync } from "node:child_process";
-import { once } from "node:events";
 import { createServer, type Server } from "node:http";
-import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-jest.setTimeout(240_000);
+import {
+  acquireProductionBuildLock,
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+} from "@/tests/support/production-build-lock";
+import {
+  type ProductionChild,
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_POLL_INTERVAL_MS,
+  PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
+  PRODUCTION_REQUEST_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+  runProductionChild,
+  spawnProductionChild,
+  stopProductionChild,
+} from "@/tests/support/production-child-process";
+
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 const OWN_COLLECTION_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const MISSING_COLLECTION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -19,8 +32,6 @@ const UPSTREAM_500_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const UPSTREAM_503_ID = "12121212-1212-4212-8212-121212121212";
 const TIMEOUT_COLLECTION_ID = "34343434-3434-4434-8434-343434343434";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
-const BUILD_DIR = ".next-collections-contract";
-const BUILD_TSCONFIG = "tsconfig.collections-contract.json";
 
 async function listen(server: Server): Promise<number> {
   await new Promise<void>((resolve, reject) => {
@@ -35,6 +46,7 @@ async function listen(server: Server): Promise<number> {
 }
 
 async function close(server: Server): Promise<void> {
+  if (!server.listening) return;
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
@@ -70,17 +82,31 @@ async function requestUntilReady(url: string, cookie: string): Promise<Response>
       return await fetch(url, {
         headers: { cookie },
         redirect: "manual",
+        signal: AbortSignal.timeout(PRODUCTION_READINESS_REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) =>
+        setTimeout(resolve, PRODUCTION_READINESS_POLL_INTERVAL_MS),
+      );
     }
   }
   throw lastError;
 }
 
+function contractFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  return fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
+  });
+}
+
 describe("collection detail production status contract", () => {
   it("returns real 404 responses for missing, hidden, and invalid collection IDs", async () => {
+    const releaseProductionBuildLock = await acquireProductionBuildLock();
     const authServer = createServer((request, response) => {
       if (request.url === "/auth/v1/user") {
         if (request.headers.authorization === "Bearer bad-jwt-access-token") {
@@ -162,83 +188,50 @@ describe("collection detail production status contract", () => {
       }
     });
 
-    const authPort = await listen(authServer);
-    const backendPort = await listen(backendServer);
-    const supabaseUrl = `http://127.0.0.1:${authPort}`;
-    const backendUrl = `http://127.0.0.1:${backendPort}`;
-    const buildPath = join(process.cwd(), BUILD_DIR);
-    const buildTsconfigPath = join(process.cwd(), BUILD_TSCONFIG);
-    rmSync(buildPath, { recursive: true, force: true });
-    writeFileSync(
-      buildTsconfigPath,
-      JSON.stringify(
-        {
-          extends: "./tsconfig.json",
-          include: [
-            "next-env.d.ts",
-            "**/*.ts",
-            "**/*.tsx",
-            `${BUILD_DIR}/types/**/*.ts`,
-          ],
-          exclude: ["node_modules"],
-        },
-        null,
-        2
-      )
-    );
-
-    const nextBin = join(process.cwd(), "node_modules/next/dist/bin/next");
-    const build = spawnSync(process.execPath, [nextBin, "build"], {
-      cwd: process.cwd(),
-      env: {
+    let productionServer: ProductionChild | undefined;
+    try {
+      const authPort = await listen(authServer);
+      const backendPort = await listen(backendServer);
+      const supabaseUrl = `http://127.0.0.1:${authPort}`;
+      const backendUrl = `http://127.0.0.1:${backendPort}`;
+      const productionEnvironment = {
         ...process.env,
-        NODE_ENV: "production",
-        NEXT_BUILD_DIR: BUILD_DIR,
-        NEXT_TSCONFIG_PATH: BUILD_TSCONFIG,
+        NODE_ENV: "production" as const,
         NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "contract-anon-key",
         API_BASE_URL: backendUrl,
         BACKEND_API_KEY: "contract-backend-key",
         COLLECTION_DETAIL_TIMEOUT_MS: "200",
-      },
-      encoding: "utf8",
-      timeout: 210_000,
-    });
+      };
 
-    let productionServer: ReturnType<typeof spawn> | undefined;
-    try {
-      if (build.status !== 0) {
-        throw new Error(`Production build failed:\n${build.stdout}\n${build.stderr}`);
-      }
+      const nextBin = join(process.cwd(), "node_modules/next/dist/bin/next");
+      await runProductionChild({
+        command: process.execPath,
+        args: [nextBin, "build"],
+        label: "Next collection contract production build",
+        cwd: process.cwd(),
+        env: productionEnvironment,
+        timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+      });
 
       const appServer = createServer();
       const nextPort = await listen(appServer);
       await close(appServer);
       const serverPath = join(
-        buildPath,
-        "standalone/frontend/server.js"
+        process.cwd(),
+        ".next/standalone/frontend/server.js",
       );
-      productionServer = spawn(process.execPath, [serverPath], {
+      productionServer = spawnProductionChild({
+        command: process.execPath,
+        args: [serverPath],
+        label: "Next collection contract production server",
         cwd: process.cwd(),
         env: {
-          ...process.env,
-          NODE_ENV: "production",
+          ...productionEnvironment,
           PORT: String(nextPort),
           HOSTNAME: "127.0.0.1",
-          NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "contract-anon-key",
-          API_BASE_URL: backendUrl,
-          BACKEND_API_KEY: "contract-backend-key",
-          COLLECTION_DETAIL_TIMEOUT_MS: "200",
         },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      let output = "";
-      productionServer.stdout?.on("data", (chunk) => {
-        output += chunk.toString();
-      });
-      productionServer.stderr?.on("data", (chunk) => {
-        output += chunk.toString();
+        timeoutMs: PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
       });
 
       const baseUrl = `http://127.0.0.1:${nextPort}`;
@@ -247,43 +240,49 @@ describe("collection detail production status contract", () => {
         `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
         cookie
       );
-      const missing = await fetch(
+      const missing = await contractFetch(
         `${baseUrl}/collections/${MISSING_COLLECTION_ID}`,
         { headers: { cookie }, redirect: "manual" }
       );
-      const hidden = await fetch(
+      const hidden = await contractFetch(
         `${baseUrl}/collections/${HIDDEN_COLLECTION_ID}`,
         { headers: { cookie }, redirect: "manual" }
       );
-      const invalid = await fetch(`${baseUrl}/collections/unsafe%20collection`, {
-        headers: { cookie },
-        redirect: "manual",
-      });
-      const encoded = await fetch(
+      const invalid = await contractFetch(
+        `${baseUrl}/collections/unsafe%20collection`,
+        {
+          headers: { cookie },
+          redirect: "manual",
+        },
+      );
+      const encoded = await contractFetch(
         `${baseUrl}/collections/${OWN_COLLECTION_ID}%2Fnested`,
         { headers: { cookie }, redirect: "manual" }
       );
-      const lookalike = await fetch(
+      const lookalike = await contractFetch(
         `${baseUrl}/collections/${OWN_COLLECTION_ID}/nested`,
         { headers: { cookie }, redirect: "manual" }
       );
-      const post = await fetch(`${baseUrl}/collections/${OWN_COLLECTION_ID}`, {
-        method: "POST",
-        headers: { cookie },
-        redirect: "manual",
-      });
-      const anonymous = await fetch(
+      const post = await contractFetch(
+        `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
+        {
+          method: "POST",
+          headers: { cookie },
+          redirect: "manual",
+        },
+      );
+      const anonymous = await contractFetch(
         `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
         { redirect: "manual" }
       );
-      const authUnavailable = await fetch(
+      const authUnavailable = await contractFetch(
         `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
         {
           headers: { cookie: authCookie("auth-service-failure-access-token") },
           redirect: "manual",
         }
       );
-      const staleCredentials = await fetch(
+      const staleCredentials = await contractFetch(
         `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
         {
           headers: { cookie: authCookie("bad-jwt-access-token") },
@@ -298,10 +297,13 @@ describe("collection detail production status contract", () => {
           [UPSTREAM_503_ID, 503],
           [TIMEOUT_COLLECTION_ID, 504],
         ].map(async ([id, status]) => {
-          const response = await fetch(`${baseUrl}/collections/${id}`, {
-            headers: { cookie },
-            redirect: "manual",
-          });
+          const response = await contractFetch(
+            `${baseUrl}/collections/${id}`,
+            {
+              headers: { cookie },
+              redirect: "manual",
+            },
+          );
           return { actual: response.status, expected: status };
         })
       );
@@ -345,35 +347,24 @@ describe("collection detail production status contract", () => {
     } catch (error) {
       throw new Error(
         `Production collection route check failed: ${String(error)}\n` +
-          `Build stdout:\n${build.stdout}\nBuild stderr:\n${build.stderr}`
+          `Production server output:\n${productionServer?.output() ?? ""}`,
       );
     } finally {
-      if (productionServer?.exitCode === null) {
-        const exited = once(productionServer, "exit");
-        productionServer.kill("SIGTERM");
-        let exitTimer: ReturnType<typeof setTimeout> | undefined;
-        try {
-          await Promise.race([
-            exited,
-            new Promise((resolve) => {
-              exitTimer = setTimeout(resolve, 5_000);
-              exitTimer.unref();
-            }),
-          ]);
-        } finally {
-          if (exitTimer) {
-            clearTimeout(exitTimer);
-          }
-        }
-        if (productionServer.exitCode === null) {
-          const killed = once(productionServer, "exit");
-          productionServer.kill("SIGKILL");
-          await killed;
-        }
+      const cleanupResults = await Promise.allSettled([
+        stopProductionChild(productionServer),
+        close(authServer),
+        close(backendServer),
+      ]);
+      await releaseProductionBuildLock();
+      const cleanupErrors = cleanupResults.flatMap((result) =>
+        result.status === "rejected" ? [result.reason] : [],
+      );
+      if (cleanupErrors.length > 0) {
+        throw new AggregateError(
+          cleanupErrors,
+          "Collection production harness cleanup failed",
+        );
       }
-      await Promise.all([close(authServer), close(backendServer)]);
-      rmSync(buildPath, { recursive: true, force: true });
-      rmSync(buildTsconfigPath, { force: true });
     }
   });
 });
