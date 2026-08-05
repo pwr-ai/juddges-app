@@ -52,6 +52,7 @@ import type {
 } from '@/types/reasoning-lines';
 import Link from 'next/link';
 import { ReasoningDAG } from '@/components/reasoning-lines/ReasoningDAG';
+import { useAuth } from '@/contexts/AuthContext';
 
 /** Active tab on the reasoning lines page */
 type TabId = 'discover' | 'saved' | 'dag';
@@ -104,6 +105,8 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ReasoningLinesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.app_metadata?.is_admin === true;
   const [activeTab, setActiveTab] = useState<TabId>('discover');
 
   // Discovery form state
@@ -419,7 +422,7 @@ export default function ReasoningLinesPage() {
                     colorIndex={index}
                     isExpanded={expandedClusters.has(cluster.cluster_id)}
                     onToggleExpand={() => toggleClusterExpansion(cluster.cluster_id)}
-                    onSave={() => handleSaveCluster(cluster)}
+                    onSave={isAdmin ? () => handleSaveCluster(cluster) : undefined}
                     isSaving={
                       createMutation.isPending &&
                       createMutation.variables?.label === cluster.label
@@ -494,6 +497,7 @@ export default function ReasoningLinesPage() {
           dagQuery={dagQuery}
           detectEventsMutation={detectEventsMutation}
           eventResult={eventResult}
+          canDetectEvents={isAdmin}
         />
       )}
     </PageContainer>
@@ -543,7 +547,7 @@ function ClusterCard({
   colorIndex: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   isSaving: boolean;
   isSaved: boolean;
 }) {
@@ -627,27 +631,29 @@ function ClusterCard({
             <div />
           )}
 
-          {/* Save button */}
-          <Button
-            variant={isSaved ? 'outline' : 'default'}
-            size="sm"
-            onClick={onSave}
-            disabled={isSaving || isSaved}
-            className="flex items-center gap-1.5 text-xs"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : isSaved ? (
-              <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
-            {isSaving
-              ? 'Zapisywanie...'
-              : isSaved
-                ? 'Zapisano'
-                : 'Zapisz jako linie'}
-          </Button>
+          {/* Saving discovered clusters mutates the global catalog and is admin-only. */}
+          {onSave && (
+            <Button
+              variant={isSaved ? 'outline' : 'default'}
+              size="sm"
+              onClick={onSave}
+              disabled={isSaving || isSaved}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              {isSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isSaved ? (
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
+              {isSaving
+                ? 'Zapisywanie...'
+                : isSaved
+                  ? 'Zapisano'
+                  : 'Zapisz jako linie'}
+            </Button>
+          )}
         </div>
 
         {/* Expanded cases list */}
@@ -1071,11 +1077,13 @@ function DAGTab({
   dagQuery,
   detectEventsMutation,
   eventResult,
+  canDetectEvents,
 }: {
   dagQuery: ReturnType<typeof useQuery>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   detectEventsMutation: ReturnType<typeof useMutation<EventDetectionResult, Error, void, any>>;
   eventResult: EventDetectionResult | null;
+  canDetectEvents: boolean;
 }) {
   // Type-narrow the query data
   const dagData = dagQuery.data as
@@ -1090,16 +1098,18 @@ function DAGTab({
           <Network className="h-5 w-5 text-primary" />
           Graf DAG linii orzeczniczych
         </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => detectEventsMutation.mutate()}
-          disabled={detectEventsMutation.isPending}
-          className="flex items-center gap-1.5 text-xs"
-        >
-          <GitMerge className="h-3.5 w-3.5" />
-          {detectEventsMutation.isPending ? 'Wykrywanie...' : 'Wykryj zdarzenia'}
-        </Button>
+        {canDetectEvents && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => detectEventsMutation.mutate()}
+            disabled={detectEventsMutation.isPending}
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <GitMerge className="h-3.5 w-3.5" />
+            {detectEventsMutation.isPending ? 'Wykrywanie...' : 'Wykryj zdarzenia'}
+          </Button>
+        )}
       </div>
 
       {/* Event detection feedback */}
@@ -1151,7 +1161,11 @@ function DAGTab({
       {dagData && dagData.nodes.length === 0 && (
         <EmptyState
           title="Brak danych w grafie"
-          description="Zapisz linie orzecznicze i wykryj zdarzenia, aby zobaczyc graf DAG."
+          description={
+            canDetectEvents
+              ? 'Zapisz linie orzecznicze i wykryj zdarzenia, aby zobaczyc graf DAG.'
+              : 'Brak zapisanych linii lub zdarzen do wyswietlenia w grafie DAG.'
+          }
           icon={Network}
         />
       )}
