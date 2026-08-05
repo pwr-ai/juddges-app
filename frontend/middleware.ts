@@ -4,9 +4,11 @@ import { LOCALE_COOKIE_NAME, DEFAULT_LOCALE, isValidLocale } from '@/lib/i18n/co
 import type { LocaleCode } from '@/lib/i18n/types'
 import {
   DOCUMENT_METADATA_HEADER,
+  DOCUMENT_METADATA_SIGNATURE_HEADER,
   VERIFIED_USER_HEADER,
   encodeDocumentMetadataHeader,
   isDocumentMetadata,
+  signDocumentMetadataHeader,
 } from '@/lib/documents/metadata-transport'
 
 const DOCUMENT_PAGE_PATTERN = /^\/documents\/([^/]+)$/
@@ -240,8 +242,16 @@ export async function middleware(incomingRequest: NextRequest) {
     if (preflight.kind === 'metadata') {
       const headers = new Headers(request.headers)
       headers.delete(DOCUMENT_METADATA_HEADER)
+      headers.delete(DOCUMENT_METADATA_SIGNATURE_HEADER)
       headers.delete(VERIFIED_USER_HEADER)
       headers.set(DOCUMENT_METADATA_HEADER, preflight.value)
+      headers.set(
+        DOCUMENT_METADATA_SIGNATURE_HEADER,
+        await signDocumentMetadataHeader(
+          preflight.value,
+          process.env.BACKEND_API_KEY ?? ''
+        )
+      )
       headers.set(VERIFIED_USER_HEADER, userId)
       return finishResponse(
         NextResponse.next({ request: { headers } }),
@@ -257,6 +267,7 @@ export async function middleware(incomingRequest: NextRequest) {
 
 export const config = {
   matcher: [
+    '/documents/:path*',
     '/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|chunk-error-handler\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|map|txt|xml|ico)$).*)',
   ],
 }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import {
   DOCUMENT_METADATA_HEADER,
+  DOCUMENT_METADATA_SIGNATURE_HEADER,
   VERIFIED_USER_HEADER,
 } from '@/lib/documents/metadata-transport';
 
@@ -18,6 +19,7 @@ export interface SessionUpdate {
 function sanitizedRequest(request: NextRequest): NextRequest {
   const headers = new Headers(request.headers);
   headers.delete(DOCUMENT_METADATA_HEADER);
+  headers.delete(DOCUMENT_METADATA_SIGNATURE_HEADER);
   headers.delete(VERIFIED_USER_HEADER);
   return new NextRequest(request.url, {
     method: request.method,

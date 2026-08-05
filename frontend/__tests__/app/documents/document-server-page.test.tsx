@@ -13,13 +13,17 @@ jest.mock('@/app/documents/[id]/_components/DocumentPageClient', () => ({
 }));
 
 import DocumentPage from '@/app/documents/[id]/page';
-import { encodeDocumentMetadataHeader } from '@/lib/documents/metadata-transport';
+import {
+  encodeDocumentMetadataHeader,
+  signDocumentMetadataHeader,
+} from '@/lib/documents/metadata-transport';
 
 const { headers: mockHeaders } = jest.requireMock('next/headers');
 
 describe('documents/[id] trusted middleware hand-off', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.BACKEND_API_KEY = 'test-backend-secret';
   });
 
   it('returns Next not-found for an invalid ID without reading metadata', async () => {
@@ -45,6 +49,10 @@ describe('documents/[id] trusted middleware hand-off', () => {
     });
     mockHeaders.mockResolvedValue(new Headers({
       'x-juddges-document-metadata': value,
+      'x-juddges-document-metadata-signature': await signDocumentMetadataHeader(
+        value,
+        'test-backend-secret'
+      ),
     }));
 
     await expect(
@@ -59,8 +67,13 @@ describe('documents/[id] trusted middleware hand-off', () => {
       language: 'en',
       title: 'Visible judgment',
     };
+    const value = await encodeDocumentMetadataHeader(metadata);
     mockHeaders.mockResolvedValue(new Headers({
-      'x-juddges-document-metadata': await encodeDocumentMetadataHeader(metadata),
+      'x-juddges-document-metadata': value,
+      'x-juddges-document-metadata-signature': await signDocumentMetadataHeader(
+        value,
+        'test-backend-secret'
+      ),
     }));
 
     const result = await DocumentPage({
@@ -71,5 +84,21 @@ describe('documents/[id] trusted middleware hand-off', () => {
       documentId: 'doc-1',
       initialMetadata: metadata,
     });
+  });
+
+  it('rejects forged metadata when middleware provenance is absent', async () => {
+    const value = await encodeDocumentMetadataHeader({
+      document_id: 'doc-1',
+      document_type: 'judgment',
+      language: 'en',
+    });
+    mockHeaders.mockResolvedValue(new Headers({
+      'x-juddges-document-metadata': value,
+      'x-juddges-document-metadata-signature': 'attacker-signature',
+    }));
+
+    await expect(
+      DocumentPage({ params: Promise.resolve({ id: 'doc-1' }) })
+    ).rejects.toThrow('Invalid verified document metadata provenance');
   });
 });

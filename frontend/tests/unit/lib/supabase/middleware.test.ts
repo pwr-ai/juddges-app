@@ -72,6 +72,7 @@ describe("Supabase middleware retired routes", () => {
         method: 'DELETE',
         headers: {
           'x-juddges-document-metadata': 'spoofed',
+          'x-juddges-document-metadata-signature': 'forged',
           'x-juddges-verified-user-id': 'attacker',
         },
       })
@@ -79,6 +80,9 @@ describe("Supabase middleware retired routes", () => {
 
     expect(result.request.method).toBe('DELETE');
     expect(result.request.headers.get('x-juddges-document-metadata')).toBeNull();
+    expect(
+      result.request.headers.get('x-juddges-document-metadata-signature')
+    ).toBeNull();
     expect(result.request.headers.get('x-juddges-verified-user-id')).toBeNull();
     expect(result.userId).toBe('owner-1');
   });

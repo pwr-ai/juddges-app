@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation';
 
 import {
   DOCUMENT_METADATA_HEADER,
+  DOCUMENT_METADATA_SIGNATURE_HEADER,
   decodeDocumentMetadataHeader,
+  verifyDocumentMetadataHeader,
 } from '@/lib/documents/metadata-transport';
 import {
   DocumentMetadataUpstreamError,
@@ -27,9 +29,27 @@ export default async function DocumentPage({
 
   const requestHeaders = await headers();
   const encodedMetadata = requestHeaders.get(DOCUMENT_METADATA_HEADER);
+  const metadataSignature = requestHeaders.get(
+    DOCUMENT_METADATA_SIGNATURE_HEADER
+  );
   if (!encodedMetadata) {
     throw new DocumentMetadataUpstreamError(
       'Missing verified document metadata',
+      500,
+      ErrorCode.INTERNAL_ERROR
+    );
+  }
+
+  if (
+    !metadataSignature ||
+    !(await verifyDocumentMetadataHeader(
+      encodedMetadata,
+      metadataSignature,
+      process.env.BACKEND_API_KEY ?? ''
+    ))
+  ) {
+    throw new DocumentMetadataUpstreamError(
+      'Invalid verified document metadata provenance',
       500,
       ErrorCode.INTERNAL_ERROR
     );

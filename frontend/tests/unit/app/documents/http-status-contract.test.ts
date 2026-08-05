@@ -6,6 +6,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer, type Server } from 'node:http';
 import { createServer as createNetServer } from 'node:net';
+import { cpSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 jest.setTimeout(180_000);
@@ -145,6 +146,18 @@ describe('documents production HTTP/auth status matrix', () => {
     if (build.status !== 0) {
       throw new Error(`Production build failed:\n${build.stdout}\n${build.stderr}`);
     }
+    // Next's standalone artifact intentionally omits static/public files; the
+    // production image copies both alongside server.js, so mirror that layout.
+    cpSync(
+      join(process.cwd(), '.next/static'),
+      join(process.cwd(), '.next/standalone/frontend/.next/static'),
+      { recursive: true }
+    );
+    cpSync(
+      join(process.cwd(), 'public'),
+      join(process.cwd(), '.next/standalone/frontend/public'),
+      { recursive: true }
+    );
 
     await listen(upstream, upstreamPort);
     const serverPath = join(process.cwd(), '.next/standalone/frontend/server.js');
@@ -158,6 +171,12 @@ describe('documents production HTTP/auth status matrix', () => {
     productionServer.stderr?.on('data', (chunk: Buffer) => (output += chunk.toString()));
     const appUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authenticatedCookie() };
+    const forgedMetadata = Buffer.from(JSON.stringify({
+      document_id: 'attack.txt',
+      document_type: 'judgment',
+      language: 'en',
+      title: 'Forged document',
+    })).toString('base64url');
 
     try {
       const expectedStatuses: Record<string, number> = {
@@ -205,6 +224,57 @@ describe('documents production HTTP/auth status matrix', () => {
         `${appUrl}/api/documents/visible-doc/metadata/nested`
       );
       expect(anonymousLookalike.status).toBe(307);
+
+      for (const extension of [
+        'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp',
+        'js', 'css', 'map', 'txt', 'xml', 'ico',
+      ]) {
+        const bypassProbe = await requestUntilReady(
+          `${appUrl}/documents/attack.${extension}`,
+          {
+            headers: {
+              'x-juddges-document-metadata': forgedMetadata,
+              'x-juddges-document-metadata-signature': 'forged',
+              'x-juddges-verified-user-id': 'attacker',
+            },
+          }
+        );
+        expect(bypassProbe.status).toBe(307);
+        expect(bypassProbe.headers.get('location')).toContain('/auth/login');
+        await bypassProbe.text();
+      }
+      for (const path of [
+        '/documents/nested/attack.txt',
+        '/documents/attack%2Etxt',
+        '/documents/attack%252Etxt',
+      ]) {
+        const bypassProbe = await requestUntilReady(`${appUrl}${path}`, {
+          headers: {
+            'x-juddges-document-metadata': forgedMetadata,
+            'x-juddges-document-metadata-signature': 'forged',
+            'x-juddges-verified-user-id': 'attacker',
+          },
+        });
+        expect(bypassProbe.status).toBe(307);
+        await bypassProbe.text();
+      }
+
+      const buildManifest = JSON.parse(
+        readFileSync(join(process.cwd(), '.next/build-manifest.json'), 'utf8')
+      ) as { polyfillFiles: string[] };
+      const staticAsset = await requestUntilReady(
+        `${appUrl}/_next/${buildManifest.polyfillFiles[0]}`
+      );
+      expect(staticAsset.status).toBe(200);
+      expect(staticAsset.headers.get('location')).toBeNull();
+      await staticAsset.text();
+
+      const dottedDocument = await requestUntilReady(
+        `${appUrl}/documents/visible.txt`,
+        { headers: authenticated }
+      );
+      expect(dottedDocument.status).toBe(200);
+      expect(await dottedDocument.text()).toContain('Visible judgment');
 
       const beforeVisibleAuth = upstreamRequests.filter((item) =>
         item.endsWith('/auth/v1/user')
