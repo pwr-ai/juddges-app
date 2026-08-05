@@ -491,6 +491,130 @@ describe('authenticated AI BFF contracts', () => {
       expect(await response.json()).toEqual({ error: 'Backend service timed out' });
     });
 
+    it('keeps the timeout active while reading an endless semantic error body', async () => {
+      jest.useFakeTimers();
+      try {
+        const observed: {
+          bodyController?: ReadableStreamDefaultController<Uint8Array>;
+          upstreamSignal?: AbortSignal;
+        } = {};
+        (global.fetch as jest.Mock).mockImplementation(
+          (_url: string, init: RequestInit) => {
+            if (init.signal) observed.upstreamSignal = init.signal;
+            const body = new ReadableStream<Uint8Array>({
+              start(controller) {
+                observed.bodyController = controller;
+                init.signal?.addEventListener(
+                  'abort',
+                  () => controller.error(init.signal?.reason),
+                  { once: true },
+                );
+              },
+            });
+            return Promise.resolve(
+              new Response(body, {
+                status: 422,
+                headers: { 'Content-Type': 'application/json' },
+              }),
+            );
+          },
+        );
+        const streamRoute = await loadQaStreamRoute();
+        expect(streamRoute).not.toBeNull();
+
+        const responsePromise = streamRoute!.POST(
+          new NextRequest('http://localhost/api/qa/stream', {
+            method: 'POST',
+            body: JSON.stringify({ question: 'What happened?' }),
+          }),
+        );
+        await jest.advanceTimersByTimeAsync(15_000);
+        const timeoutFired = observed.upstreamSignal?.aborted === true;
+        if (!timeoutFired) {
+          observed.bodyController?.error(new Error('test cleanup after missing timeout'));
+        }
+        const response = await responsePromise;
+
+        expect(timeoutFired).toBe(true);
+        expect(response.status).toBe(504);
+        expect(await response.json()).toEqual({ error: 'Backend service timed out' });
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('maps downstream abort while reading a semantic error body to 499', async () => {
+      const downstreamController = new AbortController();
+      (global.fetch as jest.Mock).mockImplementation(
+        (_url: string, init: RequestInit) => {
+          const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+              init.signal?.addEventListener(
+                'abort',
+                () => controller.error(init.signal?.reason),
+                { once: true },
+              );
+            },
+          });
+          return Promise.resolve(
+            new Response(body, {
+              status: 422,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+          );
+        },
+      );
+      const streamRoute = await loadQaStreamRoute();
+      expect(streamRoute).not.toBeNull();
+
+      const responsePromise = streamRoute!.POST(
+        new NextRequest('http://localhost/api/qa/stream', {
+          method: 'POST',
+          body: JSON.stringify({ question: 'What happened?' }),
+          signal: downstreamController.signal,
+        }),
+      );
+      downstreamController.abort(new DOMException('client disconnected', 'AbortError'));
+      const response = await responsePromise;
+
+      expect(response.status).toBe(499);
+      expect(await response.json()).toEqual({ error: 'Request was cancelled' });
+    });
+
+    it('cancels discarded 5xx bodies and removes the downstream abort bridge', async () => {
+      const cancelBody = jest.fn();
+      const downstreamController = new AbortController();
+      const observed: { upstreamSignal?: AbortSignal } = {};
+      (global.fetch as jest.Mock).mockImplementation(
+        (_url: string, init: RequestInit) => {
+          if (init.signal) observed.upstreamSignal = init.signal;
+          return Promise.resolve(
+            new Response(
+              new ReadableStream<Uint8Array>({
+                cancel: cancelBody,
+              }),
+              { status: 503, headers: { 'Retry-After': '10' } },
+            ),
+          );
+        },
+      );
+      const streamRoute = await loadQaStreamRoute();
+      expect(streamRoute).not.toBeNull();
+
+      const response = await streamRoute!.POST(
+        new NextRequest('http://localhost/api/qa/stream', {
+          method: 'POST',
+          body: JSON.stringify({ question: 'What happened?' }),
+          signal: downstreamController.signal,
+        }),
+      );
+      downstreamController.abort(new DOMException('late disconnect', 'AbortError'));
+
+      expect(response.status).toBe(503);
+      expect(cancelBody).toHaveBeenCalledTimes(1);
+      expect(observed.upstreamSignal?.aborted).toBe(false);
+    });
+
     it('sanitizes upstream stream 5xx errors', async () => {
       (global.fetch as jest.Mock).mockResolvedValue(
         new Response('database password=secret', {

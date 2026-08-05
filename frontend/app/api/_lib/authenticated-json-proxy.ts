@@ -297,9 +297,14 @@ export async function proxyAuthenticatedStream(
         signal: upstreamAbort.controller.signal,
       });
 
-      upstreamAbort.stopTimeout();
-
       if (upstream.status >= 500) {
+        if (upstream.body) {
+          void upstream.body.cancel().catch((error) => {
+            routeLogger.error('Failed to cancel discarded AI error stream', error, {
+              path: request.nextUrl.pathname,
+            });
+          });
+        }
         upstreamAbort.cleanup();
         routeLogger.error('AI stream backend returned a server error', undefined, {
           path: request.nextUrl.pathname,
@@ -331,6 +336,7 @@ export async function proxyAuthenticatedStream(
         return jsonResponse({ error: 'Backend returned an invalid response' }, 502);
       }
 
+      upstreamAbort.stopTimeout();
       const upstreamReader = upstream.body.getReader();
       let finished = false;
       const stream = new ReadableStream<Uint8Array>({
