@@ -94,6 +94,37 @@ describe("Supabase middleware retired routes", () => {
     expect(result.request.headers.get("x-juddges-schema-snapshot-user")).toBeNull();
   });
 
+  it("strips forged extraction proof headers before downstream handling", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+      error: null,
+    });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/extractions/job.txt", {
+        headers: {
+          "x-juddges-extraction-snapshot": "spoofed",
+          "x-juddges-extraction-snapshot-signature": "forged",
+          "x-juddges-extraction-verified-user": "attacker",
+        },
+      })
+    );
+
+    expect(result.userId).toBe("user-1");
+    expect(result.accessToken).toBe("access-token");
+    expect(result.request.headers.get("x-juddges-extraction-snapshot")).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-snapshot-signature")
+    ).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-verified-user")
+    ).toBeNull();
+  });
+
   it("keeps operational auth failures distinct for the exact schema page", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: null },
@@ -105,6 +136,24 @@ describe("Supabase middleware retired routes", () => {
       )
     );
     expect(result.response.status).toBe(200);
+    expect(result.authFailure).toBe("unavailable");
+  });
+
+  it("clears schema auth state when the session lookup throws", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "owner-1" } },
+      error: null,
+    });
+    mockGetSession.mockRejectedValue(new Error("session service unavailable"));
+
+    const result = await updateSessionWithAuth(
+      new NextRequest(
+        "http://localhost/schemas/abcdef01-1234-4abc-8def-1234567890ab"
+      )
+    );
+
+    expect(result.userId).toBeNull();
+    expect(result.accessToken).toBeNull();
     expect(result.authFailure).toBe("unavailable");
   });
 });

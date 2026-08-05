@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 import { OWNED_CHAT_ID_HEADER } from "@/lib/chat-route-contract";
+import {
+  EXTRACTION_SNAPSHOT_HEADER,
+  EXTRACTION_SNAPSHOT_SIGNATURE_HEADER,
+  EXTRACTION_VERIFIED_USER_HEADER,
+} from "@/lib/extractions/detail-contract";
 import { logger } from "@/lib/logger";
 import {
   SCHEMA_SNAPSHOT_HEADER,
@@ -18,6 +23,7 @@ const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
 const CHAT_MESSAGES_PREFIX = "/api/chats/";
 const CHAT_MESSAGES_SUFFIX = "/messages";
 const CHAT_PAGE_PREFIX = "/chat/";
+const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/[^/]+$/;
 const SCHEMA_API_PATTERN = /^\/api\/schemas\/[^/]+$/;
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
 
@@ -37,6 +43,9 @@ function sanitizedRequestHeaders(
 ): Headers {
   const headers = new Headers(request.headers);
   headers.delete(OWNED_CHAT_ID_HEADER);
+  headers.delete(EXTRACTION_SNAPSHOT_HEADER);
+  headers.delete(EXTRACTION_SNAPSHOT_SIGNATURE_HEADER);
+  headers.delete(EXTRACTION_VERIFIED_USER_HEADER);
   headers.delete(SCHEMA_SNAPSHOT_HEADER);
   headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);
   headers.delete(SCHEMA_SNAPSHOT_USER_HEADER);
@@ -58,6 +67,21 @@ function sanitizedRequest(incoming: NextRequest): NextRequest {
 
 function isReadRequest(request: NextRequest): boolean {
   return request.method === "GET" || request.method === "HEAD";
+}
+
+function needsExtractionAccessToken(request: NextRequest): boolean {
+  return (
+    isReadRequest(request) &&
+    EXTRACTION_DETAIL_PATTERN.test(request.nextUrl.pathname)
+  );
+}
+
+function isExactExtractionBffRead(request: NextRequest): boolean {
+  return (
+    isReadRequest(request) &&
+    request.nextUrl.pathname === "/api/extractions" &&
+    request.nextUrl.searchParams.has("job_id")
+  );
 }
 
 function chatMessagesId(pathname: string): string | null {
@@ -110,10 +134,7 @@ function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
 }
 
 function isSchemaReadApi(request: NextRequest): boolean {
-  return (
-    (request.method === "GET" || request.method === "HEAD") &&
-    SCHEMA_API_PATTERN.test(request.nextUrl.pathname)
-  );
+  return isReadRequest(request) && SCHEMA_API_PATTERN.test(request.nextUrl.pathname);
 }
 
 function isSchemaPage(request: NextRequest): boolean {
@@ -182,6 +203,7 @@ export async function updateSessionWithAuth(
   let userId: string | null = null;
   let accessToken: string | null = null;
   let authFailure: SessionAuthFailure = null;
+  const needsSchemaSession = isSchemaReadApi(request) || isSchemaPage(request);
   try {
     const userLookup = await supabase.auth.getUser();
     if (userLookup.error) {
@@ -199,7 +221,7 @@ export async function updateSessionWithAuth(
       authFailure = "unauthenticated";
     } else {
       userId = userLookup.data.user.id;
-      if (isSchemaReadApi(request) || isSchemaPage(request)) {
+      if (needsSchemaSession) {
         const sessionLookup = await supabase.auth.getSession();
         if (sessionLookup.error) {
           authFailure = isUnauthenticatedSchemaAuthError(sessionLookup.error)
@@ -218,6 +240,16 @@ export async function updateSessionWithAuth(
   } catch (error) {
     logger.error("Unexpected error in auth middleware: ", error);
     authFailure = "unavailable";
+    if (needsSchemaSession) userId = null;
+  }
+
+  if (
+    userId &&
+    !needsSchemaSession &&
+    needsExtractionAccessToken(request)
+  ) {
+    const { data } = await supabase.auth.getSession();
+    accessToken = data.session?.access_token ?? null;
   }
 
   const schemaFailureNeedsExactStatus =
@@ -322,6 +354,7 @@ export async function updateSessionWithAuth(
     !userId &&
     !isPublicPath(request.nextUrl.pathname) &&
     !isSchemaReadApi(request) &&
+    !isExactExtractionBffRead(request) &&
     !canAnonymousRequestReachHandler(request) &&
     !schemaFailureNeedsExactStatus
   ) {
