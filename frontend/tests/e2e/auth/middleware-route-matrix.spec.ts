@@ -146,7 +146,9 @@ test.describe.parallel('public pages — anonymous', () => {
       expect(response, `Expected a navigation response for ${url}`).not.toBeNull();
       expect2xx(response!, `Public page ${url}`);
       expect(new URL(page.url()).pathname).toBe(url);
-      await expect(page).not.toHaveURL(/\/auth\/login/);
+      if (url !== '/auth/login') {
+        await expect(page).not.toHaveURL(/\/auth\/login/);
+      }
     });
   }
 });
