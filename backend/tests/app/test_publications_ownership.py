@@ -35,6 +35,11 @@ PUBLICATION_ID = "11111111-1111-4111-a111-111111111111"
 MISSING_PUBLICATION_ID = "22222222-2222-4222-a222-222222222222"
 
 UPDATE_BODY = {"title": "Edited by someone"}
+OWNERSHIP_LOOKUP_ERROR_DETAIL = "Failed to verify publication ownership"
+RAW_DATABASE_ERROR = (
+    "Database error: raw-message-sentinel; code=raw-code-sentinel; "
+    "hint=raw-hint-sentinel; details=raw-details-sentinel"
+)
 
 
 def _user(user_id: str, *, is_admin: bool = False) -> AuthenticatedUser:
@@ -354,9 +359,7 @@ async def test_update_database_read_failure_is_500_without_mutation(
     stub_db: _StubPublicationsDb,
     valid_api_headers: dict[str, str],
 ) -> None:
-    stub_db.read_error = HTTPException(
-        status_code=500, detail="Database error: database unavailable"
-    )
+    stub_db.read_error = HTTPException(status_code=500, detail=RAW_DATABASE_ERROR)
     db = as_user(_user(OWNER_ID))
 
     response = await client.put(
@@ -366,6 +369,9 @@ async def test_update_database_read_failure_is_500_without_mutation(
     )
 
     assert response.status_code == 500
+    assert response.json() == {"detail": OWNERSHIP_LOOKUP_ERROR_DETAIL}
+    for sentinel in ("raw-message", "raw-code", "raw-hint", "raw-details"):
+        assert sentinel not in response.text
     assert db.update_calls == []
 
 
@@ -375,9 +381,7 @@ async def test_delete_database_read_failure_is_500_without_mutation(
     stub_db: _StubPublicationsDb,
     valid_api_headers: dict[str, str],
 ) -> None:
-    stub_db.read_error = HTTPException(
-        status_code=500, detail="Database error: database unavailable"
-    )
+    stub_db.read_error = HTTPException(status_code=500, detail=RAW_DATABASE_ERROR)
     db = as_user(_user(OWNER_ID))
 
     response = await client.delete(
@@ -386,6 +390,9 @@ async def test_delete_database_read_failure_is_500_without_mutation(
     )
 
     assert response.status_code == 500
+    assert response.json() == {"detail": OWNERSHIP_LOOKUP_ERROR_DETAIL}
+    for sentinel in ("raw-message", "raw-code", "raw-hint", "raw-details"):
+        assert sentinel not in response.text
     assert db.delete_calls == []
 
 

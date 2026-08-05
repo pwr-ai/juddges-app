@@ -12,6 +12,8 @@ from app.models import validate_id_format
 
 router = APIRouter(prefix="/publications", tags=["publications"])
 
+_OWNERSHIP_LOOKUP_ERROR_DETAIL = "Failed to verify publication ownership"
+
 
 # Enums matching database types
 class PublicationProject(str, Enum):
@@ -301,7 +303,21 @@ async def _authorize_publication_mutation(
     record. Rows predating ``user_id`` carry ``None`` and are therefore
     admin-only, which fails closed.
     """
-    publication = await db.get_publication(publication_id)
+    try:
+        publication = await db.get_publication(publication_id)
+    except HTTPException as exc:
+        if exc.status_code < 500:
+            raise
+
+        logger.error(
+            "Publication ownership lookup failed for publication {}",
+            publication_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=_OWNERSHIP_LOOKUP_ERROR_DETAIL,
+        ) from exc
+
     if not publication:
         raise HTTPException(status_code=404, detail="Publication not found")
 
