@@ -30682,6 +30682,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "List saved reasoning lines",
@@ -30729,6 +30732,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Save a discovered cluster as a persistent reasoning line",
@@ -30756,6 +30762,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get full DAG structure for visualization",
@@ -30783,6 +30792,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Detect branch/merge/influence events across reasoning lines",
@@ -30830,6 +30842,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Discover clusters of judgments addressing the same legal question",
@@ -30877,6 +30892,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Semantic search for reasoning lines by natural language query",
@@ -30929,6 +30947,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Soft-delete a reasoning line by setting status to superseded",
@@ -30975,6 +30996,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get full detail of a reasoning line with all members",
@@ -31023,6 +31047,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Classify outcome direction for each member judgment using LLM",
@@ -31071,6 +31098,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Detect language drift within a reasoning line over time",
@@ -31133,6 +31163,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Find reasoning lines related to a given line",
@@ -31181,6 +31214,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get temporal outcome distribution for a reasoning line",

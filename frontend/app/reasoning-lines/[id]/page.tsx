@@ -37,6 +37,7 @@ import type { DriftAnalysisResponse, RelatedLine } from '@/types/reasoning-lines
 import Link from 'next/link';
 import { OutcomeTimeline } from '@/components/reasoning-lines/OutcomeTimeline';
 import { DriftChart } from '@/components/reasoning-lines/DriftChart';
+import { useAuth } from '@/contexts/AuthContext';
 
 /** Format date string to a Polish-friendly format */
 function formatDate(dateStr: string): string {
@@ -53,6 +54,8 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ReasoningLineDetailPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.app_metadata?.is_admin === true;
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -278,49 +281,51 @@ export default function ReasoningLineDetailPage() {
             </div>
           )}
 
-          {/* Delete button */}
-          <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
-            {!showDeleteConfirm ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Usun linie
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  Czy na pewno chcesz usunac te linie?
-                </span>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={deleteMutation.isPending}
-                  className="flex items-center gap-1.5 text-xs"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  {deleteMutation.isPending ? 'Usuwanie...' : 'Tak, usun'}
-                </Button>
+          {/* Deleting a global reasoning line is admin-only. */}
+          {isAdmin && (
+            <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+              {!showDeleteConfirm ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="text-xs"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center gap-1.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                 >
-                  Anuluj
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Usun linie
                 </Button>
-              </div>
-            )}
-            {deleteMutation.isError && (
-              <span className="text-xs text-rose-600">
-                {deleteMutation.error?.message ?? 'Blad usuwania'}
-              </span>
-            )}
-          </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Czy na pewno chcesz usunac te linie?
+                  </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                    className="flex items-center gap-1.5 text-xs"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deleteMutation.isPending ? 'Usuwanie...' : 'Tak, usun'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="text-xs"
+                  >
+                    Anuluj
+                  </Button>
+                </div>
+              )}
+              {deleteMutation.isError && (
+                <span className="text-xs text-rose-600">
+                  {deleteMutation.error?.message ?? 'Blad usuwania'}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </BaseCard>
 
@@ -365,18 +370,20 @@ export default function ReasoningLineDetailPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
             Ewolucja orzeczen w czasie
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => classifyMutation.mutate()}
-            disabled={classifyMutation.isPending}
-            className="flex items-center gap-1.5 text-xs"
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            {classifyMutation.isPending
-              ? 'Klasyfikowanie...'
-              : 'Klasyfikuj orzeczenia'}
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => classifyMutation.mutate()}
+              disabled={classifyMutation.isPending}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              {classifyMutation.isPending
+                ? 'Klasyfikowanie...'
+                : 'Klasyfikuj orzeczenia'}
+            </Button>
+          )}
         </div>
 
         {/* Classification result feedback */}
@@ -413,7 +420,9 @@ export default function ReasoningLineDetailPage() {
         )}
         {timelineQuery.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Brak danych osi czasu. Sklasyfikuj orzeczenia, aby wygenerowac os czasu.
+            {isAdmin
+              ? 'Brak danych osi czasu. Sklasyfikuj orzeczenia, aby wygenerowac os czasu.'
+              : 'Brak danych osi czasu do wyswietlenia.'}
           </div>
         )}
         {timelineQuery.data && timelineQuery.data.points.length > 0 && (
@@ -434,7 +443,9 @@ export default function ReasoningLineDetailPage() {
         )}
         {timelineQuery.data && timelineQuery.data.points.length === 0 && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Brak sklasyfikowanych orzeczen. Uzyj przycisku powyzej, aby sklasyfikowac.
+            {isAdmin
+              ? 'Brak sklasyfikowanych orzeczen. Uzyj przycisku powyzej, aby sklasyfikowac.'
+              : 'Brak sklasyfikowanych orzeczen do wyswietlenia.'}
           </div>
         )}
       </div>
@@ -448,16 +459,18 @@ export default function ReasoningLineDetailPage() {
             <Activity className="h-5 w-5 text-primary" />
             Dryf jezykowy
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => driftMutation.mutate()}
-            disabled={driftMutation.isPending}
-            className="flex items-center gap-1.5 text-xs"
-          >
-            <Activity className="h-3.5 w-3.5" />
-            {driftMutation.isPending ? 'Analizowanie...' : 'Analizuj dryf'}
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => driftMutation.mutate()}
+              disabled={driftMutation.isPending}
+              className="flex items-center gap-1.5 text-xs"
+            >
+              <Activity className="h-3.5 w-3.5" />
+              {driftMutation.isPending ? 'Analizowanie...' : 'Analizuj dryf'}
+            </Button>
+          )}
         </div>
 
         {driftMutation.isError && (
@@ -478,7 +491,9 @@ export default function ReasoningLineDetailPage() {
 
         {!driftData && !driftMutation.isPending && !driftMutation.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Kliknij &quot;Analizuj dryf&quot;, aby zbadac zmiany w jezyku orzeczen w czasie.
+            {isAdmin
+              ? 'Kliknij "Analizuj dryf", aby zbadac zmiany w jezyku orzeczen w czasie.'
+              : 'Brak danych analizy dryfu.'}
           </div>
         )}
       </div>
