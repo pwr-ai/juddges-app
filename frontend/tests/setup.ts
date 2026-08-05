@@ -27,8 +27,6 @@ if (typeof (global as any).TransformStream === 'undefined')
 const workerThreads = require('worker_threads')
 if (typeof (global as any).MessagePort === 'undefined')
   (global as any).MessagePort = workerThreads.MessagePort
-if (typeof (global as any).MessageChannel === 'undefined')
-  (global as any).MessageChannel = workerThreads.MessageChannel
 if (typeof (global as any).BroadcastChannel === 'undefined')
   (global as any).BroadcastChannel = workerThreads.BroadcastChannel
 
