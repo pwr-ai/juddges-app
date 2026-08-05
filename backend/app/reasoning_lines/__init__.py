@@ -63,12 +63,15 @@ from .timeline_math import (
 
 router = APIRouter(prefix="/reasoning-lines", tags=["reasoning-lines"])
 router.include_router(discovery.router)
+# Static GET routes must be registered before CRUD's ``/{line_id}`` route.
+# Starlette resolves matching routes in registration order, so placing the DAG
+# router after CRUD makes ``/dag`` look like a reasoning-line identifier.
+router.include_router(events.router)
 router.include_router(crud.router)
 router.include_router(outcomes.router)
 router.include_router(timeline.router)
 router.include_router(drift.router)
 router.include_router(search.router)
-router.include_router(events.router)
 
 __all__ = [
     "CreateReasoningLineRequest",
