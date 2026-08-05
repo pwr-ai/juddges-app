@@ -579,8 +579,7 @@ def register_crud_routes(router: APIRouter) -> None:
             schema_files = [
                 f
                 for f in schema_dir.iterdir()
-                if f.stem == schema_id
-                and f.suffix in InformationExtractor.SCHEMA_EXTENSIONS
+                if f.stem == schema_id and InformationExtractor.is_schema_file(f)
             ]
 
             if not schema_files:

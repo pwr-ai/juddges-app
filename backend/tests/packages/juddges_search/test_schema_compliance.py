@@ -3,11 +3,7 @@ from typing import Any
 import pytest
 from juddges_search.info_extraction.extractor import InformationExtractor
 
-schema_ids = [
-    schema_id
-    for schema_id in InformationExtractor.list_schemas()
-    if schema_id != "jurisdiction_mappings"
-]
+schema_ids = InformationExtractor.list_schemas()
 # schema_ids = ["ipbox_v2_with_examples"]
 
 OBLIGATORY_KEYS = ["type", "description"]
@@ -37,6 +33,19 @@ GOOGLE_ALLOWED_KEYS = [
     "additionalProperties",
     "required",
 ]
+
+
+def test_schema_discovery_ignores_metadata_files(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "example.json").touch()
+    (tmp_path / "example.meta.json").write_text("{}")
+    monkeypatch.setattr(InformationExtractor, "SCHEMA_DIR", tmp_path)
+
+    assert InformationExtractor.list_schemas() == ["example"]
+
+    with pytest.raises(ValueError, match=r"Schema name example\.meta not found"):
+        InformationExtractor.get_schema("example.meta")
 
 
 @pytest.mark.parametrize("schema_name", schema_ids)

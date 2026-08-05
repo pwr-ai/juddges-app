@@ -31,7 +31,7 @@ class BaseSchemaExtractor:
     SCHEMA_DIR = PACKAGE_ROOT / "config" / "schema"
     BASE_SCHEMA_EN_FILE = SCHEMA_DIR / "base_legal_schema_en.json"
     BASE_SCHEMA_PL_FILE = SCHEMA_DIR / "base_legal_schema_pl.json"
-    MAPPINGS_FILE = SCHEMA_DIR / "jurisdiction_mappings.yaml"
+    MAPPINGS_FILE = SCHEMA_DIR / "jurisdiction_mappings.meta.yaml"
 
     def __init__(
         self,
