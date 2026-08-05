@@ -129,7 +129,7 @@ async def test_get_similar_documents_requires_authentication(client: AsyncClient
     """Test that similar documents endpoint requires authentication."""
     response = await client.get("/documents/test-id/similar")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
@@ -383,7 +383,7 @@ async def test_batch_similar_documents_requires_authentication(client: AsyncClie
         "/documents/similar/batch", json={"document_ids": ["id1", "id2"], "limit": 5}
     )
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio

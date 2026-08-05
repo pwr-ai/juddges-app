@@ -243,7 +243,7 @@ async def test_search_documents_requires_authentication(client: AsyncClient):
         "/documents/search", json={"query": "test", "limit_docs": 10}
     )
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
@@ -331,7 +331,7 @@ async def test_search_documents_legacy_requires_authentication(client: AsyncClie
         "/documents/search/legacy", json={"query": "test", "limit_docs": 10}
     )
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 # ============================================================================
@@ -378,7 +378,7 @@ async def test_get_facets_requires_authentication(client: AsyncClient):
     """Test that facets endpoint requires authentication."""
     response = await client.get("/documents/facets")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio

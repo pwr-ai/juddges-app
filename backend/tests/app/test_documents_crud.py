@@ -75,7 +75,7 @@ async def test_get_document_requires_authentication(client: AsyncClient):
     """Test that document retrieval requires authentication."""
     response = await client.get("/documents/test-id")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
@@ -343,7 +343,7 @@ async def test_batch_documents_requires_authentication(client: AsyncClient):
         "/documents/batch", json={"document_ids": ["id1", "id2"]}
     )
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio

@@ -2,13 +2,15 @@
 Authorization Boundary Tests
 
 Tests that authentication and authorization gates are enforced correctly:
-- Protected endpoints reject unauthenticated requests (no API key -> 401/403)
+- Protected endpoints reject unauthenticated requests (no API key -> 401)
 - Admin endpoints reject non-admin callers
 - API key is required for all data-plane endpoints
 
-These tests intentionally do NOT mock auth so that they exercise the real
-verify_api_key / require_admin dependencies.
+These tests exercise the real verify_api_key / get_current_user / require_admin
+dependencies. The invalid-token case stubs only Supabase's upstream response.
 """
+
+from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -45,21 +47,21 @@ class TestUnauthenticatedAccessRejected:
     ]
 
     async def test_get_endpoints_reject_missing_api_key(self, client: AsyncClient):
-        """GET requests without X-API-Key header must return 401 or 403."""
+        """GET requests without X-API-Key header must return 401."""
         for endpoint in self.PROTECTED_GET_ENDPOINTS:
             response = await client.get(endpoint)
-            assert response.status_code in (401, 403), (
+            assert response.status_code == 401, (
                 f"{endpoint} returned {response.status_code} without API key, "
-                "expected 401 or 403"
+                "expected 401"
             )
 
     async def test_post_endpoints_reject_missing_api_key(self, client: AsyncClient):
-        """POST requests without X-API-Key header must return 401 or 403."""
+        """POST requests without X-API-Key header must return 401."""
         for endpoint in self.PROTECTED_POST_ENDPOINTS:
             response = await client.post(endpoint, json={})
-            assert response.status_code in (401, 403), (
+            assert response.status_code == 401, (
                 f"{endpoint} returned {response.status_code} without API key, "
-                "expected 401 or 403"
+                "expected 401"
             )
 
     async def test_langserve_routes_reject_missing_api_key(self, client: AsyncClient):
@@ -71,9 +73,9 @@ class TestUnauthenticatedAccessRejected:
         ]
         for endpoint in langserve_endpoints:
             response = await client.post(endpoint, json={"input": "test"})
-            assert response.status_code in (401, 403), (
+            assert response.status_code == 401, (
                 f"LangServe endpoint {endpoint} returned {response.status_code} "
-                "without API key, expected 401 or 403"
+                "without API key, expected 401"
             )
 
     async def test_graphql_rejects_missing_api_key(self, client: AsyncClient):
@@ -82,10 +84,96 @@ class TestUnauthenticatedAccessRejected:
             "/graphql",
             json={"query": "{ __typename }"},
         )
-        assert response.status_code in (401, 403), (
-            f"/graphql returned {response.status_code} without API key, "
-            "expected 401 or 403"
+        assert response.status_code == 401, (
+            f"/graphql returned {response.status_code} without API key, expected 401"
         )
+
+
+# ---------------------------------------------------------------------------
+# Exact API-key, Bearer, and authorization status contracts
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+@pytest.mark.unit
+@pytest.mark.security
+class TestExactAuthStatusContracts:
+    """Keep authentication (401) distinct from authorization (403)."""
+
+    API_KEY_ENDPOINTS = [
+        "/documents",
+        "/collections",
+        "/api/search/autocomplete?q=test",
+    ]
+
+    BEARER_ENDPOINTS = [
+        "/collections",
+        "/api/search/analytics/history",
+    ]
+
+    async def test_missing_api_key_is_401(self, client: AsyncClient):
+        """Missing API credentials are an authentication failure."""
+        for endpoint in self.API_KEY_ENDPOINTS:
+            response = await client.get(endpoint)
+
+            assert response.status_code == 401, endpoint
+            assert response.json() == {"detail": "Not authenticated"}, endpoint
+            assert response.headers["WWW-Authenticate"] == "APIKey", endpoint
+
+    async def test_missing_bearer_token_is_401(
+        self, client: AsyncClient, valid_api_headers: dict[str, str]
+    ):
+        """A valid API key does not replace required user authentication."""
+        for endpoint in self.BEARER_ENDPOINTS:
+            response = await client.get(endpoint, headers=valid_api_headers)
+
+            assert response.status_code == 401, endpoint
+            assert response.json() == {"detail": "Not authenticated"}, endpoint
+            assert response.headers["WWW-Authenticate"] == "Bearer", endpoint
+
+    @patch("app.core.auth_jwt.get_admin_supabase_client")
+    async def test_invalid_bearer_token_is_401(
+        self,
+        mock_get_admin_client,
+        client: AsyncClient,
+        valid_api_headers: dict[str, str],
+    ):
+        """An invalid Bearer token is unauthenticated, not forbidden."""
+        mock_client = MagicMock()
+        mock_client.auth.get_user.return_value = None
+        mock_get_admin_client.return_value = mock_client
+        headers = {**valid_api_headers, "Authorization": "Bearer invalid-token"}
+
+        for endpoint in self.BEARER_ENDPOINTS:
+            response = await client.get(endpoint, headers=headers)
+
+            assert response.status_code == 401, endpoint
+            assert response.json() == {"detail": "Invalid authentication token"}, (
+                endpoint
+            )
+            assert response.headers["WWW-Authenticate"] == "Bearer", endpoint
+
+    async def test_authenticated_caller_without_researcher_permission_is_403(
+        self,
+        client: AsyncClient,
+        valid_api_headers: dict[str, str],
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """A known caller lacking a required privilege is forbidden."""
+        import app.api.search as search_module
+
+        monkeypatch.setattr(
+            search_module, "RESEARCHER_API_KEY", "dedicated-researcher-key"
+        )
+
+        response = await client.get(
+            "/api/search/analytics/eval-queries", headers=valid_api_headers
+        )
+
+        assert response.status_code == 403
+        assert response.json() == {
+            "detail": "This endpoint requires the researcher API key."
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +285,7 @@ class TestAdminEndpointBoundaries:
     """Admin endpoints must reject unauthenticated and non-admin callers.
 
     Admin endpoints use JWT-based ``require_admin`` dependency (not API key).
-    Requests without a valid JWT must receive 401 or 403.
+    Requests without a valid JWT must receive 401.
     """
 
     ADMIN_ENDPOINTS = [
@@ -209,9 +297,9 @@ class TestAdminEndpointBoundaries:
         """Admin endpoints must reject requests with no auth at all."""
         for endpoint in self.ADMIN_ENDPOINTS:
             response = await client.get(endpoint)
-            assert response.status_code in (401, 403, 422), (
+            assert response.status_code == 401, (
                 f"Admin endpoint {endpoint} returned {response.status_code} "
-                "without any auth, expected 401/403/422"
+                "without any auth, expected 401"
             )
 
     async def test_admin_endpoints_reject_api_key_only(
@@ -221,9 +309,9 @@ class TestAdminEndpointBoundaries:
         for endpoint in self.ADMIN_ENDPOINTS:
             response = await client.get(endpoint, headers=valid_api_headers)
             # API key alone is not sufficient for admin endpoints
-            assert response.status_code in (401, 403, 422), (
+            assert response.status_code == 401, (
                 f"Admin endpoint {endpoint} accepted API-key-only auth "
-                f"(got {response.status_code}), expected 401/403/422"
+                f"(got {response.status_code}), expected 401"
             )
 
     async def test_admin_endpoints_reject_fake_jwt(self, client: AsyncClient):
@@ -233,7 +321,7 @@ class TestAdminEndpointBoundaries:
         }
         for endpoint in self.ADMIN_ENDPOINTS:
             response = await client.get(endpoint, headers=fake_jwt_headers)
-            assert response.status_code in (401, 403, 422), (
+            assert response.status_code == 401, (
                 f"Admin endpoint {endpoint} accepted fake JWT "
                 f"(got {response.status_code})"
             )
@@ -249,7 +337,7 @@ class TestAdminEndpointBoundaries:
         }
         for endpoint in self.ADMIN_ENDPOINTS:
             response = await client.get(endpoint, headers=headers)
-            assert response.status_code in (401, 403, 422), (
+            assert response.status_code == 401, (
                 f"Admin endpoint {endpoint} accepted non-admin user "
                 f"(got {response.status_code})"
             )
@@ -275,9 +363,9 @@ class TestJWTProtectedEndpoints:
         """JWT-protected endpoints must not accept requests without auth."""
         for endpoint in self.JWT_PROTECTED_ENDPOINTS:
             response = await client.get(endpoint)
-            assert response.status_code in (401, 403, 422), (
+            assert response.status_code == 401, (
                 f"JWT endpoint {endpoint} returned {response.status_code} "
-                "without auth, expected 401/403/422"
+                "without auth, expected 401"
             )
 
     async def test_jwt_endpoints_reject_api_key_only(
@@ -286,7 +374,7 @@ class TestJWTProtectedEndpoints:
         """JWT-protected endpoints must not accept API key as a substitute for JWT."""
         for endpoint in self.JWT_PROTECTED_ENDPOINTS:
             response = await client.get(endpoint, headers=valid_api_headers)
-            assert response.status_code in (401, 403, 422), (
+            assert response.status_code == 401, (
                 f"JWT endpoint {endpoint} accepted API-key-only auth "
                 f"(got {response.status_code})"
             )
