@@ -59,7 +59,7 @@ interface EmbeddingModel {
  api_key_configured: boolean;
 }
 
-function EmbeddingModelsSection() {
+export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
  const [models, setModels] = useState<EmbeddingModel[]>([]);
  const [activeModelId, setActiveModelId] = useState<string>("");
  const [loading, setLoading] = useState(true);
@@ -178,9 +178,15 @@ function EmbeddingModelsSection() {
  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 text-amber-800 text-sm border border-amber-200">
  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
  <span>
+ {isAdmin ? (
+ <>
  Only <strong>BAAI/bge-m3</strong> can be activated at the moment. Other models are listed
  for reference — in the future we plan to investigate how different embeddings perform on
  Polish legal texts and re-enable selection.
+ </>
+ ) : (
+ <>Only administrators can change the platform&apos;s active embedding model. You can inspect and test the available models.</>
+ )}
  </span>
  </div>
 
@@ -243,7 +249,7 @@ function EmbeddingModelsSection() {
  ) : null}
  Test
  </Button>
- {!model.is_active && (
+ {isAdmin && !model.is_active && (
  <Button
  variant="default"
  size="sm"
@@ -622,6 +628,7 @@ function DigestSubscriptionsSection() {
 
 export default function SettingsPage() {
  const { user } = useAuth();
+ const isAdmin = user?.app_metadata?.is_admin === true || user?.role === "service_role";
 
  return (
  <div className="container mx-auto px-6 py-8 max-w-6xl">
@@ -734,7 +741,7 @@ export default function SettingsPage() {
  </CardDescription>
  </CardHeader>
  <CardContent>
- <EmbeddingModelsSection />
+ <EmbeddingModelsSection isAdmin={isAdmin} />
  </CardContent>
  </Card>
 
