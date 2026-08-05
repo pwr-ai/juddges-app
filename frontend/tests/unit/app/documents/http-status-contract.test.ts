@@ -2,14 +2,27 @@
  * @jest-environment node
  */
 
-import { spawn, spawnSync } from 'node:child_process';
-import { once } from 'node:events';
 import { createServer, type Server } from 'node:http';
 import { createServer as createNetServer } from 'node:net';
 import { cpSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-jest.setTimeout(180_000);
+import {
+  acquireProductionBuildLock,
+  PRODUCTION_BUILD_TEST_TIMEOUT_MS,
+} from '@/tests/support/production-build-lock';
+import {
+  type ProductionChild,
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_POLL_INTERVAL_MS,
+  PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+  runProductionChild,
+  spawnProductionChild,
+  stopProductionChild,
+} from '@/tests/support/production-child-process';
+
+jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
 async function reservePort(): Promise<number> {
   const server = createNetServer();
@@ -42,10 +55,18 @@ async function requestUntilReady(
   let lastError: unknown;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
-      return await fetch(url, { redirect: 'manual', ...options });
+      return await fetch(url, {
+        redirect: 'manual',
+        signal:
+          options.signal ??
+          AbortSignal.timeout(PRODUCTION_READINESS_REQUEST_TIMEOUT_MS),
+        ...options,
+      });
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) =>
+        setTimeout(resolve, PRODUCTION_READINESS_POLL_INTERVAL_MS)
+      );
     }
   }
   throw lastError;
@@ -137,38 +158,11 @@ describe('documents production HTTP/auth status matrix', () => {
       DOCUMENT_METADATA_TIMEOUT_MS: '50',
     };
     const nextBin = join(process.cwd(), 'node_modules/next/dist/bin/next');
-    const build = spawnSync(process.execPath, [nextBin, 'build'], {
-      cwd: process.cwd(),
-      env: commonEnv,
-      encoding: 'utf8',
-      timeout: 150_000,
-    });
-    if (build.status !== 0) {
-      throw new Error(`Production build failed:\n${build.stdout}\n${build.stderr}`);
-    }
-    // Next's standalone artifact intentionally omits static/public files; the
-    // production image copies both alongside server.js, so mirror that layout.
-    cpSync(
-      join(process.cwd(), '.next/static'),
-      join(process.cwd(), '.next/standalone/frontend/.next/static'),
-      { recursive: true }
-    );
-    cpSync(
-      join(process.cwd(), 'public'),
-      join(process.cwd(), '.next/standalone/frontend/public'),
-      { recursive: true }
-    );
-
-    await listen(upstream, upstreamPort);
-    const serverPath = join(process.cwd(), '.next/standalone/frontend/server.js');
-    const productionServer = spawn(process.execPath, [serverPath], {
-      cwd: process.cwd(),
-      env: { ...commonEnv, PORT: String(appPort), HOSTNAME: '127.0.0.1' },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    let releaseProductionBuildLock: (() => Promise<void>) | undefined;
+    let productionServer: ProductionChild | undefined;
+    let upstreamListening = false;
     let output = '';
-    productionServer.stdout?.on('data', (chunk: Buffer) => (output += chunk.toString()));
-    productionServer.stderr?.on('data', (chunk: Buffer) => (output += chunk.toString()));
+    const serverPath = join(process.cwd(), '.next/standalone/frontend/server.js');
     const appUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authenticatedCookie() };
     const forgedMetadata = Buffer.from(JSON.stringify({
@@ -179,6 +173,39 @@ describe('documents production HTTP/auth status matrix', () => {
     })).toString('base64url');
 
     try {
+      releaseProductionBuildLock = await acquireProductionBuildLock();
+      output += await runProductionChild({
+        command: process.execPath,
+        args: [nextBin, 'build'],
+        label: 'Next production build',
+        cwd: process.cwd(),
+        env: commonEnv,
+        timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+      });
+      // Next's standalone artifact intentionally omits static/public files; the
+      // production image copies both alongside server.js, so mirror that layout.
+      cpSync(
+        join(process.cwd(), '.next/static'),
+        join(process.cwd(), '.next/standalone/frontend/.next/static'),
+        { recursive: true }
+      );
+      cpSync(
+        join(process.cwd(), 'public'),
+        join(process.cwd(), '.next/standalone/frontend/public'),
+        { recursive: true }
+      );
+
+      await listen(upstream, upstreamPort);
+      upstreamListening = true;
+      productionServer = spawnProductionChild({
+        command: process.execPath,
+        args: [serverPath],
+        label: 'Next standalone production server',
+        cwd: process.cwd(),
+        env: { ...commonEnv, PORT: String(appPort), HOSTNAME: '127.0.0.1' },
+        timeoutMs: PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+      });
+
       const expectedStatuses: Record<string, number> = {
         'missing-doc': 404,
         'other-users-doc': 404,
@@ -310,25 +337,30 @@ describe('documents production HTTP/auth status matrix', () => {
       ).toBe(1);
     } catch (error) {
       throw new Error(
-        `Production status matrix failed: ${String(error)}\nRequests: ${upstreamRequests.join(', ')}\n${output}`
+        `Production status matrix failed: ${String(error)}\nRequests: ${upstreamRequests.join(', ')}\n${output}${productionServer?.output() ?? ''}`
       );
     } finally {
-      if (productionServer.exitCode === null) {
-        const exited = once(productionServer, 'exit');
-        productionServer.kill('SIGTERM');
-        let exitTimer: ReturnType<typeof setTimeout> | undefined;
-        await Promise.race([
-          exited,
-          new Promise((resolve) => {
-            exitTimer = setTimeout(resolve, 5_000);
-            exitTimer.unref();
-          }),
-        ]);
-        if (exitTimer) clearTimeout(exitTimer);
-        if (productionServer.exitCode === null) productionServer.kill('SIGKILL');
+      const cleanupResults = await Promise.allSettled([
+        stopProductionChild(productionServer),
+        upstreamListening
+          ? (async () => {
+              upstream.closeAllConnections();
+              await close(upstream);
+            })()
+          : Promise.resolve(),
+      ]);
+      const lockResults = await Promise.allSettled([
+        releaseProductionBuildLock?.() ?? Promise.resolve(),
+      ]);
+      const cleanupFailures = [...cleanupResults, ...lockResults].flatMap(
+        (result) => (result.status === 'rejected' ? [result.reason] : [])
+      );
+      if (cleanupFailures.length > 0) {
+        throw new AggregateError(
+          cleanupFailures,
+          'Production status matrix cleanup failed'
+        );
       }
-      upstream.closeAllConnections();
-      await close(upstream);
     }
   });
 });
