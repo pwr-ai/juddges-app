@@ -810,7 +810,7 @@ async def get_extraction_job(
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
-            return _pending_batch_response(job_id)
+            return _resolve_pending_job(job_id, job_record)
 
         if task_state == "PENDING" and not task_result.info:
             return _resolve_pending_job(job_id, job_record)

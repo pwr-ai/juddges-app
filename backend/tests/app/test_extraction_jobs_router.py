@@ -455,6 +455,43 @@ class TestGetExtractionJobEndpoint:
             assert response.status_code == 503
 
     @pytest.mark.unit
+    async def test_missing_celery_state_reuses_persisted_terminal_progress(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = _owned_job_store(
+            {
+                "job_id": _GET_JOB_ID,
+                "user_id": _USER_001,
+                "status": "SUCCESS",
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [],
+            }
+        )
+        mock_result = MagicMock()
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router._safe_get_task_state",
+                return_value=None,
+            ),
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "COMPLETED"
+        mock_supabase.table.assert_called_once_with("extraction_jobs")
+
+    @pytest.mark.unit
     async def test_in_progress_job(self, client, valid_api_headers) -> None:
         """Test retrieving an in-progress job owned by the caller."""
         _install_jwt_user_override(_USER_001)
