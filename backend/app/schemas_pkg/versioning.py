@@ -124,71 +124,6 @@ def register_versioning_routes(router: APIRouter) -> None:
                 detail=f"Failed to list versions: {e!s}",
             )
 
-    @router.get("/db/{schema_id}/versions/{version_number}")
-    async def get_schema_version(
-        schema_id: str,
-        version_number: int,
-    ) -> SchemaVersionDetail:
-        """
-        Get full details of a specific schema version.
-
-        Args:
-            schema_id: UUID of the schema
-            version_number: The version number to retrieve
-
-        Returns:
-            Full version details including schema and field snapshots
-        """
-        if not supabase_client:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Database connection unavailable",
-            )
-
-        try:
-            response = (
-                supabase_client.table("schema_versions")
-                .select(
-                    "id, schema_id, version_number, schema_snapshot, field_snapshot, "
-                    "change_type, change_summary, changed_fields, diff_from_previous, "
-                    "user_id, created_at"
-                )
-                .eq("schema_id", schema_id)
-                .eq("version_number", version_number)
-                .single()
-                .execute()
-            )
-
-            if not response.data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Version {version_number} not found for schema '{schema_id}'",
-                )
-
-            v = response.data
-            return SchemaVersionDetail(
-                id=v["id"],
-                schema_id=v["schema_id"],
-                version_number=v["version_number"],
-                schema_snapshot=v.get("schema_snapshot", {}),
-                field_snapshot=v.get("field_snapshot", []),
-                change_type=v["change_type"],
-                change_summary=v.get("change_summary"),
-                changed_fields=v.get("changed_fields"),
-                diff_from_previous=v.get("diff_from_previous"),
-                user_id=v.get("user_id"),
-                created_at=v["created_at"],
-            )
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to get schema version: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to get version: {e!s}",
-            )
-
     @router.get("/db/{schema_id}/versions/compare")
     async def compare_schema_versions(
         schema_id: str,
@@ -322,6 +257,71 @@ def register_versioning_routes(router: APIRouter) -> None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to compare versions: {e!s}",
+            )
+
+    @router.get("/db/{schema_id}/versions/{version_number}")
+    async def get_schema_version(
+        schema_id: str,
+        version_number: int,
+    ) -> SchemaVersionDetail:
+        """
+        Get full details of a specific schema version.
+
+        Args:
+            schema_id: UUID of the schema
+            version_number: The version number to retrieve
+
+        Returns:
+            Full version details including schema and field snapshots
+        """
+        if not supabase_client:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database connection unavailable",
+            )
+
+        try:
+            response = (
+                supabase_client.table("schema_versions")
+                .select(
+                    "id, schema_id, version_number, schema_snapshot, field_snapshot, "
+                    "change_type, change_summary, changed_fields, diff_from_previous, "
+                    "user_id, created_at"
+                )
+                .eq("schema_id", schema_id)
+                .eq("version_number", version_number)
+                .single()
+                .execute()
+            )
+
+            if not response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Version {version_number} not found for schema '{schema_id}'",
+                )
+
+            v = response.data
+            return SchemaVersionDetail(
+                id=v["id"],
+                schema_id=v["schema_id"],
+                version_number=v["version_number"],
+                schema_snapshot=v.get("schema_snapshot", {}),
+                field_snapshot=v.get("field_snapshot", []),
+                change_type=v["change_type"],
+                change_summary=v.get("change_summary"),
+                changed_fields=v.get("changed_fields"),
+                diff_from_previous=v.get("diff_from_previous"),
+                user_id=v.get("user_id"),
+                created_at=v["created_at"],
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get schema version: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to get version: {e!s}",
             )
 
     @router.post("/db/{schema_id}/versions/{version_number}/rollback")
