@@ -99,23 +99,51 @@ describe("extraction detail middleware", () => {
     expect(await response.text()).toBe("");
   });
 
-  it("returns an exact JSON 401 for anonymous detail BFF reads", async () => {
-    mockUpdateSessionWithAuth.mockImplementation((incoming: NextRequest) => ({
-      response: NextResponse.next({ request: incoming }),
-      userId: null,
-      accessToken: null,
-      request: incoming,
-    }));
+  it.each(["GET", "HEAD"])(
+    "returns an exact JSON 401 for anonymous %s detail BFF reads",
+    async (method) => {
+      mockUpdateSessionWithAuth.mockImplementation((incoming: NextRequest) => ({
+        response: NextResponse.next({ request: incoming }),
+        userId: null,
+        accessToken: null,
+        request: incoming,
+      }));
 
-    const response = await middleware(
-      request(`/api/extractions?job_id=${JOB_ID}`)
-    );
+      const response = await middleware(
+        request(`/api/extractions?job_id=${JOB_ID}`, { method })
+      );
 
-    expect(response.status).toBe(401);
-    expect(await response.json()).toEqual(
-      expect.objectContaining({ code: "UNAUTHORIZED" })
-    );
-  });
+      expect(response.status).toBe(401);
+      if (method === "GET") {
+        expect(await response.json()).toEqual(
+          expect.objectContaining({ code: "UNAUTHORIZED" })
+        );
+      }
+    }
+  );
+
+  it.each([
+    ["GET", `/api/extractions?job_id=${JOB_ID}&job_id=${JOB_ID}`],
+    ["GET", "/api/extractions?job_id=not-a-uuid"],
+    ["GET", "/api/extractions?job_id="],
+    ["GET", `/api/extractions/?job_id=${JOB_ID}`],
+    ["POST", `/api/extractions?job_id=${JOB_ID}`],
+  ] as const)(
+    "does not override central auth policy for protected %s %s",
+    async (method, path) => {
+      mockUpdateSessionWithAuth.mockImplementation((incoming: NextRequest) => ({
+        response: new NextResponse("central-policy", { status: 418 }),
+        userId: null,
+        accessToken: null,
+        request: incoming,
+      }));
+
+      const response = await middleware(request(path, { method }));
+
+      expect(response.status).toBe(418);
+      expect(await response.text()).toBe("central-policy");
+    }
+  );
 
   it("preserves refreshed session cookies on extraction failures", async () => {
     mockUpdateSessionWithAuth.mockImplementation((incoming: NextRequest) => {

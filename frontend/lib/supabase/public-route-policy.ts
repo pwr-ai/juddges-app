@@ -78,10 +78,12 @@ function isPublicPage(pathname: string): boolean {
   );
 }
 
-function isPublicExtractionDetailRead(
-  pathname: string,
-  searchParams: PublicRouteRequest['searchParams'],
-): boolean {
+export function isAnonymousExtractionBffRead({
+  pathname,
+  method,
+  searchParams,
+}: PublicRouteRequest): boolean {
+  if (!PUBLIC_READ_METHODS.has(method)) return false;
   if (pathname !== '/api/extractions' || !searchParams) return false;
   const jobIds = searchParams.getAll('job_id');
   return jobIds.length === 1 && isCanonicalUuid(jobIds[0]);
@@ -89,13 +91,14 @@ function isPublicExtractionDetailRead(
 
 function isPublicReadApi(
   pathname: string,
+  method: string,
   searchParams: PublicRouteRequest['searchParams'],
 ): boolean {
   return (
     EXACT_PUBLIC_READ_APIS.has(pathname) ||
     matchesAnySegmentTree(pathname, PUBLIC_READ_API_SUBTREES) ||
     isPublicChatMessagesRead(pathname) ||
-    isPublicExtractionDetailRead(pathname, searchParams)
+    isAnonymousExtractionBffRead({ pathname, method, searchParams })
   );
 }
 
@@ -122,5 +125,5 @@ export function isPublicRequest({
   if (pathname === '/api/graphql') return true;
   if (pathname === '/api/contact' && method === 'POST') return true;
   if (!PUBLIC_READ_METHODS.has(method)) return false;
-  return isPublicPage(pathname) || isPublicReadApi(pathname, searchParams);
+  return isPublicPage(pathname) || isPublicReadApi(pathname, method, searchParams);
 }
