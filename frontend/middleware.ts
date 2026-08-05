@@ -256,7 +256,7 @@ export async function middleware(incomingRequest: NextRequest) {
         await signExtractionSnapshot(
           encoded,
           userId,
-          request.nextUrl.pathname,
+          `/extractions/${jobId}`,
           process.env.BACKEND_API_KEY ?? '',
         ),
       )

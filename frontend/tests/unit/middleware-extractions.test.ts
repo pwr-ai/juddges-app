@@ -14,6 +14,7 @@ jest.mock("@/lib/supabase/middleware", () => ({
 global.fetch = jest.fn();
 
 import { config, middleware } from "@/middleware";
+import { verifyExtractionSnapshot } from "@/lib/extractions/detail-contract";
 
 const JOB_ID = "22222222-3333-4444-8555-666666666666";
 
@@ -173,5 +174,35 @@ describe("extraction detail middleware", () => {
       )
     ).toBe("user-1");
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("signs an encoded UUID request against the decoded canonical route", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ job_id: JOB_ID, status: "SUCCESS", results: [] }),
+    });
+    const encodedPath = `/extractions/${JOB_ID.replace("22", "%32%32")}`;
+
+    const response = await middleware(request(encodedPath));
+    const snapshot = response.headers.get(
+      "x-middleware-request-x-juddges-extraction-snapshot"
+    );
+    const signature = response.headers.get(
+      "x-middleware-request-x-juddges-extraction-snapshot-signature"
+    );
+
+    expect(response.status).toBe(200);
+    expect(snapshot).toBeTruthy();
+    expect(signature).toBeTruthy();
+    expect(
+      await verifyExtractionSnapshot(
+        snapshot!,
+        signature!,
+        "user-1",
+        `/extractions/${JOB_ID}`,
+        "signing-secret"
+      )
+    ).toBe(true);
   });
 });

@@ -1,4 +1,7 @@
-import type { DocumentExtractionResult } from "@/types/search";
+import {
+  DocumentProcessingStatus,
+  type DocumentExtractionResult,
+} from "@/types/search";
 
 export const EXTRACTION_SNAPSHOT_HEADER = "x-juddges-extraction-snapshot";
 export const EXTRACTION_SNAPSHOT_SIGNATURE_HEADER =
@@ -39,23 +42,33 @@ export function normalizeExtractionJobPayload(
   }
   const record = payload as Record<string, unknown>;
   const responseJobId = record.job_id ?? record.task_id;
+  const rawResults = record.results ?? [];
   if (
     typeof responseJobId !== "string" ||
     responseJobId !== expectedJobId ||
     typeof record.status !== "string" ||
     record.status.trim().length === 0 ||
-    (record.results !== undefined &&
-      record.results !== null &&
-      !Array.isArray(record.results))
+    !Array.isArray(rawResults) ||
+    !optionalStringFieldsAreValid(record) ||
+    (record.progress !== undefined &&
+      record.progress !== null &&
+      !isProgress(record.progress))
   ) {
     return null;
   }
+  const results = rawResults.map(normalizeExtractionResult);
+  if (results.some((result) => result === null)) return null;
 
   return {
     job_id: expectedJobId,
     status: record.status,
-    results: (record.results ?? []) as DocumentExtractionResult[],
-    progress: isProgress(record.progress) ? record.progress : undefined,
+    results: results as DocumentExtractionResult[],
+    progress:
+      record.progress === null
+        ? null
+        : isProgress(record.progress)
+          ? record.progress
+          : undefined,
     created_at: optionalString(record.created_at),
     updated_at: optionalString(record.updated_at),
     collection_id: optionalString(record.collection_id),
@@ -63,6 +76,69 @@ export function normalizeExtractionJobPayload(
     schema_id: optionalString(record.schema_id),
     schema_name: optionalString(record.schema_name),
   };
+}
+
+const OPTIONAL_STRING_FIELDS = [
+  "created_at",
+  "updated_at",
+  "collection_id",
+  "collection_name",
+  "schema_id",
+  "schema_name",
+] as const;
+
+function optionalStringFieldsAreValid(record: Record<string, unknown>): boolean {
+  return OPTIONAL_STRING_FIELDS.every((field) => {
+    const value = record[field];
+    return value === undefined || value === null || typeof value === "string";
+  });
+}
+
+function normalizeExtractionResult(
+  value: unknown
+): DocumentExtractionResult | null {
+  if (!isPlainRecord(value)) return null;
+  const status = value.status;
+  if (
+    typeof value.collection_id !== "string" ||
+    typeof value.document_id !== "string" ||
+    typeof status !== "string" ||
+    !Object.values(DocumentProcessingStatus).includes(
+      status as DocumentProcessingStatus
+    ) ||
+    typeof value.created_at !== "string" ||
+    typeof value.updated_at !== "string" ||
+    !optionalResultString(value.started_at) ||
+    !optionalResultString(value.completed_at) ||
+    !optionalResultString(value.error_message) ||
+    !(value.extracted_data === null || isPlainRecord(value.extracted_data))
+  ) {
+    return null;
+  }
+  return {
+    collection_id: value.collection_id,
+    document_id: value.document_id,
+    status: status as DocumentProcessingStatus,
+    created_at: value.created_at,
+    updated_at: value.updated_at,
+    started_at: typeof value.started_at === "string" ? value.started_at : undefined,
+    completed_at:
+      typeof value.completed_at === "string" ? value.completed_at : undefined,
+    error_message:
+      typeof value.error_message === "string" ? value.error_message : undefined,
+    // Failed rows legitimately contain null in the FastAPI model. Normalize
+    // that wire value to an empty object so the established frontend type and
+    // rendering guards remain safe.
+    extracted_data: value.extracted_data ?? {},
+  };
+}
+
+function optionalResultString(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === "string";
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 export function isTerminalExtractionStatus(status: string): boolean {
@@ -87,9 +163,16 @@ function isProgress(
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const progress = value as Record<string, unknown>;
   return (
-    typeof progress.completed === "number" &&
-    typeof progress.total === "number" &&
-    (progress.percentage === undefined || typeof progress.percentage === "number")
+    Number.isInteger(progress.completed) &&
+    Number.isInteger(progress.total) &&
+    (progress.completed as number) >= 0 &&
+    (progress.total as number) >= 0 &&
+    (progress.completed as number) <= (progress.total as number) &&
+    (progress.percentage === undefined ||
+      (typeof progress.percentage === "number" &&
+        Number.isFinite(progress.percentage) &&
+        progress.percentage >= 0 &&
+        progress.percentage <= 100))
   );
 }
 

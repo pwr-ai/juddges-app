@@ -22,7 +22,13 @@ export const revalidate = 0;
 export default async function ExtractionJobPage({
   params,
 }: ExtractionJobPageProps): Promise<React.JSX.Element> {
-  const { id: jobId } = await params;
+  const { id: rawJobId } = await params;
+  let jobId: string;
+  try {
+    jobId = decodeURIComponent(rawJobId);
+  } catch {
+    notFound();
+  }
   if (!isValidExtractionJobId(jobId)) notFound();
 
   const requestHeaders = await headers();

@@ -87,6 +87,9 @@ interface PollError {
  message: string;
 }
 
+const POLL_INTERVAL_MS = 3_000;
+const POLL_TIMEOUT_MS = 10_000;
+
 export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientProps) {
  const router = useRouter();
  const [jobData, setJobData] = useState<ExtractionJobSnapshot>(initialJob);
@@ -109,12 +112,28 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  useEffect(() => {
  if (isTerminalExtractionStatus(jobData.status)) return;
  let active = true;
+ let pollTimer: number | undefined;
+ let requestTimeout: number | undefined;
+ let requestController: AbortController | undefined;
+
+ const schedulePoll = () => {
+ if (!active) return;
+ pollTimer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
+ };
+
  const poll = async () => {
+ let timedOut = false;
+ requestController = new AbortController();
+ requestTimeout = window.setTimeout(() => {
+ timedOut = true;
+ requestController?.abort();
+ }, POLL_TIMEOUT_MS);
  try {
  const response = await fetch(`/api/extractions?job_id=${jobId}`, {
  method: "GET",
  headers: { Accept: "application/json" },
  cache: "no-store",
+ signal: requestController.signal,
  });
  const payload: unknown = await response.json().catch(() => null);
  if (!response.ok) {
@@ -132,24 +151,40 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  });
  }
  if (!active) return;
- setJobData(nextJob);
+ setJobData((currentJob) =>
+ isTerminalExtractionStatus(currentJob.status) &&
+ !isTerminalExtractionStatus(nextJob.status)
+ ? currentJob
+ : nextJob
+ );
  setPollError(null);
+ if (isTerminalExtractionStatus(nextJob.status)) return;
  } catch (error) {
  if (!active) return;
  const status =
+ timedOut ? 504 :
  typeof error === "object" && error !== null && "status" in error &&
  typeof error.status === "number" ? error.status : 503;
- const message = error instanceof Error
+ const message = timedOut
+ ? "The extraction service timed out. Please try again."
+ : error instanceof Error
  ? error.message
  : "The extraction service is unavailable.";
  logger.error("Error refreshing extraction job: ", error);
  setPollError({ status, message });
+ } finally {
+ if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+ requestTimeout = undefined;
+ requestController = undefined;
  }
+ schedulePoll();
  };
- const interval = window.setInterval(poll, 3_000);
+ schedulePoll();
  return () => {
  active = false;
- window.clearInterval(interval);
+ if (pollTimer !== undefined) window.clearTimeout(pollTimer);
+ if (requestTimeout !== undefined) window.clearTimeout(requestTimeout);
+ requestController?.abort();
  };
  }, [jobData.status, jobId]);
 

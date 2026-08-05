@@ -107,7 +107,9 @@ describe("extraction detail production HTTP status matrix", () => {
       }
       if (jobId === IDS.malformed) {
         response.writeHead(200, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({ unexpected: true }));
+        response.end(
+          JSON.stringify({ job_id: jobId, status: "SUCCESS", results: [null] })
+        );
         return;
       }
       if (jobId === IDS.timeout) return;
@@ -237,6 +239,14 @@ describe("extraction detail production HTTP status matrix", () => {
       );
       expect(dottedAuthenticated.status).toBe(404);
       await dottedAuthenticated.text();
+
+      const encodedVisibleId = IDS.visible.replace("11", "%31%31");
+      const encodedVisible = await requestUntilReady(
+        `${baseUrl}/extractions/${encodedVisibleId}`,
+        { headers: authenticated }
+      );
+      expect(encodedVisible.status).toBe(200);
+      expect(await encodedVisible.text()).toContain("SUCCESS");
 
       const before = extractionRequests.filter((item) =>
         item.endsWith(IDS.visible)

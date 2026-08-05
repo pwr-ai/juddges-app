@@ -35,6 +35,63 @@ describe("extraction detail transport", () => {
     expect(normalizeExtractionJobPayload({ unexpected: true }, JOB_ID)).toBeNull();
   });
 
+  it.each([
+    [{ job_id: JOB_ID, status: "SUCCESS", results: [null] }],
+    [{ job_id: JOB_ID, status: "SUCCESS", results: [{ document_id: "doc-1" }] }],
+    [
+      {
+        job_id: JOB_ID,
+        status: "SUCCESS",
+        results: [
+          {
+            collection_id: "collection-1",
+            document_id: "doc-1",
+            status: "unknown",
+            created_at: "2026-08-06T00:00:00Z",
+            updated_at: "2026-08-06T00:00:00Z",
+            extracted_data: {},
+          },
+        ],
+      },
+    ],
+    [{ job_id: JOB_ID, status: "SUCCESS", results: [], progress: { completed: "1", total: 1 } }],
+    [{ job_id: JOB_ID, status: "SUCCESS", results: [], progress: { completed: 2, total: 1 } }],
+  ])("rejects invalid nested extraction payload %#", (payload) => {
+    expect(normalizeExtractionJobPayload(payload, JOB_ID)).toBeNull();
+  });
+
+  it("accepts fully validated success and failed result elements", () => {
+    expect(
+      normalizeExtractionJobPayload(
+        {
+          job_id: JOB_ID,
+          status: "PARTIALLY_COMPLETED",
+          progress: { completed: 2, total: 2, percentage: 100 },
+          results: [
+            {
+              collection_id: "collection-1",
+              document_id: "doc-1",
+              status: "completed",
+              created_at: "2026-08-06T00:00:00Z",
+              updated_at: "2026-08-06T00:01:00Z",
+              extracted_data: { outcome: "allowed" },
+            },
+            {
+              collection_id: "collection-1",
+              document_id: "doc-2",
+              status: "failed",
+              created_at: "2026-08-06T00:00:00Z",
+              updated_at: "2026-08-06T00:01:00Z",
+              error_message: "OCR failed",
+              extracted_data: null,
+            },
+          ],
+        },
+        JOB_ID
+      )
+    ).not.toBeNull();
+  });
+
   it("binds the signed snapshot to the payload, user, and route", async () => {
     const snapshot = normalizeExtractionJobPayload(
       { job_id: JOB_ID, status: "SUCCESS", results: [] },
