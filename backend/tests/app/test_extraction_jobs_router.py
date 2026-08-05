@@ -27,6 +27,8 @@ from app.extraction_domain.jobs_router import (
     _is_worker_unavailable_message,
     _parse_task_results,
     _pending_batch_response,
+    _preserve_existing_job_progress,
+    _resolve_pending_job,
     _worker_unavailable_error,
 )
 from app.extraction_domain.shared import _validate_documents
@@ -54,6 +56,126 @@ class TestInProgressBatchResponse:
         assert resp.task_id == "job-2"
         assert resp.status == "IN_PROGRESS"
         assert resp.results is None
+
+
+def _stored_result(document_id: str, result_status: str) -> dict:
+    return {
+        "collection_id": "collection-1",
+        "document_id": document_id,
+        "status": result_status,
+        "created_at": "2026-08-06T10:00:00Z",
+        "updated_at": "2026-08-06T10:01:00Z",
+    }
+
+
+class TestPreserveExistingJobProgress:
+    @pytest.mark.unit
+    @pytest.mark.parametrize("stored_status", ["FAILURE", "FAILED"])
+    def test_completed_counts_do_not_overwrite_failure(
+        self, stored_status: str
+    ) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": stored_status,
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [_stored_result("doc-1", "failed")],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "FAILED"
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("stored_status", ["CANCELLED", "CANCELED", "REVOKED"])
+    def test_cancelled_state_is_preserved_even_without_progress(
+        self, stored_status: str
+    ) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": stored_status,
+                "completed_documents": 0,
+                "total_documents": 2,
+                "results": [],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "CANCELLED"
+
+    @pytest.mark.unit
+    def test_all_failed_results_are_not_reported_as_completed(self) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": "SUCCESS",
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [
+                    _stored_result("doc-1", "failed"),
+                    _stored_result("doc-2", "failed"),
+                ],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "FAILED"
+
+    @pytest.mark.unit
+    def test_mixed_results_are_reported_as_partially_completed(self) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": "SUCCESS",
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [
+                    _stored_result("doc-1", "completed"),
+                    _stored_result("doc-2", "failed"),
+                ],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "PARTIALLY_COMPLETED"
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("stored_status", "expected_status"),
+        [
+            ("SUCCESS", "COMPLETED"),
+            ("COMPLETED", "COMPLETED"),
+            ("PARTIALLY_COMPLETED", "PARTIALLY_COMPLETED"),
+        ],
+    )
+    def test_terminal_status_without_progress_is_never_resubmitted(
+        self, stored_status: str, expected_status: str
+    ) -> None:
+        job_state = {
+            "status": stored_status,
+            "completed_documents": 0,
+            "total_documents": 2,
+        }
+
+        with (
+            patch(
+                "app.extraction_domain.jobs_router._load_owned_job_recovery_record"
+            ) as load_recovery,
+            patch(
+                "app.extraction_domain.jobs_router._load_owned_job_results_record",
+                return_value={"results": []},
+            ),
+            patch(
+                "app.extraction_domain.jobs_router._try_resubmit_job"
+            ) as try_resubmit,
+        ):
+            response = _resolve_pending_job("job-1", "user-1", job_state)
+
+        assert response.status == expected_status
+        load_recovery.assert_not_called()
+        try_resubmit.assert_not_called()
 
 
 class TestWorkerUnavailableError:
@@ -261,6 +383,36 @@ class TestBuildResubmitRequestFromJob:
 _USER_001 = "00000000-0000-4000-a000-000000000001"
 _USER_099 = "00000000-0000-4000-a000-000000000099"
 _BEARER_HEADERS = {"Authorization": "Bearer fake-jwt-token"}
+_GET_JOB_ID = "11111111-2222-4333-8444-555555555555"
+
+
+def _owned_job_store(row: dict | None) -> MagicMock:
+    response = MagicMock()
+    response.data = [row] if row else []
+    chain = MagicMock()
+    chain.select.return_value = chain
+    chain.eq.return_value = chain
+    chain.limit.return_value = chain
+    chain.execute.return_value = response
+    store = MagicMock()
+    store.table.return_value = chain
+    return store
+
+
+def _owned_job_store_sequence(*rows: dict | None) -> MagicMock:
+    responses = []
+    for row in rows:
+        response = MagicMock()
+        response.data = [row] if row else []
+        responses.append(response)
+    chain = MagicMock()
+    chain.select.return_value = chain
+    chain.eq.return_value = chain
+    chain.limit.return_value = chain
+    chain.execute.side_effect = responses
+    store = MagicMock()
+    store.table.return_value = chain
+    return store
 
 
 class TestCreateExtractionJobEndpoint:
@@ -400,8 +552,28 @@ class TestGetExtractionJobEndpoint:
     """Tests for GET /extractions/{job_id} endpoint."""
 
     @pytest.mark.unit
+    async def test_invalid_job_id_is_not_found_without_storage_lookup(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = MagicMock()
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch("app.extraction_domain.jobs_router.AsyncResult") as mock_async,
+        ):
+            response = await client.get(
+                "/extractions/not-a-uuid",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 404
+        mock_supabase.table.assert_not_called()
+        mock_async.assert_not_called()
+
+    @pytest.mark.unit
     async def test_pending_job(self, client, valid_api_headers) -> None:
-        """Test retrieving a pending job (ownership check degrades when DB is down)."""
+        """Ownership cannot be established while the job store is unavailable."""
         _install_jwt_user_override(_USER_001)
         mock_result = MagicMock()
         mock_result.state = "PENDING"
@@ -415,12 +587,66 @@ class TestGetExtractionJobEndpoint:
             patch("app.extraction_domain.jobs_router.supabase", None),
         ):
             response = await client.get(
-                "/extractions/job-123",
+                f"/extractions/{_GET_JOB_ID}",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "PENDING"
+            assert response.status_code == 503
+
+    @pytest.mark.unit
+    async def test_missing_celery_state_reuses_persisted_terminal_progress(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        state_row = {
+            "job_id": _GET_JOB_ID,
+            "user_id": _USER_001,
+            "status": "SUCCESS",
+            "completed_documents": 2,
+            "total_documents": 2,
+        }
+        recovery_row = {
+            **state_row,
+            "results": [],
+            "collection_id": "collection-1",
+            "schema_id": "schema-1",
+            "document_ids": ["document-1", "document-2"],
+            "language": "pl",
+            "extraction_context": "Extract",
+            "prompt_id": "info_extraction",
+        }
+        mock_supabase = _owned_job_store_sequence(
+            state_row,
+            recovery_row,
+        )
+        mock_result = MagicMock()
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router._safe_get_task_state",
+                return_value=None,
+            ),
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "COMPLETED"
+        assert mock_supabase.table.call_count == 2
+        selected_fields = [
+            call.args[0]
+            for call in mock_supabase.table.return_value.select.call_args_list
+        ]
+        assert selected_fields == [
+            "job_id, user_id, status, completed_documents, total_documents",
+            "job_id, user_id, results",
+        ]
 
     @pytest.mark.unit
     async def test_in_progress_job(self, client, valid_api_headers) -> None:
@@ -431,10 +657,9 @@ class TestGetExtractionJobEndpoint:
         mock_result.ready.return_value = False
         mock_result.info = {"completed_documents": 5}
 
-        owner_row = MagicMock()
-        owner_row.data = {"user_id": _USER_001}
-        mock_supabase = MagicMock()
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = owner_row
+        mock_supabase = _owned_job_store(
+            {"job_id": _GET_JOB_ID, "user_id": _USER_001, "status": "STARTED"}
+        )
 
         with (
             patch(
@@ -448,35 +673,192 @@ class TestGetExtractionJobEndpoint:
             patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
         ):
             response = await client.get(
-                "/extractions/job-456",
+                f"/extractions/{_GET_JOB_ID}",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "IN_PROGRESS"
+            mock_supabase.table.assert_called_once_with("extraction_jobs")
+            query = mock_supabase.table.return_value
+            assert [item.args for item in query.eq.call_args_list] == [
+                ("job_id", _GET_JOB_ID),
+                ("user_id", _USER_001),
+            ]
+            selected_fields = query.select.call_args.args[0]
+            assert selected_fields == (
+                "job_id, user_id, status, completed_documents, total_documents"
+            )
+            assert "results" not in selected_fields
+            assert "document_ids" not in selected_fields
+            assert "prompt_id" not in selected_fields
 
     @pytest.mark.unit
-    async def test_get_job_owned_by_another_user_is_forbidden(
+    async def test_lightweight_poll_omits_terminal_results(
         self, client, valid_api_headers
     ) -> None:
-        """A user must not read another user's extraction job (IDOR, #233 follow-up)."""
         _install_jwt_user_override(_USER_001)
-        owner_row = MagicMock()
-        owner_row.data = {"user_id": _USER_099}
-        mock_supabase = MagicMock()
-        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = owner_row
+        mock_result = MagicMock()
+        mock_result.state = "SUCCESS"
+        mock_result.info = {"completed_documents": 1}
+        mock_result.ready.return_value = True
+        mock_result.failed.return_value = False
+        mock_result.get.return_value = [_stored_result("doc-1", "completed")]
+        mock_supabase = _owned_job_store(
+            {"job_id": _GET_JOB_ID, "user_id": _USER_001, "status": "SUCCESS"}
+        )
+
+        with (
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router.update_job_status_in_supabase",
+                return_value=True,
+            ) as update_job,
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}?include_results=false",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "COMPLETED"
+        assert response.json()["results"] is None
+        mock_result.get.assert_not_called()
+        update_job.assert_not_called()
+        selected_fields = [
+            call.args[0]
+            for call in mock_supabase.table.return_value.select.call_args_list
+        ]
+        assert selected_fields == [
+            "job_id, user_id, status, completed_documents, total_documents"
+        ]
+
+    @pytest.mark.unit
+    async def test_lightweight_pending_recovery_does_not_select_results(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        state_row = {
+            "job_id": _GET_JOB_ID,
+            "user_id": _USER_001,
+            "status": "PENDING",
+            "completed_documents": 0,
+            "total_documents": 2,
+        }
+        recovery_row = {
+            **state_row,
+            "collection_id": "collection-1",
+            "schema_id": "schema-1",
+            "document_ids": ["document-1", "document-2"],
+            "language": "pl",
+            "extraction_context": "Extract",
+            "prompt_id": "info_extraction",
+        }
+        mock_supabase = _owned_job_store_sequence(state_row, recovery_row)
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch("app.extraction_domain.jobs_router.AsyncResult") as mock_async,
+            patch(
+                "app.extraction_domain.jobs_router._safe_get_task_state",
+                return_value=None,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router._try_resubmit_job",
+                return_value=None,
+            ) as try_resubmit,
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}?include_results=false",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "PENDING"
+        selected_fields = [
+            call.args[0]
+            for call in mock_supabase.table.return_value.select.call_args_list
+        ]
+        assert selected_fields == [
+            "job_id, user_id, status, completed_documents, total_documents",
+            (
+                "job_id, user_id, status, completed_documents, total_documents, "
+                "collection_id, schema_id, document_ids, language, "
+                "extraction_context, prompt_id"
+            ),
+        ]
+        assert all("results" not in fields for fields in selected_fields)
+        try_resubmit.assert_called_once()
+        mock_async.return_value.get.assert_not_called()
+
+    @pytest.mark.unit
+    async def test_get_job_owned_by_another_user_is_indistinguishable_from_missing(
+        self, client, valid_api_headers
+    ) -> None:
+        """A hidden row must not reveal that another user's job exists."""
+        _install_jwt_user_override(_USER_001)
+        # The owner filter is part of the read, so an other-user row is hidden.
+        mock_supabase = _owned_job_store(None)
 
         with (
             patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
             patch("app.extraction_domain.jobs_router.AsyncResult") as mock_async,
         ):
             response = await client.get(
-                "/extractions/job-belongs-to-other",
+                f"/extractions/{_GET_JOB_ID}",
                 headers={**valid_api_headers, **_BEARER_HEADERS},
             )
-            assert response.status_code == 403
+            assert response.status_code == 404
             # Ownership is rejected before any Celery result is fetched.
             mock_async.assert_not_called()
+
+    @pytest.mark.unit
+    async def test_missing_job_is_not_synthesized_as_pending(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        missing_row = MagicMock()
+        missing_row.data = []
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = missing_row
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch("app.extraction_domain.jobs_router.AsyncResult") as mock_async,
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 404
+        mock_async.assert_not_called()
+
+    @pytest.mark.unit
+    async def test_ownership_lookup_failure_is_service_unavailable(
+        self, client, valid_api_headers
+    ) -> None:
+        _install_jwt_user_override(_USER_001)
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.side_effect = RuntimeError(
+            "database offline"
+        )
+
+        with (
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+            patch("app.extraction_domain.jobs_router.AsyncResult") as mock_async,
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 503
+        mock_async.assert_not_called()
 
 
 class TestCancelExtractionJobEndpoint:
