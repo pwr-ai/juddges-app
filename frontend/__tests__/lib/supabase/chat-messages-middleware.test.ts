@@ -25,6 +25,8 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { createClient } from "@/lib/supabase/server";
 
 const CHAT_ID = "11111111-2222-4333-8444-555555555555";
+const TRUSTED_CHAT_HEADER = "x-juddges-owned-chat-id";
+const ROTATED_COOKIE = "sb-test-auth-token";
 
 describe("anonymous chat messages middleware-to-handler contract", () => {
   beforeEach(() => {
@@ -53,11 +55,13 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
     data,
     error = null,
     waitForAbort = false,
+    rotateCookie = false,
   }: {
     data: { id: string } | null;
     error?: { message: string } | null;
     waitForAbort?: boolean;
-  }): void {
+    rotateCookie?: boolean;
+  }) {
     let signal: AbortSignal | undefined;
     const maybeSingle = jest.fn(() => {
       if (!waitForAbort) return Promise.resolve({ data, error });
@@ -72,14 +76,7 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
         );
       });
     });
-    (createServerClient as jest.Mock).mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({
-          data: { user: { id: "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5" } },
-          error: null,
-        }),
-      },
-      from: jest.fn(() => ({
+    const from = jest.fn(() => ({
         select: jest.fn(() => ({
           eq: jest.fn(() => ({
             eq: jest.fn(() => ({
@@ -90,8 +87,45 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
             })),
           })),
         })),
-      })),
-    });
+      }));
+    (createServerClient as jest.Mock).mockImplementation(
+      (
+        _url: string,
+        _key: string,
+        options: {
+          cookies: {
+            setAll: (cookies: Array<{
+              name: string;
+              value: string;
+              options?: { path?: string; httpOnly?: boolean };
+            }>) => void;
+          };
+        },
+      ) => ({
+        auth: {
+          getUser: jest.fn(async () => {
+            if (rotateCookie) {
+              options.cookies.setAll([
+                {
+                  name: ROTATED_COOKIE,
+                  value: "rotated-session",
+                  options: { path: "/", httpOnly: true },
+                },
+              ]);
+            }
+            return {
+              data: {
+                user: { id: "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5" },
+              },
+              error: null,
+            };
+          }),
+        },
+        from,
+      }),
+    );
+
+    return { from, maybeSingle };
   }
 
   it("lets exactly GET /api/chats/[id]/messages reach its own 401 handler", async () => {
@@ -112,6 +146,9 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
   it.each([
     "/api/chats",
     "/api/chats/not-a-uuid/messages",
+    "/api/chats/11111111-2222-3333-4444-555555555555/messages",
+    "/api/chats/11111111-2222-9333-8444-555555555555/messages",
+    "/api/chats/11111111-2222-4333-7444-555555555555/messages",
     `/api/chats/${CHAT_ID}/export`,
     `/api/chats/${CHAT_ID}/messages/extra`,
     `/api/chats/${CHAT_ID}/messages-archive`,
@@ -148,6 +185,9 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
 
   it.each([
     "/chat/not-a-uuid",
+    "/chat/11111111-2222-3333-4444-555555555555",
+    "/chat/11111111-2222-9333-8444-555555555555",
+    "/chat/11111111-2222-4333-7444-555555555555",
     `/chat/${CHAT_ID}/extra`,
     `/chat/${CHAT_ID}%2Fextra`,
   ])("does not open neighboring chat page %s on auth failure", async (path) => {
@@ -180,26 +220,45 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
   });
 
   it("continues to the page when the authenticated user owns the chat", async () => {
-    mockAuthenticatedChatLookup({ data: { id: CHAT_ID } });
+    const { from } = mockAuthenticatedChatLookup({ data: { id: CHAT_ID } });
 
     const response = await updateSession(
-      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`, {
+        headers: { [TRUSTED_CHAT_HEADER]: "spoofed-chat-id" },
+      }),
     );
 
     expect(response.status).toBe(200);
+    expect(from).toHaveBeenCalledTimes(1);
+    expect(
+      response.headers.get(`x-middleware-request-${TRUSTED_CHAT_HEADER}`),
+    ).toBe(CHAT_ID);
   });
 
   it("returns an indistinguishable 404 before streaming for a hidden chat", async () => {
     mockAuthenticatedChatLookup({ data: null });
 
     const response = await updateSession(
-      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`, {
+        headers: { [TRUSTED_CHAT_HEADER]: CHAT_ID },
+      }),
     );
 
     expect(response.status).toBe(404);
     expect(response.headers.get("x-middleware-rewrite")).toContain(
       "/__chat-not-found",
     );
+  });
+
+  it("preserves a rotated session cookie on the early 404 response", async () => {
+    mockAuthenticatedChatLookup({ data: null, rotateCookie: true });
+
+    const response = await updateSession(
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.cookies.get(ROTATED_COOKIE)?.value).toBe("rotated-session");
   });
 
   it("keeps middleware database failures distinct from 404", async () => {
@@ -215,6 +274,21 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
     expect(response.status).toBe(503);
   });
 
+  it("preserves a rotated session cookie on the early 503 response", async () => {
+    mockAuthenticatedChatLookup({
+      data: null,
+      error: { message: "database unavailable" },
+      rotateCookie: true,
+    });
+
+    const response = await updateSession(
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.cookies.get(ROTATED_COOKIE)?.value).toBe("rotated-session");
+  });
+
   it("returns 504 when the middleware chat lookup times out", async () => {
     jest.useFakeTimers();
     mockAuthenticatedChatLookup({ data: null, waitForAbort: true });
@@ -225,5 +299,23 @@ describe("anonymous chat messages middleware-to-handler contract", () => {
     await jest.runAllTimersAsync();
 
     await expect(responsePromise).resolves.toMatchObject({ status: 504 });
+  });
+
+  it("preserves a rotated session cookie on the early 504 response", async () => {
+    jest.useFakeTimers();
+    mockAuthenticatedChatLookup({
+      data: null,
+      waitForAbort: true,
+      rotateCookie: true,
+    });
+
+    const responsePromise = updateSession(
+      new NextRequest(`http://localhost:3000/chat/${CHAT_ID}`),
+    );
+    await jest.runAllTimersAsync();
+
+    const response = await responsePromise;
+    expect(response.status).toBe(504);
+    expect(response.cookies.get(ROTATED_COOKIE)?.value).toBe("rotated-session");
   });
 });

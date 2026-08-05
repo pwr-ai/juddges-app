@@ -7,8 +7,22 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
+const OTHER_USER_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
+const OWNER_CHAT_ID = "33333333-4444-4555-8666-777777777777";
 const MISSING_CHAT_ID = "11111111-2222-4333-8444-555555555555";
 const RLS_HIDDEN_CHAT_ID = "22222222-3333-4444-8555-666666666666";
+const ACCESS_TOKEN = "test-access-token";
+
+const CHAT_ROWS = new Map([
+  [OWNER_CHAT_ID, USER_ID],
+  [RLS_HIDDEN_CHAT_ID, OTHER_USER_ID],
+]);
+
+type PostgrestChatRequest = {
+  authorization: string | undefined;
+  chatIdFilter: string | null;
+  userIdFilter: string | null;
+};
 
 jest.setTimeout(180_000);
 
@@ -23,12 +37,15 @@ async function listen(server: Server): Promise<number> {
 }
 
 async function reservePort(): Promise<number> {
-  const server = createServer();
-  const port = await listen(server);
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-  return port;
+  for (;;) {
+    const server = createServer();
+    const port = await listen(server);
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+    // Next rejects browser-reserved low ports (for example 2049/NFS).
+    if (port >= 3_000) return port;
+  }
 }
 
 async function waitForNext(baseUrl: string, processOutput: () => string): Promise<void> {
@@ -98,7 +115,7 @@ function sessionCookie(): string {
     updated_at: new Date(now * 1000).toISOString(),
   };
   const session = {
-    access_token: "test-access-token",
+    access_token: ACCESS_TOKEN,
     refresh_token: "test-refresh-token",
     expires_in: 3_600,
     expires_at: now + 3_600,
@@ -114,12 +131,16 @@ describe("/chat/[id] through a real Next server", () => {
   let nextProcess: ChildProcessWithoutNullStreams;
   let baseUrl: string;
   let output = "";
-  const postgrestChatIds: string[] = [];
+  const postgrestChatRequests: PostgrestChatRequest[] = [];
 
   beforeAll(async () => {
     fakeSupabase = createServer((request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       if (url.pathname === "/auth/v1/user") {
+        if (request.headers.authorization !== `Bearer ${ACCESS_TOKEN}`) {
+          json(response, 401, { message: "Invalid access token" });
+          return;
+        }
         json(response, 200, {
           id: USER_ID,
           aud: "authenticated",
@@ -133,12 +154,28 @@ describe("/chat/[id] through a real Next server", () => {
         return;
       }
       if (url.pathname === "/rest/v1/chats") {
-        postgrestChatIds.push(url.searchParams.get("id") ?? "");
+        const chatIdFilter = url.searchParams.get("id");
+        const userIdFilter = url.searchParams.get("user_id");
+        const authorization = request.headers.authorization;
+        postgrestChatRequests.push({
+          authorization,
+          chatIdFilter,
+          userIdFilter,
+        });
+
+        const chatId = chatIdFilter?.replace(/^eq\./, "") ?? null;
+        const queriedUserId = userIdFilter?.replace(/^eq\./, "") ?? null;
+        const rowOwnerId = chatId ? CHAT_ROWS.get(chatId) : undefined;
+        const isVisible =
+          authorization === `Bearer ${ACCESS_TOKEN}` &&
+          queriedUserId === USER_ID &&
+          rowOwnerId === USER_ID;
+        const rows = isVisible && chatId ? [{ id: chatId }] : [];
         response.writeHead(200, {
           "Content-Type": "application/json",
-          "Content-Range": "*/0",
+          "Content-Range": rows.length === 1 ? "0-0/1" : "*/0",
         });
-        response.end("[]");
+        response.end(JSON.stringify(rows));
         return;
       }
       json(response, 404, { message: "Unexpected fake Supabase request" });
@@ -190,6 +227,30 @@ describe("/chat/[id] through a real Next server", () => {
 
     expect(response.status).toBe(404);
     expect(response.headers.get("location")).toBeNull();
-    expect(postgrestChatIds).toContain(`eq.${chatId}`);
+    expect(postgrestChatRequests).toContainEqual({
+      authorization: `Bearer ${ACCESS_TOKEN}`,
+      chatIdFilter: `eq.${chatId}`,
+      userIdFilter: `eq.${USER_ID}`,
+    });
+  });
+
+  it("returns HTTP 200 for the owner with exactly one ownership lookup", async () => {
+    const response = await fetch(`${baseUrl}/chat/${OWNER_CHAT_ID}`, {
+      headers: { Cookie: sessionCookie() },
+      redirect: "manual",
+    });
+
+    expect(response.status).toBe(200);
+    expect(
+      postgrestChatRequests.filter(
+        ({ chatIdFilter }) => chatIdFilter === `eq.${OWNER_CHAT_ID}`,
+      ),
+    ).toEqual([
+      {
+        authorization: `Bearer ${ACCESS_TOKEN}`,
+        chatIdFilter: `eq.${OWNER_CHAT_ID}`,
+        userIdFilter: `eq.${USER_ID}`,
+      },
+    ]);
   });
 });

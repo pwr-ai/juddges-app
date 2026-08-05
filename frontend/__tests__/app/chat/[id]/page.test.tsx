@@ -13,14 +13,16 @@ jest.mock("react", () => {
 });
 
 const notFoundError = { digest: "NEXT_HTTP_ERROR_FALLBACK;404" };
-const redirectError = { digest: "NEXT_REDIRECT;replace;/auth/login;307;" };
 
 jest.mock("next/navigation", () => ({
   notFound: jest.fn(),
-  redirect: jest.fn(),
   useParams: jest.fn(() => ({ id: "legacy-client-id" })),
   usePathname: jest.fn(() => "/chat/legacy-client-id"),
   useRouter: jest.fn(() => ({ push: jest.fn() })),
+}));
+
+jest.mock("next/headers", () => ({
+  headers: jest.fn(),
 }));
 
 jest.mock("@/lib/logger", () => ({
@@ -48,23 +50,23 @@ jest.mock("@/lib/server/chat-access", () => ({
   resolveOwnedChatAccess: jest.fn(),
 }));
 
-import { AppError, DatabaseError, ErrorCode } from "@/lib/errors";
 import { isValidChatId, resolveOwnedChatAccess } from "@/lib/server/chat-access";
 import { createClient } from "@/lib/supabase/server";
-import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import ChatDetailPage from "@/app/chat/[id]/page";
 
 const CHAT_ID = "11111111-2222-4333-8444-555555555555";
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const supabase = { auth: {}, from: jest.fn() };
 const notFoundMock = notFound as unknown as jest.Mock;
-const redirectMock = redirect as unknown as jest.Mock;
+const headersMock = headers as unknown as jest.Mock;
 
-async function renderPage(): Promise<React.ReactNode> {
+async function renderPage(chatId = CHAT_ID): Promise<React.ReactNode> {
   return (ChatDetailPage as unknown as (props: {
     params: Promise<{ id: string }>;
   }) => React.ReactNode | Promise<React.ReactNode>)({
-    params: Promise.resolve({ id: CHAT_ID }),
+    params: Promise.resolve({ id: chatId }),
   });
 }
 
@@ -73,73 +75,50 @@ describe("/chat/[id] server access boundary", () => {
     jest.clearAllMocks();
     (createClient as jest.Mock).mockResolvedValue(supabase);
     (isValidChatId as jest.Mock).mockReturnValue(true);
-    notFoundMock.mockImplementation(() => {
-      throw notFoundError;
-    });
-    redirectMock.mockImplementation(() => {
-      throw redirectError;
-    });
-  });
-
-  it("redirects an anonymous request to login and preserves the chat URL", async () => {
-    (resolveOwnedChatAccess as jest.Mock).mockResolvedValue({ kind: "anonymous" });
-
-    await expect(renderPage()).rejects.toBe(redirectError);
-    expect(redirectMock).toHaveBeenCalledWith(
-      `/auth/login?next=${encodeURIComponent(`/chat/${CHAT_ID}`)}`,
-    );
-  });
-
-  it("renders the client chat flow for the owner", async () => {
     (resolveOwnedChatAccess as jest.Mock).mockResolvedValue({
       kind: "owner",
       userId: USER_ID,
     });
+    headersMock.mockResolvedValue({
+      get: jest.fn((name: string) =>
+        name === "x-juddges-owned-chat-id" ? CHAT_ID : null,
+      ),
+    });
+    notFoundMock.mockImplementation(() => {
+      throw notFoundError;
+    });
+  });
 
+  it("renders from the trusted middleware decision without another ownership lookup", async () => {
     const result = await renderPage();
 
-    expect(resolveOwnedChatAccess).toHaveBeenCalledWith(supabase, CHAT_ID);
     expect(result).toEqual(expect.objectContaining({
       props: expect.objectContaining({ chatId: CHAT_ID }),
     }));
+    expect(createClient).not.toHaveBeenCalled();
+    expect(resolveOwnedChatAccess).not.toHaveBeenCalled();
     expect(notFoundMock).not.toHaveBeenCalled();
   });
 
-  it("returns a 404 for an invalid chat id without touching Supabase", async () => {
+  it("returns a 404 for an invalid chat id without reading trusted access", async () => {
     (isValidChatId as jest.Mock).mockReturnValue(false);
 
-    await expect(renderPage()).rejects.toBe(notFoundError);
+    await expect(renderPage("not-a-uuid")).rejects.toBe(notFoundError);
+    expect(headersMock).not.toHaveBeenCalled();
     expect(createClient).not.toHaveBeenCalled();
     expect(resolveOwnedChatAccess).not.toHaveBeenCalled();
   });
 
-  it.each(["missing", "inaccessible to the current user"])(
-    "invokes the Next.js 404 boundary when the chat is %s",
-    async () => {
-      (resolveOwnedChatAccess as jest.Mock).mockResolvedValue({ kind: "not_found" });
+  it.each([null, "another-chat-id"])(
+    "rejects a missing or mismatched trusted middleware decision (%s)",
+    async (trustedChatId) => {
+      headersMock.mockResolvedValue({
+        get: jest.fn(() => trustedChatId),
+      });
 
       await expect(renderPage()).rejects.toBe(notFoundError);
-      expect(notFoundMock).toHaveBeenCalledTimes(1);
+      expect(createClient).not.toHaveBeenCalled();
+      expect(resolveOwnedChatAccess).not.toHaveBeenCalled();
     },
   );
-
-  it("does not turn a database failure into a 404", async () => {
-    const databaseError = new DatabaseError("Database unavailable");
-    (resolveOwnedChatAccess as jest.Mock).mockRejectedValue(databaseError);
-
-    await expect(renderPage()).rejects.toBe(databaseError);
-    expect(notFoundMock).not.toHaveBeenCalled();
-  });
-
-  it("does not turn a timeout into a 404", async () => {
-    const timeoutError = new AppError(
-      "Chat lookup timed out",
-      ErrorCode.DATABASE_UNAVAILABLE,
-      504,
-    );
-    (resolveOwnedChatAccess as jest.Mock).mockRejectedValue(timeoutError);
-
-    await expect(renderPage()).rejects.toBe(timeoutError);
-    expect(notFoundMock).not.toHaveBeenCalled();
-  });
 });

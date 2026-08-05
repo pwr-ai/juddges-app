@@ -3,6 +3,7 @@
  */
 
 import {
+  isValidChatId,
   resolveOwnedChatAccess,
   type ChatAccessSupabaseClient,
 } from "@/lib/server/chat-access";
@@ -63,6 +64,14 @@ function mockSupabase({
 }
 
 describe("resolveOwnedChatAccess", () => {
+  it.each([
+    ["valid RFC UUID", CHAT_ID, true],
+    ["invalid version nibble", "11111111-2222-9333-8444-555555555555", false],
+    ["invalid variant nibble", "11111111-2222-4333-7444-555555555555", false],
+  ])("validates %s consistently", (_scenario, value, expected) => {
+    expect(isValidChatId(value)).toBe(expected);
+  });
+
   it("returns anonymous without querying chats when there is no user", async () => {
     const { client, from } = mockSupabase({ userId: null });
 
