@@ -6,7 +6,15 @@ import os
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -175,6 +183,7 @@ def get_search_service() -> MeiliSearchService:
 @limiter.limit(AUTOCOMPLETE_RATE_LIMIT)
 async def autocomplete(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(10, ge=1, le=50, description="Maximum number of hits"),
@@ -239,6 +248,7 @@ async def autocomplete(
 @limiter.limit(SUGGEST_RATE_LIMIT)
 async def suggest(
     request: Request,
+    response: Response,
     q: str = Query(..., min_length=1, max_length=500, description="Search query"),
     limit: int = Query(8, ge=1, le=25, description="Maximum number of suggestions"),
     language: str | None = Query(
@@ -423,6 +433,7 @@ async def documents_search(
 @limiter.limit(TOPIC_CLICK_RATE_LIMIT)
 async def topic_click(
     request: Request,
+    response: Response,
     event: TopicClickEvent,
     background_tasks: BackgroundTasks,
     user: AuthenticatedUser | None = Depends(get_optional_user),
@@ -494,6 +505,7 @@ class UserTopicClickItem(BaseModel):
 @limiter.limit(SEARCH_ANALYTICS_RATE_LIMIT)
 async def trending_topics(
     request: Request,
+    response: Response,
     days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
     limit: int = Query(20, ge=1, le=100),
 ) -> list[TrendingTopicItem]:
