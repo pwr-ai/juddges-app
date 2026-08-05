@@ -1,7 +1,9 @@
 /**
- * Static publication data for the publications page.
+ * Curated reference bibliography for the JuDDGES project.
  *
- * Used as a fallback when the backend `/publications` API is unreachable.
+ * This dataset is not a fallback for the live `/publications` catalog. The
+ * publications page renders explicit empty and error states when the API has
+ * no records or cannot be reached.
  */
 
 import {
