@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
+from loguru import logger
 
 from app import dashboard as dashboard_module
 from app.server import app
@@ -66,6 +67,15 @@ def failed_dashboard_sources(monkeypatch):
     dashboard_module._clear_stats_cache()
 
 
+@pytest.fixture
+def active_dashboard_log_sink():
+    sink_id = logger.add(lambda _message: None, format="{message}")
+    try:
+        yield
+    finally:
+        logger.remove(sink_id)
+
+
 def test_dashboard_supabase_client_uses_backend_env(monkeypatch):
     """Dashboard client must use SUPABASE_URL (backend env), not NEXT_PUBLIC_* vars."""
 
@@ -107,6 +117,7 @@ def test_dashboard_supabase_client_requires_backend_url(monkeypatch):
 @pytest.mark.api
 async def test_dashboard_stats_returns_503_when_empty_precomputed_fallback_fails(
     authenticated_client: AsyncClient,
+    active_dashboard_log_sink,
     failed_dashboard_sources,
     monkeypatch,
 ):
@@ -120,12 +131,14 @@ async def test_dashboard_stats_returns_503_when_empty_precomputed_fallback_fails
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Dashboard statistics are unavailable"}
+    assert response.headers["Cache-Control"] == "no-store"
 
 
 @pytest.mark.anyio
 @pytest.mark.api
 async def test_dashboard_stats_returns_503_when_precomputed_and_fallback_fail(
     authenticated_client: AsyncClient,
+    active_dashboard_log_sink,
     failed_dashboard_sources,
     monkeypatch,
 ):
@@ -139,6 +152,7 @@ async def test_dashboard_stats_returns_503_when_precomputed_and_fallback_fail(
 
     assert response.status_code == 503
     assert response.json() == {"detail": "Dashboard statistics are unavailable"}
+    assert response.headers["Cache-Control"] == "no-store"
 
 
 @pytest.mark.anyio

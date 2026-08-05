@@ -233,7 +233,7 @@ async def _compute_fallback_stats() -> DashboardStats:
             jurisdictions=JurisdictionCounts(PL=pl.count or 0, UK=uk.count or 0),
         )
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Fallback stats computation failed: {e}", exc_info=True)
+        logger.opt(exception=True).error("Fallback stats computation failed: {}", e)
         raise HTTPException(
             status_code=503,
             detail="Dashboard statistics are unavailable",
@@ -331,7 +331,7 @@ async def get_dashboard_stats(
         return stats
 
     except (PostgrestAPIError, StorageException, KeyError, ValueError) as e:
-        logger.error(f"Error fetching precomputed stats: {e}", exc_info=True)
+        logger.opt(exception=True).error("Error fetching precomputed stats: {}", e)
         return await _compute_fallback_stats()
 
 
