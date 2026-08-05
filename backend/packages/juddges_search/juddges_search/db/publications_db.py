@@ -80,6 +80,24 @@ class PublicationsDB(SupabaseClientMixin):
                 detail=_PUBLICATION_READ_ERROR_DETAIL,
             ) from e
 
+    async def _get_publication_after_mutation(
+        self,
+        publication_id: str,
+        fallback: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Enrich a committed mutation without turning readback failure into a retry."""
+        try:
+            return await self.get_publication(publication_id) or fallback
+        except HTTPException as exc:
+            if exc.status_code != 500 or exc.detail != _PUBLICATION_READ_ERROR_DETAIL:
+                raise
+
+            logger.warning(
+                "Returning committed publication {} without readback enrichment",
+                publication_id,
+            )
+            return fallback
+
     async def create_publication(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new publication."""
         try:
@@ -113,7 +131,10 @@ class PublicationsDB(SupabaseClientMixin):
                 self.client.table("publication_extraction_jobs").insert(job_links).execute()
 
             # Return the full publication with links
-            return await self.get_publication(publication_id) or publication
+            return await self._get_publication_after_mutation(
+                publication_id,
+                publication,
+            )
         except HTTPException:
             raise
         except (PostgrestAPIError, StorageException) as e:
@@ -129,7 +150,10 @@ class PublicationsDB(SupabaseClientMixin):
             if not response.data:
                 raise HTTPException(status_code=404, detail="Publication not found")
 
-            return await self.get_publication(publication_id) or response.data[0]
+            return await self._get_publication_after_mutation(
+                publication_id,
+                response.data[0],
+            )
         except HTTPException:
             raise
         except (PostgrestAPIError, StorageException) as e:
