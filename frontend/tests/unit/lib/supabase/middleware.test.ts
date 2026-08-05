@@ -5,12 +5,15 @@
 import { NextRequest } from "next/server";
 
 const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
 
 jest.mock("@supabase/ssr", () => ({
   createServerClient: jest.fn(() => ({
-    auth: { getUser: mockGetUser },
+    auth: { getUser: mockGetUser, getSession: mockGetSession },
   })),
 }));
+
+global.fetch = jest.fn();
 
 import { updateSession } from "@/lib/supabase/middleware";
 
@@ -21,6 +24,7 @@ describe("Supabase middleware retired routes", () => {
       data: { user: null },
       error: { message: "Auth session missing!" },
     });
+    mockGetSession.mockResolvedValue({ data: { session: null } });
   });
 
   it("lets only the retired GraphQL route fall through to Next.js 404", async () => {
@@ -37,5 +41,94 @@ describe("Supabase middleware retired routes", () => {
     expect(lookalikeRoute.headers.get("location")).toBe(
       "http://localhost/auth/login?next=%2Fapi%2Fgraphql%2Fnested"
     );
+  });
+
+  it("rewrites an authenticated missing collection to an exact HTTP 404", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 404 });
+
+    const response = await updateSession(
+      new NextRequest(
+        "http://localhost/collections/cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+      )
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("x-middleware-rewrite")).toBe(
+      "http://localhost/__collection-not-found"
+    );
+  });
+
+  it("uses the same 404 for an unexpected other-user collection payload", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: "collection-1", user_id: "other-user" }),
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1")
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it("rejects unsafe collection IDs as 404 without an upstream request", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/unsafe%20collection")
+    );
+
+    expect(response.status).toBe(404);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not turn upstream failures into collection 404 responses", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1")
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("preflights only the exact collection detail shape", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1/documents")
+    );
+
+    expect(response.status).toBe(200);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

@@ -12,20 +12,27 @@ import { createErrorDocument } from "./errorDocument";
 export const ITEMS_PER_PAGE = 12;
 export const INITIAL_LOAD_LIMIT = 20;
 
-export function useCollection(id: string) {
+export function useCollection(
+  id: string,
+  initialCollection?: CollectionWithDocuments
+) {
   // Memoize the logger to prevent infinite loops
   const pageLogger = useMemo(() => logger.child(`CollectionClient:${id}`), [id]);
   const router = useRouter();
-  const [collection, setCollection] = useState<CollectionWithDocuments | null>(null);
+  const [collection, setCollection] = useState<CollectionWithDocuments | null>(
+    initialCollection ?? null
+  );
   const [documents, setDocuments] = useState<Map<string, SearchDocument>>(new Map());
   const [loadingDocuments, setLoadingDocuments] = useState<Set<string>>(new Set());
   const [newDocumentIds, setNewDocumentIds] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialCollection);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
+  const [editName, setEditName] = useState(initialCollection?.name ?? "");
+  const [editDescription, setEditDescription] = useState(
+    initialCollection?.description ?? ""
+  );
   const [isTipDismissed, setIsTipDismissed] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -36,9 +43,18 @@ export function useCollection(id: string) {
   const [currentPage, setCurrentPage] = useState(1);
 
   // State for loading all documents
-  const [allDocumentsLoaded, setAllDocumentsLoaded] = useState(false);
+  const initialDocumentCount =
+    initialCollection?.document_count ?? initialCollection?.documents.length ?? 0;
+  const [allDocumentsLoaded, setAllDocumentsLoaded] = useState(
+    Boolean(
+      initialCollection &&
+        initialCollection.documents.length >= initialDocumentCount
+    )
+  );
   const [isLoadingAll, setIsLoadingAll] = useState(false);
-  const [totalDocumentCount, setTotalDocumentCount] = useState(0);
+  const [totalDocumentCount, setTotalDocumentCount] = useState(
+    initialDocumentCount
+  );
 
   // View toggle: cards (default) vs full-columns table
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');

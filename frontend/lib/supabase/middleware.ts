@@ -1,6 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/logger";
+import { getBackendUrl } from "@/app/api/utils/backend-url";
+
+const COLLECTION_DETAIL_PATH = /^\/collections\/([^/]+)$/;
+const COLLECTION_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
+const COLLECTION_PREFLIGHT_TIMEOUT_MS = 10_000;
+
+function collectionNotFoundResponse(
+  request: NextRequest,
+  sessionResponse: NextResponse
+): NextResponse {
+  const notFoundUrl = request.nextUrl.clone();
+  notFoundUrl.pathname = "/__collection-not-found";
+  notFoundUrl.search = "";
+  const response = NextResponse.rewrite(notFoundUrl, { status: 404 });
+  for (const cookie of sessionResponse.cookies.getAll()) {
+    response.cookies.set(cookie);
+  }
+  return response;
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -61,6 +80,48 @@ export async function updateSession(request: NextRequest) {
   } catch (error) {
     // Catch any unexpected errors and continue without user
     logger.error("Unexpected error in auth middleware: ", error);
+  }
+
+  const collectionMatch = request.nextUrl.pathname.match(COLLECTION_DETAIL_PATH);
+  if (user && collectionMatch) {
+    const collectionId = collectionMatch[1];
+    if (!COLLECTION_ID_PATTERN.test(collectionId)) {
+      return collectionNotFoundResponse(request, supabaseResponse);
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (accessToken) {
+      try {
+        const response = await fetch(
+          `${getBackendUrl()}/collections/${collectionId}?limit=1`,
+          {
+            cache: "no-store",
+            headers: {
+              "X-API-Key": process.env.BACKEND_API_KEY as string,
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            signal: AbortSignal.timeout(COLLECTION_PREFLIGHT_TIMEOUT_MS),
+          }
+        );
+
+        if (response.status === 404) {
+          return collectionNotFoundResponse(request, supabaseResponse);
+        }
+        if (response.ok) {
+          const collection = (await response.json()) as { user_id?: string };
+          if (collection.user_id !== user.id) {
+            return collectionNotFoundResponse(request, supabaseResponse);
+          }
+        }
+      } catch (error) {
+        logger.warn("Collection preflight failed; deferring to page loader", {
+          collectionId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   if (

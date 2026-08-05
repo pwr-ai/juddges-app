@@ -12,12 +12,14 @@ import DocumentsToolbar from "./_components/DocumentsToolbar";
 import DocumentsCardGrid from "./_components/DocumentsCardGrid";
 import EmptyCollectionState from "./_components/EmptyCollectionState";
 import { useCollection, ITEMS_PER_PAGE, INITIAL_LOAD_LIMIT } from "./_components/useCollection";
+import type { CollectionWithDocuments } from "@/types/collection";
 
 interface CollectionClientProps {
   id: string;
+  initialCollection: CollectionWithDocuments;
 }
 
-const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
+const CollectionClient: FC<CollectionClientProps> = ({ id, initialCollection }) => {
   const {
     router,
     collection,
@@ -61,7 +63,7 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
     handleRemoveDocument,
     handleUpdateCollection,
     handleDeleteCollection,
-  } = useCollection(id);
+  } = useCollection(id, initialCollection);
 
   if (isLoading) {
     return <CollectionLoadingSkeleton />;
