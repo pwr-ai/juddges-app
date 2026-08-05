@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server';
 global.fetch = jest.fn();
 
 import { GET as getPosts } from '@/app/api/blog/posts/route';
+import { GET as getPost } from '@/app/api/blog/posts/[slug]/route';
 import { GET as getCategories } from '@/app/api/blog/categories/route';
 
 describe('public blog BFF routes', () => {
@@ -45,6 +46,80 @@ describe('public blog BFF routes', () => {
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(payload);
+  });
+
+  it('encodes the requested slug and preserves a published detail response', async () => {
+    const payload = { id: 'post-1', slug: 'appeal & costs', status: 'published' };
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const response = await getPost(
+      new NextRequest('http://localhost/api/blog/posts/appeal%20%26%20costs'),
+      { params: Promise.resolve({ slug: 'appeal & costs' }) },
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://backend.test/blog/posts/appeal%20%26%20costs',
+      expect.objectContaining({
+        method: 'GET',
+        headers: { Accept: 'application/json', 'X-API-Key': 'server-only-key' },
+        cache: 'no-store',
+        signal: expect.any(AbortSignal),
+      }),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(payload);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it.each([404, 500])('preserves the backend detail %s without translating it', async (status) => {
+    const payload = { detail: status === 404 ? 'Post not found' : 'Failed to fetch blog post' };
+    (global.fetch as jest.Mock).mockResolvedValue(
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const response = await getPost(
+      new NextRequest('http://localhost/api/blog/posts/missing'),
+      { params: Promise.resolve({ slug: 'missing' }) },
+    );
+
+    expect(response.status).toBe(status);
+    await expect(response.json()).resolves.toEqual(payload);
+  });
+
+  it('returns 504 when a detail request reaches the upstream timeout', async () => {
+    jest.useFakeTimers();
+    try {
+      (global.fetch as jest.Mock).mockImplementation(
+        (_input: RequestInfo | URL, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener(
+              'abort',
+              () => reject(init.signal?.reason ?? new DOMException('Aborted', 'AbortError')),
+              { once: true },
+            );
+          }),
+      );
+
+      const pending = getPost(
+        new NextRequest('http://localhost/api/blog/posts/slow-post'),
+        { params: Promise.resolve({ slug: 'slow-post' }) },
+      );
+      await jest.advanceTimersByTimeAsync(8_000);
+      const response = await pending;
+
+      expect(response.status).toBe(504);
+      await expect(response.json()).resolves.toEqual({ detail: 'Blog service timed out' });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('preserves upstream error status, body, and safe headers without leaking internal headers', async () => {

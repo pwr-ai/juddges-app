@@ -1,10 +1,13 @@
 """HTTP contract tests for reasoning-line routes (#225)."""
 
+from collections.abc import Generator
 from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.auth_jwt import AuthenticatedUser
+from app.core.auth_jwt import get_current_user as jwt_get_current_user
 from app.server import app
 
 pytestmark = [pytest.mark.unit, pytest.mark.api]
@@ -60,8 +63,22 @@ class _FailingVectorDb:
 
 
 @pytest.fixture
-def reasoning_client() -> TestClient:
-    return TestClient(app)
+def reasoning_client() -> Generator[TestClient, None, None]:
+    async def _authenticated_user() -> AuthenticatedUser:
+        return AuthenticatedUser(
+            user_data={
+                "id": "reader-1",
+                "email": "reader@example.com",
+                "role": "authenticated",
+            },
+            access_token="test-bearer-token",
+        )
+
+    app.dependency_overrides[jwt_get_current_user] = _authenticated_user
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.pop(jwt_get_current_user, None)
 
 
 def test_dag_static_route_is_not_shadowed_by_line_detail(

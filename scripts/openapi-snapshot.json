@@ -10279,6 +10279,301 @@
         "title": "PromptResponse",
         "type": "object"
       },
+      "PublicBlogAuthorResponse": {
+        "properties": {
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "title"
+        ],
+        "title": "PublicBlogAuthorResponse",
+        "type": "object"
+      },
+      "PublicBlogPostCardResponse": {
+        "properties": {
+          "ai_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Summary"
+          },
+          "author": {
+            "$ref": "#/components/schemas/PublicBlogAuthorResponse"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "featured_image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Featured Image"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "likes_count": {
+            "title": "Likes Count",
+            "type": "integer"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "read_time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Time"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "const": "published",
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "excerpt",
+          "author",
+          "category",
+          "tags",
+          "status",
+          "created_at",
+          "updated_at",
+          "views",
+          "likes_count"
+        ],
+        "title": "PublicBlogPostCardResponse",
+        "type": "object"
+      },
+      "PublicBlogPostResponse": {
+        "properties": {
+          "ai_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Summary"
+          },
+          "author": {
+            "$ref": "#/components/schemas/PublicBlogAuthorResponse"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "featured_image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Featured Image"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "likes_count": {
+            "title": "Likes Count",
+            "type": "integer"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "read_time": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Time"
+          },
+          "related_posts": {
+            "items": {
+              "$ref": "#/components/schemas/PublicBlogPostCardResponse"
+            },
+            "title": "Related Posts",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "const": "published",
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "excerpt",
+          "author",
+          "category",
+          "tags",
+          "status",
+          "created_at",
+          "updated_at",
+          "views",
+          "likes_count"
+        ],
+        "title": "PublicBlogPostResponse",
+        "type": "object"
+      },
       "PublicationAuthor": {
         "properties": {
           "affiliation": {
@@ -21689,10 +21984,15 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBlogPostResponse"
+                }
               }
             },
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "Published post not found"
           },
           "422": {
             "content": {
@@ -21703,6 +22003,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "500": {
+            "description": "Blog service failure"
           }
         },
         "security": [
@@ -24797,7 +25100,7 @@
     },
     "/embeddings/models": {
       "get": {
-        "description": "List all available embedding models and their configurations.",
+        "description": "List models for API-key-authenticated read-only callers.",
         "operationId": "list_models_embeddings_models_get",
         "responses": {
           "200": {
@@ -24824,7 +25127,7 @@
     },
     "/embeddings/models/active": {
       "get": {
-        "description": "Get the currently active embedding model configuration.",
+        "description": "Get the active model for API-key-authenticated read-only callers.",
         "operationId": "get_active_model_embeddings_models_active_get",
         "responses": {
           "200": {
@@ -24847,7 +25150,7 @@
         ]
       },
       "post": {
-        "description": "Set the active embedding model for search and indexing.",
+        "description": "Set the global model; requires a service API key and admin Bearer token.",
         "operationId": "set_active_model_endpoint_embeddings_models_active_post",
         "requestBody": {
           "content": {
@@ -24883,7 +25186,8 @@
         },
         "security": [
           {
-            "APIKeyHeader": []
+            "APIKeyHeader": [],
+            "HTTPBearer": []
           }
         ],
         "summary": "Set the active embedding model",
@@ -24894,7 +25198,7 @@
     },
     "/embeddings/test": {
       "post": {
-        "description": "Generate a test embedding to verify model connectivity.",
+        "description": "Test a model without changing global state; API-key auth is sufficient.",
         "operationId": "test_embedding_embeddings_test_post",
         "requestBody": {
           "content": {
@@ -27141,6 +27445,18 @@
               "description": "Extraction job ID (task ID)",
               "title": "Job Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Include per-document extraction results",
+            "in": "query",
+            "name": "include_results",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Include per-document extraction results",
+              "title": "Include Results",
+              "type": "boolean"
             }
           }
         ],
@@ -30682,6 +30998,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "List saved reasoning lines",
@@ -30729,6 +31048,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Save a discovered cluster as a persistent reasoning line",
@@ -30756,6 +31078,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get full DAG structure for visualization",
@@ -30783,6 +31108,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Detect branch/merge/influence events across reasoning lines",
@@ -30830,6 +31158,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Discover clusters of judgments addressing the same legal question",
@@ -30877,6 +31208,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Semantic search for reasoning lines by natural language query",
@@ -30929,6 +31263,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Soft-delete a reasoning line by setting status to superseded",
@@ -30975,6 +31312,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get full detail of a reasoning line with all members",
@@ -31023,6 +31363,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Classify outcome direction for each member judgment using LLM",
@@ -31071,6 +31414,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Detect language drift within a reasoning line over time",
@@ -31133,6 +31479,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Find reasoning lines related to a given line",
@@ -31181,6 +31530,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Get temporal outcome distribution for a reasoning line",

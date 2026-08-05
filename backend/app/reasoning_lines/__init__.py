@@ -5,9 +5,10 @@ Public surface is unchanged: import ``router`` for FastAPI mounting, and the
 pure helpers remain importable from ``app.reasoning_lines`` for the test suite.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from . import crud, discovery, drift, events, outcomes, search, timeline
+from .auth import authorize_reasoning_lines_request
 from .event_detection import (
     _build_cross_branch_event,
     _build_influence_event,
@@ -61,7 +62,11 @@ from .timeline_math import (
     _extract_window_keywords,
 )
 
-router = APIRouter(prefix="/reasoning-lines", tags=["reasoning-lines"])
+router = APIRouter(
+    prefix="/reasoning-lines",
+    tags=["reasoning-lines"],
+    dependencies=[Depends(authorize_reasoning_lines_request)],
+)
 router.include_router(discovery.router)
 # Static GET routes must be registered before CRUD's ``/{line_id}`` route.
 # Starlette resolves matching routes in registration order, so placing the DAG

@@ -349,7 +349,7 @@ export const NewInput = React.forwardRef<HTMLInputElement, NewInputProps>(
           "bg-gradient-to-r from-primary/20 via-indigo-400/20 to-purple-400/20",
           "dark:from-primary/20 dark:via-indigo-500/20 dark:to-purple-500/20"
         )} />
-        
+
         <Input
           ref={ref}
           className={cn(
@@ -755,9 +755,9 @@ export interface NewComponentProps {
 
 /**
  * New Component
- * 
+ *
  * A reusable component that [description].
- * 
+ *
  * @example
  * ```tsx
  * <NewComponent onClick={() => handleClick()}>
@@ -800,10 +800,10 @@ After creating a new component:
    - Add export to `/lib/styles/components/index.ts`
    - Export both component and types
 
-3. **Add to Style Demo**
-   - Add component showcase to `/app/style-demo/page.tsx`
-   - Document all color properties
-   - Add usage examples
+3. **Integrate into a Product Surface**
+   - Prefer shared primitives from `/frontend/components/editorial/`
+   - Exercise the component in the real route that consumes it
+   - Add focused component or route tests for the supported states
 
 4. **Update Documentation**
    - Add to [Component Colors Cheat Sheet](./component-colors.md) if needed
@@ -819,7 +819,7 @@ After creating a new component:
    ```tsx
    // ❌ Bad
    className="bg-[#3b82f6]"
-   
+
    // ✅ Good
    className="bg-blue-400"
    ```
@@ -828,7 +828,7 @@ After creating a new component:
    ```tsx
    // ❌ Bad
    className="bg-primary/40"
-   
+
    // ✅ Good
    className="bg-primary/30" // or /50
    ```
@@ -837,7 +837,7 @@ After creating a new component:
    ```tsx
    // ❌ Bad
    className="bg-blue-500 dark:bg-blue-400"
-   
+
    // ✅ Good
    className="bg-blue-400 dark:bg-blue-500"
    ```
@@ -846,7 +846,7 @@ After creating a new component:
    ```tsx
    // ❌ Bad
    className="bg-blue-400/30"
-   
+
    // ✅ Good
    className="bg-blue-400/30 dark:bg-blue-500/30"
    ```
@@ -855,7 +855,7 @@ After creating a new component:
    ```tsx
    // ❌ Bad
    <button className="bg-primary">Click</button>
-   
+
    // ✅ Good
    <button className={cn(
      "bg-primary",
@@ -869,7 +869,7 @@ After creating a new component:
    ```tsx
    // ❌ Bad
    className="h-8 w-8" // 32px - too small
-   
+
    // ✅ Good
    className="h-11 w-11" // 44px - meets requirement
    ```
@@ -921,7 +921,7 @@ Strong overlay? → /80
 - **Component Cheat Sheet**: [component-colors.md](./component-colors.md)
 - **Migration Examples**: [migration-examples.md](./migration-examples.md)
 - **Existing Components**: `/lib/styles/components/`
-- **Style Demo**: `/app/style-demo/page.tsx`
+- **Canonical Design Specification**: [Editorial Jurisprudence](../../reference/DESIGN.md)
 
 ---
 
@@ -938,7 +938,7 @@ Creating new components involves:
 7. ✅ **Verify Touch Targets** - Minimum 44x44px
 8. ✅ **Test Accessibility** - Contrast, keyboard, colorblind
 9. ✅ **Test Thoroughly** - All states and modes
-10. ✅ **Document** - Add to style-demo and guides
+10. ✅ **Document** - Cover supported states in the consuming page, tests, and relevant guides
 
 **Result**: Consistent, accessible, maintainable components that follow design system standards.
 
@@ -953,4 +953,3 @@ Creating new components involves:
 5. ✅ Document and integrate
 
 **For questions or clarifications, refer to the Colors Styling Guide.**
-

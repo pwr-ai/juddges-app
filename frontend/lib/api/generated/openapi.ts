@@ -2693,7 +2693,7 @@ export interface paths {
         };
         /**
          * List available embedding models
-         * @description List all available embedding models and their configurations.
+         * @description List models for API-key-authenticated read-only callers.
          */
         get: operations["list_models_embeddings_models_get"];
         put?: never;
@@ -2713,13 +2713,13 @@ export interface paths {
         };
         /**
          * Get the currently active embedding model
-         * @description Get the currently active embedding model configuration.
+         * @description Get the active model for API-key-authenticated read-only callers.
          */
         get: operations["get_active_model_embeddings_models_active_get"];
         put?: never;
         /**
          * Set the active embedding model
-         * @description Set the active embedding model for search and indexing.
+         * @description Set the global model; requires a service API key and admin Bearer token.
          */
         post: operations["set_active_model_endpoint_embeddings_models_active_post"];
         delete?: never;
@@ -2739,7 +2739,7 @@ export interface paths {
         put?: never;
         /**
          * Test embedding generation
-         * @description Generate a test embedding to verify model connectivity.
+         * @description Test a model without changing global state; API-key auth is sufficient.
          */
         post: operations["test_embedding_embeddings_test_post"];
         delete?: never;
@@ -11173,6 +11173,107 @@ export interface components {
             /** Variables */
             variables: string[];
         };
+        /** PublicBlogAuthorResponse */
+        PublicBlogAuthorResponse: {
+            /** Avatar */
+            avatar?: string | null;
+            /** Id */
+            id: string | null;
+            /** Name */
+            name: string;
+            /** Title */
+            title: string;
+        };
+        /** PublicBlogPostCardResponse */
+        PublicBlogPostCardResponse: {
+            /** Ai Summary */
+            ai_summary?: string | null;
+            author: components["schemas"]["PublicBlogAuthorResponse"];
+            /** Category */
+            category: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Featured Image */
+            featured_image?: string | null;
+            /** Id */
+            id: string;
+            /** Likes Count */
+            likes_count: number;
+            /** Published At */
+            published_at?: string | null;
+            /** Read Time */
+            read_time?: number | null;
+            /** Slug */
+            slug: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "published";
+            /** Tags */
+            tags: string[];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Views */
+            views: number;
+        };
+        /** PublicBlogPostResponse */
+        PublicBlogPostResponse: {
+            /** Ai Summary */
+            ai_summary?: string | null;
+            author: components["schemas"]["PublicBlogAuthorResponse"];
+            /** Category */
+            category: string;
+            /** Content */
+            content?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Featured Image */
+            featured_image?: string | null;
+            /** Id */
+            id: string;
+            /** Likes Count */
+            likes_count: number;
+            /** Published At */
+            published_at?: string | null;
+            /** Read Time */
+            read_time?: number | null;
+            /** Related Posts */
+            related_posts?: components["schemas"]["PublicBlogPostCardResponse"][];
+            /** Slug */
+            slug: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "published";
+            /** Tags */
+            tags: string[];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Views */
+            views: number;
+        };
         /** PublicationAuthor */
         PublicationAuthor: {
             /** Affiliation */
@@ -16749,8 +16850,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PublicBlogPostResponse"];
                 };
+            };
+            /** @description Published post not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -16760,6 +16868,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Blog service failure */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -20053,7 +20168,10 @@ export interface operations {
     };
     get_extraction_job_extractions__job_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include per-document extraction results */
+                include_results?: boolean;
+            };
             header?: never;
             path: {
                 /** @description Extraction job ID (task ID) */
