@@ -1,5 +1,5 @@
 export enum PublicationProject {
-  JUDDGES = "JUDDGES",
+  JUDDGES = "JuDDGES",
 }
 
 export enum PublicationType {

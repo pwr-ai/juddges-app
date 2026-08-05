@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.embedding_providers import EmbeddingModelConfig, EmbeddingProviderType
 from app.embeddings_api import (
     EmbeddingModelsResponse,
@@ -20,6 +21,47 @@ from app.embeddings_api import (
     TestEmbeddingRequest,
     TestEmbeddingResponse,
 )
+
+
+@pytest.fixture
+def admin_user_override():
+    from app.server import app
+
+    async def _admin_user():
+        return AuthenticatedUser(
+            {
+                "id": "admin-1",
+                "email": "admin@example.com",
+                "role": "authenticated",
+                "app_metadata": {"is_admin": True},
+            },
+            access_token="admin-token",
+        )
+
+    app.dependency_overrides[get_current_user] = _admin_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+def ordinary_user_override():
+    from app.server import app
+
+    async def _ordinary_user():
+        return AuthenticatedUser(
+            {
+                "id": "user-1",
+                "email": "user@example.com",
+                "role": "authenticated",
+                "app_metadata": {},
+            },
+            access_token="user-token",
+        )
+
+    app.dependency_overrides[get_current_user] = _ordinary_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
 
 # ---------------------------------------------------------------------------
 # Pydantic model validation tests
@@ -163,7 +205,9 @@ class TestSetActiveModelEndpoint:
     """POST /embeddings/models/active"""
 
     @patch("app.embeddings_api.set_active_model", return_value=_FAKE_CONFIG)
-    async def test_set_active_model_success(self, mock_set, client, valid_api_headers):
+    async def test_set_active_model_success(
+        self, mock_set, client, valid_api_headers, admin_user_override
+    ):
         resp = await client.post(
             "/embeddings/models/active",
             json={"model_id": "tei/bge-m3"},
@@ -180,7 +224,7 @@ class TestSetActiveModelEndpoint:
         side_effect=ValueError("Unknown model: bad/model"),
     )
     async def test_set_active_model_invalid_model(
-        self, mock_set, client, valid_api_headers
+        self, mock_set, client, valid_api_headers, admin_user_override
     ):
         resp = await client.post(
             "/embeddings/models/active",
@@ -190,7 +234,9 @@ class TestSetActiveModelEndpoint:
         assert resp.status_code == 400
         assert "Unknown model" in resp.json()["detail"]
 
-    async def test_set_active_model_missing_body(self, client, valid_api_headers):
+    async def test_set_active_model_missing_body(
+        self, client, valid_api_headers, admin_user_override
+    ):
         resp = await client.post(
             "/embeddings/models/active",
             json={},
@@ -204,7 +250,47 @@ class TestSetActiveModelEndpoint:
             "/embeddings/models/active",
             json={"model_id": "tei/bge-m3"},
         )
-        assert resp.status_code in (401, 403)
+        assert resp.status_code == 401
+
+    async def test_set_active_model_requires_bearer_even_with_api_key(
+        self, client, valid_api_headers
+    ):
+        resp = await client.post(
+            "/embeddings/models/active",
+            json={"model_id": "tei/bge-m3"},
+            headers=valid_api_headers,
+        )
+
+        assert resp.status_code == 401
+        assert resp.json() == {"detail": "Not authenticated"}
+        assert resp.headers["WWW-Authenticate"] == "Bearer"
+
+    @patch("app.embeddings_api.set_active_model")
+    async def test_set_active_model_forbids_ordinary_user_even_with_api_key(
+        self,
+        mock_set,
+        client,
+        valid_api_headers,
+        ordinary_user_override,
+    ):
+        resp = await client.post(
+            "/embeddings/models/active",
+            json={"model_id": "tei/bge-m3"},
+            headers=valid_api_headers,
+        )
+
+        assert resp.status_code == 403
+        assert resp.json() == {"detail": "Admin privileges required"}
+        mock_set.assert_not_called()
+
+    def test_openapi_declares_service_key_and_bearer_requirements(self):
+        from app.server import app
+
+        operation = app.openapi()["paths"]["/embeddings/models/active"]["post"]
+
+        assert operation["security"] == [
+            {"APIKeyHeader": [], "HTTPBearer": []},
+        ]
 
 
 @pytest.mark.unit

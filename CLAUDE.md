@@ -27,6 +27,8 @@ Source-of-truth for commands: `frontend/package.json` scripts and `backend/pypro
 
 Dependencies are pinned by committed lockfiles: `backend/poetry.lock` and `frontend/package-lock.json`. When changing backend deps, edit `backend/pyproject.toml`, run `poetry lock`, and commit both files — CI installs from the lock and fails if it is out of sync (`poetry check --lock` verifies locally). `poetry.lock` is exempt from the pre-commit large-file check.
 
+On the frontend, `npm run deps:check` compares `node_modules/.package-lock.json` (what npm actually installed) against `package-lock.json` and fails naming the drifted packages. It runs automatically before `npm run dev` and as the first step of `npm run validate`. A stale local install is invisible otherwise — CI uses `npm ci`, so it stays green while local type errors and test results diverge (see #360). The fix it prints is always `npm ci`.
+
 Most-used:
 ```bash
 # Frontend

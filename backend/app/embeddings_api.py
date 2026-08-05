@@ -7,10 +7,11 @@ Provides:
 - Test embedding generation with a specific model
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.core.auth_jwt import AuthenticatedUser, require_admin
 from app.embedding_providers import (
     get_default_model_id,
     get_embedding_provider,
@@ -74,7 +75,7 @@ class EmbeddingModelsResponse(BaseModel):
     summary="List available embedding models",
 )
 async def list_models():
-    """List all available embedding models and their configurations."""
+    """List models for API-key-authenticated read-only callers."""
     models = list_available_models()
     active_id = get_default_model_id()
     return EmbeddingModelsResponse(models=models, active_model_id=active_id)
@@ -82,7 +83,7 @@ async def list_models():
 
 @router.get("/models/active", summary="Get the currently active embedding model")
 async def get_active_model():
-    """Get the currently active embedding model configuration."""
+    """Get the active model for API-key-authenticated read-only callers."""
     model_id = get_default_model_id()
     config = get_model_config(model_id)
     return {
@@ -99,8 +100,11 @@ async def get_active_model():
     response_model=SetActiveModelResponse,
     summary="Set the active embedding model",
 )
-async def set_active_model_endpoint(request: SetActiveModelRequest):
-    """Set the active embedding model for search and indexing."""
+async def set_active_model_endpoint(
+    request: SetActiveModelRequest,
+    admin: AuthenticatedUser = Depends(require_admin),
+):
+    """Set the global model; requires a service API key and admin Bearer token."""
     try:
         config = set_active_model(request.model_id)
         return SetActiveModelResponse(
@@ -118,7 +122,7 @@ async def set_active_model_endpoint(request: SetActiveModelRequest):
     "/test", response_model=TestEmbeddingResponse, summary="Test embedding generation"
 )
 async def test_embedding(request: TestEmbeddingRequest):
-    """Generate a test embedding to verify model connectivity."""
+    """Test a model without changing global state; API-key auth is sufficient."""
     model_id = request.model_id or get_default_model_id()
 
     try:

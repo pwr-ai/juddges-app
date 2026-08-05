@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Loader2, Database, FileText, Briefcase, Link2 } from "lucide-react";
 import {
+ PublicationProject,
  PublicationType,
  PublicationStatus,
  PublicationAuthor,
@@ -317,7 +318,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  year,
  month,
  abstract,
- project: "JUDDGES"as any,
+ project: PublicationProject.JUDDGES,
  type,
  status,
  links,
@@ -335,7 +336,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  year,
  month,
  abstract,
- project: "JUDDGES"as any,
+ project: PublicationProject.JUDDGES,
  type,
  status,
  links,
