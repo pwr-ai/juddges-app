@@ -187,8 +187,7 @@ async def test_list_documents_requires_authentication(client: AsyncClient):
     """Test that listing documents requires authentication."""
     response = await client.get("/documents")
 
-    # Should return 401 or 403
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
@@ -332,7 +331,7 @@ async def test_get_documents_sample_requires_authentication(client: AsyncClient)
     """Test that document sampling requires authentication."""
     response = await client.get("/documents/sample")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
@@ -393,7 +392,7 @@ async def test_get_embedding_stats_requires_authentication(client: AsyncClient):
     """Test that embedding stats require authentication."""
     response = await client.get("/documents/stats/embeddings")
 
-    assert response.status_code in [401, 403]
+    assert response.status_code == 401
 
 
 @pytest.mark.anyio
