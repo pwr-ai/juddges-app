@@ -96,11 +96,20 @@ describe("GET /api/schemas/[id]", () => {
       { params: Promise.resolve({ id: "not-a-uuid" }) }
     );
     expect(invalid.status).toBe(404);
+    const invalidBody = await invalid.json();
 
     mockFetchSchemaDetail.mockRejectedValue(new SchemaDetailNotFoundError());
     const hidden = await GET(new NextRequest(`http://localhost/api/schemas/${ID}`), context);
     expect(hidden.status).toBe(404);
-    expect(await hidden.json()).toMatchObject({ code: "SCHEMA_NOT_FOUND" });
+    const hiddenBody = await hidden.json();
+    expect(hiddenBody).toEqual(invalidBody);
+    expect(hiddenBody).toEqual({
+      error: "SCHEMA_NOT_FOUND",
+      message: "Schema not found",
+      code: "SCHEMA_NOT_FOUND",
+    });
+    expect(JSON.stringify(hiddenBody)).not.toContain(ID);
+    expect(JSON.stringify(hiddenBody)).not.toContain("not-a-uuid");
   });
 
   it.each([401, 403, 500, 502, 503, 504])(

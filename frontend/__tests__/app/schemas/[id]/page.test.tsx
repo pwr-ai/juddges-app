@@ -17,9 +17,11 @@ jest.mock("@/app/schemas/[id]/client", () => ({
 
 import SchemaDetailPage from "@/app/schemas/[id]/page";
 import SchemaDetailClient from "@/app/schemas/[id]/client";
+import SchemaDetailFailure from "@/components/schemas/SchemaDetailFailure";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
+  SCHEMA_FAILURE_STATUS_HEADER,
   SCHEMA_SNAPSHOT_HEADER,
   SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
   SCHEMA_SNAPSHOT_USER_HEADER,
@@ -83,6 +85,27 @@ describe("schema detail server page", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mockNotFound).toHaveBeenCalledTimes(1);
   });
+
+  it.each([401, 403, 500, 502, 503, 504])(
+    "renders the application failure surface for trusted status %i",
+    async (status) => {
+      mockHeaders.mockResolvedValue(
+        new Headers({
+          [SCHEMA_FAILURE_STATUS_HEADER]: String(status),
+        }) as unknown as Awaited<ReturnType<typeof headers>>
+      );
+
+      const result = await SchemaDetailPage({
+        params: Promise.resolve({ id: ID }),
+      });
+
+      expect(React.isValidElement(result)).toBe(true);
+      expect(result.type).toBe(SchemaDetailFailure);
+      expect(result.props).toEqual({ status });
+      expect(mockClient).not.toHaveBeenCalled();
+      expect(mockNotFound).not.toHaveBeenCalled();
+    }
+  );
 
   it.each([
     [null, null, null],

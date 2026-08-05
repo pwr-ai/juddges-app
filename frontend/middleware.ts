@@ -7,6 +7,7 @@ import {
   SCHEMA_SNAPSHOT_HEADER,
   SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
   SCHEMA_SNAPSHOT_USER_HEADER,
+  SCHEMA_FAILURE_STATUS_HEADER,
   encodeSchemaSnapshot,
   isCanonicalSchemaId,
   signSchemaSnapshot,
@@ -19,8 +20,6 @@ import {
 import { updateSessionWithAuth } from "@/lib/supabase/middleware";
 
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
-const SCHEMA_API_PATTERN =
-  /^\/api\/schemas\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function detectLocale(request: NextRequest): LocaleCode {
   const cookieLocale = request.cookies.get(LOCALE_COOKIE_NAME)?.value;
@@ -64,46 +63,29 @@ function finishResponse(
   return target;
 }
 
-function schemaPageStatus(status: number, method: string): NextResponse {
-  const notFound = status === 404;
-  const title = notFound ? "Schema not found" : "Schema temporarily unavailable";
-  const message = notFound
-    ? "The requested schema does not exist or is not accessible."
-    : "The schema service could not load this schema. Please try again.";
-  const html =
-    method === "HEAD"
-      ? null
-      : `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head><body><main><h1>${title}</h1><p>${message}</p></main></body></html>`;
-  return new NextResponse(html, {
-    status,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "private, no-store",
-    },
+function schemaPageRewrite(
+  request: NextRequest
+): NextResponse {
+  const target = request.nextUrl.clone();
+  target.pathname = "/__schema-not-found";
+  target.search = "";
+  return NextResponse.rewrite(target, {
+    status: 404,
+    request: { headers: request.headers },
   });
 }
 
-function schemaApiAuthStatus(status: 401 | 503, method: string): NextResponse {
-  const error = status === 401 ? "UNAUTHORIZED" : "DATABASE_UNAVAILABLE";
-  return new NextResponse(
-    method === "HEAD"
-      ? null
-      : JSON.stringify({
-          error,
-          code: error,
-          message:
-            status === 401
-              ? "Authentication required"
-              : "Authentication service is temporarily unavailable.",
-        }),
-    {
-      status,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "private, no-store",
-      },
-    }
-  );
+function schemaPageFailure(
+  request: NextRequest,
+  status: number
+): NextResponse {
+  const headers = new Headers(request.headers);
+  headers.delete(SCHEMA_SNAPSHOT_HEADER);
+  headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);
+  headers.delete(SCHEMA_SNAPSHOT_USER_HEADER);
+  headers.delete(SCHEMA_FAILURE_STATUS_HEADER);
+  headers.set(SCHEMA_FAILURE_STATUS_HEADER, String(status));
+  return NextResponse.next({ status, request: { headers } });
 }
 
 export async function middleware(incomingRequest: NextRequest) {
@@ -118,19 +100,11 @@ export async function middleware(incomingRequest: NextRequest) {
   }
 
   const isRead = request.method === "GET" || request.method === "HEAD";
-  if (isRead && SCHEMA_API_PATTERN.test(request.nextUrl.pathname) && !userId) {
-    return finishResponse(
-      schemaApiAuthStatus(authFailure === "unavailable" ? 503 : 401, request.method),
-      sessionResponse,
-      locale,
-      localeNeedsWrite
-    );
-  }
 
   const pageMatch = SCHEMA_PAGE_PATTERN.exec(request.nextUrl.pathname);
   if (pageMatch && !userId && authFailure === "unavailable") {
     return finishResponse(
-      schemaPageStatus(503, request.method),
+      schemaPageFailure(request, 503),
       sessionResponse,
       locale,
       localeNeedsWrite
@@ -155,19 +129,23 @@ export async function middleware(incomingRequest: NextRequest) {
       schemaId = decodeURIComponent(pageMatch[1]);
     } catch {
       return finishResponse(
-        schemaPageStatus(404, request.method),
+        schemaPageRewrite(request),
         sessionResponse,
         locale,
         localeNeedsWrite
       );
     }
-    if (
-      pageMatch[1] !== schemaId ||
-      !isCanonicalSchemaId(schemaId) ||
-      !accessToken
-    ) {
+    if (pageMatch[1] !== schemaId || !isCanonicalSchemaId(schemaId)) {
       return finishResponse(
-        schemaPageStatus(accessToken ? 404 : 401, request.method),
+        schemaPageRewrite(request),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+    if (!accessToken) {
+      return finishResponse(
+        schemaPageFailure(request, 401),
         sessionResponse,
         locale,
         localeNeedsWrite
@@ -181,6 +159,7 @@ export async function middleware(incomingRequest: NextRequest) {
       headers.delete(SCHEMA_SNAPSHOT_HEADER);
       headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);
       headers.delete(SCHEMA_SNAPSHOT_USER_HEADER);
+      headers.delete(SCHEMA_FAILURE_STATUS_HEADER);
       headers.set(SCHEMA_SNAPSHOT_HEADER, encoded);
       headers.set(
         SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
@@ -211,7 +190,9 @@ export async function middleware(incomingRequest: NextRequest) {
         message: error instanceof Error ? error.message : String(error),
       });
       return finishResponse(
-        schemaPageStatus(status, request.method),
+        status === 404
+          ? schemaPageRewrite(request)
+          : schemaPageFailure(request, status),
         sessionResponse,
         locale,
         localeNeedsWrite

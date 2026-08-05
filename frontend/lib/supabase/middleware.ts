@@ -6,13 +6,12 @@ import {
   SCHEMA_SNAPSHOT_HEADER,
   SCHEMA_SNAPSHOT_SIGNATURE_HEADER,
   SCHEMA_SNAPSHOT_USER_HEADER,
+  SCHEMA_FAILURE_STATUS_HEADER,
   isCanonicalSchemaId,
   isUnauthenticatedSchemaAuthError,
 } from "@/lib/schemas/detail-transport";
 
-const SCHEMA_API_PATTERN = new RegExp(
-  `^/api/schemas/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$`
-);
+const SCHEMA_API_PATTERN = /^\/api\/schemas\/[^/]+$/;
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
 
 export type SessionAuthFailure = "unauthenticated" | "unavailable" | null;
@@ -30,6 +29,7 @@ function sanitizedRequest(incoming: NextRequest): NextRequest {
   headers.delete(SCHEMA_SNAPSHOT_HEADER);
   headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);
   headers.delete(SCHEMA_SNAPSHOT_USER_HEADER);
+  headers.delete(SCHEMA_FAILURE_STATUS_HEADER);
   return new NextRequest(incoming.url, {
     method: incoming.method,
     headers,

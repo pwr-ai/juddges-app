@@ -44,20 +44,21 @@ describe("Supabase middleware retired routes", () => {
     );
   });
 
-  it("allows only canonical schema API GET and HEAD to reach JSON auth handling", async () => {
+  it("allows exact single-segment schema API reads to reach validation and auth handling", async () => {
     const id = "abcdef01-1234-4abc-8def-1234567890ab";
-    for (const method of ["GET", "HEAD"]) {
-      const response = await updateSession(
-        new NextRequest(`http://localhost/api/schemas/${id}`, { method })
-      );
-      expect(response.status).toBe(200);
-      expect(response.headers.get("location")).toBeNull();
+    for (const segment of [id, "not-a-uuid", `${id}.css`]) {
+      for (const method of ["GET", "HEAD"]) {
+        const response = await updateSession(
+          new NextRequest(`http://localhost/api/schemas/${segment}`, { method })
+        );
+        expect(response.status).toBe(200);
+        expect(response.headers.get("location")).toBeNull();
+      }
     }
 
     for (const path of [
       `/api/schemas/${id}/nested`,
-      `/api/schemas/${id}.css`,
-      "/api/schemas/not-a-uuid",
+      "/api/schemas/nested/value.css",
     ]) {
       const response = await updateSession(new NextRequest(`http://localhost${path}`));
       expect(response.status).toBe(307);

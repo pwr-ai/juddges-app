@@ -4,6 +4,7 @@ export const SCHEMA_SNAPSHOT_HEADER = "x-juddges-schema-snapshot";
 export const SCHEMA_SNAPSHOT_SIGNATURE_HEADER =
   "x-juddges-schema-snapshot-signature";
 export const SCHEMA_SNAPSHOT_USER_HEADER = "x-juddges-schema-snapshot-user";
+export const SCHEMA_FAILURE_STATUS_HEADER = "x-juddges-schema-failure-status";
 
 const CANONICAL_SCHEMA_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

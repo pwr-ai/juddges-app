@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   AppError,
   ErrorCode,
-  SchemaNotFoundError,
   UnauthorizedError,
 } from "@/lib/errors";
 import logger from "@/lib/logger";
@@ -23,6 +22,11 @@ export const revalidate = 0;
 
 const apiLogger = logger.child("schema-detail-api");
 type RouteContext = { params: Promise<{ id: string }> };
+const SCHEMA_NOT_FOUND_BODY = {
+  error: ErrorCode.SCHEMA_NOT_FOUND,
+  message: "Schema not found",
+  code: ErrorCode.SCHEMA_NOT_FOUND,
+} as const;
 
 function jsonError(error: AppError, head: boolean): NextResponse {
   const body = head ? null : JSON.stringify(error.toErrorDetail());
@@ -33,6 +37,19 @@ function jsonError(error: AppError, head: boolean): NextResponse {
       "Cache-Control": "private, no-store",
     },
   });
+}
+
+function schemaNotFound(head: boolean): NextResponse {
+  return new NextResponse(
+    head ? null : JSON.stringify(SCHEMA_NOT_FOUND_BODY),
+    {
+      status: 404,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "private, no-store",
+      },
+    }
+  );
 }
 
 async function handleRead(
@@ -108,7 +125,7 @@ async function handleRead(
   } catch (error) {
     apiLogger.error("Schema detail request failed", error, { schemaId: id });
     if (error instanceof SchemaDetailNotFoundError) {
-      return jsonError(new SchemaNotFoundError(id), head);
+      return schemaNotFound(head);
     }
     if (error instanceof SchemaDetailUpstreamError) {
       const code =

@@ -148,6 +148,11 @@ describe("schemas production HTTP/auth status matrix", () => {
         else response.end("[]");
         return;
       }
+      if (request.url?.startsWith("/rest/v1/user_profiles?")) {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify([{ email: "creator@example.test" }]));
+        return;
+      }
       response.writeHead(404).end();
     });
 
@@ -209,16 +214,23 @@ describe("schemas production HTTP/auth status matrix", () => {
         });
         expect(result.status).toBe(expected);
         const body = await result.text();
-        expect(body).toMatch(
-          expected === 404 ? /schema not found/i : /temporarily unavailable/i
-        );
+        if (expected === 404) {
+          expect(body).toContain("app/not-found");
+          expect(body).toContain("data-slot=\"sidebar-wrapper\"");
+        } else {
+          expect(body).toContain("data-slot=\"sidebar-wrapper\"");
+          expect(body).toContain("app/schemas/%5Bid%5D/page");
+          expect(body).toMatch(new RegExp(`status.{0,8}${expected}`));
+        }
       }
 
       const invalid = await requestUntilReady(`${appUrl}/schemas/not-a-uuid`, {
         headers: authenticated,
       });
       expect(invalid.status).toBe(404);
-      await invalid.text();
+      const invalidPageBody = await invalid.text();
+      expect(invalidPageBody).toContain("app/not-found");
+      expect(invalidPageBody).toContain("data-slot=\"sidebar-wrapper\"");
       const encodedAlias = await requestUntilReady(
         `${appUrl}/schemas/%30${ids.visible.slice(1)}`,
         { headers: authenticated }
@@ -247,6 +259,16 @@ describe("schemas production HTTP/auth status matrix", () => {
       );
       expect(anonymousApi.status).toBe(401);
       expect((await anonymousApi.json()).code).toBe("UNAUTHORIZED");
+      const anonymousInvalidApi = await requestUntilReady(
+        `${appUrl}/api/schemas/not-a-uuid`
+      );
+      expect(anonymousInvalidApi.status).toBe(404);
+      const anonymousInvalidBody = await anonymousInvalidApi.json();
+      expect(anonymousInvalidBody).toEqual({
+        error: "SCHEMA_NOT_FOUND",
+        message: "Schema not found",
+        code: "SCHEMA_NOT_FOUND",
+      });
       const anonymousApiHead = await requestUntilReady(
         `${appUrl}/api/schemas/${ids.visible}`,
         { method: "HEAD" }
@@ -279,14 +301,19 @@ describe("schemas production HTTP/auth status matrix", () => {
         [ids.malformed]: 502,
         [ids.timeout]: 504,
       };
+      const notFoundBodies: unknown[] = [anonymousInvalidBody];
       for (const [id, expected] of Object.entries(apiStatuses)) {
         const response = await requestUntilReady(`${appUrl}/api/schemas/${id}`, {
           headers: authenticated,
         });
         expect(response.status).toBe(expected);
         expect(response.headers.get("content-type")).toContain("application/json");
-        await response.text();
+        if (expected === 404) notFoundBodies.push(await response.json());
+        else await response.text();
       }
+      expect(notFoundBodies).toHaveLength(3);
+      expect(notFoundBodies[1]).toEqual(notFoundBodies[0]);
+      expect(notFoundBodies[2]).toEqual(notFoundBodies[0]);
 
       for (const extension of ["css", "js", "png", "svg", "txt", "xml"]) {
         const bypass = await requestUntilReady(
@@ -312,10 +339,13 @@ describe("schemas production HTTP/auth status matrix", () => {
           ["x-juddges-schema-snapshot"]: "forged",
           ["x-juddges-schema-snapshot-signature"]: "forged",
           ["x-juddges-schema-snapshot-user"]: "attacker",
+          ["x-juddges-schema-failure-status"]: "404",
         },
       });
       expect(visible.status).toBe(200);
-      expect(await visible.text()).toContain("Visible contract schema");
+      const visibleBody = await visible.text();
+      expect(visibleBody).toContain("Visible contract schema");
+      expect(visibleBody).toContain("creator@example.test");
       expect(
         upstreamRequests.filter((item) => item.includes(`id=eq.${ids.visible}`)).length -
           beforeVisible

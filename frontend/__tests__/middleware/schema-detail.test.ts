@@ -75,7 +75,17 @@ describe("schema detail middleware preflight", () => {
     const response = await middleware(request);
 
     expect(response.status).toBe(200);
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("/rest/v1/extraction_schemas?"),
+      expect.any(Object)
+    );
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("/rest/v1/user_profiles?"),
+      expect.any(Object)
+    );
     expect(response.cookies.get("sb-refresh")?.value).toBe("rotated");
     expect(response.headers.get("x-middleware-request-x-juddges-schema-snapshot")).not.toBe(
       "forged"
@@ -103,6 +113,16 @@ describe("schema detail middleware preflight", () => {
     const response = await middleware(request);
     expect(response.status).toBe(status);
     expect(response.cookies.get("sb-refresh")?.value).toBe("rotated");
+    if (status === 404) {
+      expect(response.headers.get("x-middleware-rewrite")).toContain(
+        "/__schema-not-found"
+      );
+    } else {
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+      expect(
+        response.headers.get("x-middleware-request-x-juddges-schema-failure-status")
+      ).toBe(String(status));
+    }
   });
 
   it("returns 405 for unsupported page methods", async () => {
@@ -123,12 +143,12 @@ describe("schema detail middleware preflight", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("lets exact anonymous API reads return JSON 401 without opening lookalikes", async () => {
+  it("passes exact anonymous API reads to the handler without opening lookalikes", async () => {
     const exact = new NextRequest(`http://localhost/api/schemas/${ID}`);
     mockUpdateSessionWithAuth.mockResolvedValueOnce(sessionResult(exact, false));
     const exactResponse = await middleware(exact);
-    expect(exactResponse.status).toBe(401);
-    expect((await exactResponse.json()).code).toBe("UNAUTHORIZED");
+    expect(exactResponse.status).toBe(200);
+    expect(exactResponse.headers.get("location")).toBeNull();
 
     const lookalike = new NextRequest(`http://localhost/api/schemas/${ID}/nested`);
     const redirect = NextResponse.redirect("http://localhost/auth/login");

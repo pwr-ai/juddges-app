@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExtractionSchema } from '@/types/extraction_schemas';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,7 +24,7 @@ import { parseSchemaToFields, flattenSchemaFields, parseSchemaText, getFieldType
 import { SchemaFieldsTable } from '@/components/schemas/SchemaFieldsTable';
 import { SchemaPreview } from '@/lib/styles/components/schemas/SchemaPreview';
 import { useAuth } from '@/contexts/AuthContext';
-import { PageContainer, LightCard, VariantButton, LoadingIndicator, ErrorCard, Badge, AIBadge, SubsectionHeader, SchemaStatusBadge, VerifiedBadge } from '@/lib/styles/components';
+import { PageContainer, LightCard, VariantButton, Badge, AIBadge, SubsectionHeader, SchemaStatusBadge, VerifiedBadge } from '@/lib/styles/components';
 import { cn } from '@/lib/utils';
 import { SchemaStatus } from '@/types/extraction_schemas';
 
@@ -35,36 +35,10 @@ interface SchemaDetailClientProps {
 export default function SchemaDetailClient({ initialSchema }: SchemaDetailClientProps) {
  const router = useRouter();
  const { user } = useAuth();
- const schemaId = initialSchema.id;
-
- const [schema, setSchema] = useState<ExtractionSchema | null>(initialSchema);
- const [loading, setLoading] = useState(false);
- const [errorMessage, setErrorMessage] = useState<string | null>(null);
+ const schema = initialSchema;
  const [showRawSchema, setShowRawSchema] = useState(false);
  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
  const [isDeleting, setIsDeleting] = useState(false);
-
- const fetchSchema = useCallback(async () => {
- if (!schemaId) return;
-
- try {
- setLoading(true);
- const response = await fetch(`/api/schemas/${schemaId}`);
- if (!response.ok) {
- if (response.status === 404) {
- throw new Error('Schema not found');
- }
- throw new Error('Failed to fetch schema');
- }
- const data = await response.json();
- setSchema(data);
- } catch (err) {
- setErrorMessage(err instanceof Error ? err.message : 'An error occurred');
- toast.error("Failed to fetch schema");
- } finally {
- setLoading(false);
- }
- }, [schemaId]);
 
  // Format date for display
  const formatDate = (dateString: string) => {
@@ -147,32 +121,6 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  if (!user || !schema?.user_id) return false;
  return schema.user_id === user.id;
  };
-
- if (loading) {
- return (
- <PageContainer fillViewport className="flex items-center justify-center">
- <LoadingIndicator
- message="Loading schema..."
- subtitle="Fetching schema details"
- subtitleIcon={FileJson}
- variant="centered"
- size="lg"
- />
- </PageContainer>
- );
- }
-
- if (errorMessage || !schema) {
- return (
- <PageContainer fillViewport className="flex items-center justify-center">
- <ErrorCard
- title="Failed to Load Schema"
- message={errorMessage || 'Schema not found'}
- onRetry={fetchSchema}
- />
- </PageContainer>
- );
- }
 
  return (
  <PageContainer fillViewport>

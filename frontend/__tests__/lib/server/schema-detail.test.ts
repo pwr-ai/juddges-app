@@ -36,15 +36,26 @@ describe("fetchSchemaDetail", () => {
   });
 
   it("queries the RLS-scoped row once with the verified bearer token", async () => {
-    global.fetch = jest.fn().mockResolvedValue(
-      new Response(JSON.stringify([visibleSchema]), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      })
-    );
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([visibleSchema]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ email: "creator@example.test" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
 
-    await expect(fetchSchemaDetail(ID, "verified-token")).resolves.toEqual(visibleSchema);
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    await expect(fetchSchemaDetail(ID, "verified-token")).resolves.toEqual({
+      ...visibleSchema,
+      user: { email: "creator@example.test" },
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/rest\/v1\/extraction_schemas\?/),
       expect.objectContaining({
@@ -53,6 +64,27 @@ describe("fetchSchemaDetail", () => {
         headers: expect.objectContaining({ Authorization: "Bearer verified-token" }),
       })
     );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/rest\/v1\/user_profiles\?/),
+      expect.objectContaining({
+        method: "GET",
+        cache: "no-store",
+        headers: expect.objectContaining({ Authorization: "Bearer verified-token" }),
+      })
+    );
+  });
+
+  it.each([
+    new Response("failed", { status: 500 }),
+    new Response(JSON.stringify([]), { status: 200 }),
+    new Response(JSON.stringify([{ unexpected: true }]), { status: 200 }),
+  ])("keeps a confirmed schema when optional creator enrichment is unavailable", async (profileResponse) => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([visibleSchema]), { status: 200 }))
+      .mockResolvedValueOnce(profileResponse);
+    await expect(fetchSchemaDetail(ID, "token")).resolves.toEqual(visibleSchema);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it.each([[], null])("maps a missing or RLS-hidden row to not found", async (body) => {

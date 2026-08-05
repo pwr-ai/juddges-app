@@ -3,6 +3,9 @@ import {
   isCanonicalSchemaId,
   isExtractionSchema,
 } from "@/lib/schemas/detail-transport";
+import logger from "@/lib/logger";
+
+const schemaLogger = logger.child("schema-detail");
 
 export type SchemaDetailFailureReason =
   | "upstream_auth"
@@ -155,7 +158,54 @@ export async function fetchSchemaDetail(
         "malformed"
       );
     }
-    return payload[0];
+    const schema = payload[0];
+    if (!schema.user_id) return schema;
+
+    const profileQuery = new URLSearchParams({
+      select: "email",
+      id: `eq.${schema.user_id}`,
+      limit: "1",
+    });
+    try {
+      const profileResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?${profileQuery.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${accessToken}`,
+          },
+          cache: "no-store",
+          signal,
+        }
+      );
+      if (!profileResponse.ok) {
+        schemaLogger.warn("Creator profile enrichment failed", {
+          schemaId,
+          status: profileResponse.status,
+        });
+        return schema;
+      }
+      const profiles: unknown = await profileResponse.json();
+      if (
+        Array.isArray(profiles) &&
+        profiles.length === 1 &&
+        typeof profiles[0] === "object" &&
+        profiles[0] !== null &&
+        "email" in profiles[0] &&
+        typeof profiles[0].email === "string"
+      ) {
+        return { ...schema, user: { email: profiles[0].email } };
+      }
+      return schema;
+    } catch (error) {
+      schemaLogger.warn("Creator profile enrichment unavailable", {
+        schemaId,
+        reason: isTimeoutFailure(error, signal) ? "timeout" : "transport",
+      });
+      return schema;
+    }
   } catch (error) {
     if (
       error instanceof SchemaDetailNotFoundError ||
