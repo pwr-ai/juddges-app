@@ -1,4 +1,5 @@
 import { AppError, DatabaseError, ErrorCode } from "@/lib/errors";
+import { isAnonymousAuthError } from "@/lib/supabase/auth-error";
 import type { createClient } from "@/lib/supabase/server";
 import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
 
@@ -26,14 +27,6 @@ function chatLookupTimeout(): AppError {
 
 export function isValidChatId(chatId: string): boolean {
   return isCanonicalUuid(chatId);
-}
-
-function isAnonymousAuthError(error: { message?: string } | null): boolean {
-  if (!error) return false;
-  return (
-    error.message === "Auth session missing!" ||
-    error.message?.includes("refresh_token_not_found") === true
-  );
 }
 
 export async function runChatQueryWithTimeout<T>(

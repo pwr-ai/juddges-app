@@ -2,36 +2,55 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { OWNED_CHAT_ID_HEADER } from "@/lib/chat-route-contract";
 import { logger } from "@/lib/logger";
-import { CANONICAL_UUID_PATH_SEGMENT } from "@/lib/validation/canonical-uuid";
+import { isAnonymousAuthError } from "@/lib/supabase/auth-error";
+import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
 
-const CHAT_MESSAGES_HANDLER_PATH = new RegExp(
-  `^/api/chats/${CANONICAL_UUID_PATH_SEGMENT}/messages$`,
-  "i",
-);
-const CHAT_DETAIL_PAGE_PATH = new RegExp(
-  `^/chat/${CANONICAL_UUID_PATH_SEGMENT}$`,
-  "i",
-);
 const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
+const CHAT_MESSAGES_PREFIX = "/api/chats/";
+const CHAT_MESSAGES_SUFFIX = "/messages";
+const CHAT_PAGE_PREFIX = "/chat/";
+
+function isReadRequest(request: NextRequest): boolean {
+  return request.method === "GET" || request.method === "HEAD";
+}
+
+function chatMessagesId(pathname: string): string | null {
+  if (
+    !pathname.startsWith(CHAT_MESSAGES_PREFIX) ||
+    !pathname.endsWith(CHAT_MESSAGES_SUFFIX)
+  ) {
+    return null;
+  }
+  const chatId = pathname.slice(
+    CHAT_MESSAGES_PREFIX.length,
+    -CHAT_MESSAGES_SUFFIX.length,
+  );
+  return isCanonicalUuid(chatId) ? chatId : null;
+}
+
+function chatPageIdFromPath(pathname: string): string | null {
+  if (!pathname.startsWith(CHAT_PAGE_PREFIX)) return null;
+  const chatId = pathname.slice(CHAT_PAGE_PREFIX.length);
+  return isCanonicalUuid(chatId) ? chatId : null;
+}
 
 function canAnonymousRequestReachHandler(request: NextRequest): boolean {
   return (
-    request.method === "GET" &&
-    CHAT_MESSAGES_HANDLER_PATH.test(request.nextUrl.pathname)
+    isReadRequest(request) &&
+    chatMessagesId(request.nextUrl.pathname) !== null
   );
 }
 
 function isExactChatPageRequest(request: NextRequest): boolean {
   return (
-    request.method === "GET" &&
-    CHAT_DETAIL_PAGE_PATH.test(request.nextUrl.pathname)
+    isReadRequest(request) &&
+    chatPageIdFromPath(request.nextUrl.pathname) !== null
   );
 }
 
 function chatPageId(request: NextRequest): string | null {
-  if (request.method !== "GET") return null;
-  const match = request.nextUrl.pathname.match(CHAT_DETAIL_PAGE_PATH);
-  return match ? match[0].slice("/chat/".length) : null;
+  if (!isReadRequest(request)) return null;
+  return chatPageIdFromPath(request.nextUrl.pathname);
 }
 
 function chatPageError(status: 503 | 504): NextResponse {
@@ -108,10 +127,7 @@ export async function updateSession(request: NextRequest) {
 
     if (!error) {
       user = authUser;
-    } else if (
-      error.message !== "Auth session missing!" &&
-      !error.message.includes("refresh_token_not_found")
-    ) {
+    } else if (!isAnonymousAuthError(error)) {
       authLookupFailed = true;
       // Surface unexpected auth failures (expired tokens that won't refresh,
       // project-ref mismatches, network errors). Benign anonymous-user errors
