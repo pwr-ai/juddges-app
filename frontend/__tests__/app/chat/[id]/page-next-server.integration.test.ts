@@ -2,7 +2,6 @@
  * @jest-environment node
  */
 
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
@@ -10,6 +9,16 @@ import {
   acquireProductionBuildLock,
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
 } from "@/tests/support/production-build-lock";
+import {
+  type ProductionChild,
+  PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
+  PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
+  PRODUCTION_REQUEST_TIMEOUT_MS,
+  PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
+  runProductionChild,
+  spawnProductionChild,
+  stopProductionChild,
+} from "@/tests/support/production-child-process";
 
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const OTHER_USER_ID = "b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6";
@@ -60,7 +69,9 @@ async function waitForNext(baseUrl: string, processOutput: () => string): Promis
   const deadline = Date.now() + 90_000;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${baseUrl}/status`);
+      const response = await fetch(`${baseUrl}/status`, {
+        signal: AbortSignal.timeout(PRODUCTION_READINESS_REQUEST_TIMEOUT_MS),
+      });
       if (response.status < 500) return;
     } catch {
       // The child has not bound its port yet.
@@ -70,56 +81,11 @@ async function waitForNext(baseUrl: string, processOutput: () => string): Promis
   throw new Error(`Next server did not become ready:\n${processOutput()}`);
 }
 
-async function stopChild(
-  child: ChildProcessWithoutNullStreams | undefined,
-): Promise<void> {
-  if (!child || child.exitCode !== null) return;
-  await new Promise<void>((resolve, reject) => {
-    const forceKill = setTimeout(() => child.kill("SIGKILL"), 5_000);
-    const giveUp = setTimeout(
-      () => reject(new Error(`Next server process ${child.pid} did not exit`)),
-      10_000,
-    );
-    child.once("error", reject);
-    child.once("exit", () => {
-      clearTimeout(forceKill);
-      clearTimeout(giveUp);
-      resolve();
-    });
-    child.kill("SIGTERM");
-  });
-}
-
 async function closeServer(server: Server | undefined): Promise<void> {
   if (!server?.listening) return;
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
-}
-
-async function runNextBuild(
-  nextBin: string,
-  environment: NodeJS.ProcessEnv,
-): Promise<string> {
-  const child = spawn(process.execPath, [nextBin, "build"], {
-    cwd: process.cwd(),
-    env: environment,
-    stdio: "pipe",
-  });
-  let buildOutput = "";
-  child.stdout.on("data", (chunk) => {
-    buildOutput += String(chunk);
-  });
-  child.stderr.on("data", (chunk) => {
-    buildOutput += String(chunk);
-  });
-  const exitCode = await new Promise<number | null>((resolve) => {
-    child.once("exit", resolve);
-  });
-  if (exitCode !== 0) {
-    throw new Error(`Next production build failed:\n${buildOutput}`);
-  }
-  return buildOutput;
 }
 
 function sessionCookie(): string {
@@ -148,7 +114,7 @@ function sessionCookie(): string {
 
 describe("/chat/[id] through a real Next server", () => {
   let fakeSupabase: Server | undefined;
-  let nextProcess: ChildProcessWithoutNullStreams | undefined;
+  let nextProcess: ProductionChild | undefined;
   let releaseProductionBuildLock: (() => Promise<void>) | undefined;
   let baseUrl: string;
   let output = "";
@@ -162,7 +128,7 @@ describe("/chat/[id] through a real Next server", () => {
     fakeSupabase = undefined;
     releaseProductionBuildLock = undefined;
     const resourceResults = await Promise.allSettled([
-      stopChild(child),
+      stopProductionChild(child),
       closeServer(server),
     ]);
     const lockResults = await Promise.allSettled([
@@ -243,24 +209,27 @@ describe("/chat/[id] through a real Next server", () => {
         NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:9",
         NEXT_TELEMETRY_DISABLED: "1",
       };
-      output += await runNextBuild(nextBin, nextEnvironment);
-      nextProcess = spawn(
-        process.execPath,
-        [nextBin, "start", "-H", "127.0.0.1", "-p", String(nextPort)],
-        {
-          cwd: process.cwd(),
-          env: nextEnvironment,
-          stdio: "pipe",
-        },
-      );
-      nextProcess.stdout.on("data", (chunk) => {
-        output += String(chunk);
+      output += await runProductionChild({
+        command: process.execPath,
+        args: [nextBin, "build"],
+        label: "Next production build",
+        cwd: process.cwd(),
+        env: nextEnvironment,
+        timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
       });
-      nextProcess.stderr.on("data", (chunk) => {
-        output += String(chunk);
+      nextProcess = spawnProductionChild({
+        command: process.execPath,
+        args: [nextBin, "start", "-H", "127.0.0.1", "-p", String(nextPort)],
+        label: "Next production server",
+        cwd: process.cwd(),
+        env: nextEnvironment,
+        timeoutMs: PRODUCTION_SERVER_PROCESS_TIMEOUT_MS,
       });
 
-      await waitForNext(baseUrl, () => output);
+      await waitForNext(
+        baseUrl,
+        () => output + (nextProcess?.output() ?? ""),
+      );
     } catch (error) {
       setupFailure = error;
       throw error;
@@ -291,6 +260,7 @@ describe("/chat/[id] through a real Next server", () => {
     const response = await fetch(`${baseUrl}/chat/${chatId}`, {
       headers: { Cookie: sessionCookie() },
       redirect: "manual",
+      signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
     });
 
     expect(response.status).toBe(404);
@@ -306,6 +276,7 @@ describe("/chat/[id] through a real Next server", () => {
     const response = await fetch(`${baseUrl}/chat/${OWNER_CHAT_ID}`, {
       headers: { Cookie: sessionCookie() },
       redirect: "manual",
+      signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
     });
 
     expect(response.status).toBe(200);
@@ -327,6 +298,7 @@ describe("/chat/[id] through a real Next server", () => {
       method: "HEAD",
       headers: { Cookie: sessionCookie() },
       redirect: "manual",
+      signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
     });
 
     expect(response.status).toBe(200);
@@ -341,6 +313,7 @@ describe("/chat/[id] through a real Next server", () => {
   it("redirects an anonymous chat request to login", async () => {
     const response = await fetch(`${baseUrl}/chat/${MISSING_CHAT_ID}`, {
       redirect: "manual",
+      signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
     });
 
     expect(response.status).toBe(307);
@@ -353,6 +326,7 @@ describe("/chat/[id] through a real Next server", () => {
     const response = await fetch(`${baseUrl}/chat/${DATABASE_ERROR_CHAT_ID}`, {
       headers: { Cookie: sessionCookie() },
       redirect: "manual",
+      signal: AbortSignal.timeout(PRODUCTION_REQUEST_TIMEOUT_MS),
     });
 
     expect(response.status).toBe(503);

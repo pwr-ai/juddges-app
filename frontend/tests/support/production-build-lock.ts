@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import {
   mkdir,
-  readFile,
+  readdir,
   rename,
   rm,
+  rmdir,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -14,15 +15,18 @@ export type ProductionBuildLockOptions = {
   timeoutMs?: number;
   staleMs?: number;
   pollIntervalMs?: number;
+  testHooks?: {
+    onStaleLeaseMoved?: () => void | Promise<void>;
+  };
 };
 
 // Covers waiting for another production lifecycle plus a slow CI build/run.
 export const PRODUCTION_BUILD_TEST_TIMEOUT_MS = 12 * 60_000;
 
 const DEFAULT_TIMEOUT_MS = 170_000;
-const DEFAULT_STALE_MS = 5 * 60_000;
+const DEFAULT_STALE_MS = PRODUCTION_BUILD_TEST_TIMEOUT_MS + 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
-const OWNER_FILE = "owner";
+const LEASE_PREFIX = "lease-";
 
 function hasCode(error: unknown, code: string): boolean {
   return (
@@ -36,24 +40,51 @@ function hasCode(error: unknown, code: string): boolean {
 async function removeStaleLock(
   lockPath: string,
   staleMs: number,
+  onStaleLeaseMoved?: () => void | Promise<void>,
 ): Promise<boolean> {
-  let lockStats;
+  let leaseName: string | undefined;
   try {
-    lockStats = await stat(lockPath);
+    const leaseNames = (await readdir(lockPath)).filter((entry) =>
+      entry.startsWith(LEASE_PREFIX),
+    );
+    if (leaseNames.length !== 1) return false;
+    [leaseName] = leaseNames;
   } catch (error) {
     if (hasCode(error, "ENOENT")) return true;
     throw error;
   }
-  if (Date.now() - lockStats.mtimeMs <= staleMs) return false;
+  const leasePath = resolve(lockPath, leaseName);
+  let leaseStats;
+  try {
+    leaseStats = await stat(leasePath);
+  } catch (error) {
+    if (hasCode(error, "ENOENT")) return true;
+    throw error;
+  }
+  if (Date.now() - leaseStats.mtimeMs <= staleMs) return false;
 
-  const stalePath = `${lockPath}.stale-${randomUUID()}`;
+  const stalePath = `${lockPath}.${leaseName}.stale-${randomUUID()}`;
   try {
-    await rename(lockPath, stalePath);
+    // Moving the exact lease token proves which owner is being reclaimed.
+    await rename(leasePath, stalePath);
   } catch (error) {
     if (hasCode(error, "ENOENT")) return true;
     throw error;
   }
-  await rm(stalePath, { recursive: true, force: true });
+  await onStaleLeaseMoved?.();
+  try {
+    await rmdir(lockPath);
+  } catch (error) {
+    if (
+      !hasCode(error, "ENOENT") &&
+      !hasCode(error, "ENOTEMPTY") &&
+      !hasCode(error, "EEXIST")
+    ) {
+      throw error;
+    }
+  } finally {
+    await rm(stalePath, { force: true });
+  }
   return true;
 }
 
@@ -65,18 +96,24 @@ export async function acquireProductionBuildLock(
   const staleMs = options.staleMs ?? DEFAULT_STALE_MS;
   const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const startedAt = Date.now();
-  const ownerToken = `${process.pid}:${randomUUID()}`;
+  const ownerToken = randomUUID();
+  const leaseName = `${LEASE_PREFIX}${ownerToken}`;
+  const leasePath = resolve(lockPath, leaseName);
 
   for (;;) {
     try {
       await mkdir(lockPath);
       try {
-        await writeFile(resolve(lockPath, OWNER_FILE), ownerToken, {
+        await writeFile(leasePath, `${process.pid}:${ownerToken}`, {
           encoding: "utf8",
           flag: "wx",
         });
       } catch (error) {
-        await rm(lockPath, { recursive: true, force: true });
+        try {
+          await rmdir(lockPath);
+        } catch {
+          // Preserve any lease that appeared while initialization failed.
+        }
         throw error;
       }
 
@@ -85,21 +122,32 @@ export async function acquireProductionBuildLock(
         if (released) return;
         released = true;
         try {
-          const currentOwner = await readFile(
-            resolve(lockPath, OWNER_FILE),
-            "utf8",
-          );
-          if (currentOwner !== ownerToken) return;
-          await rm(lockPath, { recursive: true, force: true });
+          // Removing only this owner's unique token cannot delete a newer lease.
+          await rm(leasePath, { force: true });
+          await rmdir(lockPath);
         } catch (error) {
-          if (!hasCode(error, "ENOENT")) throw error;
+          if (
+            !hasCode(error, "ENOENT") &&
+            !hasCode(error, "ENOTEMPTY") &&
+            !hasCode(error, "EEXIST")
+          ) {
+            throw error;
+          }
         }
       };
     } catch (error) {
       if (!hasCode(error, "EEXIST")) throw error;
     }
 
-    if (await removeStaleLock(lockPath, staleMs)) continue;
+    if (
+      await removeStaleLock(
+        lockPath,
+        staleMs,
+        options.testHooks?.onStaleLeaseMoved,
+      )
+    ) {
+      continue;
+    }
 
     const elapsedMs = Date.now() - startedAt;
     if (elapsedMs >= timeoutMs) {

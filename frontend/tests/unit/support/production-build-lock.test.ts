@@ -2,11 +2,12 @@
  * @jest-environment node
  */
 
-import { access, mkdir, mkdtemp, rm, utimes } from "node:fs/promises";
+import { access, mkdtemp, readdir, rm, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  acquireProductionBuildLock,
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
   withProductionBuildLock,
 } from "@/tests/support/production-build-lock";
@@ -28,6 +29,16 @@ describe("withProductionBuildLock", () => {
     expect(PRODUCTION_BUILD_TEST_TIMEOUT_MS).toBeGreaterThanOrEqual(
       12 * 60_000,
     );
+  });
+
+  it("stores ownership in a unique lease token", async () => {
+    const release = await acquireProductionBuildLock({ lockPath });
+
+    await expect(readdir(lockPath)).resolves.toEqual([
+      expect.stringMatching(/^lease-[0-9a-f-]+$/),
+    ]);
+
+    await release();
   });
 
   it("serializes contending build operations", async () => {
@@ -102,9 +113,14 @@ describe("withProductionBuildLock", () => {
   });
 
   it("recovers an abandoned stale lock", async () => {
-    await mkdir(lockPath);
-    const staleTimestamp = new Date(Date.now() - 60_000);
-    await utimes(lockPath, staleTimestamp, staleTimestamp);
+    const abandonedRelease = await acquireProductionBuildLock({ lockPath });
+    const [leaseName] = await readdir(lockPath);
+    const staleTimestamp = new Date(Date.now() - 120_000);
+    await utimes(
+      join(lockPath, leaseName),
+      staleTimestamp,
+      staleTimestamp,
+    );
 
     await expect(
       withProductionBuildLock(async () => "built", {
@@ -115,6 +131,68 @@ describe("withProductionBuildLock", () => {
       }),
     ).resolves.toBe("built");
     await expect(access(lockPath)).rejects.toMatchObject({ code: "ENOENT" });
+    await abandonedRelease();
+  });
+
+  it("does not remove a newer lease during stale takeover", async () => {
+    const firstRelease = await acquireProductionBuildLock({ lockPath });
+    const [firstLeaseName] = await readdir(lockPath);
+    const staleTimestamp = new Date(Date.now() - 120_000);
+    await utimes(
+      join(lockPath, firstLeaseName),
+      staleTimestamp,
+      staleTimestamp,
+    );
+
+    let signalStaleLeaseMoved: () => void = () => undefined;
+    const staleLeaseMoved = new Promise<void>((resolve) => {
+      signalStaleLeaseMoved = resolve;
+    });
+    let resumeTakeover: () => void = () => undefined;
+    const takeoverMayResume = new Promise<void>((resolve) => {
+      resumeTakeover = resolve;
+    });
+    let contenderAcquired = false;
+    const contender = acquireProductionBuildLock({
+      lockPath,
+      timeoutMs: 1_000,
+      staleMs: 60_000,
+      pollIntervalMs: 5,
+      testHooks: {
+        onStaleLeaseMoved: async () => {
+          signalStaleLeaseMoved();
+          await takeoverMayResume;
+        },
+      },
+    }).then((release) => {
+      contenderAcquired = true;
+      return release;
+    });
+
+    const firstEvent = await Promise.race([
+      staleLeaseMoved.then(() => "stale-moved" as const),
+      contender.then(() => "contender-acquired" as const),
+    ]);
+    if (firstEvent !== "stale-moved") {
+      await (await contender)();
+      await firstRelease();
+      expect(firstEvent).toBe("stale-moved");
+      return;
+    }
+
+    await firstRelease();
+    const newerRelease = await acquireProductionBuildLock({ lockPath });
+    resumeTakeover();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    expect(contenderAcquired).toBe(false);
+    await expect(readdir(lockPath)).resolves.toEqual([
+      expect.stringMatching(/^lease-[0-9a-f-]+$/),
+    ]);
+
+    await newerRelease();
+    const contenderRelease = await contender;
+    await contenderRelease();
   });
 
   it("releases the lock when the build operation fails", async () => {
