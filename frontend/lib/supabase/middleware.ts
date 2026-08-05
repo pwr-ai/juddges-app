@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { OWNED_CHAT_ID_HEADER } from "@/lib/chat-route-contract";
 import {
@@ -8,6 +8,11 @@ import {
   isUnauthenticatedAuthError,
   isValidCollectionId,
 } from "@/lib/collections/detail-contract";
+import {
+  EXTRACTION_SNAPSHOT_HEADER,
+  EXTRACTION_SNAPSHOT_SIGNATURE_HEADER,
+  EXTRACTION_VERIFIED_USER_HEADER,
+} from "@/lib/extractions/detail-contract";
 import { logger } from "@/lib/logger";
 import { isAnonymousAuthError } from "@/lib/supabase/auth-error";
 import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
@@ -19,6 +24,7 @@ const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
 const CHAT_MESSAGES_PREFIX = "/api/chats/";
 const CHAT_MESSAGES_SUFFIX = "/messages";
 const CHAT_PAGE_PREFIX = "/chat/";
+const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/[^/]+$/;
 
 function collectionPreflightTimeoutMs(): number {
   const configured = Number(process.env.COLLECTION_DETAIL_TIMEOUT_MS);
@@ -27,8 +33,22 @@ function collectionPreflightTimeoutMs(): number {
     : DEFAULT_COLLECTION_PREFLIGHT_TIMEOUT_MS;
 }
 
+export interface SessionUpdate {
+  response: NextResponse;
+  userId: string | null;
+  accessToken: string | null;
+  request: NextRequest;
+}
+
 function isReadRequest(request: NextRequest): boolean {
   return request.method === "GET" || request.method === "HEAD";
+}
+
+function needsExtractionAccessToken(request: NextRequest): boolean {
+  return (
+    isReadRequest(request) &&
+    EXTRACTION_DETAIL_PATTERN.test(request.nextUrl.pathname)
+  );
 }
 
 function chatMessagesId(pathname: string): string | null {
@@ -84,16 +104,24 @@ function sanitizedRequestHeaders(
   request: NextRequest,
   ownedChatId?: string,
 ): Headers {
-  const headers = new Headers(request.headers);
-  headers.delete(COLLECTION_SNAPSHOT_HEADER);
-  headers.delete(OWNED_CHAT_ID_HEADER);
-  if (ownedChatId) headers.set(OWNED_CHAT_ID_HEADER, ownedChatId);
-  return headers;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(OWNED_CHAT_ID_HEADER);
+  requestHeaders.delete(COLLECTION_SNAPSHOT_HEADER);
+  requestHeaders.delete(EXTRACTION_SNAPSHOT_HEADER);
+  requestHeaders.delete(EXTRACTION_SNAPSHOT_SIGNATURE_HEADER);
+  requestHeaders.delete(EXTRACTION_VERIFIED_USER_HEADER);
+  if (ownedChatId) requestHeaders.set(OWNED_CHAT_ID_HEADER, ownedChatId);
+  return requestHeaders;
 }
 
-function nextSessionResponse(request: NextRequest): NextResponse {
-  return NextResponse.next({
-    request: { headers: sanitizedRequestHeaders(request) },
+function sanitizedRequest(incomingRequest: NextRequest): NextRequest {
+  return new NextRequest(incomingRequest.url, {
+    method: incomingRequest.method,
+    headers: sanitizedRequestHeaders(incomingRequest),
+    body:
+      incomingRequest.method === "GET" || incomingRequest.method === "HEAD"
+        ? undefined
+        : incomingRequest.body,
   });
 }
 
@@ -156,30 +184,6 @@ function hydratedCollectionResponse(
   );
 }
 
-function isPublicPath(pathname: string): boolean {
-  return (
-    pathname === "/" ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/about") ||
-    pathname.startsWith("/ecosystem") ||
-    pathname.startsWith("/opengraph-image") ||
-    pathname.startsWith("/twitter-image") ||
-    pathname.startsWith("/onboarding") ||
-    pathname.startsWith("/api/health") ||
-    pathname.startsWith("/api/dashboard/stats") ||
-    pathname === "/api/graphql" ||
-    pathname.startsWith("/status") ||
-    pathname.startsWith("/offline")
-  );
-}
-
-function isPublicRequest(request: NextRequest): boolean {
-  return (
-    isPublicPath(request.nextUrl.pathname) ||
-    canAnonymousRequestReachHandler(request)
-  );
-}
-
 function loginRedirectResponse(
   request: NextRequest,
   sessionResponse: NextResponse,
@@ -194,8 +198,22 @@ function loginRedirectResponse(
   return preserveSupabaseCookies(NextResponse.redirect(url), sessionResponse);
 }
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = nextSessionResponse(request);
+function sessionUpdate(
+  response: NextResponse,
+  request: NextRequest,
+  userId: string | null,
+  accessToken: string | null,
+): SessionUpdate {
+  return { response, request, userId, accessToken };
+}
+
+export async function updateSessionWithAuth(
+  incomingRequest: NextRequest,
+): Promise<SessionUpdate> {
+  const request = sanitizedRequest(incomingRequest);
+  let supabaseResponse = NextResponse.next({
+    request: { headers: sanitizedRequestHeaders(request) },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -209,7 +227,9 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          supabaseResponse = nextSessionResponse(request);
+          supabaseResponse = NextResponse.next({
+            request: { headers: sanitizedRequestHeaders(request) },
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
@@ -218,8 +238,15 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: Keep auth.getUser() immediately after client construction.
+  // Do not run code between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
+
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+
   let user = null;
+  let accessToken: string | null = null;
+  let authLookupFailed = false;
   let authLookupError: unknown = null;
   try {
     const {
@@ -229,7 +256,8 @@ export async function updateSession(request: NextRequest) {
 
     if (!error) {
       user = authUser;
-    } else if (!isUnauthenticatedAuthError(error)) {
+    } else if (!isAnonymousAuthError(error)) {
+      authLookupFailed = true;
       logger.warn("Auth session lookup failed in middleware", {
         path: request.nextUrl.pathname,
         message: error.message,
@@ -238,31 +266,46 @@ export async function updateSession(request: NextRequest) {
     }
     authLookupError = error;
   } catch (error) {
-    logger.error("Unexpected error in auth middleware: ", error);
+    authLookupFailed = true;
     authLookupError = error;
+    logger.error("Unexpected error in auth middleware: ", error);
   }
 
-  const chatAuthLookupFailed =
-    !user &&
-    authLookupError !== null &&
-    !isAnonymousAuthError(authLookupError);
+  if (user && needsExtractionAccessToken(request)) {
+    const { data } = await supabase.auth.getSession();
+    accessToken = data.session?.access_token ?? null;
+  }
+
+  const collectionMatch = request.nextUrl.pathname.match(COLLECTION_DETAIL_PATH);
   const collectionAuthLookupFailed =
     !user &&
     authLookupError !== null &&
     !isUnauthenticatedAuthError(authLookupError);
-  const collectionMatch = request.nextUrl.pathname.match(COLLECTION_DETAIL_PATH);
-
-  if (chatAuthLookupFailed && isExactChatPageRequest(request)) {
-    return preserveSupabaseCookies(chatPageError(503), supabaseResponse);
-  }
   if (collectionAuthLookupFailed && collectionMatch) {
-    return collectionStatusResponse(503, supabaseResponse);
+    return sessionUpdate(
+      collectionStatusResponse(503, supabaseResponse),
+      request,
+      null,
+      null,
+    );
+  }
+
+  if (authLookupFailed && isExactChatPageRequest(request)) {
+    return sessionUpdate(
+      preserveSupabaseCookies(chatPageError(503), supabaseResponse),
+      request,
+      null,
+      null,
+    );
   }
 
   const requestedChatId = user ? chatPageId(request) : null;
   if (user && requestedChatId) {
     const controller = new AbortController();
-    const timeoutReason = new DOMException("Chat lookup timed out", "TimeoutError");
+    const timeoutReason = new DOMException(
+      "Chat lookup timed out",
+      "TimeoutError",
+    );
     const timeout = setTimeout(
       () => controller.abort(timeoutReason),
       CHAT_PAGE_LOOKUP_TIMEOUT_MS,
@@ -280,39 +323,60 @@ export async function updateSession(request: NextRequest) {
         logger.error("Chat access lookup failed in middleware", error, {
           path: request.nextUrl.pathname,
         });
-        return preserveSupabaseCookies(chatPageError(503), supabaseResponse);
+        return sessionUpdate(
+          preserveSupabaseCookies(chatPageError(503), supabaseResponse),
+          request,
+          user.id,
+          accessToken,
+        );
       }
       if (!chat) {
         const notFoundUrl = request.nextUrl.clone();
         notFoundUrl.pathname = "/__chat-not-found";
-        return preserveSupabaseCookies(
-          NextResponse.rewrite(notFoundUrl, {
-            status: 404,
-            request: { headers: sanitizedRequestHeaders(request) },
-          }),
-          supabaseResponse,
+        return sessionUpdate(
+          preserveSupabaseCookies(
+            NextResponse.rewrite(notFoundUrl, {
+              status: 404,
+              request: { headers: sanitizedRequestHeaders(request) },
+            }),
+            supabaseResponse,
+          ),
+          request,
+          user.id,
+          accessToken,
         );
       }
 
-      return preserveSupabaseCookies(
-        NextResponse.next({
-          request: {
-            headers: sanitizedRequestHeaders(request, requestedChatId),
-          },
-        }),
-        supabaseResponse,
+      return sessionUpdate(
+        preserveSupabaseCookies(
+          NextResponse.next({
+            request: {
+              headers: sanitizedRequestHeaders(request, requestedChatId),
+            },
+          }),
+          supabaseResponse,
+        ),
+        request,
+        user.id,
+        accessToken,
       );
     } catch (error) {
-      if (
+      const status =
         controller.signal.aborted &&
         controller.signal.reason === timeoutReason
-      ) {
-        return preserveSupabaseCookies(chatPageError(504), supabaseResponse);
+          ? 504
+          : 503;
+      if (status === 503) {
+        logger.error("Chat access lookup failed in middleware", error, {
+          path: request.nextUrl.pathname,
+        });
       }
-      logger.error("Chat access lookup failed in middleware", error, {
-        path: request.nextUrl.pathname,
-      });
-      return preserveSupabaseCookies(chatPageError(503), supabaseResponse);
+      return sessionUpdate(
+        preserveSupabaseCookies(chatPageError(status), supabaseResponse),
+        request,
+        user.id,
+        accessToken,
+      );
     } finally {
       clearTimeout(timeout);
     }
@@ -322,18 +386,28 @@ export async function updateSession(request: NextRequest) {
   if (user && collectionMatch && !isPageRead) {
     const response = collectionStatusResponse(405, supabaseResponse);
     response.headers.set("Allow", "GET, HEAD");
-    return response;
+    return sessionUpdate(response, request, user.id, accessToken);
   }
   if (user && collectionMatch && isPageRead) {
     const collectionId = collectionMatch[1];
     if (!isValidCollectionId(collectionId)) {
-      return collectionNotFoundResponse(request, supabaseResponse);
+      return sessionUpdate(
+        collectionNotFoundResponse(request, supabaseResponse),
+        request,
+        user.id,
+        accessToken,
+      );
     }
 
     const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) {
-      return loginRedirectResponse(request, supabaseResponse);
+    const collectionAccessToken = sessionData.session?.access_token;
+    if (!collectionAccessToken) {
+      return sessionUpdate(
+        loginRedirectResponse(request, supabaseResponse),
+        request,
+        null,
+        null,
+      );
     }
     try {
       const response = await fetch(
@@ -342,7 +416,7 @@ export async function updateSession(request: NextRequest) {
           cache: "no-store",
           headers: {
             "X-API-Key": process.env.BACKEND_API_KEY as string,
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${collectionAccessToken}`,
             "Content-Type": "application/json",
           },
           signal: AbortSignal.timeout(collectionPreflightTimeoutMs()),
@@ -350,16 +424,36 @@ export async function updateSession(request: NextRequest) {
       );
 
       if (response.status === 404) {
-        return collectionNotFoundResponse(request, supabaseResponse);
+        return sessionUpdate(
+          collectionNotFoundResponse(request, supabaseResponse),
+          request,
+          user.id,
+          collectionAccessToken,
+        );
       }
       if (!response.ok) {
-        return collectionStatusResponse(response.status, supabaseResponse);
+        return sessionUpdate(
+          collectionStatusResponse(response.status, supabaseResponse),
+          request,
+          user.id,
+          collectionAccessToken,
+        );
       }
       const collection = (await response.json()) as CollectionWithDocuments;
       if (collection.user_id !== user.id) {
-        return collectionNotFoundResponse(request, supabaseResponse);
+        return sessionUpdate(
+          collectionNotFoundResponse(request, supabaseResponse),
+          request,
+          user.id,
+          collectionAccessToken,
+        );
       }
-      return hydratedCollectionResponse(request, supabaseResponse, collection);
+      return sessionUpdate(
+        hydratedCollectionResponse(request, supabaseResponse, collection),
+        request,
+        user.id,
+        collectionAccessToken,
+      );
     } catch (error) {
       logger.warn("Collection preflight failed", {
         collectionId,
@@ -370,13 +464,64 @@ export async function updateSession(request: NextRequest) {
         (error.name === "TimeoutError" || error.name === "AbortError")
           ? 504
           : 502;
-      return collectionStatusResponse(status, supabaseResponse);
+      return sessionUpdate(
+        collectionStatusResponse(status, supabaseResponse),
+        request,
+        user.id,
+        collectionAccessToken,
+      );
     }
   }
 
-  if (!user && !isPublicRequest(request)) {
-    return loginRedirectResponse(request, supabaseResponse);
+  if (
+    !user &&
+    request.nextUrl.pathname !== "/" &&
+    !request.nextUrl.pathname.startsWith("/auth") &&
+    !request.nextUrl.pathname.startsWith("/about") &&
+    !request.nextUrl.pathname.startsWith("/ecosystem") &&
+    // Metadata image routes must be reachable by social/search crawlers.
+    !request.nextUrl.pathname.startsWith("/opengraph-image") &&
+    !request.nextUrl.pathname.startsWith("/twitter-image") &&
+    !request.nextUrl.pathname.startsWith("/onboarding") &&
+    !request.nextUrl.pathname.startsWith("/api/health") &&
+    !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
+    // Exact extraction-detail reads return JSON 401 from the BFF. Other
+    // methods and extraction API shapes retain the normal protected policy.
+    !(
+      isReadRequest(request) &&
+      request.nextUrl.pathname === "/api/extractions" &&
+      request.nextUrl.searchParams.has("job_id")
+    ) &&
+    // The retired GraphQL bridge must reach the Next.js router and resolve as
+    // 404. Keep this exact so lookalike paths remain protected.
+    request.nextUrl.pathname !== "/api/graphql" &&
+    !canAnonymousRequestReachHandler(request) &&
+    !request.nextUrl.pathname.startsWith("/status") &&
+    !request.nextUrl.pathname.startsWith("/offline")
+  ) {
+    const url = request.nextUrl.clone();
+    const nextTarget = request.nextUrl.pathname + request.nextUrl.search;
+    url.pathname = "/auth/login";
+    url.search = "";
+    if (nextTarget && nextTarget !== "/") {
+      url.searchParams.set("next", nextTarget);
+    }
+    return sessionUpdate(
+      preserveSupabaseCookies(NextResponse.redirect(url), supabaseResponse),
+      request,
+      null,
+      null,
+    );
   }
 
-  return supabaseResponse;
+  return sessionUpdate(
+    supabaseResponse,
+    request,
+    user?.id ?? null,
+    accessToken,
+  );
+}
+
+export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  return (await updateSessionWithAuth(request)).response;
 }

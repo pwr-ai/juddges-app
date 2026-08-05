@@ -15,7 +15,10 @@ jest.mock("@supabase/ssr", () => ({
 
 global.fetch = jest.fn();
 
-import { updateSession } from "@/lib/supabase/middleware";
+import {
+  updateSession,
+  updateSessionWithAuth,
+} from "@/lib/supabase/middleware";
 
 describe("Supabase middleware retired routes", () => {
   beforeEach(() => {
@@ -287,5 +290,35 @@ describe("Supabase middleware retired routes", () => {
 
     expect(response.status).toBe(405);
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("strips forged extraction proof headers before downstream handling", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/extractions/job.txt", {
+        headers: {
+          "x-juddges-extraction-snapshot": "spoofed",
+          "x-juddges-extraction-snapshot-signature": "forged",
+          "x-juddges-extraction-verified-user": "attacker",
+        },
+      })
+    );
+
+    expect(result.userId).toBe("user-1");
+    expect(result.accessToken).toBe("access-token");
+    expect(result.request.headers.get("x-juddges-extraction-snapshot")).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-snapshot-signature")
+    ).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-extraction-verified-user")
+    ).toBeNull();
   });
 });
