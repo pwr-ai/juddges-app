@@ -7,7 +7,6 @@ from juddges_search.chains.models import QuestionDict
 from juddges_search.info_extraction.extractor import InformationExtractor
 from juddges_search.models import DocumentChunk, LegalDocument, LegalDocumentMetadata
 from juddges_search.retrieval.config import (
-    MAX_CHUNKS_PER_FETCH_REQUEST,
     MAX_INVALID_UUIDS_TO_SHOW,
     OPTIMIZED_CHUNK_ALPHA,
     OPTIMIZED_CHUNK_DOCS_LIMIT,
@@ -655,120 +654,6 @@ class CancelJobResponse(BaseModel):
     message: str = Field(description="Human-readable status message")
 
 
-# ===== Document Similarity Graph Models =====
-
-
-class SimilarityGraphRequest(BaseModel):
-    """Request model for document similarity graph visualization."""
-
-    sample_size: int = Field(
-        default=50,
-        ge=1,
-        le=200,
-        description="Number of documents to include in the graph",
-    )
-    similarity_threshold: float = Field(
-        default=0.7,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity score to create an edge (0.0 to 1.0)",
-    )
-    document_types: list[str] | None = Field(
-        default=None, description="Optional filter by document types"
-    )
-    include_clusters: bool = Field(
-        default=False,
-        description="Whether to calculate cluster IDs using community detection",
-    )
-
-
-class GraphNode(BaseModel):
-    """Node in the similarity graph representing a document."""
-
-    id: str = Field(description="Document ID")
-    title: str = Field(description="Document title")
-    document_type: str = Field(description="Type of document")
-    year: int | None = Field(None, description="Year of document issuance")
-    x: float = Field(description="X coordinate for visualization")
-    y: float = Field(description="Y coordinate for visualization")
-    cluster_id: int | None = Field(
-        None, description="Cluster ID if clustering is enabled"
-    )
-    metadata: dict = Field(
-        default_factory=dict, description="Additional metadata for visualization"
-    )
-
-
-class GraphEdge(BaseModel):
-    """Edge in the similarity graph representing similarity between documents."""
-
-    source: str = Field(description="Source document ID")
-    target: str = Field(description="Target document ID")
-    similarity: float = Field(
-        ge=0.0, le=1.0, description="Similarity score between documents"
-    )
-
-
-class GraphStatistics(BaseModel):
-    """Statistics about the similarity graph."""
-
-    total_nodes: int = Field(description="Total number of nodes in the graph")
-    total_edges: int = Field(description="Total number of edges in the graph")
-    avg_similarity: float = Field(
-        description="Average similarity score across all edges"
-    )
-    min_similarity: float = Field(description="Minimum similarity score")
-    max_similarity: float = Field(description="Maximum similarity score")
-    num_clusters: int | None = Field(
-        None, description="Number of clusters if clustering is enabled"
-    )
-
-
-class SimilarityGraphResponse(BaseModel):
-    """Response model for document similarity graph."""
-
-    nodes: list[GraphNode] = Field(description="List of document nodes")
-    edges: list[GraphEdge] = Field(description="List of similarity edges")
-    statistics: GraphStatistics = Field(description="Graph statistics")
-
-
-# ===== Document UUID and Chunk Models =====
-
-
-class ChunksByDocumentIdsRequest(BaseModel):
-    """Request to get best chunks for document IDs."""
-
-    query: str = Field(description="Search query to find most similar chunks")
-    document_ids: list[str] = Field(
-        description="List of document_id strings (e.g., ['II FSK 1234/21', 'I SA/Wa 567/22'])",
-        min_length=1,
-        max_length=100,
-    )
-
-    @field_validator("document_ids")
-    @classmethod
-    def validate_document_ids_field(cls, v: list[str]) -> list[str]:
-        """Validate list length."""
-        if len(v) > 100:
-            raise ValueError("Maximum 100 document_ids allowed per request")
-        return v
-
-    return_properties: list[str] | None = Field(
-        default=None,
-        description="Optional list of property names to return. If None, returns all properties. "
-        "Use to speed up queries when only specific fields are needed. "
-        "Example: ['document_id', 'chunk_id', 'chunk_text']",
-        examples=[["document_id", "chunk_id", "chunk_text"]],
-    )
-
-
-class ChunksByDocumentIdsResponse(BaseModel):
-    """Response with best chunks for document IDs."""
-
-    chunks: list[DocumentChunk] = Field(description="Best chunk for each document_id")
-    query: str = Field(description="Search query used")
-
-
 class DocumentsByUuidRequest(BaseModel):
     """Request to get documents by UUIDs."""
 
@@ -1178,29 +1063,6 @@ class FacetsResponse(BaseModel):
     facets: dict[str, list[FacetOption]] = Field(
         description="Facets grouped by type (e.g., {'case_type': [{'value': 'Criminal', 'count': 234}]})"
     )
-
-
-# ===== Chunk Fetch Models (Phase 2) =====
-
-
-class FetchChunksByUuidRequest(BaseModel):
-    """Request for fetching full chunk data by UUIDs (Phase 2)."""
-
-    chunk_uuids: list[str] = Field(
-        description="List of chunk UUIDs to fetch",
-        min_length=1,
-        max_length=MAX_CHUNKS_PER_FETCH_REQUEST,
-        examples=[["uuid1", "uuid2", "uuid3"]],
-    )
-
-
-class FetchChunksByUuidResponse(BaseModel):
-    """Response for chunk fetch by UUIDs."""
-
-    chunks: list[DocumentChunk] = Field(
-        description="Full chunk objects with all data including chunk_text"
-    )
-    total_chunks: int = Field(description="Number of chunks returned")
 
 
 # ===== Citation Network Models =====
