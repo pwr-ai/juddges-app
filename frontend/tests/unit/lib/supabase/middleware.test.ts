@@ -65,6 +65,25 @@ describe("Supabase middleware retired routes", () => {
     );
   });
 
+  it("returns 503 for an unexpected Supabase auth failure instead of redirecting", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: "authentication service unavailable",
+        code: "unexpected_failure",
+        status: 500,
+      },
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1")
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("location")).toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("uses the same 404 for an unexpected other-user collection payload", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -100,7 +119,9 @@ describe("Supabase middleware retired routes", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("does not turn upstream failures into collection 404 responses", async () => {
+  it.each([401, 403, 500, 503])(
+    "preserves upstream status %s at the HTTP response boundary",
+    async (status) => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
       error: null,
@@ -108,14 +129,69 @@ describe("Supabase middleware retired routes", () => {
     mockGetSession.mockResolvedValue({
       data: { session: { access_token: "access-token" } },
     });
-    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status });
+
+      const response = await updateSession(
+        new NextRequest("http://localhost/collections/collection-1")
+      );
+
+      expect(response.status).toBe(status);
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    }
+  );
+
+  it("returns 504 for a collection preflight timeout", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    (global.fetch as jest.Mock).mockRejectedValue(timeout);
 
     const response = await updateSession(
       new NextRequest("http://localhost/collections/collection-1")
     );
 
+    expect(response.status).toBe(504);
+  });
+
+  it("hydrates the owned collection in the downstream request after one read", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: "collection-1",
+        user_id: "user-1",
+        name: "Hydrated",
+        documents: [],
+        document_count: 37,
+      }),
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1", {
+        headers: { "x-juddges-collection-snapshot": "spoofed" },
+      })
+    );
+
     expect(response.status).toBe(200);
-    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const snapshot = response.headers.get(
+      "x-middleware-request-x-juddges-collection-snapshot"
+    );
+    expect(snapshot).toBeTruthy();
+    expect(snapshot).not.toBe("spoofed");
   });
 
   it("preflights only the exact collection detail shape", async () => {
@@ -129,6 +205,22 @@ describe("Supabase middleware retired routes", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-page methods without a preflight read", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/collection-1", {
+        method: "POST",
+      })
+    );
+
+    expect(response.status).toBe(405);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

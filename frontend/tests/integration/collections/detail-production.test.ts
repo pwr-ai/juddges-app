@@ -13,6 +13,11 @@ jest.setTimeout(240_000);
 const OWN_COLLECTION_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const MISSING_COLLECTION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const HIDDEN_COLLECTION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const UPSTREAM_401_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const UPSTREAM_403_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const UPSTREAM_500_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+const UPSTREAM_503_ID = "12121212-1212-4212-8212-121212121212";
+const TIMEOUT_COLLECTION_ID = "34343434-3434-4434-8434-343434343434";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const BUILD_DIR = ".next-collections-contract";
 const BUILD_TSCONFIG = "tsconfig.collections-contract.json";
@@ -35,9 +40,11 @@ async function close(server: Server): Promise<void> {
   });
 }
 
-function authCookie(): string {
+function authCookie(
+  accessToken = "production-contract-access-token"
+): string {
   const session = {
-    access_token: "production-contract-access-token",
+    access_token: accessToken,
     refresh_token: "production-contract-refresh-token",
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -76,6 +83,14 @@ describe("collection detail production status contract", () => {
   it("returns real 404 responses for missing, hidden, and invalid collection IDs", async () => {
     const authServer = createServer((request, response) => {
       if (request.url === "/auth/v1/user") {
+        if (
+          request.headers.authorization ===
+          "Bearer auth-service-failure-access-token"
+        ) {
+          response.writeHead(500, { "content-type": "application/json" });
+          response.end(JSON.stringify({ message: "auth service unavailable" }));
+          return;
+        }
         response.writeHead(200, { "content-type": "application/json" });
         response.end(
           JSON.stringify({
@@ -92,8 +107,12 @@ describe("collection detail production status contract", () => {
       }
       response.writeHead(404).end();
     });
+    const backendReads = new Map<string, number>();
     const backendServer = createServer((request, response) => {
       const id = request.url?.split("?")[0].split("/").at(-1);
+      if (id) {
+        backendReads.set(id, (backendReads.get(id) ?? 0) + 1);
+      }
       response.setHeader("content-type", "application/json");
       if (id === OWN_COLLECTION_ID) {
         response.writeHead(200).end(
@@ -121,6 +140,16 @@ describe("collection detail production status contract", () => {
             document_count: 0,
           })
         );
+      } else if (id === UPSTREAM_401_ID) {
+        response.writeHead(401).end(JSON.stringify({ detail: "unauthorized" }));
+      } else if (id === UPSTREAM_403_ID) {
+        response.writeHead(403).end(JSON.stringify({ detail: "forbidden" }));
+      } else if (id === UPSTREAM_500_ID) {
+        response.writeHead(500).end(JSON.stringify({ detail: "database failed" }));
+      } else if (id === UPSTREAM_503_ID) {
+        response.writeHead(503).end(JSON.stringify({ detail: "database unavailable" }));
+      } else if (id === TIMEOUT_COLLECTION_ID) {
+        request.on("aborted", () => response.destroy());
       } else {
         response.writeHead(404).end(JSON.stringify({ detail: "Collection not found" }));
       }
@@ -163,6 +192,7 @@ describe("collection detail production status contract", () => {
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "contract-anon-key",
         API_BASE_URL: backendUrl,
         BACKEND_API_KEY: "contract-backend-key",
+        COLLECTION_DETAIL_TIMEOUT_MS: "200",
       },
       encoding: "utf8",
       timeout: 210_000,
@@ -192,6 +222,7 @@ describe("collection detail production status contract", () => {
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "contract-anon-key",
           API_BASE_URL: backendUrl,
           BACKEND_API_KEY: "contract-backend-key",
+          COLLECTION_DETAIL_TIMEOUT_MS: "200",
         },
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -221,6 +252,45 @@ describe("collection detail production status contract", () => {
         headers: { cookie },
         redirect: "manual",
       });
+      const encoded = await fetch(
+        `${baseUrl}/collections/${OWN_COLLECTION_ID}%2Fnested`,
+        { headers: { cookie }, redirect: "manual" }
+      );
+      const lookalike = await fetch(
+        `${baseUrl}/collections/${OWN_COLLECTION_ID}/nested`,
+        { headers: { cookie }, redirect: "manual" }
+      );
+      const post = await fetch(`${baseUrl}/collections/${OWN_COLLECTION_ID}`, {
+        method: "POST",
+        headers: { cookie },
+        redirect: "manual",
+      });
+      const anonymous = await fetch(
+        `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
+        { redirect: "manual" }
+      );
+      const authUnavailable = await fetch(
+        `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
+        {
+          headers: { cookie: authCookie("auth-service-failure-access-token") },
+          redirect: "manual",
+        }
+      );
+      const upstreamResponses = await Promise.all(
+        [
+          [UPSTREAM_401_ID, 401],
+          [UPSTREAM_403_ID, 403],
+          [UPSTREAM_500_ID, 500],
+          [UPSTREAM_503_ID, 503],
+          [TIMEOUT_COLLECTION_ID, 504],
+        ].map(async ([id, status]) => {
+          const response = await fetch(`${baseUrl}/collections/${id}`, {
+            headers: { cookie },
+            redirect: "manual",
+          });
+          return { actual: response.status, expected: status };
+        })
+      );
 
       const [ownedBody, missingBody, hiddenBody, invalidBody] = await Promise.all([
         owned.text(),
@@ -233,6 +303,21 @@ describe("collection detail production status contract", () => {
       expect(missing.status).toBe(404);
       expect(hidden.status).toBe(404);
       expect(invalid.status).toBe(404);
+      expect(encoded.status).toBe(404);
+      expect(lookalike.status).toBe(404);
+      expect(post.status).toBe(405);
+      expect(anonymous.status).toBe(307);
+      expect(authUnavailable.status).toBe(503);
+      expect(upstreamResponses).toEqual([
+        { actual: 401, expected: 401 },
+        { actual: 403, expected: 403 },
+        { actual: 500, expected: 500 },
+        { actual: 503, expected: 503 },
+        { actual: 504, expected: 504 },
+      ]);
+      expect(backendReads.get(OWN_COLLECTION_ID)).toBe(1);
+      expect(backendReads.get(MISSING_COLLECTION_ID)).toBe(1);
+      expect(backendReads.get(HIDDEN_COLLECTION_ID)).toBe(1);
       expect(missingBody).not.toContain("Never leak this collection");
       expect(hiddenBody).not.toContain("Never leak this collection");
       expect(invalidBody).not.toContain("unsafe collection");

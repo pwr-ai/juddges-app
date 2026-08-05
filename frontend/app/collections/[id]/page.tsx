@@ -1,9 +1,14 @@
 import CollectionClient from "./client";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import {
   CollectionDetailUnavailableError,
   loadCollectionDetail,
 } from "@/lib/server/collection-detail";
+import {
+  COLLECTION_SNAPSHOT_HEADER,
+  decodeCollectionSnapshot,
+} from "@/lib/collections/detail-contract";
 
 type CollectionParams = Promise<{ id: string }>;
 
@@ -17,6 +22,15 @@ export default async function CollectionPage({
   params: CollectionParams
 }) {
   const { id } = await params;
+  const requestHeaders = await headers();
+  const snapshot = decodeCollectionSnapshot(
+    requestHeaders.get(COLLECTION_SNAPSHOT_HEADER),
+    id
+  );
+  if (snapshot) {
+    return <CollectionClient id={id} initialCollection={snapshot} />;
+  }
+
   const result = await loadCollectionDetail(id, { limit: 20 });
 
   if (result.kind === "invalid" || result.kind === "not_found") {

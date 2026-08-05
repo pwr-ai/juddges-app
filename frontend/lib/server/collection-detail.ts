@@ -1,10 +1,13 @@
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import { createClient } from "@/lib/supabase/server";
 import type { CollectionWithDocuments } from "@/types/collection";
+import {
+  isMissingAuthSessionError,
+  isValidCollectionId,
+} from "@/lib/collections/detail-contract";
 
 const API_BASE_URL = getBackendUrl();
 const API_KEY = process.env.BACKEND_API_KEY as string;
-const COLLECTION_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
 const COLLECTION_REQUEST_TIMEOUT_MS = 10_000;
 
 export type CollectionDetailResult =
@@ -15,7 +18,12 @@ export type CollectionDetailResult =
   | {
       kind: "unavailable";
       status: number;
-      reason: "upstream_auth" | "upstream" | "timeout" | "transport";
+      reason:
+        | "local_auth"
+        | "upstream_auth"
+        | "upstream"
+        | "timeout"
+        | "transport";
     };
 
 export interface LoadCollectionDetailOptions {
@@ -25,11 +33,21 @@ export interface LoadCollectionDetailOptions {
 
 export class CollectionDetailUnavailableError extends Error {
   readonly status: number;
-  readonly reason: "upstream_auth" | "upstream" | "timeout" | "transport";
+  readonly reason:
+    | "local_auth"
+    | "upstream_auth"
+    | "upstream"
+    | "timeout"
+    | "transport";
 
   constructor(
     status: number,
-    reason: "upstream_auth" | "upstream" | "timeout" | "transport"
+    reason:
+      | "local_auth"
+      | "upstream_auth"
+      | "upstream"
+      | "timeout"
+      | "transport"
   ) {
     super("Collection service unavailable");
     this.name = "CollectionDetailUnavailableError";
@@ -38,9 +56,7 @@ export class CollectionDetailUnavailableError extends Error {
   }
 }
 
-export function isValidCollectionId(id: string): boolean {
-  return COLLECTION_ID_PATTERN.test(id);
-}
+export { isValidCollectionId } from "@/lib/collections/detail-contract";
 
 function isTimeoutError(error: unknown): boolean {
   return (
@@ -62,14 +78,17 @@ export async function loadCollectionDetail(
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
-  if (userError || !user) {
+  if (userError && !isMissingAuthSessionError(userError)) {
+    return { kind: "unavailable", status: 503, reason: "local_auth" };
+  }
+  if (!user) {
     return { kind: "unauthenticated" };
   }
 
   const { data: sessionData } = await supabase.auth.getSession();
   const accessToken = sessionData.session?.access_token;
   if (!accessToken) {
-    return { kind: "unauthenticated" };
+    return { kind: "unavailable", status: 503, reason: "local_auth" };
   }
 
   const params = new URLSearchParams();

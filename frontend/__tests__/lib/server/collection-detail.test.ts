@@ -15,12 +15,16 @@ import {
 const USER_ID = "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5";
 const COLLECTION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
-function mockAuth(userId: string | null = USER_ID) {
+function mockAuth(
+  userId: string | null = USER_ID,
+  error: { message: string; code?: string; status?: number } | null =
+    userId ? null : { message: "Auth session missing!", code: "session_not_found" }
+) {
   (createClient as jest.Mock).mockResolvedValue({
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user: userId ? { id: userId } : null },
-        error: userId ? null : new Error("no session"),
+        error,
       }),
       getSession: jest.fn().mockResolvedValue({
         data: {
@@ -60,6 +64,21 @@ describe("collection detail server loader", () => {
 
     await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
       kind: "unauthenticated",
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unexpected Supabase auth failure retryable and distinct", async () => {
+    mockAuth(null, {
+      message: "authentication service unavailable",
+      code: "unexpected_failure",
+      status: 500,
+    });
+
+    await expect(loadCollectionDetail(COLLECTION_ID)).resolves.toEqual({
+      kind: "unavailable",
+      status: 503,
+      reason: "local_auth",
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });

@@ -28,7 +28,9 @@ function mockSupabaseAuth(userId: string | null) {
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user: userId ? { id: userId } : null },
-        error: userId ? null : new Error("not authed"),
+        error: userId
+          ? null
+          : { message: "Auth session missing!", code: "session_not_found" },
       }),
       getSession: jest.fn().mockResolvedValue({
         data: {
@@ -82,6 +84,26 @@ describe("GET /api/collections/[id]", () => {
     const response = await GET(makeGetRequest(COLLECTION_ID));
 
     expect(response.status).toBe(401);
+  });
+
+  it("returns 503 when Supabase authentication lookup fails unexpectedly", async () => {
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: {
+            message: "authentication service unavailable",
+            code: "unexpected_failure",
+            status: 500,
+          },
+        }),
+      },
+    });
+
+    const response = await GET(makeGetRequest(COLLECTION_ID));
+
+    expect(response.status).toBe(503);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it("returns 400 for an unsafe collection ID without consulting auth or backend", async () => {

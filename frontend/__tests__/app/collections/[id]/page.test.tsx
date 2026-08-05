@@ -12,10 +12,14 @@ const mockRedirect = jest.fn((location: string) => {
 });
 const mockCollectionClient = jest.fn((_props: unknown) => null);
 const mockLoadCollectionDetail = jest.fn();
+const mockHeadersGet = jest.fn();
 
 jest.mock("next/navigation", () => ({
   notFound: () => mockNotFound(),
   redirect: (location: string) => mockRedirect(location),
+}));
+jest.mock("next/headers", () => ({
+  headers: async () => ({ get: (name: string) => mockHeadersGet(name) }),
 }));
 jest.mock("@/app/collections/[id]/client", () => ({
   __esModule: true,
@@ -50,6 +54,7 @@ const COLLECTION = {
 describe("CollectionPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHeadersGet.mockReturnValue(null);
   });
 
   it.each(["not_found", "invalid"])(
@@ -111,5 +116,20 @@ describe("CollectionPage", () => {
       id: COLLECTION_ID,
       initialCollection: COLLECTION,
     });
+  });
+
+  it("uses the trusted middleware snapshot without a second server read", async () => {
+    mockHeadersGet.mockImplementation((name: string) =>
+      name === "x-juddges-collection-snapshot"
+        ? Buffer.from(JSON.stringify(COLLECTION)).toString("base64url")
+        : null
+    );
+
+    const element = await CollectionPage({
+      params: Promise.resolve({ id: COLLECTION_ID }),
+    });
+
+    expect(mockLoadCollectionDetail).not.toHaveBeenCalled();
+    expect(element.props.initialCollection).toEqual(COLLECTION);
   });
 });
