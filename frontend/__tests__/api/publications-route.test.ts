@@ -18,6 +18,7 @@ jest.mock('@/lib/logger', () => ({
 
 import { GET } from '@/app/api/publications/route';
 import { createClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 describe('GET /api/publications', () => {
   const originalFetch = global.fetch;
@@ -61,8 +62,16 @@ describe('GET /api/publications', () => {
     );
   });
 
-  it('propagates an upstream database error instead of replacing it with catalog data', async () => {
-    const body = JSON.stringify({ detail: 'Database error: catalog unavailable' });
+  it('keeps upstream database diagnostics server-side', async () => {
+    const upstreamError = {
+      detail: {
+        message: 'relation "publications" does not exist',
+        code: '42P01',
+        hint: 'Check the private schema migration',
+        details: 'query: select * from private.publications',
+      },
+    };
+    const body = JSON.stringify(upstreamError);
     global.fetch = jest.fn(async () =>
       new Response(body, {
         status: 500,
@@ -75,8 +84,14 @@ describe('GET /api/publications', () => {
     );
 
     expect(response.status).toBe(500);
-    expect(response.headers.get('content-type')).toBe('application/problem+json');
-    expect(await response.text()).toBe(body);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    await expect(response.json()).resolves.toEqual({
+      error: 'Publications service is unavailable',
+    });
+    expect(logger.error).toHaveBeenCalledWith(
+      'Backend API returned error status: 500',
+      body,
+    );
   });
 
   it('preserves an empty upstream catalog as an empty catalog', async () => {

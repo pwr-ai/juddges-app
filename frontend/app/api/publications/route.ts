@@ -34,15 +34,18 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      logger.error(`Backend API returned error status: ${response.status}`);
-      return new Response(await response.arrayBuffer(), {
-        status: response.status,
-        statusText: response.statusText,
-        headers: {
-          'Content-Type': response.headers.get('Content-Type') ?? 'application/json',
-          'Cache-Control': 'no-store',
+      const errorBody = await response.text();
+      logger.error(
+        `Backend API returned error status: ${response.status}`,
+        errorBody,
+      );
+      return NextResponse.json(
+        { error: 'Publications service is unavailable' },
+        {
+          status: response.status,
+          headers: { 'Cache-Control': 'no-store' },
         },
-      });
+      );
     }
 
     const publications = await response.json();
