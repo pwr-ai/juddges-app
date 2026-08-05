@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import re
+import secrets
 from typing import TYPE_CHECKING
 
 from slowapi import Limiter
@@ -12,13 +14,36 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
 
+_RATE_LIMIT_IDENTITY_PATTERN = re.compile(r"^[a-f0-9]{64}$")
+
+
+def _get_verified_identity_key(request: Request) -> str | None:
+    """Return a BFF-provided user quota key for an authenticated service call."""
+    identity = request.headers.get("X-RateLimit-Identity", "").strip()
+    expected_api_key = os.getenv("BACKEND_API_KEY", "")
+    supplied_api_key = request.headers.get("X-API-Key", "")
+
+    if (
+        identity
+        and _RATE_LIMIT_IDENTITY_PATTERN.fullmatch(identity)
+        and expected_api_key
+        and secrets.compare_digest(supplied_api_key, expected_api_key)
+    ):
+        return f"user:{identity}"
+    return None
+
+
 def _is_trusted_proxy() -> bool:
     """Return True when TRUSTED_PROXY env var is set to a truthy value."""
     return os.getenv("TRUSTED_PROXY", "false").strip().lower() in ("1", "true", "yes")
 
 
 def get_client_ip(request: Request) -> str:
-    """Resolve the real client IP for rate-limit keying.
+    """Resolve the per-user or real-client-IP rate-limit key.
+
+    Requests from an API-key-authenticated BFF may provide an opaque user
+    identity derived after Supabase authentication. This takes precedence over
+    the proxy socket so different signed-in users receive independent quotas.
 
     When ``TRUSTED_PROXY=true`` the leftmost address in ``X-Forwarded-For``
     (the original client) is used.  The leftmost value is chosen because
@@ -29,6 +54,10 @@ def get_client_ip(request: Request) -> str:
     When ``TRUSTED_PROXY=false`` (the default) the raw socket address is
     used, which is the safe behaviour for direct-to-internet deployments.
     """
+    verified_identity = _get_verified_identity_key(request)
+    if verified_identity:
+        return verified_identity
+
     if _is_trusted_proxy():
         forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
         if forwarded_for:

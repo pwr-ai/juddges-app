@@ -187,6 +187,10 @@ jobs:
         working-directory: frontend
         run: npm run validate
 
+      - name: TypeScript type check
+        working-directory: frontend
+        run: npm run typecheck
+
   frontend-test:
     name: Frontend Unit Tests
     runs-on: ubuntu-latest
