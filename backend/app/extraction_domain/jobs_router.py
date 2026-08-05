@@ -69,6 +69,11 @@ _WORKER_UNAVAILABLE_MARKERS = (
     "not available",
 )
 _RESULT_METADATA_MARKERS = ("started_at", "elapsed_time_seconds", "exc_type")
+_JOB_STATE_FIELDS = "job_id, user_id, status, completed_documents, total_documents"
+_JOB_RECOVERY_FIELDS = (
+    f"{_JOB_STATE_FIELDS}, results, collection_id, schema_id, document_ids, "
+    "language, extraction_context, prompt_id"
+)
 _TERMINAL_DOCUMENT_STATUSES = {
     DocumentProcessingStatus.COMPLETED.value,
     DocumentProcessingStatus.FAILED.value,
@@ -133,8 +138,8 @@ def _safe_get_task_state(task_result: AsyncResult, job_id: str) -> str | None:
         raise _worker_unavailable_error()
 
 
-def _load_owned_job_record(job_id: str, user_id: str) -> dict:
-    """Load one caller-owned job without revealing hidden rows.
+def _load_owned_job_fields(job_id: str, user_id: str, fields: str) -> dict:
+    """Load selected fields from one owned job without revealing hidden rows.
 
     The user filter is part of the same database read as the job filter.  A
     missing row and an RLS-hidden/other-user row therefore share the exact 404
@@ -148,11 +153,7 @@ def _load_owned_job_record(job_id: str, user_id: str) -> dict:
     try:
         response = (
             supabase.table("extraction_jobs")
-            .select(
-                "job_id, user_id, status, completed_documents, total_documents, "
-                "results, collection_id, schema_id, document_ids, language, "
-                "extraction_context, prompt_id"
-            )
+            .select(fields)
             .eq("job_id", job_id)
             .eq("user_id", user_id)
             .limit(1)
@@ -176,6 +177,16 @@ def _load_owned_job_record(job_id: str, user_id: str) -> dict:
             detail="Extraction job not found",
         )
     return rows[0]
+
+
+def _load_owned_job_record(job_id: str, user_id: str) -> dict:
+    """Load only ownership and state fields used by the normal polling path."""
+    return _load_owned_job_fields(job_id, user_id, _JOB_STATE_FIELDS)
+
+
+def _load_owned_job_recovery_record(job_id: str, user_id: str) -> dict:
+    """Load heavy recovery fields only after Celery has lost the task state."""
+    return _load_owned_job_fields(job_id, user_id, _JOB_RECOVERY_FIELDS)
 
 
 def _verify_job_ownership(job_id: str, user_id: str) -> None:
@@ -220,36 +231,51 @@ def _preserve_existing_job_progress(
     """Preserve existing job progress from Supabase when Celery state is missing."""
     completed_documents = job_data.get("completed_documents", 0) or 0
     total_documents = job_data.get("total_documents", 0) or 0
-    existing_status = job_data.get("status", "PENDING")
+    existing_status = str(job_data.get("status", "PENDING")).upper()
     existing_results = job_data.get("results")
 
-    if completed_documents <= 0 and not existing_results:
+    failure_statuses = {"FAILURE", "FAILED"}
+    cancellation_statuses = {"CANCELLED", "CANCELED", "REVOKED"}
+
+    if existing_status in failure_statuses:
+        final_status = "FAILED"
+    elif existing_status in cancellation_statuses:
+        final_status = "CANCELLED"
+    elif existing_status == "PARTIALLY_COMPLETED":
+        final_status = "PARTIALLY_COMPLETED"
+    else:
+        result_statuses = {
+            str(
+                result.get("status", "")
+                if isinstance(result, dict)
+                else getattr(result, "status", "")
+            )
+            .lower()
+            .replace("documentprocessingstatus.", "")
+            for result in existing_results or []
+        }
+        if result_statuses and result_statuses <= {"failed"}:
+            final_status = "FAILED"
+        elif "failed" in result_statuses or "partially_completed" in result_statuses:
+            final_status = "PARTIALLY_COMPLETED"
+        elif completed_documents >= total_documents and total_documents > 0:
+            final_status = "COMPLETED"
+        elif completed_documents > 0:
+            final_status = "PARTIALLY_COMPLETED"
+        else:
+            final_status = existing_status
+
+    if (
+        completed_documents <= 0
+        and not existing_results
+        and existing_status not in failure_statuses | cancellation_statuses
+    ):
         return None
 
     logger.info(
         f"Job {job_id} has existing progress: {completed_documents}/{total_documents} docs, "
         f"status={existing_status}. Preserving state instead of resetting to PENDING."
     )
-
-    if completed_documents >= total_documents and total_documents > 0:
-        final_status = "COMPLETED"
-        if existing_status not in ["SUCCESS", "COMPLETED", "PARTIALLY_COMPLETED"]:
-            update_job_status_in_supabase(
-                job_id, final_status, completed_documents=completed_documents
-            )
-    elif completed_documents > 0:
-        final_status = "PARTIALLY_COMPLETED"
-        if existing_status not in [
-            "SUCCESS",
-            "COMPLETED",
-            "PARTIALLY_COMPLETED",
-            "FAILURE",
-        ]:
-            update_job_status_in_supabase(
-                job_id, final_status, completed_documents=completed_documents
-            )
-    else:
-        final_status = existing_status
 
     return BatchExtractionResponse(
         task_id=job_id,
@@ -327,11 +353,15 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
         return None
 
 
-def _resolve_pending_job(job_id: str, job_data: dict) -> BatchExtractionResponse:
+def _resolve_pending_job(
+    job_id: str, user_id: str, job_state: dict
+) -> BatchExtractionResponse:
     """Resolve pending state by preserving existing progress or resubmitting when possible."""
     logger.warning(
         f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
     )
+    recovery_data = _load_owned_job_recovery_record(job_id, user_id)
+    job_data = {**job_state, **recovery_data}
     preserved_response = _preserve_existing_job_progress(job_id, job_data)
     if preserved_response:
         return preserved_response
@@ -810,10 +840,10 @@ async def get_extraction_job(
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
-            return _resolve_pending_job(job_id, job_record)
+            return _resolve_pending_job(job_id, user.id, job_record)
 
         if task_state == "PENDING" and not task_result.info:
-            return _resolve_pending_job(job_id, job_record)
+            return _resolve_pending_job(job_id, user.id, job_record)
 
         not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
         if not_ready_response:

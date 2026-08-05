@@ -27,6 +27,7 @@ from app.extraction_domain.jobs_router import (
     _is_worker_unavailable_message,
     _parse_task_results,
     _pending_batch_response,
+    _preserve_existing_job_progress,
     _worker_unavailable_error,
 )
 from app.extraction_domain.shared import _validate_documents
@@ -54,6 +55,90 @@ class TestInProgressBatchResponse:
         assert resp.task_id == "job-2"
         assert resp.status == "IN_PROGRESS"
         assert resp.results is None
+
+
+def _stored_result(document_id: str, result_status: str) -> dict:
+    return {
+        "collection_id": "collection-1",
+        "document_id": document_id,
+        "status": result_status,
+        "created_at": "2026-08-06T10:00:00Z",
+        "updated_at": "2026-08-06T10:01:00Z",
+    }
+
+
+class TestPreserveExistingJobProgress:
+    @pytest.mark.unit
+    @pytest.mark.parametrize("stored_status", ["FAILURE", "FAILED"])
+    def test_completed_counts_do_not_overwrite_failure(
+        self, stored_status: str
+    ) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": stored_status,
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [_stored_result("doc-1", "failed")],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "FAILED"
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("stored_status", ["CANCELLED", "CANCELED", "REVOKED"])
+    def test_cancelled_state_is_preserved_even_without_progress(
+        self, stored_status: str
+    ) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": stored_status,
+                "completed_documents": 0,
+                "total_documents": 2,
+                "results": [],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "CANCELLED"
+
+    @pytest.mark.unit
+    def test_all_failed_results_are_not_reported_as_completed(self) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": "SUCCESS",
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [
+                    _stored_result("doc-1", "failed"),
+                    _stored_result("doc-2", "failed"),
+                ],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "FAILED"
+
+    @pytest.mark.unit
+    def test_mixed_results_are_reported_as_partially_completed(self) -> None:
+        response = _preserve_existing_job_progress(
+            "job-1",
+            {
+                "status": "SUCCESS",
+                "completed_documents": 2,
+                "total_documents": 2,
+                "results": [
+                    _stored_result("doc-1", "completed"),
+                    _stored_result("doc-2", "failed"),
+                ],
+            },
+        )
+
+        assert response is not None
+        assert response.status == "PARTIALLY_COMPLETED"
 
 
 class TestWorkerUnavailableError:
@@ -277,6 +362,22 @@ def _owned_job_store(row: dict | None) -> MagicMock:
     return store
 
 
+def _owned_job_store_sequence(*rows: dict | None) -> MagicMock:
+    responses = []
+    for row in rows:
+        response = MagicMock()
+        response.data = [row] if row else []
+        responses.append(response)
+    chain = MagicMock()
+    chain.select.return_value = chain
+    chain.eq.return_value = chain
+    chain.limit.return_value = chain
+    chain.execute.side_effect = responses
+    store = MagicMock()
+    store.table.return_value = chain
+    return store
+
+
 class TestCreateExtractionJobEndpoint:
     """Tests for POST /extractions endpoint."""
 
@@ -459,15 +560,26 @@ class TestGetExtractionJobEndpoint:
         self, client, valid_api_headers
     ) -> None:
         _install_jwt_user_override(_USER_001)
-        mock_supabase = _owned_job_store(
-            {
-                "job_id": _GET_JOB_ID,
-                "user_id": _USER_001,
-                "status": "SUCCESS",
-                "completed_documents": 2,
-                "total_documents": 2,
-                "results": [],
-            }
+        state_row = {
+            "job_id": _GET_JOB_ID,
+            "user_id": _USER_001,
+            "status": "SUCCESS",
+            "completed_documents": 2,
+            "total_documents": 2,
+        }
+        recovery_row = {
+            **state_row,
+            "results": [],
+            "collection_id": "collection-1",
+            "schema_id": "schema-1",
+            "document_ids": ["document-1", "document-2"],
+            "language": "pl",
+            "extraction_context": "Extract",
+            "prompt_id": "info_extraction",
+        }
+        mock_supabase = _owned_job_store_sequence(
+            state_row,
+            recovery_row,
         )
         mock_result = MagicMock()
 
@@ -489,7 +601,19 @@ class TestGetExtractionJobEndpoint:
 
         assert response.status_code == 200
         assert response.json()["status"] == "COMPLETED"
-        mock_supabase.table.assert_called_once_with("extraction_jobs")
+        assert mock_supabase.table.call_count == 2
+        selected_fields = [
+            call.args[0]
+            for call in mock_supabase.table.return_value.select.call_args_list
+        ]
+        assert selected_fields == [
+            "job_id, user_id, status, completed_documents, total_documents",
+            (
+                "job_id, user_id, status, completed_documents, total_documents, "
+                "results, collection_id, schema_id, document_ids, language, "
+                "extraction_context, prompt_id"
+            ),
+        ]
 
     @pytest.mark.unit
     async def test_in_progress_job(self, client, valid_api_headers) -> None:
@@ -528,6 +652,13 @@ class TestGetExtractionJobEndpoint:
                 ("job_id", _GET_JOB_ID),
                 ("user_id", _USER_001),
             ]
+            selected_fields = query.select.call_args.args[0]
+            assert selected_fields == (
+                "job_id, user_id, status, completed_documents, total_documents"
+            )
+            assert "results" not in selected_fields
+            assert "document_ids" not in selected_fields
+            assert "prompt_id" not in selected_fields
 
     @pytest.mark.unit
     async def test_get_job_owned_by_another_user_is_indistinguishable_from_missing(
