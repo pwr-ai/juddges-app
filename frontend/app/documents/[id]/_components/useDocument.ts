@@ -13,14 +13,17 @@ import { track } from '@/lib/analytics/track';
 
 import type { DocumentMetadata, SimilarDocument } from './types';
 
-export function useDocument(documentId: string) {
+export function useDocument(
+  documentId: string,
+  initialMetadata: DocumentMetadata
+) {
   const { user, loading: authLoading } = useAuth();
 
-  const [metadata, setMetadata] = useState<DocumentMetadata | null>(null);
+  const [metadata, setMetadata] = useState<DocumentMetadata | null>(initialMetadata);
   const [similarDocs, setSimilarDocs] = useState<SimilarDocument[]>([]);
   const [enrichedSimilarDocs, setEnrichedSimilarDocs] = useState<SimilarDocument[]>([]);
   const [loadingSimilarMetadata, setLoadingSimilarMetadata] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [htmlUrl, setHtmlUrl] = useState<string>('');
   const [htmlString, setHtmlString] = useState<string | null>(null);
@@ -40,16 +43,19 @@ export function useDocument(documentId: string) {
   const [isKeyPointsPanelOpen, setIsKeyPointsPanelOpen] = useState(false);
   const canUseDocumentAI = Boolean(user);
 
-  const fetchDocumentData = useCallback(async (): Promise<void> => {
+  const fetchDocumentData = useCallback(async (
+    refreshMetadata = true
+  ): Promise<void> => {
     try {
-      setLoading(true);
+      setLoading(refreshMetadata);
       setError(null);
 
-      const metadataRes = await fetch(`/api/documents/${documentId}/metadata`, { cache: 'no-store' });
-      if (!metadataRes.ok) throw new Error('Failed to fetch document metadata');
-      const metadataData = await metadataRes.json();
-      setMetadata(metadataData);
-      track('judgment_viewed', { document_id: documentId });
+      if (refreshMetadata) {
+        const metadataRes = await fetch(`/api/documents/${documentId}/metadata`, { cache: 'no-store' });
+        if (!metadataRes.ok) throw new Error('Failed to fetch document metadata');
+        const metadataData = await metadataRes.json();
+        setMetadata(metadataData);
+      }
 
       const similarRes = await fetch(`/api/documents/${documentId}/similar?top_k=3`, { cache: 'no-store' });
       if (similarRes.ok) {
@@ -84,7 +90,10 @@ export function useDocument(documentId: string) {
   }, [documentId]);
 
   useEffect(() => {
-    if (documentId) fetchDocumentData();
+    if (documentId) {
+      track('judgment_viewed', { document_id: documentId });
+      void fetchDocumentData(false);
+    }
   }, [documentId, fetchDocumentData]);
 
   // Fetch metadata for similar documents

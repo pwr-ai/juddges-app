@@ -2,6 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse, NextRequest } from "next/server";
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from "@/lib/logger";
+import {
+  isValidCollectionId,
+  loadCollectionDetail,
+} from "@/lib/server/collection-detail";
 
 const apiLogger = logger.child('collections-api');
 const API_BASE_URL = getBackendUrl();
@@ -17,7 +21,7 @@ export async function GET(request: NextRequest) {
     const match = pathname.match(/\/collections\/([^/]+)/);
     const id = match?.[1];
 
-    if (!id) {
+    if (!id || !isValidCollectionId(id)) {
       apiLogger.error("Invalid collection ID: ", id);
       return NextResponse.json(
         { error: "Invalid collection ID" },
@@ -25,61 +29,42 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the authenticated user
-    const supabase = await createClient();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !userData?.user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    // Build backend URL with pagination params
-    const backendParams = new URLSearchParams();
     const limit = searchParams.get('limit');
     const offset = searchParams.get('offset');
-    if (limit) backendParams.set('limit', limit);
-    if (offset) backendParams.set('offset', offset);
-
-    const backendQueryString = backendParams.toString();
-    const backendUrl = `${API_BASE_URL}/collections/${id}${backendQueryString ? `?${backendQueryString}` : ''}`;
-
-    // Call backend API
-    const response = await fetch(backendUrl, {
-      headers: {
-        'X-API-Key': API_KEY,
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      } as HeadersInit,
+    const result = await loadCollectionDetail(id, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
     });
 
-    if (!response.ok) {
-      apiLogger.error(`Backend API returned error status: ${response.status}`);
-      if (response.status === 404) {
-        return NextResponse.json(
-          { error: "Collection not found" },
-          { status: 404 }
-        );
-      }
+    if (result.kind === "invalid") {
       return NextResponse.json(
-        { error: "Failed to fetch collection from backend" },
-        { status: response.status }
+        { error: "Invalid collection ID" },
+        { status: 400 }
       );
     }
+    if (result.kind === "unauthenticated") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    if (result.kind === "not_found") {
+      return NextResponse.json(
+        { error: "Collection not found" },
+        { status: 404 }
+      );
+    }
+    if (result.kind === "unavailable") {
+      const message =
+        result.reason === "timeout"
+          ? "Collection service timed out"
+          : result.reason === "transport"
+            ? "Collection service unavailable"
+            : "Failed to fetch collection from backend";
+      return NextResponse.json({ error: message }, { status: result.status });
+    }
 
-    const collection = await response.json();
-    return NextResponse.json(collection);
+    return NextResponse.json(result.collection);
   } catch (error) {
     apiLogger.error("Error in GET collection: ", error);
     return NextResponse.json(
@@ -95,7 +80,7 @@ export async function PUT(request: NextRequest) {
     const match = pathname.match(/\/collections\/([^/]+)/);
     const id = match?.[1];
 
-    if (!id) {
+    if (!id || !isValidCollectionId(id)) {
       apiLogger.error("Missing collection ID in PUT request");
       return NextResponse.json(
         { error: "Collection ID is required" },
@@ -179,7 +164,7 @@ export async function DELETE(request: NextRequest) {
     const match = pathname.match(/\/collections\/([^/]+)/);
     const id = match?.[1];
 
-    if (!id) {
+    if (!id || !isValidCollectionId(id)) {
       apiLogger.error("Missing collection ID in DELETE request");
       return NextResponse.json(
         { error: "Collection ID is required" },

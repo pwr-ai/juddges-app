@@ -28,7 +28,9 @@ function mockSupabaseAuth(userId: string | null) {
     auth: {
       getUser: jest.fn().mockResolvedValue({
         data: { user: userId ? { id: userId } : null },
-        error: userId ? null : new Error("not authed"),
+        error: userId
+          ? null
+          : { message: "Auth session missing!", code: "session_not_found" },
       }),
       getSession: jest.fn().mockResolvedValue({
         data: {
@@ -84,6 +86,56 @@ describe("GET /api/collections/[id]", () => {
     expect(response.status).toBe(401);
   });
 
+  it("returns 401 when Supabase rejects a stale JWT", async () => {
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: {
+            name: "AuthApiError",
+            message: "JWT expired",
+            code: "bad_jwt",
+            status: 401,
+          },
+        }),
+      },
+    });
+
+    const response = await GET(makeGetRequest(COLLECTION_ID));
+
+    expect(response.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when Supabase authentication lookup fails unexpectedly", async () => {
+    (createClient as jest.Mock).mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: {
+            message: "authentication service unavailable",
+            code: "unexpected_failure",
+            status: 500,
+          },
+        }),
+      },
+    });
+
+    const response = await GET(makeGetRequest(COLLECTION_ID));
+
+    expect(response.status).toBe(503);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an unsafe collection ID without consulting auth or backend", async () => {
+    const response = await GET(makeGetRequest("unsafe%20collection"));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid collection ID" });
+    expect(createClient).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("fetches collection from backend", async () => {
     mockSupabaseAuth(USER_ID);
 
@@ -92,6 +144,7 @@ describe("GET /api/collections/[id]", () => {
       status: 200,
       json: async () => ({
         id: COLLECTION_ID,
+        user_id: USER_ID,
         name: "Test Collection",
         document_count: 10,
       }),
@@ -148,6 +201,27 @@ describe("GET /api/collections/[id]", () => {
     expect(response.status).toBe(404);
   });
 
+  it("returns 404 without leaking a collection owned by another user", async () => {
+    mockSupabaseAuth(USER_ID);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: COLLECTION_ID,
+        user_id: "different-user-id",
+        name: "Private collection",
+        documents: [],
+        document_count: 0,
+      }),
+    });
+
+    const response = await GET(makeGetRequest(COLLECTION_ID));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Collection not found" });
+  });
+
   it("returns backend error status on other failures", async () => {
     mockSupabaseAuth(USER_ID);
 
@@ -168,7 +242,21 @@ describe("GET /api/collections/[id]", () => {
 
     const response = await GET(makeGetRequest(COLLECTION_ID));
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(502);
+  });
+
+  it("returns a distinct 504 for an upstream timeout", async () => {
+    mockSupabaseAuth(USER_ID);
+    const timeout = new Error("request timed out");
+    timeout.name = "TimeoutError";
+    (global.fetch as jest.Mock).mockRejectedValue(timeout);
+
+    const response = await GET(makeGetRequest(COLLECTION_ID));
+
+    expect(response.status).toBe(504);
+    expect(await response.json()).toEqual({
+      error: "Collection service timed out",
+    });
   });
 });
 
@@ -187,6 +275,16 @@ describe("PUT /api/collections/[id]", () => {
     );
 
     expect(response.status).toBe(401);
+  });
+
+  it("returns 400 for an unsafe collection ID without consulting auth or backend", async () => {
+    const response = await PUT(
+      makePutRequest("unsafe%20collection", { name: "Updated" })
+    );
+
+    expect(response.status).toBe(400);
+    expect(createClient).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it("returns 400 when name is missing", async () => {
@@ -327,6 +425,14 @@ describe("DELETE /api/collections/[id]", () => {
     const response = await DELETE(makeDeleteRequest(COLLECTION_ID));
 
     expect(response.status).toBe(401);
+  });
+
+  it("returns 400 for an unsafe collection ID without consulting auth or backend", async () => {
+    const response = await DELETE(makeDeleteRequest("unsafe%20collection"));
+
+    expect(response.status).toBe(400);
+    expect(createClient).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it("deletes collection via backend", async () => {

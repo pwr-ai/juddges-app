@@ -15,6 +15,7 @@ import { getBrandConfig, getCurrentBrand } from "@/lib/brand";
 import { siteMetadataBase } from "@/lib/site";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteStructuredData } from "@/lib/structured-data";
+import { CollectionDetailProvider } from "@/contexts/CollectionDetailContext";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -171,9 +172,11 @@ export default function RootLayout({
             <AuthProvider>
               <BrandProvider>
                 <LanguageProvider>
+                  <CollectionDetailProvider>
                     <AppLayoutWrapper>
                       {children}
                     </AppLayoutWrapper>
+                  </CollectionDetailProvider>
                     <SonnerToaster />
                 </LanguageProvider>
               </BrandProvider>

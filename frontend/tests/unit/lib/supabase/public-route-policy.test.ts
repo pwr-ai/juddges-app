@@ -150,6 +150,29 @@ describe('isPublicRequest', () => {
     },
   );
 
+  it.each(['GET', 'HEAD'])(
+    'allows exact schema detail BFF %s to reach route validation',
+    (method) => {
+      for (const segment of [
+        'abcdef01-1234-4abc-8def-1234567890ab',
+        'not-a-uuid',
+        'abcdef01-1234-4abc-8def-1234567890ab.css',
+      ]) {
+        expect(
+          isPublicRequest({ pathname: `/api/schemas/${segment}`, method }),
+        ).toBe(true);
+      }
+    },
+  );
+
+  it.each([
+    ['POST', '/api/schemas/abcdef01-1234-4abc-8def-1234567890ab'],
+    ['GET', '/api/schemas/abcdef01-1234-4abc-8def-1234567890ab/nested'],
+    ['GET', '/api/schemas/nested/value.css'],
+  ] as const)('protects schema BFF lookalike %s %s', (method, pathname) => {
+    expect(isPublicRequest({ pathname, method })).toBe(false);
+  });
+
   it.each([
     new URLSearchParams(),
     new URLSearchParams({ job_id: 'not-a-uuid' }),
@@ -186,6 +209,39 @@ describe('isPublicRequest', () => {
           pathname: '/api/extractions',
           method,
           searchParams: new URLSearchParams({ job_id: EXTRACTION_ID }),
+        }),
+      ).toBe(false);
+    },
+  );
+
+  it.each(['GET', 'HEAD'])(
+    'allows exact document metadata BFF %s',
+    (method) => {
+      expect(
+        isPublicRequest({
+          pathname: '/api/documents/visible-doc/metadata',
+          method,
+        }),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    '/api/documents/visible-doc/metadata/',
+    '/api/documents/visible-doc/metadata/nested',
+    '/api/documents/nested/visible-doc/metadata',
+    '/api/documents//metadata',
+  ])('protects document metadata BFF lookalike %s', (pathname) => {
+    expect(isPublicRequest({ pathname, method: 'GET' })).toBe(false);
+  });
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
+    'protects document metadata BFF method %s',
+    (method) => {
+      expect(
+        isPublicRequest({
+          pathname: '/api/documents/visible-doc/metadata',
+          method,
         }),
       ).toBe(false);
     },

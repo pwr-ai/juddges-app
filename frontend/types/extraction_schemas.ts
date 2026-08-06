@@ -3,7 +3,7 @@ export type SchemaStatus = 'draft' | 'published' | 'review' | 'archived';
 export interface ExtractionSchema {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   type: string;
   category: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +16,7 @@ export interface ExtractionSchema {
   field_count?: number;
   created_at: string;
   updated_at: string;
-  user_id: string;
+  user_id: string | null;
   user?: {
     email: string;
   };
