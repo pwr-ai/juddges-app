@@ -113,6 +113,16 @@ describe('documents production HTTP/auth status matrix', () => {
           response.end(JSON.stringify({ message: 'auth unavailable' }));
           return;
         }
+        if (request.headers.authorization?.endsWith('.bad-jwt')) {
+          response.writeHead(401, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ code: 'bad_jwt', message: 'bad jwt' }));
+          return;
+        }
+        if (request.headers.authorization?.endsWith('.status-401')) {
+          response.writeHead(401, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ message: 'invalid bearer token' }));
+          return;
+        }
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ id: 'owner-1', email: 'owner@example.test' }));
         return;
@@ -170,6 +180,8 @@ describe('documents production HTTP/auth status matrix', () => {
     const appUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authenticatedCookie() };
     const authOutage = { Cookie: authenticatedCookie('auth-outage') };
+    const badJwt = { Cookie: authenticatedCookie('bad-jwt') };
+    const status401 = { Cookie: authenticatedCookie('status-401') };
     const forgedMetadata = Buffer.from(JSON.stringify({
       document_id: 'attack.txt',
       document_type: 'judgment',
@@ -301,6 +313,26 @@ describe('documents production HTTP/auth status matrix', () => {
       );
       expect(authOutageBff.status).toBe(503);
       expect((await authOutageBff.json()).error).toBe('DATABASE_UNAVAILABLE');
+      expect(
+        upstreamRequests.filter((item) =>
+          item.endsWith('/documents/visible-doc/metadata')
+        ).length
+      ).toBe(metadataBeforeAuthOutage);
+
+      for (const invalidSession of [badJwt, status401]) {
+        const invalidPage = await requestUntilReady(
+          `${appUrl}/documents/visible-doc`,
+          { headers: invalidSession }
+        );
+        expect(invalidPage.status).toBe(307);
+        expect(invalidPage.headers.get('location')).toContain('/auth/login');
+        const invalidBff = await requestUntilReady(
+          `${appUrl}/api/documents/visible-doc/metadata`,
+          { headers: invalidSession }
+        );
+        expect(invalidBff.status).toBe(401);
+        expect((await invalidBff.json()).error).toBe('UNAUTHORIZED');
+      }
       expect(
         upstreamRequests.filter((item) =>
           item.endsWith('/documents/visible-doc/metadata')

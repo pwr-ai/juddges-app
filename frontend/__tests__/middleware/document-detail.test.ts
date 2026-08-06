@@ -22,6 +22,19 @@ function unavailableSession(request: NextRequest): SessionUpdate {
   };
 }
 
+function anonymousSession(
+  request: NextRequest,
+  response: NextResponse,
+): SessionUpdate {
+  return {
+    response,
+    request,
+    userId: null,
+    accessToken: null,
+    authFailure: "unauthenticated",
+  };
+}
+
 describe("document detail auth failure boundary", () => {
   const originalFetch = global.fetch;
 
@@ -46,6 +59,41 @@ describe("document detail auth failure boundary", () => {
     expect(response.status).toBe(503);
     expect(response.headers.get("content-type")).toContain(type);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps an invalid page session on the login path", async () => {
+    const request = new NextRequest("http://localhost/documents/visible-doc");
+    mockUpdateSessionWithAuth.mockResolvedValue(
+      anonymousSession(
+        request,
+        NextResponse.redirect(
+          "http://localhost/auth/login?next=%2Fdocuments%2Fvisible-doc",
+        ),
+      ),
+    );
+
+    const response = await middleware(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/auth/login");
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps an invalid metadata BFF session as 401", async () => {
+    const request = new NextRequest(
+      "http://localhost/api/documents/visible-doc/metadata",
+    );
+    mockUpdateSessionWithAuth.mockResolvedValue(
+      anonymousSession(request, NextResponse.next({ request })),
+    );
+
+    const response = await middleware(request);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ error: "UNAUTHORIZED" }),
+    );
     expect(global.fetch).not.toHaveBeenCalled();
   });
 

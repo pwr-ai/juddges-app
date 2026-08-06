@@ -339,6 +339,24 @@ describe("Supabase middleware public route policy", () => {
     expect(result.authFailure).toBe("unavailable");
   });
 
+  it.each([
+    ["bad_jwt", { code: "bad_jwt", message: "invalid bearer token" }],
+    ["invalid_credentials", { code: "invalid_credentials", message: "invalid credentials" }],
+    ["no_authorization", { code: "no_authorization", message: "authorization missing" }],
+    ["status 401", { status: 401, message: "invalid bearer token" }],
+    ["status 403", { status: 403, message: "credential rejected" }],
+  ])("treats %s as an anonymous document session", async (_label, error) => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/documents/visible-doc"),
+    );
+
+    expect(result.response.status).toBe(307);
+    expect(result.response.headers.get("location")).toContain("/auth/login");
+    expect(result.authFailure).toBe("unauthenticated");
+  });
+
   it("clears schema auth state when the session lookup throws", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "owner-1" } },
