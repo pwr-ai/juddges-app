@@ -300,10 +300,28 @@ describe("schemas production HTTP/auth status matrix", () => {
         await response.text();
       }
 
+      const beforeAnonymousPage = upstreamRequests.filter((item) =>
+        item.includes(`id=eq.${ids.visible}`)
+      ).length;
+      const anonymousPage = await requestUntilReady(
+        `${appUrl}/schemas/${ids.visible}`
+      );
+      expect(anonymousPage.status).toBe(307);
+      expect(anonymousPage.headers.get("location")).toContain(
+        `/auth/login?next=%2Fschemas%2F${ids.visible}`
+      );
+      await anonymousPage.text();
+      expect(
+        upstreamRequests.filter((item) =>
+          item.includes(`id=eq.${ids.visible}`)
+        )
+      ).toHaveLength(beforeAnonymousPage);
+
       const anonymousApi = await requestUntilReady(
         `${appUrl}/api/schemas/${ids.visible}`
       );
       expect(anonymousApi.status).toBe(401);
+      expect(anonymousApi.headers.get("cache-control")).toBe("private, no-store");
       expect((await anonymousApi.json()).code).toBe("UNAUTHORIZED");
       const anonymousInvalidApi = await requestUntilReady(
         `${appUrl}/api/schemas/not-a-uuid`
@@ -354,6 +372,7 @@ describe("schemas production HTTP/auth status matrix", () => {
         });
         expect(response.status).toBe(expected);
         expect(response.headers.get("content-type")).toContain("application/json");
+        expect(response.headers.get("cache-control")).toBe("private, no-store");
         if (expected === 404) notFoundBodies.push(await response.json());
         else await response.text();
       }
