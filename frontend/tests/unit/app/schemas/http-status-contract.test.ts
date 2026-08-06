@@ -300,6 +300,9 @@ describe("schemas production HTTP/auth status matrix", () => {
         await response.text();
       }
 
+      const beforeAnonymousPage = upstreamRequests.filter((item) =>
+        item.includes(`id=eq.${ids.visible}`)
+      ).length;
       const anonymousPage = await requestUntilReady(
         `${appUrl}/schemas/${ids.visible}`
       );
@@ -308,6 +311,11 @@ describe("schemas production HTTP/auth status matrix", () => {
         `/auth/login?next=%2Fschemas%2F${ids.visible}`
       );
       await anonymousPage.text();
+      expect(
+        upstreamRequests.filter((item) =>
+          item.includes(`id=eq.${ids.visible}`)
+        )
+      ).toHaveLength(beforeAnonymousPage);
 
       const anonymousApi = await requestUntilReady(
         `${appUrl}/api/schemas/${ids.visible}`
