@@ -15,14 +15,13 @@ import {
 } from "@/lib/extractions/detail-contract";
 import { logger } from "@/lib/logger";
 import { isAnonymousAuthError } from "@/lib/supabase/auth-error";
+import { isPublicRequest } from "@/lib/supabase/public-route-policy";
 import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
 import type { CollectionWithDocuments } from "@/types/collection";
 
 const COLLECTION_DETAIL_PATH = /^\/collections\/([^/]+)$/;
 const DEFAULT_COLLECTION_PREFLIGHT_TIMEOUT_MS = 10_000;
 const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
-const CHAT_MESSAGES_PREFIX = "/api/chats/";
-const CHAT_MESSAGES_SUFFIX = "/messages";
 const CHAT_PAGE_PREFIX = "/chat/";
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/[^/]+$/;
 
@@ -51,31 +50,10 @@ function needsExtractionAccessToken(request: NextRequest): boolean {
   );
 }
 
-function chatMessagesId(pathname: string): string | null {
-  if (
-    !pathname.startsWith(CHAT_MESSAGES_PREFIX) ||
-    !pathname.endsWith(CHAT_MESSAGES_SUFFIX)
-  ) {
-    return null;
-  }
-  const chatId = pathname.slice(
-    CHAT_MESSAGES_PREFIX.length,
-    -CHAT_MESSAGES_SUFFIX.length,
-  );
-  return isCanonicalUuid(chatId) ? chatId : null;
-}
-
 function chatPageIdFromPath(pathname: string): string | null {
   if (!pathname.startsWith(CHAT_PAGE_PREFIX)) return null;
   const chatId = pathname.slice(CHAT_PAGE_PREFIX.length);
   return isCanonicalUuid(chatId) ? chatId : null;
-}
-
-function canAnonymousRequestReachHandler(request: NextRequest): boolean {
-  return (
-    isReadRequest(request) &&
-    chatMessagesId(request.nextUrl.pathname) !== null
-  );
 }
 
 function isExactChatPageRequest(request: NextRequest): boolean {
@@ -475,29 +453,11 @@ export async function updateSessionWithAuth(
 
   if (
     !user &&
-    request.nextUrl.pathname !== "/" &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/about") &&
-    !request.nextUrl.pathname.startsWith("/ecosystem") &&
-    // Metadata image routes must be reachable by social/search crawlers.
-    !request.nextUrl.pathname.startsWith("/opengraph-image") &&
-    !request.nextUrl.pathname.startsWith("/twitter-image") &&
-    !request.nextUrl.pathname.startsWith("/onboarding") &&
-    !request.nextUrl.pathname.startsWith("/api/health") &&
-    !request.nextUrl.pathname.startsWith("/api/dashboard/stats") &&
-    // Exact extraction-detail reads return JSON 401 from the BFF. Other
-    // methods and extraction API shapes retain the normal protected policy.
-    !(
-      isReadRequest(request) &&
-      request.nextUrl.pathname === "/api/extractions" &&
-      request.nextUrl.searchParams.has("job_id")
-    ) &&
-    // The retired GraphQL bridge must reach the Next.js router and resolve as
-    // 404. Keep this exact so lookalike paths remain protected.
-    request.nextUrl.pathname !== "/api/graphql" &&
-    !canAnonymousRequestReachHandler(request) &&
-    !request.nextUrl.pathname.startsWith("/status") &&
-    !request.nextUrl.pathname.startsWith("/offline")
+    !isPublicRequest({
+      pathname: request.nextUrl.pathname,
+      method: request.method,
+      searchParams: request.nextUrl.searchParams,
+    })
   ) {
     const url = request.nextUrl.clone();
     const nextTarget = request.nextUrl.pathname + request.nextUrl.search;

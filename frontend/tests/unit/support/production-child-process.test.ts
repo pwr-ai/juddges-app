@@ -165,13 +165,60 @@ describe("production child process runner", () => {
   );
 
   it("reports output from a failed child after its streams close", async () => {
-    await expect(
-      runProductionChild({
-        command: process.execPath,
-        args: ["-e", "process.stderr.write('build failed'); process.exit(7)"],
-        label: "failing build",
-        timeoutMs: 1_000,
-      }),
-    ).rejects.toThrow("failing build exited with code 7:\nbuild failed");
+    const failure = runProductionChild({
+      command: process.execPath,
+      args: [
+        "-e",
+        "process.stdout.write('stdout-sentinel'); process.stderr.write('stderr-sentinel'); process.exit(7)",
+      ],
+      label: "failing build",
+      timeoutMs: 1_000,
+    });
+
+    await expect(failure).rejects.toThrow("code: 7");
+    await expect(failure).rejects.toThrow("signal: none");
+    await expect(failure).rejects.toThrow("spawn error: none");
+    await expect(failure).rejects.toThrow("stdout:\nstdout-sentinel");
+    await expect(failure).rejects.toThrow("stderr:\nstderr-sentinel");
+    await expect(failure).rejects.toThrow(
+      "combined output:\nstdout-sentinelstderr-sentinel",
+    );
+  });
+
+  it("reports complete context when a child fails to spawn", async () => {
+    const failure = runProductionChild({
+      command: "/definitely-missing-production-child",
+      args: [],
+      label: "missing build",
+      timeoutMs: 1_000,
+    });
+
+    await expect(failure).rejects.toThrow(/code: (?:-?\d+|null)/);
+    await expect(failure).rejects.toThrow("signal: none");
+    await expect(failure).rejects.toThrow(/spawn error: .*ENOENT/);
+    await expect(failure).rejects.toThrow("stdout:\n<empty>");
+    await expect(failure).rejects.toThrow("stderr:\n<empty>");
+    await expect(failure).rejects.toThrow("combined output:\n<empty>");
+  });
+
+  itOnPosix("reports signal termination with all captured output", async () => {
+    const failure = runProductionChild({
+      command: process.execPath,
+      args: [
+        "-e",
+        "process.stdout.write('signal-stdout'); process.stderr.write('signal-stderr'); process.kill(process.pid, 'SIGTERM')",
+      ],
+      label: "signaled build",
+      timeoutMs: 1_000,
+    });
+
+    await expect(failure).rejects.toThrow("code: null");
+    await expect(failure).rejects.toThrow("signal: SIGTERM");
+    await expect(failure).rejects.toThrow("spawn error: none");
+    await expect(failure).rejects.toThrow("stdout:\nsignal-stdout");
+    await expect(failure).rejects.toThrow("stderr:\nsignal-stderr");
+    await expect(failure).rejects.toThrow(
+      "combined output:\nsignal-stdoutsignal-stderr",
+    );
   });
 });

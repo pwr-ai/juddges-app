@@ -7,7 +7,7 @@ const pkg = JSON.parse(
 
 /** @type {import('next').NextConfig} */
 const baseConfig = {
-  // Contract tests can isolate production builds from concurrent worktrees.
+  // Real production contracts isolate generated artifacts and route types.
   distDir: process.env.NEXT_BUILD_DIR || '.next',
   typescript: {
     tsconfigPath: process.env.NEXT_TSCONFIG_PATH || 'tsconfig.json',
