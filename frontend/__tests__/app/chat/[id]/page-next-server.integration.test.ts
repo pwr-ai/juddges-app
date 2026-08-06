@@ -10,6 +10,11 @@ import {
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
 } from "@/tests/support/production-build-lock";
 import {
+  cleanupProductionContractBuild,
+  prepareProductionContractBuild,
+  type ProductionContractBuild,
+} from "@/tests/support/production-contract-build";
+import {
   type ProductionChild,
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
   PRODUCTION_READINESS_POLL_INTERVAL_MS,
@@ -29,6 +34,8 @@ const MISSING_CHAT_ID = "11111111-2222-4333-8444-555555555555";
 const RLS_HIDDEN_CHAT_ID = "22222222-3333-4444-8555-666666666666";
 const DATABASE_ERROR_CHAT_ID = "55555555-6666-4777-8888-999999999999";
 const ACCESS_TOKEN = "test-access-token";
+const CHAT_CONTRACT_FILE =
+  "__tests__/app/chat/[id]/page-next-server.integration.test.ts";
 
 const CHAT_ROWS = new Map([
   [OWNER_CHAT_ID, USER_ID],
@@ -118,6 +125,7 @@ function sessionCookie(): string {
 describe("/chat/[id] through a real Next server", () => {
   let fakeSupabase: Server | undefined;
   let nextProcess: ProductionChild | undefined;
+  let contractBuild: ProductionContractBuild | undefined;
   let releaseProductionBuildLock: (() => Promise<void>) | undefined;
   let baseUrl: string;
   let output = "";
@@ -126,18 +134,23 @@ describe("/chat/[id] through a real Next server", () => {
   async function cleanupTestResources(): Promise<unknown[]> {
     const child = nextProcess;
     const server = fakeSupabase;
+    const build = contractBuild;
     const releaseLock = releaseProductionBuildLock;
     nextProcess = undefined;
     fakeSupabase = undefined;
+    contractBuild = undefined;
     releaseProductionBuildLock = undefined;
     const resourceResults = await Promise.allSettled([
       stopProductionChild(child),
       closeServer(server),
     ]);
+    const buildResults = await Promise.allSettled([
+      cleanupProductionContractBuild(build),
+    ]);
     const lockResults = await Promise.allSettled([
       releaseLock?.() ?? Promise.resolve(),
     ]);
-    return [...resourceResults, ...lockResults].flatMap((result) =>
+    return [...resourceResults, ...buildResults, ...lockResults].flatMap((result) =>
       result.status === "rejected" ? [result.reason] : [],
     );
   }
@@ -146,6 +159,7 @@ describe("/chat/[id] through a real Next server", () => {
     let setupFailure: unknown;
     try {
       releaseProductionBuildLock = await acquireProductionBuildLock();
+      contractBuild = await prepareProductionContractBuild(CHAT_CONTRACT_FILE);
       fakeSupabase = createServer((request, response) => {
         const url = new URL(request.url ?? "/", "http://127.0.0.1");
         if (url.pathname === "/auth/v1/user") {
@@ -206,6 +220,7 @@ describe("/chat/[id] through a real Next server", () => {
       const nextBin = require.resolve("next/dist/bin/next");
       const nextEnvironment: NodeJS.ProcessEnv = {
         ...process.env,
+        ...contractBuild.environment,
         NODE_ENV: "production",
         NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${supabasePort}`,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",

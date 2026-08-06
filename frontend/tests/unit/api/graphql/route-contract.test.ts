@@ -11,6 +11,11 @@ import {
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
 } from '@/tests/support/production-build-lock';
 import {
+  cleanupProductionContractBuild,
+  prepareProductionContractBuild,
+  type ProductionContractBuild,
+} from '@/tests/support/production-contract-build';
+import {
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
   PRODUCTION_READINESS_POLL_INTERVAL_MS,
   PRODUCTION_READINESS_REQUEST_TIMEOUT_MS,
@@ -22,6 +27,8 @@ import {
 } from '@/tests/support/production-child-process';
 
 jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
+
+const GRAPHQL_CONTRACT_FILE = 'tests/unit/api/graphql/route-contract.test.ts';
 
 async function reservePort(): Promise<number> {
   const server = createServer();
@@ -72,20 +79,29 @@ describe('GraphQL browser surface contract', () => {
 
   it('returns 404 for the retired route in a real production build', async () => {
     const releaseProductionBuildLock = await acquireProductionBuildLock();
+    let contractBuild: ProductionContractBuild | undefined;
     try {
+      contractBuild = await prepareProductionContractBuild(
+        GRAPHQL_CONTRACT_FILE
+      );
+      const productionEnvironment: NodeJS.ProcessEnv = {
+        ...process.env,
+        ...contractBuild.environment,
+        NODE_ENV: 'production',
+      };
       const nextBin = join(process.cwd(), 'node_modules/next/dist/bin/next');
       await runProductionChild({
         command: process.execPath,
         args: [nextBin, 'build'],
         label: 'Next production build',
         cwd: process.cwd(),
-        env: { ...process.env, NODE_ENV: 'production' },
+        env: productionEnvironment,
         timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
       });
 
       const manifestPath = join(
-        process.cwd(),
-        '.next/server/app-paths-manifest.json'
+        contractBuild.buildPath,
+        'server/app-paths-manifest.json'
       );
       const manifest = JSON.parse(
         readFileSync(manifestPath, 'utf8')
@@ -94,8 +110,8 @@ describe('GraphQL browser surface contract', () => {
 
       const port = await reservePort();
       const serverPath = join(
-        process.cwd(),
-        '.next/standalone/frontend/server.js'
+        contractBuild.buildPath,
+        'standalone/frontend/server.js'
       );
       const productionServer = spawnProductionChild({
         command: process.execPath,
@@ -103,8 +119,7 @@ describe('GraphQL browser surface contract', () => {
         label: 'Next standalone production server',
         cwd: process.cwd(),
         env: {
-          ...process.env,
-          NODE_ENV: 'production',
+          ...productionEnvironment,
           PORT: String(port),
           HOSTNAME: '127.0.0.1',
           NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
@@ -142,7 +157,11 @@ describe('GraphQL browser surface contract', () => {
         await stopProductionChild(productionServer);
       }
     } finally {
-      await releaseProductionBuildLock();
+      try {
+        await cleanupProductionContractBuild(contractBuild);
+      } finally {
+        await releaseProductionBuildLock();
+      }
     }
   });
 });
