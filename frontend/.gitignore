@@ -12,10 +12,18 @@
 
 # testing
 /coverage
+/.next-contract-*/
+/tsconfig.contract-*.json
+/.next-production-build.lock/
 
 # next.js
 /.next/
 /out/
+
+# production contract test artifacts
+/.next-contract-*/
+/tsconfig.contract-*.json
+/.next-production-build.lock/
 
 # production
 /build
