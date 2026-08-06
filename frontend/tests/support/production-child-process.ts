@@ -15,6 +15,8 @@ export const PRODUCTION_REQUEST_TIMEOUT_MS = 30_000;
 export type ProductionChildResult = {
   code: number | null;
   signal: NodeJS.Signals | null;
+  stdout: string;
+  stderr: string;
   output: string;
   timedOut: boolean;
   exited: boolean;
@@ -132,6 +134,8 @@ export function spawnProductionChild(
     detached,
     stdio: "pipe",
   });
+  let stdout = "";
+  let stderr = "";
   let output = "";
   let spawnError: Error | undefined;
   let exited = false;
@@ -144,10 +148,14 @@ export function spawnProductionChild(
   let resolveCompleted: (result: ProductionChildResult) => void = () => undefined;
 
   child.stdout.on("data", (chunk) => {
-    output += String(chunk);
+    const text = String(chunk);
+    stdout += text;
+    output += text;
   });
   child.stderr.on("data", (chunk) => {
-    output += String(chunk);
+    const text = String(chunk);
+    stderr += text;
+    output += text;
   });
 
   const finish = (didClose: boolean): void => {
@@ -157,6 +165,8 @@ export function spawnProductionChild(
     resolveCompleted({
       code: exitCode,
       signal: exitSignal,
+      stdout,
+      stderr,
       output,
       timedOut,
       exited,
@@ -222,19 +232,31 @@ export async function runProductionChild(
 ): Promise<string> {
   const handle = spawnProductionChild(options);
   const result = await handle.completed;
+  const failureContext = (): string =>
+    [
+      `code: ${String(result.code)}`,
+      `signal: ${result.signal ?? "none"}`,
+      `spawn error: ${result.spawnError?.message ?? "none"}`,
+      "stdout:",
+      result.stdout || "<empty>",
+      "stderr:",
+      result.stderr || "<empty>",
+      "combined output:",
+      result.output || "<empty>",
+    ].join("\n");
   if (result.spawnError) {
     throw new Error(
-      `${handle.label} failed to spawn: ${result.spawnError.message}`,
+      `${handle.label} failed to spawn:\n${failureContext()}`,
     );
   }
   if (result.timedOut) {
     throw new Error(
-      `${handle.label} timed out after ${handle.timeoutMs}ms:\n${result.output}`,
+      `${handle.label} timed out after ${handle.timeoutMs}ms:\n${failureContext()}`,
     );
   }
   if (result.code !== 0) {
     throw new Error(
-      `${handle.label} exited with code ${String(result.code)}:\n${result.output}`,
+      `${handle.label} ${result.signal ? "terminated by signal" : "exited unsuccessfully"}:\n${failureContext()}`,
     );
   }
   return result.output;

@@ -21,6 +21,7 @@
     "test:local": "jest --runInBand --no-cache",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:production-contracts": "jest --config jest.production-contracts.config.js --coverage=false",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test --project=chromium-ui-smoke --max-failures=3 --retries=1",
     "test:e2e:ui": "playwright test --ui",
