@@ -3,6 +3,11 @@ const nextJest = require('next/jest')
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const productionContracts = require('./jest.production-contracts')
 
+const explicitlyRunsTestsByPath = process.argv.some(
+  (argument) =>
+    argument === '--runTestsByPath' || argument.startsWith('--runTestsByPath=')
+)
+
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.js and .env files
   dir: './',
@@ -105,7 +110,9 @@ const customJestConfig = {
     '/.next/',
     '/out/',
     '/coverage/',
-    ...productionContracts.testPathIgnorePatterns,
+    ...(explicitlyRunsTestsByPath
+      ? []
+      : productionContracts.testPathIgnorePatterns),
   ],
   modulePathIgnorePatterns: [
     '<rootDir>/.next/',
