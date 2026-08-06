@@ -11,6 +11,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   timeout: 60_000,
+  outputDir: 'test-results/route-contract',
   reporter: [
     ['line'],
     ['html', { open: 'never' }],

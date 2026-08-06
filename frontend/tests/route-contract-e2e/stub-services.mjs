@@ -186,12 +186,13 @@ function extractionResponse(jobId, response) {
 
 const server = createServer((request, response) => {
   const host = request.headers.host;
+  const url = new URL(request.url ?? '/', `http://${HOST}:${PORT}`);
   if (host !== `${HOST}:${PORT}`) {
+    logRequest(request, url, true);
+    process.exitCode = 1;
     sendJson(response, 400, { error: 'unexpected host' });
     return;
   }
-
-  const url = new URL(request.url ?? '/', `http://${host}`);
 
   if (request.method === 'GET' && url.pathname === `${CONTROL_PREFIX}ready`) {
     sendJson(response, 200, { ready: true });
@@ -282,7 +283,7 @@ server.listen(PORT, HOST, () => {
   console.log(`[route-contract-stub] listening on http://${HOST}:${PORT}`);
 });
 
-function shutdown(signal) {
+function shutdown() {
   server.closeAllConnections();
   server.close((error) => {
     if (error) {
@@ -295,5 +296,5 @@ function shutdown(signal) {
   setTimeout(() => process.exit(1), 5_000).unref();
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
