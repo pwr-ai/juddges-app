@@ -20,6 +20,7 @@ import {
   updateSession,
   updateSessionWithAuth,
 } from "@/lib/supabase/middleware";
+import { decodeCollectionSnapshot } from "@/lib/collections/detail-contract";
 
 describe("Supabase middleware public route policy", () => {
   beforeEach(() => {
@@ -131,6 +132,18 @@ describe("Supabase middleware public route policy", () => {
       expect(response.headers.get("location")).toBe(expectedLocation);
     },
   );
+
+  it("redirects an anonymous asset-like collection ID with the exact return target", async () => {
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/secret.txt?tab=documents"),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/auth/login?next=%2Fcollections%2Fsecret.txt%3Ftab%3Ddocuments",
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 
   it("does not apply the anonymous policy to an authenticated user", async () => {
     mockGetUser.mockResolvedValue({
@@ -357,6 +370,49 @@ describe("Supabase middleware public route policy", () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const snapshot = response.headers.get(
       "x-middleware-request-x-juddges-collection-snapshot"
+    );
+    expect(snapshot).toBeTruthy();
+    expect(snapshot).not.toBe("spoofed");
+    expect(decodeCollectionSnapshot(snapshot, "secret.txt")).toMatchObject({
+      id: "secret.txt",
+      user_id: "user-1",
+    });
+  });
+
+  it("strips a forged snapshot and preflights an owned asset-like collection ID", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "access-token" } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: "secret.txt",
+        user_id: "user-1",
+        name: "Protected collection",
+        documents: [],
+        document_count: 0,
+      }),
+    });
+
+    const response = await updateSession(
+      new NextRequest("http://localhost/collections/secret.txt", {
+        headers: { "x-juddges-collection-snapshot": "spoofed" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/collections\/secret\.txt\?limit=20$/),
+      expect.any(Object),
+    );
+    const snapshot = response.headers.get(
+      "x-middleware-request-x-juddges-collection-snapshot",
     );
     expect(snapshot).toBeTruthy();
     expect(snapshot).not.toBe("spoofed");

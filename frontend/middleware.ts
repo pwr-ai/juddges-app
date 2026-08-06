@@ -299,6 +299,7 @@ export async function middleware(incomingRequest: NextRequest) {
 export const config = {
   matcher: [
     '/extractions/:path*',
+    '/collections/:path*',
     '/blog/admin/:path*',
     '/publications/admin/:path*',
     /*
