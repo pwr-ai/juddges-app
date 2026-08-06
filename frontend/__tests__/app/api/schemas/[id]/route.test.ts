@@ -46,7 +46,12 @@ describe("GET /api/schemas/[id]", () => {
     jest.clearAllMocks();
     mockGetUser.mockResolvedValue({ data: { user: { id: "owner-1" } }, error: null });
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: "verified-token" } },
+      data: {
+        session: {
+          access_token: "verified-token",
+          user: { id: "owner-1" },
+        },
+      },
       error: null,
     });
     mockFetchSchemaDetail.mockResolvedValue(visibleSchema);
@@ -78,6 +83,26 @@ describe("GET /api/schemas/[id]", () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
     const response = await GET(new NextRequest(`http://localhost/api/schemas/${ID}`), context);
     expect(response.status).toBe(401);
+  });
+
+  it("rejects a bearer token whose session user differs from the verified user", async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "attacker-token",
+          user: { id: "attacker" },
+        },
+      },
+      error: null,
+    });
+
+    const response = await GET(
+      new NextRequest(`http://localhost/api/schemas/${ID}`),
+      context
+    );
+
+    expect(response.status).toBe(401);
+    expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
   });
 
   it("returns 503 when the local session service throws", async () => {

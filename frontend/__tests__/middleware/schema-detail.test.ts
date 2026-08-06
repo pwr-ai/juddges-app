@@ -63,7 +63,7 @@ describe("schema detail middleware preflight", () => {
     global.fetch = originalFetch;
   });
 
-  it("preflights minimally, replaces spoofed proof headers, and preserves refresh cookies", async () => {
+  it("preflights the complete explicit schema projection, replaces spoofed proof headers, and preserves refresh cookies", async () => {
     const request = new NextRequest(`http://localhost/schemas/${ID}`, {
       headers: {
         [SCHEMA_SNAPSHOT_HEADER]: "forged",
@@ -85,7 +85,9 @@ describe("schema detail middleware preflight", () => {
     const preflightUrl = new URL(
       String((global.fetch as jest.Mock).mock.calls[0][0])
     );
-    expect(preflightUrl.searchParams.get("select")).toBe("id");
+    expect(preflightUrl.searchParams.get("select")).toBe(
+      "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id"
+    );
     expect(response.cookies.get("sb-refresh")?.value).toBe("rotated");
     expect(response.headers.get("x-middleware-request-x-juddges-schema-snapshot")).not.toBe(
       "forged"

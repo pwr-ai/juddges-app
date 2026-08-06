@@ -10,24 +10,23 @@ jest.mock("next/navigation", () => ({
 }));
 const mockGetUser = jest.fn();
 const mockGetSession = jest.fn();
+const mockCreateClient = jest.fn();
 jest.mock("@/lib/supabase/server", () => ({
-  createClient: jest.fn(async () => ({
-    auth: { getUser: mockGetUser, getSession: mockGetSession },
-  })),
+  createClient: (...args: unknown[]) => mockCreateClient(...args),
 }));
 jest.mock("@/lib/server/schema-detail", () => {
   const actual = jest.requireActual("@/lib/server/schema-detail");
   return { ...actual, fetchSchemaDetail: jest.fn() };
 });
-jest.mock("@/app/schemas/[id]/client", () => ({
+jest.mock("@/app/schemas/[id]/loader", () => ({
   __esModule: true,
   default: jest.fn((props: unknown) =>
-    React.createElement("div", { "data-testid": "schema-client" }, JSON.stringify(props))
+    React.createElement("div", { "data-testid": "schema-loader" }, JSON.stringify(props))
   ),
 }));
 
 import SchemaDetailPage from "@/app/schemas/[id]/page";
-import SchemaDetailClient from "@/app/schemas/[id]/client";
+import SchemaDetailLoader from "@/app/schemas/[id]/loader";
 import SchemaDetailFailure from "@/components/schemas/SchemaDetailFailure";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -43,7 +42,7 @@ import {
 
 const mockHeaders = jest.mocked(headers);
 const mockNotFound = jest.mocked(notFound);
-const mockClient = jest.mocked(SchemaDetailClient);
+const mockLoader = jest.mocked(SchemaDetailLoader);
 const mockFetchSchemaDetail = jest.mocked(fetchSchemaDetail);
 
 const ID = "abcdef01-1234-4abc-8def-1234567890ab";
@@ -66,6 +65,9 @@ describe("schema detail server page", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.BACKEND_API_KEY = "snapshot-secret";
+    mockCreateClient.mockResolvedValue({
+      auth: { getUser: mockGetUser, getSession: mockGetSession },
+    });
     mockGetUser.mockResolvedValue({
       data: { user: { id: "owner-1" } },
       error: null,
@@ -82,96 +84,66 @@ describe("schema detail server page", () => {
     mockFetchSchemaDetail.mockResolvedValue(schema);
   });
 
-  it("renders a large schema from one user-scoped full read after signed proof", async () => {
-    const largeSchema = {
-      ...schema,
-      text: { legalDefinition: "x".repeat(147_000) },
-    };
-    mockFetchSchemaDetail.mockResolvedValue(largeSchema);
+  async function verifiedHeaders(
+    signedUser = "owner-1",
+    signedPath = `/schemas/${ID}`
+  ): Promise<Headers> {
     const encoded = encodeSchemaSnapshot(schema);
     const signature = await signSchemaSnapshot(
       encoded,
-      "owner-1",
-      `/schemas/${ID}`,
+      signedUser,
+      signedPath,
       "snapshot-secret"
     );
-    const values = new Map([
-      [SCHEMA_SNAPSHOT_HEADER, encoded],
-      [SCHEMA_SNAPSHOT_SIGNATURE_HEADER, signature],
-      [SCHEMA_SNAPSHOT_USER_HEADER, "owner-1"],
-    ]);
+    return new Headers({
+      [SCHEMA_SNAPSHOT_HEADER]: encoded,
+      [SCHEMA_SNAPSHOT_SIGNATURE_HEADER]: signature,
+      [SCHEMA_SNAPSHOT_USER_HEADER]: signedUser,
+    });
+  }
+
+  it("renders the client loader without a second auth lookup after successful preflight", async () => {
+    mockCreateClient.mockRejectedValue(new Error("auth unavailable"));
     mockHeaders.mockResolvedValue(
-      new Headers(Object.fromEntries(values)) as unknown as Awaited<ReturnType<typeof headers>>
+      (await verifiedHeaders()) as unknown as Awaited<ReturnType<typeof headers>>
     );
 
     const result = await SchemaDetailPage({ params: Promise.resolve({ id: ID }) });
 
     expect(React.isValidElement(result)).toBe(true);
-    expect(result.type).toBe(mockClient);
-    expect(result.props).toEqual(
-      expect.objectContaining({ initialSchema: largeSchema })
-    );
-    expect(mockFetchSchemaDetail).toHaveBeenCalledTimes(1);
-    expect(mockFetchSchemaDetail).toHaveBeenCalledWith(
-      ID,
-      "verified-token"
-    );
-  });
-
-  it("does not perform the full read when proof user differs from auth user", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "attacker" } },
-      error: null,
-    });
-    const encoded = encodeSchemaSnapshot(schema);
-    const signature = await signSchemaSnapshot(
-      encoded,
-      "owner-1",
-      `/schemas/${ID}`,
-      "snapshot-secret"
-    );
-    mockHeaders.mockResolvedValue(
-      new Headers({
-        [SCHEMA_SNAPSHOT_HEADER]: encoded,
-        [SCHEMA_SNAPSHOT_SIGNATURE_HEADER]: signature,
-        [SCHEMA_SNAPSHOT_USER_HEADER]: "owner-1",
-      }) as unknown as Awaited<ReturnType<typeof headers>>
-    );
-
-    await expect(
-      SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
-    ).rejects.toThrow(/verified schema user/i);
+    expect(result.type).toBe(mockLoader);
+    expect(result.key).toBe(ID);
+    expect(result.props).toEqual({ schemaId: ID });
+    expect(mockCreateClient).not.toHaveBeenCalled();
     expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
   });
 
-  it("does not use a token when its session user differs from the verified user", async () => {
-    mockGetSession.mockResolvedValue({
-      data: {
-        session: {
-          access_token: "attacker-token",
-          user: { id: "attacker" },
-        },
-      },
-      error: null,
-    });
-    const encoded = encodeSchemaSnapshot(schema);
-    const signature = await signSchemaSnapshot(
-      encoded,
-      "owner-1",
-      `/schemas/${ID}`,
-      "snapshot-secret"
+  it("renders the client loader without a second full read after successful preflight", async () => {
+    mockFetchSchemaDetail.mockRejectedValue(
+      new Error("the forbidden second read returned 503")
     );
     mockHeaders.mockResolvedValue(
-      new Headers({
-        [SCHEMA_SNAPSHOT_HEADER]: encoded,
-        [SCHEMA_SNAPSHOT_SIGNATURE_HEADER]: signature,
-        [SCHEMA_SNAPSHOT_USER_HEADER]: "owner-1",
-      }) as unknown as Awaited<ReturnType<typeof headers>>
+      (await verifiedHeaders()) as unknown as Awaited<ReturnType<typeof headers>>
+    );
+
+    const result = await SchemaDetailPage({ params: Promise.resolve({ id: ID }) });
+
+    expect(result.type).toBe(mockLoader);
+    expect(mockCreateClient).not.toHaveBeenCalled();
+    expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
+  });
+
+  it("rejects a proof signed for another path without auth or schema reads", async () => {
+    mockHeaders.mockResolvedValue(
+      (await verifiedHeaders("owner-1", `/schemas/${ID}-other`)) as unknown as Awaited<
+        ReturnType<typeof headers>
+      >
     );
 
     await expect(
       SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
-    ).rejects.toThrow(/verified schema session/i);
+    ).rejects.toThrow(/verified schema snapshot/i);
+    expect(mockCreateClient).not.toHaveBeenCalled();
     expect(mockFetchSchemaDetail).not.toHaveBeenCalled();
   });
 
@@ -198,7 +170,7 @@ describe("schema detail server page", () => {
       expect(React.isValidElement(result)).toBe(true);
       expect(result.type).toBe(SchemaDetailFailure);
       expect(result.props).toEqual({ status });
-      expect(mockClient).not.toHaveBeenCalled();
+      expect(mockLoader).not.toHaveBeenCalled();
       expect(mockNotFound).not.toHaveBeenCalled();
     }
   );
@@ -217,6 +189,6 @@ describe("schema detail server page", () => {
     await expect(
       SchemaDetailPage({ params: Promise.resolve({ id: ID }) })
     ).rejects.toThrow(/verified schema snapshot/i);
-    expect(mockClient).not.toHaveBeenCalled();
+    expect(mockLoader).not.toHaveBeenCalled();
   });
 });

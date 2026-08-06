@@ -369,13 +369,14 @@ describe("schemas production HTTP/auth status matrix", () => {
       });
       expect(visible.status).toBe(200);
       const visibleBody = await visible.text();
-      expect(visibleBody).toContain("Visible contract schema");
-      expect(visibleBody).toContain("creator@example.test");
-      expect(visibleBody).toContain("x".repeat(128));
+      expect(visibleBody).toContain("data-slot=\"sidebar-wrapper\"");
+      expect(visibleBody).not.toContain("Visible contract schema");
+      expect(visibleBody).not.toContain("creator@example.test");
+      expect(visibleBody).not.toContain("x".repeat(128));
       const visibleRequests = upstreamRequests.filter((item) =>
         item.includes(`id=eq.${ids.visible}`)
       );
-      expect(visibleRequests).toHaveLength(beforeVisible + 2);
+      expect(visibleRequests).toHaveLength(beforeVisible + 1);
       expect(
         visibleRequests.slice(beforeVisible).map((item) => {
           const requestUrl = item.slice(item.indexOf(" ") + 1);
@@ -383,7 +384,6 @@ describe("schemas production HTTP/auth status matrix", () => {
             .searchParams.get("select");
         })
       ).toEqual([
-        "id",
         "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id",
       ]);
 

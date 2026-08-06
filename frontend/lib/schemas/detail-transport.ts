@@ -69,6 +69,7 @@ export function normalizeExtractionSchema(
   if (!isObject(value)) return null;
   const description = value.description;
   const status = value.status;
+  const user = value.user;
   if (
     typeof value.id !== "string" ||
     !isCanonicalSchemaId(value.id) ||
@@ -85,7 +86,11 @@ export function normalizeExtractionSchema(
     typeof value.is_verified !== "boolean" ||
     typeof value.created_at !== "string" ||
     typeof value.updated_at !== "string" ||
-    !(typeof value.user_id === "string" || value.user_id === null)
+    !(typeof value.user_id === "string" || value.user_id === null) ||
+    !(
+      user === undefined ||
+      (isObject(user) && typeof user.email === "string")
+    )
   ) {
     return null;
   }
@@ -102,6 +107,9 @@ export function normalizeExtractionSchema(
     created_at: value.created_at,
     updated_at: value.updated_at,
     user_id: value.user_id,
+    ...(isObject(user) && typeof user.email === "string"
+      ? { user: { email: user.email } }
+      : {}),
   };
 }
 

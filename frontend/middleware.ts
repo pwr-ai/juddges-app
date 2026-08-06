@@ -26,7 +26,7 @@ import {
 import {
   SchemaDetailNotFoundError,
   SchemaDetailUpstreamError,
-  fetchSchemaDetailProof,
+  fetchSchemaDetail,
 } from "@/lib/server/schema-detail";
 import { updateSessionWithAuth } from "@/lib/supabase/middleware";
 
@@ -351,8 +351,13 @@ export async function middleware(incomingRequest: NextRequest) {
     }
 
     try {
-      const proof = await fetchSchemaDetailProof(schemaId, accessToken, request.signal);
-      const encoded = encodeSchemaSnapshot(proof);
+      const schema = await fetchSchemaDetail(
+        schemaId,
+        accessToken,
+        request.signal,
+        { enrichCreator: false }
+      );
+      const encoded = encodeSchemaSnapshot(schema);
       const headers = new Headers(request.headers);
       headers.delete(SCHEMA_SNAPSHOT_HEADER);
       headers.delete(SCHEMA_SNAPSHOT_SIGNATURE_HEADER);

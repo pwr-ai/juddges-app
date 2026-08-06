@@ -71,7 +71,12 @@ describe("Supabase middleware retired routes", () => {
       error: null,
     });
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: "verified-token" } },
+      data: {
+        session: {
+          access_token: "verified-token",
+          user: { id: "owner-1" },
+        },
+      },
       error: null,
     });
     const result = await updateSessionWithAuth(
@@ -94,13 +99,42 @@ describe("Supabase middleware retired routes", () => {
     expect(result.request.headers.get("x-juddges-schema-snapshot-user")).toBeNull();
   });
 
+  it("rejects a schema access token whose session user differs from the verified user", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "owner-1" } },
+      error: null,
+    });
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "attacker-token",
+          user: { id: "attacker" },
+        },
+      },
+      error: null,
+    });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest(
+        "http://localhost/schemas/abcdef01-1234-4abc-8def-1234567890ab"
+      )
+    );
+
+    expect(result.userId).toBeNull();
+    expect(result.accessToken).toBeNull();
+    expect(result.authFailure).toBe("unauthenticated");
+    expect(result.response.status).toBe(307);
+  });
+
   it("strips forged extraction proof headers before downstream handling", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
       error: null,
     });
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: "access-token" } },
+      data: {
+        session: { access_token: "access-token", user: { id: "user-1" } },
+      },
       error: null,
     });
 

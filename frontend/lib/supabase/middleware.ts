@@ -229,10 +229,16 @@ export async function updateSessionWithAuth(
             : "unavailable";
           userId = null;
         } else {
-          accessToken = sessionLookup.data.session?.access_token ?? null;
-          if (!accessToken) {
+          const session = sessionLookup.data.session;
+          if (
+            !session?.access_token ||
+            session.user.id !== userId
+          ) {
             userId = null;
+            accessToken = null;
             authFailure = "unauthenticated";
+          } else {
+            accessToken = session.access_token;
           }
         }
       }

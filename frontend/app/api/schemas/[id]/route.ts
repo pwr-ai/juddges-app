@@ -85,6 +85,7 @@ async function handleRead(
       );
     }
     if (!userLookup.data.user) throw new UnauthorizedError();
+    const verifiedUserId = userLookup.data.user.id;
 
     let sessionLookup: Awaited<ReturnType<typeof supabase.auth.getSession>>;
     try {
@@ -106,8 +107,14 @@ async function handleRead(
         503
       );
     }
-    const accessToken = sessionLookup.data.session?.access_token;
-    if (!accessToken) throw new UnauthorizedError();
+    const session = sessionLookup.data.session;
+    if (
+      !session?.access_token ||
+      session.user.id !== verifiedUserId
+    ) {
+      throw new UnauthorizedError();
+    }
+    const accessToken = session.access_token;
 
     const schema = await fetchSchemaDetail(id, accessToken, request.signal);
     if (head) {
