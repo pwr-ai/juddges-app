@@ -69,6 +69,12 @@ _WORKER_UNAVAILABLE_MARKERS = (
     "not available",
 )
 _RESULT_METADATA_MARKERS = ("started_at", "elapsed_time_seconds", "exc_type")
+_JOB_STATE_FIELDS = "job_id, user_id, status, completed_documents, total_documents"
+_JOB_RECOVERY_FIELDS = (
+    f"{_JOB_STATE_FIELDS}, collection_id, schema_id, document_ids, "
+    "language, extraction_context, prompt_id"
+)
+_JOB_RESULTS_FIELDS = "job_id, user_id, results"
 _TERMINAL_DOCUMENT_STATUSES = {
     DocumentProcessingStatus.COMPLETED.value,
     DocumentProcessingStatus.FAILED.value,
@@ -84,6 +90,15 @@ def _pending_batch_response(job_id: str) -> BatchExtractionResponse:
 def _in_progress_batch_response(job_id: str) -> BatchExtractionResponse:
     """Build IN_PROGRESS response payload."""
     return BatchExtractionResponse(task_id=job_id, status="IN_PROGRESS", results=None)
+
+
+def _with_optional_results(
+    response: BatchExtractionResponse, include_results: bool
+) -> BatchExtractionResponse:
+    """Strip heavy result payloads from ownership/status-only reads."""
+    if include_results:
+        return response
+    return response.model_copy(update={"results": None})
 
 
 def _worker_unavailable_error() -> HTTPException:
@@ -133,24 +148,84 @@ def _safe_get_task_state(task_result: AsyncResult, job_id: str) -> str | None:
         raise _worker_unavailable_error()
 
 
-def _load_job_record(job_id: str) -> dict | None:
-    """Load extraction job row from Supabase."""
+def _load_owned_job_fields(job_id: str, user_id: str, fields: str) -> dict:
+    """Load selected fields from one owned job without revealing hidden rows.
+
+    The user filter is part of the same database read as the job filter.  A
+    missing row and an RLS-hidden/other-user row therefore share the exact 404
+    contract, while database failures stay distinguishable as 503.
+    """
     if not supabase:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Extraction job store unavailable",
+        )
     try:
-        job_data = (
+        response = (
             supabase.table("extraction_jobs")
-            .select("job_id, status, completed_documents, total_documents, results")
+            .select(fields)
+            .eq("job_id", job_id)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as lookup_error:
+        logger.error(
+            f"Could not verify extraction job access for {job_id}: {lookup_error}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Extraction job store unavailable",
+        ) from lookup_error
+
+    rows = response.data or []
+    if isinstance(rows, dict):
+        rows = [rows]
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Extraction job not found",
+        )
+    return rows[0]
+
+
+def _load_owned_job_record(job_id: str, user_id: str) -> dict:
+    """Load only ownership and state fields used by the normal polling path."""
+    return _load_owned_job_fields(job_id, user_id, _JOB_STATE_FIELDS)
+
+
+def _load_owned_job_recovery_record(job_id: str, user_id: str) -> dict:
+    """Load resubmission fields only after Celery has lost the task state."""
+    return _load_owned_job_fields(job_id, user_id, _JOB_RECOVERY_FIELDS)
+
+
+def _load_owned_job_results_record(job_id: str, user_id: str) -> dict:
+    """Load persisted results only when the caller requested result details."""
+    return _load_owned_job_fields(job_id, user_id, _JOB_RESULTS_FIELDS)
+
+
+def _verify_job_ownership(job_id: str, user_id: str) -> None:
+    """Retain the explicit mutation authorization contract for cancellation."""
+    if supabase is None:
+        return
+    try:
+        owner = (
+            supabase.table("extraction_jobs")
+            .select("user_id")
             .eq("job_id", job_id)
             .single()
             .execute()
         )
-        return job_data.data
-    except (PostgrestAPIError, StorageException) as supabase_error:
-        logger.warning(
-            f"Could not retrieve job data from Supabase for {job_id}: {supabase_error}"
+    except Exception as lookup_error:
+        logger.warning(f"Cancellation ownership check skipped: {lookup_error}")
+        return
+
+    owner_id = (owner.data or {}).get("user_id") if owner.data else None
+    if owner_id is not None and owner_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to modify this job",
         )
-        return None
 
 
 def _deserialize_existing_results(
@@ -171,36 +246,58 @@ def _preserve_existing_job_progress(
     """Preserve existing job progress from Supabase when Celery state is missing."""
     completed_documents = job_data.get("completed_documents", 0) or 0
     total_documents = job_data.get("total_documents", 0) or 0
-    existing_status = job_data.get("status", "PENDING")
+    existing_status = str(job_data.get("status", "PENDING")).upper()
     existing_results = job_data.get("results")
 
-    if completed_documents <= 0 and not existing_results:
+    failure_statuses = {"FAILURE", "FAILED"}
+    cancellation_statuses = {"CANCELLED", "CANCELED", "REVOKED"}
+    successful_statuses = {"SUCCESS", "COMPLETED"}
+
+    if existing_status in failure_statuses:
+        final_status = "FAILED"
+    elif existing_status in cancellation_statuses:
+        final_status = "CANCELLED"
+    elif existing_status == "PARTIALLY_COMPLETED":
+        final_status = "PARTIALLY_COMPLETED"
+    else:
+        result_statuses = {
+            str(
+                result.get("status", "")
+                if isinstance(result, dict)
+                else getattr(result, "status", "")
+            )
+            .lower()
+            .replace("documentprocessingstatus.", "")
+            for result in existing_results or []
+        }
+        if result_statuses and result_statuses <= {"failed"}:
+            final_status = "FAILED"
+        elif "failed" in result_statuses or "partially_completed" in result_statuses:
+            final_status = "PARTIALLY_COMPLETED"
+        elif existing_status in successful_statuses or (
+            completed_documents >= total_documents and total_documents > 0
+        ):
+            final_status = "COMPLETED"
+        elif completed_documents > 0:
+            final_status = "PARTIALLY_COMPLETED"
+        else:
+            final_status = existing_status
+
+    if (
+        completed_documents <= 0
+        and not existing_results
+        and existing_status
+        not in failure_statuses
+        | cancellation_statuses
+        | successful_statuses
+        | {"PARTIALLY_COMPLETED"}
+    ):
         return None
 
     logger.info(
         f"Job {job_id} has existing progress: {completed_documents}/{total_documents} docs, "
         f"status={existing_status}. Preserving state instead of resetting to PENDING."
     )
-
-    if completed_documents >= total_documents and total_documents > 0:
-        final_status = "COMPLETED"
-        if existing_status not in ["SUCCESS", "COMPLETED", "PARTIALLY_COMPLETED"]:
-            update_job_status_in_supabase(
-                job_id, final_status, completed_documents=completed_documents
-            )
-    elif completed_documents > 0:
-        final_status = "PARTIALLY_COMPLETED"
-        if existing_status not in [
-            "SUCCESS",
-            "COMPLETED",
-            "PARTIALLY_COMPLETED",
-            "FAILURE",
-        ]:
-            update_job_status_in_supabase(
-                job_id, final_status, completed_documents=completed_documents
-            )
-    else:
-        final_status = existing_status
 
     return BatchExtractionResponse(
         task_id=job_id,
@@ -278,18 +375,37 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
         return None
 
 
-def _resolve_pending_job(job_id: str) -> BatchExtractionResponse:
+def _resolve_pending_job(
+    job_id: str,
+    user_id: str,
+    job_state: dict,
+    include_results: bool = True,
+) -> BatchExtractionResponse:
     """Resolve pending state by preserving existing progress or resubmitting when possible."""
     logger.warning(
         f"Task {job_id} is PENDING with no info - checking Supabase for existing state"
     )
-    job_data = _load_job_record(job_id)
-    if not job_data:
-        return _pending_batch_response(job_id)
+    preserved_response = _preserve_existing_job_progress(job_id, job_state)
+    if preserved_response:
+        if not include_results:
+            return preserved_response
+        result_data = _load_owned_job_results_record(job_id, user_id)
+        return (
+            _preserve_existing_job_progress(job_id, {**job_state, **result_data})
+            or preserved_response
+        )
 
+    recovery_data = _load_owned_job_recovery_record(job_id, user_id)
+    job_data = {**job_state, **recovery_data}
     preserved_response = _preserve_existing_job_progress(job_id, job_data)
     if preserved_response:
-        return preserved_response
+        if not include_results:
+            return preserved_response
+        result_data = _load_owned_job_results_record(job_id, user_id)
+        return (
+            _preserve_existing_job_progress(job_id, {**job_data, **result_data})
+            or preserved_response
+        )
 
     logger.info(f"Job {job_id} has no progress, attempting to resubmit")
     resubmitted_response = _try_resubmit_job(job_id, job_data)
@@ -732,41 +848,6 @@ async def create_bulk_extraction(
         )
 
 
-def _verify_job_ownership(job_id: str, user_id: str) -> None:
-    """Enforce per-user ownership on extraction job reads.
-
-    Raises 403 if the job has a database record owned by a different user.
-    Enforced only when the job is recorded and the database is reachable:
-    unknown ids carry no user data to leak, and transient DB/lookup errors
-    degrade to the prior behaviour rather than blocking status polling.
-    """
-    if supabase is None:
-        return
-    try:
-        owner = (
-            supabase.table("extraction_jobs")
-            .select("user_id")
-            .eq("job_id", job_id)
-            .single()
-            .execute()
-        )
-    except Exception as lookup_error:
-        # Never block status polling on transient DB/lookup errors; degrade to
-        # the prior behaviour rather than failing the request.
-        logger.warning(f"Ownership check skipped for job {job_id}: {lookup_error}")
-        return
-
-    owner_id = (owner.data or {}).get("user_id") if owner.data else None
-    if owner_id is not None and owner_id != user_id:
-        logger.warning(
-            f"User {user_id} attempted to read job {job_id} owned by another user"
-        )
-        raise HTTPException(
-            status_code=403,
-            detail="You do not have permission to view this job",
-        )
-
-
 @router.get(
     "/{job_id}",
     response_model=BatchExtractionResponse,
@@ -775,6 +856,9 @@ def _verify_job_ownership(job_id: str, user_id: str) -> None:
 )
 async def get_extraction_job(
     job_id: str = Path(..., description="Extraction job ID (task ID)"),
+    include_results: bool = Query(
+        True, description="Include per-document extraction results"
+    ),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> BatchExtractionResponse:
     """
@@ -791,22 +875,47 @@ async def get_extraction_job(
     - **CANCELLED**: Job was cancelled
     """
     try:
-        _verify_job_ownership(job_id, user.id)
+        if not is_uuid(job_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Extraction job not found",
+            )
+        job_record = _load_owned_job_record(job_id, user.id)
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
-            return _pending_batch_response(job_id)
+            return _with_optional_results(
+                _resolve_pending_job(
+                    job_id, user.id, job_record, include_results=include_results
+                ),
+                include_results,
+            )
 
         if task_state == "PENDING" and not task_result.info:
-            return _resolve_pending_job(job_id)
+            return _with_optional_results(
+                _resolve_pending_job(
+                    job_id, user.id, job_record, include_results=include_results
+                ),
+                include_results,
+            )
 
         not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
         if not_ready_response:
-            return not_ready_response
+            return _with_optional_results(not_ready_response, include_results)
 
         failed_response = _handle_failed_task(task_result, task_state, job_id)
         if failed_response:
-            return failed_response
+            return _with_optional_results(failed_response, include_results)
+
+        if not include_results:
+            persisted_response = _preserve_existing_job_progress(job_id, job_record)
+            if persisted_response:
+                return _with_optional_results(persisted_response, False)
+            return BatchExtractionResponse(
+                task_id=job_id,
+                status=simplify_job_status(task_state),
+                results=None,
+            )
 
         try:
             results = task_result.get()
@@ -823,10 +932,13 @@ async def get_extraction_job(
                 update_job_status_in_supabase(
                     job_id, simplified_status, error_message=str(error_msg)
                 )
-                return BatchExtractionResponse(
-                    task_id=job_id,
-                    status=simplified_status,
-                    results=[],
+                return _with_optional_results(
+                    BatchExtractionResponse(
+                        task_id=job_id,
+                        status=simplified_status,
+                        results=[],
+                    ),
+                    include_results,
                 )
 
             responses, normalized_results = _parse_task_results(results)
@@ -838,10 +950,13 @@ async def get_extraction_job(
                 completed_documents=processed_count,
                 results=normalized_results,
             )
-            return BatchExtractionResponse(
-                task_id=job_id,
-                status=simplified_status,
-                results=responses,
+            return _with_optional_results(
+                BatchExtractionResponse(
+                    task_id=job_id,
+                    status=simplified_status,
+                    results=responses,
+                ),
+                include_results,
             )
         except Exception as get_error:
             # Broad catch: Celery task.get() can raise backend errors, celery.exceptions,

@@ -211,6 +211,10 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage
 
+      - name: Run production contract tests serially
+        working-directory: frontend
+        run: npm run test:production-contracts
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         if: always()
@@ -259,6 +263,65 @@ jobs:
           # ~22 files instead of the full Next.js build output. Enable it.
           include-hidden-files: true
           retention-days: 1
+
+  frontend-route-contract:
+    name: Frontend Route Contract (Chromium)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-jammy
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend for route contracts
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:4311
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: route-contract-anon
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4311
+          API_BASE_URL: http://127.0.0.1:4311
+          BACKEND_API_KEY: route-contract-backend-key
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
+      - name: Run route contract E2E
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:4311
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: route-contract-anon
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4311
+          API_BASE_URL: http://127.0.0.1:4311
+          BACKEND_API_KEY: route-contract-backend-key
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          set -o pipefail
+          mkdir -p test-results
+          npm run test:e2e:route-contract 2>&1 | tee test-results/route-contract-services.log
+
+      - name: Upload route contract diagnostics
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: frontend-route-contract-diagnostics
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # ============================================================================
   # Frontend E2E - Issue #98

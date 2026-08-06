@@ -469,61 +469,6 @@ test.describe('Document View Flow', () => {
   // =========================================================================
 
   test.describe('Error state', () => {
-    test('renders error state when document is not found (404)', async ({ page }) => {
-      // Mock the document endpoint to return 404
-      await page.route(`**/api/documents/does-not-exist-9999`, (route) =>
-        route.fulfill({
-          status: 404,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Document not found' }),
-        })
-      );
-
-      await page.goto('/documents/does-not-exist-9999');
-
-      // The page must not crash — either an error card or a "not found" message
-      const errorVisible = await page
-        .locator('text=/not found|does not exist|error|404/i')
-        .isVisible({ timeout: 8000 })
-        .catch(() => false);
-
-      // Fallback: a generic error card component
-      const errorCard = page.locator('[class*="error"], [data-testid*="error"]').first();
-      const errorCardVisible = await errorCard.isVisible({ timeout: 3000 }).catch(() => false);
-
-      expect(errorVisible || errorCardVisible).toBeTruthy();
-    });
-
-    test('renders error state when document API returns 500', async ({ page }) => {
-      const badId = 'server-error-doc-001';
-
-      await page.route(`**/api/documents/${badId}`, (route) =>
-        route.fulfill({
-          status: 500,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Internal server error' }),
-        })
-      );
-
-      await page.goto(`/documents/${badId}`);
-
-      // Page must not be a blank white screen
-      const bodyText = await page.locator('body').innerText().catch(() => '');
-      expect(bodyText.length).toBeGreaterThan(0);
-
-      // Some form of error indicator must be shown for a 500 response
-      const errorIndicator = page.locator('text=/error|unavailable|failed|something went wrong/i').first();
-      const errorCard = page.locator('[class*="error"], [data-testid*="error"]').first();
-
-      const errorVisible = await errorIndicator.isVisible({ timeout: 8000 }).catch(() => false);
-      const errorCardVisible = await errorCard.isVisible({ timeout: 3000 }).catch(() => false);
-
-      expect(
-        errorVisible || errorCardVisible,
-        'Expected an error indicator or error card to be displayed when API returns 500'
-      ).toBeTruthy();
-    });
-
     test('similar documents endpoint failure does not crash the document page', async ({ page }) => {
       await mockDocumentDetails(page, MOCK_DOC_ID, MOCK_FULL_DOCUMENT as any);
 

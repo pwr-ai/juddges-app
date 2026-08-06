@@ -17,6 +17,7 @@ import {
   validateRequestBody,
   validateQueryParams
 } from '@/lib/validation/schemas';
+import { normalizeExtractionJobPayload } from '@/lib/extractions/detail-contract';
 
 const apiLogger = logger.child('extractions-api');
 const API_BASE_URL = getBackendUrl();
@@ -355,15 +356,32 @@ export async function GET(request: NextRequest) {
     }
 
     // Call the backend API to get extraction status and results
-    const response = await fetch(
-      `${API_BASE_URL}/extractions/${job_id}`,
-      {
-        headers: {
-          'X-API-Key': API_KEY,
-          'Authorization': `Bearer ${accessToken}`,
+    let response: Response;
+    try {
+      response = await fetch(
+        `${API_BASE_URL}/extractions/${job_id}`,
+        {
+          cache: 'no-store',
+          headers: {
+            'X-API-Key': API_KEY,
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          signal: AbortSignal.timeout(10_000),
         }
-      }
-    );
+      );
+    } catch (error) {
+      const timedOut =
+        error instanceof Error &&
+        (error.name === 'TimeoutError' || error.name === 'AbortError');
+      throw new AppError(
+        timedOut
+          ? 'The extraction service timed out. Please try again.'
+          : 'The extraction service is unavailable. Please try again.',
+        (timedOut ? 'EXTRACTION_TIMEOUT' : 'EXTRACTION_UNAVAILABLE') as ErrorCode,
+        timedOut ? 504 : 503,
+        { job_id }
+      );
+    }
 
     if (!response.ok) {
       const { message, code } = await parseBackendError(response);
@@ -375,7 +393,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const jobData = await response.json();
+    let rawJobData: unknown;
+    try {
+      rawJobData = await response.json();
+    } catch {
+      throw new AppError(
+        'The extraction service returned malformed data.',
+        'MALFORMED_EXTRACTION_RESPONSE' as ErrorCode,
+        502,
+        { job_id }
+      );
+    }
+    const jobData = normalizeExtractionJobPayload(rawJobData, job_id);
+    if (!jobData) {
+      throw new AppError(
+        'The extraction service returned malformed data.',
+        'MALFORMED_EXTRACTION_RESPONSE' as ErrorCode,
+        502,
+        { job_id }
+      );
+    }
 
     // Update job status in Supabase
     try {
@@ -493,7 +530,7 @@ export async function GET(request: NextRequest) {
 
     // Return job status with enriched metadata
     return NextResponse.json({
-      job_id: jobData.job_id || job_id,
+      job_id: jobData.job_id,
       status: jobData.status,
       results: extractions,
       progress: jobData.progress,
