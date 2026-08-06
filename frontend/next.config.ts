@@ -7,6 +7,11 @@ const pkg = JSON.parse(
 
 /** @type {import('next').NextConfig} */
 const baseConfig = {
+  // Real production contracts isolate generated artifacts and route types.
+  distDir: process.env.NEXT_BUILD_DIR || '.next',
+  typescript: {
+    tsconfigPath: process.env.NEXT_TSCONFIG_PATH || 'tsconfig.json',
+  },
   // Output standalone build optimized for Docker
   output: 'standalone',
   // Ensure tracing works correctly when multiple lockfiles exist in monorepo

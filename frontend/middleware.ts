@@ -20,12 +20,14 @@ import {
 import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME, isValidLocale } from '@/lib/i18n/config'
 import type { LocaleCode } from '@/lib/i18n/types'
 import { updateSessionWithAuth } from '@/lib/supabase/middleware'
+import {
+  isAnonymousDocumentBffRead,
+  isAnonymousExtractionBffRead,
+} from '@/lib/supabase/public-route-policy'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const DOCUMENT_PAGE_PATTERN = /^\/documents\/([^/]+)$/
 const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/
-const DOCUMENT_METADATA_API_PATTERN =
-  /^\/api\/documents\/[a-zA-Z0-9_.-]{1,255}\/metadata$/
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/([^/]+)$/
 
 type DocumentPreflight =
@@ -257,9 +259,10 @@ export async function middleware(incomingRequest: NextRequest) {
     )
   }
 
-  const isDocumentBffRead =
-    (request.method === 'GET' || request.method === 'HEAD') &&
-    DOCUMENT_METADATA_API_PATTERN.test(request.nextUrl.pathname)
+  const isDocumentBffRead = isAnonymousDocumentBffRead({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+  })
   if (!userId && isDocumentBffRead) {
     return finishResponse(
       new NextResponse(
@@ -284,10 +287,11 @@ export async function middleware(incomingRequest: NextRequest) {
     )
   }
 
-  const isExtractionBffRead =
-    (request.method === 'GET' || request.method === 'HEAD') &&
-    request.nextUrl.pathname === '/api/extractions' &&
-    request.nextUrl.searchParams.has('job_id')
+  const isExtractionBffRead = isAnonymousExtractionBffRead({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    searchParams: request.nextUrl.searchParams,
+  })
   if (!userId && isExtractionBffRead) {
     return finishResponse(
       NextResponse.json(
@@ -483,6 +487,15 @@ export const config = {
   matcher: [
     '/documents/:path*',
     '/extractions/:path*',
+    '/blog/admin/:path*',
+    '/publications/admin/:path*',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
     '/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|chunk-error-handler\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|map|txt|xml|ico)$).*)',
   ],
 }

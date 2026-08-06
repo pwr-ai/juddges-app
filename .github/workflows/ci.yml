@@ -211,6 +211,10 @@ jobs:
         working-directory: frontend
         run: npm run test:coverage
 
+      - name: Run production contract tests serially
+        working-directory: frontend
+        run: npm run test:production-contracts
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         if: always()
