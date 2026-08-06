@@ -46,7 +46,6 @@ type SourceBindings = {
   childProcessFunctions: Map<string, string>;
   childProcessNamespaces: Set<string>;
   productionChildFunctions: Set<string>;
-  productionBuildFunctions: Set<string>;
 };
 
 function importName(specifier: ts.ImportSpecifier): string {
@@ -81,7 +80,6 @@ function collectSourceBindings(sourceFile: ts.SourceFile): SourceBindings {
     childProcessFunctions: new Map(),
     childProcessNamespaces: new Set(),
     productionChildFunctions: new Set(),
-    productionBuildFunctions: new Set(),
   };
 
   const registerNamedImport = (
@@ -94,12 +92,6 @@ function collectSourceBindings(sourceFile: ts.SourceFile): SourceBindings {
     }
     if (moduleName.includes('production-child-process') && imported === 'runProductionChild') {
       bindings.productionChildFunctions.add(local);
-    }
-    if (
-      moduleName.includes('production-contract-build') &&
-      imported === 'prepareProductionContractBuild'
-    ) {
-      bindings.productionBuildFunctions.add(local);
     }
   };
 
@@ -315,12 +307,6 @@ function callRunsNextBuild(
 ): boolean {
   if (
     ts.isIdentifier(node.expression) &&
-    bindings.productionBuildFunctions.has(node.expression.text)
-  ) {
-    return true;
-  }
-  if (
-    ts.isIdentifier(node.expression) &&
     bindings.productionChildFunctions.has(node.expression.text)
   ) {
     const options = node.arguments[0];
@@ -479,11 +465,6 @@ describe('production contract registry', () => {
         runChild({ command, args });`
       );
       writeFileSync(
-        join(fixtureDirectory, 'prepare-helper.test.ts'),
-        `import { prepareProductionContractBuild as prepare } from '../../support/production-contract-build';
-        prepare('tests/unit/app/example/http-status-contract.test.ts');`
-      );
-      writeFileSync(
         join(fixtureDirectory, 'child-process-unit.test.ts'),
         `import { spawnSync } from 'node:child_process';
         spawnSync(process.execPath, ['-e', childScript]);`
@@ -513,7 +494,6 @@ describe('production contract registry', () => {
         'const-args-spawn.test.ts',
         'exec-next.test.ts',
         'namespace-spawn.test.ts',
-        'prepare-helper.test.ts',
       ]);
     } finally {
       rmSync(fixtureDirectory, { recursive: true, force: true });

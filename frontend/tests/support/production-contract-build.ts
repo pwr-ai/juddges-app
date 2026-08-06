@@ -1,5 +1,5 @@
 import { rm, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, dirname, isAbsolute, resolve } from "node:path";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const registry = require("../../jest.production-contracts") as {
@@ -21,6 +21,53 @@ export type ProductionContractBuild = ProductionContractDefinition & {
   };
 };
 
+const BUILD_DIRECTORY_PATTERN = /^\.next-contract-[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const TSCONFIG_PATH_PATTERN =
+  /^tsconfig\.contract-[A-Za-z0-9][A-Za-z0-9._-]*\.json$/;
+
+function validateArtifactBasename(
+  value: string,
+  pattern: RegExp,
+  field: "buildDirectory" | "tsconfigPath",
+): void {
+  if (
+    isAbsolute(value) ||
+    value.includes("/") ||
+    value.includes("\\") ||
+    basename(value) !== value ||
+    !pattern.test(value)
+  ) {
+    throw new Error(`Unsafe production contract ${field}: ${value}`);
+  }
+}
+
+function resolveContractArtifactPaths(contract: ProductionContractDefinition): {
+  buildPath: string;
+  tsconfigAbsolutePath: string;
+} {
+  validateArtifactBasename(
+    contract.buildDirectory,
+    BUILD_DIRECTORY_PATTERN,
+    "buildDirectory",
+  );
+  validateArtifactBasename(
+    contract.tsconfigPath,
+    TSCONFIG_PATH_PATTERN,
+    "tsconfigPath",
+  );
+
+  const frontendRoot = resolve();
+  const buildPath = resolve(frontendRoot, contract.buildDirectory);
+  const tsconfigAbsolutePath = resolve(frontendRoot, contract.tsconfigPath);
+  if (
+    dirname(buildPath) !== frontendRoot ||
+    dirname(tsconfigAbsolutePath) !== frontendRoot
+  ) {
+    throw new Error(`Unsafe production contract artifact path: ${contract.file}`);
+  }
+  return { buildPath, tsconfigAbsolutePath };
+}
+
 export function resolveStandaloneRuntimeBuildPath(
   buildPath: string,
   buildDirectory: string,
@@ -38,8 +85,8 @@ export async function prepareProductionContractBuild(
     throw new Error(`Unregistered production contract: ${contractFile}`);
   }
 
-  const buildPath = resolve(contract.buildDirectory);
-  const tsconfigAbsolutePath = resolve(contract.tsconfigPath);
+  const { buildPath, tsconfigAbsolutePath } =
+    resolveContractArtifactPaths(contract);
   await rm(buildPath, { recursive: true, force: true });
   await writeFile(
     tsconfigAbsolutePath,
