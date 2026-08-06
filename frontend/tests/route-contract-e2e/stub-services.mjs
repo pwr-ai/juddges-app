@@ -5,6 +5,17 @@ const PORT = 4311;
 const CONTROL_PREFIX = '/__route-contract/';
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
+const LOGGABLE_QUERY_KEYS = new Set([
+  'chat_id',
+  'id',
+  'include_results',
+  'job_id',
+  'limit',
+  'order',
+  'select',
+  'top_k',
+  'user_id',
+]);
 
 const IDS = {
   chat: {
@@ -36,6 +47,10 @@ const IDS = {
     unavailable: '30000000-0000-4000-8000-000000000006',
   },
 };
+const CHAT_OWNERS = new Map([
+  [IDS.chat.known, USER_ID],
+  [IDS.chat.hidden, OTHER_USER_ID],
+]);
 
 let requests = [];
 
@@ -51,7 +66,12 @@ function sanitizedRequest(request, url) {
   return {
     method: request.method,
     path: url.pathname,
-    query: Object.fromEntries(url.searchParams.entries()),
+    query: Object.fromEntries(
+      [...url.searchParams.entries()].map(([key, value]) => [
+        key,
+        LOGGABLE_QUERY_KEYS.has(key) ? value : '[redacted]',
+      ]),
+    ),
   };
 }
 
@@ -61,8 +81,10 @@ function logRequest(request, url, unexpected = false) {
     ...(unexpected ? { unexpected: true } : {}),
   };
   requests.push(entry);
+  const query = new URLSearchParams(entry.query).toString();
+  // eslint-disable-next-line no-console -- intentional child-process diagnostics
   console.log(
-    `[route-contract-stub] ${entry.method} ${entry.path}${url.search}`,
+    `[route-contract-stub] ${entry.method} ${entry.path}${query ? `?${query}` : ''}`,
   );
 }
 
@@ -98,7 +120,7 @@ function chatsResponse(url, response) {
   const chatId = url.searchParams.get('id')?.replace(/^eq\./, '');
   const userId = url.searchParams.get('user_id')?.replace(/^eq\./, '');
   const rows =
-    chatId === IDS.chat.known && userId === USER_ID ? [{ id: chatId }] : [];
+    chatId && CHAT_OWNERS.get(chatId) === userId ? [{ id: chatId }] : [];
   sendJson(response, 200, rows, {
     'content-range': rows.length === 1 ? '0-0/1' : '*/0',
   });
@@ -280,6 +302,7 @@ server.on('error', (error) => {
 });
 
 server.listen(PORT, HOST, () => {
+  // eslint-disable-next-line no-console -- intentional child-process diagnostics
   console.log(`[route-contract-stub] listening on http://${HOST}:${PORT}`);
 });
 

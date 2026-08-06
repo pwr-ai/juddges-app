@@ -10,6 +10,9 @@ import {
 const APP_BASE_URL = 'http://127.0.0.1:3006';
 const ADAPTER_BASE_URL = 'http://127.0.0.1:4311';
 const USER_ID = '11111111-1111-4111-8111-111111111111';
+const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
+const SCHEMA_DETAIL_SELECT =
+  'id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id';
 
 const IDS = {
   chat: {
@@ -18,14 +21,17 @@ const IDS = {
     hidden: '10000000-0000-4000-8000-000000000003',
   },
   collection: {
+    known: 'known-collection',
     missing: 'missing-collection',
     hidden: 'hidden-collection',
   },
   document: {
+    known: 'known-document',
     missing: 'missing-document',
     hidden: 'hidden-document',
   },
   schema: {
+    known: '20000000-0000-4000-8000-000000000001',
     missing: '20000000-0000-4000-8000-000000000002',
     hidden: '20000000-0000-4000-8000-000000000003',
   },
@@ -143,6 +149,7 @@ function expectOneCall(
     (request) =>
       request.method === 'GET' &&
       request.path === path &&
+      Object.keys(request.query).length === Object.keys(query).length &&
       Object.entries(query).every(([key, value]) => request.query[key] === value),
   );
   expect(matching).toHaveLength(1);
@@ -159,23 +166,74 @@ test.describe.serial('production route status contract', () => {
     expect(requests.filter(({ unexpected }) => unexpected)).toEqual([]);
   });
 
-  test('serves a known extraction through an authenticated browser navigation', async ({
-    context,
+  test('serves every known dynamic detail page through authenticated browser navigation', async ({
+    browser,
     request,
   }) => {
-    await setSyntheticSession(context, 'valid');
-    const body = await navigate(
-      context,
-      `/extractions/${IDS.extraction.known}`,
-      200,
-    );
-    expect(body).toContain(IDS.extraction.known);
+    const navigationContext = await browser.newContext({
+      baseURL: APP_BASE_URL,
+      javaScriptEnabled: false,
+      serviceWorkers: 'block',
+    });
+    await setSyntheticSession(navigationContext, 'valid');
+    const cases = [
+      {
+        pagePath: `/chat/${IDS.chat.known}`,
+        marker: IDS.chat.known,
+        adapterPath: '/rest/v1/chats',
+        query: {
+          select: 'id',
+          id: `eq.${IDS.chat.known}`,
+          user_id: `eq.${USER_ID}`,
+        },
+      },
+      {
+        pagePath: `/collections/${IDS.collection.known}`,
+        marker: 'Route contract collection',
+        adapterPath: `/collections/${IDS.collection.known}`,
+        query: { limit: '20' },
+      },
+      {
+        pagePath: `/documents/${IDS.document.known}`,
+        marker: 'Route contract judgment',
+        adapterPath: `/documents/${IDS.document.known}/metadata`,
+        query: {},
+      },
+      {
+        pagePath: `/schemas/${IDS.schema.known}`,
+        marker: IDS.schema.known,
+        adapterPath: '/rest/v1/extraction_schemas',
+        query: {
+          select: SCHEMA_DETAIL_SELECT,
+          id: `eq.${IDS.schema.known}`,
+          limit: '1',
+        },
+      },
+      {
+        pagePath: `/extractions/${IDS.extraction.known}`,
+        marker: IDS.extraction.known,
+        adapterPath: `/extractions/${IDS.extraction.known}`,
+        query: { include_results: 'false' },
+      },
+    ] as const;
 
-    expectOneCall(
-      await adapterRequests(request),
-      `/extractions/${IDS.extraction.known}`,
-      { include_results: 'false' },
-    );
+    try {
+      for (const routeCase of cases) {
+        const body = await navigate(
+          navigationContext,
+          routeCase.pagePath,
+          200,
+        );
+        expect(body).toContain(routeCase.marker);
+      }
+
+      const requests = await adapterRequests(request);
+      for (const routeCase of cases) {
+        expectOneCall(requests, routeCase.adapterPath, routeCase.query);
+      }
+    } finally {
+      await navigationContext.close();
+    }
   });
 
   test('returns route-owned 404s for missing and hidden dynamic resources', async ({
@@ -235,14 +293,30 @@ test.describe.serial('production route status contract', () => {
     for (const routeCase of cases) {
       for (const id of routeCase.ids) {
         if (routeCase.adapterPath === '/rest/v1/chats') {
-          expectOneCall(requests, routeCase.adapterPath, { id: `eq.${id}` });
+          expectOneCall(requests, routeCase.adapterPath, {
+            select: 'id',
+            id: `eq.${id}`,
+            user_id: `eq.${USER_ID}`,
+          });
         } else if (routeCase.adapterPath === '/rest/v1/extraction_schemas') {
-          expectOneCall(requests, routeCase.adapterPath, { id: `eq.${id}` });
+          expectOneCall(requests, routeCase.adapterPath, {
+            select: SCHEMA_DETAIL_SELECT,
+            id: `eq.${id}`,
+            limit: '1',
+          });
         } else {
           const suffix = routeCase.adapterPath.startsWith('/documents/')
             ? `${id}/metadata`
             : id;
-          expectOneCall(requests, `${routeCase.adapterPath}${suffix}`);
+          expectOneCall(
+            requests,
+            `${routeCase.adapterPath}${suffix}`,
+            routeCase.adapterPath === '/collections/'
+              ? { limit: '20' }
+              : routeCase.adapterPath === '/extractions/'
+                ? { include_results: 'false' }
+                : {},
+          );
         }
       }
     }
@@ -271,6 +345,27 @@ test.describe.serial('production route status contract', () => {
         include_results: 'false',
       });
     }
+  });
+
+  test('models a hidden chat row behind the ownership filter', async ({
+    request,
+  }) => {
+    const query = new URLSearchParams({
+      select: 'id',
+      id: `eq.${IDS.chat.hidden}`,
+      user_id: `eq.${OTHER_USER_ID}`,
+    });
+    const response = await request.get(
+      `${ADAPTER_BASE_URL}/rest/v1/chats?${query.toString()}`,
+    );
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual([{ id: IDS.chat.hidden }]);
+
+    expectOneCall(await adapterRequests(request), '/rest/v1/chats', {
+      select: 'id',
+      id: `eq.${IDS.chat.hidden}`,
+      user_id: `eq.${OTHER_USER_ID}`,
+    });
   });
 
   test('keeps an authenticated unknown route as a plain 404 with no domain read', async ({
@@ -392,5 +487,29 @@ test.describe.serial('production route status contract', () => {
     const requests = await adapterRequests(request);
     expect(requests.some(({ path }) => path === '/auth/v1/user')).toBe(true);
     expect(domainRequests(requests)).toEqual([]);
+  });
+
+  test('redacts non-contract query fields from adapter diagnostics', async ({
+    request,
+  }) => {
+    const response = await request.get(
+      `${ADAPTER_BASE_URL}/rest/v1/chats?select=id&id=eq.${IDS.chat.missing}` +
+        `&user_id=eq.${USER_ID}&access_token=must-not-leak`,
+    );
+    expect(response.status()).toBe(200);
+
+    const requests = await adapterRequests(request);
+    expect(requests).toEqual([
+      {
+        method: 'GET',
+        path: '/rest/v1/chats',
+        query: {
+          select: 'id',
+          id: `eq.${IDS.chat.missing}`,
+          user_id: `eq.${USER_ID}`,
+          access_token: '[redacted]',
+        },
+      },
+    ]);
   });
 });
