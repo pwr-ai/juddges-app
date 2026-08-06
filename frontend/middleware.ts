@@ -1,4 +1,5 @@
 import { updateSessionWithAuth } from '@/lib/supabase/middleware'
+import { isAnonymousExtractionBffRead } from '@/lib/supabase/public-route-policy'
 import { NextResponse, type NextRequest } from 'next/server'
 import { LOCALE_COOKIE_NAME, DEFAULT_LOCALE, isValidLocale } from '@/lib/i18n/config'
 import type { LocaleCode } from '@/lib/i18n/types'
@@ -137,10 +138,11 @@ export async function middleware(incomingRequest: NextRequest) {
     )
   }
 
-  const isExtractionBffRead =
-    (request.method === 'GET' || request.method === 'HEAD') &&
-    request.nextUrl.pathname === '/api/extractions' &&
-    request.nextUrl.searchParams.has('job_id')
+  const isExtractionBffRead = isAnonymousExtractionBffRead({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    searchParams: request.nextUrl.searchParams,
+  })
   if (!userId && isExtractionBffRead) {
     return finishResponse(
       NextResponse.json(
@@ -297,6 +299,8 @@ export async function middleware(incomingRequest: NextRequest) {
 export const config = {
   matcher: [
     '/extractions/:path*',
+    '/blog/admin/:path*',
+    '/publications/admin/:path*',
     /*
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)
