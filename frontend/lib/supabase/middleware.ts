@@ -17,14 +17,15 @@ import {
   isUnauthenticatedSchemaAuthError,
 } from "@/lib/schemas/detail-transport";
 import { isAnonymousAuthError } from "@/lib/supabase/auth-error";
+import {
+  isAnonymousSchemaBffRead,
+  isPublicRequest,
+} from "@/lib/supabase/public-route-policy";
 import { isCanonicalUuid } from "@/lib/validation/canonical-uuid";
 
 const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
-const CHAT_MESSAGES_PREFIX = "/api/chats/";
-const CHAT_MESSAGES_SUFFIX = "/messages";
 const CHAT_PAGE_PREFIX = "/chat/";
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/[^/]+$/;
-const SCHEMA_API_PATTERN = /^\/api\/schemas\/[^/]+$/;
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
 
 export type SessionAuthFailure = "unauthenticated" | "unavailable" | null;
@@ -76,36 +77,10 @@ function needsExtractionAccessToken(request: NextRequest): boolean {
   );
 }
 
-function isExactExtractionBffRead(request: NextRequest): boolean {
-  return (
-    isReadRequest(request) &&
-    request.nextUrl.pathname === "/api/extractions" &&
-    request.nextUrl.searchParams.has("job_id")
-  );
-}
-
-function chatMessagesId(pathname: string): string | null {
-  if (
-    !pathname.startsWith(CHAT_MESSAGES_PREFIX) ||
-    !pathname.endsWith(CHAT_MESSAGES_SUFFIX)
-  ) {
-    return null;
-  }
-  const chatId = pathname.slice(
-    CHAT_MESSAGES_PREFIX.length,
-    -CHAT_MESSAGES_SUFFIX.length
-  );
-  return isCanonicalUuid(chatId) ? chatId : null;
-}
-
 function chatPageIdFromPath(pathname: string): string | null {
   if (!pathname.startsWith(CHAT_PAGE_PREFIX)) return null;
   const chatId = pathname.slice(CHAT_PAGE_PREFIX.length);
   return isCanonicalUuid(chatId) ? chatId : null;
-}
-
-function canAnonymousRequestReachHandler(request: NextRequest): boolean {
-  return isReadRequest(request) && chatMessagesId(request.nextUrl.pathname) !== null;
 }
 
 function isExactChatPageRequest(request: NextRequest): boolean {
@@ -133,10 +108,6 @@ function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
   return target;
 }
 
-function isSchemaReadApi(request: NextRequest): boolean {
-  return isReadRequest(request) && SCHEMA_API_PATTERN.test(request.nextUrl.pathname);
-}
-
 function isSchemaPage(request: NextRequest): boolean {
   const match = SCHEMA_PAGE_PATTERN.exec(request.nextUrl.pathname);
   if (!match) return false;
@@ -145,23 +116,6 @@ function isSchemaPage(request: NextRequest): boolean {
   } catch {
     return false;
   }
-}
-
-function isPublicPath(pathname: string): boolean {
-  return (
-    pathname === "/" ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/about") ||
-    pathname.startsWith("/ecosystem") ||
-    pathname.startsWith("/opengraph-image") ||
-    pathname.startsWith("/twitter-image") ||
-    pathname.startsWith("/onboarding") ||
-    pathname.startsWith("/api/health") ||
-    pathname.startsWith("/api/dashboard/stats") ||
-    pathname === "/api/graphql" ||
-    pathname.startsWith("/status") ||
-    pathname.startsWith("/offline")
-  );
 }
 
 function loginRedirect(
@@ -203,7 +157,11 @@ export async function updateSessionWithAuth(
   let userId: string | null = null;
   let accessToken: string | null = null;
   let authFailure: SessionAuthFailure = null;
-  const needsSchemaSession = isSchemaReadApi(request) || isSchemaPage(request);
+  const schemaReadApi = isAnonymousSchemaBffRead({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+  });
+  const needsSchemaSession = schemaReadApi || isSchemaPage(request);
   try {
     const userLookup = await supabase.auth.getUser();
     if (userLookup.error) {
@@ -260,7 +218,7 @@ export async function updateSessionWithAuth(
 
   const schemaFailureNeedsExactStatus =
     authFailure === "unavailable" &&
-    (isSchemaReadApi(request) || isSchemaPage(request));
+    (schemaReadApi || isSchemaPage(request));
 
   if (authFailure === "unavailable" && isExactChatPageRequest(request)) {
     return {
@@ -358,10 +316,11 @@ export async function updateSessionWithAuth(
 
   if (
     !userId &&
-    !isPublicPath(request.nextUrl.pathname) &&
-    !isSchemaReadApi(request) &&
-    !isExactExtractionBffRead(request) &&
-    !canAnonymousRequestReachHandler(request) &&
+    !isPublicRequest({
+      pathname: request.nextUrl.pathname,
+      method: request.method,
+      searchParams: request.nextUrl.searchParams,
+    }) &&
     !schemaFailureNeedsExactStatus
   ) {
     return {

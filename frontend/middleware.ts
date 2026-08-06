@@ -29,6 +29,7 @@ import {
   fetchSchemaDetail,
 } from "@/lib/server/schema-detail";
 import { updateSessionWithAuth } from "@/lib/supabase/middleware";
+import { isAnonymousExtractionBffRead } from "@/lib/supabase/public-route-policy";
 
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/([^/]+)$/;
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
@@ -150,10 +151,11 @@ export async function middleware(incomingRequest: NextRequest) {
   }
 
   const isRead = request.method === "GET" || request.method === "HEAD";
-  const isExtractionBffRead =
-    isRead &&
-    request.nextUrl.pathname === "/api/extractions" &&
-    request.nextUrl.searchParams.has("job_id");
+  const isExtractionBffRead = isAnonymousExtractionBffRead({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    searchParams: request.nextUrl.searchParams,
+  });
   if (!userId && isExtractionBffRead) {
     return finishResponse(
       NextResponse.json(
@@ -411,6 +413,8 @@ export const config = {
     "/extractions/:path*",
     "/schemas/:path*",
     "/api/schemas/:path*",
+    "/blog/admin/:path*",
+    "/publications/admin/:path*",
     "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|chunk-error-handler\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|js|css|map|txt|xml|ico)$).*)",
   ],
 };
