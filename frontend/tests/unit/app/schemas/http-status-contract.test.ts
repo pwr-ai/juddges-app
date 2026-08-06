@@ -10,6 +10,12 @@ import {
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
 } from "@/tests/support/production-build-lock";
 import {
+  cleanupProductionContractBuild,
+  prepareProductionContractBuild,
+  resolveStandaloneRuntimeBuildPath,
+  type ProductionContractBuild,
+} from "@/tests/support/production-contract-build";
+import {
   type ProductionChild,
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
   PRODUCTION_READINESS_POLL_INTERVAL_MS,
@@ -21,6 +27,9 @@ import {
 } from "@/tests/support/production-child-process";
 
 jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
+
+const SCHEMAS_CONTRACT_FILE =
+  "tests/unit/app/schemas/http-status-contract.test.ts";
 
 const ids = {
   visible: "00000000-0000-4000-8000-000000000001",
@@ -175,17 +184,10 @@ describe("schemas production HTTP/auth status matrix", () => {
       response.writeHead(404).end();
     });
 
-    const commonEnv: NodeJS.ProcessEnv = {
-      ...process.env,
-      NODE_ENV: "production",
-      NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${upstreamPort}`,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
-      BACKEND_API_KEY: "test-snapshot-secret",
-      SCHEMA_DETAIL_TIMEOUT_MS: "250",
-    };
     const nextBin = join(process.cwd(), "node_modules/next/dist/bin/next");
     let output = "";
     let productionServer: ProductionChild | undefined;
+    let contractBuild: ProductionContractBuild | undefined;
     let upstreamListening = false;
     let contractFailure: Error | undefined;
     const releaseProductionBuildLock = await acquireProductionBuildLock();
@@ -193,6 +195,16 @@ describe("schemas production HTTP/auth status matrix", () => {
     const authenticated = { Cookie: authCookie() };
 
     try {
+      contractBuild = await prepareProductionContractBuild(SCHEMAS_CONTRACT_FILE);
+      const commonEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        ...contractBuild.environment,
+        NODE_ENV: "production",
+        NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${upstreamPort}`,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
+        BACKEND_API_KEY: "test-snapshot-secret",
+        SCHEMA_DETAIL_TIMEOUT_MS: "250",
+      };
       output += await runProductionChild({
         command: process.execPath,
         args: [nextBin, "build"],
@@ -202,19 +214,28 @@ describe("schemas production HTTP/auth status matrix", () => {
         timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
       });
       cpSync(
-        join(process.cwd(), ".next/static"),
-        join(process.cwd(), ".next/standalone/frontend/.next/static"),
+        join(contractBuild.buildPath, "static"),
+        join(
+          resolveStandaloneRuntimeBuildPath(
+            contractBuild.buildPath,
+            contractBuild.buildDirectory
+          ),
+          "static"
+        ),
         { recursive: true }
       );
       cpSync(
         join(process.cwd(), "public"),
-        join(process.cwd(), ".next/standalone/frontend/public"),
+        join(contractBuild.buildPath, "standalone/frontend/public"),
         { recursive: true }
       );
 
       await listen(upstream, upstreamPort);
       upstreamListening = true;
-      const serverPath = join(process.cwd(), ".next/standalone/frontend/server.js");
+      const serverPath = join(
+        contractBuild.buildPath,
+        "standalone/frontend/server.js"
+      );
       productionServer = spawnProductionChild({
         command: process.execPath,
         args: [serverPath],
@@ -398,7 +419,7 @@ describe("schemas production HTTP/auth status matrix", () => {
       await refreshedMissing.text();
 
       const manifest = JSON.parse(
-        readFileSync(join(process.cwd(), ".next/build-manifest.json"), "utf8")
+        readFileSync(join(contractBuild.buildPath, "build-manifest.json"), "utf8")
       ) as { polyfillFiles: string[] };
       const staticAsset = await requestUntilReady(
         `${appUrl}/_next/${manifest.polyfillFiles[0]}`
@@ -425,6 +446,11 @@ describe("schemas production HTTP/auth status matrix", () => {
         } catch (error) {
           cleanupFailures.push(error);
         }
+      }
+      try {
+        await cleanupProductionContractBuild(contractBuild);
+      } catch (error) {
+        cleanupFailures.push(error);
       }
       try {
         await releaseProductionBuildLock();

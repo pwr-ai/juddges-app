@@ -14,6 +14,11 @@ const productionContracts = [
     buildDirectory: '.next-contract-extractions-detail',
     tsconfigPath: 'tsconfig.contract-extractions-detail.json',
   },
+  {
+    file: 'tests/unit/app/schemas/http-status-contract.test.ts',
+    buildDirectory: '.next-contract-schemas-detail',
+    tsconfigPath: 'tsconfig.contract-schemas-detail.json',
+  },
 ]
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
