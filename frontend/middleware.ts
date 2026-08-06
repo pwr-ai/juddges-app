@@ -2,6 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import {
+  DOCUMENT_METADATA_HEADER,
+  DOCUMENT_METADATA_SIGNATURE_HEADER,
+  VERIFIED_USER_HEADER,
+  encodeDocumentMetadataHeader,
+  isDocumentMetadata,
+  signDocumentMetadataHeader,
+} from "@/lib/documents/metadata-transport";
+import {
   EXTRACTION_SNAPSHOT_HEADER,
   EXTRACTION_SNAPSHOT_SIGNATURE_HEADER,
   EXTRACTION_VERIFIED_USER_HEADER,
@@ -29,10 +37,141 @@ import {
   fetchSchemaDetail,
 } from "@/lib/server/schema-detail";
 import { updateSessionWithAuth } from "@/lib/supabase/middleware";
-import { isAnonymousExtractionBffRead } from "@/lib/supabase/public-route-policy";
+import {
+  isAnonymousDocumentBffRead,
+  isAnonymousExtractionBffRead,
+} from "@/lib/supabase/public-route-policy";
 
+const DOCUMENT_PAGE_PATTERN = /^\/documents\/([^/]+)$/;
+const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/([^/]+)$/;
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
+
+type DocumentPreflight =
+  | { kind: "not-document" }
+  | { kind: "metadata"; value: string; documentId: string }
+  | { kind: "response"; response: NextResponse };
+
+function documentStatusResponse(status: number): NextResponse {
+  const notFound = status === 404;
+  const title = notFound
+    ? "Document not found"
+    : "Document temporarily unavailable";
+  const message = notFound
+    ? "The requested document does not exist or is not accessible."
+    : "The service could not load this judgment. Please try again.";
+  const retry = notFound ? "" : '<a href="">Try again</a>';
+  return new NextResponse(
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title}</title></head>` +
+      `<body><main><p>Document service ${status}</p><h1>${title}</h1>` +
+      `<p>${message}</p>${retry}</main></body></html>`,
+    {
+      status,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "private, no-store",
+      },
+    }
+  );
+}
+
+function metadataTimeoutMs(): number {
+  const configured = Number(process.env.DOCUMENT_METADATA_TIMEOUT_MS ?? 10_000);
+  return Number.isFinite(configured) && configured > 0 ? configured : 10_000;
+}
+
+function isDocumentTimeout(error: unknown, signal: AbortSignal): boolean {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "TimeoutError"
+  ) {
+    return true;
+  }
+  return (
+    signal.aborted &&
+    typeof signal.reason === "object" &&
+    signal.reason !== null &&
+    "name" in signal.reason &&
+    signal.reason.name === "TimeoutError"
+  );
+}
+
+async function preflightDocumentPage(
+  request: NextRequest,
+  userId: string
+): Promise<DocumentPreflight> {
+  const match = DOCUMENT_PAGE_PATTERN.exec(request.nextUrl.pathname);
+  if (!match) return { kind: "not-document" };
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return {
+      kind: "response",
+      response: NextResponse.json(
+        { error: "METHOD_NOT_ALLOWED", message: "Method not allowed" },
+        { status: 405, headers: { Allow: "GET, HEAD" } }
+      ),
+    };
+  }
+
+  let documentId: string;
+  try {
+    documentId = decodeURIComponent(match[1]);
+  } catch {
+    return { kind: "response", response: documentStatusResponse(404) };
+  }
+  if (!DOCUMENT_ID_PATTERN.test(documentId)) {
+    return { kind: "response", response: documentStatusResponse(404) };
+  }
+
+  const timeoutSignal = AbortSignal.timeout(metadataTimeoutMs());
+  try {
+    const response = await fetch(
+      `${getBackendUrl()}/documents/${encodeURIComponent(documentId)}/metadata`,
+      {
+        headers: {
+          Accept: "application/json",
+          "X-API-Key": process.env.BACKEND_API_KEY ?? "",
+          "X-User-ID": userId,
+        },
+        cache: "no-store",
+        signal: timeoutSignal,
+      }
+    );
+
+    if (response.status === 404 || response.status === 403) {
+      return { kind: "response", response: documentStatusResponse(404) };
+    }
+    if (!response.ok) {
+      const status = response.status >= 500 ? response.status : 502;
+      return { kind: "response", response: documentStatusResponse(status) };
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      return { kind: "response", response: documentStatusResponse(502) };
+    }
+    if (!isDocumentMetadata(payload) || payload.document_id !== documentId) {
+      return { kind: "response", response: documentStatusResponse(502) };
+    }
+
+    return {
+      kind: "metadata",
+      value: await encodeDocumentMetadataHeader(payload),
+      documentId,
+    };
+  } catch (error) {
+    return {
+      kind: "response",
+      response: documentStatusResponse(
+        isDocumentTimeout(error, timeoutSignal) ? 504 : 503
+      ),
+    };
+  }
+}
 
 function extractionStatusResponse(
   status: number,
@@ -151,6 +290,88 @@ export async function middleware(incomingRequest: NextRequest) {
   }
 
   const isRead = request.method === "GET" || request.method === "HEAD";
+  const isDocumentBffRead = isAnonymousDocumentBffRead({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+  });
+  if (!userId && isDocumentBffRead) {
+    const status = authFailure === "unavailable" ? 503 : 401;
+    return finishResponse(
+      new NextResponse(
+        request.method === "HEAD"
+          ? null
+          : JSON.stringify(
+              status === 503
+                ? {
+                    error: "DATABASE_UNAVAILABLE",
+                    code: "DATABASE_UNAVAILABLE",
+                    message: "Authentication service is temporarily unavailable.",
+                  }
+                : {
+                    error: "UNAUTHORIZED",
+                    code: "UNAUTHORIZED",
+                    message: "Authentication required",
+                  }
+            ),
+        {
+          status,
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "private, no-store",
+          },
+        }
+      ),
+      sessionResponse,
+      locale,
+      localeNeedsWrite
+    );
+  }
+
+  const documentMatch = DOCUMENT_PAGE_PATTERN.exec(request.nextUrl.pathname);
+  if (documentMatch && !userId && authFailure === "unavailable") {
+    return finishResponse(
+      documentStatusResponse(503),
+      sessionResponse,
+      locale,
+      localeNeedsWrite
+    );
+  }
+
+  if (userId) {
+    const preflight = await preflightDocumentPage(request, userId);
+    if (preflight.kind === "response") {
+      return finishResponse(
+        preflight.response,
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+    if (preflight.kind === "metadata") {
+      const headers = new Headers(request.headers);
+      headers.delete(DOCUMENT_METADATA_HEADER);
+      headers.delete(DOCUMENT_METADATA_SIGNATURE_HEADER);
+      headers.delete(VERIFIED_USER_HEADER);
+      headers.set(DOCUMENT_METADATA_HEADER, preflight.value);
+      headers.set(
+        DOCUMENT_METADATA_SIGNATURE_HEADER,
+        await signDocumentMetadataHeader(
+          preflight.value,
+          userId,
+          preflight.documentId,
+          process.env.BACKEND_API_KEY ?? ""
+        )
+      );
+      headers.set(VERIFIED_USER_HEADER, userId);
+      return finishResponse(
+        NextResponse.next({ request: { headers } }),
+        sessionResponse,
+        locale,
+        localeNeedsWrite
+      );
+    }
+  }
+
   const isExtractionBffRead = isAnonymousExtractionBffRead({
     pathname: request.nextUrl.pathname,
     method: request.method,
@@ -410,6 +631,7 @@ export async function middleware(incomingRequest: NextRequest) {
 
 export const config = {
   matcher: [
+    "/documents/:path*",
     "/extractions/:path*",
     "/collections/:path*",
     "/schemas/:path*",

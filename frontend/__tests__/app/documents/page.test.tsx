@@ -47,7 +47,7 @@ jest.mock('dompurify', () => ({
   },
 }));
 
-import DocumentPage from '@/app/documents/[id]/page';
+import { DocumentPageClient } from '@/app/documents/[id]/_components/DocumentPageClient';
 
 describe('DocumentPage public AI actions', () => {
   beforeEach(() => {
@@ -86,11 +86,26 @@ describe('DocumentPage public AI actions', () => {
   });
 
   it('shows sign-in prompts instead of protected AI action buttons for anonymous users', async () => {
-    render(<DocumentPage />);
+    render(
+      <DocumentPageClient
+        documentId="doc-1"
+        initialMetadata={{
+          document_id: 'doc-1',
+          document_type: 'judgment',
+          language: 'en',
+          title: 'Test judgment',
+        }}
+      />
+    );
 
     await waitFor(() => {
       expect(screen.getAllByText('Test judgment').length).toBeGreaterThan(0);
     });
+
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      '/api/documents/doc-1/metadata',
+      expect.anything()
+    );
 
     expect(screen.getAllByRole('link', { name: /Sign in/i }).length).toBeGreaterThan(0);
     expect(

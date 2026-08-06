@@ -159,6 +159,58 @@ describe("Supabase middleware public route policy", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("lets only exact anonymous document metadata reads reach the JSON handler", async () => {
+    const exact = await updateSession(
+      new NextRequest("http://localhost/api/documents/doc-1/metadata"),
+    );
+    const exactHead = await updateSession(
+      new NextRequest("http://localhost/api/documents/doc-1/metadata", {
+        method: "HEAD",
+      }),
+    );
+    const wrongMethod = await updateSession(
+      new NextRequest("http://localhost/api/documents/doc-1/metadata", {
+        method: "POST",
+      }),
+    );
+    const nested = await updateSession(
+      new NextRequest("http://localhost/api/documents/doc-1/metadata/nested"),
+    );
+
+    expect(exact.status).toBe(200);
+    expect(exact.headers.get("location")).toBeNull();
+    expect(exactHead.status).toBe(200);
+    expect(exactHead.headers.get("location")).toBeNull();
+    expect(wrongMethod.status).toBe(307);
+    expect(nested.status).toBe(307);
+  });
+
+  it("strips forged document proof headers and preserves the method", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "owner-1" } },
+      error: null,
+    });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/documents/doc-1", {
+        method: "DELETE",
+        headers: {
+          "x-juddges-document-metadata": "spoofed",
+          "x-juddges-document-metadata-signature": "forged",
+          "x-juddges-verified-user-id": "attacker",
+        },
+      }),
+    );
+
+    expect(result.request.method).toBe("DELETE");
+    expect(result.request.headers.get("x-juddges-document-metadata")).toBeNull();
+    expect(
+      result.request.headers.get("x-juddges-document-metadata-signature"),
+    ).toBeNull();
+    expect(result.request.headers.get("x-juddges-verified-user-id")).toBeNull();
+    expect(result.userId).toBe("owner-1");
+  });
+
   it("rewrites an authenticated missing collection to an exact HTTP 404", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -575,6 +627,38 @@ describe("Supabase middleware public route policy", () => {
     );
     expect(result.response.status).toBe(200);
     expect(result.authFailure).toBe("unavailable");
+  });
+
+  it("keeps operational auth failures distinct for the exact document page", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { status: 503, message: "auth service unavailable" },
+    });
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/documents/visible-doc"),
+    );
+
+    expect(result.response.status).toBe(200);
+    expect(result.response.headers.get("location")).toBeNull();
+    expect(result.authFailure).toBe("unavailable");
+  });
+
+  it.each([
+    ["bad_jwt", { code: "bad_jwt", message: "invalid bearer token" }],
+    ["invalid_credentials", { code: "invalid_credentials", message: "invalid credentials" }],
+    ["no_authorization", { code: "no_authorization", message: "authorization missing" }],
+    ["status 401", { status: 401, message: "invalid bearer token" }],
+    ["status 403", { status: 403, message: "credential rejected" }],
+  ])("treats %s as an anonymous document session", async (_label, error) => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error });
+
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/documents/visible-doc"),
+    );
+
+    expect(result.response.status).toBe(307);
+    expect(result.response.headers.get("location")).toContain("/auth/login");
+    expect(result.authFailure).toBe("unauthenticated");
   });
 
   it("clears schema auth state when the session lookup throws", async () => {

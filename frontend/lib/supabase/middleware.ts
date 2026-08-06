@@ -10,6 +10,11 @@ import {
   isValidCollectionId,
 } from "@/lib/collections/detail-contract";
 import {
+  DOCUMENT_METADATA_HEADER,
+  DOCUMENT_METADATA_SIGNATURE_HEADER,
+  VERIFIED_USER_HEADER,
+} from "@/lib/documents/metadata-transport";
+import {
   EXTRACTION_SNAPSHOT_HEADER,
   EXTRACTION_SNAPSHOT_SIGNATURE_HEADER,
   EXTRACTION_VERIFIED_USER_HEADER,
@@ -35,6 +40,8 @@ const COLLECTION_DETAIL_PATH = /^\/collections\/([^/]+)$/;
 const DEFAULT_COLLECTION_PREFLIGHT_TIMEOUT_MS = 10_000;
 const CHAT_PAGE_LOOKUP_TIMEOUT_MS = 8_000;
 const CHAT_PAGE_PREFIX = "/chat/";
+const DOCUMENT_PAGE_PATTERN = /^\/documents\/([^/]+)$/;
+const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
 const EXTRACTION_DETAIL_PATTERN = /^\/extractions\/[^/]+$/;
 const SCHEMA_PAGE_PATTERN = /^\/schemas\/([^/]+)$/;
 
@@ -62,6 +69,9 @@ function sanitizedRequestHeaders(
   const headers = new Headers(request.headers);
   headers.delete(OWNED_CHAT_ID_HEADER);
   headers.delete(COLLECTION_SNAPSHOT_HEADER);
+  headers.delete(DOCUMENT_METADATA_HEADER);
+  headers.delete(DOCUMENT_METADATA_SIGNATURE_HEADER);
+  headers.delete(VERIFIED_USER_HEADER);
   headers.delete(EXTRACTION_SNAPSHOT_HEADER);
   headers.delete(EXTRACTION_SNAPSHOT_SIGNATURE_HEADER);
   headers.delete(EXTRACTION_VERIFIED_USER_HEADER);
@@ -131,6 +141,17 @@ function isSchemaPage(request: NextRequest): boolean {
   if (!match) return false;
   try {
     return isCanonicalSchemaId(decodeURIComponent(match[1]));
+  } catch {
+    return false;
+  }
+}
+
+function isExactDocumentPage(request: NextRequest): boolean {
+  if (!isReadRequest(request)) return false;
+  const match = DOCUMENT_PAGE_PATTERN.exec(request.nextUrl.pathname);
+  if (!match) return false;
+  try {
+    return DOCUMENT_ID_PATTERN.test(decodeURIComponent(match[1]));
   } catch {
     return false;
   }
@@ -309,6 +330,8 @@ export async function updateSessionWithAuth(
   const schemaFailureNeedsExactStatus =
     authFailure === "unavailable" &&
     (schemaReadApi || isSchemaPage(request));
+  const documentFailureNeedsExactStatus =
+    authFailure === "unavailable" && isExactDocumentPage(request);
 
   if (authFailure === "unavailable" && isExactChatPageRequest(request)) {
     return {
@@ -509,7 +532,8 @@ export async function updateSessionWithAuth(
       method: request.method,
       searchParams: request.nextUrl.searchParams,
     }) &&
-    !schemaFailureNeedsExactStatus
+    !schemaFailureNeedsExactStatus &&
+    !documentFailureNeedsExactStatus
   ) {
     return {
       response: loginRedirect(request, supabaseResponse),

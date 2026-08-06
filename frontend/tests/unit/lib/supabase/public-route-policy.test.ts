@@ -214,6 +214,39 @@ describe('isPublicRequest', () => {
     },
   );
 
+  it.each(['GET', 'HEAD'])(
+    'allows exact document metadata BFF %s',
+    (method) => {
+      expect(
+        isPublicRequest({
+          pathname: '/api/documents/visible-doc/metadata',
+          method,
+        }),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    '/api/documents/visible-doc/metadata/',
+    '/api/documents/visible-doc/metadata/nested',
+    '/api/documents/nested/visible-doc/metadata',
+    '/api/documents//metadata',
+  ])('protects document metadata BFF lookalike %s', (pathname) => {
+    expect(isPublicRequest({ pathname, method: 'GET' })).toBe(false);
+  });
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
+    'protects document metadata BFF method %s',
+    (method) => {
+      expect(
+        isPublicRequest({
+          pathname: '/api/documents/visible-doc/metadata',
+          method,
+        }),
+      ).toBe(false);
+    },
+  );
+
   it.each([
     ['POST', '/api/health/invalidate'],
     ['POST', '/contact'],
