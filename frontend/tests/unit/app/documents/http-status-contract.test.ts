@@ -12,6 +12,12 @@ import {
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
 } from '@/tests/support/production-build-lock';
 import {
+  cleanupProductionContractBuild,
+  prepareProductionContractBuild,
+  type ProductionContractBuild,
+  resolveStandaloneRuntimeBuildPath,
+} from '@/tests/support/production-contract-build';
+import {
   type ProductionChild,
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
   PRODUCTION_READINESS_POLL_INTERVAL_MS,
@@ -23,6 +29,9 @@ import {
 } from '@/tests/support/production-child-process';
 
 jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
+
+const DOCUMENTS_CONTRACT_FILE =
+  'tests/unit/app/documents/http-status-contract.test.ts';
 
 async function reservePort(): Promise<number> {
   const server = createNetServer();
@@ -148,21 +157,11 @@ describe('documents production HTTP/auth status matrix', () => {
       }));
     });
 
-    const commonEnv: NodeJS.ProcessEnv = {
-      ...process.env,
-      NODE_ENV: 'production',
-      NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${upstreamPort}`,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-      API_BASE_URL: `http://127.0.0.1:${upstreamPort}`,
-      BACKEND_API_KEY: 'test-backend-key',
-      DOCUMENT_METADATA_TIMEOUT_MS: '50',
-    };
-    const nextBin = join(process.cwd(), 'node_modules/next/dist/bin/next');
     let releaseProductionBuildLock: (() => Promise<void>) | undefined;
+    let contractBuild: ProductionContractBuild | undefined;
     let productionServer: ProductionChild | undefined;
     let upstreamListening = false;
     let output = '';
-    const serverPath = join(process.cwd(), '.next/standalone/frontend/server.js');
     const appUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authenticatedCookie() };
     const forgedMetadata = Buffer.from(JSON.stringify({
@@ -174,6 +173,21 @@ describe('documents production HTTP/auth status matrix', () => {
 
     try {
       releaseProductionBuildLock = await acquireProductionBuildLock();
+      contractBuild = await prepareProductionContractBuild(
+        DOCUMENTS_CONTRACT_FILE
+      );
+      const commonEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        ...contractBuild.environment,
+        NODE_ENV: 'production',
+        NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${upstreamPort}`,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+        API_BASE_URL: `http://127.0.0.1:${upstreamPort}`,
+        BACKEND_API_KEY: 'test-backend-key',
+        DOCUMENT_METADATA_TIMEOUT_MS: '50',
+        NEXT_TELEMETRY_DISABLED: '1',
+      };
+      const nextBin = join(process.cwd(), 'node_modules/next/dist/bin/next');
       output += await runProductionChild({
         command: process.execPath,
         args: [nextBin, 'build'],
@@ -185,13 +199,19 @@ describe('documents production HTTP/auth status matrix', () => {
       // Next's standalone artifact intentionally omits static/public files; the
       // production image copies both alongside server.js, so mirror that layout.
       cpSync(
-        join(process.cwd(), '.next/static'),
-        join(process.cwd(), '.next/standalone/frontend/.next/static'),
+        join(contractBuild.buildPath, 'static'),
+        join(
+          resolveStandaloneRuntimeBuildPath(
+            contractBuild.buildPath,
+            contractBuild.buildDirectory
+          ),
+          'static'
+        ),
         { recursive: true }
       );
       cpSync(
         join(process.cwd(), 'public'),
-        join(process.cwd(), '.next/standalone/frontend/public'),
+        join(contractBuild.buildPath, 'standalone/frontend/public'),
         { recursive: true }
       );
 
@@ -199,7 +219,7 @@ describe('documents production HTTP/auth status matrix', () => {
       upstreamListening = true;
       productionServer = spawnProductionChild({
         command: process.execPath,
-        args: [serverPath],
+        args: [join(contractBuild.buildPath, 'standalone/frontend/server.js')],
         label: 'Next standalone production server',
         cwd: process.cwd(),
         env: { ...commonEnv, PORT: String(appPort), HOSTNAME: '127.0.0.1' },
@@ -295,7 +315,7 @@ describe('documents production HTTP/auth status matrix', () => {
       }
 
       const buildManifest = JSON.parse(
-        readFileSync(join(process.cwd(), '.next/build-manifest.json'), 'utf8')
+        readFileSync(join(contractBuild.buildPath, 'build-manifest.json'), 'utf8')
       ) as { polyfillFiles: string[] };
       const staticAsset = await requestUntilReady(
         `${appUrl}/_next/${buildManifest.polyfillFiles[0]}`
@@ -340,21 +360,30 @@ describe('documents production HTTP/auth status matrix', () => {
         `Production status matrix failed: ${String(error)}\nRequests: ${upstreamRequests.join(', ')}\n${output}${productionServer?.output() ?? ''}`
       );
     } finally {
-      const cleanupResults = await Promise.allSettled([
-        stopProductionChild(productionServer),
-        upstreamListening
-          ? (async () => {
-              upstream.closeAllConnections();
-              await close(upstream);
-            })()
-          : Promise.resolve(),
-      ]);
-      const lockResults = await Promise.allSettled([
-        releaseProductionBuildLock?.() ?? Promise.resolve(),
-      ]);
-      const cleanupFailures = [...cleanupResults, ...lockResults].flatMap(
-        (result) => (result.status === 'rejected' ? [result.reason] : [])
-      );
+      const cleanupFailures: unknown[] = [];
+      try {
+        await stopProductionChild(productionServer);
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
+      try {
+        if (upstreamListening) {
+          upstream.closeAllConnections();
+          await close(upstream);
+        }
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
+      try {
+        await cleanupProductionContractBuild(contractBuild);
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
+      try {
+        await releaseProductionBuildLock?.();
+      } catch (error) {
+        cleanupFailures.push(error);
+      }
       if (cleanupFailures.length > 0) {
         throw new AggregateError(
           cleanupFailures,
