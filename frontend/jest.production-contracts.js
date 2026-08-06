@@ -15,6 +15,11 @@ const productionContracts = [
     tsconfigPath: 'tsconfig.contract-extractions-detail.json',
   },
   {
+    file: 'tests/unit/app/schemas/http-status-contract.test.ts',
+    buildDirectory: '.next-contract-schemas-detail',
+    tsconfigPath: 'tsconfig.contract-schemas-detail.json',
+  },
+  {
     file: 'tests/unit/app/documents/http-status-contract.test.ts',
     buildDirectory: '.next-contract-documents-detail',
     tsconfigPath: 'tsconfig.contract-documents-detail.json',

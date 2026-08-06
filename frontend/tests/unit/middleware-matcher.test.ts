@@ -17,7 +17,9 @@ describe('middleware matcher security boundaries', () => {
     '/blog/admin/nested/draft.css',
     '/publications/admin/secret.txt',
     '/publications/admin/nested/draft.js',
-  ])('runs middleware for protected asset-like admin route %s', (pathname) => {
+    '/schemas/abcdef01-1234-4abc-8def-1234567890ab.css',
+    '/api/schemas/abcdef01-1234-4abc-8def-1234567890ab.css',
+  ])('runs middleware for protected asset-like route %s', (pathname) => {
     expect(doesMiddlewareMatch(pathname)).toBe(true);
   });
 
