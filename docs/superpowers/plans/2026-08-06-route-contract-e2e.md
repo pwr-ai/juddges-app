@@ -14,7 +14,9 @@
 
 **Files:**
 - Create: `frontend/playwright.route-contract.config.ts`
+- Create: `frontend/scripts/prepare-route-contract-standalone.mjs`
 - Create: `frontend/tests/route-contract-e2e/stub-services.mjs`
+- Create: `frontend/tests/unit/test-harness/route-contract-harness.test.ts`
 - Modify: `frontend/package.json`
 
 - [ ] **Step 1: Write the failing project discovery check**
@@ -46,12 +48,16 @@ webServer: [
     stderr: "pipe",
   },
   {
-    command: "npm start",
-    url: "http://127.0.0.1:3006/__route-contract-ready",
+    command: "npm run start:e2e:route-contract",
+    url: "http://127.0.0.1:3006",
     reuseExistingServer: false,
     timeout: 60_000,
     stdout: "pipe",
     stderr: "pipe",
+    env: {
+      PORT: "3006",
+      HOSTNAME: "127.0.0.1",
+    },
   },
 ]
 ```
@@ -77,13 +83,22 @@ Scenario IDs must return deterministic 200/404/422/429/503 responses. Log only
 method and parsed pathname/query; never log cookies or Authorization headers.
 Exit non-zero on bind errors and close cleanly on SIGTERM/SIGINT.
 
-- [ ] **Step 4: Add the explicit npm command**
+- [ ] **Step 4: Add the explicit npm lifecycle**
 
 Add:
 
 ```json
+"prepare:e2e:route-contract": "node scripts/prepare-route-contract-standalone.mjs",
+"pretest:e2e:route-contract": "npm run prepare:e2e:route-contract",
+"start:e2e:route-contract": "node .next/standalone/frontend/server.js",
+"lint:route-contract-harness": "eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e",
 "test:e2e:route-contract": "playwright test --config=playwright.route-contract.config.ts --max-failures=1"
 ```
+
+The preparation script copies `public/` and `.next/static/` into
+`.next/standalone/frontend/` after the production build. Include the targeted
+harness lint command in `npm run validate`, with only narrow inline exemptions
+for intentional child-process diagnostics.
 
 - [ ] **Step 5: Verify project discovery and adapter readiness**
 
@@ -125,11 +140,14 @@ async function expectWireStatus(request: APIRequestContext, method: string, path
 ```
 
 For page cases, call `page.goto` and compare `response.status()` with strict
-equality. For redirects and methods, call `request.fetch` with `maxRedirects:
-0`. Assert exact `Location`, `Allow`, JSON/content type, empty HEAD bodies, final
-browser URL, adapter method/path, and call count. Assert zero domain reads for
-anonymous, invalid-session, auth-outage, unknown-route, and unsupported-method
-cases.
+equality. Cover authenticated known chat, collection, document, schema, and
+extraction pages with route-specific response content and exact adapter
+method/path/query/count proof. Use a JavaScript-disabled Chromium context for
+this server-rendering matrix so hydration cannot duplicate reads. For redirects
+and methods, call `request.fetch` with `maxRedirects: 0`. Assert exact
+`Location`, `Allow`, JSON/content type, empty HEAD bodies, final browser URL,
+adapter method/path, and call count. Assert zero domain reads for anonymous,
+invalid-session, auth-outage, unknown-route, and unsupported-method cases.
 
 - [ ] **Step 2: Run against the production build to verify failure**
 

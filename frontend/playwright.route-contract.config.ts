@@ -38,7 +38,7 @@ export default defineConfig({
       stderr: 'pipe',
     },
     {
-      command: 'npm start',
+      command: 'npm run start:e2e:route-contract',
       url: FRONTEND_BASE_URL,
       reuseExistingServer: false,
       timeout: 60_000,
@@ -51,6 +51,8 @@ export default defineConfig({
         NEXT_PUBLIC_API_BASE_URL: STUB_BASE_URL,
         API_BASE_URL: STUB_BASE_URL,
         BACKEND_API_KEY: 'route-contract-backend-key',
+        PORT: '3006',
+        HOSTNAME: '127.0.0.1',
       },
     },
   ],

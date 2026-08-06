@@ -9,11 +9,13 @@ contracts without real credentials or external services.
 ## Architecture
 
 The gate builds Next.js once with both public service URLs pointing at a local
-loopback adapter. A dedicated Playwright config starts that adapter and the
-production Next server, selects only `tests/route-contract-e2e`, uses one worker
-with no retries, and blocks service workers. This keeps the test independent of
-the real-auth setup and prevents the application service worker from
-manufacturing a false-positive 503.
+loopback adapter. Before Playwright starts, a preparation script copies
+`public/` and `.next/static/` into Next's standalone output. A dedicated
+Playwright config then starts that adapter and the generated
+`.next/standalone/frontend/server.js`, selects only
+`tests/route-contract-e2e`, uses one worker with no retries, and blocks service
+workers. This keeps the test independent of the real-auth setup and prevents
+the application service worker from manufacturing a false-positive 503.
 
 The adapter implements only the Supabase auth/REST and backend endpoints used by
 the selected route matrix. Scenario IDs and synthetic session cookies select
@@ -26,7 +28,7 @@ to `127.0.0.1` and never reads repository secrets.
 
 | Area | Request | Expected wire result | Additional proof |
 |---|---|---:|---|
-| Dynamic owner page | authenticated known extraction | 200 | expected adapter read |
+| Dynamic owner pages | authenticated known chat, collection, document, schema, extraction | 200 | route-specific response content and exactly one matching adapter read |
 | Dynamic missing pages | authenticated chat, collection, document, schema, extraction misses | 404 | route-specific adapter read, not a generic Next miss |
 | Upstream preservation | authenticated extraction scenarios returning 404, 422, 429, 503 | same status | exactly one matching adapter call |
 | Unknown route | authenticated `GET /__route-contract-missing` | 404 | zero domain adapter reads |
@@ -47,17 +49,21 @@ down: adapter logs and response content are part of the assertion.
 - `frontend/tests/route-contract-e2e/stub-services.mjs`: loopback Supabase/backend adapter, scenario fixtures, readiness/control endpoints, sanitized request log.
 - `frontend/tests/route-contract-e2e/route-status.spec.ts`: exact browser and HTTP contract matrix.
 - `frontend/playwright.route-contract.config.ts`: isolated single-project lifecycle and safety settings.
-- `frontend/package.json`: one explicit command for the route-contract project.
+- `frontend/scripts/prepare-route-contract-standalone.mjs`: stages static and public assets beside the generated standalone server.
+- `frontend/tests/unit/test-harness/route-contract-harness.test.ts`: locks the standalone and lint lifecycle in a focused Jest contract.
+- `frontend/package.json`: explicit preparation, standalone start, lint, and test commands for the route-contract project.
 - `.github/workflows/ci.yml`: a bounded PR job that installs, builds with loopback URLs, runs the project, and uploads diagnostics on failure.
 
 ## CI Lifecycle
 
 The job runs in the repository-pinned Playwright image, installs with `npm ci`,
-builds with fixed loopback public URLs, and then executes the dedicated script.
-Playwright owns both web servers and terminates them on completion. The job has
-a hard timeout and uploads the Playwright report, test results, and sanitized
-adapter/server logs on failure. The existing UI smoke job and manual full
-browser matrix remain unchanged.
+builds with fixed loopback public URLs, stages the standalone runtime through
+the npm pre-script, and then executes the dedicated test script. Playwright
+owns both web servers and terminates them on completion. The checked-in harness
+sources are part of `npm run validate`. The job has a hard timeout and uploads
+the Playwright report, test results, and sanitized adapter/server logs on
+failure. The existing UI smoke job and manual full browser matrix remain
+unchanged.
 
 ## Non-goals
 
