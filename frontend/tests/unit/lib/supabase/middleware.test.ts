@@ -373,10 +373,6 @@ describe("Supabase middleware public route policy", () => {
     );
     expect(snapshot).toBeTruthy();
     expect(snapshot).not.toBe("spoofed");
-    expect(decodeCollectionSnapshot(snapshot, "secret.txt")).toMatchObject({
-      id: "secret.txt",
-      user_id: "user-1",
-    });
   });
 
   it("strips a forged snapshot and preflights an owned asset-like collection ID", async () => {
@@ -416,6 +412,10 @@ describe("Supabase middleware public route policy", () => {
     );
     expect(snapshot).toBeTruthy();
     expect(snapshot).not.toBe("spoofed");
+    expect(decodeCollectionSnapshot(snapshot, "secret.txt")).toMatchObject({
+      id: "secret.txt",
+      user_id: "user-1",
+    });
   });
 
   it("preflights only the exact collection detail shape", async () => {
