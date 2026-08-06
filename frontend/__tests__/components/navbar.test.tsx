@@ -38,12 +38,21 @@ jest.mock('next/navigation', () => ({
 // Mock AuthContext
 const mockUser = { id: 'user-1', email: 'test@example.com' };
 let currentUser: typeof mockUser | null = null;
+let currentCollectionDetail: { id: string; name: string; description?: string } | null = null;
+const mockSetCollectionDetail = jest.fn();
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: currentUser,
     loading: false,
     signOut: jest.fn(),
+  }),
+}));
+
+jest.mock('@/contexts/CollectionDetailContext', () => ({
+  useCollectionDetail: () => ({
+    collectionDetail: currentCollectionDetail,
+    setCollectionDetail: mockSetCollectionDetail,
   }),
 }));
 
@@ -100,7 +109,9 @@ jest.mock('sonner', () => ({
 }));
 
 jest.mock('next/link', () => {
-  return ({ children, href, ...props }: any) => <a href={href} {...props}>{children}</a>;
+  return function MockLink({ children, href, ...props }: any) {
+    return <a href={href} {...props}>{children}</a>;
+  };
 });
 
 // Mock lucide-react icons
@@ -126,6 +137,7 @@ beforeEach(() => {
   mockParams = {};
   mockSearchParamsMap = new URLSearchParams();
   currentUser = null;
+  currentCollectionDetail = null;
   mockSearchType = 'standard';
   global.fetch = jest.fn().mockResolvedValue({
     ok: false,
@@ -305,12 +317,14 @@ describe('Navbar', () => {
       mockParams = { id: 'col-1' };
     });
 
-    it('fetches collection data on mount', () => {
+    it('uses hydrated collection data without issuing a duplicate detail read', () => {
+      currentCollectionDetail = {
+        id: 'col-1',
+        name: 'Hydrated collection',
+      };
       render(<Navbar />);
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/collections/col-1',
-        expect.objectContaining({ cache: 'no-store' })
-      );
+      expect(screen.getByText('Hydrated collection')).toBeInTheDocument();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 

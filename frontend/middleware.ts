@@ -633,6 +633,7 @@ export const config = {
   matcher: [
     "/documents/:path*",
     "/extractions/:path*",
+    "/collections/:path*",
     "/schemas/:path*",
     "/api/schemas/:path*",
     "/blog/admin/:path*",
