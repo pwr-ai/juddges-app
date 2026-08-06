@@ -68,6 +68,16 @@ function resolveContractArtifactPaths(contract: ProductionContractDefinition): {
   return { buildPath, tsconfigAbsolutePath };
 }
 
+function registeredContract(contractFile: string): ProductionContractDefinition {
+  const contract = registry.productionContracts.find(
+    (candidate) => candidate.file === contractFile,
+  );
+  if (!contract) {
+    throw new Error(`Unregistered production contract: ${contractFile}`);
+  }
+  return contract;
+}
+
 export function resolveStandaloneRuntimeBuildPath(
   buildPath: string,
   buildDirectory: string,
@@ -78,12 +88,7 @@ export function resolveStandaloneRuntimeBuildPath(
 export async function prepareProductionContractBuild(
   contractFile: string,
 ): Promise<ProductionContractBuild> {
-  const contract = registry.productionContracts.find(
-    (candidate) => candidate.file === contractFile,
-  );
-  if (!contract) {
-    throw new Error(`Unregistered production contract: ${contractFile}`);
-  }
+  const contract = registeredContract(contractFile);
 
   const { buildPath, tsconfigAbsolutePath } =
     resolveContractArtifactPaths(contract);
@@ -121,6 +126,16 @@ export async function cleanupProductionContractBuild(
   build: ProductionContractBuild | undefined,
 ): Promise<void> {
   if (!build) return;
-  await rm(build.buildPath, { recursive: true, force: true });
-  await rm(build.tsconfigAbsolutePath, { force: true });
+  const contract = registeredContract(build.file);
+  const expected = resolveContractArtifactPaths(contract);
+  if (
+    build.buildDirectory !== contract.buildDirectory ||
+    build.tsconfigPath !== contract.tsconfigPath ||
+    build.buildPath !== expected.buildPath ||
+    build.tsconfigAbsolutePath !== expected.tsconfigAbsolutePath
+  ) {
+    throw new Error(`Unsafe production contract cleanup: ${build.file}`);
+  }
+  await rm(expected.buildPath, { recursive: true, force: true });
+  await rm(expected.tsconfigAbsolutePath, { force: true });
 }

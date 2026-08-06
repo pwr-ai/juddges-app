@@ -29,7 +29,7 @@ describe('production contract artifact ignores', () => {
     const patterns = readFileSync(resolve('.gitignore'), 'utf8').split(/\r?\n/);
 
     for (const expected of EXPECTED_PATTERNS) {
-      expect(patterns).toContain(expected);
+      expect(patterns.filter((pattern) => pattern === expected)).toHaveLength(1);
     }
   });
 

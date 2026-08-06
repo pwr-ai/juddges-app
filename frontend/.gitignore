@@ -12,9 +12,6 @@
 
 # testing
 /coverage
-/.next-contract-*/
-/tsconfig.contract-*.json
-/.next-production-build.lock/
 
 # next.js
 /.next/
