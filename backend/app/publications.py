@@ -168,6 +168,23 @@ class LinkExtractionJobRequest(BaseModel):
         return validate_id_format(v, "job_id")
 
 
+def _extract_job_status(link: dict) -> str | None:
+    """Pull the job status out of a publication_extraction_jobs row.
+
+    ``status`` lives on the nested ``extraction_jobs`` table, not on the
+    junction row, so it arrives as an embedded PostgREST resource. Embeds
+    come back as a dict for a to-one relationship and as a list when
+    PostgREST resolves the relationship as to-many, so accept both. A link
+    pointing at a deleted job embeds ``None`` and yields ``None``.
+    """
+    embedded = link.get("extraction_jobs")
+    if isinstance(embedded, list):
+        embedded = embedded[0] if embedded else None
+    if not isinstance(embedded, dict):
+        return None
+    return embedded.get("status")
+
+
 def transform_publication(data: dict) -> PublicationWithResources:
     """Transform database response to PublicationWithResources model."""
     schemas = []
@@ -198,6 +215,7 @@ def transform_publication(data: dict) -> PublicationWithResources:
             extraction_jobs.append(
                 ExtractionJobLink(
                     job_id=pj["job_id"],
+                    job_status=_extract_job_status(pj),
                     description=pj.get("description"),
                     created_at=pj.get("created_at"),
                 )
