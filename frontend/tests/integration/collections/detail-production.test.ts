@@ -3,6 +3,7 @@
  */
 
 import { createServer, type Server } from "node:http";
+import { cpSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -12,6 +13,7 @@ import {
 import {
   cleanupProductionContractBuild,
   prepareProductionContractBuild,
+  resolveStandaloneRuntimeBuildPath,
   type ProductionContractBuild,
 } from "@/tests/support/production-contract-build";
 import {
@@ -225,6 +227,22 @@ describe("collection detail production status contract", () => {
         env: productionEnvironment,
         timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
       });
+      cpSync(
+        join(contractBuild.buildPath, "static"),
+        join(
+          resolveStandaloneRuntimeBuildPath(
+            contractBuild.buildPath,
+            contractBuild.buildDirectory
+          ),
+          "static"
+        ),
+        { recursive: true }
+      );
+      cpSync(
+        join(process.cwd(), "public"),
+        join(contractBuild.buildPath, "standalone/frontend/public"),
+        { recursive: true }
+      );
       const appServer = createServer();
       const nextPort = await listen(appServer);
       await close(appServer);
@@ -250,6 +268,12 @@ describe("collection detail production status contract", () => {
       const owned = await requestUntilReady(
         `${baseUrl}/collections/${OWN_COLLECTION_ID}`,
         cookie
+      );
+      const manifest = JSON.parse(
+        readFileSync(join(contractBuild.buildPath, "build-manifest.json"), "utf8")
+      ) as { polyfillFiles: string[] };
+      const asset = await contractFetch(
+        `${baseUrl}/_next/${manifest.polyfillFiles[0]}`
       );
       const missing = await contractFetch(
         `${baseUrl}/collections/${MISSING_COLLECTION_ID}`,
@@ -327,6 +351,7 @@ describe("collection detail production status contract", () => {
       ]);
 
       expect(owned.status).toBe(200);
+      expect(asset.status).toBe(200);
       expect(missing.status).toBe(404);
       expect(hidden.status).toBe(404);
       expect(invalid.status).toBe(404);
