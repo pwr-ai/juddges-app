@@ -325,6 +325,20 @@ describe("Supabase middleware public route policy", () => {
     expect(result.authFailure).toBe("unavailable");
   });
 
+  it("keeps operational auth failures distinct for the exact document page", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { status: 503, message: "auth service unavailable" },
+    });
+    const result = await updateSessionWithAuth(
+      new NextRequest("http://localhost/documents/visible-doc"),
+    );
+
+    expect(result.response.status).toBe(200);
+    expect(result.response.headers.get("location")).toBeNull();
+    expect(result.authFailure).toBe("unavailable");
+  });
+
   it("clears schema auth state when the session lookup throws", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "owner-1" } },

@@ -81,7 +81,7 @@ async function requestUntilReady(
   throw lastError;
 }
 
-function authenticatedCookie(): string {
+function authenticatedCookie(signature = 'test-signature'): string {
   const encode = (value: unknown) =>
     Buffer.from(JSON.stringify(value)).toString('base64url');
   const expiresAt = Math.floor(Date.now() / 1000) + 3600;
@@ -89,7 +89,7 @@ function authenticatedCookie(): string {
     sub: 'owner-1',
     aud: 'authenticated',
     exp: expiresAt,
-  })}.test-signature`;
+  })}.${signature}`;
   return `sb-127-auth-token=base64-${encode({
     access_token: accessToken,
     refresh_token: 'test-refresh-token',
@@ -108,6 +108,11 @@ describe('documents production HTTP/auth status matrix', () => {
     const upstream = createServer((request, response) => {
       upstreamRequests.push(`${request.method} ${request.url}`);
       if (request.url === '/auth/v1/user') {
+        if (request.headers.authorization?.endsWith('.auth-outage')) {
+          response.writeHead(503, { 'Content-Type': 'application/json' });
+          response.end(JSON.stringify({ message: 'auth unavailable' }));
+          return;
+        }
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ id: 'owner-1', email: 'owner@example.test' }));
         return;
@@ -164,6 +169,7 @@ describe('documents production HTTP/auth status matrix', () => {
     let output = '';
     const appUrl = `http://127.0.0.1:${appPort}`;
     const authenticated = { Cookie: authenticatedCookie() };
+    const authOutage = { Cookie: authenticatedCookie('auth-outage') };
     const forgedMetadata = Buffer.from(JSON.stringify({
       document_id: 'attack.txt',
       document_type: 'judgment',
@@ -279,6 +285,27 @@ describe('documents production HTTP/auth status matrix', () => {
         `${appUrl}/api/documents/visible-doc/metadata/nested`
       );
       expect(anonymousLookalike.status).toBe(307);
+
+      const metadataBeforeAuthOutage = upstreamRequests.filter((item) =>
+        item.endsWith('/documents/visible-doc/metadata')
+      ).length;
+      const authOutagePage = await requestUntilReady(
+        `${appUrl}/documents/visible-doc`,
+        { headers: authOutage }
+      );
+      expect(authOutagePage.status).toBe(503);
+      expect(await authOutagePage.text()).toMatch(/temporarily unavailable|try again/i);
+      const authOutageBff = await requestUntilReady(
+        `${appUrl}/api/documents/visible-doc/metadata`,
+        { headers: authOutage }
+      );
+      expect(authOutageBff.status).toBe(503);
+      expect((await authOutageBff.json()).error).toBe('DATABASE_UNAVAILABLE');
+      expect(
+        upstreamRequests.filter((item) =>
+          item.endsWith('/documents/visible-doc/metadata')
+        ).length
+      ).toBe(metadataBeforeAuthOutage);
 
       for (const extension of [
         'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp',

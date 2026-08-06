@@ -295,23 +295,42 @@ export async function middleware(incomingRequest: NextRequest) {
     method: request.method,
   });
   if (!userId && isDocumentBffRead) {
+    const status = authFailure === "unavailable" ? 503 : 401;
     return finishResponse(
       new NextResponse(
         request.method === "HEAD"
           ? null
-          : JSON.stringify({
-              error: "UNAUTHORIZED",
-              code: "UNAUTHORIZED",
-              message: "Authentication required",
-            }),
+          : JSON.stringify(
+              status === 503
+                ? {
+                    error: "DATABASE_UNAVAILABLE",
+                    code: "DATABASE_UNAVAILABLE",
+                    message: "Authentication service is temporarily unavailable.",
+                  }
+                : {
+                    error: "UNAUTHORIZED",
+                    code: "UNAUTHORIZED",
+                    message: "Authentication required",
+                  }
+            ),
         {
-          status: 401,
+          status,
           headers: {
             "Content-Type": "application/json",
             "Cache-Control": "private, no-store",
           },
         }
       ),
+      sessionResponse,
+      locale,
+      localeNeedsWrite
+    );
+  }
+
+  const documentMatch = DOCUMENT_PAGE_PATTERN.exec(request.nextUrl.pathname);
+  if (documentMatch && !userId && authFailure === "unavailable") {
+    return finishResponse(
+      documentStatusResponse(503),
       sessionResponse,
       locale,
       localeNeedsWrite
