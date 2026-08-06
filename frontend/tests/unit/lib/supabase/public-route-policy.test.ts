@@ -57,8 +57,12 @@ const PROTECTED_PAGE_CASES = [
   '/documents',
   '/blog/admin',
   '/blog/admin/new',
+  '/blog/admin/secret.txt',
+  '/blog/admin/nested/draft.css',
   '/publications/admin',
   '/publications/admin/publication-1',
+  '/publications/admin/secret.txt',
+  '/publications/admin/nested/draft.js',
 ] as const;
 
 const LOOKALIKE_CASES = [

@@ -69,8 +69,18 @@ describe("Supabase middleware public route policy", () => {
     ],
     [
       "GET",
+      "/blog/admin/secret.txt",
+      "http://localhost/auth/login?next=%2Fblog%2Fadmin%2Fsecret.txt",
+    ],
+    [
+      "GET",
       "/publications/admin",
       "http://localhost/auth/login?next=%2Fpublications%2Fadmin",
+    ],
+    [
+      "GET",
+      "/publications/admin/secret.txt",
+      "http://localhost/auth/login?next=%2Fpublications%2Fadmin%2Fsecret.txt",
     ],
     [
       "POST",

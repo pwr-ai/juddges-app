@@ -299,6 +299,8 @@ export async function middleware(incomingRequest: NextRequest) {
 export const config = {
   matcher: [
     '/extractions/:path*',
+    '/blog/admin/:path*',
+    '/publications/admin/:path*',
     /*
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)

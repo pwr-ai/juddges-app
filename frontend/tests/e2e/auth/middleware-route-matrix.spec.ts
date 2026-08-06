@@ -55,8 +55,18 @@ const PROTECTED_REQUESTS = [
   { method: 'GET', url: '/blog/admin/new', next: '/blog/admin/new' },
   {
     method: 'GET',
+    url: '/blog/admin/secret.txt',
+    next: '/blog/admin/secret.txt',
+  },
+  {
+    method: 'GET',
     url: '/publications/admin',
     next: '/publications/admin',
+  },
+  {
+    method: 'GET',
+    url: '/publications/admin/secret.txt',
+    next: '/publications/admin/secret.txt',
   },
   { method: 'POST', url: '/api/publications', next: '/api/publications' },
   {
