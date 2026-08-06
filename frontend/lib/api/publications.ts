@@ -126,7 +126,8 @@ export async function getPublication(id: string): Promise<PublicationWithResourc
     throw new Error("Failed to fetch publication");
   }
 
-  return response.json();
+  const publication: ApiPublication = await response.json();
+  return normalizePublication(publication);
 }
 
 export async function createPublication(data: CreatePublicationRequest): Promise<PublicationWithResources> {
@@ -143,7 +144,8 @@ export async function createPublication(data: CreatePublicationRequest): Promise
     throw new Error(error.error || 'Failed to create publication');
   }
 
-  return response.json();
+  const publication: ApiPublication = await response.json();
+  return normalizePublication(publication);
 }
 
 export async function updatePublication(id: string, data: UpdatePublicationRequest): Promise<PublicationWithResources> {
@@ -160,7 +162,8 @@ export async function updatePublication(id: string, data: UpdatePublicationReque
     throw new Error(error.error || 'Failed to update publication');
   }
 
-  return response.json();
+  const publication: ApiPublication = await response.json();
+  return normalizePublication(publication);
 }
 
 export async function deletePublication(id: string): Promise<void> {
