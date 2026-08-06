@@ -51,4 +51,20 @@ describe('route-contract harness lifecycle', () => {
       'npm run lint:route-contract-harness',
     );
   });
+
+  it('shuts the adapter down once and stops accepting before closing sockets', () => {
+    const stub = readFileSync(
+      resolve('tests/route-contract-e2e/stub-services.mjs'),
+      'utf8',
+    );
+    expect(stub).toContain('let shuttingDown = false;');
+    expect(stub).toMatch(
+      /function shutdown\(\) \{\s+if \(shuttingDown\) return;\s+shuttingDown = true;/,
+    );
+    expect(stub.indexOf('server.close((error) => {')).toBeGreaterThan(-1);
+    expect(stub.indexOf('server.close((error) => {')).toBeLessThan(
+      stub.indexOf('server.closeAllConnections();'),
+    );
+    expect(stub).toContain('setTimeout(() => process.exit(1), 5_000)');
+  });
 });

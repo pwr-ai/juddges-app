@@ -53,6 +53,7 @@ const CHAT_OWNERS = new Map([
 ]);
 
 let requests = [];
+let shuttingDown = false;
 
 function sendJson(response, status, body, headers = {}) {
   response.writeHead(status, {
@@ -377,16 +378,20 @@ server.listen(PORT, HOST, () => {
 });
 
 function shutdown() {
-  server.closeAllConnections();
+  if (shuttingDown) return;
+  shuttingDown = true;
+  const forceExitTimer = setTimeout(() => process.exit(1), 5_000);
+  forceExitTimer.unref();
+
   server.close((error) => {
+    clearTimeout(forceExitTimer);
     if (error) {
       console.error(`[route-contract-stub] shutdown failed: ${error.message}`);
       process.exitCode = 1;
     }
     process.exit();
   });
-
-  setTimeout(() => process.exit(1), 5_000).unref();
+  server.closeAllConnections();
 }
 
 process.on('SIGTERM', shutdown);
