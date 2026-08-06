@@ -10,6 +10,11 @@ import {
   PRODUCTION_BUILD_TEST_TIMEOUT_MS,
 } from "@/tests/support/production-build-lock";
 import {
+  cleanupProductionContractBuild,
+  prepareProductionContractBuild,
+  type ProductionContractBuild,
+} from "@/tests/support/production-contract-build";
+import {
   type ProductionChild,
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
   PRODUCTION_READINESS_POLL_INTERVAL_MS,
@@ -23,6 +28,8 @@ import {
 
 jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 
+const COLLECTIONS_CONTRACT_FILE =
+  "tests/integration/collections/detail-production.test.ts";
 const OWN_COLLECTION_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const MISSING_COLLECTION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const HIDDEN_COLLECTION_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -107,6 +114,7 @@ function contractFetch(
 describe("collection detail production status contract", () => {
   it("returns real 404 responses for missing, hidden, and invalid collection IDs", async () => {
     const releaseProductionBuildLock = await acquireProductionBuildLock();
+    let contractBuild: ProductionContractBuild | undefined;
     const authServer = createServer((request, response) => {
       if (request.url === "/auth/v1/user") {
         if (request.headers.authorization === "Bearer bad-jwt-access-token") {
@@ -190,12 +198,16 @@ describe("collection detail production status contract", () => {
 
     let productionServer: ProductionChild | undefined;
     try {
+      contractBuild = await prepareProductionContractBuild(
+        COLLECTIONS_CONTRACT_FILE
+      );
       const authPort = await listen(authServer);
       const backendPort = await listen(backendServer);
       const supabaseUrl = `http://127.0.0.1:${authPort}`;
       const backendUrl = `http://127.0.0.1:${backendPort}`;
       const productionEnvironment = {
         ...process.env,
+        ...contractBuild.environment,
         NODE_ENV: "production" as const,
         NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "contract-anon-key",
@@ -213,13 +225,12 @@ describe("collection detail production status contract", () => {
         env: productionEnvironment,
         timeoutMs: PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
       });
-
       const appServer = createServer();
       const nextPort = await listen(appServer);
       await close(appServer);
       const serverPath = join(
-        process.cwd(),
-        ".next/standalone/frontend/server.js",
+        contractBuild.buildPath,
+        "standalone/frontend/server.js",
       );
       productionServer = spawnProductionChild({
         command: process.execPath,
@@ -355,10 +366,19 @@ describe("collection detail production status contract", () => {
         close(authServer),
         close(backendServer),
       ]);
-      await releaseProductionBuildLock();
-      const cleanupErrors = cleanupResults.flatMap((result) =>
+      const cleanupErrors: unknown[] = cleanupResults.flatMap((result) =>
         result.status === "rejected" ? [result.reason] : [],
       );
+      try {
+        await cleanupProductionContractBuild(contractBuild);
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+      try {
+        await releaseProductionBuildLock();
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
       if (cleanupErrors.length > 0) {
         throw new AggregateError(
           cleanupErrors,
