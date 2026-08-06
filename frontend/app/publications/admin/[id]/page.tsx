@@ -26,19 +26,18 @@ export default function EditPublicationPage({ params }: EditPublicationPageProps
       setLoading(true);
       const data = await getPublication(id);
 
-      // Check if user can edit this publication
-      if (data.userId && data.userId !== userId) {
-        setError("You don't have permission to edit this publication");
-        return;
-      }
-
+      // Ownership is enforced server-side on PUT/DELETE (#420). The previous
+      // check here read data.userId, which PublicationWithResources does not
+      // carry, so it never fired — and a client-side check would not be a
+      // control regardless. A save by a non-owner surfaces as a 403 from the
+      // API and lands in the catch below.
       setPublication(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load publication");
     } finally {
       setLoading(false);
     }
-  }, [id, userId]);
+  }, [id]);
 
   useEffect(() => {
     if (userId && id) {
