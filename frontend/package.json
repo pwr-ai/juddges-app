@@ -17,7 +17,7 @@
     "test:document-types": "node scripts/validate-document-types.js",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
     "validate": "npm run deps:check && npm run test:document-types && npm run lint && npm run lint:route-contract-harness",
-    "lint:route-contract-harness": "eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e",
+    "lint:route-contract-harness": "eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e tests/unit/test-harness/route-contract-harness.test.ts",
     "test": "jest",
     "test:local": "jest --runInBand --no-cache",
     "test:watch": "jest --watch",

@@ -50,7 +50,7 @@ type SessionMode = 'valid' | 'invalid' | 'outage';
 interface AdapterRequest {
   method: string;
   path: string;
-  query: Record<string, string>;
+  query: Record<string, string | string[]>;
   unexpected?: boolean;
 }
 
@@ -145,14 +145,9 @@ function expectOneCall(
   path: string,
   query: Record<string, string> = {},
 ): void {
-  const matching = requests.filter(
-    (request) =>
-      request.method === 'GET' &&
-      request.path === path &&
-      Object.keys(request.query).length === Object.keys(query).length &&
-      Object.entries(query).every(([key, value]) => request.query[key] === value),
-  );
-  expect(matching).toHaveLength(1);
+  expect(domainRequests(requests)).toEqual([
+    { method: 'GET', path, query },
+  ]);
 }
 
 test.describe.serial('production route status contract', () => {
@@ -219,17 +214,18 @@ test.describe.serial('production route status contract', () => {
 
     try {
       for (const routeCase of cases) {
+        await resetAdapter(request);
         const body = await navigate(
           navigationContext,
           routeCase.pagePath,
           200,
         );
         expect(body).toContain(routeCase.marker);
-      }
-
-      const requests = await adapterRequests(request);
-      for (const routeCase of cases) {
-        expectOneCall(requests, routeCase.adapterPath, routeCase.query);
+        expectOneCall(
+          await adapterRequests(request),
+          routeCase.adapterPath,
+          routeCase.query,
+        );
       }
     } finally {
       await navigationContext.close();
@@ -284,14 +280,11 @@ test.describe.serial('production route status contract', () => {
     ] as const;
 
     for (const routeCase of cases) {
-      for (const path of routeCase.paths) {
+      for (const [index, path] of routeCase.paths.entries()) {
+        await resetAdapter(request);
         await navigate(context, path, 404);
-      }
-    }
-
-    const requests = await adapterRequests(request);
-    for (const routeCase of cases) {
-      for (const id of routeCase.ids) {
+        const id = routeCase.ids[index];
+        const requests = await adapterRequests(request);
         if (routeCase.adapterPath === '/rest/v1/chats') {
           expectOneCall(requests, routeCase.adapterPath, {
             select: 'id',
@@ -335,15 +328,42 @@ test.describe.serial('production route status contract', () => {
     ] as const;
 
     for (const [id, status] of statuses) {
+      await resetAdapter(request);
       const body = await navigate(context, `/extractions/${id}`, status);
       expect(body).toContain(`Extraction service ${status}`);
-    }
-
-    const requests = await adapterRequests(request);
-    for (const [id] of statuses) {
-      expectOneCall(requests, `/extractions/${id}`, {
+      expectOneCall(await adapterRequests(request), `/extractions/${id}`, {
         include_results: 'false',
       });
+    }
+  });
+
+  test('hydrates fixture content for client-rendered known pages', async ({
+    context,
+  }) => {
+    await setSyntheticSession(context, 'valid');
+    const cases = [
+      {
+        pagePath: `/chat/${IDS.chat.known}`,
+        marker: 'Route contract chat message',
+      },
+      {
+        pagePath: `/schemas/${IDS.schema.known}`,
+        marker: 'Route contract schema',
+      },
+      {
+        pagePath: `/extractions/${IDS.extraction.known}`,
+        marker: 'Route contract extraction schema',
+      },
+    ] as const;
+
+    for (const routeCase of cases) {
+      const page = await context.newPage();
+      const response = await page.goto(routeCase.pagePath);
+      expect(response?.status()).toBe(200);
+      await expect(
+        page.getByText(routeCase.marker, { exact: true }),
+      ).toBeVisible();
+      await page.close();
     }
   });
 

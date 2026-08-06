@@ -63,15 +63,22 @@ function sendJson(response, status, body, headers = {}) {
 }
 
 function sanitizedRequest(request, url) {
+  const query = {};
+  for (const [key, value] of url.searchParams.entries()) {
+    const sanitizedValue = LOGGABLE_QUERY_KEYS.has(key) ? value : '[redacted]';
+    const existing = query[key];
+    if (existing === undefined) {
+      query[key] = sanitizedValue;
+    } else if (Array.isArray(existing)) {
+      existing.push(sanitizedValue);
+    } else {
+      query[key] = [existing, sanitizedValue];
+    }
+  }
   return {
     method: request.method,
     path: url.pathname,
-    query: Object.fromEntries(
-      [...url.searchParams.entries()].map(([key, value]) => [
-        key,
-        LOGGABLE_QUERY_KEYS.has(key) ? value : '[redacted]',
-      ]),
-    ),
+    query,
   };
 }
 
@@ -81,10 +88,15 @@ function logRequest(request, url, unexpected = false) {
     ...(unexpected ? { unexpected: true } : {}),
   };
   requests.push(entry);
-  const query = new URLSearchParams(entry.query).toString();
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(entry.query)) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      query.append(key, item);
+    }
+  }
   // eslint-disable-next-line no-console -- intentional child-process diagnostics
   console.log(
-    `[route-contract-stub] ${entry.method} ${entry.path}${query ? `?${query}` : ''}`,
+    `[route-contract-stub] ${entry.method} ${entry.path}${query.size ? `?${query}` : ''}`,
   );
 }
 
@@ -124,6 +136,24 @@ function chatsResponse(url, response) {
   sendJson(response, 200, rows, {
     'content-range': rows.length === 1 ? '0-0/1' : '*/0',
   });
+}
+
+function messagesResponse(url, response) {
+  const chatId = url.searchParams.get('chat_id')?.replace(/^eq\./, '');
+  const userId = url.searchParams.get('user_id')?.replace(/^eq\./, '');
+  const messages =
+    chatId === IDS.chat.known && userId === USER_ID
+      ? [
+          {
+            id: '40000000-0000-4000-8000-000000000001',
+            role: 'user',
+            content: 'Route contract chat message',
+            document_ids: null,
+            created_at: '2026-08-06T00:00:00.000Z',
+          },
+        ]
+      : [];
+  sendJson(response, 200, messages);
 }
 
 function collectionResponse(collectionId, response) {
@@ -186,6 +216,10 @@ function schemaResponse(url, response) {
   ]);
 }
 
+function profileResponse(response) {
+  sendJson(response, 200, [{ email: 'route-contract@example.test' }]);
+}
+
 function extractionResponse(jobId, response) {
   const statusById = new Map([
     [IDS.extraction.missing, 404],
@@ -202,6 +236,7 @@ function extractionResponse(jobId, response) {
   sendJson(response, 200, {
     job_id: jobId,
     status: 'SUCCESS',
+    schema_name: 'Route contract extraction schema',
     results: [],
   });
 }
@@ -233,6 +268,17 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === 'OPTIONS' && url.pathname === '/auth/v1/user') {
+    logRequest(request, url);
+    response.writeHead(204, {
+      'access-control-allow-origin': `http://${HOST}:3006`,
+      'access-control-allow-headers': 'authorization, apikey',
+      'access-control-allow-methods': 'GET, OPTIONS',
+    });
+    response.end();
+    return;
+  }
+
   if (request.method === 'GET' && url.pathname === '/auth/v1/user') {
     logRequest(request, url);
     authResponse(request, response);
@@ -245,12 +291,36 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/rest/v1/messages') {
+    logRequest(request, url);
+    messagesResponse(url, response);
+    return;
+  }
+
   if (
     request.method === 'GET' &&
     url.pathname === '/rest/v1/extraction_schemas'
   ) {
     logRequest(request, url);
     schemaResponse(url, response);
+    return;
+  }
+
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/rest/v1/user_profiles'
+  ) {
+    logRequest(request, url);
+    profileResponse(response);
+    return;
+  }
+
+  if (
+    request.method === 'GET' &&
+    url.pathname === '/rest/v1/extraction_jobs'
+  ) {
+    logRequest(request, url);
+    sendJson(response, 200, []);
     return;
   }
 

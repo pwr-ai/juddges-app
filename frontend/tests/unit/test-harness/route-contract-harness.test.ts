@@ -45,7 +45,7 @@ describe('route-contract harness lifecycle', () => {
 
   it('lints every checked-in route-contract harness source during validation', () => {
     expect(packageJson.scripts['lint:route-contract-harness']).toBe(
-      'eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e',
+      'eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e tests/unit/test-harness/route-contract-harness.test.ts',
     );
     expect(packageJson.scripts.validate).toContain(
       'npm run lint:route-contract-harness',

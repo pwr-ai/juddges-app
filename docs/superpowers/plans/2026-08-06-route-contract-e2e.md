@@ -91,7 +91,7 @@ Add:
 "prepare:e2e:route-contract": "node scripts/prepare-route-contract-standalone.mjs",
 "pretest:e2e:route-contract": "npm run prepare:e2e:route-contract",
 "start:e2e:route-contract": "node .next/standalone/frontend/server.js",
-"lint:route-contract-harness": "eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e",
+"lint:route-contract-harness": "eslint playwright.route-contract.config.ts scripts/prepare-route-contract-standalone.mjs tests/route-contract-e2e tests/unit/test-harness/route-contract-harness.test.ts",
 "test:e2e:route-contract": "playwright test --config=playwright.route-contract.config.ts --max-failures=1"
 ```
 
