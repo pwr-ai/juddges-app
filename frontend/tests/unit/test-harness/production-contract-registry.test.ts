@@ -2,6 +2,10 @@
  * @jest-environment node
  */
 
+import {
+  resolveStandaloneRuntimeBuildPath,
+} from '../../support/production-contract-build';
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const registry = require('../../../jest.production-contracts') as {
   productionContracts: Array<{
@@ -46,5 +50,16 @@ describe('production contract registry', () => {
         pattern.test(`${rootDir}/nested/${registered}`)
       )
     ).toBe(false);
+  });
+
+  it('maps an isolated distDir into the standalone frontend runtime', () => {
+    expect(
+      resolveStandaloneRuntimeBuildPath(
+        '/workspace/frontend/.next-contract-extractions-detail',
+        '.next-contract-extractions-detail'
+      )
+    ).toBe(
+      '/workspace/frontend/.next-contract-extractions-detail/standalone/frontend/.next-contract-extractions-detail'
+    );
   });
 });

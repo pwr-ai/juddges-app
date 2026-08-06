@@ -21,6 +21,13 @@ export type ProductionContractBuild = ProductionContractDefinition & {
   };
 };
 
+export function resolveStandaloneRuntimeBuildPath(
+  buildPath: string,
+  buildDirectory: string,
+): string {
+  return resolve(buildPath, "standalone/frontend", buildDirectory);
+}
+
 export async function prepareProductionContractBuild(
   contractFile: string,
 ): Promise<ProductionContractBuild> {

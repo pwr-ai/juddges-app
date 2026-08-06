@@ -14,6 +14,7 @@ import {
 import {
   cleanupProductionContractBuild,
   prepareProductionContractBuild,
+  resolveStandaloneRuntimeBuildPath,
 } from "@/tests/support/production-contract-build";
 import {
   PRODUCTION_BUILD_PROCESS_TIMEOUT_MS,
@@ -169,7 +170,13 @@ describe("extraction detail production HTTP status matrix", () => {
     });
     cpSync(
       join(contractBuild.buildPath, "static"),
-      join(contractBuild.buildPath, "standalone/frontend/.next/static"),
+      join(
+        resolveStandaloneRuntimeBuildPath(
+          contractBuild.buildPath,
+          contractBuild.buildDirectory
+        ),
+        "static"
+      ),
       { recursive: true }
     );
     cpSync(
