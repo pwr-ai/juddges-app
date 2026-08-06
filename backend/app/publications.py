@@ -586,6 +586,7 @@ async def get_publication_extraction_jobs(
     return [
         ExtractionJobLink(
             job_id=j["job_id"],
+            job_status=_extract_job_status(j),
             description=j.get("description"),
             created_at=j.get("created_at"),
         )

@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 from juddges_search.db.publications_db import PublicationsDB
 
-from app.publications import transform_publication
+from app.publications import get_publication_extraction_jobs, transform_publication
 
 pytestmark = [pytest.mark.unit]
 
@@ -143,6 +143,29 @@ def test_transform_yields_none_when_embed_key_missing() -> None:
     publication = transform_publication(_publication([{"job_id": JOB_ID}]))
 
     assert publication.extraction_jobs[0].job_status is None
+
+
+class _ExtractionJobsDb:
+    async def get_publication_extraction_jobs(
+        self, publication_id: str
+    ) -> list[dict[str, Any]]:
+        assert publication_id == PUBLICATION_ID
+        return [
+            {
+                "job_id": JOB_ID,
+                "description": "Published extraction",
+                "created_at": "2026-08-06T09:00:00Z",
+                "extraction_jobs": {"status": "SUCCESS"},
+            }
+        ]
+
+
+@pytest.mark.anyio
+async def test_extraction_jobs_subresource_maps_embedded_job_status() -> None:
+    """The linked-jobs endpoint preserves the nested raw database status."""
+    jobs = await get_publication_extraction_jobs(PUBLICATION_ID, _ExtractionJobsDb())
+
+    assert [job.job_status for job in jobs] == ["SUCCESS"]
 
 
 @pytest.mark.anyio
