@@ -411,6 +411,7 @@ export async function middleware(incomingRequest: NextRequest) {
 export const config = {
   matcher: [
     "/extractions/:path*",
+    "/collections/:path*",
     "/schemas/:path*",
     "/api/schemas/:path*",
     "/blog/admin/:path*",

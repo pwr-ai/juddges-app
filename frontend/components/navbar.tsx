@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/lib/styles/components/tooltip";
 import { SaveToCollectionPopover } from "@/lib/styles/components/save-to-collection-popover";
 import { logger } from "@/lib/logger";
+import { useCollectionDetail } from "@/contexts/CollectionDetailContext";
 
 function NavbarHeading({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
@@ -32,10 +33,10 @@ export function Navbar(): React.ReactElement {
   const pathname = usePathname();
   const params = useParams();
   const searchParams = useSearchParams();
+  const { collectionDetail, setCollectionDetail } = useCollectionDetail();
   const [isUserCardOpen, setIsUserCardOpen] = React.useState(false);
   const [documentMetadata, setDocumentMetadata] = React.useState<{ document_number?: string | null; document_id?: string } | null>(null);
   const [collectionName, setCollectionName] = React.useState<string | null>(null);
-  const [collectionData, setCollectionData] = React.useState<{ id: string; name: string; description?: string } | null>(null);
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [editingTitle, setEditingTitle] = React.useState("");
   const [isDeletingCollection, setIsDeletingCollection] = React.useState(false);
@@ -84,28 +85,20 @@ export function Navbar(): React.ReactElement {
     }
   }, [isDocumentPage, params?.id, user]);
 
-  // Fetch collection data when on collection detail page
+  const collectionId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const collectionData =
+    isCollectionDetail && collectionDetail?.id === collectionId
+      ? collectionDetail
+      : null;
+
+  // Keep the editable label aligned with the page-hydrated collection.
   React.useEffect(() => {
-    if (isCollectionDetail && params?.id && user) {
-      const collectionId = Array.isArray(params.id) ? params.id[0] : params.id;
-      const fetchCollectionData = async () => {
-        try {
-          const res = await fetch(`/api/collections/${collectionId}`, { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            setCollectionData(data);
-            setCollectionName(data.name);
-          }
-        } catch (error) {
-          logger.error('Failed to fetch collection data for navbar:', error);
-        }
-      };
-      fetchCollectionData();
+    if (collectionData) {
+      setCollectionName(collectionData.name);
     } else {
-      setCollectionData(null);
       setCollectionName(null);
     }
-  }, [isCollectionDetail, params?.id, user]);
+  }, [collectionData]);
 
   const handleTitleClick = (): void => {
     if (collectionData) {
@@ -133,7 +126,7 @@ export function Navbar(): React.ReactElement {
         body: JSON.stringify({ name: editingTitle }),
       });
       if (res.ok) {
-        setCollectionData(prev => prev ? { ...prev, name: editingTitle } : null);
+        setCollectionDetail(prev => prev ? { ...prev, name: editingTitle } : null);
         setCollectionName(editingTitle);
         setIsEditingTitle(false);
         toast.success("Collection name updated");

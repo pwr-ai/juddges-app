@@ -12,12 +12,17 @@ import DocumentsToolbar from "./_components/DocumentsToolbar";
 import DocumentsCardGrid from "./_components/DocumentsCardGrid";
 import EmptyCollectionState from "./_components/EmptyCollectionState";
 import { useCollection, ITEMS_PER_PAGE, INITIAL_LOAD_LIMIT } from "./_components/useCollection";
+import type { CollectionWithDocuments } from "@/types/collection";
+import { useEffect } from "react";
+import { useCollectionDetail } from "@/contexts/CollectionDetailContext";
 
 interface CollectionClientProps {
   id: string;
+  initialCollection: CollectionWithDocuments;
 }
 
-const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
+const CollectionClient: FC<CollectionClientProps> = ({ id, initialCollection }) => {
+  const { setCollectionDetail } = useCollectionDetail();
   const {
     router,
     collection,
@@ -61,7 +66,23 @@ const CollectionClient: FC<CollectionClientProps> = ({ id }) => {
     handleRemoveDocument,
     handleUpdateCollection,
     handleDeleteCollection,
-  } = useCollection(id);
+  } = useCollection(id, initialCollection);
+
+  useEffect(() => {
+    if (!collection) {
+      return;
+    }
+    setCollectionDetail({
+      id: collection.id,
+      name: collection.name,
+      description: collection.description,
+    });
+    return () => {
+      setCollectionDetail((current) =>
+        current?.id === collection.id ? null : current
+      );
+    };
+  }, [collection, setCollectionDetail]);
 
   if (isLoading) {
     return <CollectionLoadingSkeleton />;

@@ -5,6 +5,11 @@ const productionContracts = [
     tsconfigPath: 'tsconfig.contract-chat-detail.json',
   },
   {
+    file: 'tests/integration/collections/detail-production.test.ts',
+    buildDirectory: '.next-contract-collections-detail',
+    tsconfigPath: 'tsconfig.contract-collections-detail.json',
+  },
+  {
     file: 'tests/unit/api/graphql/route-contract.test.ts',
     buildDirectory: '.next-contract-graphql-route',
     tsconfigPath: 'tsconfig.contract-graphql-route.json',
