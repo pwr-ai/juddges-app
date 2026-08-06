@@ -140,7 +140,7 @@ export function ExtractionConfigPanel({
                     .map((schema) => ({
                       value: schema.id,
                       label: formatName(schema.name),
-                      description: schema.description,
+                      description: schema.description ?? undefined,
                       status: schema.status ?? undefined,
                       isVerified: schema.is_verified,
                     }))}

@@ -150,6 +150,29 @@ describe('isPublicRequest', () => {
     },
   );
 
+  it.each(['GET', 'HEAD'])(
+    'allows exact schema detail BFF %s to reach route validation',
+    (method) => {
+      for (const segment of [
+        'abcdef01-1234-4abc-8def-1234567890ab',
+        'not-a-uuid',
+        'abcdef01-1234-4abc-8def-1234567890ab.css',
+      ]) {
+        expect(
+          isPublicRequest({ pathname: `/api/schemas/${segment}`, method }),
+        ).toBe(true);
+      }
+    },
+  );
+
+  it.each([
+    ['POST', '/api/schemas/abcdef01-1234-4abc-8def-1234567890ab'],
+    ['GET', '/api/schemas/abcdef01-1234-4abc-8def-1234567890ab/nested'],
+    ['GET', '/api/schemas/nested/value.css'],
+  ] as const)('protects schema BFF lookalike %s %s', (method, pathname) => {
+    expect(isPublicRequest({ pathname, method })).toBe(false);
+  });
+
   it.each([
     new URLSearchParams(),
     new URLSearchParams({ job_id: 'not-a-uuid' }),

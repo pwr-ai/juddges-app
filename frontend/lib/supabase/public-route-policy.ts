@@ -52,6 +52,7 @@ const PUBLIC_READ_API_SUBTREES = [
 
 const CHAT_MESSAGES_PREFIX = '/api/chats/';
 const CHAT_MESSAGES_SUFFIX = '/messages';
+const SCHEMA_API_PATTERN = /^\/api\/schemas\/[^/]+$/;
 
 function matchesSegmentTree(pathname: string, root: string): boolean {
   return pathname === root || pathname.startsWith(`${root}/`);
@@ -89,6 +90,13 @@ export function isAnonymousExtractionBffRead({
   return jobIds.length === 1 && isCanonicalUuid(jobIds[0]);
 }
 
+export function isAnonymousSchemaBffRead({
+  pathname,
+  method,
+}: PublicRouteRequest): boolean {
+  return PUBLIC_READ_METHODS.has(method) && SCHEMA_API_PATTERN.test(pathname);
+}
+
 function isPublicReadApi(
   pathname: string,
   method: string,
@@ -98,6 +106,7 @@ function isPublicReadApi(
     EXACT_PUBLIC_READ_APIS.has(pathname) ||
     matchesAnySegmentTree(pathname, PUBLIC_READ_API_SUBTREES) ||
     isPublicChatMessagesRead(pathname) ||
+    isAnonymousSchemaBffRead({ pathname, method }) ||
     isAnonymousExtractionBffRead({ pathname, method, searchParams })
   );
 }
