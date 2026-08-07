@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, require_admin
+from app.extraction_domain.shared import simplify_job_status
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/publications", tags=["publications"])
@@ -176,13 +177,29 @@ def _extract_job_status(link: dict) -> str | None:
     come back as a dict for a to-one relationship and as a list when
     PostgREST resolves the relationship as to-many, so accept both. A link
     pointing at a deleted job embeds ``None`` and yields ``None``.
+
+    The column stores database-side values only — ``PENDING``, ``STARTED``,
+    ``SUCCESS``, ``FAILURE`` — because ``update_job_status_in_supabase``
+    maps the simplified status down before writing. Every other surface
+    normalises on the way out (``jobs_router`` does the same on its list
+    endpoint), so publications must too, or the same job reads ``SUCCESS``
+    here and ``COMPLETED`` two pages over.
+
+    ``COMPLETED`` and ``PARTIALLY_COMPLETED`` both persist as ``SUCCESS``
+    and cannot be told apart from the column alone; that needs the
+    per-document results JSON, which this embed does not fetch. A partially
+    failed job therefore reads as ``COMPLETED`` here — the same limitation
+    the extraction job list already has.
     """
     embedded = link.get("extraction_jobs")
     if isinstance(embedded, list):
         embedded = embedded[0] if embedded else None
     if not isinstance(embedded, dict):
         return None
-    return embedded.get("status")
+    status = embedded.get("status")
+    if not status:
+        return None
+    return simplify_job_status(status)
 
 
 def transform_publication(data: dict) -> PublicationWithResources:

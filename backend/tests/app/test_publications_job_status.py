@@ -95,13 +95,13 @@ def test_transform_maps_status_from_embedded_job() -> None:
                     "job_id": JOB_ID,
                     "description": "Published extraction",
                     "created_at": "2026-08-06T09:00:00Z",
-                    "extraction_jobs": {"status": "completed"},
+                    "extraction_jobs": {"status": "SUCCESS"},
                 }
             ]
         )
     )
 
-    assert [job.job_status for job in publication.extraction_jobs] == ["completed"]
+    assert [job.job_status for job in publication.extraction_jobs] == ["COMPLETED"]
     assert publication.extraction_jobs[0].job_id == JOB_ID
 
 
@@ -112,13 +112,52 @@ def test_transform_accepts_embed_returned_as_list() -> None:
             [
                 {
                     "job_id": JOB_ID,
-                    "extraction_jobs": [{"status": "running"}],
+                    "extraction_jobs": [{"status": "STARTED"}],
                 }
             ]
         )
     )
 
-    assert publication.extraction_jobs[0].job_status == "running"
+    assert publication.extraction_jobs[0].job_status == "IN_PROGRESS"
+
+
+@pytest.mark.parametrize(
+    ("stored", "exposed"),
+    [
+        pytest.param("PENDING", "IN_PROGRESS", id="pending"),
+        pytest.param("STARTED", "IN_PROGRESS", id="started"),
+        pytest.param("SUCCESS", "COMPLETED", id="success"),
+        pytest.param("FAILURE", "FAILED", id="failure"),
+    ],
+)
+def test_transform_exposes_simplified_status(stored: str, exposed: str) -> None:
+    """Every value the column can hold maps to the shared API vocabulary.
+
+    update_job_status_in_supabase narrows the simplified status to one of
+    these four before writing, so this is the full domain. Publications must
+    expose the same names as the extraction job endpoints — a job reading
+    SUCCESS here and COMPLETED elsewhere is the bug this pins.
+    """
+    publication = transform_publication(
+        _publication([{"job_id": JOB_ID, "extraction_jobs": {"status": stored}}])
+    )
+
+    assert publication.extraction_jobs[0].job_status == exposed
+
+
+def test_partially_completed_is_indistinguishable_from_completed() -> None:
+    """A partially failed job reads as COMPLETED, and that is a known limit.
+
+    PARTIALLY_COMPLETED persists as SUCCESS, so the column cannot separate
+    the two — telling them apart needs the per-document results JSON, which
+    this embed does not fetch. Pinned so the limitation is deliberate rather
+    than discovered later in the UI.
+    """
+    publication = transform_publication(
+        _publication([{"job_id": JOB_ID, "extraction_jobs": {"status": "SUCCESS"}}])
+    )
+
+    assert publication.extraction_jobs[0].job_status == "COMPLETED"
 
 
 @pytest.mark.parametrize(
@@ -127,6 +166,8 @@ def test_transform_accepts_embed_returned_as_list() -> None:
         pytest.param(None, id="job-deleted"),
         pytest.param([], id="empty-embed"),
         pytest.param({}, id="status-absent"),
+        pytest.param({"status": None}, id="status-null"),
+        pytest.param({"status": ""}, id="status-empty"),
     ],
 )
 def test_transform_yields_none_when_status_unavailable(embedded: Any) -> None:
@@ -165,7 +206,7 @@ async def test_extraction_jobs_subresource_maps_embedded_job_status() -> None:
     """The linked-jobs endpoint preserves the nested raw database status."""
     jobs = await get_publication_extraction_jobs(PUBLICATION_ID, _ExtractionJobsDb())
 
-    assert [job.job_status for job in jobs] == ["SUCCESS"]
+    assert [job.job_status for job in jobs] == ["COMPLETED"]
 
 
 @pytest.mark.anyio
