@@ -1,7 +1,9 @@
 import asyncio
 import os
+import tempfile
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import openai
@@ -127,6 +129,74 @@ if os.environ.get("INGESTION_BEAT_ENABLED", "false").lower() == "true":
     }
 
 celery_app.conf.timezone = "UTC"
+
+# ---------------------------------------------------------------------------
+# Reliability configuration (#437)
+#
+# Extraction runs for minutes, so every Celery default tuned for sub-second
+# tasks is wrong here. The four settings below are load-bearing:
+#
+# * task_acks_late — Celery acks a message when the worker *reserves* it, not
+#   when the task finishes. A worker restart or OOM 12 minutes into an
+#   extraction therefore loses the message permanently. Acking late means an
+#   interrupted task is redelivered instead of vanishing.
+# * task_reject_on_worker_lost — without it, a hard-killed child (SIGKILL,
+#   OOM) still marks the message as handled despite acks_late.
+# * worker_prefetch_multiplier=1 — the default 4 makes one worker reserve
+#   4 x concurrency messages into a local buffer that other workers cannot
+#   see. With multi-minute tasks that is head-of-line blocking.
+# * visibility_timeout — the Redis transport redelivers any un-acked message
+#   after this window. It MUST exceed the hard time limit, otherwise a task
+#   that is still legitimately running gets handed to a second worker and
+#   runs twice. Derived from the time limit for exactly that reason.
+_TASK_HARD_TIME_LIMIT = int(os.environ.get("CELERY_TASK_TIME_LIMIT", 3 * 60 * 60))
+_TASK_SOFT_TIME_LIMIT = int(
+    os.environ.get("CELERY_TASK_SOFT_TIME_LIMIT", max(_TASK_HARD_TIME_LIMIT - 300, 60))
+)
+# One hard-limit of headroom above the hard limit: a task cannot outlive its
+# own time limit, so redelivery can only ever mean the worker really died.
+_BROKER_VISIBILITY_TIMEOUT = _TASK_HARD_TIME_LIMIT * 2
+
+celery_app.conf.update(
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    worker_prefetch_multiplier=1,
+    task_time_limit=_TASK_HARD_TIME_LIMIT,
+    task_soft_time_limit=_TASK_SOFT_TIME_LIMIT,
+    # Recycle prefork children periodically — the LLM/HTTP client stack leaks
+    # slowly over long-lived processes and a leak here means an OOM mid-job.
+    worker_max_tasks_per_child=int(
+        os.environ.get("CELERY_WORKER_MAX_TASKS_PER_CHILD", 100)
+    ),
+    broker_transport_options={"visibility_timeout": _BROKER_VISIBILITY_TIMEOUT},
+    result_backend_transport_options={"visibility_timeout": _BROKER_VISIBILITY_TIMEOUT},
+    # Results are also mirrored into ``extraction_jobs``; keep the Redis copy
+    # long enough for polling clients but not indefinitely.
+    result_expires=int(os.environ.get("CELERY_RESULT_EXPIRES", 7 * 24 * 60 * 60)),
+    # The revoked-task set lives in memory unless persisted. With acks_late a
+    # revoked-and-terminated task would otherwise be redelivered — and rerun —
+    # after a worker restart.
+    # Compose points this at a named volume so it also survives a container
+    # recreate; the temp-dir default only has to survive a process restart.
+    worker_state_db=os.environ.get(
+        "CELERY_WORKER_STATE_DB",
+        str(Path(tempfile.gettempdir()) / "celery-worker-state"),
+    ),
+    broker_connection_retry_on_startup=True,
+    task_default_queue="celery",
+    # Long LLM work must not share a queue with the periodic maintenance jobs;
+    # one 20-minute extraction batch would otherwise delay the daily digest and
+    # the weekly VACUUM behind it.
+    task_routes={
+        "app.workers.extract_information_from_documents_task": {"queue": "extraction"},
+        "ingestion.*": {"queue": "extraction"},
+        "reasoning_lines.*": {"queue": "extraction"},
+        "digest.*": {"queue": "maintenance"},
+        "maintenance.*": {"queue": "maintenance"},
+        "meilisearch.*": {"queue": "maintenance"},
+        "suggestions.*": {"queue": "maintenance"},
+    },
+)
 
 
 def _update_job_results_in_supabase(

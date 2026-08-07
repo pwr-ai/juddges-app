@@ -22,7 +22,7 @@ ENV_FILE="${REPO_ROOT}/.env"
 DEPLOY_LOG="${REPO_ROOT}/.deploy-history"
 
 # Expected services that must be running after deploy
-REQUIRED_SERVICES=("frontend" "backend" "meilisearch" "backend-worker" "backend-beat")
+REQUIRED_SERVICES=("frontend" "backend" "meilisearch" "backend-worker" "backend-worker-maintenance" "backend-beat")
 
 # ------------------------------------------------------------------------------
 # Color output
