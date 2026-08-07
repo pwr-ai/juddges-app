@@ -3,17 +3,23 @@ Extraction job status reaches the API response (issue #431).
 
 ``ExtractionJobLink.job_status`` was declared on the response model but never
 populated, so every publication reported ``job_status: null`` no matter what
-state its extraction jobs were in. Two independent gaps caused it, and either
+state its extraction jobs were in. Three independent gaps caused it, and any
 one alone is enough to reproduce the bug:
 
-1. the ``publication_extraction_jobs`` embed did not request ``status``, so the
-   column never left Postgres;
-2. ``transform_publication`` built ``ExtractionJobLink`` without passing
-   ``job_status``, so the value would have been dropped even if it arrived.
+1. the ``publication_extraction_jobs`` embed in ``get_publications`` did not
+   request ``status``, so the column never left Postgres;
+2. the same embed in ``get_publication``;
+3. ``transform_publication`` and the linked-jobs endpoint built
+   ``ExtractionJobLink`` without passing ``job_status``, so the value would
+   have been dropped even where it did arrive.
 
 ``status`` lives on the nested ``extraction_jobs`` table rather than on the
-junction row, so it comes back as an embedded PostgREST resource. Both gaps are
-pinned here — fixing one without the other silently returns to ``None``.
+junction row, so it comes back as an embedded PostgREST resource. All three
+gaps are pinned here — closing any subset still returns ``None``.
+
+The column stores only ``PENDING``/``STARTED``/``SUCCESS``/``FAILURE``, and the
+API exposes the simplified vocabulary shared with the extraction endpoints, so
+the fixtures use real column values and assert the translated names.
 """
 
 from typing import Any
@@ -130,7 +136,7 @@ def test_transform_accepts_embed_returned_as_list() -> None:
         pytest.param("FAILURE", "FAILED", id="failure"),
     ],
 )
-def test_transform_exposes_simplified_status(stored: str, exposed: str) -> None:
+def test_transform_exposes_the_simplified_status(stored: str, exposed: str) -> None:
     """Every value the column can hold maps to the shared API vocabulary.
 
     update_job_status_in_supabase narrows the simplified status to one of
@@ -203,14 +209,14 @@ class _ExtractionJobsDb:
 
 @pytest.mark.anyio
 async def test_extraction_jobs_subresource_maps_embedded_job_status() -> None:
-    """The linked-jobs endpoint preserves the nested raw database status."""
+    """The linked-jobs endpoint maps the nested status like the others."""
     jobs = await get_publication_extraction_jobs(PUBLICATION_ID, _ExtractionJobsDb())
 
     assert [job.job_status for job in jobs] == ["COMPLETED"]
 
 
 @pytest.mark.anyio
-async def test_get_publication_requests_job_status() -> None:
+async def test_get_publication_detail_requests_job_status() -> None:
     """The detail query must embed the status column."""
     db, client = _db_with_recording_client()
 
