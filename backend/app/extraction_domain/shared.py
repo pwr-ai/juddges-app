@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path as FilePath
 from typing import Any
@@ -250,12 +252,136 @@ def _validate_collection_id(collection_id: str | None) -> None:
         )
 
 
-def _submit_extraction_task(extraction_request: DocumentExtractionRequest) -> str:
+def build_idempotency_key(
+    extraction_request: DocumentExtractionRequest,
+) -> str:
+    """Fingerprint the work a request asks for, ignoring incidental ordering.
+
+    Two submissions that would extract the same fields from the same documents
+    are the same job even if the document list arrives in a different order, so
+    the ids are sorted before hashing. The schema is part of the key: the same
+    documents under a different schema is genuinely different work.
+    """
+    payload = {
+        "collection_id": extraction_request.collection_id,
+        "schema_id": extraction_request.schema_id,
+        "document_ids": sorted(extraction_request.document_ids or []),
+        "prompt_id": extraction_request.prompt_id,
+        "language": extraction_request.language,
+    }
+    # A user_schema passed inline has no id to key on, so hash its text.
+    if extraction_request.user_schema:
+        payload["user_schema"] = json.dumps(
+            extraction_request.user_schema, sort_keys=True, default=str
+        )
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, default=str).encode()
+    ).hexdigest()
+
+
+def _find_inflight_job(user_id: str, idempotency_key: str) -> str | None:
+    """Return the job_id of an equivalent job that is still running, if any."""
+    if not supabase:
+        return None
+    try:
+        existing = (
+            supabase.table("extraction_jobs")
+            .select("job_id")
+            .eq("user_id", user_id)
+            .eq("idempotency_key", idempotency_key)
+            .in_("status", ["PENDING", "STARTED"])
+            .limit(1)
+            .execute()
+        )
+    except Exception as lookup_error:
+        # A failed dedup lookup must not block the submission; the worst case is
+        # a duplicate job, which is what the situation was before this check.
+        logger.warning(f"Idempotency lookup failed, submitting anyway: {lookup_error}")
+        return None
+    rows = existing.data or []
+    if isinstance(rows, dict):
+        rows = [rows]
+    return rows[0]["job_id"] if rows else None
+
+
+def _insert_job_record(
+    job_id: str,
+    user_id: str,
+    extraction_request: DocumentExtractionRequest,
+    idempotency_key: str,
+) -> None:
+    """Persist the job row before the task is queued.
+
+    Ordering matters: the worker updates this row from its very first document,
+    so the row has to exist before the message is on the broker. Enqueueing
+    first is a race the worker loses, and it used to be worse than a race — the
+    row was written by the Next.js BFF after this call returned, in a different
+    process, with its insert error swallowed (#437).
+    """
+    if not supabase:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service Unavailable",
+                "message": "Job store unavailable; the extraction job was not queued.",
+                "code": "JOB_STORE_UNAVAILABLE",
+            },
+        )
+    document_ids = extraction_request.document_ids or []
+    supabase.table("extraction_jobs").insert(
+        {
+            "job_id": job_id,
+            "user_id": user_id,
+            "collection_id": extraction_request.collection_id,
+            "schema_id": extraction_request.schema_id,
+            "status": "PENDING",
+            "document_ids": document_ids,
+            "total_documents": len(document_ids),
+            "completed_documents": 0,
+            "language": extraction_request.language or "pl",
+            "prompt_id": extraction_request.prompt_id or "info_extraction",
+            "extraction_context": extraction_request.extraction_context,
+            "idempotency_key": idempotency_key,
+            "attempts": 0,
+        }
+    ).execute()
+
+
+def _abandon_job_record(job_id: str, reason: str) -> None:
+    """Mark a job as failed when it could not be handed to the broker.
+
+    Without this the row would sit at PENDING forever, and the stale-job reaper
+    cannot tell it apart from a job that is legitimately waiting for a worker.
+    """
+    if not supabase:
+        return
+    try:
+        supabase.table("extraction_jobs").update(
+            {
+                "status": "FAILURE",
+                "error_message": reason,
+                "completed_at": datetime.now(UTC).isoformat(),
+            }
+        ).eq("job_id", job_id).execute()
+    except Exception as cleanup_error:
+        logger.error(f"Could not mark job {job_id} as failed: {cleanup_error}")
+
+
+def _submit_extraction_task(
+    extraction_request: DocumentExtractionRequest,
+    user_id: str,
+) -> str:
     """
     Submit extraction task to Celery with proper error handling.
 
+    Writes the tracking row first, then enqueues under an explicitly chosen task
+    id so the two always agree. An equivalent job that is already in flight is
+    returned as-is rather than queued a second time — a double-clicked submit
+    otherwise pays for the same LLM calls twice.
+
     Args:
         extraction_request: The validated extraction request
+        user_id: Owner of the job, used for the row and for dedup scoping
 
     Returns:
         The task ID
@@ -263,13 +389,50 @@ def _submit_extraction_task(extraction_request: DocumentExtractionRequest) -> st
     Raises:
         HTTPException: 503 on connection errors, 500 on unexpected errors
     """
-    try:
-        task = extract_information_from_documents_task.delay(
-            extraction_request.model_dump(mode="json")
+    idempotency_key = build_idempotency_key(extraction_request)
+    inflight_job_id = _find_inflight_job(user_id, idempotency_key)
+    if inflight_job_id:
+        logger.info(
+            f"Reusing in-flight extraction job {inflight_job_id} for an "
+            f"identical request from user {user_id}"
         )
-        logger.info(f"Created extraction job with ID: {task.id}")
-        return task.id
+        return inflight_job_id
+
+    task_id = str(uuid.uuid4())
+    try:
+        _insert_job_record(task_id, user_id, extraction_request, idempotency_key)
+    except HTTPException:
+        raise
+    except Exception as insert_error:
+        # A unique-violation here means a concurrent request won the race for
+        # the same fingerprint; adopt its job instead of failing the caller.
+        concurrent_job_id = _find_inflight_job(user_id, idempotency_key)
+        if concurrent_job_id:
+            logger.info(
+                f"Concurrent submit detected; reusing job {concurrent_job_id} "
+                f"for user {user_id}"
+            )
+            return concurrent_job_id
+        logger.error(f"Failed to create extraction job record: {insert_error}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Job Store Error",
+                "message": "Could not record the extraction job. Please try again.",
+                "code": "JOB_RECORD_FAILED",
+                "debug": str(insert_error),
+            },
+        )
+
+    try:
+        extract_information_from_documents_task.apply_async(
+            args=[extraction_request.model_dump(mode="json")],
+            task_id=task_id,
+        )
+        logger.info(f"Created extraction job with ID: {task_id}")
+        return task_id
     except celery_exceptions.OperationalError as e:
+        _abandon_job_record(task_id, f"Task queue unavailable: {e}")
         logger.error(f"Failed to submit extraction task to Celery broker: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -281,6 +444,7 @@ def _submit_extraction_task(extraction_request: DocumentExtractionRequest) -> st
             },
         )
     except (ConnectionError, OSError, TimeoutError) as e:
+        _abandon_job_record(task_id, f"Task queue unreachable: {e}")
         logger.error(f"Network error while submitting extraction task: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -292,6 +456,7 @@ def _submit_extraction_task(extraction_request: DocumentExtractionRequest) -> st
             },
         )
     except Exception as e:
+        _abandon_job_record(task_id, f"Task submission failed: {e}")
         logger.error(
             f"Unexpected error while submitting extraction task to Celery: {e}",
             exc_info=True,

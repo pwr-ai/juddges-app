@@ -323,62 +323,104 @@ class TestCreateExtractionResponse:
 
 
 class TestSubmitExtractionTask:
+    """Submission now writes the tracking row before enqueueing (#437), so these
+    exercise a real request object and a job store rather than a bare mock."""
+
+    @staticmethod
+    def _request():
+        from app.models import DocumentExtractionRequest
+
+        return DocumentExtractionRequest(
+            collection_id="col-1",
+            document_ids=["doc-1"],
+            extraction_context="ctx",
+            user_schema={"name": "n", "description": "d", "text": "t"},
+            prompt_id="info_extraction",
+        )
+
+    @staticmethod
+    def _job_store(inflight: list | None = None):
+        """Job store double: no in-flight duplicate unless one is supplied."""
+        fake = MagicMock()
+        table = fake.table.return_value
+        table.select.return_value.eq.return_value.eq.return_value.in_.return_value.limit.return_value.execute.return_value = MagicMock(
+            data=inflight or []
+        )
+        table.insert.return_value.execute.return_value = MagicMock(data=[{"id": "1"}])
+        table.update.return_value.eq.return_value.execute.return_value = MagicMock(
+            data=[{"id": "1"}]
+        )
+        return fake
+
     @pytest.mark.unit
     def test_successful_submission(self) -> None:
-        mock_task = MagicMock()
-        mock_task.id = "task-abc"
-        mock_request = MagicMock()
-        mock_request.model_dump.return_value = {"key": "value"}
-
-        with patch(
-            "app.extraction_domain.shared.extract_information_from_documents_task"
-        ) as mock_celery:
-            mock_celery.delay.return_value = mock_task
-            result = _submit_extraction_task(mock_request)
-            assert result == "task-abc"
+        with (
+            patch("app.extraction_domain.shared.supabase", self._job_store()),
+            patch(
+                "app.extraction_domain.shared.extract_information_from_documents_task"
+            ) as mock_celery,
+        ):
+            result = _submit_extraction_task(self._request(), user_id="user-1")
+            # The id is chosen by the caller now, so the row and the task agree.
+            assert result
+            assert mock_celery.apply_async.call_args.kwargs["task_id"] == result
 
     @pytest.mark.unit
     def test_operational_error_raises_503(self) -> None:
         from celery import exceptions as celery_exceptions
 
-        mock_request = MagicMock()
-        mock_request.model_dump.return_value = {}
-
-        with patch(
-            "app.extraction_domain.shared.extract_information_from_documents_task"
-        ) as mock_celery:
-            mock_celery.delay.side_effect = celery_exceptions.OperationalError(
+        with (
+            patch("app.extraction_domain.shared.supabase", self._job_store()),
+            patch(
+                "app.extraction_domain.shared.extract_information_from_documents_task"
+            ) as mock_celery,
+        ):
+            mock_celery.apply_async.side_effect = celery_exceptions.OperationalError(
                 "broker down"
             )
             with pytest.raises(HTTPException) as exc_info:
-                _submit_extraction_task(mock_request)
+                _submit_extraction_task(self._request(), user_id="user-1")
             assert exc_info.value.status_code == 503
 
     @pytest.mark.unit
     def test_connection_error_raises_503(self) -> None:
-        mock_request = MagicMock()
-        mock_request.model_dump.return_value = {}
-
-        with patch(
-            "app.extraction_domain.shared.extract_information_from_documents_task"
-        ) as mock_celery:
-            mock_celery.delay.side_effect = ConnectionError("refused")
+        with (
+            patch("app.extraction_domain.shared.supabase", self._job_store()),
+            patch(
+                "app.extraction_domain.shared.extract_information_from_documents_task"
+            ) as mock_celery,
+        ):
+            mock_celery.apply_async.side_effect = ConnectionError("refused")
             with pytest.raises(HTTPException) as exc_info:
-                _submit_extraction_task(mock_request)
+                _submit_extraction_task(self._request(), user_id="user-1")
             assert exc_info.value.status_code == 503
 
     @pytest.mark.unit
     def test_unexpected_error_raises_503(self) -> None:
-        mock_request = MagicMock()
-        mock_request.model_dump.return_value = {}
-
-        with patch(
-            "app.extraction_domain.shared.extract_information_from_documents_task"
-        ) as mock_celery:
-            mock_celery.delay.side_effect = RuntimeError("unexpected")
+        with (
+            patch("app.extraction_domain.shared.supabase", self._job_store()),
+            patch(
+                "app.extraction_domain.shared.extract_information_from_documents_task"
+            ) as mock_celery,
+        ):
+            mock_celery.apply_async.side_effect = RuntimeError("unexpected")
             with pytest.raises(HTTPException) as exc_info:
-                _submit_extraction_task(mock_request)
+                _submit_extraction_task(self._request(), user_id="user-1")
             assert exc_info.value.status_code == 503
+
+    @pytest.mark.unit
+    def test_missing_job_store_refuses_to_queue(self) -> None:
+        """Queueing without a tracking row is how jobs went missing (#437)."""
+        with (
+            patch("app.extraction_domain.shared.supabase", None),
+            patch(
+                "app.extraction_domain.shared.extract_information_from_documents_task"
+            ) as mock_celery,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                _submit_extraction_task(self._request(), user_id="user-1")
+            assert exc_info.value.status_code == 503
+            mock_celery.apply_async.assert_not_called()
 
 
 # =============================================================================

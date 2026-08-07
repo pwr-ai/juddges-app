@@ -96,6 +96,15 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=8, minute=0, day_of_week=1),
         "kwargs": {"frequency": "weekly"},
     },
+    # Stale extraction job reaper (#437). Runs often because the cost is one
+    # indexed query and the symptom it clears — a job stuck at STARTED with a
+    # dead worker — is visible to the user in the jobs list.
+    "reap-stale-extraction-jobs-every-5min": {
+        "task": "maintenance.reap_stale_extraction_jobs",
+        "schedule": 5 * 60,
+        # Never let these pile up: a skipped run is fully covered by the next.
+        "options": {"expires": 5 * 60},
+    },
     "vacuum-analyze-judgments-weekly": {
         "task": "maintenance.vacuum_analyze",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
@@ -204,6 +213,7 @@ def _update_job_results_in_supabase(
     results: list[dict[str, Any]],
     completed_documents: int,
     status: str = "STARTED",
+    error_message: str | None = None,
 ) -> bool:
     """
     Update extraction job results in Supabase incrementally during processing.
@@ -227,12 +237,23 @@ def _update_job_results_in_supabase(
         return False
 
     try:
+        now = datetime.now(UTC).isoformat()
         update_data = {
             "results": results,
             "completed_documents": completed_documents,
             "status": status,
-            "updated_at": datetime.now(UTC).isoformat(),
+            "updated_at": now,
+            # Written only here, by the running task. `updated_at` is also
+            # touched by the BFF on every status poll, so it cannot distinguish
+            # a live worker from a dead job someone is watching.
+            "heartbeat_at": now,
         }
+        # Stamping completed_at is what takes the row out of the reaper's scan;
+        # a terminal row with no completion time reads as still running.
+        if status in ("SUCCESS", "FAILURE"):
+            update_data["completed_at"] = now
+        if error_message:
+            update_data["error_message"] = error_message
 
         result = (
             supabase_client.table("extraction_jobs")
@@ -253,6 +274,80 @@ def _update_job_results_in_supabase(
 
     except Exception as e:
         logger.error(f"Failed to update Supabase results for job {job_id}: {e}")
+        return False
+
+
+def _claim_job(job_id: str, total_documents: int) -> None:
+    """Mark the job as owned by this worker run.
+
+    Bumping ``attempts`` is what makes redelivery visible. With
+    ``task_acks_late`` an interrupted job legitimately comes back, but a job on
+    its fourth attempt is a job stuck in a crash loop, and nothing else in the
+    system records that.
+    """
+    if not supabase_client:
+        return
+    try:
+        current = (
+            supabase_client.table("extraction_jobs")
+            .select("attempts")
+            .eq("job_id", job_id)
+            .limit(1)
+            .execute()
+        )
+        rows = current.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        # Read-modify-write is safe here: only the worker holding this task id
+        # writes the column, and a concurrent writer would mean the duplicate
+        # execution this counter exists to surface.
+        attempts = (rows[0].get("attempts") or 0) + 1 if rows else 1
+        now = datetime.now(UTC).isoformat()
+        supabase_client.table("extraction_jobs").update(
+            {
+                "status": "STARTED",
+                "started_at": now,
+                "heartbeat_at": now,
+                "attempts": attempts,
+                "total_documents": total_documents,
+            }
+        ).eq("job_id", job_id).execute()
+        if attempts > 1:
+            logger.warning(
+                f"Job {job_id} is starting attempt {attempts} — the previous "
+                f"run did not finish"
+            )
+    except Exception as claim_error:
+        # Never fail the job over bookkeeping; the extraction itself is the
+        # valuable part and the reaper can still resolve an unclaimed row.
+        logger.error(f"Failed to claim job {job_id}: {claim_error}")
+
+
+def _cancellation_requested(job_id: str) -> bool:
+    """Check whether the owner asked for this job to stop.
+
+    Polled between documents rather than enforced by SIGTERM: killing the child
+    mid-document loses the in-flight document and, under ``task_acks_late``,
+    causes the whole job to be redelivered and restarted.
+    """
+    if not supabase_client:
+        return False
+    try:
+        response = (
+            supabase_client.table("extraction_jobs")
+            .select("cancel_requested_at")
+            .eq("job_id", job_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        return bool(rows and rows[0].get("cancel_requested_at"))
+    except Exception as check_error:
+        # Treat an unreadable flag as "not cancelled" — aborting a long job on a
+        # transient database blip would be the worse failure.
+        logger.warning(f"Cancellation check failed for job {job_id}: {check_error}")
         return False
 
 
@@ -411,6 +506,10 @@ def extract_information_from_documents_task(
                 "completed_documents": 0,
             },
         )
+
+        # Claim the job before any slow work (LLM init, document fetch) so a run
+        # that dies during setup still leaves a heartbeat for the reaper.
+        _claim_job(self.request.id, total_documents=len(request.document_ids))
 
         # Initialize LLM - this may fail if LLM service is unavailable
         llm_name = request.llm_name
@@ -585,6 +684,28 @@ def extract_information_from_documents_task(
                 completed_documents=completed_documents,
                 status="STARTED",
             )
+
+            # Cooperative cancellation point. Checked after the write above so
+            # everything extracted so far is already durable, and only between
+            # documents so no document is abandoned half-processed.
+            if completed_documents < total_documents and _cancellation_requested(
+                self.request.id
+            ):
+                logger.info(
+                    f"Job {self.request.id} cancelled by owner after "
+                    f"{completed_documents}/{total_documents} documents"
+                )
+                _update_job_results_in_supabase(
+                    job_id=self.request.id,
+                    results=results,
+                    completed_documents=completed_documents,
+                    status="FAILURE",
+                    error_message=(
+                        f"Cancelled by user after {completed_documents} of "
+                        f"{total_documents} documents"
+                    ),
+                )
+                return results
 
         # Check results and update task state accordingly
         # NOTE: Do NOT call update_state() with final states (SUCCESS, FAILURE, etc.) before returning!
