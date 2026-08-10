@@ -106,10 +106,11 @@ describe("GET /api/schemas", () => {
   it("fetches schemas from backend and enriches with user emails", async () => {
     const supabase = mockSupabaseAuth(USER_ID);
 
-    // Mock user_profiles lookup
+    // Author profiles live in `profiles` — `user_profiles` does not exist (see #446),
+    // so any other table name silently yields no email.
     const profilesResult = { data: [{ id: USER_ID, email: "user@test.com" }], error: null };
     supabase.from = jest.fn().mockImplementation((table: string) => {
-      if (table === "user_profiles") {
+      if (table === "profiles") {
         return {
           select: jest.fn().mockReturnValue({
             in: jest.fn().mockResolvedValue(profilesResult),
@@ -141,6 +142,13 @@ describe("GET /api/schemas", () => {
     const body = await response.json();
     expect(Array.isArray(body)).toBe(true);
     expect(body[0].user).toEqual({ email: "user@test.com" });
+
+    // Regression guard for #446: the enrichment must read `profiles`.
+    const queriedTables = (supabase.from as jest.Mock).mock.calls.map(
+      ([table]) => table
+    );
+    expect(queriedTables).toContain("profiles");
+    expect(queriedTables).not.toContain("user_profiles");
   });
 
   it("returns paginated response when pagination params provided", async () => {

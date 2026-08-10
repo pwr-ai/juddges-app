@@ -177,7 +177,7 @@ export async function fetchSchemaDetail(
     });
     try {
       const profileResponse = await fetch(
-        `${supabaseUrl}/rest/v1/user_profiles?${profileQuery.toString()}`,
+        `${supabaseUrl}/rest/v1/profiles?${profileQuery.toString()}`,
         {
           method: "GET",
           headers: {

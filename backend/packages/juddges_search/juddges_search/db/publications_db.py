@@ -65,7 +65,8 @@ class PublicationsDB(SupabaseClientMixin):
             query = self.client.table("publications").select(
                 "*, publication_schemas(schema_id, description, created_at), "
                 "publication_collections(collection_id, description, created_at), "
-                "publication_extraction_jobs(job_id, description, created_at)"
+                "publication_extraction_jobs(job_id, description, created_at, "
+                "extraction_jobs(status))"
             )
 
             if project:
@@ -96,7 +97,8 @@ class PublicationsDB(SupabaseClientMixin):
                 .select(
                     "*, publication_schemas(schema_id, description, created_at), "
                     "publication_collections(collection_id, description, created_at), "
-                    "publication_extraction_jobs(job_id, description, created_at)"
+                    "publication_extraction_jobs(job_id, description, created_at, "
+                    "extraction_jobs(status))"
                 )
                 .eq("id", publication_id)
                 .execute()

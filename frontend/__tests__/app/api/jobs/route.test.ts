@@ -88,7 +88,8 @@ describe("GET /api/jobs", () => {
     // Schema lookup
     const schemasInResult = { data: [{ id: SCHEMA_ID, name: "Test Schema" }], error: null };
 
-    // User profiles
+    // Author profiles live in `profiles` — `user_profiles` does not exist (see #446),
+    // so any other table name silently yields no email.
     const profilesInResult = { data: [{ id: USER_ID, email: "user@test.com" }], error: null };
 
     supabase.from = jest.fn().mockImplementation((table: string) => {
@@ -109,7 +110,7 @@ describe("GET /api/jobs", () => {
           }),
         };
       }
-      if (table === "user_profiles") {
+      if (table === "profiles") {
         return {
           select: jest.fn().mockReturnValue({
             in: jest.fn().mockResolvedValue(profilesInResult),
@@ -128,6 +129,13 @@ describe("GET /api/jobs", () => {
     expect(body.jobs[0].schema_name).toBe("Test Schema");
     expect(body.jobs[0].user).toEqual({ email: "user@test.com" });
     expect(body.total).toBe(1);
+
+    // Regression guard for #446: the enrichment must read `profiles`.
+    const queriedTables = (supabase.from as jest.Mock).mock.calls.map(
+      ([table]) => table
+    );
+    expect(queriedTables).toContain("profiles");
+    expect(queriedTables).not.toContain("user_profiles");
   });
 
   it("returns empty jobs list when no jobs exist", async () => {
