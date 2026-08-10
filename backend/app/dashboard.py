@@ -665,9 +665,7 @@ async def test_document_counts(
         # Get total count
         logger.info("Fetching total document count...")
         total_response = (
-            supabase.table("legal_documents")
-            .select("document_id", count="exact")
-            .execute()
+            supabase.table("judgments").select("id", count="exact").execute()
         )
         total_count = total_response.count or 0
         logger.info(f"Total documents: {total_count:,}")
@@ -686,9 +684,11 @@ async def test_document_counts(
             try:
                 logger.info(f"Querying {doc_type}...")
                 response = (
-                    supabase.table("legal_documents")
-                    .select("document_id", count="exact")
-                    .eq("document_type", doc_type)
+                    supabase.table("judgments")
+                    .select("id", count="exact")
+                    # `judgments.decision_type` is the closest analogue of the
+                    # legacy `document_type` column.
+                    .eq("decision_type", doc_type)
                     .execute()
                 )
                 count = response.count or 0
@@ -702,9 +702,9 @@ async def test_document_counts(
         try:
             one_week_ago = datetime.now(UTC) - timedelta(days=7)
             recent_response = (
-                supabase.table("legal_documents")
-                .select("document_id", count="exact")
-                .gte("ingestion_date", one_week_ago.isoformat())
+                supabase.table("judgments")
+                .select("id", count="exact")
+                .gte("created_at", one_week_ago.isoformat())
                 .execute()
             )
             recent_count = recent_response.count or 0

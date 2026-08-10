@@ -477,7 +477,7 @@ async def _gather_research_context(
     try:
         # Get recent search queries
         search_response = (
-            supabase.table("search_queries")
+            supabase.table("search_analytics")
             .select("query, created_at")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
@@ -741,7 +741,7 @@ async def _get_trending_topics(user_id: str | None, limit: int = 5) -> list[str]
             return []
 
         response = (
-            supabase.table("search_queries")
+            supabase.table("search_analytics")
             .select("query")
             .eq("user_id", user_id)
             .order("created_at", desc=True)

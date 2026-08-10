@@ -369,7 +369,7 @@ class TestRevertRollbackOnFailure:
                 chain.execute.return_value = resp
             elif call_count["select"] == 2:
                 # Second select on document_versions: get max version number
-                # (the current doc select goes to legal_documents / docs_mock)
+                # (the current doc select goes to judgments / docs_mock)
                 resp = MagicMock()
                 resp.data = [{"version_number": 3}]
                 chain.execute.return_value = resp
@@ -390,7 +390,7 @@ class TestRevertRollbackOnFailure:
         delete_chain.execute.return_value = MagicMock(data=[])
         versions_mock.delete.return_value = delete_chain
 
-        # legal_documents table mock
+        # judgments table mock
         docs_mock = MagicMock()
 
         def docs_select(*args, **kwargs):
@@ -398,15 +398,14 @@ class TestRevertRollbackOnFailure:
             chain.eq.return_value = chain
             chain.limit.return_value = chain
             resp = MagicMock()
+            # `judgments` exposes no content_hash / extracted_data /
+            # current_version; the route aliases `id` to `document_id`.
             resp.data = [
                 {
                     "document_id": document_id,
                     "title": "Current Title",
                     "full_text": "current content",
                     "summary": "current summary",
-                    "content_hash": "currenthash",
-                    "extracted_data": {},
-                    "current_version": 3,
                 }
             ]
             chain.execute.return_value = resp
@@ -414,7 +413,7 @@ class TestRevertRollbackOnFailure:
 
         docs_mock.select.side_effect = docs_select
 
-        # Update on legal_documents raises an error
+        # Update on judgments raises an error
         update_chain = MagicMock()
         update_chain.eq.return_value = update_chain
         update_chain.execute.side_effect = RuntimeError("DB connection lost")
@@ -424,7 +423,7 @@ class TestRevertRollbackOnFailure:
         def table_router(name):
             if name == "document_versions":
                 return versions_mock
-            if name == "legal_documents":
+            if name == "judgments":
                 return docs_mock
             raise ValueError(f"Unexpected table: {name}")
 
@@ -507,9 +506,6 @@ class TestRevertRollbackOnFailure:
                     "title": "Current",
                     "full_text": "current text",
                     "summary": None,
-                    "content_hash": "curhash",
-                    "extracted_data": {},
-                    "current_version": 2,
                 }
             ]
             chain.execute.return_value = resp
@@ -527,7 +523,7 @@ class TestRevertRollbackOnFailure:
         def table_router(name):
             if name == "document_versions":
                 return versions_mock
-            if name == "legal_documents":
+            if name == "judgments":
                 return docs_mock
             raise ValueError(f"Unexpected table: {name}")
 

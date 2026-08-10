@@ -134,8 +134,8 @@ def _convert_supabase_to_legal_document(
         issuing_body = IssuingBody(**issuing_body_data)
 
     # Parse dates using utility function. Real `judgments` rows expose
-    # `decision_date`; legacy `legal_documents` callers passed `date_issued` —
-    # accept either so collection batch responses don't drop dates.
+    # `decision_date`; callers that alias it to the legacy `date_issued` name
+    # pass that instead — accept either so batch responses don't drop dates.
     date_issued = parse_date(
         doc_data.get("date_issued") or doc_data.get("decision_date")
     )

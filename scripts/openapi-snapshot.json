@@ -14118,8 +14118,7 @@
           "filters": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -18713,7 +18712,7 @@
     },
     "/api/admin/documents/stats": {
       "get": {
-        "description": "Get document statistics grouped by type, country, and language.\n\nQueries the doc_type_stats pre-computed table for type counts, and\nlegal_documents for country/language breakdowns and recent additions.",
+        "description": "Get document statistics grouped by type, country, and language.\n\nQueries the doc_type_stats pre-computed table for type counts, and\njudgments for country/language breakdowns and recent additions.",
         "operationId": "get_document_stats_api_admin_documents_stats_get",
         "responses": {
           "200": {

@@ -439,7 +439,13 @@ class TestAnonymizeDataGdprRegression:
 
     @pytest.mark.unit
     async def test_pii_fields_scrubbed_in_search_queries(self) -> None:
-        """Anonymizing search_queries must scrub ip, user_agent, and query content."""
+        """Anonymizing search_queries must redact the query text on the
+        physical `search_analytics` table.
+
+        `search_analytics` has no ip_address / user_agent columns, so the
+        payload must not mention them -- PostgREST rejects updates that
+        reference unknown columns.
+        """
         mock_client = MagicMock()
         mock_result = MagicMock()
         mock_result.data = [{"id": "1"}]
@@ -447,12 +453,15 @@ class TestAnonymizeDataGdprRegression:
 
         await RetentionService._anonymize_data(mock_client, "user-1", "search_queries")
 
+        mock_client.table.assert_called_once_with("search_analytics")
+
         update_call = mock_client.table.return_value.update
         update_data = update_call.call_args[0][0]
 
-        assert update_data["ip_address"] is None
-        assert update_data["user_agent"] is None
         assert update_data["query"] == "[REDACTED]"
+        assert update_data["user_id"] != "user-1"
+        assert "ip_address" not in update_data
+        assert "user_agent" not in update_data
 
 
 # =============================================================================

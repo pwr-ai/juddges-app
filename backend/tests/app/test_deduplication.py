@@ -135,16 +135,16 @@ class TestDeduplicationStatsEndpoint:
         groups_chain.select.return_value.execute.return_value = make_count_response(2)
 
         mock_client.table.side_effect = lambda name: {
-            "legal_documents": total_chain,
+            "judgments": total_chain,
             "document_duplicate_groups": groups_chain,
         }.get(name, MagicMock())
 
-        # For the legal_documents calls we need different behavior per call
+        # For the judgments calls we need different behavior per call
         # Use a counter to differentiate
         call_count = {"n": 0}
 
         def table_side_effect(name):
-            if name == "legal_documents":
+            if name == "judgments":
                 call_count["n"] += 1
                 if call_count["n"] == 1:
                     return total_chain

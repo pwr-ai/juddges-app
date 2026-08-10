@@ -188,11 +188,12 @@ async def get_version_history(
     try:
         db = get_vector_db()
 
-        # Get current document version
+        # Get current document version. `judgments` has no `current_version`
+        # column, so the fallback below treats an unversioned document as v1.
         doc_response = (
-            db.client.table("legal_documents")
-            .select("document_id, current_version")
-            .eq("document_id", document_id)
+            db.client.table("judgments")
+            .select("document_id:id")
+            .eq("id", document_id)
             .limit(1)
             .execute()
         )
@@ -364,9 +365,10 @@ async def get_version_diff(
         if not to_response.data:
             # If target version is not found, it might be the current version
             doc_response = (
-                db.client.table("legal_documents")
-                .select("full_text, title, updated_at, current_version")
-                .eq("document_id", document_id)
+                db.client.table("judgments")
+                # `judgments` has no `current_version` column.
+                .select("full_text, title, updated_at")
+                .eq("id", document_id)
                 .limit(1)
                 .execute()
             )
@@ -424,11 +426,12 @@ async def create_version_snapshot(
 
         # Get current document
         doc_response = (
-            db.client.table("legal_documents")
-            .select(
-                "document_id, title, full_text, summary, content_hash, extracted_data, current_version"
-            )
-            .eq("document_id", document_id)
+            db.client.table("judgments")
+            # `judgments` has no `content_hash`, `extracted_data` or
+            # `current_version` columns; the hash is recomputed below and the
+            # version counter lives on `document_versions`.
+            .select("document_id:id, title, full_text, summary")
+            .eq("id", document_id)
             .limit(1)
             .execute()
         )
@@ -498,10 +501,9 @@ async def create_version_snapshot(
 
         v = insert_response.data[0]
 
-        # Update current_version on the document
-        db.client.table("legal_documents").update({"current_version": next_version}).eq(
-            "document_id", document_id
-        ).execute()
+        # The document row itself carries no version counter: `judgments` has
+        # no `current_version` column, so the highest
+        # `document_versions.version_number` is the current version.
 
         logger.info(f"Created version {next_version} for document {document_id}")
 
@@ -566,11 +568,12 @@ async def revert_to_version(
 
         # Get current document to snapshot before revert
         doc_response = (
-            db.client.table("legal_documents")
-            .select(
-                "document_id, title, full_text, summary, content_hash, extracted_data, current_version"
-            )
-            .eq("document_id", document_id)
+            db.client.table("judgments")
+            # `judgments` has no `content_hash`, `extracted_data` or
+            # `current_version` columns; the hash is recomputed below and the
+            # version counter lives on `document_versions`.
+            .select("document_id:id, title, full_text, summary")
+            .eq("id", document_id)
             .limit(1)
             .execute()
         )
@@ -620,17 +623,16 @@ async def revert_to_version(
         # Now revert the document content; if this fails, roll back the snapshot
         # to avoid leaving a phantom version record with an un-reverted document.
         try:
-            revert_hash = _compute_content_hash(target_version["full_text"])
+            # `judgments` has neither `content_hash` nor `current_version`, so
+            # only the content columns are written back.
             update_data = {
                 "title": target_version.get("title") or current_doc.get("title"),
                 "full_text": target_version["full_text"],
                 "summary": target_version.get("summary"),
-                "content_hash": revert_hash,
-                "current_version": next_version + 1,
             }
 
-            db.client.table("legal_documents").update(update_data).eq(
-                "document_id", document_id
+            db.client.table("judgments").update(update_data).eq(
+                "id", document_id
             ).execute()
         except Exception as update_err:
             # Compensating transaction: remove the pre-revert snapshot

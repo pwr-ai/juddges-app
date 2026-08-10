@@ -157,26 +157,24 @@ async def get_deduplication_stats() -> DeduplicationStatsResponse:
         db = get_vector_db()
 
         # Count total documents
-        total_resp = (
-            db.client.table("legal_documents")
-            .select("supabase_document_id", count="exact")
-            .execute()
-        )
+        total_resp = db.client.table("judgments").select("id", count="exact").execute()
         total_documents = total_resp.count or 0
 
-        # Count documents with content hash
+        # Count documents with content hash. `judgments` has no `content_hash`
+        # column yet, so this raises and the endpoint reports zeros below.
         hash_resp = (
-            db.client.table("legal_documents")
-            .select("supabase_document_id", count="exact")
+            db.client.table("judgments")
+            .select("id", count="exact")
             .not_.is_("content_hash", "null")
             .execute()
         )
         documents_with_hash = hash_resp.count or 0
 
-        # Count flagged duplicates
+        # Count flagged duplicates. `judgments` has no `is_duplicate` column
+        # yet, so this raises and the endpoint reports zeros below.
         dup_resp = (
-            db.client.table("legal_documents")
-            .select("supabase_document_id", count="exact")
+            db.client.table("judgments")
+            .select("id", count="exact")
             .eq("is_duplicate", True)
             .execute()
         )
@@ -233,10 +231,14 @@ async def scan_for_duplicates(request: ScanRequest) -> ScanResponse:
     db = get_vector_db()
 
     # Fetch documents with embeddings
-    select_fields = "document_id, title, document_type, date_issued, full_text, embedding, content_hash"
+    # `judgments` columns are aliased onto the legacy names this endpoint reads.
+    select_fields = (
+        "document_id:id, title, document_type:decision_type, "
+        "date_issued:decision_date, full_text, embedding, content_hash"
+    )
     try:
         response = (
-            db.client.table("legal_documents")
+            db.client.table("judgments")
             .select(select_fields)
             .limit(request.max_documents)
             .execute()
@@ -244,10 +246,11 @@ async def scan_for_duplicates(request: ScanRequest) -> ScanResponse:
     except Exception:
         # Fallback if content_hash column doesn't exist yet
         select_fields = (
-            "document_id, title, document_type, date_issued, full_text, embedding"
+            "document_id:id, title, document_type:decision_type, "
+            "date_issued:decision_date, full_text, embedding"
         )
         response = (
-            db.client.table("legal_documents")
+            db.client.table("judgments")
             .select(select_fields)
             .limit(request.max_documents)
             .execute()
@@ -415,10 +418,13 @@ async def check_document_duplicates(
     if content_hash:
         try:
             hash_resp = (
-                db.client.table("legal_documents")
-                .select("document_id, title, document_type, date_issued, content_hash")
+                db.client.table("judgments")
+                .select(
+                    "document_id:id, title, document_type:decision_type, "
+                    "date_issued:decision_date, content_hash"
+                )
                 .eq("content_hash", content_hash)
-                .neq("document_id", request.document_id)
+                .neq("id", request.document_id)
                 .limit(20)
                 .execute()
             )
@@ -431,9 +437,12 @@ async def check_document_duplicates(
         if not exact_duplicates and full_text:
             try:
                 all_docs_resp = (
-                    db.client.table("legal_documents")
-                    .select("document_id, title, document_type, date_issued, full_text")
-                    .neq("document_id", request.document_id)
+                    db.client.table("judgments")
+                    .select(
+                        "document_id:id, title, document_type:decision_type, "
+                        "date_issued:decision_date, full_text"
+                    )
+                    .neq("id", request.document_id)
                     .limit(200)
                     .execute()
                 )
@@ -519,8 +528,8 @@ async def compute_hashes(
     try:
         # Fetch documents without hashes
         response = (
-            db.client.table("legal_documents")
-            .select("supabase_document_id, document_id, full_text")
+            db.client.table("judgments")
+            .select("id, full_text")
             .is_("content_hash", "null")
             .limit(limit)
             .execute()
@@ -528,10 +537,7 @@ async def compute_hashes(
     except Exception:
         # content_hash column may not exist - fetch all and compute locally
         response = (
-            db.client.table("legal_documents")
-            .select("supabase_document_id, document_id, full_text")
-            .limit(limit)
-            .execute()
+            db.client.table("judgments").select("id, full_text").limit(limit).execute()
         )
 
     docs = response.data or []
@@ -546,14 +552,12 @@ async def compute_hashes(
         content_hash = compute_content_hash(full_text)
 
         try:
-            db.client.table("legal_documents").update(
-                {"content_hash": content_hash}
-            ).eq("supabase_document_id", doc["supabase_document_id"]).execute()
+            db.client.table("judgments").update({"content_hash": content_hash}).eq(
+                "id", doc["id"]
+            ).execute()
             updated += 1
         except Exception as e:
-            logger.warning(
-                f"Error updating hash for document {doc['document_id']}: {e}"
-            )
+            logger.warning(f"Error updating hash for document {doc['id']}: {e}")
             errors += 1
 
     return {
