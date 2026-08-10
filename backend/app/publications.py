@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, require_admin
+from app.extraction_domain.shared import simplify_job_status
 from app.models import validate_id_format
 
 router = APIRouter(prefix="/publications", tags=["publications"])
@@ -168,6 +169,39 @@ class LinkExtractionJobRequest(BaseModel):
         return validate_id_format(v, "job_id")
 
 
+def _extract_job_status(link: dict) -> str | None:
+    """Pull the job status out of a publication_extraction_jobs row.
+
+    ``status`` lives on the nested ``extraction_jobs`` table, not on the
+    junction row, so it arrives as an embedded PostgREST resource. Embeds
+    come back as a dict for a to-one relationship and as a list when
+    PostgREST resolves the relationship as to-many, so accept both. A link
+    pointing at a deleted job embeds ``None`` and yields ``None``.
+
+    The column stores database-side values only — ``PENDING``, ``STARTED``,
+    ``SUCCESS``, ``FAILURE`` — because ``update_job_status_in_supabase``
+    maps the simplified status down before writing. Every other surface
+    normalises on the way out (``jobs_router`` does the same on its list
+    endpoint), so publications must too, or the same job reads ``SUCCESS``
+    here and ``COMPLETED`` two pages over.
+
+    ``COMPLETED`` and ``PARTIALLY_COMPLETED`` both persist as ``SUCCESS``
+    and cannot be told apart from the column alone; that needs the
+    per-document results JSON, which this embed does not fetch. A partially
+    failed job therefore reads as ``COMPLETED`` here — the same limitation
+    the extraction job list already has.
+    """
+    embedded = link.get("extraction_jobs")
+    if isinstance(embedded, list):
+        embedded = embedded[0] if embedded else None
+    if not isinstance(embedded, dict):
+        return None
+    status = embedded.get("status")
+    if not status:
+        return None
+    return simplify_job_status(status)
+
+
 def transform_publication(data: dict) -> PublicationWithResources:
     """Transform database response to PublicationWithResources model."""
     schemas = []
@@ -198,6 +232,7 @@ def transform_publication(data: dict) -> PublicationWithResources:
             extraction_jobs.append(
                 ExtractionJobLink(
                     job_id=pj["job_id"],
+                    job_status=_extract_job_status(pj),
                     description=pj.get("description"),
                     created_at=pj.get("created_at"),
                 )
@@ -568,6 +603,7 @@ async def get_publication_extraction_jobs(
     return [
         ExtractionJobLink(
             job_id=j["job_id"],
+            job_status=_extract_job_status(j),
             description=j.get("description"),
             created_at=j.get("created_at"),
         )
