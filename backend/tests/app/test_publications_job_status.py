@@ -20,12 +20,22 @@ gaps are pinned here — closing any subset still returns ``None``.
 The column stores only ``PENDING``/``STARTED``/``SUCCESS``/``FAILURE``, and the
 API exposes the simplified vocabulary shared with the extraction endpoints, so
 the fixtures use real column values and assert the translated names.
+
+The same embed had a second defect, fixed under issue #464: the linked-jobs
+sub-resource selected ``extraction_jobs(… schema_name …)``, a column that does
+not exist and should not — the name is derived from ``schema_id`` everywhere
+else (``jobs_router.create_bulk_extraction``,
+``frontend/app/api/jobs/route.ts``). PostgREST rejects the whole query with
+``42703 column extraction_jobs_1.schema_name does not exist``, so the endpoint
+returned ``[]`` for every publication. The second half of this module pins the
+select string and the derivation that replaced the phantom column.
 """
 
 from typing import Any
 
 import pytest
 from juddges_search.db.publications_db import PublicationsDB
+from supabase import PostgrestAPIError
 
 from app.publications import get_publication_extraction_jobs, transform_publication
 
@@ -235,3 +245,259 @@ async def test_get_publications_requests_job_status() -> None:
 
     assert client.selects, "get_publications issued no select"
     assert "extraction_jobs(status)" in client.selects[0]
+
+
+# ---------------------------------------------------------------------------
+# The phantom `schema_name` column in the linked-jobs embed (issue #464)
+# ---------------------------------------------------------------------------
+
+SCHEMA_ID = "55555555-5555-4555-a555-555555555555"
+
+
+class _TableStub:
+    """One table's worth of canned rows, or an error to raise on execute."""
+
+    def __init__(
+        self, rows: list[dict[str, Any]] | None = None, error: Exception | None = None
+    ) -> None:
+        self.rows = rows or []
+        self.error = error
+
+
+class _StubQuery:
+    def __init__(
+        self, stub: _TableStub, recorder: list[tuple[str, str]], table: str
+    ) -> None:
+        self._stub = stub
+        self._recorder = recorder
+        self._table = table
+
+    def select(self, columns: str) -> "_StubQuery":
+        self._recorder.append((self._table, columns))
+        return self
+
+    def __getattr__(self, _name: str):
+        def _chain(*_args: Any, **_kwargs: Any) -> "_StubQuery":
+            return self
+
+        return _chain
+
+    def execute(self) -> Any:
+        if self._stub.error is not None:
+            raise self._stub.error
+
+        class _Response:
+            data = self._stub.rows
+
+        return _Response()
+
+
+class _StubClient:
+    """A Supabase client that answers per table and records every select."""
+
+    def __init__(self, **tables: _TableStub) -> None:
+        self._tables = tables
+        self.selects: list[tuple[str, str]] = []
+
+    def table(self, name: str) -> _StubQuery:
+        return _StubQuery(self._tables.get(name, _TableStub()), self.selects, name)
+
+    @property
+    def tables_queried(self) -> list[str]:
+        return [table for table, _ in self.selects]
+
+
+def _db_with(client: _StubClient) -> PublicationsDB:
+    db = PublicationsDB.__new__(PublicationsDB)
+    db.client = client
+    return db
+
+
+def _job_link(job: dict[str, Any] | list[dict[str, Any]] | None) -> dict[str, Any]:
+    """A publication_extraction_jobs row as PostgREST returns it."""
+    return {
+        "job_id": JOB_ID,
+        "description": "Run reported in table 3",
+        "created_at": "2026-08-06T09:00:00Z",
+        "extraction_jobs": job,
+    }
+
+
+def _embedded_job(link: dict[str, Any]) -> dict[str, Any]:
+    embedded = link["extraction_jobs"]
+    return embedded[0] if isinstance(embedded, list) else embedded
+
+
+@pytest.mark.anyio
+async def test_linked_jobs_embed_does_not_select_schema_name() -> None:
+    """extraction_jobs has no schema_name column; selecting it is a 400.
+
+    Pinned on the select string rather than on behaviour because the failure
+    mode is upstream: PostgREST refuses the request, the except branch logs and
+    returns [], and the endpoint reports "no linked jobs" for every
+    publication.
+    """
+    client = _StubClient()
+    db = _db_with(client)
+
+    await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert client.selects, "get_publication_extraction_jobs issued no select"
+    select = client.selects[0][1]
+    assert "schema_name" not in select
+    assert "extraction_jobs(id, job_id, status, schema_id, created_at)" in select
+
+
+@pytest.mark.anyio
+async def test_linked_jobs_resolve_schema_name_from_schema_id() -> None:
+    """The name comes from a schema lookup, like the other two call sites."""
+    client = _StubClient(
+        publication_extraction_jobs=_TableStub(
+            [
+                _job_link(
+                    {
+                        "id": "job-row",
+                        "job_id": JOB_ID,
+                        "status": "SUCCESS",
+                        "schema_id": SCHEMA_ID,
+                    }
+                )
+            ]
+        ),
+        extraction_schemas=_TableStub(
+            [{"id": SCHEMA_ID, "name": "Criminal appeal v3"}]
+        ),
+    )
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert client.tables_queried == [
+        "publication_extraction_jobs",
+        "extraction_schemas",
+    ]
+    assert _embedded_job(links[0])["schema_name"] == "Criminal appeal v3"
+    # The junction-row keys the API consumes are untouched.
+    assert links[0]["job_id"] == JOB_ID
+    assert links[0]["description"] == "Run reported in table 3"
+    assert links[0]["created_at"] == "2026-08-06T09:00:00Z"
+    assert _embedded_job(links[0])["status"] == "SUCCESS"
+
+
+@pytest.mark.anyio
+async def test_schema_name_resolves_through_a_to_many_embed() -> None:
+    """PostgREST may return the embed as a list; the name still lands."""
+    client = _StubClient(
+        publication_extraction_jobs=_TableStub(
+            [_job_link([{"status": "STARTED", "schema_id": SCHEMA_ID}])]
+        ),
+        extraction_schemas=_TableStub(
+            [{"id": SCHEMA_ID, "name": "Criminal appeal v3"}]
+        ),
+    )
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert _embedded_job(links[0])["schema_name"] == "Criminal appeal v3"
+
+
+@pytest.mark.anyio
+async def test_schema_name_is_none_when_the_schema_is_gone() -> None:
+    """extraction_jobs.schema_id has no FK, so it can dangle."""
+    client = _StubClient(
+        publication_extraction_jobs=_TableStub(
+            [_job_link({"status": "SUCCESS", "schema_id": SCHEMA_ID})]
+        ),
+        extraction_schemas=_TableStub([]),
+    )
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert _embedded_job(links[0])["schema_name"] is None
+
+
+@pytest.mark.anyio
+async def test_no_schema_lookup_without_a_schema_id() -> None:
+    """A job with no schema costs no extra round trip."""
+    client = _StubClient(
+        publication_extraction_jobs=_TableStub(
+            [_job_link({"status": "SUCCESS", "schema_id": None})]
+        ),
+    )
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert client.tables_queried == ["publication_extraction_jobs"]
+    assert _embedded_job(links[0])["schema_name"] is None
+
+
+@pytest.mark.anyio
+async def test_failed_schema_lookup_still_returns_the_links() -> None:
+    """Display metadata must not take down the read path."""
+    client = _StubClient(
+        publication_extraction_jobs=_TableStub(
+            [_job_link({"status": "SUCCESS", "schema_id": SCHEMA_ID})]
+        ),
+        extraction_schemas=_TableStub(
+            error=PostgrestAPIError({"message": "schema lookup exploded"})
+        ),
+    )
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert len(links) == 1
+    assert _embedded_job(links[0])["schema_name"] is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "embedded",
+    [
+        pytest.param(None, id="job-deleted"),
+        pytest.param([], id="empty-embed"),
+    ],
+)
+async def test_unresolvable_embed_needs_no_schema_lookup(embedded: Any) -> None:
+    """A link with no reachable job is returned as-is, not skipped."""
+    client = _StubClient(publication_extraction_jobs=_TableStub([_job_link(embedded)]))
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert client.tables_queried == ["publication_extraction_jobs"]
+    assert links[0]["job_id"] == JOB_ID
+
+
+@pytest.mark.anyio
+async def test_one_lookup_serves_every_link() -> None:
+    """Names are batched, mirroring the id -> name map in the jobs BFF route."""
+    other_schema = "66666666-6666-4666-a666-666666666666"
+    client = _StubClient(
+        publication_extraction_jobs=_TableStub(
+            [
+                _job_link({"status": "SUCCESS", "schema_id": SCHEMA_ID}),
+                _job_link({"status": "FAILURE", "schema_id": other_schema}),
+                _job_link({"status": "PENDING", "schema_id": SCHEMA_ID}),
+            ]
+        ),
+        extraction_schemas=_TableStub(
+            [
+                {"id": SCHEMA_ID, "name": "Criminal appeal v3"},
+                {"id": other_schema, "name": "Sentencing v1"},
+            ]
+        ),
+    )
+    db = _db_with(client)
+
+    links = await db.get_publication_extraction_jobs(PUBLICATION_ID)
+
+    assert client.tables_queried.count("extraction_schemas") == 1
+    assert [_embedded_job(link)["schema_name"] for link in links] == [
+        "Criminal appeal v3",
+        "Sentencing v1",
+        "Criminal appeal v3",
+    ]
