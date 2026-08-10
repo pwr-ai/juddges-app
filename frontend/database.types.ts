@@ -359,6 +359,48 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          department: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          metadata: Json | null
+          organization: string | null
+          preferences: Json | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          metadata?: Json | null
+          organization?: string | null
+          preferences?: Json | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          metadata?: Json | null
+          organization?: string | null
+          preferences?: Json | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       search_queries: {
         Row: {
           created_at: string | null
@@ -386,30 +428,6 @@ export type Database = {
           query?: string
           updated_at?: string | null
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      user_profiles: {
-        Row: {
-          createdAt: string
-          email: string
-          id: string
-          name: string | null
-          updatedAt: string
-        }
-        Insert: {
-          createdAt?: string
-          email: string
-          id: string
-          name?: string | null
-          updatedAt: string
-        }
-        Update: {
-          createdAt?: string
-          email?: string
-          id?: string
-          name?: string | null
-          updatedAt?: string
         }
         Relationships: []
       }
