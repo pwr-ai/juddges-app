@@ -646,11 +646,18 @@ jobs:
       # Switched from gitleaks-action (now requires a paid license for orgs)
       # to TruffleHog, which is free and OSS. Same intent: scan history for
       # leaked secrets and fail the job on verified findings.
+      #
+      # The Lob detector is excluded: a Lob API key is `test_` or `live_`
+      # followed by exactly 35 characters, which is also the shape of a great
+      # many pytest function names. It reports those as *verified*, so the job
+      # fails hard on them — 397 such matches under backend/tests alone, and
+      # zero of them secrets. See #438. Excluding the detector is the fix;
+      # policing test-name length is not.
       - name: Run TruffleHog (verified secrets only)
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          extra_args: --results=verified,unknown
+          extra_args: --results=verified,unknown --exclude-detectors=lob
         continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
 
   # ============================================================================
