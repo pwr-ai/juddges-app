@@ -41,19 +41,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
     const pageParam = searchParams.get('page');
     const pageSizeParam = searchParams.get('pageSize') || searchParams.get('page_size');
-    
+
     // Validate and set defaults for pagination
     // Explicitly check for NaN to prevent invalid values from being sent to backend
     const parsedPage = pageParam ? parseInt(pageParam, 10) : null;
     const parsedPageSize = pageSizeParam ? parseInt(pageSizeParam, 10) : null;
-    
-    const page = (parsedPage !== null && !isNaN(parsedPage)) 
-      ? Math.max(1, parsedPage) 
+
+    const page = (parsedPage !== null && !isNaN(parsedPage))
+      ? Math.max(1, parsedPage)
       : 1;
     const pageSize = (parsedPageSize !== null && !isNaN(parsedPageSize))
       ? Math.max(1, Math.min(100, parsedPageSize))
       : 100;
-    
+
     const hasPaginationParams = pageParam !== null || pageSizeParam !== null;
 
     // Get backend URL and API key
@@ -105,12 +105,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .filter((id: string | undefined) => id != null)
     )];
 
-    // Fetch user emails from user_profiles table
+    // Fetch user emails from the profiles table
     let userEmails: Record<string, string> = {};
     if (userIds.length > 0) {
       try {
         const { data: profiles, error: profilesError } = await supabase
-          .from('user_profiles')
+          .from('profiles')
           .select('id, email')
           .in('id', userIds);
 
@@ -128,9 +128,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             profilesFound: profiles.length
           });
         } else {
-          apiLogger.warn("Failed to fetch user emails from profiles", { 
-            error: profilesError, 
-            requestId 
+          apiLogger.warn("Failed to fetch user emails from profiles", {
+            error: profilesError,
+            requestId
           });
         }
       } catch (error) {
