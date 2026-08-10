@@ -151,7 +151,10 @@ def test_public_blog_rpc_is_safe_batched_and_deterministic() -> None:
     assert "count(*)" in normalized
     assert "jsonb_agg" in normalized
     assert "'id', up.id" in normalized
-    assert "'name', coalesce(up.name, 'anonymous')" in normalized
+    assert "left join public.profiles" in normalized
+    assert "user_profiles" not in normalized
+    assert "'name', coalesce(up.full_name, 'anonymous')" in normalized
+    assert "'avatar', up.avatar_url" in normalized
     assert "email" not in normalized
     assert "order by" in normalized
     assert "published_at" in normalized
