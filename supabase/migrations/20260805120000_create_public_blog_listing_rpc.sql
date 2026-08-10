@@ -107,9 +107,11 @@ AS $$
                 )
                 ELSE jsonb_build_object(
                     'id', up.id,
-                    'name', COALESCE(up.name, 'Anonymous'),
-                    'avatar', up.avatar,
-                    'title', COALESCE(up.title, 'Researcher')
+                    'name', COALESCE(up.full_name, 'Anonymous'),
+                    'avatar', up.avatar_url,
+                    -- public.profiles has no job-title column; the API layer
+                    -- substitutes its own default for a null here.
+                    'title', NULL::text
                 )
             END AS author,
             COALESCE(
@@ -121,7 +123,7 @@ AS $$
                 '[]'::jsonb
             ) AS tags
         FROM paged AS p
-        LEFT JOIN public.user_profiles AS up ON up.id = p.author_id
+        LEFT JOIN public.profiles AS up ON up.id = p.author_id
     )
     SELECT jsonb_build_object(
         'total', (SELECT COUNT(*) FROM filtered),
