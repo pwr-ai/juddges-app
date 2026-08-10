@@ -254,6 +254,15 @@ def _update_job_results_in_supabase(
             update_data["completed_at"] = now
         if error_message:
             update_data["error_message"] = error_message
+        elif status == "STARTED":
+            # A single document slower than the reaper's threshold gets the job
+            # marked FAILURE while the worker is in fact still alive. This write
+            # is the worker reasserting itself, so it must also clear the reaper's
+            # message and completion stamp — otherwise the row reads as running
+            # while still carrying "worker stopped reporting", and a client that
+            # polled during the window saw a failure that then un-failed.
+            update_data["error_message"] = None
+            update_data["completed_at"] = None
 
         result = (
             supabase_client.table("extraction_jobs")

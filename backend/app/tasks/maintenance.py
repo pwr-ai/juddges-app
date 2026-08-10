@@ -13,9 +13,15 @@ if TYPE_CHECKING:
     from celery import Task
 
 
-# A running extraction reports a heartbeat after every document, so silence for
-# this long means the worker is gone, not slow. Sized for a worst-case single
-# document (a very long judgment against a slow model) plus margin.
+# A running extraction reports a heartbeat after every document, so the
+# threshold has to exceed the slowest single document, not the slowest job.
+# Sized for a worst case (a very long judgment against a slow model) plus margin.
+#
+# A false positive is survivable by design rather than by luck: one document
+# slower than this gets the job reaped, and the worker's next progress write
+# reasserts STARTED and clears the error message and completion stamp (see
+# ``_update_job_results_in_supabase`` in app/workers.py). Raising this value
+# trades faster recovery from real worker deaths for fewer such flips.
 STALE_JOB_THRESHOLD_SECONDS = int(
     os.environ.get("EXTRACTION_STALE_JOB_SECONDS", 45 * 60)
 )

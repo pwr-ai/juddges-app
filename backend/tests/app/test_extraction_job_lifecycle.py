@@ -308,7 +308,34 @@ def test_progress_write_advances_the_heartbeat(monkeypatch):
     payload = fake.first("update")["payload"]
     assert payload["heartbeat_at"]
     assert payload["status"] == "STARTED"
-    assert "completed_at" not in payload, "a mid-run write must not look terminal"
+    # Explicitly nulled rather than omitted: a mid-run write also has to undo a
+    # false-positive reap, so it clears the stamp instead of leaving it alone.
+    assert payload.get("completed_at") is None, "a mid-run write must not look terminal"
+
+
+@pytest.mark.unit
+def test_progress_write_clears_a_false_positive_reap(monkeypatch):
+    """A slow document must not leave the row contradicting itself.
+
+    One document slower than the reaper's threshold gets the job marked FAILURE
+    while its worker is alive. The next progress write is the worker reasserting
+    itself, so it has to clear the reaper's error message and completion stamp —
+    otherwise the row reads STARTED while still saying "worker stopped
+    reporting", and a client that polled in between saw a failure that un-failed.
+    """
+    from app import workers
+
+    fake = FakeSupabase(results={"update": [[{"job_id": "job-1"}]]})
+    monkeypatch.setattr(workers, "supabase_client", fake)
+
+    workers._update_job_results_in_supabase(
+        job_id="job-1", results=[{"status": "completed"}], completed_documents=2
+    )
+
+    payload = fake.first("update")["payload"]
+    assert payload["status"] == "STARTED"
+    assert payload["error_message"] is None, "a live worker must clear a stale failure"
+    assert payload["completed_at"] is None, "a running job has no completion time"
 
 
 @pytest.mark.unit
