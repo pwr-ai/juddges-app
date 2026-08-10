@@ -309,7 +309,7 @@ const server = createServer((request, response) => {
 
   if (
     request.method === 'GET' &&
-    url.pathname === '/rest/v1/user_profiles'
+    url.pathname === '/rest/v1/profiles'
   ) {
     logRequest(request, url);
     profileResponse(response);

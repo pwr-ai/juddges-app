@@ -238,14 +238,14 @@ export async function GET() {
       }
     }
 
-    // Fetch user emails from user_profiles table
+    // Fetch user emails from the profiles table
     const userIds = [...new Set((jobs || []).map((job: any) => job.user_id).filter(Boolean))];
     let userEmails: Record<string, string> = {};
 
     if (userIds.length > 0) {
       try {
         const { data: userProfiles, error: profilesError } = await supabase
-          .from('user_profiles')
+          .from('profiles')
           .select('id, email')
           .in('id', userIds);
 
