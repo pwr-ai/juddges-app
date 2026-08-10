@@ -157,11 +157,16 @@ async def get_post_tags(supabase, post_id: str) -> list[str]:
 
 
 async def get_post_author(supabase, author_id: str) -> dict:
-    """Get author information."""
+    """Get author information from public.profiles.
+
+    `profiles` has no job-title column, so the author's ``title`` is always the
+    ``"Researcher"`` default — the same value the no-profile fallback below and
+    `public_author` use, which keeps the author shape stable for every caller.
+    """
     try:
         response = (
-            supabase.table("user_profiles")
-            .select("id, name, email, avatar, title")
+            supabase.table("profiles")
+            .select("id, full_name, email, avatar_url")
             .eq("id", author_id)
             .single()
             .execute()
@@ -170,10 +175,10 @@ async def get_post_author(supabase, author_id: str) -> dict:
         if response.data:
             return {
                 "id": response.data["id"],
-                "name": response.data.get("name") or "Anonymous",
+                "name": response.data.get("full_name") or "Anonymous",
                 "email": response.data.get("email"),
-                "avatar": response.data.get("avatar"),
-                "title": response.data.get("title") or "Researcher",
+                "avatar": response.data.get("avatar_url"),
+                "title": "Researcher",
             }
     except (PostgrestAPIError, StorageException) as e:
         logger.warning(f"Could not fetch author profile for {author_id}: {e}")
