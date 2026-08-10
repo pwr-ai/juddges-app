@@ -422,14 +422,14 @@ async def _get_search_history_recommendations(
     user_id: str,
     limit: int = 10,
 ) -> list[RecommendationItem]:
-    """Fallback: derive recommendations from search_queries table."""
+    """Fallback: derive recommendations from the search_analytics table."""
     supabase = get_supabase_client()
     if not supabase:
         return []
 
     try:
         response = (
-            supabase.table("search_queries")
+            supabase.table("search_analytics")
             .select("query")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
@@ -480,10 +480,13 @@ async def _get_recent_documents(limit: int = 10) -> list[RecommendationItem]:
 
     try:
         response = (
-            supabase.table("legal_documents")
+            supabase.table("judgments")
+            # Alias the `judgments` columns onto the legacy names the
+            # RecommendationItem builder below reads.
             .select(
-                "document_id, title, document_type, date_issued, "
-                "document_number, court_name, language, summary"
+                "document_id:id, title, document_type:decision_type, "
+                "date_issued:decision_date, document_number:case_number, "
+                "court_name, language:metadata->>language, summary"
             )
             .order("created_at", desc=True)
             .limit(limit)

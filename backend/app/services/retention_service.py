@@ -167,8 +167,13 @@ class RetentionService:
 
             # Export analytics events
             events_result = (
-                client.table("events")
-                .select("id, user_id, session_id, event_name, event_data, created_at")
+                client.table("app_events")
+                # `app_events` stores the payload in `properties`; alias it so
+                # the export keeps its documented `event_data` key.
+                .select(
+                    "id, user_id, session_id, event_name, "
+                    "event_data:properties, created_at"
+                )
                 .eq("user_id", user_id)
                 .execute()
             )
@@ -176,8 +181,9 @@ class RetentionService:
 
             # Export search queries
             search_result = (
-                client.table("search_queries")
-                .select("id, user_id, session_id, query, created_at")
+                client.table("search_analytics")
+                # `search_analytics` has no `session_id` column.
+                .select("id, user_id, query, created_at")
                 .eq("user_id", user_id)
                 .execute()
             )
@@ -408,11 +414,13 @@ class RetentionService:
         Returns:
             Number of records deleted
         """
+        # Keys are the logical data types accepted by the API; values are the
+        # physical table names.
         table_mapping = {
             "audit_logs": "audit_logs",
-            "analytics": "events",
+            "analytics": "app_events",
             "feedback": ["search_feedback", "feature_requests"],
-            "search_queries": "search_queries",
+            "search_queries": "search_analytics",
             "user_consent": "user_consent",
         }
 
@@ -449,22 +457,25 @@ class RetentionService:
         # Use a one-way hash so the anonymized ID cannot be reversed to the original
         anonymized_id = hashlib.sha256(user_id.encode()).hexdigest()[:16]
 
+        # Keys are the logical data types accepted by the API; values are the
+        # physical table names.
         table_mapping = {
             "audit_logs": "audit_logs",
-            "analytics": "events",
+            "analytics": "app_events",
             "feedback": ["search_feedback", "feature_requests"],
-            "search_queries": "search_queries",
+            "search_queries": "search_analytics",
         }
 
-        # PII fields to scrub per table (beyond user_id replacement)
+        # PII fields to scrub per table (beyond user_id replacement).
+        # Keyed by physical table name. `search_analytics` has no
+        # `ip_address` / `user_agent` columns, so only the query text is
+        # redacted there.
         pii_scrub_fields: dict[str, dict[str, Any]] = {
             "audit_logs": {
                 "ip_address": None,
                 "user_agent": None,
             },
-            "search_queries": {
-                "ip_address": None,
-                "user_agent": None,
+            "search_analytics": {
                 "query": "[REDACTED]",
             },
         }

@@ -78,7 +78,7 @@ export interface paths {
          * @description Get document statistics grouped by type, country, and language.
          *
          *     Queries the doc_type_stats pre-computed table for type counts, and
-         *     legal_documents for country/language breakdowns and recent additions.
+         *     judgments for country/language breakdowns and recent additions.
          */
         get: operations["get_document_stats_api_admin_documents_stats_get"];
         put?: never;
@@ -13022,9 +13022,7 @@ export interface components {
             /** Duration Ms */
             duration_ms?: number | null;
             /** Filters */
-            filters?: {
-                [key: string]: unknown;
-            } | null;
+            filters?: string | null;
             /** Id */
             id: string;
             /** Query */
