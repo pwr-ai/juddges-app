@@ -237,9 +237,11 @@ def test_public_blog_detail_rpc_is_batched_private_and_deterministic() -> None:
     assert "bp.status = 'published'" in normalized
     assert "bp.deleted_at is null" in normalized
     assert "jsonb_agg" in normalized
-    assert "left join public.user_profiles" in normalized
+    assert "left join public.profiles" in normalized
+    assert "user_profiles" not in normalized
     assert "'id', up.id" in normalized
-    assert "'name', coalesce(up.name, 'anonymous')" in normalized
+    assert "'name', coalesce(up.full_name, 'anonymous')" in normalized
+    assert "'avatar', up.avatar_url" in normalized
     assert "email" not in normalized
     assert "published_at desc nulls last" in normalized
     assert "id asc" in normalized
