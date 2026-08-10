@@ -239,7 +239,16 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: juddges-backend-worker
-    command: celery -A app.workers worker --loglevel=info
+    # Dedicated to the `extraction` queue (see task_routes in app/workers.py).
+    # Long LLM jobs get their own worker so a multi-minute extraction batch
+    # cannot delay the periodic maintenance tasks behind it.
+    # Concurrency is deliberately low: each slot holds an LLM client and a full
+    # document in memory, and the 8G limit below is shared across slots.
+    command: >
+      celery -A app.workers worker
+      --loglevel=info
+      --queues=extraction
+      --concurrency=${CELERY_EXTRACTION_CONCURRENCY:-2}
     restart: unless-stopped
     # PRODUCTION NOTE: Development volume mount removed for production deployment
     # In production, code is baked into the Docker image at build time for:
@@ -249,8 +258,12 @@ services:
     # - Consistency (same code across all environments)
     #
     # For local development, uncomment the following line:
-    # volumes:
     #   - ./backend:/app
+    volumes:
+      # Persists the revoked-task set. With task_acks_late enabled a revoked and
+      # terminated task would otherwise be redelivered — and rerun — after a
+      # worker restart, because Celery keeps that set in memory by default.
+      - celery-state:/var/lib/celery
     env_file:
       - .env
     environment:
@@ -261,6 +274,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_BACKEND_URL=redis://redis:6379/0
+      - CELERY_WORKER_STATE_DB=/var/lib/celery/worker-extraction-state
     # All environment variables loaded from env_file
     labels:
       - "com.juddges.service=application"
@@ -295,6 +309,64 @@ services:
           cpus: '1'
           memory: 4G
 
+  # Periodic + short-lived work: Meilisearch sync, digests, VACUUM, partition
+  # rolls, suggestion rebuilds. Separated from backend-worker so these never
+  # queue behind a long extraction batch.
+  backend-worker-maintenance:
+    image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: juddges-backend-worker-maintenance
+    command: >
+      celery -A app.workers worker
+      --loglevel=info
+      --queues=maintenance,celery
+      --concurrency=${CELERY_MAINTENANCE_CONCURRENCY:-2}
+    restart: unless-stopped
+    volumes:
+      - celery-state:/var/lib/celery
+    env_file:
+      - .env
+    environment:
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
+      - REDIS_HOST=redis
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_BACKEND_URL=redis://redis:6379/0
+      - CELERY_WORKER_STATE_DB=/var/lib/celery/worker-maintenance-state
+    labels:
+      - "com.juddges.service=application"
+      - "com.juddges.service.type=worker"
+    depends_on:
+      - meilisearch
+      - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers inspect ping -d celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+
   backend-beat:
     image: ${DOCKER_USERNAME}/juddges-backend:${JUDDGES_IMAGE_TAG:-latest}
     build:
@@ -302,8 +374,16 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: juddges-backend-beat
-    command: celery -A app.workers beat --loglevel=info
+    # The schedule file records the last run of each interval-based entry.
+    # Keeping it on a volume stops every redeploy from resetting those timers
+    # and immediately re-firing jobs like the 8-hourly Meilisearch full sync.
+    command: >
+      celery -A app.workers beat
+      --loglevel=info
+      --schedule=/var/lib/celery/celerybeat-schedule
     restart: unless-stopped
+    volumes:
+      - celery-state:/var/lib/celery
     env_file:
       - .env
     environment:
@@ -356,6 +436,10 @@ volumes:
     driver: local
   redis-data:
     name: juddges-redis-data
+    driver: local
+  # Celery beat schedule + per-worker revoked-task state.
+  celery-state:
+    name: juddges-celery-state
     driver: local
 
 # ==============================================================================
