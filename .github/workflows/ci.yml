@@ -653,11 +653,18 @@ jobs:
       # fails hard on them — 397 such matches under backend/tests alone, and
       # zero of them secrets. See #438. Excluding the detector is the fix;
       # policing test-name length is not.
+      #
+      # --results is verified only, deliberately narrower than the default.
+      # Including `unknown` failed the build on matches TruffleHog could not
+      # confirm — 19 of them under backend/tests, all test DSNs. The cost is
+      # real: a leaked secret of a type TruffleHog cannot verify now passes.
+      # The trade is that a gate failing on test fixtures gets bypassed, and a
+      # bypassed gate catches nothing. See #474.
       - name: Run TruffleHog (verified secrets only)
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          extra_args: --results=verified,unknown --exclude-detectors=lob
+          extra_args: --results=verified --exclude-detectors=lob
         continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_vuln_override == 'true' }}
 
   # ============================================================================
