@@ -145,8 +145,15 @@ describe('GraphQL browser surface contract', () => {
 
         expect(retiredRoute.status).toBe(404);
         expect(lookalikeRoute.status).toBe(307);
-        expect(lookalikeRoute.headers.get('location')).toBe(
-          `http://localhost:${port}/auth/login?next=%2Fapi%2Fgraphql%2Fnested`
+        // Resolved against the server origin because Next 16 emits a relative
+        // Location where 15 emitted an absolute one. Both are valid per RFC
+        // 7231; the contract is the target, not the serialisation.
+        const loginRedirect = new URL(
+          lookalikeRoute.headers.get('location') as string,
+          `http://localhost:${port}`
+        );
+        expect(loginRedirect.pathname + loginRedirect.search).toBe(
+          '/auth/login?next=%2Fapi%2Fgraphql%2Fnested'
         );
         await Promise.all([retiredRoute.text(), lookalikeRoute.text()]);
       } catch (error) {
