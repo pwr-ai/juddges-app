@@ -3391,6 +3391,13 @@
           "change_type": {
             "default": "amendment",
             "description": "Type of change: initial, amendment, correction, consolidation, repeal",
+            "enum": [
+              "initial",
+              "amendment",
+              "correction",
+              "consolidation",
+              "repeal"
+            ],
             "title": "Change Type",
             "type": "string"
           }

@@ -10,14 +10,31 @@ Provides:
 
 import difflib
 import hashlib
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Query
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 from pydantic import BaseModel, Field
+from supabase import PostgrestAPIError
 
 router = APIRouter(prefix="/documents", tags=["versioning"])
+
+# Mirrors the CHECK constraint on document_versions.change_type
+# (supabase/migrations/20260810000004_create_saved_searches_versions_audit_tables.sql)
+# and frontend/components/VersionHistory.tsx. An invalid value must be a 422 from
+# FastAPI, not a 500 from the database CHECK.
+ChangeType = Literal["initial", "amendment", "correction", "consolidation", "repeal"]
+
+# Custom SQLSTATE raised by public.create_document_version() when a version with
+# the same (document_id, content_hash) already exists
+# (supabase/migrations/20260812000001_create_document_version_rpc.sql). Mapped
+# back to the HTTP 409 this endpoint has always returned.
+_DUPLICATE_CONTENT_SQLSTATE = "P0409"
+
+# Name of the RPC that allocates version_number and inserts in one transaction,
+# under a per-document advisory lock. PostgREST matches its arguments by NAME.
+_CREATE_VERSION_RPC = "create_document_version"
 
 
 # ===== Models =====
@@ -86,7 +103,7 @@ class CreateVersionRequest(BaseModel):
         max_length=500,
         description="Description of what changed",
     )
-    change_type: str = Field(
+    change_type: ChangeType = Field(
         default="amendment",
         description="Type of change: initial, amendment, correction, consolidation, repeal",
     )
@@ -171,6 +188,69 @@ def _escape_html(text: str) -> str:
     )
 
 
+def _append_version(
+    db: Any,
+    *,
+    document_id: str,
+    title: str | None,
+    full_text: str,
+    summary: str | None,
+    content_hash: str | None,
+    change_description: str | None,
+    change_type: str,
+    created_by: str,
+    extracted_data: dict[str, Any],
+    reject_duplicate_content: bool,
+) -> dict[str, Any] | None:
+    """Append one `document_versions` row and return it (None if nothing came back).
+
+    Delegates to `public.create_document_version`, which takes a per-document
+    `pg_advisory_xact_lock`, runs the duplicate-content check and allocates
+    `version_number` as `MAX + 1` all inside one transaction. Doing the
+    allocation here with a separate `MAX(version_number)` read raced: two
+    concurrent callers for the same document computed the same number and the
+    second insert died on `UNIQUE (document_id, version_number)`. Folding the
+    read into the INSERT would not have helped either — under READ COMMITTED the
+    aggregate cannot see a sibling transaction's uncommitted row (see
+    supabase/migrations/20260812000001_create_document_version_rpc.sql).
+
+    `reject_duplicate_content=False` is what the revert path uses: it never had a
+    duplicate-content guard, and adding one would turn re-reverting to the
+    already-current version from a 200 into a 409.
+
+    Raises:
+        HTTPException: 409 when the RPC reports SQLSTATE P0409 (identical content
+            already versioned), with the message the endpoint has always
+            returned. Any other PostgrestAPIError propagates untouched.
+    """
+    try:
+        response = db.client.rpc(
+            _CREATE_VERSION_RPC,
+            {
+                "p_document_id": document_id,
+                "p_title": title,
+                "p_full_text": full_text,
+                "p_summary": summary,
+                "p_content_hash": content_hash,
+                "p_change_description": change_description,
+                "p_change_type": change_type,
+                "p_created_by": created_by,
+                "p_extracted_data": extracted_data,
+                "p_reject_duplicate_content": reject_duplicate_content,
+            },
+        ).execute()
+    except PostgrestAPIError as e:
+        if e.code == _DUPLICATE_CONTENT_SQLSTATE:
+            raise HTTPException(
+                status_code=409,
+                detail=e.message or "A version with identical content already exists",
+            ) from e
+        raise
+
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
 # ===== Endpoints =====
 
 
@@ -252,8 +332,8 @@ async def get_version_history(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            f"Error getting version history for {document_id}: {e}", exc_info=True
+        logger.opt(exception=True).error(
+            f"Error getting version history for {document_id}: {e}"
         )
         raise HTTPException(status_code=500, detail="Error retrieving version history")
 
@@ -309,9 +389,8 @@ async def get_version_detail(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            f"Error getting version {version_number} for {document_id}: {e}",
-            exc_info=True,
+        logger.opt(exception=True).error(
+            f"Error getting version {version_number} for {document_id}: {e}"
         )
         raise HTTPException(status_code=500, detail="Error retrieving version detail")
 
@@ -407,7 +486,9 @@ async def get_version_diff(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error generating diff for {document_id}: {e}", exc_info=True)
+        logger.opt(exception=True).error(
+            f"Error generating diff for {document_id}: {e}"
+        )
         raise HTTPException(status_code=500, detail="Error generating version diff")
 
 
@@ -448,64 +529,31 @@ async def create_version_snapshot(
             doc["full_text"]
         )
 
-        # Check if this exact content already has a version
-        existing = (
-            db.client.table("document_versions")
-            .select("id, version_number")
-            .eq("document_id", document_id)
-            .eq("content_hash", content_hash)
-            .limit(1)
-            .execute()
+        # Duplicate-content check, version-number allocation and insert all
+        # happen inside public.create_document_version, under a per-document
+        # advisory lock. Doing any of it here would race (see _append_version).
+        v = _append_version(
+            db,
+            document_id=document_id,
+            title=doc.get("title"),
+            full_text=doc["full_text"],
+            summary=doc.get("summary"),
+            content_hash=content_hash,
+            change_description=request.change_description,
+            change_type=request.change_type,
+            created_by="user",
+            extracted_data=doc.get("extracted_data") or {},
+            reject_duplicate_content=True,
         )
 
-        if existing.data:
-            raise HTTPException(
-                status_code=409,
-                detail=f"A version with identical content already exists (version {existing.data[0]['version_number']})",
-            )
-
-        # Get next version number
-        max_version_response = (
-            db.client.table("document_versions")
-            .select("version_number")
-            .eq("document_id", document_id)
-            .order("version_number", desc=True)
-            .limit(1)
-            .execute()
-        )
-
-        next_version = 1
-        if max_version_response.data:
-            next_version = max_version_response.data[0]["version_number"] + 1
-
-        # Create version
-        version_data = {
-            "document_id": document_id,
-            "version_number": next_version,
-            "title": doc.get("title"),
-            "full_text": doc["full_text"],
-            "summary": doc.get("summary"),
-            "content_hash": content_hash,
-            "change_description": request.change_description,
-            "change_type": request.change_type,
-            "created_by": "user",
-            "extracted_data": doc.get("extracted_data") or {},
-        }
-
-        insert_response = (
-            db.client.table("document_versions").insert(version_data).execute()
-        )
-
-        if not insert_response.data:
+        if not v:
             raise HTTPException(status_code=500, detail="Failed to create version")
-
-        v = insert_response.data[0]
 
         # The document row itself carries no version counter: `judgments` has
         # no `current_version` column, so the highest
         # `document_versions.version_number` is the current version.
 
-        logger.info(f"Created version {next_version} for document {document_id}")
+        logger.info(f"Created version {v['version_number']} for document {document_id}")
 
         return DocumentVersion(
             id=str(v["id"]),
@@ -523,7 +571,9 @@ async def create_version_snapshot(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error creating version for {document_id}: {e}", exc_info=True)
+        logger.opt(exception=True).error(
+            f"Error creating version for {document_id}: {e}"
+        )
         raise HTTPException(status_code=500, detail="Error creating version snapshot")
 
 
@@ -588,37 +638,35 @@ async def revert_to_version(
             current_doc["full_text"]
         )
 
-        # Get next version number for the pre-revert snapshot
-        max_version_response = (
-            db.client.table("document_versions")
-            .select("version_number")
-            .eq("document_id", document_id)
-            .order("version_number", desc=True)
-            .limit(1)
-            .execute()
+        # Save current state as a version before reverting. Same RPC as
+        # create_version_snapshot, so the version number is allocated under the
+        # per-document advisory lock instead of by a racy MAX+1 read.
+        # `reject_duplicate_content=False` preserves this path's behaviour: it
+        # never deduplicated, and reverting to the version whose content is
+        # already current must stay a 200.
+        snapshot = _append_version(
+            db,
+            document_id=document_id,
+            title=current_doc.get("title"),
+            full_text=current_doc["full_text"],
+            summary=current_doc.get("summary"),
+            content_hash=current_hash,
+            change_description=(
+                "Pre-revert snapshot (before reverting to version "
+                f"{request.version_number})"
+            ),
+            change_type="amendment",
+            created_by="system",
+            extracted_data=current_doc.get("extracted_data") or {},
+            reject_duplicate_content=False,
         )
 
-        next_version = 1
-        if max_version_response.data:
-            next_version = max_version_response.data[0]["version_number"] + 1
+        if not snapshot:
+            raise HTTPException(
+                status_code=500, detail="Error reverting document version"
+            )
 
-        # Save current state as a version before reverting
-        pre_revert_data = {
-            "document_id": document_id,
-            "version_number": next_version,
-            "title": current_doc.get("title"),
-            "full_text": current_doc["full_text"],
-            "summary": current_doc.get("summary"),
-            "content_hash": current_hash,
-            "change_description": f"Pre-revert snapshot (before reverting to version {request.version_number})",
-            "change_type": "amendment",
-            "created_by": "system",
-            "extracted_data": current_doc.get("extracted_data") or {},
-        }
-
-        snapshot_response = (
-            db.client.table("document_versions").insert(pre_revert_data).execute()
-        )
+        next_version = snapshot["version_number"]
 
         # Now revert the document content; if this fails, roll back the snapshot
         # to avoid leaving a phantom version record with an un-reverted document.
@@ -636,13 +684,12 @@ async def revert_to_version(
             ).execute()
         except Exception as update_err:
             # Compensating transaction: remove the pre-revert snapshot
-            logger.error(
+            logger.opt(exception=True).error(
                 f"Document update failed during revert of {document_id}, "
-                f"rolling back pre-revert snapshot (version {next_version}): {update_err}",
-                exc_info=True,
+                f"rolling back pre-revert snapshot (version {next_version}): {update_err}"
             )
             try:
-                snapshot_id = snapshot_response.data[0]["id"]
+                snapshot_id = snapshot["id"]
                 db.client.table("document_versions").delete().eq(
                     "id", snapshot_id
                 ).execute()
@@ -651,10 +698,9 @@ async def revert_to_version(
                     f"for document {document_id}"
                 )
             except Exception as rollback_err:
-                logger.error(
+                logger.opt(exception=True).error(
                     f"Failed to roll back pre-revert snapshot for {document_id}: "
-                    f"{rollback_err}",
-                    exc_info=True,
+                    f"{rollback_err}"
                 )
             raise
 
@@ -674,8 +720,7 @@ async def revert_to_version(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            f"Error reverting {document_id} to version {request.version_number}: {e}",
-            exc_info=True,
+        logger.opt(exception=True).error(
+            f"Error reverting {document_id} to version {request.version_number}: {e}"
         )
         raise HTTPException(status_code=500, detail="Error reverting document version")
