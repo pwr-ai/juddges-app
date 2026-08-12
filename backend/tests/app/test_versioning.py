@@ -2,7 +2,7 @@
 Unit tests for app.versioning module.
 
 Tests cover:
-- Pydantic model validation
+- Pydantic model validation (including the change_type Literal)
 - _compute_content_hash helper (including None input)
 - _escape_html helper
 - _generate_diff_html helper
@@ -102,6 +102,25 @@ class TestCreateVersionRequestModel:
     def test_description_too_long(self):
         with pytest.raises((ValueError, ValidationError)):
             CreateVersionRequest(change_description="x" * 501)
+
+    @pytest.mark.parametrize(
+        "change_type",
+        ["initial", "amendment", "correction", "consolidation", "repeal"],
+    )
+    def test_accepts_every_value_in_the_db_check_constraint(self, change_type):
+        """The Literal must match the CHECK on document_versions.change_type
+        (20260810000004) exactly, or a valid request becomes a 422."""
+        assert CreateVersionRequest(change_type=change_type).change_type == change_type
+
+    @pytest.mark.parametrize(
+        "change_type",
+        ["", "AMENDMENT", "bulk_import", "rollback", "delete", "amendment ", None, 3],
+    )
+    def test_rejects_values_outside_the_check_constraint(self, change_type):
+        """An invalid change_type must be rejected by Pydantic (-> FastAPI 422)
+        rather than reaching the database CHECK and surfacing as a 500."""
+        with pytest.raises((ValueError, ValidationError)):
+            CreateVersionRequest(change_type=change_type)
 
 
 @pytest.mark.unit

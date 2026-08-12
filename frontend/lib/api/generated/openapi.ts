@@ -7742,8 +7742,9 @@ export interface components {
              * Change Type
              * @description Type of change: initial, amendment, correction, consolidation, repeal
              * @default amendment
+             * @enum {string}
              */
-            change_type: string;
+            change_type: "initial" | "amendment" | "correction" | "consolidation" | "repeal";
         };
         /**
          * DAGEdge

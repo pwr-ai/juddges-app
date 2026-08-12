@@ -10,7 +10,7 @@ Provides:
 
 import difflib
 import hashlib
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Query
 from juddges_search.db.supabase_db import get_vector_db
@@ -19,6 +19,12 @@ from pydantic import BaseModel, Field
 from supabase import PostgrestAPIError
 
 router = APIRouter(prefix="/documents", tags=["versioning"])
+
+# Mirrors the CHECK constraint on document_versions.change_type
+# (supabase/migrations/20260810000004_create_saved_searches_versions_audit_tables.sql)
+# and frontend/components/VersionHistory.tsx. An invalid value must be a 422 from
+# FastAPI, not a 500 from the database CHECK.
+ChangeType = Literal["initial", "amendment", "correction", "consolidation", "repeal"]
 
 # Custom SQLSTATE raised by public.create_document_version() when a version with
 # the same (document_id, content_hash) already exists
@@ -97,7 +103,7 @@ class CreateVersionRequest(BaseModel):
         max_length=500,
         description="Description of what changed",
     )
-    change_type: str = Field(
+    change_type: ChangeType = Field(
         default="amendment",
         description="Type of change: initial, amendment, correction, consolidation, repeal",
     )
