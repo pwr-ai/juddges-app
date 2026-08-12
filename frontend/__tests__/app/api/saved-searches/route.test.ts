@@ -165,6 +165,84 @@ describe("POST /api/saved-searches", () => {
     expect(response.status).toBe(400);
   });
 
+  it.each(["rabbit", "thinking"])(
+    "accepts search_mode=%s",
+    async (mode) => {
+      const supabase = mockSupabaseAuth(USER_ID);
+
+      const singleMock = jest.fn().mockResolvedValue({
+        data: { id: SEARCH_ID, name: "Test", search_mode: mode },
+        error: null,
+      });
+      const selectMock = jest.fn().mockReturnValue({ single: singleMock });
+      const insertMock = jest.fn().mockReturnValue({ select: selectMock });
+      supabase.from = jest.fn().mockReturnValue({ insert: insertMock });
+
+      const response = await POST(
+        new NextRequest("http://localhost:3000/api/saved-searches", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Test", search_mode: mode }),
+        })
+      );
+
+      expect(response.status).toBe(201);
+      expect(insertMock).toHaveBeenCalledWith(
+        expect.objectContaining({ search_mode: mode })
+      );
+    }
+  );
+
+  it.each([["hybrid"], ["THINKING"], [42], [{ mode: "rabbit" }], [["rabbit"]]])(
+    "returns 400 with a field-level message when search_mode is %p",
+    async (mode) => {
+      const supabase = mockSupabaseAuth(USER_ID);
+      supabase.from = jest.fn(); // must never be reached
+
+      const response = await POST(
+        new NextRequest("http://localhost:3000/api/saved-searches", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Test", search_mode: mode }),
+        })
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.message).toBe("search_mode must be one of: rabbit, thinking");
+      expect(body.details).toEqual(
+        expect.objectContaining({ field: "search_mode" })
+      );
+      // Rejected before the insert: no database round trip.
+      expect(supabase.from).not.toHaveBeenCalled();
+    }
+  );
+
+  it("falls back to 'thinking' when search_mode is omitted", async () => {
+    const supabase = mockSupabaseAuth(USER_ID);
+
+    const singleMock = jest.fn().mockResolvedValue({
+      data: { id: SEARCH_ID, name: "Test", search_mode: "thinking" },
+      error: null,
+    });
+    const selectMock = jest.fn().mockReturnValue({ single: singleMock });
+    const insertMock = jest.fn().mockReturnValue({ select: selectMock });
+    supabase.from = jest.fn().mockReturnValue({ insert: insertMock });
+
+    const response = await POST(
+      new NextRequest("http://localhost:3000/api/saved-searches", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Test" }),
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ search_mode: "thinking" })
+    );
+  });
+
   it("creates a saved search and returns 201", async () => {
     const supabase = mockSupabaseAuth(USER_ID);
 
@@ -265,6 +343,40 @@ describe("PATCH /api/saved-searches", () => {
       })
     );
 
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when search_mode is invalid", async () => {
+    const supabase = mockSupabaseAuth(USER_ID);
+    supabase.from = jest.fn();
+
+    const response = await PATCH(
+      new NextRequest("http://localhost:3000/api/saved-searches", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: SEARCH_ID, search_mode: "hybrid" }),
+      })
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.message).toBe("search_mode must be one of: rabbit, thinking");
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when search_mode is explicitly null", async () => {
+    const supabase = mockSupabaseAuth(USER_ID);
+    supabase.from = jest.fn();
+
+    const response = await PATCH(
+      new NextRequest("http://localhost:3000/api/saved-searches", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: SEARCH_ID, search_mode: null }),
+      })
+    );
+
+    // The column is NOT NULL; without this guard the null reached the database.
     expect(response.status).toBe(400);
   });
 
