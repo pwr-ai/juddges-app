@@ -32,7 +32,7 @@ def _install_jwt_user_override(user_id: str) -> None:
     """Override the Supabase Bearer dep (``app.core.auth_jwt.get_current_user``)
     for tests that do not carry a real Supabase JWT.
 
-    Routers migrated to Bearer JWT (/collections, /playground, /extractions,
+    Routers migrated to Bearer JWT (/collections, /extractions,
     /publications) all resolve through this single dependency, so one override
     covers them all.
     """
@@ -100,7 +100,7 @@ async def authenticated_client(
     Create an authenticated async HTTP client with valid API key and Bearer-JWT override.
 
     Installs the Bearer-JWT override so migrated routers (/collections,
-    /playground, /extractions, /publications) all see a synthetic
+    /extractions, /publications) all see a synthetic
     ``AuthenticatedUser`` without a real Supabase round-trip.
     """
     headers = {**valid_api_headers, "X-User-ID": mock_user["id"]}

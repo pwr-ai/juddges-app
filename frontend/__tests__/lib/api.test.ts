@@ -30,22 +30,8 @@ import {
   getVersionDetail,
   getVersionDiff,
   createVersionSnapshot,
-  getOCRJobStatus,
-  listOCRJobs,
-  submitOCRCorrection,
   revertToVersion,
-  getSemanticClusters,
-  getRecommendations,
-  trackDocumentInteraction,
-  analyzeResearchContext,
-  getResearchSuggestions,
-  saveResearchContext,
   analyzeArguments,
-  browseMarketplaceListings,
-  getMarketplaceStats,
-  publishToMarketplace,
-  downloadMarketplaceSchema,
-  submitMarketplaceReview,
   extractTimeline,
 } from '@/lib/api';
 
@@ -413,35 +399,6 @@ describe('API client functions', () => {
     });
   });
 
-  // ── OCR ────────────────────────────────────────────────────────────────
-
-  describe('getOCRJobStatus', () => {
-    it('sends GET to /api/ocr/jobs/{id}', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ job_id: 'j1', status: 'completed' }));
-      const result = await getOCRJobStatus('j1');
-      expect(result.job_id).toBe('j1');
-    });
-  });
-
-  describe('listOCRJobs', () => {
-    it('sends GET with optional filters', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ jobs: [], total: 0, page: 1, page_size: 10 }));
-      await listOCRJobs({ status: 'completed', page: 2 });
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('status=completed'),
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('submitOCRCorrection', () => {
-    it('sends POST to /api/ocr/jobs/{id}/correct', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ job_id: 'j1', status: 'corrected', corrected_at: '', message: 'ok' }));
-      await submitOCRCorrection('j1', { corrected_text: 'fixed text' });
-      expect(mockFetch).toHaveBeenCalledWith('/api/ocr/jobs/j1/correct', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
   // ── revertToVersion ────────────────────────────────────────────────────
 
   describe('revertToVersion', () => {
@@ -452,71 +409,6 @@ describe('API client functions', () => {
     });
   });
 
-  // ── Semantic Clustering ────────────────────────────────────────────────
-
-  describe('getSemanticClusters', () => {
-    it('sends POST to /api/clustering/semantic-clusters', async () => {
-      const mockResult = { clusters: [], nodes: [], edges: [], statistics: {} };
-      mockFetch.mockResolvedValueOnce(okResponse(mockResult));
-      await getSemanticClusters({ num_clusters: 5 });
-      const body = JSON.parse(mockFetch.mock.calls[0][1]!.body as string);
-      expect(body.num_clusters).toBe(5);
-    });
-  });
-
-  // ── Recommendations ────────────────────────────────────────────────────
-
-  describe('getRecommendations', () => {
-    it('sends GET with query params', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ recommendations: [] }));
-      await getRecommendations({ query: 'contract', limit: 5 });
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('query=contract'),
-        // No second arg for simple GET
-      );
-    });
-  });
-
-  describe('trackDocumentInteraction', () => {
-    it('sends POST and does not throw on failure', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('network'));
-      // Should not throw - it silently fails
-      await expect(trackDocumentInteraction({ document_id: 'd1', interaction_type: 'view' } as any)).resolves.toBeUndefined();
-    });
-
-    it('sends POST to /api/recommendations/track', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({}));
-      await trackDocumentInteraction({ document_id: 'd1', interaction_type: 'view' } as any);
-      expect(mockFetch).toHaveBeenCalledWith('/api/recommendations/track', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
-  // ── Research Assistant ─────────────────────────────────────────────────
-
-  describe('analyzeResearchContext', () => {
-    it('sends POST to /api/research-assistant?action=analyze', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ analysis: {} }));
-      await analyzeResearchContext({ query: 'test' } as any);
-      expect(mockFetch).toHaveBeenCalledWith('/api/research-assistant?action=analyze', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
-  describe('getResearchSuggestions', () => {
-    it('sends GET with endpoint=suggestions', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ suggestions: [] }));
-      await getResearchSuggestions({ query: 'test' });
-      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('endpoint=suggestions'));
-    });
-  });
-
-  describe('saveResearchContext', () => {
-    it('sends POST to /api/research-assistant?action=save', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ id: 'rc1' }));
-      await saveResearchContext({ title: 'test' } as any);
-      expect(mockFetch).toHaveBeenCalledWith('/api/research-assistant?action=save', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
   // ── Argumentation ──────────────────────────────────────────────────────
 
   describe('analyzeArguments', () => {
@@ -524,56 +416,6 @@ describe('API client functions', () => {
       mockFetch.mockResolvedValueOnce(okResponse({ arguments: [], overall_analysis: {}, document_ids: [], argument_count: 0 }));
       await analyzeArguments({ document_ids: ['d1'] });
       expect(mockFetch).toHaveBeenCalledWith('/api/argumentation', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
-  // ── Marketplace ────────────────────────────────────────────────────────
-
-  describe('browseMarketplaceListings', () => {
-    it('sends GET with endpoint=browse', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ listings: [], total: 0 }));
-      await browseMarketplaceListings({ search: 'tax', category: 'legal' });
-      const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('endpoint=browse');
-      expect(url).toContain('search=tax');
-    });
-  });
-
-  describe('getMarketplaceStats', () => {
-    it('sends GET to /api/marketplace?endpoint=stats', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ stats: {} }));
-      await getMarketplaceStats();
-      expect(mockFetch).toHaveBeenCalledWith('/api/marketplace?endpoint=stats');
-    });
-  });
-
-  describe('publishToMarketplace', () => {
-    it('sends POST to /api/marketplace?action=publish', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ id: 'l1' }));
-      await publishToMarketplace({ schema_id: 's1', title: 'My Schema' } as any);
-      expect(mockFetch).toHaveBeenCalledWith('/api/marketplace?action=publish', expect.objectContaining({ method: 'POST' }));
-    });
-  });
-
-  describe('downloadMarketplaceSchema', () => {
-    it('sends POST with listing_id param', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({ schema: {} }));
-      await downloadMarketplaceSchema('listing-1');
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('listing_id=listing-1'),
-        expect.objectContaining({ method: 'POST' })
-      );
-    });
-  });
-
-  describe('submitMarketplaceReview', () => {
-    it('sends POST with listing_id and review data', async () => {
-      mockFetch.mockResolvedValueOnce(okResponse({}));
-      await submitMarketplaceReview('listing-1', { rating: 5, comment: 'great' } as any);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('listing_id=listing-1'),
-        expect.objectContaining({ method: 'POST' })
-      );
     });
   });
 
