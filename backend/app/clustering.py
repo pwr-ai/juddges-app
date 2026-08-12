@@ -351,14 +351,18 @@ async def get_semantic_clusters(
     db = get_vector_db()
 
     # Fetch documents with embeddings
+    # Alias the `judgments` columns onto the legacy names the clustering
+    # pipeline reads downstream.
     select_fields = (
-        "document_id, title, document_type, date_issued, summary, keywords, embedding"
+        "document_id:id, title, document_type:decision_type, "
+        "date_issued:decision_date, summary, keywords, embedding"
     )
     try:
-        query = db.client.table("legal_documents").select(select_fields)
+        query = db.client.table("judgments").select(select_fields)
 
         if clustering_request.document_types:
-            query = query.in_("document_type", clustering_request.document_types)
+            # Filters must use the physical column name, not the alias.
+            query = query.in_("decision_type", clustering_request.document_types)
 
         response = query.limit(clustering_request.sample_size).execute()
     except Exception as e:

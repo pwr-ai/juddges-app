@@ -12,6 +12,28 @@ import {
 const apiLogger = logger.child('saved-searches-api');
 
 /**
+ * The only values the UI can produce (searchStore.searchType,
+ * frontend/lib/store/searchStore.ts:57) and the only ones the CHECK on
+ * `saved_searches.search_mode` admits (supabase/migrations/
+ * 20260810000004_create_saved_searches_versions_audit_tables.sql).
+ *
+ * Without this check an arbitrary body value went straight into the insert and
+ * the client got a 500 from the database CHECK instead of a 400 naming the field
+ * (#461).
+ */
+const SEARCH_MODES = ['rabbit', 'thinking'] as const;
+type SearchMode = (typeof SEARCH_MODES)[number];
+
+function assertSearchMode(value: unknown): void {
+  if (typeof value !== 'string' || !SEARCH_MODES.includes(value as SearchMode)) {
+    throw new ValidationError(
+      `search_mode must be one of: ${SEARCH_MODES.join(', ')}`,
+      { field: 'search_mode', received: value }
+    );
+  }
+}
+
+/**
  * GET /api/saved-searches - Fetch all saved searches for the current user
  * Supports optional folder filtering via ?folder=<name>
  */
@@ -87,6 +109,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new ValidationError("Name must be 200 characters or fewer");
     }
 
+    // Only validate when a value was actually supplied: the insert below keeps
+    // falling back to 'thinking' for a missing/empty search_mode.
+    if (search_mode) {
+      assertSearchMode(search_mode);
+    }
+
     const { data: savedSearch, error: insertError } = await supabase
       .from("saved_searches")
       .insert({
@@ -151,6 +179,12 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
 
     if (updates.name !== undefined && (typeof updates.name !== 'string' || updates.name.trim().length === 0)) {
       throw new ValidationError("Name must be a non-empty string");
+    }
+
+    // PATCH writes search_mode through verbatim whenever the key is present, so
+    // it needs the same guard as POST (the column is NOT NULL with a CHECK).
+    if (updates.search_mode !== undefined) {
+      assertSearchMode(updates.search_mode);
     }
 
     // Build update object with only provided fields

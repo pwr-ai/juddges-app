@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -394,7 +394,7 @@ async def refresh_dashboard_stats(
         supabase.rpc("refresh_dashboard_stats").execute()
         logger.info("refresh_dashboard_stats RPC call succeeded")
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error refreshing stats via RPC: {e}", exc_info=True)
+        logger.exception(f"Error refreshing stats via RPC: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     # Clear caches regardless of RPC outcome so stale data is not served
@@ -575,7 +575,7 @@ async def get_featured_examples(
         return [_to_document_summary(doc) for doc in (response.data or [])[:limit]]
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching featured examples: {e}", exc_info=True)
+        logger.exception(f"Error fetching featured examples: {e}")
         return []
 
 
@@ -645,89 +645,3 @@ async def get_trending_topics(
         curated_topics = [t for t in curated_topics if t.category == category]
 
     return curated_topics[:limit]
-
-
-@router.get("/test-document-counts")
-@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
-async def test_document_counts(
-    request: Request, api_key: str = Depends(verify_api_key)
-):
-    """
-    Test endpoint to verify document counting functionality.
-
-    Returns counts directly from Supabase without caching.
-    """
-    logger.info("Testing document counts from Supabase...")
-
-    try:
-        supabase = get_supabase_client()
-
-        # Get total count
-        logger.info("Fetching total document count...")
-        total_response = (
-            supabase.table("legal_documents")
-            .select("document_id", count="exact")
-            .execute()
-        )
-        total_count = total_response.count or 0
-        logger.info(f"Total documents: {total_count:,}")
-
-        # Get counts by type
-        logger.info("Fetching document counts by type...")
-        document_types = [
-            "judgment",
-            "ruling",
-            "opinion",
-            "legislation",
-        ]
-        type_counts = {}
-
-        for doc_type in document_types:
-            try:
-                logger.info(f"Querying {doc_type}...")
-                response = (
-                    supabase.table("legal_documents")
-                    .select("document_id", count="exact")
-                    .eq("document_type", doc_type)
-                    .execute()
-                )
-                count = response.count or 0
-                if count > 0:
-                    type_counts[doc_type] = count
-                    logger.info(f"{doc_type}: {count:,}")
-            except (PostgrestAPIError, StorageException) as e:
-                logger.warning(f"Could not count {doc_type}: {e}")
-
-        # Get recent documents count
-        try:
-            one_week_ago = datetime.now(UTC) - timedelta(days=7)
-            recent_response = (
-                supabase.table("legal_documents")
-                .select("document_id", count="exact")
-                .gte("ingestion_date", one_week_ago.isoformat())
-                .execute()
-            )
-            recent_count = recent_response.count or 0
-            logger.info(f"Documents added this week: {recent_count:,}")
-        except (PostgrestAPIError, StorageException) as e:
-            logger.warning(f"Could not get weekly count: {e}")
-            recent_count = 0
-
-        return {
-            "status": "success",
-            "source": "supabase",
-            "total_documents": total_count,
-            "by_type": type_counts,
-            "added_this_week": recent_count,
-            "message": "Document counting is working!",
-        }
-
-    except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error testing document counts: {e}", exc_info=True)
-        return {
-            "status": "error",
-            "message": str(e),
-            "total_documents": 0,
-            "by_type": {},
-            "added_this_week": 0,
-        }

@@ -415,46 +415,93 @@ def _owned_job_store_sequence(*rows: dict | None) -> MagicMock:
     return store
 
 
+def _submit_job_store() -> MagicMock:
+    """Job store double for the submit path (#437).
+
+    Submission now reads (dedup lookup) and writes (tracking row) before
+    enqueueing, so a bare MagicMock is not enough: its truthy `.data` would make
+    every request look like a duplicate of an in-flight job.
+    """
+    store = MagicMock()
+    table = store.table.return_value
+    table.select.return_value.eq.return_value.eq.return_value.in_.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[]
+    )
+    table.insert.return_value.execute.return_value = MagicMock(data=[{"id": "1"}])
+    table.update.return_value.eq.return_value.execute.return_value = MagicMock(
+        data=[{"id": "1"}]
+    )
+    return store
+
+
 class TestCreateExtractionJobEndpoint:
     """Tests for POST /extractions endpoint."""
 
     @pytest.mark.unit
-    async def test_create_job_simple_request(self, client, valid_api_headers) -> None:
+    async def test_create_job_simple_request(
+        self, client, valid_api_headers, override_user_auth
+    ) -> None:
         """Test creating an extraction job with a simple request."""
-        mock_task = MagicMock()
-        mock_task.id = "task-123"
+        override_user_auth("user-1")
 
         with (
             patch(
                 "app.extraction_domain.shared.extract_information_from_documents_task"
-            ) as mock_celery,
-            patch("app.extraction_domain.shared.supabase", MagicMock()),
-        ):
-            mock_celery.delay.return_value = mock_task
+            ),
+            patch("app.extraction_domain.shared.supabase", _submit_job_store()),
             # Mock _fetch_schema_from_db since we provide a UUID schema_id
-            with patch(
+            patch(
                 "app.extraction_domain.jobs_router._fetch_schema_from_db",
                 return_value={
                     "field": {"type": "string", "description": "test", "required": True}
                 },
-            ):
-                response = await client.post(
-                    "/extractions",
-                    json={
-                        "collection_id": "col-1",
-                        "schema_id": "550e8400-e29b-41d4-a716-446655440000",
-                        "document_ids": ["doc-1", "doc-2"],
-                        "extraction_context": "Extract legal info",
-                    },
-                    headers=valid_api_headers,
-                )
-                assert response.status_code == 202
-                data = response.json()
-                assert data["status"] == "accepted"
+            ),
+        ):
+            response = await client.post(
+                "/extractions",
+                json={
+                    "collection_id": "col-1",
+                    "schema_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "document_ids": ["doc-1", "doc-2"],
+                    "extraction_context": "Extract legal info",
+                },
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+            assert response.status_code == 202
+            data = response.json()
+            assert data["status"] == "accepted"
 
     @pytest.mark.unit
-    async def test_create_job_empty_documents(self, client, valid_api_headers) -> None:
+    async def test_create_job_requires_an_authenticated_owner(
+        self, client, valid_api_headers
+    ) -> None:
+        """Submission records the job against a user, so it cannot be anonymous.
+
+        Also guards the property that matters more than the status code: an
+        unauthenticated request must not reach the broker.
+        """
+        with patch(
+            "app.extraction_domain.shared.extract_information_from_documents_task"
+        ) as mock_celery:
+            response = await client.post(
+                "/extractions",
+                json={
+                    "collection_id": "col-1",
+                    "schema_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "document_ids": ["doc-1"],
+                    "extraction_context": "Extract legal info",
+                },
+                headers=valid_api_headers,
+            )
+        assert response.status_code in (401, 403)
+        mock_celery.apply_async.assert_not_called()
+
+    @pytest.mark.unit
+    async def test_create_job_empty_documents(
+        self, client, valid_api_headers, override_user_auth
+    ) -> None:
         """An explicitly empty document list is a request validation error."""
+        override_user_auth("user-1")
         response = await client.post(
             "/extractions",
             json={
@@ -463,7 +510,7 @@ class TestCreateExtractionJobEndpoint:
                 "document_ids": [],
                 "extraction_context": "Extract info",
             },
-            headers=valid_api_headers,
+            headers={**valid_api_headers, **_BEARER_HEADERS},
         )
         assert response.status_code == 422
         assert response.json()["detail"][0]["loc"][-1] == "document_ids"
@@ -471,9 +518,10 @@ class TestCreateExtractionJobEndpoint:
     @pytest.mark.unit
     @pytest.mark.parametrize("language", ["pl", "en"])
     async def test_create_db_job_accepts_frontend_payload(
-        self, client, valid_api_headers, language: str
+        self, client, valid_api_headers, override_user_auth, language: str
     ) -> None:
         """The Next BFF payload reaches the canonical DB-backed submit route."""
+        override_user_auth("user-1")
         with (
             patch(
                 "app.extraction_domain.jobs_router._fetch_schema_from_db",
@@ -503,7 +551,7 @@ class TestCreateExtractionJobEndpoint:
                     "extraction_context": "Extract structured contract data",
                     "language": language,
                 },
-                headers=valid_api_headers,
+                headers={**valid_api_headers, **_BEARER_HEADERS},
             )
 
         assert response.status_code == 202
@@ -515,8 +563,9 @@ class TestCreateExtractionJobEndpoint:
 
     @pytest.mark.unit
     async def test_create_db_job_rejects_unsupported_language(
-        self, client, valid_api_headers
+        self, client, valid_api_headers, override_user_auth
     ) -> None:
+        override_user_auth("user-1")
         response = await client.post(
             "/extractions/db",
             json={
@@ -526,16 +575,17 @@ class TestCreateExtractionJobEndpoint:
                 "extraction_context": "Extract structured contract data",
                 "language": "uk",
             },
-            headers=valid_api_headers,
+            headers={**valid_api_headers, **_BEARER_HEADERS},
         )
 
         assert response.status_code == 422
 
     @pytest.mark.unit
     async def test_create_job_missing_collection_id(
-        self, client, valid_api_headers
+        self, client, valid_api_headers, override_user_auth
     ) -> None:
         """Test validation for missing collection_id."""
+        override_user_auth("user-1")
         response = await client.post(
             "/extractions",
             json={
@@ -543,7 +593,7 @@ class TestCreateExtractionJobEndpoint:
                 "document_ids": ["doc-1"],
                 "extraction_context": "Extract info",
             },
-            headers=valid_api_headers,
+            headers={**valid_api_headers, **_BEARER_HEADERS},
         )
         assert response.status_code == 422
 

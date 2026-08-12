@@ -152,16 +152,21 @@ async def get_post_tags(supabase, post_id: str) -> list[str]:
         )
         return [row["tag"] for row in response.data]
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching tags: {e}", exc_info=True)
+        logger.exception(f"Error fetching tags: {e}")
         return []
 
 
 async def get_post_author(supabase, author_id: str) -> dict:
-    """Get author information."""
+    """Get author information from public.profiles.
+
+    `profiles` has no job-title column, so the author's ``title`` is always the
+    ``"Researcher"`` default — the same value the no-profile fallback below and
+    `public_author` use, which keeps the author shape stable for every caller.
+    """
     try:
         response = (
-            supabase.table("user_profiles")
-            .select("id, name, email, avatar, title")
+            supabase.table("profiles")
+            .select("id, full_name, email, avatar_url")
             .eq("id", author_id)
             .single()
             .execute()
@@ -170,10 +175,10 @@ async def get_post_author(supabase, author_id: str) -> dict:
         if response.data:
             return {
                 "id": response.data["id"],
-                "name": response.data.get("name") or "Anonymous",
+                "name": response.data.get("full_name") or "Anonymous",
                 "email": response.data.get("email"),
-                "avatar": response.data.get("avatar"),
-                "title": response.data.get("title") or "Researcher",
+                "avatar": response.data.get("avatar_url"),
+                "title": "Researcher",
             }
     except (PostgrestAPIError, StorageException) as e:
         logger.warning(f"Could not fetch author profile for {author_id}: {e}")
@@ -304,7 +309,7 @@ async def list_posts(
         }
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error listing posts: {e}", exc_info=True)
+        logger.exception(f"Error listing posts: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch blog posts")
 
 
@@ -400,7 +405,7 @@ async def list_categories():
         return {"data": categories}
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching categories: {e}", exc_info=True)
+        logger.exception(f"Error fetching categories: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch categories")
 
 
@@ -469,7 +474,7 @@ async def toggle_like(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error toggling like: {e}", exc_info=True)
+        logger.exception(f"Error toggling like: {e}")
         raise HTTPException(status_code=500, detail="Failed to toggle like")
 
 
@@ -524,7 +529,7 @@ async def toggle_bookmark(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error toggling bookmark: {e}", exc_info=True)
+        logger.exception(f"Error toggling bookmark: {e}")
         raise HTTPException(status_code=500, detail="Failed to toggle bookmark")
 
 
@@ -562,7 +567,7 @@ async def get_bookmarks(
         return {"data": bookmarks}
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching bookmarks: {e}", exc_info=True)
+        logger.exception(f"Error fetching bookmarks: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch bookmarks")
 
 
@@ -630,7 +635,7 @@ async def create_post(
         return {"success": True, "data": normalized_post}
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error creating post: {e}", exc_info=True)
+        logger.exception(f"Error creating post: {e}")
         raise HTTPException(status_code=500, detail="Failed to create blog post")
 
 
@@ -707,7 +712,7 @@ async def list_admin_posts(
             },
         }
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error listing admin posts: {e}", exc_info=True)
+        logger.exception(f"Error listing admin posts: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch admin blog posts")
 
 
@@ -740,7 +745,7 @@ async def get_admin_post(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching admin post {post_id}: {e}", exc_info=True)
+        logger.exception(f"Error fetching admin post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch blog post")
 
 
@@ -824,7 +829,7 @@ async def update_post(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error updating post {post_id}: {e}", exc_info=True)
+        logger.exception(f"Error updating post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to update blog post")
 
 
@@ -859,7 +864,7 @@ async def delete_post(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error deleting post {post_id}: {e}", exc_info=True)
+        logger.exception(f"Error deleting post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete blog post")
 
 
@@ -903,5 +908,5 @@ async def get_admin_blog_stats(
             avg_read_time=avg_read_time,
         )
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching blog stats: {e}", exc_info=True)
+        logger.exception(f"Error fetching blog stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch blog stats")

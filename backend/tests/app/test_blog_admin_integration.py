@@ -203,13 +203,12 @@ class FakeSupabase:
                 }
             ],
             "blog_tags": [{"post_id": "post-1", "tag": "initial"}],
-            "user_profiles": [
+            "profiles": [
                 {
                     "id": "user-1",
-                    "name": "Author One",
+                    "full_name": "Author One",
                     "email": "author@example.com",
-                    "avatar": None,
-                    "title": "Editor",
+                    "avatar_url": None,
                 }
             ],
         }

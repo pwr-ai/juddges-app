@@ -2,10 +2,12 @@
 Unit tests for app.versioning module.
 
 Tests cover:
-- Pydantic model validation
+- Pydantic model validation (including the change_type Literal)
 - _compute_content_hash helper (including None input)
 - _escape_html helper
 - _generate_diff_html helper
+- The public.create_document_version RPC call shape at both write sites
+- Mapping SQLSTATE P0409 back to HTTP 409
 - Revert rollback behavior on document update failure
 """
 
@@ -13,9 +15,13 @@ import hashlib
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from pydantic import ValidationError
+from supabase import PostgrestAPIError
 
 from app.versioning import (
+    _CREATE_VERSION_RPC,
+    _DUPLICATE_CONTENT_SQLSTATE,
     CreateVersionRequest,
     DocumentVersion,
     RevertVersionRequest,
@@ -23,6 +29,7 @@ from app.versioning import (
     _compute_content_hash,
     _escape_html,
     _generate_diff_html,
+    create_version_snapshot,
     revert_to_version,
 )
 
@@ -95,6 +102,25 @@ class TestCreateVersionRequestModel:
     def test_description_too_long(self):
         with pytest.raises((ValueError, ValidationError)):
             CreateVersionRequest(change_description="x" * 501)
+
+    @pytest.mark.parametrize(
+        "change_type",
+        ["initial", "amendment", "correction", "consolidation", "repeal"],
+    )
+    def test_accepts_every_value_in_the_db_check_constraint(self, change_type):
+        """The Literal must match the CHECK on document_versions.change_type
+        (20260810000004) exactly, or a valid request becomes a 422."""
+        assert CreateVersionRequest(change_type=change_type).change_type == change_type
+
+    @pytest.mark.parametrize(
+        "change_type",
+        ["", "AMENDMENT", "bulk_import", "rollback", "delete", "amendment ", None, 3],
+    )
+    def test_rejects_values_outside_the_check_constraint(self, change_type):
+        """An invalid change_type must be rejected by Pydantic (-> FastAPI 422)
+        rather than reaching the database CHECK and surfacing as a 500."""
+        with pytest.raises((ValueError, ValidationError)):
+            CreateVersionRequest(change_type=change_type)
 
 
 @pytest.mark.unit
@@ -367,22 +393,21 @@ class TestRevertRollbackOnFailure:
                     }
                 ]
                 chain.execute.return_value = resp
-            elif call_count["select"] == 2:
-                # Second select on document_versions: get max version number
-                # (the current doc select goes to legal_documents / docs_mock)
-                resp = MagicMock()
-                resp.data = [{"version_number": 3}]
-                chain.execute.return_value = resp
+            else:
+                # There is no second read of document_versions any more: the
+                # MAX(version_number) query moved into the RPC.
+                raise AssertionError(
+                    "unexpected extra document_versions select "
+                    "(max-then-insert allocation was removed)"
+                )
             return chain
 
         versions_mock.select.side_effect = versions_select
 
-        # Insert (snapshot creation) succeeds
-        insert_chain = MagicMock()
-        insert_chain.execute.return_value = MagicMock(
-            data=[{"id": snapshot_id, "version_number": 4}]
+        # Version rows are written by the RPC now, never by table().insert().
+        versions_mock.insert.side_effect = AssertionError(
+            "version rows must be inserted by the create_document_version RPC"
         )
-        versions_mock.insert.return_value = insert_chain
 
         # Delete (rollback) should be called
         delete_chain = MagicMock()
@@ -390,7 +415,7 @@ class TestRevertRollbackOnFailure:
         delete_chain.execute.return_value = MagicMock(data=[])
         versions_mock.delete.return_value = delete_chain
 
-        # legal_documents table mock
+        # judgments table mock
         docs_mock = MagicMock()
 
         def docs_select(*args, **kwargs):
@@ -398,15 +423,14 @@ class TestRevertRollbackOnFailure:
             chain.eq.return_value = chain
             chain.limit.return_value = chain
             resp = MagicMock()
+            # `judgments` exposes no content_hash / extracted_data /
+            # current_version; the route aliases `id` to `document_id`.
             resp.data = [
                 {
                     "document_id": document_id,
                     "title": "Current Title",
                     "full_text": "current content",
                     "summary": "current summary",
-                    "content_hash": "currenthash",
-                    "extracted_data": {},
-                    "current_version": 3,
                 }
             ]
             chain.execute.return_value = resp
@@ -414,7 +438,7 @@ class TestRevertRollbackOnFailure:
 
         docs_mock.select.side_effect = docs_select
 
-        # Update on legal_documents raises an error
+        # Update on judgments raises an error
         update_chain = MagicMock()
         update_chain.eq.return_value = update_chain
         update_chain.execute.side_effect = RuntimeError("DB connection lost")
@@ -424,12 +448,15 @@ class TestRevertRollbackOnFailure:
         def table_router(name):
             if name == "document_versions":
                 return versions_mock
-            if name == "legal_documents":
+            if name == "judgments":
                 return docs_mock
             raise ValueError(f"Unexpected table: {name}")
 
         mock_db = MagicMock()
         mock_db.client.table.side_effect = table_router
+        mock_db.client.rpc.return_value.execute.return_value = MagicMock(
+            data=[{"id": snapshot_id, "version_number": 4}]
+        )
 
         request = RevertVersionRequest(
             version_number=target_version_number,
@@ -480,19 +507,18 @@ class TestRevertRollbackOnFailure:
                     }
                 ]
                 chain.execute.return_value = resp
-            elif call_count["select"] == 2:
-                resp = MagicMock()
-                resp.data = [{"version_number": 2}]
-                chain.execute.return_value = resp
+            else:
+                raise AssertionError(
+                    "unexpected extra document_versions select "
+                    "(max-then-insert allocation was removed)"
+                )
             return chain
 
         versions_mock.select.side_effect = versions_select
 
-        insert_chain = MagicMock()
-        insert_chain.execute.return_value = MagicMock(
-            data=[{"id": "snap-1", "version_number": 3}]
+        versions_mock.insert.side_effect = AssertionError(
+            "version rows must be inserted by the create_document_version RPC"
         )
-        versions_mock.insert.return_value = insert_chain
 
         docs_mock = MagicMock()
 
@@ -507,9 +533,6 @@ class TestRevertRollbackOnFailure:
                     "title": "Current",
                     "full_text": "current text",
                     "summary": None,
-                    "content_hash": "curhash",
-                    "extracted_data": {},
-                    "current_version": 2,
                 }
             ]
             chain.execute.return_value = resp
@@ -527,12 +550,15 @@ class TestRevertRollbackOnFailure:
         def table_router(name):
             if name == "document_versions":
                 return versions_mock
-            if name == "legal_documents":
+            if name == "judgments":
                 return docs_mock
             raise ValueError(f"Unexpected table: {name}")
 
         mock_db = MagicMock()
         mock_db.client.table.side_effect = table_router
+        mock_db.client.rpc.return_value.execute.return_value = MagicMock(
+            data=[{"id": "snap-1", "version_number": 3}]
+        )
 
         request = RevertVersionRequest(version_number=target_version_number)
 
@@ -540,5 +566,202 @@ class TestRevertRollbackOnFailure:
             result = await revert_to_version(request=request, document_id=document_id)
 
         assert result["reverted_to_version"] == target_version_number
+        # Version number comes from the RPC result, not a local MAX+1 read.
+        assert result["pre_revert_snapshot_version"] == 3
+        assert result["new_current_version"] == 4
         # No rollback delete should have been called
         versions_mock.delete.assert_not_called()
+
+        # The pre-revert snapshot goes through the same RPC as the manual
+        # snapshot endpoint; only change_description, created_by and the
+        # duplicate-content flag differ.
+        rpc_name, rpc_params = mock_db.client.rpc.call_args.args
+        assert rpc_name == _CREATE_VERSION_RPC
+        assert rpc_params == {
+            "p_document_id": document_id,
+            "p_title": "Current",
+            "p_full_text": "current text",
+            "p_summary": None,
+            "p_content_hash": _compute_content_hash("current text"),
+            "p_change_description": (
+                "Pre-revert snapshot (before reverting to version 1)"
+            ),
+            "p_change_type": "amendment",
+            "p_created_by": "system",
+            "p_extracted_data": {},
+            # This path never deduplicated; reverting to the already-current
+            # version must stay a 200, not become a 409.
+            "p_reject_duplicate_content": False,
+        }
+
+
+# ===== public.create_document_version RPC contract (create_version_snapshot) =====
+
+_DOC_ID = "doc-7"
+_DOC_TEXT = "current content"
+
+
+def _snapshot_db(rpc_result=None, rpc_error=None):
+    """Mock db: one judgments row, and an rpc() that returns rows or raises.
+
+    Any read or insert on `document_versions` is a hard failure — the
+    duplicate-content check and the MAX(version_number) allocation both moved
+    into the RPC, so nothing may touch that table from Python here.
+    """
+    docs_mock = MagicMock()
+
+    def docs_select(*args, **kwargs):
+        chain = MagicMock()
+        chain.eq.return_value = chain
+        chain.limit.return_value = chain
+        chain.execute.return_value = MagicMock(
+            data=[
+                {
+                    "document_id": _DOC_ID,
+                    "title": "Wyrok",
+                    "full_text": _DOC_TEXT,
+                    "summary": "streszczenie",
+                }
+            ]
+        )
+        return chain
+
+    docs_mock.select.side_effect = docs_select
+
+    versions_mock = MagicMock()
+    versions_mock.select.side_effect = AssertionError(
+        "no document_versions read may remain in create_version_snapshot"
+    )
+    versions_mock.insert.side_effect = AssertionError(
+        "version rows must be inserted by the create_document_version RPC"
+    )
+
+    def table_router(name):
+        if name == "judgments":
+            return docs_mock
+        if name == "document_versions":
+            return versions_mock
+        raise ValueError(f"Unexpected table: {name}")
+
+    mock_db = MagicMock()
+    mock_db.client.table.side_effect = table_router
+    if rpc_error is not None:
+        mock_db.client.rpc.return_value.execute.side_effect = rpc_error
+    else:
+        mock_db.client.rpc.return_value.execute.return_value = MagicMock(
+            data=rpc_result
+        )
+    return mock_db
+
+
+@pytest.mark.unit
+class TestCreateVersionSnapshotUsesRpc:
+    """create_version_snapshot must allocate the version number inside
+    public.create_document_version, not with a separate MAX+1 read (#461)."""
+
+    @pytest.mark.asyncio
+    async def test_calls_rpc_with_expected_payload(self):
+        row = {
+            "id": "v-uuid",
+            "document_id": _DOC_ID,
+            "version_number": 4,
+            "title": "Wyrok",
+            "content_hash": _compute_content_hash(_DOC_TEXT),
+            "change_description": "fixed a typo",
+            "change_type": "correction",
+            "created_by": "user",
+            "created_at": "2026-08-12T00:00:00Z",
+            "extracted_data": {},
+        }
+        mock_db = _snapshot_db(rpc_result=[row])
+        request = CreateVersionRequest(
+            change_description="fixed a typo", change_type="correction"
+        )
+
+        with patch("app.versioning.get_vector_db", return_value=mock_db):
+            result = await create_version_snapshot(request=request, document_id=_DOC_ID)
+
+        rpc_name, rpc_params = mock_db.client.rpc.call_args.args
+        assert rpc_name == _CREATE_VERSION_RPC == "create_document_version"
+        # PostgREST matches RPC arguments by NAME: a renamed key is a runtime 404.
+        assert rpc_params == {
+            "p_document_id": _DOC_ID,
+            "p_title": "Wyrok",
+            "p_full_text": _DOC_TEXT,
+            "p_summary": "streszczenie",
+            "p_content_hash": _compute_content_hash(_DOC_TEXT),
+            "p_change_description": "fixed a typo",
+            "p_change_type": "correction",
+            "p_created_by": "user",
+            "p_extracted_data": {},
+            "p_reject_duplicate_content": True,
+        }
+        assert result.version_number == 4
+        assert result.change_type == "correction"
+        assert result.created_by == "user"
+
+    @pytest.mark.asyncio
+    async def test_duplicate_content_sqlstate_becomes_http_409(self):
+        """The RPC signals an already-versioned content hash with SQLSTATE
+        P0409; the endpoint must still answer 409 with the same message."""
+        message = "A version with identical content already exists (version 2)"
+        mock_db = _snapshot_db(
+            rpc_error=PostgrestAPIError(
+                {
+                    "code": _DUPLICATE_CONTENT_SQLSTATE,
+                    "message": message,
+                    "details": None,
+                    "hint": None,
+                }
+            )
+        )
+
+        with (
+            patch("app.versioning.get_vector_db", return_value=mock_db),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_version_snapshot(
+                request=CreateVersionRequest(), document_id=_DOC_ID
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == message
+
+    @pytest.mark.asyncio
+    async def test_other_postgrest_error_is_still_a_500(self):
+        mock_db = _snapshot_db(
+            rpc_error=PostgrestAPIError(
+                {
+                    "code": "23514",
+                    "message": 'violates check constraint "document_versions_change_type_check"',
+                    "details": None,
+                    "hint": None,
+                }
+            )
+        )
+
+        with (
+            patch("app.versioning.get_vector_db", return_value=mock_db),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_version_snapshot(
+                request=CreateVersionRequest(), document_id=_DOC_ID
+            )
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Error creating version snapshot"
+
+    @pytest.mark.asyncio
+    async def test_empty_rpc_result_is_a_500(self):
+        mock_db = _snapshot_db(rpc_result=[])
+
+        with (
+            patch("app.versioning.get_vector_db", return_value=mock_db),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_version_snapshot(
+                request=CreateVersionRequest(), document_id=_DOC_ID
+            )
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Failed to create version"

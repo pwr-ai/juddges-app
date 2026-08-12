@@ -176,7 +176,7 @@ describe("schemas production HTTP/auth status matrix", () => {
         else response.end("[]");
         return;
       }
-      if (request.url?.startsWith("/rest/v1/user_profiles?")) {
+      if (request.url?.startsWith("/rest/v1/profiles?")) {
         response.writeHead(200, { "Content-Type": "application/json" });
         response.end(JSON.stringify([{ email: "creator@example.test" }]));
         return;

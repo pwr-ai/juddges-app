@@ -426,10 +426,7 @@ def send_digest(frequency: str = "daily") -> dict[str, Any]:
                     logger.warning(f"Unknown channel '{channel}' for sub {sub_id}")
 
             except Exception as exc:
-                logger.error(
-                    f"Failed to deliver {channel} for sub {sub_id}: {exc}",
-                    exc_info=True,
-                )
+                logger.exception(f"Failed to deliver {channel} for sub {sub_id}: {exc}")
 
         update_last_sent(sub_id)
         log_delivery(sub_id, frequency, len(matches), channels_delivered)

@@ -13,6 +13,154 @@ if TYPE_CHECKING:
     from celery import Task
 
 
+# A running extraction reports a heartbeat after every document, so the
+# threshold has to exceed the slowest single document, not the slowest job.
+# Sized for a worst case (a very long judgment against a slow model) plus margin.
+#
+# A false positive is survivable by design rather than by luck: one document
+# slower than this gets the job reaped, and the worker's next progress write
+# reasserts STARTED and clears the error message and completion stamp (see
+# ``_update_job_results_in_supabase`` in app/workers.py). Raising this value
+# trades faster recovery from real worker deaths for fewer such flips.
+STALE_JOB_THRESHOLD_SECONDS = int(
+    os.environ.get("EXTRACTION_STALE_JOB_SECONDS", 45 * 60)
+)
+
+
+@celery_app.task(
+    bind=True,
+    name="maintenance.reap_stale_extraction_jobs",
+    max_retries=1,
+    default_retry_delay=300,
+)
+def reap_stale_extraction_jobs(self: Task) -> dict[str, Any]:
+    """Fail extraction jobs whose worker stopped reporting.
+
+    Closes the gap left by the on-demand recovery in `jobs_router._try_resubmit_job`,
+    which only runs when somebody polls the job. An unpolled job whose worker was
+    OOM-killed used to sit at STARTED forever, showing as in-progress in the UI
+    with no way to reach a terminal state.
+
+    Deliberately terminal rather than requeueing: `task_acks_late` already
+    redelivers a genuinely interrupted message, so a row still stale after the
+    threshold has exhausted that path, and re-queueing here would race the
+    broker's own redelivery.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from app.core.supabase import supabase_client
+
+    if not supabase_client:
+        logger.warning("Supabase client unavailable — skipping stale job reap")
+        return {"status": "skipped", "reason": "no_supabase_client"}
+
+    cutoff = (
+        datetime.now(UTC) - timedelta(seconds=STALE_JOB_THRESHOLD_SECONDS)
+    ).isoformat()
+
+    try:
+        stale = (
+            supabase_client.table("extraction_jobs")
+            .select("job_id, completed_documents, total_documents, attempts")
+            .eq("status", "STARTED")
+            .lt("heartbeat_at", cutoff)
+            .execute()
+        )
+        rows = stale.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+
+        reaped = []
+        for row in rows:
+            job_id = row["job_id"]
+            completed = row.get("completed_documents") or 0
+            total = row.get("total_documents") or 0
+            supabase_client.table("extraction_jobs").update(
+                {
+                    "status": "FAILURE",
+                    "completed_at": datetime.now(UTC).isoformat(),
+                    "error_message": (
+                        f"Worker stopped reporting after {completed} of {total} "
+                        f"documents (no heartbeat for over "
+                        f"{STALE_JOB_THRESHOLD_SECONDS // 60} minutes, "
+                        f"attempt {row.get('attempts') or 1})"
+                    ),
+                }
+            ).eq("job_id", job_id).eq("status", "STARTED").execute()
+            reaped.append(job_id)
+            logger.warning(
+                f"Reaped stale extraction job {job_id} "
+                f"({completed}/{total} documents completed)"
+            )
+
+        if not reaped:
+            logger.debug("No stale extraction jobs found")
+        return {"status": "completed", "reaped": len(reaped), "job_ids": reaped}
+    except Exception as exc:
+        logger.error(f"Stale extraction job reap failed: {exc}")
+        raise
+
+
+@celery_app.task(
+    bind=True,
+    name="maintenance.refresh_dashboard_stats",
+    max_retries=1,
+    default_retry_delay=300,
+)
+def refresh_dashboard_stats(self: Task) -> dict[str, Any]:
+    """Recompute the precomputed dashboard statistics.
+
+    `/statistics` reads `dashboard_precomputed_stats` rather than aggregating
+    12k judgments per request. Nothing refreshed that table on a schedule: the
+    only trigger was the manual `POST /dashboard/refresh-stats`, so the numbers
+    drifted for three months until a migration happened to recompute them.
+
+    Note the freshness this can guarantee is bounded by the read-side cache.
+    The API process keeps an in-process copy for `_cache_ttl` (4h) and a Celery
+    worker cannot reach into another process to clear it, so a refresh becomes
+    visible either when that copy expires or when the process restarts. The
+    shared Redis entry IS cleared here, which is what makes the refresh visible
+    to any process that has not cached it locally. With a daily cadence the
+    worst case is stats 4h behind the last refresh, against three months before.
+    """
+    from app.core.supabase import supabase_client
+
+    if not supabase_client:
+        logger.warning("Supabase client unavailable — skipping dashboard refresh")
+        return {"status": "skipped", "reason": "no_supabase_client"}
+
+    try:
+        logger.info("Refreshing precomputed dashboard statistics")
+        supabase_client.rpc("refresh_dashboard_stats").execute()
+        logger.info("refresh_dashboard_stats RPC call succeeded")
+    except Exception as exc:
+        logger.error(f"Dashboard stats refresh failed: {exc}")
+        raise
+
+    # Drop the shared cache so the fresh rows are actually served. Import the
+    # key names rather than re-spelling them: they carry a version suffix, and a
+    # duplicated literal would silently stop matching the next time it is bumped.
+    cleared = False
+    try:
+        from app.dashboard import (
+            DASHBOARD_STATS_CACHE_KEY,
+            LEGACY_DASHBOARD_STATS_CACHE_KEY,
+        )
+        from app.services.sync_status import _get_redis
+
+        client = _get_redis()
+        if client is not None:
+            client.delete(DASHBOARD_STATS_CACHE_KEY, LEGACY_DASHBOARD_STATS_CACHE_KEY)
+            cleared = True
+            logger.info("Cleared shared dashboard stats cache")
+    except Exception as exc:
+        # The rows are already refreshed; a stale cache resolves itself at TTL.
+        # Never fail the task over cache invalidation.
+        logger.warning(f"Could not clear dashboard stats cache: {exc}")
+
+    return {"status": "completed", "cache_cleared": cleared}
+
+
 @celery_app.task(
     bind=True,
     name="maintenance.vacuum_analyze",

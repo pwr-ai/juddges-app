@@ -266,26 +266,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store job in Supabase for tracking
-    try {
-      await supabase.from('extraction_jobs').insert({
-        job_id: jobId,
-        user_id: userData.user.id,
-        collection_id,
-        schema_id,
-        status: 'PENDING',
-        document_ids: documentIds,
-        total_documents: documentIds.length,
-        completed_documents: 0,
-        language: language || 'pl',
-        prompt_id: 'info_extraction',  // Default prompt template
-        extraction_context: extraction_context || 'Extract structured information from legal documents using the provided schema.',
-      });
-    } catch (error) {
-      apiLogger.error('Failed to create job tracking record', error, { requestId, jobId });
-      // Don't fail the request if job tracking fails
-    }
-
+    // The tracking row is created by the backend inside POST /extractions/db,
+    // before the Celery task is queued (#437). It used to be inserted here,
+    // after that call had already returned — so the worker could start writing
+    // progress to a row that did not exist yet, and an insert failure was
+    // swallowed, leaving a job that ran and billed with nothing tracking it.
+    // Returning the job id is now enough; do not re-insert.
     apiLogger.info('POST /api/extractions completed', {
       requestId,
       jobId,
