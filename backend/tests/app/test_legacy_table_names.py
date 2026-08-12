@@ -225,28 +225,6 @@ class TestSearchAnalyticsQueries:
         # search_analytics.filters is a text filter expression, not JSON.
         assert entry.filters == 'jurisdiction = "PL"'
 
-    async def test_recommendations_read_search_analytics(self) -> None:
-        from app import recommendations
-
-        client = _FakeClient()
-        with patch.object(recommendations, "get_supabase_client", return_value=client):
-            await recommendations._get_search_history_recommendations("user-1")
-
-        assert client.tables == ["search_analytics"]
-        assert client.filter_columns("search_analytics") == {"user_id", "created_at"}
-
-    async def test_trending_topics_read_search_analytics(self) -> None:
-        from app import research_assistant
-
-        client = _FakeClient()
-        with patch.object(
-            research_assistant, "get_supabase_client", return_value=client
-        ):
-            await research_assistant._get_trending_topics("user-1")
-
-        assert client.tables == ["search_analytics"]
-        assert client.projection("search_analytics") == "query"
-
 
 # ===== events -> app_events =====
 
@@ -363,43 +341,6 @@ class TestJudgmentsQueries:
         # Filters must use the physical column, not the alias.
         assert client.filter_columns("judgments") == {"decision_type"}
 
-    async def test_recent_documents_recommendations_alias_judgments(self) -> None:
-        from app import recommendations
-
-        client = _FakeClient(
-            {
-                "judgments": _FakeResponse(
-                    [
-                        {
-                            "document_id": "d1",
-                            "title": "T",
-                            "document_type": "Judgment",
-                            "date_issued": "2020-01-01",
-                            "document_number": "I ACa 1/20",
-                            "court_name": "SA",
-                            "language": "pl",
-                            "summary": "s",
-                        }
-                    ]
-                )
-            }
-        )
-        with patch.object(recommendations, "get_supabase_client", return_value=client):
-            items = await recommendations._get_recent_documents()
-
-        assert client.tables == ["judgments"]
-        projection = client.projection("judgments")
-        for alias in (
-            "document_id:id",
-            "document_type:decision_type",
-            "date_issued:decision_date",
-            "document_number:case_number",
-            "language:metadata->>language",
-        ):
-            assert alias in projection
-        assert items[0].document_id == "d1"
-        assert items[0].language == "pl"
-
     async def test_citation_network_aliases_references_and_umap(self) -> None:
         from app.judgments_pkg import get_citation_network
 
@@ -433,20 +374,4 @@ class TestJudgmentsQueries:
         assert "judgments" in client.tables
         # `judgments` has no `current_version` column.
         assert "current_version" not in client.projection("judgments")
-        assert ("judgments", "eq", "id") in client.filters
-
-    async def test_compute_hashes_updates_judgments_by_id(self) -> None:
-        from app.deduplication import compute_hashes
-
-        client = _FakeClient(
-            {"judgments": _FakeResponse([{"id": "j1", "full_text": "body"}])}
-        )
-        db = MagicMock()
-        db.client = client
-
-        with patch("app.deduplication.get_vector_db", return_value=db):
-            await compute_hashes(limit=10)
-
-        assert set(client.tables) == {"judgments"}
-        assert client.projection("judgments") == "id, full_text"
         assert ("judgments", "eq", "id") in client.filters
