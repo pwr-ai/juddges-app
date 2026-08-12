@@ -245,7 +245,7 @@ async def get_citation_network(
         return CitationNetworkResponse(nodes=nodes, edges=edges, statistics=statistics)
 
     except Exception as e:
-        logger.error(f"Error building citation network: {e!s}", exc_info=True)
+        logger.exception(f"Error building citation network: {e!s}")
         raise HTTPException(status_code=500, detail="Error building citation network")
 
 
@@ -307,7 +307,7 @@ async def get_facets(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Facets retrieval error: {e!s}", exc_info=True)
+        logger.exception(f"Facets retrieval error: {e!s}")
         raise HTTPException(status_code=500, detail=f"Failed to get facets: {e!s}")
 
 

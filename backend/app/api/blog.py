@@ -152,7 +152,7 @@ async def get_post_tags(supabase, post_id: str) -> list[str]:
         )
         return [row["tag"] for row in response.data]
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching tags: {e}", exc_info=True)
+        logger.exception(f"Error fetching tags: {e}")
         return []
 
 
@@ -309,7 +309,7 @@ async def list_posts(
         }
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error listing posts: {e}", exc_info=True)
+        logger.exception(f"Error listing posts: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch blog posts")
 
 
@@ -405,7 +405,7 @@ async def list_categories():
         return {"data": categories}
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching categories: {e}", exc_info=True)
+        logger.exception(f"Error fetching categories: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch categories")
 
 
@@ -474,7 +474,7 @@ async def toggle_like(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error toggling like: {e}", exc_info=True)
+        logger.exception(f"Error toggling like: {e}")
         raise HTTPException(status_code=500, detail="Failed to toggle like")
 
 
@@ -529,7 +529,7 @@ async def toggle_bookmark(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error toggling bookmark: {e}", exc_info=True)
+        logger.exception(f"Error toggling bookmark: {e}")
         raise HTTPException(status_code=500, detail="Failed to toggle bookmark")
 
 
@@ -567,7 +567,7 @@ async def get_bookmarks(
         return {"data": bookmarks}
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching bookmarks: {e}", exc_info=True)
+        logger.exception(f"Error fetching bookmarks: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch bookmarks")
 
 
@@ -635,7 +635,7 @@ async def create_post(
         return {"success": True, "data": normalized_post}
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error creating post: {e}", exc_info=True)
+        logger.exception(f"Error creating post: {e}")
         raise HTTPException(status_code=500, detail="Failed to create blog post")
 
 
@@ -712,7 +712,7 @@ async def list_admin_posts(
             },
         }
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error listing admin posts: {e}", exc_info=True)
+        logger.exception(f"Error listing admin posts: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch admin blog posts")
 
 
@@ -745,7 +745,7 @@ async def get_admin_post(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching admin post {post_id}: {e}", exc_info=True)
+        logger.exception(f"Error fetching admin post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch blog post")
 
 
@@ -829,7 +829,7 @@ async def update_post(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error updating post {post_id}: {e}", exc_info=True)
+        logger.exception(f"Error updating post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to update blog post")
 
 
@@ -864,7 +864,7 @@ async def delete_post(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error deleting post {post_id}: {e}", exc_info=True)
+        logger.exception(f"Error deleting post {post_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete blog post")
 
 
@@ -908,5 +908,5 @@ async def get_admin_blog_stats(
             avg_read_time=avg_read_time,
         )
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching blog stats: {e}", exc_info=True)
+        logger.exception(f"Error fetching blog stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch blog stats")

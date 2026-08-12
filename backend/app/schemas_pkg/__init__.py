@@ -154,9 +154,8 @@ async def validate_openai_schema_endpoint(schema_id: str) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            f"Unexpected error during schema validation for {schema_id}: {e}",
-            exc_info=True,
+        logger.exception(
+            f"Unexpected error during schema validation for {schema_id}: {e}"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -263,7 +262,7 @@ async def compile_schema_fields(params: SchemaCompileRequest) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during schema compilation: {e}", exc_info=True)
+        logger.exception(f"Unexpected error during schema compilation: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to compile schema: {e!s}",

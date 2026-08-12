@@ -334,7 +334,7 @@ async def submit_ocr_job(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OCR processing error: {e!s}", exc_info=True)
+        logger.exception(f"OCR processing error: {e!s}")
         # If job was created, mark it as failed
         if job_id is not None:
             try:
@@ -433,7 +433,7 @@ async def submit_ocr_job_text(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"OCR text processing error: {e!s}", exc_info=True)
+        logger.exception(f"OCR text processing error: {e!s}")
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {e!s}")
 
 
@@ -475,7 +475,7 @@ async def get_ocr_job(job_id: str) -> OCRJobStatus:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching OCR job {job_id}: {e!s}", exc_info=True)
+        logger.exception(f"Error fetching OCR job {job_id}: {e!s}")
         raise HTTPException(status_code=500, detail="Failed to fetch OCR job status")
 
 
@@ -520,7 +520,7 @@ async def list_ocr_jobs(
         )
 
     except Exception as e:
-        logger.error(f"Error listing OCR jobs: {e!s}", exc_info=True)
+        logger.exception(f"Error listing OCR jobs: {e!s}")
         raise HTTPException(status_code=500, detail="Failed to list OCR jobs")
 
 
@@ -590,5 +590,5 @@ async def submit_ocr_correction(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error applying OCR corrections: {e!s}", exc_info=True)
+        logger.exception(f"Error applying OCR corrections: {e!s}")
         raise HTTPException(status_code=500, detail="Failed to apply corrections")

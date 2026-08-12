@@ -561,9 +561,7 @@ def extract_information_from_documents_task(
                 user_schema = _fetch_schema_from_db(schema_id, client=supabase_client)
                 logger.info(f"Fetched schema {schema_id} from database")
             except Exception as e:
-                logger.error(
-                    f"Failed to fetch schema from database: {e}", exc_info=True
-                )
+                logger.exception(f"Failed to fetch schema from database: {e}")
                 raise ValueError(f"Failed to fetch schema from database: {e!s}")
 
         logger.info(
@@ -594,9 +592,8 @@ def extract_information_from_documents_task(
         ) as e:
             error_type = type(e).__name__
             error_msg = str(e)
-            logger.error(
-                f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}",
-                exc_info=True,
+            logger.exception(
+                f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}"
             )
             # Ensure exception message includes error type for Celery serialization
             if error_type not in error_msg:
@@ -652,9 +649,8 @@ def extract_information_from_documents_task(
                 )
             except Exception as doc_error:
                 # Individual document failed - mark it as failed but continue with other documents
-                logger.error(
-                    f"Error extracting from document {doc.document_id}: {doc_error}",
-                    exc_info=True,
+                logger.exception(
+                    f"Error extracting from document {doc.document_id}: {doc_error}"
                 )
                 results.append(
                     DocumentExtractionResponse(
@@ -771,7 +767,7 @@ def extract_information_from_documents_task(
             f"{error_type}: {error_msg}" if error_type not in error_msg else error_msg
         )
 
-        logger.error(f"Error in extraction task: {full_error_msg}", exc_info=True)
+        logger.exception(f"Error in extraction task: {full_error_msg}")
         failed_results = []
         for doc_id in request.document_ids:
             failed_results.append(

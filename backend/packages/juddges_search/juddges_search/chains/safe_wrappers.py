@@ -72,7 +72,7 @@ def create_safe_chain_wrapper(
 
             except Exception as e:
                 # Non-retriable error - log and fallback immediately
-                logger.error(f"[{chain_name}] Non-retriable error: {e}", exc_info=True)
+                logger.exception(f"[{chain_name}] Non-retriable error: {e}")
                 logger.warning(f"[{chain_name}] Returning fallback response due to error")
                 return fallback_response
 
@@ -112,7 +112,7 @@ def create_safe_chain_wrapper(
 
             except Exception as e:
                 # Non-retriable error - log and fallback immediately
-                logger.error(f"[{chain_name}] Non-retriable error: {e}", exc_info=True)
+                logger.exception(f"[{chain_name}] Non-retriable error: {e}")
                 logger.warning(f"[{chain_name}] Returning fallback response due to error")
                 return fallback_response
 
