@@ -38,11 +38,8 @@ from app.auth import verify_api_key
 from app.clustering import router as clustering_router
 from app.collections import router as collections_router
 from app.dashboard import router as dashboard_router
-from app.deduplication import router as deduplication_router
 from app.embeddings_api import router as embeddings_router
-from app.evaluations import router as evaluations_router
 from app.example_questions import router as example_questions_router
-from app.experiments import router as experiments_router
 from app.extraction import router as extraction_router
 from app.feedback import router as feedback_router
 from app.graphql_api.router import graphql_router
@@ -57,15 +54,10 @@ from app.judgments_pkg import router as documents_router
 
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
-from app.marketplace import router as marketplace_router
-from app.ocr import router as ocr_router
-from app.playground import router as playground_router
 from app.precedents import router as precedents_router
 from app.publications import router as publications_router
 from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
 from app.reasoning_lines import router as reasoning_lines_router
-from app.recommendations import router as recommendations_router
-from app.research_assistant import router as research_assistant_router
 from app.schemas_pkg import router as schemas_router
 from app.summarization import router as summarization_router
 from app.timeline_extraction import router as timeline_router
@@ -623,18 +615,15 @@ async def redirect_root_to_docs():
 #            documents_router, collections_router, publications_router
 #            extraction_router, schemas_router, schema_generator_router
 #            example_questions_router
-#            dashboard_router, playground_router, evaluations_router
-#            summarization_router, precedents_router, deduplication_router
-#            versioning_router, ocr_router, clustering_router
-#            recommendations_router, research_assistant_router
+#            dashboard_router, summarization_router, precedents_router
+#            versioning_router, clustering_router
 #            topic_modeling_router, argumentation_router, embeddings_router
-#            marketplace_router, timeline_router, search_router
+#            timeline_router, search_router
 #            graphql_router — /graphql
 #            health_router — /health/status (sub-route API key guard)
 #
 # USER:      blog_router — API_KEY at router level + JWT per-endpoint for
 #                          write operations (like, bookmark, admin CRUD)
-#            experiments_router — JWT enforced per-endpoint
 #
 # ADMIN:     admin_router (/api/admin — require_admin on every endpoint)
 #
@@ -667,22 +656,15 @@ API_KEY_PROTECTED_ROUTERS = [
     schema_generator_router,
     example_questions_router,
     dashboard_router,
-    playground_router,
-    evaluations_router,
     summarization_router,
     precedents_router,
-    deduplication_router,
     versioning_router,
-    ocr_router,
     clustering_router,
-    recommendations_router,
-    research_assistant_router,
     research_agent_v2_router,
     topic_modeling_router,
     argumentation_router,
     judge_fingerprint_router,
     embeddings_router,
-    marketplace_router,
     timeline_router,
     blog_router,
     search_router,
@@ -690,9 +672,6 @@ API_KEY_PROTECTED_ROUTERS = [
 ]
 for _router in API_KEY_PROTECTED_ROUTERS:
     app.include_router(_router, dependencies=[Depends(verify_api_key)])
-
-# Experiments - uses JWT authentication (implemented in endpoints)
-app.include_router(experiments_router)
 
 # Include Day 1 feature routers
 # Guest sessions - no API key required (public endpoint)
