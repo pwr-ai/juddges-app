@@ -361,10 +361,14 @@ describe("collection detail production status contract", () => {
       expect(anonymous.status).toBe(307);
       expect(authUnavailable.status).toBe(503);
       expect(staleCredentials.status).toBe(307);
-      expect(
-        new URL(staleCredentials.headers.get("location") as string).pathname +
-          new URL(staleCredentials.headers.get("location") as string).search
-      ).toBe(
+      // Base supplied because Next 16 emits a relative Location where 15
+      // emitted an absolute one; new URL() throws on a relative input without
+      // one. Both forms are valid per RFC 7231.
+      const staleRedirect = new URL(
+        staleCredentials.headers.get("location") as string,
+        baseUrl
+      );
+      expect(staleRedirect.pathname + staleRedirect.search).toBe(
         `/auth/login?next=%2Fcollections%2F${OWN_COLLECTION_ID}`
       );
       expect(upstreamResponses).toEqual([
