@@ -105,6 +105,16 @@ celery_app.conf.beat_schedule = {
         # Never let these pile up: a skipped run is fully covered by the next.
         "options": {"expires": 5 * 60},
     },
+    # Precomputed dashboard statistics (#467). Daily is ample: ingestion is the
+    # only writer that moves these numbers, and the incremental ingestion beat
+    # is opt-in via INGESTION_BEAT_ENABLED. Runs before the 7am digest so the
+    # figures a reader sees are the freshly computed ones. `expires` matches the
+    # cadence so a skipped run is covered by the next rather than piling up.
+    "refresh-dashboard-stats-daily": {
+        "task": "maintenance.refresh_dashboard_stats",
+        "schedule": crontab(hour=5, minute=0),
+        "options": {"expires": 24 * 60 * 60},
+    },
     "vacuum-analyze-judgments-weekly": {
         "task": "maintenance.vacuum_analyze",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
