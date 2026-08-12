@@ -394,7 +394,7 @@ async def refresh_dashboard_stats(
         supabase.rpc("refresh_dashboard_stats").execute()
         logger.info("refresh_dashboard_stats RPC call succeeded")
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error refreshing stats via RPC: {e}", exc_info=True)
+        logger.exception(f"Error refreshing stats via RPC: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     # Clear caches regardless of RPC outcome so stale data is not served
@@ -575,7 +575,7 @@ async def get_featured_examples(
         return [_to_document_summary(doc) for doc in (response.data or [])[:limit]]
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error fetching featured examples: {e}", exc_info=True)
+        logger.exception(f"Error fetching featured examples: {e}")
         return []
 
 
@@ -723,7 +723,7 @@ async def test_document_counts(
         }
 
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error testing document counts: {e}", exc_info=True)
+        logger.exception(f"Error testing document counts: {e}")
         return {
             "status": "error",
             "message": str(e),

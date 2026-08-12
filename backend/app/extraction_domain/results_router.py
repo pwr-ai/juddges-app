@@ -508,7 +508,7 @@ async def filter_by_extracted_data(
         }
 
     except Exception as e:
-        logger.error(f"Failed to filter documents: {e}", exc_info=True)
+        logger.exception(f"Failed to filter documents: {e}")
         raise HTTPException(
             status_code=500,
             detail={
@@ -633,7 +633,7 @@ async def get_facet_counts(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get facet counts for {field}: {e}", exc_info=True)
+        logger.exception(f"Failed to get facet counts for {field}: {e}")
         raise HTTPException(
             status_code=500,
             detail={
@@ -693,7 +693,7 @@ async def get_numeric_histogram(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get histogram for {field}: {e}", exc_info=True)
+        logger.exception(f"Failed to get histogram for {field}: {e}")
         raise HTTPException(
             status_code=500,
             detail={

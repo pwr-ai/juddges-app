@@ -457,9 +457,8 @@ def _submit_extraction_task(
         )
     except Exception as e:
         _abandon_job_record(task_id, f"Task submission failed: {e}")
-        logger.error(
-            f"Unexpected error while submitting extraction task to Celery: {e}",
-            exc_info=True,
+        logger.exception(
+            f"Unexpected error while submitting extraction task to Celery: {e}"
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -520,9 +519,7 @@ def _fetch_schema_from_db(schema_id: str, include_metadata: bool = False) -> dic
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            "Unexpected error fetching schema from database: {}", str(e), exc_info=True
-        )
+        logger.exception("Unexpected error fetching schema from database: {}", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -659,7 +656,7 @@ def update_job_status_in_supabase(
         return False
 
     except Exception as e:
-        logger.error(f"Failed to update Supabase for job {job_id}: {e}", exc_info=True)
+        logger.exception(f"Failed to update Supabase for job {job_id}: {e}")
         return False
 
 

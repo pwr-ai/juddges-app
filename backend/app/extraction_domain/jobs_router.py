@@ -394,9 +394,7 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
     except Exception as resubmit_error:
         # Broad catch: resubmit involves both Celery task submission and
         # Supabase update; either can raise arbitrary exceptions.
-        logger.error(
-            f"Failed to resubmit job {job_id}: {resubmit_error}", exc_info=True
-        )
+        logger.exception(f"Failed to resubmit job {job_id}: {resubmit_error}")
         return None
 
 
@@ -605,9 +603,7 @@ async def create_extraction_job(
     except Exception as e:
         # Broad catch: task submission involves Celery, Supabase, and schema
         # validation; any of these may raise arbitrary exceptions.
-        logger.error(
-            "Unexpected error creating extraction job: {}", str(e), exc_info=True
-        )
+        logger.exception("Unexpected error creating extraction job: {}", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -728,9 +724,7 @@ async def create_extraction_job_db(
     except Exception as e:
         # Broad catch: task submission involves Celery, Supabase, and schema
         # validation; any of these may raise arbitrary exceptions.
-        logger.error(
-            "Unexpected error creating extraction job: {}", str(e), exc_info=True
-        )
+        logger.exception("Unexpected error creating extraction job: {}", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -836,9 +830,8 @@ async def create_bulk_extraction(
                 )
             except Exception as e:
                 # Broad catch: per-schema job creation involves Celery + Supabase.
-                logger.error(
-                    f"Unexpected error creating job for schema {schema_id}: {e}",
-                    exc_info=True,
+                logger.exception(
+                    f"Unexpected error creating job for schema {schema_id}: {e}"
                 )
                 jobs.append(
                     BulkExtractionJobInfo(
@@ -865,7 +858,7 @@ async def create_bulk_extraction(
         raise
     except Exception as e:
         # Broad catch: bulk extraction orchestrates multiple Celery + Supabase calls.
-        logger.error(f"Unexpected error in bulk extraction: {e}", exc_info=True)
+        logger.exception(f"Unexpected error in bulk extraction: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -1153,7 +1146,7 @@ async def list_extraction_jobs(
     except Exception as e:
         # Broad catch: listing jobs queries Supabase which can raise
         # arbitrary connection/postgrest exceptions.
-        logger.error("Error listing extraction jobs: {}", str(e), exc_info=True)
+        logger.exception("Error listing extraction jobs: {}", str(e))
         raise HTTPException(
             status_code=500, detail=f"Error listing extraction jobs: {e!s}"
         )
@@ -1257,7 +1250,7 @@ async def cancel_or_delete_extraction_job(
     except Exception as e:
         # Broad catch: Celery revoke() and task state access can raise arbitrary
         # broker/connection exceptions.
-        logger.error("Error cancelling job {}: {}", job_id, str(e), exc_info=True)
+        logger.exception("Error cancelling job {}: {}", job_id, str(e))
         raise HTTPException(status_code=500, detail=f"Error cancelling job: {e!s}")
 
 
@@ -1337,5 +1330,5 @@ async def delete_extraction_job(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error deleting job {job_id}: {e!s}", exc_info=True)
+        logger.exception(f"Error deleting job {job_id}: {e!s}")
         raise HTTPException(status_code=500, detail=f"Error deleting job: {e!s}")
