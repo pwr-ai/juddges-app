@@ -103,6 +103,66 @@ def reap_stale_extraction_jobs(self: Task) -> dict[str, Any]:
 
 @celery_app.task(
     bind=True,
+    name="maintenance.refresh_dashboard_stats",
+    max_retries=1,
+    default_retry_delay=300,
+)
+def refresh_dashboard_stats(self: Task) -> dict[str, Any]:
+    """Recompute the precomputed dashboard statistics.
+
+    `/statistics` reads `dashboard_precomputed_stats` rather than aggregating
+    12k judgments per request. Nothing refreshed that table on a schedule: the
+    only trigger was the manual `POST /dashboard/refresh-stats`, so the numbers
+    drifted for three months until a migration happened to recompute them.
+
+    Note the freshness this can guarantee is bounded by the read-side cache.
+    The API process keeps an in-process copy for `_cache_ttl` (4h) and a Celery
+    worker cannot reach into another process to clear it, so a refresh becomes
+    visible either when that copy expires or when the process restarts. The
+    shared Redis entry IS cleared here, which is what makes the refresh visible
+    to any process that has not cached it locally. With a daily cadence the
+    worst case is stats 4h behind the last refresh, against three months before.
+    """
+    from app.core.supabase import supabase_client
+
+    if not supabase_client:
+        logger.warning("Supabase client unavailable — skipping dashboard refresh")
+        return {"status": "skipped", "reason": "no_supabase_client"}
+
+    try:
+        logger.info("Refreshing precomputed dashboard statistics")
+        supabase_client.rpc("refresh_dashboard_stats").execute()
+        logger.info("refresh_dashboard_stats RPC call succeeded")
+    except Exception as exc:
+        logger.error(f"Dashboard stats refresh failed: {exc}")
+        raise
+
+    # Drop the shared cache so the fresh rows are actually served. Import the
+    # key names rather than re-spelling them: they carry a version suffix, and a
+    # duplicated literal would silently stop matching the next time it is bumped.
+    cleared = False
+    try:
+        from app.dashboard import (
+            DASHBOARD_STATS_CACHE_KEY,
+            LEGACY_DASHBOARD_STATS_CACHE_KEY,
+        )
+        from app.services.sync_status import _get_redis
+
+        client = _get_redis()
+        if client is not None:
+            client.delete(DASHBOARD_STATS_CACHE_KEY, LEGACY_DASHBOARD_STATS_CACHE_KEY)
+            cleared = True
+            logger.info("Cleared shared dashboard stats cache")
+    except Exception as exc:
+        # The rows are already refreshed; a stale cache resolves itself at TTL.
+        # Never fail the task over cache invalidation.
+        logger.warning(f"Could not clear dashboard stats cache: {exc}")
+
+    return {"status": "completed", "cache_cleared": cleared}
+
+
+@celery_app.task(
+    bind=True,
     name="maintenance.vacuum_analyze",
     max_retries=1,
     default_retry_delay=300,
