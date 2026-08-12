@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -645,89 +645,3 @@ async def get_trending_topics(
         curated_topics = [t for t in curated_topics if t.category == category]
 
     return curated_topics[:limit]
-
-
-@router.get("/test-document-counts")
-@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
-async def test_document_counts(
-    request: Request, api_key: str = Depends(verify_api_key)
-):
-    """
-    Test endpoint to verify document counting functionality.
-
-    Returns counts directly from Supabase without caching.
-    """
-    logger.info("Testing document counts from Supabase...")
-
-    try:
-        supabase = get_supabase_client()
-
-        # Get total count
-        logger.info("Fetching total document count...")
-        total_response = (
-            supabase.table("judgments").select("id", count="exact").execute()
-        )
-        total_count = total_response.count or 0
-        logger.info(f"Total documents: {total_count:,}")
-
-        # Get counts by type
-        logger.info("Fetching document counts by type...")
-        document_types = [
-            "judgment",
-            "ruling",
-            "opinion",
-            "legislation",
-        ]
-        type_counts = {}
-
-        for doc_type in document_types:
-            try:
-                logger.info(f"Querying {doc_type}...")
-                response = (
-                    supabase.table("judgments")
-                    .select("id", count="exact")
-                    # `judgments.decision_type` is the closest analogue of the
-                    # legacy `document_type` column.
-                    .eq("decision_type", doc_type)
-                    .execute()
-                )
-                count = response.count or 0
-                if count > 0:
-                    type_counts[doc_type] = count
-                    logger.info(f"{doc_type}: {count:,}")
-            except (PostgrestAPIError, StorageException) as e:
-                logger.warning(f"Could not count {doc_type}: {e}")
-
-        # Get recent documents count
-        try:
-            one_week_ago = datetime.now(UTC) - timedelta(days=7)
-            recent_response = (
-                supabase.table("judgments")
-                .select("id", count="exact")
-                .gte("created_at", one_week_ago.isoformat())
-                .execute()
-            )
-            recent_count = recent_response.count or 0
-            logger.info(f"Documents added this week: {recent_count:,}")
-        except (PostgrestAPIError, StorageException) as e:
-            logger.warning(f"Could not get weekly count: {e}")
-            recent_count = 0
-
-        return {
-            "status": "success",
-            "source": "supabase",
-            "total_documents": total_count,
-            "by_type": type_counts,
-            "added_this_week": recent_count,
-            "message": "Document counting is working!",
-        }
-
-    except (PostgrestAPIError, StorageException) as e:
-        logger.exception(f"Error testing document counts: {e}")
-        return {
-            "status": "error",
-            "message": str(e),
-            "total_documents": 0,
-            "by_type": {},
-            "added_this_week": 0,
-        }

@@ -25,7 +25,6 @@ jest.mock('@/lib/logger', () => ({
 global.fetch = jest.fn();
 
 import * as argumentationRoute from '@/app/api/argumentation/route';
-import * as clusteringRoute from '@/app/api/clustering/semantic-clusters/route';
 import * as qaRoute from '@/app/api/qa/route';
 import * as topicModelingRoute from '@/app/api/topic-modeling/analyze/route';
 
@@ -69,14 +68,6 @@ const routes: RouteCase[] = [
     route: argumentationRoute,
     requestBody: { document_ids: ['doc-1'] },
     upstreamBody: { document_ids: ['doc-1'] },
-  },
-  {
-    name: 'semantic clustering',
-    url: 'http://localhost/api/clustering/semantic-clusters',
-    upstreamPath: '/clustering/semantic-clusters',
-    route: clusteringRoute,
-    requestBody: { sample_size: 100 },
-    upstreamBody: { sample_size: 100 },
   },
   {
     name: 'topic modeling',
@@ -380,11 +371,6 @@ describe('authenticated AI BFF contracts', () => {
       'argumentation',
       () => import('@/app/api/argumentation/[...path]/route').catch(() => null),
       'http://localhost/api/argumentation/internal',
-    ],
-    [
-      'semantic clustering',
-      () => import('@/app/api/clustering/semantic-clusters/[...path]/route').catch(() => null),
-      'http://localhost/api/clustering/semantic-clusters/internal',
     ],
     [
       'topic modeling',

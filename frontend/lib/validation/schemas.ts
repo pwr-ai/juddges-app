@@ -13,7 +13,6 @@ export * from './base';
 
 // Re-export schema-specific validators
 export * from './schema-endpoints';
-export * from './search-query-endpoints';
 
 // Import base schemas for use in this file
 import { uuidSchema, languageSchema } from './base';

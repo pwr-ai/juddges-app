@@ -61,20 +61,13 @@ Quick reference (as registered in server.py):
         schema_generator_router — /api/schema-generator
         example_questions_router
         dashboard_router
-        playground_router
-        evaluations_router
         summarization_router
         precedents_router
-        deduplication_router
         versioning_router
-        ocr_router
         clustering_router
-        recommendations_router
-        research_assistant_router
         topic_modeling_router
         argumentation_router
         embeddings_router
-        marketplace_router
         timeline_router
         search_router
         graphql_router          — /graphql
@@ -85,7 +78,6 @@ Quick reference (as registered in server.py):
                                   write sub-routes also require JWT:
                                   POST .../like, POST .../bookmark,
                                   GET /bookmarks, /blog/admin/*)
-        experiments_router      — JWT enforced per-endpoint
 
     ADMIN (JWT + admin role):
         admin_router            — /api/admin (require_admin on every endpoint)

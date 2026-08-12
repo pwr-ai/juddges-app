@@ -123,14 +123,6 @@ async def test_dashboard_trending_topics_limit(authenticated_client: AsyncClient
 
 @pytest.mark.anyio
 @pytest.mark.api
-async def test_dashboard_test_document_counts_requires_auth(client: AsyncClient):
-    """Test document counts should reject unauthenticated requests."""
-    response = await client.get("/dashboard/test-document-counts")
-    assert response.status_code in [401, 403]
-
-
-@pytest.mark.anyio
-@pytest.mark.api
 async def test_dashboard_health_requires_auth(client: AsyncClient):
     """Health check should reject unauthenticated requests after #170 fix."""
     response = await client.get("/dashboard/health")
