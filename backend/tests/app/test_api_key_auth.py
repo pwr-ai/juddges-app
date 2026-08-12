@@ -8,8 +8,6 @@ Tests for API key authentication including security measures like:
 - Constant-time comparison
 """
 
-import time
-
 import pytest
 from httpx import AsyncClient, Response
 
@@ -96,51 +94,91 @@ class TestAPIKeyAuthentication:
         if test_api_key != test_api_key.lower():
             _assert_api_key_error(response_lower, "Invalid API key")
 
-    async def test_api_key_timing_attack_protection(self, client: AsyncClient):
+    @pytest.mark.parametrize(
+        "candidate",
+        [
+            "a",  # very short, completely wrong
+            "a" * 50,  # long, completely wrong
+            "test-api-key-00000",  # same length, different ending
+            "zzzz-api-key-99999",  # same length, different everywhere
+            "test",  # partial prefix match
+            "test-api",  # longer prefix match
+            "test-api-key-1234",  # almost correct, one char short
+        ],
+    )
+    async def test_api_key_comparison_is_constant_time(
+        self, monkeypatch: pytest.MonkeyPatch, candidate: str
+    ) -> None:
+        """Every rejected key must be compared with `secrets.compare_digest`.
+
+        This replaces a test that measured wall-clock latency of 35 real HTTP
+        requests and asserted the relative standard deviation stayed under 50%.
+        That cannot work: the key comparison is a vanishing fraction of a round
+        trip, and the rest is event-loop scheduling, GC, coverage instrumentation
+        and whatever else shares the CI runner. Five samples per key cannot
+        average that away, so a single scheduling hiccup failed the build — it did
+        so on #470, a versioning change touching no auth code, reporting 213%
+        variation while the suite passed locally.
+
+        The guarantee it reached for comes from the comparison primitive, so
+        assert that instead. This fails for the regression that actually matters —
+        someone replacing `secrets.compare_digest` with `==` — which the timing
+        test could not reliably catch, and it fails deterministically.
+
+        The prefix-overlap keys are kept as parameters: a short-circuiting
+        comparison would show up as a missing call for a candidate whose first
+        character already differs.
         """
-        Test that API key verification uses constant-time comparison.
+        from fastapi import HTTPException
 
-        This test verifies that the comparison time doesn't significantly vary
-        based on how many characters match, which would allow timing attacks.
-        """
-        test_keys = [
-            "a",  # Very short, completely wrong
-            "a" * 50,  # Long, completely wrong
-            "test-api-key-00000",  # Same length, different ending
-            "zzzz-api-key-99999",  # Same length, different everywhere
-            "test",  # Partial prefix match
-            "test-api",  # More prefix match
-            "test-api-key-1234",  # Almost correct (one char short)
-        ]
+        from app import auth
 
-        timings = []
-        samples_per_key = 5
+        real_compare = auth.secrets.compare_digest
+        calls: list[tuple[str, str]] = []
 
-        for key in test_keys:
-            key_timings = []
-            for _ in range(samples_per_key):
-                headers = {"X-API-Key": key}
-                start = time.perf_counter()
-                await client.get("/documents", headers=headers)
-                end = time.perf_counter()
-                key_timings.append(end - start)
+        def recording_compare(left, right):
+            calls.append((left, right))
+            return real_compare(left, right)
 
-            avg_timing = sum(key_timings) / len(key_timings)
-            timings.append(avg_timing)
+        monkeypatch.setattr(auth.secrets, "compare_digest", recording_compare)
 
-        # Calculate variance in timings
-        mean_timing = sum(timings) / len(timings)
-        variance = sum((t - mean_timing) ** 2 for t in timings) / len(timings)
-        std_dev = variance**0.5
+        with pytest.raises(HTTPException) as exc_info:
+            await auth.verify_api_key(candidate)
 
-        # Standard deviation should be small relative to mean (< 50%)
-        # This indicates constant-time comparison
-        relative_std = std_dev / mean_timing if mean_timing > 0 else 0
-
-        assert relative_std < 0.5, (
-            f"Timing variation too high ({relative_std:.2%}), "
-            f"may indicate timing attack vulnerability"
+        assert exc_info.value.status_code == 401
+        assert calls, (
+            "verify_api_key rejected the key without calling "
+            "secrets.compare_digest — a plain == comparison leaks key material "
+            "through timing"
         )
+        assert any(left == candidate for left, _ in calls), (
+            f"the supplied key {candidate!r} never reached compare_digest"
+        )
+
+    async def test_valid_api_key_also_goes_through_compare_digest(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The accept path must not shortcut the constant-time comparison.
+
+        Guarding only the reject path would miss an implementation that returns
+        early on an equality check and falls back to compare_digest only when
+        that fails.
+        """
+        from app import auth
+
+        real_compare = auth.secrets.compare_digest
+        calls: list[tuple[str, str]] = []
+
+        def recording_compare(left, right):
+            calls.append((left, right))
+            return real_compare(left, right)
+
+        monkeypatch.setattr(auth.secrets, "compare_digest", recording_compare)
+
+        result = await auth.verify_api_key(auth.API_KEY)
+
+        assert result == auth.API_KEY
+        assert calls, "the accept path bypassed secrets.compare_digest"
 
     async def test_api_key_header_name_required(
         self, client: AsyncClient, test_api_key: str
