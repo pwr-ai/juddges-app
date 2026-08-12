@@ -70,14 +70,22 @@ describe("fetchSchemaDetail", () => {
     expect(schemaUrl.searchParams.get("select")).toBe(
       "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id"
     );
+    // Creator enrichment must hit `profiles`; `user_profiles` does not exist (#446),
+    // so querying it returns 404 and the email silently never reaches the payload.
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringMatching(/\/rest\/v1\/user_profiles\?/),
+      expect.stringMatching(/\/rest\/v1\/profiles\?/),
       expect.objectContaining({
         method: "GET",
         cache: "no-store",
         headers: expect.objectContaining({ Authorization: "Bearer verified-token" }),
       })
     );
+    const profileUrl = new URL(
+      String((global.fetch as jest.Mock).mock.calls[1][0])
+    );
+    expect(profileUrl.pathname).toBe("/rest/v1/profiles");
+    expect(profileUrl.searchParams.get("select")).toBe("email");
+    expect(profileUrl.searchParams.get("id")).toBe(`eq.${visibleSchema.user_id}`);
   });
 
   it("preserves a large legal schema but drops unselected future columns", async () => {

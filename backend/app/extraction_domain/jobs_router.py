@@ -228,6 +228,26 @@ def _verify_job_ownership(job_id: str, user_id: str) -> None:
         )
 
 
+def _request_job_cancellation(job_id: str) -> None:
+    """Record a cancellation request for the running task to observe.
+
+    `status` cannot carry this: its CHECK constraint has no CANCELLED value and
+    the application maps cancellation onto FAILURE, so a dedicated timestamp is
+    the only place a *pending* cancellation can live without the reaper mistaking
+    the job for a healthy one.
+    """
+    if supabase is None:
+        return
+    try:
+        supabase.table("extraction_jobs").update(
+            {"cancel_requested_at": datetime.now(UTC).isoformat()}
+        ).eq("job_id", job_id).execute()
+    except Exception as flag_error:
+        # Revoke still runs, so a queued job is stopped either way; only the
+        # cooperative stop for an already-running job is lost.
+        logger.warning(f"Could not flag job {job_id} as cancelled: {flag_error}")
+
+
 def _deserialize_existing_results(
     existing_results: object,
 ) -> list[DocumentExtractionResponse] | None:
@@ -353,25 +373,28 @@ def _try_resubmit_job(job_id: str, job_data: dict) -> BatchExtractionResponse | 
         resubmit_request = _build_resubmit_request_from_job(
             job_data=job_data, schema_data=schema_response.data
         )
-        new_task = extract_information_from_documents_task.delay(
-            resubmit_request.model_dump(mode="json")
+        # Re-enqueue under the SAME task id. Minting a new one used to require
+        # rewriting `job_id` on the row, which broke the row-to-task identity
+        # for anything already holding the old id (polling clients, the results
+        # endpoint, publication links) and reset the attempt history.
+        extract_information_from_documents_task.apply_async(
+            args=[resubmit_request.model_dump(mode="json")],
+            task_id=job_id,
         )
-        logger.info(f"Resubmitted job {job_id} as new job {new_task.id}")
+        logger.info(f"Resubmitted job {job_id} under its original id")
 
         supabase.table("extraction_jobs").update(
             {
-                "job_id": new_task.id,
+                "status": "PENDING",
                 "updated_at": datetime.now(UTC).isoformat(),
             }
         ).eq("job_id", job_id).execute()
 
-        return _in_progress_batch_response(new_task.id)
+        return _in_progress_batch_response(job_id)
     except Exception as resubmit_error:
         # Broad catch: resubmit involves both Celery task submission and
         # Supabase update; either can raise arbitrary exceptions.
-        logger.error(
-            f"Failed to resubmit job {job_id}: {resubmit_error}", exc_info=True
-        )
+        logger.exception(f"Failed to resubmit job {job_id}: {resubmit_error}")
         return None
 
 
@@ -521,6 +544,7 @@ def _count_processed_documents(results: list[dict]) -> int | None:
 async def create_extraction_job(
     request: Request,
     payload: DocumentExtractionRequest | SimpleExtractionRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> DocumentExtractionSubmissionResponse:
     """
     Create a new extraction job.
@@ -571,7 +595,7 @@ async def create_extraction_job(
             extraction_request.document_ids, extraction_request.collection_id
         )
         _validate_collection_id(extraction_request.collection_id)
-        task_id = _submit_extraction_task(extraction_request)
+        task_id = _submit_extraction_task(extraction_request, user_id=user.id)
         return _create_extraction_response(task_id)
 
     except HTTPException:
@@ -579,9 +603,7 @@ async def create_extraction_job(
     except Exception as e:
         # Broad catch: task submission involves Celery, Supabase, and schema
         # validation; any of these may raise arbitrary exceptions.
-        logger.error(
-            "Unexpected error creating extraction job: {}", str(e), exc_info=True
-        )
+        logger.exception("Unexpected error creating extraction job: {}", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -603,6 +625,7 @@ async def create_extraction_job(
 async def create_extraction_job_db(
     request: Request,
     payload: DocumentExtractionRequest | SimpleExtractionRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> DocumentExtractionSubmissionResponse:
     """
     Create a new extraction job using InformationExtractor with schemas from Supabase.
@@ -693,7 +716,7 @@ async def create_extraction_job_db(
             )
 
         # Submit and return
-        task_id = _submit_extraction_task(extraction_request)
+        task_id = _submit_extraction_task(extraction_request, user_id=user.id)
         return _create_extraction_response(task_id)
 
     except HTTPException:
@@ -701,9 +724,7 @@ async def create_extraction_job_db(
     except Exception as e:
         # Broad catch: task submission involves Celery, Supabase, and schema
         # validation; any of these may raise arbitrary exceptions.
-        logger.error(
-            "Unexpected error creating extraction job: {}", str(e), exc_info=True
-        )
+        logger.exception("Unexpected error creating extraction job: {}", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -725,6 +746,7 @@ async def create_extraction_job_db(
 async def create_bulk_extraction(
     request: Request,
     payload: BulkExtractionRequest = Body(...),
+    user: AuthenticatedUser = Depends(get_current_user),
 ) -> BulkExtractionResponse:
     """
     Create bulk extraction jobs - one per schema.
@@ -779,7 +801,7 @@ async def create_bulk_extraction(
                 )
 
                 # Submit to Celery
-                task_id = _submit_extraction_task(extraction_request)
+                task_id = _submit_extraction_task(extraction_request, user_id=user.id)
 
                 jobs.append(
                     BulkExtractionJobInfo(
@@ -808,9 +830,8 @@ async def create_bulk_extraction(
                 )
             except Exception as e:
                 # Broad catch: per-schema job creation involves Celery + Supabase.
-                logger.error(
-                    f"Unexpected error creating job for schema {schema_id}: {e}",
-                    exc_info=True,
+                logger.exception(
+                    f"Unexpected error creating job for schema {schema_id}: {e}"
                 )
                 jobs.append(
                     BulkExtractionJobInfo(
@@ -837,7 +858,7 @@ async def create_bulk_extraction(
         raise
     except Exception as e:
         # Broad catch: bulk extraction orchestrates multiple Celery + Supabase calls.
-        logger.error(f"Unexpected error in bulk extraction: {e}", exc_info=True)
+        logger.exception(f"Unexpected error in bulk extraction: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
@@ -1125,7 +1146,7 @@ async def list_extraction_jobs(
     except Exception as e:
         # Broad catch: listing jobs queries Supabase which can raise
         # arbitrary connection/postgrest exceptions.
-        logger.error("Error listing extraction jobs: {}", str(e), exc_info=True)
+        logger.exception("Error listing extraction jobs: {}", str(e))
         raise HTTPException(
             status_code=500, detail=f"Error listing extraction jobs: {e!s}"
         )
@@ -1197,17 +1218,29 @@ async def cancel_or_delete_extraction_job(
         # before issuing the Celery revoke.  Mirrors the delete path exactly.
         _verify_job_ownership(job_id, user_id)
 
-        # Task is running or pending - revoke it
-        # terminate=True will kill the worker process if the task is running
-        # signal='SIGTERM' is the default, which allows graceful shutdown
-        celery_app.control.revoke(job_id, terminate=True, signal="SIGTERM")
+        # Record the request first, then revoke. Two mechanisms cover the two
+        # states a job can be in:
+        #
+        # * Not yet started — `revoke` stops the worker from ever running it.
+        # * Already running — the task polls `cancel_requested_at` between
+        #   documents and stops at a clean boundary, keeping the partial results
+        #   it has already persisted.
+        #
+        # `terminate=True` is deliberately not used. SIGTERM kills the prefork
+        # child mid-document, and with task_acks_late the un-acked message is
+        # then redelivered and the job restarts from the beginning.
+        _request_job_cancellation(job_id)
+        celery_app.control.revoke(job_id)
 
         logger.info(f"Successfully revoked job {job_id} for user {user_id}")
 
         return CancelJobResponse(
             task_id=job_id,
             status="cancelled",
-            message="Job cancellation requested. The task will be terminated if currently running.",
+            message=(
+                "Job cancellation requested. A queued job is dropped immediately; "
+                "a running job stops after the document it is currently processing."
+            ),
         )
 
     except HTTPException:
@@ -1217,7 +1250,7 @@ async def cancel_or_delete_extraction_job(
     except Exception as e:
         # Broad catch: Celery revoke() and task state access can raise arbitrary
         # broker/connection exceptions.
-        logger.error("Error cancelling job {}: {}", job_id, str(e), exc_info=True)
+        logger.exception("Error cancelling job {}: {}", job_id, str(e))
         raise HTTPException(status_code=500, detail=f"Error cancelling job: {e!s}")
 
 
@@ -1297,5 +1330,5 @@ async def delete_extraction_job(
     except HTTPException:
         raise
     except (PostgrestAPIError, StorageException) as e:
-        logger.error(f"Error deleting job {job_id}: {e!s}", exc_info=True)
+        logger.exception(f"Error deleting job {job_id}: {e!s}")
         raise HTTPException(status_code=500, detail=f"Error deleting job: {e!s}")

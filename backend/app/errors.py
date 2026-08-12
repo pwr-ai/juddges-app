@@ -340,9 +340,7 @@ def handle_errors(func):
         try:
             return await func(*args, **kwargs)
         except AppException as e:
-            logger.error(
-                f"Application error in {func.__name__}: {e.message}", exc_info=True
-            )
+            logger.exception(f"Application error in {func.__name__}: {e.message}")
             raise e.to_http_exception()
         except HTTPException:
             # Re-raise HTTPExceptions as-is

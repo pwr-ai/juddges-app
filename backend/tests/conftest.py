@@ -13,6 +13,20 @@ LOCAL_TEST_PROFILE_ENV = "JUDDGES_PYTEST_PROFILE"
 REMOVED_LEGACY_SCHEMA_API_ENV = "RUN_REMOVED_LEGACY_SCHEMA_API_TESTS"
 TIER_MARKERS = {"unit", "integration", "e2e"}
 
+# Pin Celery to in-memory transports before anything imports `app.workers`,
+# which resolves CELERY_BROKER_URL / CELERY_BACKEND_URL once at import time.
+#
+# This has to happen here rather than in a fixture. `task_always_eager` does not
+# stop `self.update_state()` from writing to the result backend, so with the real
+# Redis URL from `.env` and no Redis running, a task's first progress report
+# raises ConnectionError. The extraction task converts unexpected errors into
+# per-document FAILED results and returns normally, so `result.successful()`
+# stays true and the test passes having exercised only the error path — the loop
+# it meant to test never ran. Setting the env first is also why `load_dotenv()`
+# in app/workers.py cannot undo it: it does not override existing variables.
+os.environ.setdefault("CELERY_BROKER_URL", "memory://")
+os.environ.setdefault("CELERY_BACKEND_URL", "cache+memory://")
+
 # Add backend and packages to Python path for tests
 backend_dir = Path(__file__).parent.parent
 packages_dir = backend_dir / "packages"

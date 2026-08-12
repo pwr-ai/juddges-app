@@ -34,7 +34,6 @@ class TestUnauthenticatedAccessRejected:
         "/schemas",
         "/publications",
         "/dashboard/stats",
-        "/marketplace",
         "/blog/posts",
         "/api/search/autocomplete?q=test",
         "/example_questions",
@@ -43,7 +42,6 @@ class TestUnauthenticatedAccessRejected:
     PROTECTED_POST_ENDPOINTS = [
         "/collections",
         "/summarize",
-        "/ocr/jobs",
     ]
 
     async def test_get_endpoints_reject_missing_api_key(self, client: AsyncClient):

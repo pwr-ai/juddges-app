@@ -121,7 +121,7 @@ def register_crud_routes(router: APIRouter) -> None:
         except HTTPException:
             raise
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(f"Failed to list schemas from database: {e}", exc_info=True)
+            logger.exception(f"Failed to list schemas from database: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to list schemas from database: {e!s}",
@@ -157,9 +157,7 @@ def register_crud_routes(router: APIRouter) -> None:
         except HTTPException:
             raise
         except (PostgrestAPIError, StorageException) as e:
-            logger.error(
-                f"Failed to get schema {schema_id} from database: {e}", exc_info=True
-            )
+            logger.exception(f"Failed to get schema {schema_id} from database: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve schema from database: {e!s}",
@@ -243,7 +241,7 @@ def register_crud_routes(router: APIRouter) -> None:
         except Exception as e:
             # Broad catch: schema conversion may raise arbitrary errors from
             # underlying JSON/YAML parsing or pydantic schema processing.
-            logger.error(f"Failed to convert schema {schema_id}: {e}", exc_info=True)
+            logger.exception(f"Failed to convert schema {schema_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to convert schema: {e!s}",
@@ -268,7 +266,7 @@ def register_crud_routes(router: APIRouter) -> None:
             logger.info(f"Listed {len(schemas)} schemas")
             return schemas
         except OSError as e:
-            logger.error(f"Failed to list schemas: {e}", exc_info=True)
+            logger.exception(f"Failed to list schemas: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to list schemas: {e!s}",
@@ -303,7 +301,7 @@ def register_crud_routes(router: APIRouter) -> None:
                 detail=f"Schema '{schema_id}' not found: {e!s}",
             )
         except OSError as e:
-            logger.error(f"Failed to get schema {schema_id}: {e}", exc_info=True)
+            logger.exception(f"Failed to get schema {schema_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve schema: {e!s}",
@@ -406,7 +404,7 @@ def register_crud_routes(router: APIRouter) -> None:
         except HTTPException:
             raise
         except OSError as e:
-            logger.error(f"Failed to create schema: {e}", exc_info=True)
+            logger.exception(f"Failed to create schema: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to create schema: {e!s}",
@@ -530,7 +528,7 @@ def register_crud_routes(router: APIRouter) -> None:
         except HTTPException:
             raise
         except OSError as e:
-            logger.error(f"Failed to update schema {schema_id}: {e}", exc_info=True)
+            logger.exception(f"Failed to update schema {schema_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to update schema: {e!s}",
@@ -634,7 +632,7 @@ def register_crud_routes(router: APIRouter) -> None:
         except HTTPException:
             raise
         except OSError as e:
-            logger.error(f"Failed to delete schema {schema_id}: {e}", exc_info=True)
+            logger.exception(f"Failed to delete schema {schema_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete schema: {e!s}",

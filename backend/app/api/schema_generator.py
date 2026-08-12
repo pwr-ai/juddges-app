@@ -431,10 +431,9 @@ async def schema_chat(
                     config={"configurable": {"thread_id": thread_id}},
                 )
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Agent graph invocation failed for session {session_id} "
-                    f"(user: {user.id}): {e}",
-                    exc_info=True,
+                    f"(user: {user.id}): {e}"
                 )
                 # Clean up failed session from in-memory agent store.
                 _generation_sessions.pop(thread_id, None)
@@ -468,10 +467,9 @@ async def schema_chat(
                     config={"configurable": {"thread_id": thread_id}},
                 )
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Agent graph refinement failed for session {session_id} "
-                    f"(user: {user.id}): {e}",
-                    exc_info=True,
+                    f"(user: {user.id}): {e}"
                 )
 
                 # Provide user-friendly error based on exception type
@@ -538,7 +536,7 @@ async def schema_chat(
         # Re-raise our standardized exceptions
         raise e.to_http_exception()
     except Exception as e:
-        logger.error(f"Unexpected error in schema chat request: {e}", exc_info=True)
+        logger.exception(f"Unexpected error in schema chat request: {e}")
         raise AppException(
             message="An unexpected error occurred. Please try again or contact support if the problem persists.",
             code=ErrorCode.INTERNAL_ERROR,
@@ -668,9 +666,8 @@ async def test_schema(
                 execution_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 total_time += execution_time
 
-                logger.error(
-                    f"Unexpected error extracting from document {doc_id}: {e}",
-                    exc_info=True,
+                logger.exception(
+                    f"Unexpected error extracting from document {doc_id}: {e}"
                 )
 
                 results.append(
@@ -714,7 +711,7 @@ async def test_schema(
         # Re-raise our standardized exceptions
         raise e.to_http_exception()
     except Exception as e:
-        logger.error(f"Failed to test schema: {e}", exc_info=True)
+        logger.exception(f"Failed to test schema: {e}")
         raise AppException(
             message=f"Failed to test schema: {e!s}", code=ErrorCode.INTERNAL_ERROR
         ).to_http_exception()
@@ -806,7 +803,7 @@ async def generate_schema_simple(
             detail=f"Schema generation failed: {e!s}",
         )
     except Exception as e:
-        logger.error(f"Schema generation error: {e}", exc_info=True)
+        logger.exception(f"Schema generation error: {e}")
         raise AppException(
             message=f"Failed to generate schema: {e!s}",
             code=ErrorCode.INTERNAL_ERROR,

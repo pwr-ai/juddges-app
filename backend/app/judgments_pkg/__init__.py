@@ -205,11 +205,18 @@ async def get_citation_network(
     try:
         db = get_vector_db()
 
-        query = db.client.table("legal_documents").select(
-            'document_id, title, document_type, date_issued, x, y, "references", court_name, document_number, language'
+        # Alias the `judgments` columns onto the legacy names the citation
+        # network builders read. `references` maps to `legal_topics`, matching
+        # `_convert_supabase_to_legal_document`; `x`/`y` are the UMAP coords.
+        query = db.client.table("judgments").select(
+            "document_id:id, title, document_type:decision_type, "
+            "date_issued:decision_date, x:umap_x, y:umap_y, "
+            "references:legal_topics, court_name, document_number:case_number, "
+            "language:metadata->>language"
         )
 
-        response = query.not_.is_("references", "null").limit(sample_size).execute()
+        # Filters must use the physical column name, not the alias.
+        response = query.not_.is_("legal_topics", "null").limit(sample_size).execute()
         docs = response.data or []
         docs = [d for d in docs if d.get("references") and len(d["references"]) > 0]
 
@@ -238,7 +245,7 @@ async def get_citation_network(
         return CitationNetworkResponse(nodes=nodes, edges=edges, statistics=statistics)
 
     except Exception as e:
-        logger.error(f"Error building citation network: {e!s}", exc_info=True)
+        logger.exception(f"Error building citation network: {e!s}")
         raise HTTPException(status_code=500, detail="Error building citation network")
 
 
@@ -300,7 +307,7 @@ async def get_facets(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Facets retrieval error: {e!s}", exc_info=True)
+        logger.exception(f"Facets retrieval error: {e!s}")
         raise HTTPException(status_code=500, detail=f"Failed to get facets: {e!s}")
 
 

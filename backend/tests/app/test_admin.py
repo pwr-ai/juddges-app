@@ -63,7 +63,7 @@ class TestGetPlatformStats:
 
         call_idx = {"n": 0}
         tables = {
-            # legal_documents (total)
+            # judgments (total)
             0: lambda: MagicMock(
                 select=MagicMock(
                     return_value=MagicMock(
@@ -71,7 +71,7 @@ class TestGetPlatformStats:
                     )
                 )
             ),
-            # search_queries
+            # search_analytics
             1: lambda: MagicMock(
                 select=MagicMock(
                     return_value=MagicMock(
@@ -83,7 +83,7 @@ class TestGetPlatformStats:
                     )
                 )
             ),
-            # events
+            # app_events
             2: lambda: MagicMock(
                 select=MagicMock(
                     return_value=MagicMock(
@@ -103,7 +103,7 @@ class TestGetPlatformStats:
                     )
                 )
             ),
-            # legal_documents (added this week)
+            # judgments (added this week)
             3: lambda: MagicMock(
                 select=MagicMock(
                     return_value=MagicMock(

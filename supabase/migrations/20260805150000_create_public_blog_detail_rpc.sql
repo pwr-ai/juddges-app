@@ -35,9 +35,11 @@ AS $$
             )
             ELSE jsonb_build_object(
                 'id', up.id,
-                'name', COALESCE(up.name, 'Anonymous'),
-                'avatar', up.avatar,
-                'title', COALESCE(up.title, 'Researcher')
+                'name', COALESCE(up.full_name, 'Anonymous'),
+                'avatar', up.avatar_url,
+                -- public.profiles has no job-title column; the API layer
+                -- substitutes its own default for a null here.
+                'title', NULL::text
             )
         END,
         'category', t.category,
@@ -75,9 +77,9 @@ AS $$
                             )
                             ELSE jsonb_build_object(
                                 'id', related_author.id,
-                                'name', COALESCE(related_author.name, 'Anonymous'),
-                                'avatar', related_author.avatar,
-                                'title', COALESCE(related_author.title, 'Researcher')
+                                'name', COALESCE(related_author.full_name, 'Anonymous'),
+                                'avatar', related_author.avatar_url,
+                                'title', NULL::text
                             )
                         END,
                         'category', related.category,
@@ -110,14 +112,14 @@ AS $$
                     ORDER BY candidate.published_at DESC NULLS LAST, candidate.id ASC
                     LIMIT LEAST(GREATEST(p_related_limit, 0), 6)
                 ) AS related
-                LEFT JOIN public.user_profiles AS related_author
+                LEFT JOIN public.profiles AS related_author
                     ON related_author.id = related.author_id
             ),
             '[]'::jsonb
         )
     )
     FROM target AS t
-    LEFT JOIN public.user_profiles AS up ON up.id = t.author_id;
+    LEFT JOIN public.profiles AS up ON up.id = t.author_id;
 $$;
 
 REVOKE ALL ON FUNCTION public.get_public_blog_post(text, integer)

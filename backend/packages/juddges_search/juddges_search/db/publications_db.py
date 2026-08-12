@@ -45,6 +45,20 @@ def _raise_publication_error(
     ) from error
 
 
+def _embedded_job(link: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the ``extraction_jobs`` resource embedded in a junction row.
+
+    PostgREST returns a to-one embed as a dict but resolves the same
+    relationship as to-many in some versions, so accept both — the same
+    normalisation ``app.publications._extract_job_status`` does on the way out.
+    A link whose job is gone embeds ``None``.
+    """
+    embedded = link.get("extraction_jobs")
+    if isinstance(embedded, list):
+        embedded = embedded[0] if embedded else None
+    return embedded if isinstance(embedded, dict) else None
+
+
 class PublicationsDB(SupabaseClientMixin):
     """Database operations for publications management."""
 
@@ -65,7 +79,8 @@ class PublicationsDB(SupabaseClientMixin):
             query = self.client.table("publications").select(
                 "*, publication_schemas(schema_id, description, created_at), "
                 "publication_collections(collection_id, description, created_at), "
-                "publication_extraction_jobs(job_id, description, created_at)"
+                "publication_extraction_jobs(job_id, description, created_at, "
+                "extraction_jobs(status))"
             )
 
             if project:
@@ -96,7 +111,8 @@ class PublicationsDB(SupabaseClientMixin):
                 .select(
                     "*, publication_schemas(schema_id, description, created_at), "
                     "publication_collections(collection_id, description, created_at), "
-                    "publication_extraction_jobs(job_id, description, created_at)"
+                    "publication_extraction_jobs(job_id, description, created_at, "
+                    "extraction_jobs(status))"
                 )
                 .eq("id", publication_id)
                 .execute()
@@ -317,14 +333,60 @@ class PublicationsDB(SupabaseClientMixin):
         try:
             response = (
                 self.client.table("publication_extraction_jobs")
-                .select("job_id, description, created_at, extraction_jobs(id, job_id, status, schema_name, created_at)")
+                .select("job_id, description, created_at, extraction_jobs(id, job_id, status, schema_id, created_at)")
                 .eq("publication_id", publication_id)
                 .execute()
             )
-            return response.data or []
+            links = response.data or []
+            self._attach_schema_names(links)
+            return links
         except (PostgrestAPIError, StorageException) as e:
             logger.exception(f"Error getting publication extraction jobs: {e}")
             return []
+
+    def _attach_schema_names(self, links: list[dict[str, Any]]) -> None:
+        """Fill in ``schema_name`` on each embedded extraction job, in place.
+
+        ``extraction_jobs`` stores ``schema_id`` and no name — the name is
+        derived everywhere it is shown, never persisted (see
+        ``jobs_router.create_bulk_extraction``, which reads it off the fetched
+        schema, and ``frontend/app/api/jobs/route.ts``, which builds an
+        id -> name map). Selecting ``schema_name`` from the embed used to make
+        PostgREST reject the whole query with a 400.
+
+        Resolved with one extra lookup rather than a nested
+        ``extraction_schemas(name)`` embed because ``extraction_jobs.schema_id``
+        deliberately carries no foreign key (see
+        20260807000001_create_extraction_jobs_table.sql), so PostgREST has no
+        relationship to traverse.
+
+        Best effort by design: this is display metadata on a read path whose
+        caller only consumes ``job_id``/``status``, so a failed or partial
+        lookup leaves ``schema_name`` as ``None`` instead of failing the
+        request.
+        """
+        embeds = [job for link in links if (job := _embedded_job(link)) is not None]
+        if not embeds:
+            return
+
+        for job in embeds:
+            job.setdefault("schema_name", None)
+
+        schema_ids = {job["schema_id"] for job in embeds if job.get("schema_id")}
+        if not schema_ids:
+            return
+
+        try:
+            response = (
+                self.client.table("extraction_schemas").select("id, name").in_("id", sorted(schema_ids)).execute()
+            )
+        except (PostgrestAPIError, StorageException) as e:
+            logger.warning(f"Could not resolve schema names for linked extraction jobs: {e}")
+            return
+
+        names = {row["id"]: row.get("name") for row in response.data or []}
+        for job in embeds:
+            job["schema_name"] = names.get(job.get("schema_id"))
 
 
 # ---------------------------------------------------------------------------

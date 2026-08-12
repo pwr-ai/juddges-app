@@ -7,7 +7,14 @@ import pytest
 
 @pytest.fixture
 def celery_eager(monkeypatch):
-    """Run Celery tasks synchronously inside the test process."""
+    """Run Celery tasks synchronously inside the test process.
+
+    Note that ``task_always_eager`` alone does not make a task hermetic:
+    ``self.update_state()`` still writes through to the result backend. The
+    in-memory backend that keeps this off the network is pinned in
+    ``tests/conftest.py`` before ``app.workers`` is imported — see the comment
+    there for why it cannot be done from a fixture.
+    """
     from app.workers import celery_app
 
     monkeypatch.setattr(celery_app.conf, "task_always_eager", True)

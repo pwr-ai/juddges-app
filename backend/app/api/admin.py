@@ -78,7 +78,10 @@ class SearchQueryEntry(BaseModel):
     session_id: str | None = None
     query: str | None = None
     result_count: int | None = None
-    filters: dict[str, Any] | None = None
+    # `search_analytics.filters` is a text column holding the filter
+    # expression that was applied (e.g. `jurisdiction = "PL"`), not a JSON
+    # object.
+    filters: str | None = None
     duration_ms: int | None = None
     created_at: str | None = None
 
@@ -226,11 +229,7 @@ async def get_platform_stats(
     # Total documents
     total_documents = 0
     try:
-        docs_response = (
-            client.table("legal_documents")
-            .select("document_id", count="exact")
-            .execute()
-        )
+        docs_response = client.table("judgments").select("id", count="exact").execute()
         total_documents = docs_response.count or 0
     except Exception as e:
         logger.warning(f"Admin stats: could not fetch document count: {e}")
@@ -239,7 +238,7 @@ async def get_platform_stats(
     searches_today = 0
     try:
         searches_response = (
-            client.table("search_queries")
+            client.table("search_analytics")
             .select("id", count="exact")
             .gte("created_at", today_start.isoformat())
             .execute()
@@ -248,11 +247,11 @@ async def get_platform_stats(
     except Exception as e:
         logger.warning(f"Admin stats: could not fetch searches_today: {e}")
 
-    # Active sessions in last 24h (distinct session_id in events table)
+    # Active sessions in last 24h (distinct session_id in app_events table)
     active_sessions_24h = 0
     try:
         events_response = (
-            client.table("events")
+            client.table("app_events")
             .select("session_id")
             .gte("created_at", last_24h.isoformat())
             .not_.is_("session_id", "null")
@@ -273,9 +272,9 @@ async def get_platform_stats(
     documents_added_this_week = 0
     try:
         recent_response = (
-            client.table("legal_documents")
-            .select("document_id", count="exact")
-            .gte("ingestion_date", last_week.isoformat())
+            client.table("judgments")
+            .select("id", count="exact")
+            .gte("created_at", last_week.isoformat())
             .execute()
         )
         documents_added_this_week = recent_response.count or 0
@@ -430,7 +429,7 @@ async def get_search_queries(
     total = 0
     try:
         count_response = (
-            client.table("search_queries").select("id", count="exact").execute()
+            client.table("search_analytics").select("id", count="exact").execute()
         )
         total = count_response.count or 0
     except Exception as e:
@@ -438,9 +437,13 @@ async def get_search_queries(
 
     try:
         response = (
-            client.table("search_queries")
+            client.table("search_analytics")
+            # `search_analytics` names these columns differently, so alias them
+            # back to the response-model field names. It has no `session_id`
+            # column, so `SearchQueryEntry.session_id` stays None.
             .select(
-                "id, user_id, session_id, query, result_count, filters, duration_ms, created_at"
+                "id, user_id, query, result_count:hit_count, "
+                "filters, duration_ms:processing_ms, created_at"
             )
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
@@ -487,7 +490,7 @@ async def get_document_stats(
     Get document statistics grouped by type, country, and language.
 
     Queries the doc_type_stats pre-computed table for type counts, and
-    legal_documents for country/language breakdowns and recent additions.
+    judgments for country/language breakdowns and recent additions.
     """
     client = get_admin_supabase_client()
     last_week = datetime.now(UTC) - timedelta(days=7)
@@ -495,11 +498,7 @@ async def get_document_stats(
     # Total documents
     total = 0
     try:
-        total_response = (
-            client.table("legal_documents")
-            .select("document_id", count="exact")
-            .execute()
-        )
+        total_response = client.table("judgments").select("id", count="exact").execute()
         total = total_response.count or 0
     except Exception as e:
         logger.warning(f"Admin doc stats: could not fetch total: {e}")
@@ -520,7 +519,10 @@ async def get_document_stats(
     # Counts by country (return as dict)
     by_country: dict[str, int] = {}
     try:
-        country_response = client.table("legal_documents").select("country").execute()
+        # `judgments.jurisdiction` (PL/UK) is the country dimension.
+        country_response = (
+            client.table("judgments").select("country:jurisdiction").execute()
+        )
         for row in country_response.data or []:
             country = row.get("country") or "unknown"
             by_country[country] = by_country.get(country, 0) + 1
@@ -530,7 +532,10 @@ async def get_document_stats(
     # Counts by language (return as dict)
     by_language: dict[str, int] = {}
     try:
-        lang_response = client.table("legal_documents").select("language").execute()
+        # `judgments` has no scalar language column; it lives in metadata JSONB.
+        lang_response = (
+            client.table("judgments").select("language:metadata->>language").execute()
+        )
         for row in lang_response.data or []:
             lang = row.get("language") or "unknown"
             by_language[lang] = by_language.get(lang, 0) + 1
@@ -541,9 +546,9 @@ async def get_document_stats(
     added_this_week = 0
     try:
         recent_response = (
-            client.table("legal_documents")
-            .select("document_id", count="exact")
-            .gte("ingestion_date", last_week.isoformat())
+            client.table("judgments")
+            .select("id", count="exact")
+            .gte("created_at", last_week.isoformat())
             .execute()
         )
         added_this_week = recent_response.count or 0

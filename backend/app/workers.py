@@ -1,7 +1,9 @@
 import asyncio
 import os
+import tempfile
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import openai
@@ -94,6 +96,25 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=8, minute=0, day_of_week=1),
         "kwargs": {"frequency": "weekly"},
     },
+    # Stale extraction job reaper (#437). Runs often because the cost is one
+    # indexed query and the symptom it clears — a job stuck at STARTED with a
+    # dead worker — is visible to the user in the jobs list.
+    "reap-stale-extraction-jobs-every-5min": {
+        "task": "maintenance.reap_stale_extraction_jobs",
+        "schedule": 5 * 60,
+        # Never let these pile up: a skipped run is fully covered by the next.
+        "options": {"expires": 5 * 60},
+    },
+    # Precomputed dashboard statistics (#467). Daily is ample: ingestion is the
+    # only writer that moves these numbers, and the incremental ingestion beat
+    # is opt-in via INGESTION_BEAT_ENABLED. Runs before the 7am digest so the
+    # figures a reader sees are the freshly computed ones. `expires` matches the
+    # cadence so a skipped run is covered by the next rather than piling up.
+    "refresh-dashboard-stats-daily": {
+        "task": "maintenance.refresh_dashboard_stats",
+        "schedule": crontab(hour=5, minute=0),
+        "options": {"expires": 24 * 60 * 60},
+    },
     "vacuum-analyze-judgments-weekly": {
         "task": "maintenance.vacuum_analyze",
         "schedule": crontab(hour=3, minute=0, day_of_week=0),
@@ -128,12 +149,81 @@ if os.environ.get("INGESTION_BEAT_ENABLED", "false").lower() == "true":
 
 celery_app.conf.timezone = "UTC"
 
+# ---------------------------------------------------------------------------
+# Reliability configuration (#437)
+#
+# Extraction runs for minutes, so every Celery default tuned for sub-second
+# tasks is wrong here. The four settings below are load-bearing:
+#
+# * task_acks_late — Celery acks a message when the worker *reserves* it, not
+#   when the task finishes. A worker restart or OOM 12 minutes into an
+#   extraction therefore loses the message permanently. Acking late means an
+#   interrupted task is redelivered instead of vanishing.
+# * task_reject_on_worker_lost — without it, a hard-killed child (SIGKILL,
+#   OOM) still marks the message as handled despite acks_late.
+# * worker_prefetch_multiplier=1 — the default 4 makes one worker reserve
+#   4 x concurrency messages into a local buffer that other workers cannot
+#   see. With multi-minute tasks that is head-of-line blocking.
+# * visibility_timeout — the Redis transport redelivers any un-acked message
+#   after this window. It MUST exceed the hard time limit, otherwise a task
+#   that is still legitimately running gets handed to a second worker and
+#   runs twice. Derived from the time limit for exactly that reason.
+_TASK_HARD_TIME_LIMIT = int(os.environ.get("CELERY_TASK_TIME_LIMIT", 3 * 60 * 60))
+_TASK_SOFT_TIME_LIMIT = int(
+    os.environ.get("CELERY_TASK_SOFT_TIME_LIMIT", max(_TASK_HARD_TIME_LIMIT - 300, 60))
+)
+# One hard-limit of headroom above the hard limit: a task cannot outlive its
+# own time limit, so redelivery can only ever mean the worker really died.
+_BROKER_VISIBILITY_TIMEOUT = _TASK_HARD_TIME_LIMIT * 2
+
+celery_app.conf.update(
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    worker_prefetch_multiplier=1,
+    task_time_limit=_TASK_HARD_TIME_LIMIT,
+    task_soft_time_limit=_TASK_SOFT_TIME_LIMIT,
+    # Recycle prefork children periodically — the LLM/HTTP client stack leaks
+    # slowly over long-lived processes and a leak here means an OOM mid-job.
+    worker_max_tasks_per_child=int(
+        os.environ.get("CELERY_WORKER_MAX_TASKS_PER_CHILD", 100)
+    ),
+    broker_transport_options={"visibility_timeout": _BROKER_VISIBILITY_TIMEOUT},
+    result_backend_transport_options={"visibility_timeout": _BROKER_VISIBILITY_TIMEOUT},
+    # Results are also mirrored into ``extraction_jobs``; keep the Redis copy
+    # long enough for polling clients but not indefinitely.
+    result_expires=int(os.environ.get("CELERY_RESULT_EXPIRES", 7 * 24 * 60 * 60)),
+    # The revoked-task set lives in memory unless persisted. With acks_late a
+    # revoked-and-terminated task would otherwise be redelivered — and rerun —
+    # after a worker restart.
+    # Compose points this at a named volume so it also survives a container
+    # recreate; the temp-dir default only has to survive a process restart.
+    worker_state_db=os.environ.get(
+        "CELERY_WORKER_STATE_DB",
+        str(Path(tempfile.gettempdir()) / "celery-worker-state"),
+    ),
+    broker_connection_retry_on_startup=True,
+    task_default_queue="celery",
+    # Long LLM work must not share a queue with the periodic maintenance jobs;
+    # one 20-minute extraction batch would otherwise delay the daily digest and
+    # the weekly VACUUM behind it.
+    task_routes={
+        "app.workers.extract_information_from_documents_task": {"queue": "extraction"},
+        "ingestion.*": {"queue": "extraction"},
+        "reasoning_lines.*": {"queue": "extraction"},
+        "digest.*": {"queue": "maintenance"},
+        "maintenance.*": {"queue": "maintenance"},
+        "meilisearch.*": {"queue": "maintenance"},
+        "suggestions.*": {"queue": "maintenance"},
+    },
+)
+
 
 def _update_job_results_in_supabase(
     job_id: str,
     results: list[dict[str, Any]],
     completed_documents: int,
     status: str = "STARTED",
+    error_message: str | None = None,
 ) -> bool:
     """
     Update extraction job results in Supabase incrementally during processing.
@@ -157,12 +247,32 @@ def _update_job_results_in_supabase(
         return False
 
     try:
+        now = datetime.now(UTC).isoformat()
         update_data = {
             "results": results,
             "completed_documents": completed_documents,
             "status": status,
-            "updated_at": datetime.now(UTC).isoformat(),
+            "updated_at": now,
+            # Written only here, by the running task. `updated_at` is also
+            # touched by the BFF on every status poll, so it cannot distinguish
+            # a live worker from a dead job someone is watching.
+            "heartbeat_at": now,
         }
+        # Stamping completed_at is what takes the row out of the reaper's scan;
+        # a terminal row with no completion time reads as still running.
+        if status in ("SUCCESS", "FAILURE"):
+            update_data["completed_at"] = now
+        if error_message:
+            update_data["error_message"] = error_message
+        elif status == "STARTED":
+            # A single document slower than the reaper's threshold gets the job
+            # marked FAILURE while the worker is in fact still alive. This write
+            # is the worker reasserting itself, so it must also clear the reaper's
+            # message and completion stamp — otherwise the row reads as running
+            # while still carrying "worker stopped reporting", and a client that
+            # polled during the window saw a failure that then un-failed.
+            update_data["error_message"] = None
+            update_data["completed_at"] = None
 
         result = (
             supabase_client.table("extraction_jobs")
@@ -183,6 +293,80 @@ def _update_job_results_in_supabase(
 
     except Exception as e:
         logger.error(f"Failed to update Supabase results for job {job_id}: {e}")
+        return False
+
+
+def _claim_job(job_id: str, total_documents: int) -> None:
+    """Mark the job as owned by this worker run.
+
+    Bumping ``attempts`` is what makes redelivery visible. With
+    ``task_acks_late`` an interrupted job legitimately comes back, but a job on
+    its fourth attempt is a job stuck in a crash loop, and nothing else in the
+    system records that.
+    """
+    if not supabase_client:
+        return
+    try:
+        current = (
+            supabase_client.table("extraction_jobs")
+            .select("attempts")
+            .eq("job_id", job_id)
+            .limit(1)
+            .execute()
+        )
+        rows = current.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        # Read-modify-write is safe here: only the worker holding this task id
+        # writes the column, and a concurrent writer would mean the duplicate
+        # execution this counter exists to surface.
+        attempts = (rows[0].get("attempts") or 0) + 1 if rows else 1
+        now = datetime.now(UTC).isoformat()
+        supabase_client.table("extraction_jobs").update(
+            {
+                "status": "STARTED",
+                "started_at": now,
+                "heartbeat_at": now,
+                "attempts": attempts,
+                "total_documents": total_documents,
+            }
+        ).eq("job_id", job_id).execute()
+        if attempts > 1:
+            logger.warning(
+                f"Job {job_id} is starting attempt {attempts} — the previous "
+                f"run did not finish"
+            )
+    except Exception as claim_error:
+        # Never fail the job over bookkeeping; the extraction itself is the
+        # valuable part and the reaper can still resolve an unclaimed row.
+        logger.error(f"Failed to claim job {job_id}: {claim_error}")
+
+
+def _cancellation_requested(job_id: str) -> bool:
+    """Check whether the owner asked for this job to stop.
+
+    Polled between documents rather than enforced by SIGTERM: killing the child
+    mid-document loses the in-flight document and, under ``task_acks_late``,
+    causes the whole job to be redelivered and restarted.
+    """
+    if not supabase_client:
+        return False
+    try:
+        response = (
+            supabase_client.table("extraction_jobs")
+            .select("cancel_requested_at")
+            .eq("job_id", job_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        return bool(rows and rows[0].get("cancel_requested_at"))
+    except Exception as check_error:
+        # Treat an unreadable flag as "not cancelled" — aborting a long job on a
+        # transient database blip would be the worse failure.
+        logger.warning(f"Cancellation check failed for job {job_id}: {check_error}")
         return False
 
 
@@ -342,6 +526,10 @@ def extract_information_from_documents_task(
             },
         )
 
+        # Claim the job before any slow work (LLM init, document fetch) so a run
+        # that dies during setup still leaves a heartbeat for the reaper.
+        _claim_job(self.request.id, total_documents=len(request.document_ids))
+
         # Initialize LLM - this may fail if LLM service is unavailable
         llm_name = request.llm_name
         logger.info(
@@ -373,9 +561,7 @@ def extract_information_from_documents_task(
                 user_schema = _fetch_schema_from_db(schema_id, client=supabase_client)
                 logger.info(f"Fetched schema {schema_id} from database")
             except Exception as e:
-                logger.error(
-                    f"Failed to fetch schema from database: {e}", exc_info=True
-                )
+                logger.exception(f"Failed to fetch schema from database: {e}")
                 raise ValueError(f"Failed to fetch schema from database: {e!s}")
 
         logger.info(
@@ -406,9 +592,8 @@ def extract_information_from_documents_task(
         ) as e:
             error_type = type(e).__name__
             error_msg = str(e)
-            logger.error(
-                f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}",
-                exc_info=True,
+            logger.exception(
+                f"Failed to prepare schema or create InformationExtractor: {error_type}: {error_msg}"
             )
             # Ensure exception message includes error type for Celery serialization
             if error_type not in error_msg:
@@ -464,9 +649,8 @@ def extract_information_from_documents_task(
                 )
             except Exception as doc_error:
                 # Individual document failed - mark it as failed but continue with other documents
-                logger.error(
-                    f"Error extracting from document {doc.document_id}: {doc_error}",
-                    exc_info=True,
+                logger.exception(
+                    f"Error extracting from document {doc.document_id}: {doc_error}"
                 )
                 results.append(
                     DocumentExtractionResponse(
@@ -516,6 +700,28 @@ def extract_information_from_documents_task(
                 status="STARTED",
             )
 
+            # Cooperative cancellation point. Checked after the write above so
+            # everything extracted so far is already durable, and only between
+            # documents so no document is abandoned half-processed.
+            if completed_documents < total_documents and _cancellation_requested(
+                self.request.id
+            ):
+                logger.info(
+                    f"Job {self.request.id} cancelled by owner after "
+                    f"{completed_documents}/{total_documents} documents"
+                )
+                _update_job_results_in_supabase(
+                    job_id=self.request.id,
+                    results=results,
+                    completed_documents=completed_documents,
+                    status="FAILURE",
+                    error_message=(
+                        f"Cancelled by user after {completed_documents} of "
+                        f"{total_documents} documents"
+                    ),
+                )
+                return results
+
         # Check results and update task state accordingly
         # NOTE: Do NOT call update_state() with final states (SUCCESS, FAILURE, etc.) before returning!
         # When we call update_state() and then return a value, Celery's Redis backend may store
@@ -561,7 +767,7 @@ def extract_information_from_documents_task(
             f"{error_type}: {error_msg}" if error_type not in error_msg else error_msg
         )
 
-        logger.error(f"Error in extraction task: {full_error_msg}", exc_info=True)
+        logger.exception(f"Error in extraction task: {full_error_msg}")
         failed_results = []
         for doc_id in request.document_ids:
             failed_results.append(

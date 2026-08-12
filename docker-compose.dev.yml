@@ -163,7 +163,15 @@ services:
             dockerfile: Dockerfile
             target: development
         container_name: juddges-backend-worker-dev
-        command: celery -A app.workers worker --beat --loglevel=info
+        # Dev runs a single worker across every queue with an embedded beat.
+        # The queue list must be explicit: task_routes sends work to
+        # `extraction` / `maintenance`, and a worker without --queues only
+        # consumes the default `celery` queue, so routed tasks would sit unrun.
+        command: >
+            celery -A app.workers worker --beat
+            --loglevel=info
+            --queues=extraction,maintenance,celery
+            --concurrency=${CELERY_DEV_CONCURRENCY:-2}
         restart: unless-stopped
         env_file:
             - .env
