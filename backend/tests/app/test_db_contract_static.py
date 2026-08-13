@@ -38,23 +38,18 @@ TS_ROOTS = [REPO_ROOT / "frontend" / "app", REPO_ROOT / "frontend" / "lib"]
 #
 # Adding to this set is not a fix. It records a known gap so that *new* drift
 # still fails, which is the whole point of the guard.
-KNOWN_MISSING_RPCS = {
-    # GDPR machinery: `api/consent.py` and `services/retention_service.py`.
-    # Unreachable today — no frontend route, no beat entry — and deliberately
-    # excluded from the dead-code removal in #476, because deleting code that
-    # implements a legal obligation is not an engineering decision. Whoever owns
-    # that call either implements these functions or removes the modules; until
-    # then the consent-recording and audit-archival paths cannot work. Tracked
-    # in #484.
-    #
-    # The other five entries that lived here are gone because their call sites
-    # are gone: the example-questions RPC had no table to read and its curated
-    # fallback was the only path that ever ran, the vault RPC sat in front of a
-    # direct view read that already worked, and the three chunk/hybrid search
-    # RPCs belonged to methods with no callers.
-    "update_user_consent",
-    "archive_expired_audit_logs",
-}
+# Empty, and that is the goal state: every RPC the code calls is declared by a
+# migration. The last two entries — update_user_consent and
+# archive_expired_audit_logs — were removed when #484 implemented them.
+#
+# Adding an entry here is not a fix. It records a known gap so that *new* drift
+# still fails, and it needs a reason and a ticket. Two companion tests keep it
+# honest in both directions: an entry that gains a migration, and an entry whose
+# call site disappears, both fail.
+#
+# Spelled `set()` rather than `{}`: a brace block containing only comments is an
+# empty *dict*, which makes the set operations below raise instead of pass.
+KNOWN_MISSING_RPCS: set[str] = set()
 
 # Tables that live outside `supabase/migrations/` by design.
 NON_MIGRATION_TABLES = {
