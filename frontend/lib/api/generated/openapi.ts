@@ -2962,7 +2962,7 @@ export interface paths {
         };
         /**
          * Get Example Questions
-         * @description Get randomly sampled example questions from database.
+         * @description Get randomly sampled example questions.
          *
          *     Args:
          *         num_polish: Number of Polish questions to sample (default: 2)

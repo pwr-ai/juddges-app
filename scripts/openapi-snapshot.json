@@ -22278,7 +22278,7 @@
     },
     "/example_questions": {
       "get": {
-        "description": "Get randomly sampled example questions from database.\n\nArgs:\n    num_polish: Number of Polish questions to sample (default: 2)\n    num_english: Number of English questions to sample (default: 2)\n\nReturns:\n    ExampleQuestionsResponse containing list of randomly sampled questions",
+        "description": "Get randomly sampled example questions.\n\nArgs:\n    num_polish: Number of Polish questions to sample (default: 2)\n    num_english: Number of English questions to sample (default: 2)\n\nReturns:\n    ExampleQuestionsResponse containing list of randomly sampled questions",
         "operationId": "get_example_questions_example_questions_get",
         "parameters": [
           {
