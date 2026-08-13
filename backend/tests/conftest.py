@@ -11,7 +11,10 @@ from loguru import logger
 
 LOCAL_TEST_PROFILE_ENV = "JUDDGES_PYTEST_PROFILE"
 REMOVED_LEGACY_SCHEMA_API_ENV = "RUN_REMOVED_LEGACY_SCHEMA_API_TESTS"
-TIER_MARKERS = {"unit", "integration", "e2e"}
+# `db` is a tier, not a plain marker: without it here, the "no tier -> unit"
+# default below would pull the database-contract suite into `-m unit`, where
+# there is no database and every test would error.
+TIER_MARKERS = {"unit", "integration", "e2e", "db"}
 
 # Pin Celery to in-memory transports before anything imports `app.workers`,
 # which resolves CELERY_BROKER_URL / CELERY_BACKEND_URL once at import time.
