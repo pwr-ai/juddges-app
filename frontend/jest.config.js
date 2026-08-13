@@ -125,14 +125,21 @@ const customJestConfig = {
     '/tests/',
     '/__tests__/',
   ],
-  // Coverage thresholds — ratcheted to current state (see lcov.info 2026-05-05).
+  // Coverage thresholds — ratcheted to current state (measured 2026-08-13:
+  // 31.55 statements / 26.14 branches / 26.40 functions / 32.13 lines).
   // Raise these whenever real coverage moves up; never lower them.
+  //
+  // The previous values (21/16/16/22) were ratcheted in May and then drifted ~10
+  // points below reality, which meant the gate could only catch a collapse, not
+  // a regression: a change could delete a third of the covered code and still
+  // pass. Each value sits ~1 point under the measurement so ordinary variance
+  // does not turn the gate into noise.
   coverageThreshold: {
     global: {
-      statements: 21,
-      branches: 16,
-      functions: 16,
-      lines: 22,
+      statements: 30,
+      branches: 25,
+      functions: 25,
+      lines: 31,
     },
   },
 }

@@ -141,7 +141,11 @@ jobs:
 
       - name: Run unit tests with coverage
         working-directory: backend
-        run: poetry run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=54
+        # --cov-fail-under is ratcheted to just under the measured value
+        # (65.39% on 2026-08-13). Raise it when coverage rises; never lower it.
+        # It sat at 54 while real coverage was 65, so the gate could only catch
+        # a collapse — a change could drop 11 points of coverage and still pass.
+        run: poetry run pytest -v -m unit --cov=app --cov=juddges_search --cov=schema_generator_agent --cov-report=term-missing --cov-report=html --cov-fail-under=64
 
       # Issue #106 (unit-safe tier): import-check the integration test module so
       # a broken import, syntax error, or missing fixture breaks CI early, but
