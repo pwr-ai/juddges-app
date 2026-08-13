@@ -9,9 +9,6 @@ import { Navbar } from "@/components/navbar";
 import { CompactFooter } from "@/components/footer/CompactFooter";
 import { CommandPalette } from "@/components/command-palette";
 import { LegalComplianceWrapper } from "@/components/legal/legal-compliance-wrapper";
-import { LoadingIndicator } from "@/lib/styles/components/loading-indicator";
-import { useAuth } from "@/contexts/AuthContext";
-import { JuddgesLogo } from "@/lib/styles/components/juddges-logo";
 import { CommandPaletteProvider } from "@/contexts/CommandPaletteContext";
 import { PWAProvider } from "@/components/PWAProvider";
 
@@ -32,19 +29,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   // Temporarily disable icon mode for the whole application
   const shouldUseIconOnly = false; // iconOnlyPages.some((page) => pathname?.startsWith(page));
 
-  // Hooks must be called unconditionally (Rules of Hooks)
-  const auth = useAuth();
-  const authLoading = isDebugPage ? false : auth.loading;
-
   const [isSearchLoading, setIsSearchLoading] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-  // For debug pages, skip initial load immediately
-  useEffect(() => {
-    if (isDebugPage) {
-      setIsInitialLoad(false);
-    }
-  }, [isDebugPage]);
 
   // Check if body has search-loading class
   useEffect(() => {
@@ -64,17 +49,6 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
 
     return () => observer.disconnect();
   }, []);
-
-  // Track initial load state - hide loading once auth is ready
-  useEffect(() => {
-    if (!authLoading && !isDebugPage) {
-      // Small delay to ensure smooth transition
-      const timer = setTimeout(() => {
-        setIsInitialLoad(false);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [authLoading, isDebugPage]);
 
   // Don't show sidebar/navbar for auth pages, style-demo, debug routes, and admin
   const isAuthPage = pathname?.startsWith("/auth");
@@ -101,34 +75,19 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
     </Suspense>
   );
 
-  // Show sidebar skeleton with loading indicator during initial app load
-  // Skip loading check for debug pages
-  if (!isDebugPage && (isInitialLoad || authLoading)) {
-    return (
-      <CommandPaletteProvider>
-        <SidebarProvider defaultOpen={!shouldUseIconOnly}>
-          <ChatProvider initialMaxDocuments={10}>
-            <div className="flex min-h-screen w-full">
-              <AppSidebar />
-              <div className="flex-1 flex flex-col bg-background">
-                <NavbarWithSuspense />
-                <div className="flex-1 overflow-y-auto flex items-center justify-center">
-                <LoadingIndicator
-                  message="Initializing application and preparing your workspace"
-                  logo={<JuddgesLogo size="lg" showText={true} showGlow={true} />}
-                  showLoader={false}
-                  variant="centered"
-                  size="lg"
-                />
-                </div>
-              </div>
-            </div>
-          </ChatProvider>
-        </SidebarProvider>
-      </CommandPaletteProvider>
-    );
-  }
-
+  // No loading gate here, deliberately. This used to return a full-screen
+  // "Initializing application" panel while `isInitialLoad || authLoading` was
+  // true. Both start true and only clear inside effects, which never run during
+  // SSR — so the server rendered that panel for *every* route, on every
+  // request. The served HTML carried ~146 characters of visible text and no
+  // page content at all, including on static pages like /about. See #481.
+  //
+  // This gate was never an access boundary: middleware.ts decides server-side
+  // whether a request may see a route and redirects anonymous users to
+  // /auth/login before this component renders. Dropping it exposes nothing that
+  // was not already authorised. Auth-dependent chrome (the user menu) handles
+  // its own pending state, so it does not need the whole page held back.
+  //
   // Show sidebar, navbar, and command palette for all other pages
   return (
     <CommandPaletteProvider>

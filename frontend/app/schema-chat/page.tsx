@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { SchemaStudioLayout } from "@/components/schema-studio/SchemaStudioLayout";
@@ -44,7 +44,7 @@ interface Collection {
  document_count?: number;
 }
 
-export default function SchemaStudioPage(): React.JSX.Element {
+function SchemaStudioPageContent(): React.JSX.Element {
  const { user } = useAuth();
  const router = useRouter();
  const pathname = usePathname();
@@ -582,4 +582,17 @@ export default function SchemaStudioPage(): React.JSX.Element {
  />
  </>
  );
+}
+
+// useSearchParams() opts a page out of static prerendering unless it sits under
+// a Suspense boundary, and Next fails the build rather than warning. Previously
+// AppLayoutWrapper short-circuited every route to a loading panel before this
+// page rendered, so the bailout never triggered and the missing boundary went
+// unnoticed. See #481.
+export default function SchemaStudioPage(): React.JSX.Element {
+  return (
+    <Suspense fallback={<div className="flex-1" />}>
+      <SchemaStudioPageContent />
+    </Suspense>
+  );
 }
