@@ -31,6 +31,11 @@ jest.setTimeout(PRODUCTION_BUILD_TEST_TIMEOUT_MS);
 const SCHEMAS_CONTRACT_FILE =
   "tests/unit/app/schemas/http-status-contract.test.ts";
 
+// Rendered copy from app/not-found.tsx — the stable way to tell the not-found
+// page from the schema detail page now that Next 16 no longer leaks module
+// paths into the HTML.
+const NOT_FOUND_MARKER = "Page Not Found";
+
 const ids = {
   visible: "00000000-0000-4000-8000-000000000001",
   missing: "00000000-0000-4000-8000-000000000002",
@@ -260,15 +265,18 @@ describe("schemas production HTTP/auth status matrix", () => {
         });
         expect(result.status).toBe(expected);
         const body = await result.text();
-        // Page identity is no longer assertable from the HTML. This test used
-        // to key on module paths Next 15 left in the flight payload
-        // ("app/not-found", "app/schemas/%5Bid%5D/page"); Next 16 does not emit
-        // them. The served HTML is only the app shell — the body renders as
-        // "Initializing application and preparing your workspace" for every
-        // route here, so no copy distinguishes not-found from the detail page.
-        // What remains pinned is the status code and that a real shell was
-        // served rather than a blank or crashed response.
+        // Page identity is asserted from rendered copy rather than from the
+        // build-internal module paths this used to key on ("app/not-found",
+        // "app/schemas/%5Bid%5D/page"), which Next 16 no longer emits. Copy is
+        // only visible here because #481 removed the layout gate that used to
+        // replace every server-rendered page with a loading panel.
         expect(body).toContain("data-slot=\"sidebar-wrapper\"");
+        if (expected === 404) {
+          expect(body).toContain(NOT_FOUND_MARKER);
+        } else {
+          expect(body).not.toContain(NOT_FOUND_MARKER);
+          expect(body).toMatch(new RegExp(`status.{0,8}${expected}`));
+        }
       }
 
       const invalid = await requestUntilReady(`${appUrl}/schemas/not-a-uuid`, {
@@ -277,6 +285,7 @@ describe("schemas production HTTP/auth status matrix", () => {
       expect(invalid.status).toBe(404);
       const invalidPageBody = await invalid.text();
       expect(invalidPageBody).toContain("data-slot=\"sidebar-wrapper\"");
+      expect(invalidPageBody).toContain(NOT_FOUND_MARKER);
       const encodedAlias = await requestUntilReady(
         `${appUrl}/schemas/%30${ids.visible.slice(1)}`,
         { headers: authenticated }
