@@ -109,8 +109,15 @@ class TestSecretsManager:
         result = mgr.load_vault_secrets()
         assert result == {}
 
-    def test_load_vault_secrets_from_rpc(self):
-        """Secrets loaded via RPC function."""
+    def test_load_vault_secrets_from_the_vault_view(self):
+        """Secrets are read straight from vault.decrypted_secrets.
+
+        This used to assert the `get_vault_secrets` RPC path. That function has
+        never existed in any migration or in the database, and a missing function
+        raises rather than returning empty data, so the documented
+        "fall through to direct table access" never fired — the view read was the
+        only path that ever worked (#484).
+        """
         mgr = self._make_manager()
         mgr._vault_enabled = True
 
@@ -120,7 +127,7 @@ class TestSecretsManager:
             {"name": "openai_api_key", "decrypted_secret": "sk-real"},
             {"name": "other_key", "decrypted_secret": "val"},
         ]
-        mock_supabase.rpc.return_value.execute.return_value = mock_response
+        mock_supabase.schema.return_value.from_.return_value.select.return_value.execute.return_value = mock_response
         mgr._supabase = mock_supabase
 
         result = mgr.load_vault_secrets(force_reload=True)
@@ -138,7 +145,7 @@ class TestSecretsManager:
             {"name": "key", "decrypted_secret": None},
             {"name": "good_key", "decrypted_secret": "good_val"},
         ]
-        mock_supabase.rpc.return_value.execute.return_value = mock_response
+        mock_supabase.schema.return_value.from_.return_value.select.return_value.execute.return_value = mock_response
         mgr._supabase = mock_supabase
 
         result = mgr.load_vault_secrets(force_reload=True)

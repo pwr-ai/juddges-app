@@ -39,29 +39,21 @@ TS_ROOTS = [REPO_ROOT / "frontend" / "app", REPO_ROOT / "frontend" / "lib"]
 # Adding to this set is not a fix. It records a known gap so that *new* drift
 # still fails, which is the whole point of the guard.
 KNOWN_MISSING_RPCS = {
-    # LIVE and reachable: frontend/lib/api/documents.ts -> app/api/example_questions
-    # -> backend /example_questions -> this RPC. `example_questions.py` catches the
-    # resulting error and falls back to hardcoded examples, so the endpoint answers
-    # 200 — but it never reads the database and logs an error on every request.
-    # The most user-visible entry here.
-    "get_random_example_questions",
-    # Unreachable search paths in juddges_search/db/documents_db.py:
-    # hybrid_search(), search_chunks() and get_document_chunks() have no callers
-    # outside tests. Consistent with the earlier finding that the chunk search RPC
-    # is unused and broken.
-    "hybrid_search_documents",
-    "search_document_chunks",
-    "get_document_chunks",
-    # GDPR machinery (api/consent.py, services/retention_service.py). Unreachable
-    # today — no frontend route, no beat entry — and deliberately excluded from the
-    # dead-code removal in #476, because deleting code that implements a legal
-    # obligation is not an engineering decision. Whoever makes that call either
-    # implements these or removes the modules.
+    # GDPR machinery: `api/consent.py` and `services/retention_service.py`.
+    # Unreachable today — no frontend route, no beat entry — and deliberately
+    # excluded from the dead-code removal in #476, because deleting code that
+    # implements a legal obligation is not an engineering decision. Whoever owns
+    # that call either implements these functions or removes the modules; until
+    # then the consent-recording and audit-archival paths cannot work. Tracked
+    # in #484.
+    #
+    # The other five entries that lived here are gone because their call sites
+    # are gone: the example-questions RPC had no table to read and its curated
+    # fallback was the only path that ever ran, the vault RPC sat in front of a
+    # direct view read that already worked, and the three chunk/hybrid search
+    # RPCs belonged to methods with no callers.
     "update_user_consent",
     "archive_expired_audit_logs",
-    # core/secrets.py calls it behind a "Vault disabled" flag, in a module that
-    # nothing imports, and falls back to reading vault.decrypted_secrets directly.
-    "get_vault_secrets",
 }
 
 # Tables that live outside `supabase/migrations/` by design.
@@ -229,6 +221,24 @@ def test_every_rpc_the_code_calls_is_declared_by_a_migration() -> None:
     assert not missing, (
         "these RPCs are called but declared by no migration, so they 404 at "
         "runtime:\n  " + "\n  ".join(sorted(missing))
+    )
+
+
+@pytest.mark.unit
+def test_allowlisted_rpcs_are_still_actually_called() -> None:
+    """Retire allowlist entries once their call site is gone.
+
+    The other direction of rot, and the one that bit this file first: five
+    entries survived here after #484 removed the code that called them, so the
+    allowlist was granting an exemption nothing needed. An exemption for a name
+    the code no longer mentions is dead configuration that makes the real
+    exemptions harder to audit.
+    """
+    called = {name for name, _, _ in _collect_python_calls("rpc") + _collect_ts_rpcs()}
+    orphaned = sorted(KNOWN_MISSING_RPCS - called)
+    assert not orphaned, (
+        f"{orphaned} are allowlisted but no longer called anywhere — remove them "
+        "from KNOWN_MISSING_RPCS"
     )
 
 

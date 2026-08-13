@@ -96,18 +96,21 @@ class SecretsManager:
         try:
             logger.info("Loading secrets from Supabase Vault")
 
-            # Query vault.decrypted_secrets view
-            # Note: This requires the service_role to have SELECT permission
-            result = self._supabase.rpc("get_vault_secrets", {}).execute()
-
-            # If RPC function doesn't exist, try direct table access
-            if not result.data:
-                result = (
-                    self._supabase.schema("vault")
-                    .from_("decrypted_secrets")
-                    .select("name,decrypted_secret")
-                    .execute()
-                )
+            # Query the vault.decrypted_secrets view directly.
+            # Note: this requires the service_role to have SELECT permission.
+            #
+            # This used to try a `get_vault_secrets` RPC first and fall through
+            # to the view "if the RPC function doesn't exist". That function has
+            # never existed in any migration and does not exist in the database,
+            # and a missing function raises rather than returning empty data — so
+            # the fall-through never fired and the whole attempt was dead
+            # weight inside the try block (#484).
+            result = (
+                self._supabase.schema("vault")
+                .from_("decrypted_secrets")
+                .select("name,decrypted_secret")
+                .execute()
+            )
 
             if result.data:
                 self._vault_secrets = {
