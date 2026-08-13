@@ -80,5 +80,15 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- Postgres does not, which silently turns "RLS denies this" into "the role had
 -- no privilege anyway" — a false pass. Reproduce it so the tests measure
 -- policies rather than missing grants.
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
+-- `service_role` is included because production does. Verified against the live
+-- project: `document_versions` and `audit_logs` have their anon/authenticated
+-- privileges revoked by their migration and end up as
+-- `postgres=arwdDxtm/postgres service_role=arwdDxtm/postgres`. Omitting
+-- service_role here made the backend look locked out of its own tables — note
+-- BYPASSRLS skips policies, not privileges, so a missing GRANT is a hard denial.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
