@@ -94,6 +94,13 @@ EXPECTED_RPC_ARGS = {
     # frontend/app/api/schemas/[id]/versions/route.ts, .../[version]/rollback,
     # backend/app/schemas_pkg/versioning.py
     "rollback_to_version": ["p_schema_id", "p_version_number"],
+    # backend/app/api/consent.py — the consent update endpoints
+    "update_user_consent": [
+        "p_user_id",
+        "p_consent_type",
+        "p_accepted",
+        "p_version",
+    ],
     # backend/app/versioning.py, both call sites
     "create_document_version": [
         "p_document_id",
