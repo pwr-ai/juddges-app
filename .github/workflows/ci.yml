@@ -167,6 +167,67 @@ jobs:
           path: backend/htmlcov/
           retention-days: 30
 
+  # Issue #482. Everything the migrations create — 19 tables, 4 RPCs, a trigger,
+  # every RLS policy, and the foreign keys the PostgREST embeds resolve through —
+  # used to be verified once by hand in throwaway containers. This job re-verifies
+  # it on every PR against a real Postgres.
+  #
+  # pgvector/pgvector, NOT postgres: `judgments` and `document_chunks` declare
+  # vector(1024) columns and plain Postgres cannot create them, so the chain would
+  # fail on the very first migration.
+  database-contract:
+    name: Database Contract
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+
+      - name: Install dependencies
+        working-directory: backend
+        run: poetry install --with dev
+
+      # The suite applies the migration chain with psql, because the migrations
+      # contain dollar-quoted bodies and multi-statement files that a driver
+      # would have to split by hand — and splitting is where a home-grown runner
+      # stops matching how Supabase applies them.
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      # A dedicated variable rather than DATABASE_URL: this suite creates roles
+      # and applies migrations, and DATABASE_URL points at the production
+      # Supabase project in .env. The fixture also refuses any Supabase host.
+      - name: Run database contract tests
+        working-directory: backend
+        env:
+          DB_CONTRACT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: poetry run pytest -v -m db
+
   frontend-lint:
     name: Frontend Lint
     runs-on: ubuntu-latest
