@@ -161,18 +161,35 @@ def _collect_python_calls(method: str) -> list[tuple[str, Path, int]]:
 
 
 _TS_RPC_RE = re.compile(r"""\.rpc\(\s*['"]([a-z_][a-z0-9_]*)['"]""")
+# supabase-js names the table in `.from("t")`, where PostgREST-py uses `.table("t")`.
+_TS_FROM_RE = re.compile(r"""\.from\(\s*['"]([a-z_][a-z0-9_]*)['"]""")
+# Comment lines. `lib/supabase/index.ts` documents usage as `supabase.from('table')`
+# in its header block, which the regex above cannot tell from a real call site.
+# Only whole-line comments are skipped; a trailing `// .from('x')` would still be
+# collected, which fails loudly rather than hiding drift, so it is left alone.
+_TS_COMMENT_RE = re.compile(r"^\s*(?:\*|//|/\*)")
 
 
-def _collect_ts_rpcs() -> list[tuple[str, Path, int]]:
+def _collect_ts(pattern: re.Pattern[str]) -> list[tuple[str, Path, int]]:
     found: list[tuple[str, Path, int]] = []
     for root in TS_ROOTS:
         for path in list(root.rglob("*.ts")) + list(root.rglob("*.tsx")):
             if "node_modules" in path.parts or "generated" in path.parts:
                 continue
             for lineno, line in enumerate(path.read_text().splitlines(), start=1):
-                for match in _TS_RPC_RE.finditer(line):
+                if _TS_COMMENT_RE.match(line):
+                    continue
+                for match in pattern.finditer(line):
                     found.append((match.group(1), path, lineno))
     return found
+
+
+def _collect_ts_rpcs() -> list[tuple[str, Path, int]]:
+    return _collect_ts(_TS_RPC_RE)
+
+
+def _collect_ts_tables() -> list[tuple[str, Path, int]]:
+    return _collect_ts(_TS_FROM_RE)
 
 
 def _rel(path: Path) -> str:
@@ -249,6 +266,35 @@ def test_allowlisted_rpcs_are_still_actually_missing() -> None:
     assert not stale, (
         f"{stale} now exist in the migrations — remove them from "
         "KNOWN_MISSING_RPCS so real drift is caught again"
+    )
+
+
+@pytest.mark.unit
+def test_every_table_the_code_queries_is_declared_by_a_migration() -> None:
+    """A `.table("x")` / `.from("x")` name no migration declares is a `PGRST205`.
+
+    This is the guard that was missing while ~33 tables the code queried had no
+    `CREATE TABLE` anywhere — `extraction_jobs` among them, which is why the
+    extraction endpoint failed on its very first insert. The RPC test above
+    covered function names only, so a table name absent from the schema sailed
+    through the unit tier unchallenged.
+
+    Same reasoning as the RPC check: PostgREST resolves the table by name, so the
+    name either appears in `supabase/migrations/` or the request 404s. Deciding
+    that needs no database.
+    """
+    declared = set(_declared_columns(_migration_sql()))
+    queried = _collect_python_calls("table") + _collect_ts_tables()
+    assert queried, "found no .table()/.from() call sites — the collector is broken"
+
+    missing = [
+        f"{_rel(path)}:{lineno} queries table {name!r}"
+        for name, path, lineno in queried
+        if name.lower() not in declared and name.lower() not in NON_MIGRATION_TABLES
+    ]
+    assert not missing, (
+        "these tables are queried but declared by no migration, so PostgREST "
+        "answers PGRST205 at runtime:\n  " + "\n  ".join(sorted(set(missing)))
     )
 
 
