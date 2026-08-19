@@ -6,6 +6,7 @@ to produce evaluation datasets for search quality measurement.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -101,18 +102,34 @@ async def get_user_search_history(
     if not supabase_client:
         return []
     try:
-        result = supabase_client.rpc(
+        rpc_builder = supabase_client.rpc(
             "get_user_search_history",
             {
                 "p_user_id": user_id,
                 "days_back": days,
                 "max_results": limit,
             },
-        ).execute()
+        )
+        result = await asyncio.to_thread(rpc_builder.execute)
         return result.data or []
     except Exception as exc:
         logger.warning(f"Failed to fetch user search history: {exc}")
         return []
+
+
+async def clear_user_search_history(user_id: str) -> bool:
+    """Delete search history rows for a single user from search_analytics."""
+    if not supabase_client:
+        return False
+    try:
+        query_builder = supabase_client.table("search_analytics").delete().eq("user_id", user_id)
+        await asyncio.to_thread(query_builder.execute)
+        return True
+    except Exception as exc:
+        logger.warning(f"Failed to clear search history for user {user_id}: {exc}")
+        return False
+
+
 
 
 async def get_trending_topics(days: int = 30, limit: int = 20) -> list[dict[str, Any]]:
@@ -124,10 +141,11 @@ async def get_trending_topics(days: int = 30, limit: int = 20) -> list[dict[str,
     if not supabase_client:
         return []
     try:
-        result = supabase_client.rpc(
+        rpc_builder = supabase_client.rpc(
             "get_trending_topics",
             {"days_back": days, "max_results": limit},
-        ).execute()
+        )
+        result = await asyncio.to_thread(rpc_builder.execute)
         return result.data or []
     except Exception as exc:
         logger.warning(f"Failed to fetch trending topics: {exc}")
@@ -145,14 +163,15 @@ async def get_user_topic_clicks(
     if not supabase_client:
         return []
     try:
-        result = supabase_client.rpc(
+        rpc_builder = supabase_client.rpc(
             "get_user_topic_clicks",
             {
                 "p_user_id": user_id,
                 "days_back": days,
                 "max_results": limit,
             },
-        ).execute()
+        )
+        result = await asyncio.to_thread(rpc_builder.execute)
         return result.data or []
     except Exception as exc:
         logger.warning(f"Failed to fetch user topic clicks: {exc}")
@@ -263,10 +282,11 @@ async def _fetch_log_queries(
     assert supabase_client is not None
     try:
         # Try the RPC first (reuse existing popular-queries RPC with wider window)
-        result = supabase_client.rpc(
+        rpc_builder = supabase_client.rpc(
             "get_popular_search_queries",
             {"days_back": 9999, "max_results": limit},
-        ).execute()
+        )
+        result = await asyncio.to_thread(rpc_builder.execute)
         rows = result.data or []
 
         # Client-side filter for min_frequency and cutoff
@@ -277,14 +297,14 @@ async def _fetch_log_queries(
 
     # Fallback: direct table query (less efficient but works without RPC)
     try:
-        result = (
+        query_builder = (
             supabase_client.table("search_analytics")
             .select("query, hit_count, processing_ms")
             .gte("created_at", cutoff_iso)
             .order("created_at", desc=True)
             .limit(limit * 5)  # over-fetch for dedup
-            .execute()
         )
+        result = await asyncio.to_thread(query_builder.execute)
         rows = result.data or []
 
         # Group and deduplicate
@@ -335,14 +355,14 @@ async def _fetch_feedback_labels(cutoff_iso: str) -> dict[str, list[dict[str, An
     """
     assert supabase_client is not None
     try:
-        result = (
+        query_builder = (
             supabase_client.table("search_feedback")
             .select("search_query, document_id, rating, result_position, reason")
             .gte("created_at", cutoff_iso)
             .order("created_at", desc=True)
             .limit(2000)
-            .execute()
         )
+        result = await asyncio.to_thread(query_builder.execute)
         rows = result.data or []
 
         feedback_map: dict[str, list[dict[str, Any]]] = {}

@@ -436,6 +436,10 @@ describe("schemas production HTTP/auth status matrix", () => {
         "id,name,description,type,category,text,dates,status,is_verified,created_at,updated_at,user_id",
       ]);
 
+      // Page-identity assertion for missing schema (#483):
+      // The HTTP 404 status code contract is asserted here on the raw server response.
+      // The rendered client copy ("Page Not Found") is asserted in E2E route-contract tests
+      // under `tests/route-contract-e2e/route-status.spec.ts`.
       const refreshedMissing = await requestUntilReady(
         `${appUrl}/schemas/${ids.missing}`,
         {
