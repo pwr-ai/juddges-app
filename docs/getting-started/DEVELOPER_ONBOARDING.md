@@ -517,7 +517,7 @@ Access docs at http://localhost:8004/docs
 1. **Create page** in `frontend/app/your-page/page.tsx`
 
 ```typescript
-// frontend/app/(app)/my-page/page.tsx
+// frontend/app/my-page/page.tsx
 export default function MyPage() {
   return (
     <div className="container py-6">
@@ -578,7 +578,7 @@ export function useMyData() {
 
 ```typescript
 import { render, screen } from "@testing-library/react";
-import MyPage from "@/app/(app)/my-page/page";
+import MyPage from "@/app/my-page/page";
 
 describe("MyPage", () => {
   it("renders heading", () => {
