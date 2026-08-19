@@ -367,6 +367,19 @@ test.describe.serial('production route status contract', () => {
     }
   });
 
+  test('renders page-identity 404 Not Found UI for missing schema ID (#483)', async ({
+    context,
+  }) => {
+    await setSyntheticSession(context, 'valid');
+    const page = await context.newPage();
+    const response = await page.goto(`/schemas/${IDS.schema.missing}`);
+    expect(response?.status()).toBe(404);
+    await expect(
+      page.getByText('Page Not Found', { exact: false }),
+    ).toBeVisible();
+    await page.close();
+  });
+
   test('polls the extraction detail page without dropping schema metadata', async ({
     context,
   }) => {
