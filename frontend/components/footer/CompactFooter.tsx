@@ -53,6 +53,9 @@ export function CompactFooter({ className }: { className?: string }) {
  <Link href="/contact"className="hover:text-slate-800 transition-colors">
  Contact
  </Link>
+ <Link href="/status"className="hover:text-slate-800 transition-colors">
+ Status
+ </Link>
  <span className="text-slate-300">|</span>
  <Link href="/privacy"className="hover:text-slate-800 transition-colors">
  Privacy

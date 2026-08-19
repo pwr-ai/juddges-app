@@ -7,8 +7,8 @@
  * AFTER: Search-first navigation with only core workflow links
  *
  * Navigation Philosophy:
- * - Primary actions always visible (Search, Collections, Extraction)
- * - Saved Searches visible for admins only
+ * - Primary actions always visible (Search, Chat, Collections, Extraction)
+ * - Saved Searches and the Admin Panel are visible for admins only
  * - Secondary/discovery features moved out of main sidebar
  * - Quick access via Command Palette (Cmd+K)
  */
@@ -24,6 +24,11 @@ import {
  LogIn,
  UserPlus,
  LayoutDashboard,
+ MessageSquare,
+ Scale,
+ GitBranch,
+ Fingerprint,
+ ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -130,7 +135,7 @@ export function AppSidebar(): React.JSX.Element {
  {/* Subtle background shimmer animation */}
  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none"/>
 
- <Link href="/"className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
+ <Link href="/" aria-label={t('navigation.homeLinkLabel')} className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
  <JuddgesLogo
  size="md"
  showText={false}
@@ -205,7 +210,7 @@ export function AppSidebar(): React.JSX.Element {
  {/* Subtle background shimmer animation */}
  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none"/>
 
- <Link href="/"className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
+ <Link href="/" aria-label={t('navigation.homeLinkLabel')} className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
  <JuddgesLogo
  size="md"
  showText={false}
@@ -281,6 +286,28 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuItem>
 
  <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.searchExtractedData')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/search/extractions"}>
+ <Link href="/search/extractions">
+ <FileJson />
+ <span>{t('navigation.searchExtractedData')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.chat')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/chat" || pathname.startsWith("/chat/")}>
+ <Link href="/chat">
+ <MessageSquare />
+ <span>{t('navigation.chat')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
  <ConditionalTooltip content={t('navigation.topicTrends')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/topics"}>
  <Link href="/topics">
@@ -318,7 +345,48 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarGroupContent>
  </SidebarGroup>
 
- {/* Phase 3 — Export: compare datasets / export annotated collections */}
+ {/* Phase 3 — Analyze: AI analysis surfaces over the judgments already found */}
+ <SidebarGroup className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseAnalyze')}</SidebarGroupLabel>
+ <SidebarGroupContent className="px-0">
+ <SidebarMenu className="space-y-1">
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.precedentSearch')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/precedents"}>
+ <Link href="/precedents">
+ <Scale />
+ <span>{t('navigation.precedentSearch')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.argumentationAnalysis')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/argumentation-analysis"}>
+ <Link href="/argumentation-analysis">
+ <GitBranch />
+ <span>{t('navigation.argumentationAnalysis')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.judgeFingerprint')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/judge-fingerprint"}>
+ <Link href="/judge-fingerprint">
+ <Fingerprint />
+ <span>{t('navigation.judgeFingerprint')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+ </SidebarMenu>
+ </SidebarGroupContent>
+ </SidebarGroup>
+
+ {/* Phase 4 — Export: compare datasets / export annotated collections */}
  <SidebarGroup className="p-0">
  <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseExport')}</SidebarGroupLabel>
  <SidebarGroupContent className="px-0">
@@ -336,6 +404,28 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>
+
+ {/* Administration — only rendered for admins; AdminGuard enforces the same
+    app_metadata.is_admin check server-side on every /admin page. */}
+ {isAdmin && (
+ <SidebarGroup className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.administration')}</SidebarGroupLabel>
+ <SidebarGroupContent className="px-0">
+ <SidebarMenu className="space-y-1">
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.adminPanel')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/admin" || pathname.startsWith("/admin/")}>
+ <Link href="/admin">
+ <ShieldCheck />
+ <span>{t('navigation.adminPanel')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+ </SidebarMenu>
+ </SidebarGroupContent>
+ </SidebarGroup>
+ )}
 
  {/* Language Switcher - Always visible in sidebar */}
  <SidebarGroup className="p-0">
