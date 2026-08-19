@@ -107,13 +107,13 @@ const onboardingSteps: OnboardingStep[] = [
  {
  title: "Find your way around",
  description:
-"Every feature lives in the sidebar — search, chat, collections, extraction, precedents, and argumentation analysis.",
+"The left sidebar follows the research workflow — Plan, Search, Analyze, Export — and every tool sits in the phase where you need it.",
  icon: PanelsTopLeft,
  features: [
-"Use the left sidebar to switch between tools",
-"Precedent search and argumentation analysis sit here too",
-"Re-open this tour any time from the Help page",
-"Your work stays available across sessions",
+"1. Plan — research collections and the base coding schema",
+"2. Search — judgments, extracted data, chat, and topic tools",
+"3. Analyze — precedent search, argumentation analysis, judge fingerprint",
+"4. Export — compare and export annotated datasets. Press ⌘K for quick search",
  ],
  color: "text-ink-soft",
  },

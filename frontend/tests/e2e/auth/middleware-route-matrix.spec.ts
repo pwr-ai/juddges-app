@@ -21,7 +21,6 @@ const PUBLIC_HTML_PAGES = [
   '/team',
   '/terms',
   '/legal/disclaimer',
-  '/legal/terms',
   '/blog',
   '/publications',
   '/use-cases',
