@@ -262,10 +262,10 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  onClick={onStopGeneration}
  size="sm"
  variant="ghost"
- className={getIconButtonStyle('destructive', 'h-7 w-7', 'flex items-center justify-center')}
+ className={getIconButtonStyle('destructive', 'h-11 w-11', 'flex items-center justify-center')}
  >
  <div className="absolute inset-0 rounded-full transition-opacity duration-200"/>
- <Square size={14} className="fill-destructive relative z-10 group-hover:scale-110 transition-transform duration-200"/>
+ <Square size={18} className="fill-destructive relative z-10 group-hover:scale-110 transition-transform duration-200"/>
  <span className="sr-only">Stop generation</span>
  </Button>
  )}
@@ -278,8 +278,8 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  disabled={!currentValue?.trim() || isLoading}
  className={cn(
  currentValue?.trim()
- ? getIconButtonStyle('primary', 'h-7 w-7', 'flex items-center justify-center')
- : 'h-7 w-7 rounded-full flex-shrink-0 p-0 text-muted-foreground cursor-not-allowed transition-all duration-200'
+ ? getIconButtonStyle('primary', 'h-11 w-11', 'flex items-center justify-center')
+ : 'h-11 w-11 rounded-full flex-shrink-0 p-0 text-muted-foreground cursor-not-allowed transition-all duration-200'
  )}
  >
  <div className={cn(
@@ -288,7 +288,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  ? 'opacity-0 group-hover:opacity-80'
  : ''
  )} />
- <Send size={14} className={cn(
+ <Send size={18} className={cn(
  'relative z-10 transition-transform duration-200',
  currentValue?.trim() && 'group-hover:scale-110 group-hover:translate-x-0.5'
  )} />
@@ -407,10 +407,10 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  onClick={onStopGeneration}
  size="sm"
  variant="ghost"
- className="group relative rounded-full text-destructive hover:text-destructive flex-shrink-0 p-0 h-7 w-7 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-destructive/20"
+ className="group relative rounded-full text-destructive hover:text-destructive flex-shrink-0 p-0 h-11 w-11 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-destructive/20"
  >
  <div className="absolute inset-0 rounded-full bg-destructive/10 opacity-0 group-hover:opacity-80 transition-opacity duration-200"/>
- <Square size={14} className="fill-destructive relative z-10 group-hover:scale-110 transition-transform duration-200"/>
+ <Square size={18} className="fill-destructive relative z-10 group-hover:scale-110 transition-transform duration-200"/>
  <span className="sr-only">Stop generation</span>
  </Button>
  )}
@@ -422,7 +422,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  variant="ghost"
  disabled={!currentValue?.trim() || isLoading}
  className={cn(
- 'group relative h-7 w-7 rounded-full flex-shrink-0 p-0 transition-all duration-200',
+ 'group relative h-11 w-11 rounded-full flex-shrink-0 p-0 transition-all duration-200',
  currentValue?.trim()
  ? 'text-primary hover:text-primary hover:scale-110 hover:shadow-lg hover:shadow-primary/20'
  : 'text-muted-foreground cursor-not-allowed'
@@ -434,7 +434,7 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  ? 'bg-primary/10 opacity-0 group-hover:opacity-80'
  : ''
  )} />
- <Send size={14} className={cn(
+ <Send size={18} className={cn(
  'relative z-10 transition-transform duration-200',
  currentValue?.trim() && 'group-hover:scale-110 group-hover:translate-x-0.5'
  )} />

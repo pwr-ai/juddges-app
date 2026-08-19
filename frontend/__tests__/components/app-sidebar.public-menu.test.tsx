@@ -40,6 +40,14 @@ jest.mock('@/contexts/LanguageContext', () => ({
         'navigation.extractions': 'Extractions',
         'navigation.dashboard': 'Dashboard',
         'navigation.searchJudgments': 'Search Judgments',
+        'navigation.searchExtractedData': 'Search Extracted Data',
+        'navigation.chat': 'Chat',
+        'navigation.precedentSearch': 'Precedent Search',
+        'navigation.argumentationAnalysis': 'Argumentation Analysis',
+        'navigation.judgeFingerprint': 'Judge Fingerprint',
+        'navigation.administration': 'Administration',
+        'navigation.adminPanel': 'Admin Panel',
+        'navigation.homeLinkLabel': 'JuDDGES — go to the home page',
       };
 
       return map[key] ?? key;
@@ -107,5 +115,69 @@ describe('AppSidebar public navigation', () => {
 
     expect(dashboardIndex).toBeGreaterThanOrEqual(0);
     expect(searchIndex).toBeGreaterThan(dashboardIndex);
+  });
+
+  // Regression guard for #511: these routes were fully built and unreachable.
+  it('links the chat and analysis routes for authenticated users', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
+
+    const { container } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    for (const href of [
+      '/chat',
+      '/search/extractions',
+      '/precedents',
+      '/argumentation-analysis',
+      '/judge-fingerprint',
+    ]) {
+      expect(container.querySelector(`a[href="${href}"]`)).toBeInTheDocument();
+    }
+  });
+
+  it('hides the admin panel from non-admins and shows it to admins', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
+
+    const { container: nonAdmin } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    expect(nonAdmin.querySelector('a[href="/admin"]')).not.toBeInTheDocument();
+
+    mockUseAuth.mockReturnValue({
+      user: { id: 'u2', app_metadata: { is_admin: true } },
+      loading: false,
+    });
+
+    const { container: admin } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    expect(admin.querySelector('a[href="/admin"]')).toBeInTheDocument();
+  });
+
+  // Regression guard for the axe link-name violation in #513.
+  it.each([
+    ['anonymous', null],
+    ['authenticated', { id: 'u1', app_metadata: {} }],
+  ])('gives the logo link an accessible name (%s)', (_label, user) => {
+    mockUseAuth.mockReturnValue({ user, loading: false });
+
+    const { container } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    const logoLink = container.querySelector('a[href="/"]');
+
+    expect(logoLink).toHaveAttribute('aria-label', 'JuDDGES — go to the home page');
   });
 });

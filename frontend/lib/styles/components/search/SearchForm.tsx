@@ -1,10 +1,11 @@
 "use client";
 
-import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createTranslator, isValidLocale, DEFAULT_LOCALE } from "@/lib/i18n";
 import { Eyebrow } from "@/components/editorial";
 import { sanitizeHighlightHtml } from "@/lib/highlight";
 import type { TopicHit } from "@/hooks/useSearchAutocomplete";
@@ -140,6 +141,15 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const totalItems = autocompleteTopicHits.length;
 
+  // The search input needs a programmatic name (issue #513). Translate through
+  // the i18n layer directly instead of the LanguageContext hook so the form
+  // still renders outside a LanguageProvider (tests, isolated stories).
+  const translate = useMemo(() => {
+    const base = currentLocale.split("-")[0];
+    return createTranslator(isValidLocale(base) ? base : DEFAULT_LOCALE).t;
+  }, [currentLocale]);
+  const searchInputLabel = translate("search.searchDocuments");
+
   const setInputRef = (node: HTMLInputElement | null): void => {
     internalRef.current = node;
     if (!forwardedRef) {
@@ -246,9 +256,13 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
       onSubmit={handleSubmit}
       className={`rounded-xl border bg-background/80 px-4 py-3 ${hasError ? "pb-2" : ""}`}
     >
+      <label htmlFor="search-query-input" className="sr-only">
+        {searchInputLabel}
+      </label>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
           ref={setInputRef}
+          id="search-query-input"
           type="text"
           value={query}
           onChange={(event) => setQuery(event.target.value)}

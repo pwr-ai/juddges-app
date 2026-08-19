@@ -17048,6 +17048,38 @@
       }
     },
     "/api/search/analytics/history": {
+      "delete": {
+        "description": "Delete all search history entries for the authenticated caller.",
+        "operationId": "delete_user_search_history_api_search_analytics_history_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete User Search History Api Search Analytics History Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete User Search History",
+        "tags": [
+          "Search"
+        ]
+      },
       "get": {
         "description": "Return the authenticated caller's own search history (most recent first).",
         "operationId": "user_search_history_api_search_analytics_history_get",

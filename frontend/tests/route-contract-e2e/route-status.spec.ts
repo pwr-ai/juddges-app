@@ -367,6 +367,64 @@ test.describe.serial('production route status contract', () => {
     }
   });
 
+  test('renders page-identity 404 Not Found UI for missing schema ID (#483)', async ({
+    context,
+  }) => {
+    await setSyntheticSession(context, 'valid');
+    const page = await context.newPage();
+    const response = await page.goto(`/schemas/${IDS.schema.missing}`);
+    expect(response?.status()).toBe(404);
+    await expect(
+      page.getByText('Page Not Found', { exact: false }),
+    ).toBeVisible();
+    await page.close();
+  });
+
+  test('polls the extraction detail page without dropping schema metadata', async ({
+    context,
+  }) => {
+    // #524: the detail page painted `schema_name` from the SSR snapshot, the first
+    // poll answered with it nulled, and the row disappeared for good. The existing
+    // marker assertion in the hydration test above only caught this when it
+    // happened to read the DOM after that response — 1 in 10 on main, 8 in 9 once
+    // an unrelated change shifted client-bundle timing.
+    //
+    // The wire is asserted rather than the DOM, deliberately. `toBeVisible()`
+    // resolves the instant the element is present, so an assertion placed "after
+    // the response" can still pass before React has applied the update — a check
+    // that reports success for a page about to blank the field. The response body
+    // has no such window. (The client-side merge that also protects this is
+    // covered deterministically by the unit tests for
+    // `mergeExtractionJobUpdate`.)
+    await setSyntheticSession(context, 'valid');
+    const page = await context.newPage();
+
+    const pollResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/extractions?job_id=') &&
+        response.request().method() === 'GET',
+    );
+    const response = await page.goto(`/extractions/${IDS.extraction.known}`);
+    expect(response?.status()).toBe(200);
+
+    const polled = await pollResponse;
+    expect(polled.status()).toBe(200);
+    // The stub serves no extraction_jobs row, so the BFF cannot resolve the name
+    // from Supabase. It must return what the upstream response already carried
+    // instead of answering null.
+    expect(await polled.json()).toMatchObject({
+      job_id: IDS.extraction.known,
+      schema_name: 'Route contract extraction schema',
+    });
+
+    // No DOM assertion follows on purpose. There is no signal here that marks the
+    // poll update as applied — `networkidle` never settles on this page — so any
+    // "still visible" check would either race the re-render or amount to a sleep.
+    // The visible marker is asserted by the hydration test above; what this test
+    // owns is the response that used to blank it.
+    await page.close();
+  });
+
   test('models a hidden chat row behind the ownership filter', async ({
     request,
   }) => {

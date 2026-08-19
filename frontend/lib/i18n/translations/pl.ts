@@ -115,6 +115,7 @@ export const pl: Translations = {
 
     // Legal domain navigation
     searchJudgments: 'Szukaj orzeczeń',
+    searchExtractedData: 'Szukaj w danych z ekstrakcji',
     topicTrends: 'Trendy tematów',
     topicModeling: 'Modelowanie tematów',
     savedSearches: 'Zapisane wyszukiwania',
@@ -122,11 +123,22 @@ export const pl: Translations = {
     extractionResults: 'Wyniki ekstrakcji',
     baseTemplate: 'Bazowy schemat kodowania',
     compareDatasets: 'Porównaj zbiory danych',
+    precedentSearch: 'Wyszukiwanie precedensów',
+    argumentationAnalysis: 'Analiza argumentacji',
+    judgeFingerprint: 'Profil sędziego',
+
+    // Administration (admin-only surfaces)
+    administration: 'Administracja',
+    adminPanel: 'Panel administratora',
+
+    // Accessible names
+    homeLinkLabel: 'JuDDGES — przejdź do strony głównej',
 
     // Workflow phase labels
     phasePlan: '1. Zaplanuj',
     phaseSearch: '2. Wyszukaj',
-    phaseExport: '3. Eksportuj',
+    phaseAnalyze: '3. Analizuj',
+    phaseExport: '4. Eksportuj',
   },
 
   chat: {

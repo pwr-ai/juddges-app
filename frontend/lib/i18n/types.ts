@@ -159,6 +159,7 @@ export interface NavigationTranslations {
 
   // Legal domain navigation
   searchJudgments: string;
+  searchExtractedData: string;
   topicTrends: string;
   topicModeling: string;
   savedSearches: string;
@@ -166,10 +167,21 @@ export interface NavigationTranslations {
   extractionResults: string;
   baseTemplate: string;
   compareDatasets: string;
+  precedentSearch: string;
+  argumentationAnalysis: string;
+  judgeFingerprint: string;
+
+  // Administration (admin-only surfaces)
+  administration: string;
+  adminPanel: string;
+
+  // Accessible names
+  homeLinkLabel: string;
 
   // Workflow phase labels
   phasePlan: string;
   phaseSearch: string;
+  phaseAnalyze: string;
   phaseExport: string;
 }
 

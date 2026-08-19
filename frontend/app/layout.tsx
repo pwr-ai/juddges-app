@@ -53,12 +53,13 @@ const serializeForInlineScript = (value: Record<string, string>) =>
     .replace(/&/g, "\\u0026")
     .replace(/'/g, "\\u0027");
 
+// No maximumScale / userScalable here on purpose: locking the scale breaks
+// pinch-zoom app-wide and violates WCAG 2.1 SC 1.4.4 (Resize Text). iOS
+// focus-zoom is prevented by the >=16px form-control rule in globals.css.
 export const viewport: Viewport = {
   themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export const metadata: Metadata = {
