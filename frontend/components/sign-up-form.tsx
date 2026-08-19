@@ -16,8 +16,50 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [repeatPasswordError, setRepeatPasswordError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  const validateEmail = (value: string): boolean => {
+    if (!value) {
+      setEmailError('Email is required')
+      return false
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setEmailError('Please enter a valid email address')
+      return false
+    }
+    setEmailError(null)
+    return true
+  }
+
+  const validatePassword = (value: string): boolean => {
+    if (!value) {
+      setPasswordError('Password is required')
+      return false
+    }
+    if (value.length < 6) {
+      setPasswordError('Password must be at least 6 characters')
+      return false
+    }
+    setPasswordError(null)
+    return true
+  }
+
+  const validateRepeatPassword = (value: string, original: string): boolean => {
+    if (!value) {
+      setRepeatPasswordError('Please repeat your password')
+      return false
+    }
+    if (value !== original) {
+      setRepeatPasswordError('Passwords do not match')
+      return false
+    }
+    setRepeatPasswordError(null)
+    return true
+  }
 
   const handleSignUp = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
@@ -25,8 +67,12 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     setIsLoading(true)
     setError(null)
 
-    if (password !== repeatPassword) {
-      setError('Passwords do not match')
+    // Validate on submit as well as on blur, so each message stays attached to
+    // the field that produced it instead of a single generic form-level line.
+    const emailValid = validateEmail(email)
+    const passwordValid = validatePassword(password)
+    const repeatValid = validateRepeatPassword(repeatPassword, password)
+    if (!emailValid || !passwordValid || !repeatValid) {
       setIsLoading(false)
       return
     }
@@ -67,41 +113,95 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="m@example.com"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (emailError) setEmailError(null)
+                  }}
+                  onBlur={(e) => validateEmail(e.target.value)}
                   disabled={isLoading}
                   className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
+                  aria-invalid={!!emailError}
+                  aria-describedby={emailError ? 'signup-email-error' : undefined}
                 />
+                {emailError && (
+                  <p id="signup-email-error" role="alert" className="text-sm text-destructive">
+                    {emailError}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (passwordError) setPasswordError(null)
+                  }}
+                  onBlur={(e) => validatePassword(e.target.value)}
                   disabled={isLoading}
                   className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
+                  aria-invalid={!!passwordError}
+                  aria-describedby={passwordError ? 'signup-password-error' : undefined}
                 />
+                {passwordError && (
+                  <p id="signup-password-error" role="alert" className="text-sm text-destructive">
+                    {passwordError}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="repeat-password" className="text-sm font-medium">Repeat Password</Label>
                 <Input
                   id="repeat-password"
+                  name="repeat-password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
+                  onChange={(e) => {
+                    setRepeatPassword(e.target.value)
+                    if (repeatPasswordError) setRepeatPasswordError(null)
+                  }}
+                  onBlur={(e) => validateRepeatPassword(e.target.value, password)}
                   disabled={isLoading}
                   className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
+                  aria-invalid={!!repeatPasswordError}
+                  aria-describedby={
+                    repeatPasswordError ? 'signup-repeat-password-error' : undefined
+                  }
                 />
+                {repeatPasswordError && (
+                  <p
+                    id="signup-repeat-password-error"
+                    role="alert"
+                    className="text-sm text-destructive"
+                  >
+                    {repeatPasswordError}
+                  </p>
+                )}
               </div>
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && (
+                <p
+                  id="signup-form-error"
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-sm text-destructive"
+                >
+                  {error}
+                </p>
+              )}
               <VariantButton intent="primary"
                 type="submit"
                 className="w-full"
@@ -122,7 +222,10 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
             </div>
             <div className="mt-4 text-center text-sm">
               Already have an account?{' '}
-              <Link href="/auth/login" className="underline underline-offset-4">
+              <Link
+                href="/auth/login"
+                className="inline-flex min-h-6 items-center underline underline-offset-4"
+              >
                 Login
               </Link>
             </div>
@@ -134,14 +237,14 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         By signing up, you agree to our{' '}
         <Link
           href="/terms"
-          className="text-primary hover:underline underline-offset-4"
+          className="inline-flex min-h-6 items-center text-primary underline underline-offset-4"
         >
           Terms of Service
         </Link>
         {' '}and{' '}
         <Link
           href="/privacy"
-          className="text-primary hover:underline underline-offset-4"
+          className="inline-flex min-h-6 items-center text-primary underline underline-offset-4"
         >
           Privacy Policy
         </Link>
