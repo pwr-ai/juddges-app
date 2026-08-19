@@ -26,7 +26,6 @@ const PUBLIC_PAGE_SUBTREE_CASES = [
   '/auth/forgot-password',
   '/legal',
   '/legal/disclaimer',
-  '/legal/terms',
   '/blog',
   '/blog/published-slug',
   '/publications',
