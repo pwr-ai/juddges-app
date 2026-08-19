@@ -1043,6 +1043,62 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ─────────────────────────────────────────────
+   iOS focus-zoom guard (#508)
+
+   Mobile Safari zooms the page in whenever a focused form control renders
+   below 16px, which is the only reason the app used to ship
+   `maximumScale: 1` / `userScalable: false`. Setting a 16px floor on the
+   controls themselves removes that reason and lets pinch-zoom stay enabled
+   (WCAG 2.1 SC 1.4.4).
+
+   Deliberately declared outside `@layer`: unlayered rules outrank Tailwind's
+   `utilities` layer, so a stray `text-sm` / `text-xs` on an input cannot
+   silently reintroduce the zoom. Above `md` the design's denser 14px controls
+   are kept, matching the `text-base md:text-sm` shadcn baseline.
+   ───────────────────────────────────────────── */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font-size: 16px;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Reduced motion (#516)
+
+   WCAG 2.1 SC 2.2.2 / 2.3.3. Collapses every CSS animation and transition to
+   an effectively instant duration rather than using `animation: none`.
+   That distinction is load-bearing: reveal-style keyframes start at
+   `opacity: 0`, and killing the animation outright would strand that content
+   permanently invisible. Running it to completion in ~0ms lands each element
+   on its final frame instead, so the page reads as if it had already
+   finished animating.
+
+   Unlayered on purpose so it outranks Tailwind's `utilities` layer and the
+   `@layer components` animation helpers above.
+   ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  html,
+  html[data-scroll-behavior="smooth"],
+  body,
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Professional visual cleanup: flatten decorative gradients across the app */
 @layer base {
   :where(

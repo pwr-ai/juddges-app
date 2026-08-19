@@ -36,6 +36,7 @@ export function LoginFormEnhanced({
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -57,10 +58,24 @@ export function LoginFormEnhanced({
     return true
   }
 
+  const validatePassword = (password: string): boolean => {
+    if (!password) {
+      setPasswordError('Password is required')
+      return false
+    }
+    setPasswordError(null)
+    return true
+  }
+
+  // Validate on blur so a bad field is reported before the user submits.
   const handleEmailBlur = (): void => {
     if (email) {
       validateEmail(email)
     }
+  }
+
+  const handlePasswordBlur = (): void => {
+    validatePassword(password)
   }
 
   const handleLogin = async (e: React.FormEvent): Promise<void> => {
@@ -69,9 +84,13 @@ export function LoginFormEnhanced({
     setIsLoading(true)
     setError(null)
     setEmailError(null)
+    setPasswordError(null)
 
-    // Validate email before submission
-    if (!validateEmail(email)) {
+    // Validate every field before submission so each message lands next to the
+    // input that produced it rather than in a single generic form-level line.
+    const emailValid = validateEmail(email)
+    const passwordValid = validatePassword(password)
+    if (!emailValid || !passwordValid) {
       setIsLoading(false)
       return
     }
@@ -253,7 +272,9 @@ export function LoginFormEnhanced({
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => {
@@ -286,10 +307,11 @@ export function LoginFormEnhanced({
                 <Label htmlFor="password" className="text-sm font-medium">
                   Password
                 </Label>
+                {/* Was tabIndex={-1}, which made password recovery unreachable
+                    by keyboard. Kept in the tab order with a 24px hit area. */}
                 <Link
                   href="/auth/forgot-password"
-                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-                  tabIndex={-1}
+                  className="inline-flex min-h-6 items-center text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -298,30 +320,53 @@ export function LoginFormEnhanced({
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    if (passwordError) setPasswordError(null)
+                  }}
+                  onBlur={handlePasswordBlur}
                   required
                   disabled={isLoading}
                   className="pl-10"
-                  aria-label="Password"
+                  aria-invalid={!!passwordError}
+                  aria-describedby={passwordError ? 'password-error' : undefined}
                 />
               </div>
+              {passwordError && (
+                <div
+                  id="password-error"
+                  className="flex items-center gap-2 text-sm text-destructive animate-fade-in-down"
+                  role="alert"
+                >
+                  <AlertCircle className="size-4" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
             </div>
 
             {/* Remember Me */}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="remember"
+                name="remember"
                 checked={rememberMe}
                 onCheckedChange={(checked) => setRememberMe(checked === true)}
                 disabled={isLoading}
-                aria-label="Remember me"
+                // Radix renders the checkbox as a <button>, so keep an explicit
+                // name that matches the visible label text verbatim (SC 2.5.3).
+                aria-label="Remember me for 30 days"
+                // The glyph stays 16px; the ::after pseudo-element extends the
+                // pointer target to 28px so it clears the 24px WCAG 2.5.8 floor.
+                className="relative after:absolute after:-inset-1.5 after:content-['']"
               />
               <Label
                 htmlFor="remember"
-                className="text-sm text-muted-foreground cursor-pointer select-none"
+                className="flex min-h-6 items-center text-sm text-muted-foreground cursor-pointer select-none"
               >
                 Remember me for 30 days
               </Label>
@@ -330,8 +375,10 @@ export function LoginFormEnhanced({
             {/* Error Message */}
             {error && (
               <div
+                id="login-form-error"
                 className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 animate-fade-in-down"
                 role="alert"
+                aria-live="assertive"
               >
                 <AlertCircle className="size-5 text-destructive shrink-0" />
                 <p className="text-sm text-destructive font-medium">{error}</p>
@@ -364,7 +411,7 @@ export function LoginFormEnhanced({
               </span>
               <Link
                 href="/auth/sign-up"
-                className="text-primary hover:text-primary/80 font-semibold transition-colors"
+                className="inline-flex min-h-6 items-center text-primary hover:text-primary/80 font-semibold transition-colors"
               >
                 Sign up
               </Link>
@@ -376,14 +423,14 @@ export function LoginFormEnhanced({
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
               <Link
                 href="/privacy"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                className="inline-flex min-h-6 items-center hover:text-foreground transition-colors underline-offset-4 hover:underline"
               >
                 Privacy Policy
               </Link>
               <span className="text-border">•</span>
               <Link
                 href="/terms"
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+                className="inline-flex min-h-6 items-center hover:text-foreground transition-colors underline-offset-4 hover:underline"
               >
                 Terms of Service
               </Link>
