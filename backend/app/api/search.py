@@ -32,6 +32,7 @@ from app.services.search import (
     TopicHit,
 )
 from app.services.search_analytics import (
+    clear_user_search_history,
     export_eval_queries,
     get_popular_queries,
     get_trending_topics,
@@ -597,6 +598,15 @@ async def user_search_history(
     """Return the authenticated caller's own search history (most recent first)."""
     rows = await get_user_search_history(user_id=user.id, days=days, limit=limit)
     return [UserSearchHistoryItem(**r) for r in rows]
+
+
+@router.delete("/analytics/history", response_model=dict[str, bool])
+async def delete_user_search_history(
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> dict[str, bool]:
+    """Delete all search history entries for the authenticated caller."""
+    success = await clear_user_search_history(user.id)
+    return {"success": success}
 
 
 # ── Eval query export ────────────────────────────────────────────────────
