@@ -965,7 +965,11 @@ export interface paths {
         get: operations["user_search_history_api_search_analytics_history_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete User Search History
+         * @description Delete all search history entries for the authenticated caller.
+         */
+        delete: operations["delete_user_search_history_api_search_analytics_history_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -13687,6 +13691,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_user_search_history_api_search_analytics_history_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
                 };
             };
         };
