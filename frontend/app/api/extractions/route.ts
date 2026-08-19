@@ -468,11 +468,16 @@ export async function GET(request: NextRequest) {
     // Extract results from the response
     const extractions: DocumentExtractionResult[] = jobData.results || [];
 
-    // Fetch job metadata from Supabase to get collection_name and schema_name
-    let collection_id: string | null = null;
-    let collection_name: string | null = null;
-    let schema_id: string | null = null;
-    let schema_name: string | null = null;
+    // Seed from what the upstream response already carried, then let Supabase
+    // fill the gaps. Starting from null and overwriting unconditionally is how
+    // #524 happened: the lookup below returns nothing whenever the
+    // extraction_jobs row is not visible to this user's RLS client, and the
+    // route then answered `schema_name: null` for a job whose name it had just
+    // been handed — blanking the schema row on the detail page.
+    let collection_id: string | null = jobData.collection_id ?? null;
+    let collection_name: string | null = jobData.collection_name ?? null;
+    let schema_id: string | null = jobData.schema_id ?? null;
+    let schema_name: string | null = jobData.schema_name ?? null;
 
     try {
       // Get job record with collection and schema IDs
@@ -483,9 +488,11 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (jobRecord) {
-        // Store IDs
-        collection_id = jobRecord.collection_id || null;
-        schema_id = jobRecord.schema_id || null;
+        // Fall back to the seeded value rather than assigning unconditionally: a
+        // lookup that comes back empty leaves the upstream value in place
+        // instead of erasing it.
+        collection_id = jobRecord.collection_id || collection_id;
+        schema_id = jobRecord.schema_id || schema_id;
 
         // Fetch collection name
         if (jobRecord.collection_id) {
@@ -494,7 +501,7 @@ export async function GET(request: NextRequest) {
             .select('name')
             .eq('id', jobRecord.collection_id)
             .single();
-          collection_name = collection?.name || null;
+          collection_name = collection?.name || collection_name;
         }
 
         // Fetch schema name
@@ -504,7 +511,7 @@ export async function GET(request: NextRequest) {
             .select('name')
             .eq('id', jobRecord.schema_id)
             .single();
-          schema_name = schema?.name || null;
+          schema_name = schema?.name || schema_name;
         }
       }
     } catch (metadataError) {

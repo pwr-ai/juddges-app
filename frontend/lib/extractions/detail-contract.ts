@@ -89,6 +89,51 @@ export function toExtractionJobSnapshot(
   return snapshot;
 }
 
+/**
+ * Identity metadata: which collection and schema a job belongs to. Fixed for the
+ * life of the job, so a later response that omits one of these is missing
+ * information, never reporting a change.
+ */
+const JOB_IDENTITY_FIELDS = [
+  "collection_id",
+  "collection_name",
+  "schema_id",
+  "schema_name",
+  "created_at",
+] as const;
+
+/**
+ * Fold a poll response into the state the page already holds.
+ *
+ * A poll response is an *update*, not a replacement. Replacing wholesale means
+ * any field the response happens to omit erases what the page already knew — the
+ * #524 bug, where `/api/extractions?job_id=…` answered with `schema_name: null`
+ * and the schema row vanished from a detail page a few hundred milliseconds after
+ * it rendered, permanently, because nothing ever restored it.
+ *
+ * So identity metadata is only ever filled in, never cleared. `status`,
+ * `progress`, `results` and `updated_at` are the live fields and are taken from
+ * the response — except that a terminal status is never walked back to a
+ * non-terminal one, which a late-arriving in-flight response would otherwise do.
+ */
+export function mergeExtractionJobUpdate(
+  current: ExtractionJobResponse,
+  next: ExtractionJobResponse
+): ExtractionJobResponse {
+  if (
+    isTerminalExtractionStatus(current.status) &&
+    !isTerminalExtractionStatus(next.status)
+  ) {
+    return current;
+  }
+
+  const merged: ExtractionJobResponse = { ...current, ...next };
+  for (const field of JOB_IDENTITY_FIELDS) {
+    merged[field] = next[field] ?? current[field];
+  }
+  return merged;
+}
+
 const OPTIONAL_STRING_FIELDS = [
   "created_at",
   "updated_at",

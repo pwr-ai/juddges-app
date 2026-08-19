@@ -35,6 +35,7 @@ import { ExtractionResultsTable } from "@/components/extraction-results-table";
 import { logger } from "@/lib/logger";
 import {
  isTerminalExtractionStatus,
+ mergeExtractionJobUpdate,
  normalizeExtractionJobPayload,
  type ExtractionJobResponse,
  type ExtractionJobSnapshot,
@@ -159,15 +160,11 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  }
  if (!active) return;
  setJobData((currentJob) => {
- if (
- isTerminalExtractionStatus(currentJob.status) &&
- !isTerminalExtractionStatus(nextJob.status)
- ) {
- currentStatus = currentJob.status;
- return currentJob;
- }
- currentStatus = nextJob.status;
- return nextJob;
+ // Merge, never replace: a response that omits schema_name must not blank
+ // the schema row the page is already showing (#524).
+ const mergedJob = mergeExtractionJobUpdate(currentJob, nextJob);
+ currentStatus = mergedJob.status;
+ return mergedJob;
  });
  setPollError(null);
  } catch (error) {

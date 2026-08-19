@@ -367,6 +367,43 @@ test.describe.serial('production route status contract', () => {
     }
   });
 
+  test('keeps extraction schema metadata after the detail page polls', async ({
+    context,
+  }) => {
+    // This assertion used to be a race, and that is what made this whole check
+    // flaky (#524): the page painted `schema_name` from the SSR snapshot, then the
+    // first poll answered with it nulled and the row disappeared. Whether the
+    // check passed depended on whether it read the DOM before or after that
+    // response — 1 in 10 on main, 8 in 9 once client-bundle timing shifted.
+    //
+    // So wait for the poll response explicitly and assert after it, rather than
+    // sampling the DOM at an arbitrary moment. The job is SUCCESS, which is
+    // terminal, so exactly one poll fires and there is a well-defined "after".
+    await setSyntheticSession(context, 'valid');
+    const page = await context.newPage();
+
+    const pollResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/extractions?job_id=') &&
+        response.request().method() === 'GET',
+    );
+    const response = await page.goto(`/extractions/${IDS.extraction.known}`);
+    expect(response?.status()).toBe(200);
+
+    const marker = page.getByText('Route contract extraction schema', {
+      exact: true,
+    });
+    await expect(marker).toBeVisible();
+
+    const polled = await pollResponse;
+    expect(polled.status()).toBe(200);
+    // The stub serves no extraction_jobs row, so the BFF cannot resolve the name
+    // from Supabase — the page must hold the value it already had.
+    await expect(marker).toBeVisible();
+
+    await page.close();
+  });
+
   test('models a hidden chat row behind the ownership filter', async ({
     request,
   }) => {

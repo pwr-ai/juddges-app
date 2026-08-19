@@ -5,9 +5,11 @@
 import {
   decodeExtractionSnapshot,
   encodeExtractionSnapshot,
+  mergeExtractionJobUpdate,
   normalizeExtractionJobPayload,
   signExtractionSnapshot,
   verifyExtractionSnapshot,
+  type ExtractionJobResponse,
 } from "@/lib/extractions/detail-contract";
 
 const JOB_ID = "22222222-3333-4444-8555-666666666666";
@@ -136,5 +138,98 @@ describe("extraction detail transport", () => {
     });
 
     expect(encoded).toBeNull();
+  });
+});
+
+describe("folding a poll response into page state", () => {
+  const rendered: ExtractionJobResponse = {
+    job_id: JOB_ID,
+    status: "IN_PROGRESS",
+    results: [],
+    progress: { completed: 1, total: 4 },
+    created_at: "2026-08-19T10:00:00Z",
+    updated_at: "2026-08-19T10:00:05Z",
+    collection_id: "col-1",
+    collection_name: "Route contract collection",
+    schema_id: "sch-1",
+    schema_name: "Route contract extraction schema",
+  };
+
+  // The #524 wire capture: the poll answers with the identity fields nulled.
+  const pollWithNulledMetadata: ExtractionJobResponse = {
+    job_id: JOB_ID,
+    status: "IN_PROGRESS",
+    results: [],
+    progress: { completed: 2, total: 4 },
+    updated_at: "2026-08-19T10:00:10Z",
+    collection_id: null,
+    collection_name: null,
+    schema_id: null,
+    schema_name: null,
+    created_at: null,
+  };
+
+  it("keeps identity metadata a response nulls, and takes the live fields", () => {
+    const merged = mergeExtractionJobUpdate(rendered, pollWithNulledMetadata);
+
+    expect(merged.schema_name).toBe("Route contract extraction schema");
+    expect(merged.schema_id).toBe("sch-1");
+    expect(merged.collection_name).toBe("Route contract collection");
+    expect(merged.collection_id).toBe("col-1");
+    expect(merged.created_at).toBe("2026-08-19T10:00:00Z");
+    // The fields that legitimately move still move.
+    expect(merged.progress).toEqual({ completed: 2, total: 4 });
+    expect(merged.updated_at).toBe("2026-08-19T10:00:10Z");
+  });
+
+  it("keeps identity metadata a response omits entirely", () => {
+    const { schema_name: _n, schema_id: _i, ...withoutSchema } =
+      pollWithNulledMetadata;
+
+    expect(mergeExtractionJobUpdate(rendered, withoutSchema).schema_name).toBe(
+      "Route contract extraction schema"
+    );
+  });
+
+  it("fills in identity metadata the first paint lacked", () => {
+    const withoutSchema: ExtractionJobResponse = {
+      ...rendered,
+      schema_id: null,
+      schema_name: null,
+    };
+    const pollWithSchema: ExtractionJobResponse = {
+      ...pollWithNulledMetadata,
+      schema_id: "sch-9",
+      schema_name: "Resolved late",
+    };
+
+    const merged = mergeExtractionJobUpdate(withoutSchema, pollWithSchema);
+
+    expect(merged.schema_name).toBe("Resolved late");
+    expect(merged.schema_id).toBe("sch-9");
+  });
+
+  it("advances status and results, and adopts a terminal status", () => {
+    const finished: ExtractionJobResponse = {
+      ...pollWithNulledMetadata,
+      status: "SUCCESS",
+      progress: { completed: 4, total: 4 },
+    };
+
+    const merged = mergeExtractionJobUpdate(rendered, finished);
+
+    expect(merged.status).toBe("SUCCESS");
+    expect(merged.progress).toEqual({ completed: 4, total: 4 });
+    expect(merged.schema_name).toBe("Route contract extraction schema");
+  });
+
+  it("never walks a terminal status back to an in-flight one", () => {
+    const done: ExtractionJobResponse = { ...rendered, status: "SUCCESS" };
+    const lateInFlight: ExtractionJobResponse = {
+      ...pollWithNulledMetadata,
+      status: "IN_PROGRESS",
+    };
+
+    expect(mergeExtractionJobUpdate(done, lateInFlight)).toBe(done);
   });
 });
