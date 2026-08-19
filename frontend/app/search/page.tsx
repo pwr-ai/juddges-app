@@ -15,6 +15,7 @@ import {
  SearchResultsSection,
 } from '@/lib/styles/components';
 import { ZeroResultsEmptyState } from '@/components/search/ZeroResultsEmptyState';
+import { SearchPageSkeleton } from '@/components/search/search-page-skeleton';
 import { SearchErrorBoundary } from '@/components/errors/SearchErrorBoundary';
 import { SaveSearchDialog } from '@/components/SaveSearchDialog';
 import { useSearchResults } from '@/hooks/useSearchResults';
@@ -383,8 +384,11 @@ function SearchPageContent(): React.JSX.Element | null {
 
  const showExpanded = searchMetadata.length === 0 && !error && !(query && hasPerformedSearch);
 
+ // Until the client has hydrated we cannot read the persisted search state, so
+ // render the search-page skeleton rather than a blank screen. The skeleton has
+ // the same layout as the real page, so nothing jumps when it swaps in.
  if (!mounted) {
- return null;
+ return <SearchPageSkeleton />;
  }
 
  return (
@@ -681,7 +685,7 @@ function SearchPageContent(): React.JSX.Element | null {
 
 export default function SearchPage(): React.JSX.Element {
  return (
- <Suspense fallback={null}>
+ <Suspense fallback={<SearchPageSkeleton />}>
  <SearchPageContent />
  </Suspense>
  );

@@ -412,4 +412,166 @@ export const en: Translations = {
     reasoningTeleological: 'Teleological',
     reasoningTeleologicalDescription: 'Purpose-driven interpretation referring to the goal and function of a provision.',
   },
+
+  reasoningLines: {
+    // Page header
+    pageTitle: 'Reasoning lines',
+    pageSubtitle: 'Discover clusters of judgments that answer the same legal question',
+
+    // Tabs
+    tabDiscover: 'Discover',
+    tabSaved: 'Saved lines',
+    tabDag: 'DAG graph',
+
+    // Discovery controls
+    paramsHeading: 'Discovery parameters',
+    paramSampleSize: 'Sample size',
+    paramNumClusters: 'Number of clusters',
+    paramLegalDomain: 'Legal domain (optional)',
+    paramLegalDomainPlaceholder: 'e.g. tax law, employment law...',
+    discoverButton: 'Discover lines',
+    discoverButtonPending: 'Discovering...',
+
+    // Discovery states
+    discoverLoadingTitle: 'Discovering reasoning lines...',
+    discoverLoadingSubtitle: 'Clustering judgments by semantic similarity — larger samples take longer',
+    discoverErrorTitle: 'Discovery could not be completed',
+    discoverErrorMessage: 'The clustering service did not return a result, so no lines were discovered. Nothing was saved. Try again, or lower the sample size and the number of clusters to make the request lighter.',
+    discoverEmptyTitle: 'No discovery run yet',
+    discoverEmptyDescription: 'Nothing has been clustered so far. Set the sample size, the number of clusters and — optionally — a legal domain above, then select “Discover lines” to group judgments that address the same legal question.',
+    discoveredHeading: 'Discovered reasoning lines ({{count}})',
+
+    // Discovery statistics
+    statDocuments: 'Documents',
+    statClusters: 'Clusters',
+    statCoherence: 'Coherence',
+    statTime: 'Time',
+
+    // How discovery works
+    howItWorks: 'How it works',
+    howSemanticTitle: 'Semantic clustering',
+    howSemanticDescription: 'Judgments are grouped by the meaning of their content and reasoning, not by keyword overlap.',
+    howSharedBasesTitle: 'Shared legal bases',
+    howSharedBasesDescription: 'Clusters are held together by common references to the same provisions and legal acts.',
+    howCoherenceTitle: 'Coherence analysis',
+    howCoherenceDescription: 'Every cluster gets a coherence score — the higher it is, the more uniform the reasoning line.',
+    howKeywordsTitle: 'Keywords',
+    howKeywordsDescription: 'The most characteristic terms of each cluster are extracted automatically.',
+
+    // Cluster / line cards
+    clusterCaseCount: 'Cases: {{count}}',
+    coherenceLabel: 'Coherence',
+    coherenceValue: 'Coherence: {{percent}}%',
+    legalBasesLabel: 'Legal bases',
+    showCases: 'Show cases ({{count}})',
+    hideCases: 'Hide cases',
+    saveCluster: 'Save as line',
+    saveClusterPending: 'Saving...',
+    saveClusterDone: 'Saved',
+    caseCount: '{{count}} cases',
+    similarityMatch: '{{percent}}% match',
+
+    // Status labels
+    statusActive: 'Active',
+    statusArchived: 'Archived',
+    statusDeleted: 'Deleted',
+
+    // Saved lines tab
+    searchPlaceholder: 'Search reasoning lines...',
+    searchAriaLabel: 'Search reasoning lines',
+    searchErrorTitle: 'Search is unavailable',
+    searchErrorMessage: 'The reasoning-line search service could not be reached, so no results could be loaded. Try again in a moment, or clear the search box to browse every saved line.',
+    searchEmptyTitle: 'No reasoning lines match your search',
+    searchEmptyDescription: 'Nothing in the saved catalogue matches “{{query}}”. Search covers labels, legal questions and keywords — try broader wording, or clear the box to browse every saved line.',
+    searchResultsHeading: 'Search results ({{count}})',
+    savedLoading: 'Loading saved reasoning lines...',
+    savedErrorTitle: 'Saved lines could not be loaded',
+    savedErrorMessage: 'The saved reasoning lines could not be fetched from the server. Nothing was lost — try again, or reload the page if the problem persists.',
+    savedEmptyTitle: 'No saved reasoning lines yet',
+    savedEmptyDescription: 'Nothing has been added to the catalogue so far. Open the Discover tab, run a discovery over the case corpus, and save the clusters worth tracking — they will show up here.',
+    savedHeading: 'Saved reasoning lines ({{count}})',
+
+    // Automated pipeline card
+    pipelineHeading: 'Automated pipeline',
+    pipelineWeekly: 'Weekly',
+    pipelineAssignTitle: 'Auto-assignment',
+    pipelineAssignDescription: 'New judgments are assigned to existing reasoning lines automatically',
+    pipelineDiscoverTitle: 'Auto-discovery',
+    pipelineDiscoverDescription: 'Unassigned judgments are grouped into new reasoning lines',
+    pipelineEventsTitle: 'Event detection',
+    pipelineEventsDescription: 'Branches and merges between lines are detected automatically',
+
+    // DAG tab
+    dagHeading: 'Reasoning line DAG',
+    detectEvents: 'Detect events',
+    detectEventsPending: 'Detecting...',
+    detectEventsError: 'Event detection failed. Nothing was changed — try again in a moment.',
+    eventBranches: 'Branches: {{count}}',
+    eventMerges: 'Merges: {{count}}',
+    eventInfluences: 'Influences: {{count}}',
+    eventLinesAnalyzed: 'Lines analysed: {{count}}',
+    eventProcessingTime: 'Time: {{seconds}}s',
+    dagLoading: 'Loading the DAG graph...',
+    dagErrorTitle: 'Graph could not be loaded',
+    dagErrorMessage: 'The reasoning-line graph could not be fetched from the server. Try again; if it keeps failing, the graph may still be rebuilding after the last pipeline run.',
+    dagEmptyTitle: 'Nothing to plot yet',
+    dagEmptyDescriptionAdmin: 'The graph is empty because no branch, merge or influence events have been recorded. Save at least two reasoning lines, then select “Detect events” to build the graph.',
+    dagEmptyDescription: 'The graph is empty because no reasoning lines or relationships between them have been recorded yet. The graph is built by an administrator — check back once lines have been saved and analysed.',
+    statNodes: 'Nodes',
+    statEdges: 'Edges',
+    statBranches: 'Branches',
+    statMerges: 'Merges',
+
+    // Detail page — shell states
+    backToList: 'Back to reasoning lines',
+    detailLoading: 'Loading reasoning line details...',
+    detailErrorTitle: 'Reasoning line could not be loaded',
+    detailErrorMessage: 'The details of this reasoning line could not be fetched from the server. Try again, or go back to the list and open it once more.',
+    detailNotFoundTitle: 'Reasoning line not found',
+    detailNotFoundDescription: 'This reasoning line does not exist or has been deleted. Go back to the list to browse the lines that are still available.',
+    createdLabel: 'Created: {{date}}',
+
+    // Detail page — delete flow
+    deleteLine: 'Delete line',
+    deleteConfirmQuestion: 'Delete this reasoning line for everyone?',
+    deleteConfirm: 'Yes, delete',
+    deletePending: 'Deleting...',
+    deleteError: 'The reasoning line could not be deleted. Nothing was removed — try again in a moment.',
+
+    // Detail page — member judgments
+    membersHeading: 'Judgments in this line ({{count}})',
+    membersEmptyTitle: 'No judgments in this line yet',
+    membersEmptyDescription: 'No judgments have been assigned to this reasoning line. The weekly auto-assignment job adds newly ingested judgments that match — check back after the next run.',
+
+    // Detail page — outcome timeline
+    outcomeHeading: 'How outcomes evolved over time',
+    classify: 'Classify judgments',
+    classifyPending: 'Classifying...',
+    classifyError: 'Classification failed. No outcomes were changed — try again in a moment.',
+    classifyClassified: 'Classified: {{count}}',
+    classifySkipped: 'Skipped: {{count}}',
+    classifyErrors: 'Errors: {{count}}',
+    timelineLoading: 'Loading the outcome timeline...',
+    timelineErrorAdmin: 'No timeline available. The outcomes of this line have not been classified yet — select “Classify judgments” above to generate it.',
+    timelineError: 'No timeline available. The outcomes of this line have not been classified yet, so there is nothing to plot.',
+    timelineEmptyAdmin: 'No judgments have been classified yet. Select “Classify judgments” above to label the outcomes and build the timeline.',
+    timelineEmpty: 'No judgments have been classified yet, so the outcome timeline is empty.',
+    timelineTotalClassified: 'Classified: {{count}}',
+    timelineTotalUnclassified: 'Unclassified: {{count}}',
+
+    // Detail page — language drift
+    driftHeading: 'Language drift',
+    driftAnalyze: 'Analyse drift',
+    driftPending: 'Analysing...',
+    driftError: 'Drift analysis failed. Nothing was changed — try again in a moment.',
+    driftLoading: 'Analysing language drift...',
+    driftIdleAdmin: 'Language drift has not been analysed yet. Select “Analyse drift” to measure how the wording of the judgments in this line changed over time.',
+    driftIdle: 'Language drift has not been analysed for this line yet, so there is nothing to display.',
+
+    // Detail page — related lines
+    relatedHeading: 'Related reasoning lines',
+    relatedLoading: 'Loading related reasoning lines...',
+    relatedError: 'Related reasoning lines could not be loaded. Reload the page to try again.',
+    relatedEmpty: 'No related reasoning lines found. Relatedness is based on shared legal bases and keywords — links appear as the catalogue grows.',
+  },
 };

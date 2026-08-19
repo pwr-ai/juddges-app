@@ -16,6 +16,11 @@ import {
  useAdminSystemHealth,
 } from "@/lib/api/admin";
 import { useDashboardStats } from "@/lib/api/dashboard";
+import { ErrorCard } from "@/lib/styles/components";
+import logger from "@/lib/logger";
+import { useEffect } from "react";
+
+const pageLogger = logger.child("AdminDashboardPage");
 
 function formatDate(iso: string): string {
  return new Date(iso).toLocaleString(undefined, {
@@ -51,6 +56,15 @@ export default function AdminDashboardPage() {
  const dashboardStatsQuery = useDashboardStats();
  const activityQuery = useAdminActivity(8);
  const healthQuery = useAdminSystemHealth();
+
+ // Raw error text must never reach the screen: it leaks internals and tells an
+ // admin nothing they can act on. Keep it in the console for debugging instead.
+ useEffect(() => {
+ if (statsQuery.error) pageLogger.error("Failed to load admin stats", statsQuery.error);
+ if (dashboardStatsQuery.error) pageLogger.error("Failed to load corpus stats", dashboardStatsQuery.error);
+ if (activityQuery.error) pageLogger.error("Failed to load recent activity", activityQuery.error);
+ if (healthQuery.error) pageLogger.error("Failed to load system health", healthQuery.error);
+ }, [statsQuery.error, dashboardStatsQuery.error, activityQuery.error, healthQuery.error]);
 
  const stats = statsQuery.data;
  const dashboardStats = dashboardStatsQuery.data;
@@ -101,8 +115,13 @@ export default function AdminDashboardPage() {
 
  {/* Stats error */}
  {statsQuery.isError && (
- <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
- Failed to load statistics: {(statsQuery.error as Error).message}
+ <div role="alert"className="mb-6">
+ <ErrorCard
+ title="Platform statistics could not be loaded"
+ message="The admin statistics endpoint did not respond, so the user, document and search counters below are unavailable. This is usually a temporary backend outage — retry, and if it keeps failing check Admin → System for service health."
+ onRetry={() => { void statsQuery.refetch(); }}
+ retryLabel="Reload statistics"
+ />
  </div>
  )}
 
@@ -138,11 +157,13 @@ export default function AdminDashboardPage() {
  {/* Data Quality tile (sub-metric for corpus) */}
  <div className="mb-10">
  {dashboardStatsQuery.isError ? (
- <div
- role="alert"
- className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
- >
- Failed to load corpus statistics: {(dashboardStatsQuery.error as Error).message}
+ <div role="alert">
+ <ErrorCard
+ title="Corpus data-quality figures could not be loaded"
+ message="The corpus statistics endpoint did not respond, so embedding and AI-summary coverage are unknown right now. The corpus itself is unaffected — retry, and if it keeps failing check Admin → System for service health."
+ onRetry={() => { void dashboardStatsQuery.refetch(); }}
+ retryLabel="Reload data quality"
+ />
  </div>
  ) : dashboardStatsQuery.isLoading ? (
  <StatCardSkeleton />
@@ -188,8 +209,13 @@ export default function AdminDashboardPage() {
  </div>
 
  {activityQuery.isError && (
- <div className="px-6 py-4 text-sm text-red-600">
- Failed to load activity.
+ <div role="alert"className="m-6">
+ <ErrorCard
+ title="Recent activity could not be loaded"
+ message="The audit-log endpoint did not respond, so the activity feed is empty rather than genuinely quiet. Retry to fetch it again."
+ onRetry={() => { void activityQuery.refetch(); }}
+ retryLabel="Reload activity"
+ />
  </div>
  )}
 
@@ -228,7 +254,7 @@ export default function AdminDashboardPage() {
  colSpan={3}
  className="px-6 py-10 text-center text-sm text-muted-foreground"
  >
- No recent activity.
+ No activity has been recorded yet. User sign-ins, searches and document actions will appear here as they happen.
  </td>
  </tr>
  ) : (
@@ -272,8 +298,13 @@ export default function AdminDashboardPage() {
  </div>
 
  {healthQuery.isError && (
- <div className="px-6 py-4 text-sm text-red-600">
- Failed to load health status.
+ <div role="alert"className="m-6">
+ <ErrorCard
+ title="Service health could not be loaded"
+ message="The health-check endpoint did not respond. That does not by itself mean the services are down — the check could not run. Retry, and if it keeps failing inspect the backend container logs directly."
+ onRetry={() => { void healthQuery.refetch(); }}
+ retryLabel="Re-run health check"
+ />
  </div>
  )}
 
@@ -321,7 +352,7 @@ export default function AdminDashboardPage() {
  ))
  ) : (
  <p className="text-sm text-muted-foreground text-center py-4">
- No health data.
+ The health check returned no services. Confirm the backend is running with health reporting enabled, then re-run the check.
  </p>
  )}
  </div>
