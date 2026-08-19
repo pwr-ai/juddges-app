@@ -29,6 +29,7 @@ import {
  GitBranch,
  Fingerprint,
  ShieldCheck,
+ History,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -341,6 +342,17 @@ export function AppSidebar(): React.JSX.Element {
  </ConditionalTooltip>
  </SidebarMenuItem>
  )}
+
+ <SidebarMenuItem>
+   <ConditionalTooltip content="Search History" isIconMode={isIconMode}>
+     <SidebarMenuButton asChild isActive={pathname === "/history"}>
+       <Link href="/history">
+         <History />
+         <span>Search History</span>
+       </Link>
+     </SidebarMenuButton>
+   </ConditionalTooltip>
+ </SidebarMenuItem>
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>

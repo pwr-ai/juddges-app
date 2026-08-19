@@ -438,7 +438,37 @@ class TestUserHistoryEndpoint:
         assert body[0]["hit_count"] == 7
         mock_history.assert_awaited_once()
         kwargs = mock_history.call_args.kwargs
-        assert kwargs == {"user_id": "user-xyz", "days": 7, "limit": 10}
+        assert kwargs["user_id"] == "user-xyz"
+        assert kwargs["days"] == 7
+        assert kwargs["limit"] == 10
+
+    @pytest.mark.anyio
+    @patch("app.api.search.clear_user_search_history")
+    async def test_delete_history_endpoint(self, mock_clear, client, valid_api_headers):
+        """Authenticated caller can clear their history via DELETE."""
+        from app.core.auth_jwt import AuthenticatedUser, get_current_user
+        from app.server import app
+
+        async def fake_user():
+            return AuthenticatedUser(
+                {"id": "user-xyz", "email": "u@example.com", "role": "authenticated"},
+                access_token="tok",
+            )
+
+        app.dependency_overrides[get_current_user] = fake_user
+        mock_clear.return_value = True
+
+        try:
+            response = await client.delete(
+                "/api/search/analytics/history",
+                headers=valid_api_headers,
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json() == {"success": True}
+        mock_clear.assert_awaited_once_with("user-xyz")
 
 
 class TestSyncStatus:
