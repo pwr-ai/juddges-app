@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAdminUsers } from "@/lib/api/admin";
+import { ErrorCard } from "@/lib/styles/components";
+import logger from "@/lib/logger";
+import { useEffect } from "react";
+
+const pageLogger = logger.child("AdminUsersPage");
 
 const PER_PAGE = 20;
 
@@ -19,7 +24,12 @@ export default function AdminUsersPage() {
  const [page, setPage] = useState(1);
  const [query, setQuery] = useState("");
 
- const { data, isLoading, isError, error } = useAdminUsers(page, PER_PAGE);
+ const { data, isLoading, isError, error, refetch } = useAdminUsers(page, PER_PAGE);
+
+ // The raw exception is for us, not for the admin looking at the screen.
+ useEffect(() => {
+ if (error) pageLogger.error("Failed to load admin users", error);
+ }, [error]);
 
  const users = data?.users ?? [];
  const total = data?.total ?? 0;
@@ -59,8 +69,13 @@ export default function AdminUsersPage() {
 
  {/* Error */}
  {isError && (
- <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
- Failed to load users: {(error as Error).message}
+ <div role="alert"className="mb-6">
+ <ErrorCard
+ title="The user list could not be loaded"
+ message={`The admin users endpoint did not respond, so page ${page} of the account list is unavailable. No accounts were changed. Retry, and if it keeps failing check Admin → System for service health.`}
+ onRetry={() => { void refetch(); }}
+ retryLabel="Reload users"
+ />
  </div>
  )}
 
@@ -120,7 +135,9 @@ export default function AdminUsersPage() {
  colSpan={6}
  className="px-6 py-10 text-center text-sm text-muted-foreground"
  >
- {query ? "No users match your search.": "No users found."}
+ {query
+ ? `No account on this page matches “${query}”. The filter only searches the ${users.length} accounts loaded for page ${page} — clear it or move to another page to widen the search.`
+ : "No accounts exist yet. Users appear here as soon as they sign up."}
  </td>
  </tr>
  ) : (
