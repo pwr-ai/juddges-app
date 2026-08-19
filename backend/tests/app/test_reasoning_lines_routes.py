@@ -23,9 +23,9 @@ class _FakeQuery:
         return self
 
     def eq(self, column: str, value: object):
-        if column == "id" and value == "dag":
-            self._rows = []
-        elif column == "id" and value == "non-existent-line":
+        if (column == "id" and value == "dag") or (
+            column == "id" and value == "non-existent-line"
+        ):
             self._rows = []
         elif column == "status":
             self._rows = [r for r in self._rows if r.get("status") == value]
@@ -178,4 +178,3 @@ def test_get_reasoning_line_not_found(
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
-

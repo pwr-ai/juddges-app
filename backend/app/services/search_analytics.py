@@ -122,14 +122,14 @@ async def clear_user_search_history(user_id: str) -> bool:
     if not supabase_client:
         return False
     try:
-        query_builder = supabase_client.table("search_analytics").delete().eq("user_id", user_id)
+        query_builder = (
+            supabase_client.table("search_analytics").delete().eq("user_id", user_id)
+        )
         await asyncio.to_thread(query_builder.execute)
         return True
     except Exception as exc:
         logger.warning(f"Failed to clear search history for user {user_id}: {exc}")
         return False
-
-
 
 
 async def get_trending_topics(days: int = 30, limit: int = 20) -> list[dict[str, Any]]:

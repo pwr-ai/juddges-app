@@ -444,9 +444,7 @@ class TestUserHistoryEndpoint:
 
     @pytest.mark.anyio
     @patch("app.api.search.clear_user_search_history")
-    async def test_delete_history_endpoint(
-        self, mock_clear, client, valid_api_headers
-    ):
+    async def test_delete_history_endpoint(self, mock_clear, client, valid_api_headers):
         """Authenticated caller can clear their history via DELETE."""
         from app.core.auth_jwt import AuthenticatedUser, get_current_user
         from app.server import app

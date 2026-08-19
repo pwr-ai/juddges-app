@@ -16,6 +16,9 @@ jest.mock("next/navigation", () => ({
 
 // Mock lucide-react icons
 jest.mock("lucide-react", () => {
+  // jest.mock factories are hoisted above imports, so the outer React binding
+  // is not in scope here and require() is the only way in.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require("react");
   return new Proxy(
     {},

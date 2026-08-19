@@ -609,7 +609,6 @@ async def delete_user_search_history(
     return {"success": success}
 
 
-
 # ── Eval query export ────────────────────────────────────────────────────
 
 
