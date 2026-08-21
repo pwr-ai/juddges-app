@@ -45,6 +45,22 @@ describe('SearchForm', () => {
     expect(screen.getByRole('button', { name: /search/i })).toBeInTheDocument();
   });
 
+  // Regression guard for #513. The logo link got one when it was fixed; the
+  // search input did not, so the label that gives the product's primary control
+  // its accessible name could be deleted without a single test noticing.
+  it('gives the search input an accessible name that survives typing', () => {
+    render(<SearchForm {...defaultProps} query="defective works" />);
+
+    // getByRole resolves the accessible name the same way a screen reader does,
+    // so this passes only via the <label htmlFor>, not the placeholder — which
+    // is not a name and disappears as soon as the field has a value.
+    const input = screen.getByRole('textbox', { name: /search documents/i });
+
+    expect(input).toHaveValue('defective works');
+    // The character counter is described-by, not the name; both must coexist.
+    expect(input).toHaveAttribute('aria-describedby', 'search-char-counter');
+  });
+
   it('shows bilingual suggested-topic pills before the first search', () => {
     render(<SearchForm {...defaultProps} />);
 
