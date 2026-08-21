@@ -116,7 +116,9 @@ export function FieldEditor({
 
  /**
  * Validate field name
- * Must be non-empty, alphanumeric with underscores, no spaces
+ * Must be non-empty, and may contain only letters, digits and underscores,
+ * with a letter or underscore first — the leading-character rule the regex
+ * enforces and the old wording omitted.
  */
  const validateFieldName = (name: string): boolean => {
  if (!name.trim()) {
@@ -126,7 +128,13 @@ export function FieldEditor({
  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
  setErrors((prev) => ({
  ...prev,
- fieldName: "Field name must be alphanumeric with underscores, no spaces",
+ // The rule the regex actually enforces, stated as a rule plus an example.
+ // The previous wording said "alphanumeric with underscores, no spaces",
+ // which does not mention the leading-character restriction the pattern
+ // also imposes — so `2nd_party` was rejected with a message implying it
+ // should have been accepted.
+ fieldName:
+ "Field names can only use letters, numbers and underscores, and can't start with a number — try `party_name` instead of spaces or symbols.",
  }));
  return false;
  }
