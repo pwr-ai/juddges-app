@@ -49,7 +49,9 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
       setActiveModelId(data.active_model_id || "");
       setError(null);
     } catch {
-      setError("Failed to load embedding models. The backend may be unavailable.");
+      setError(
+        "Couldn't load embedding models — the backend may be unavailable. Try refreshing the page."
+      );
     } finally {
       setLoading(false);
     }

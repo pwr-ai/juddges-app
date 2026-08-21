@@ -54,7 +54,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       return false
     }
     if (value !== original) {
-      setRepeatPasswordError('Passwords do not match')
+      setRepeatPasswordError(
+        "Passwords don't match — retype them so both fields are identical."
+      )
       return false
     }
     setRepeatPasswordError(null)
