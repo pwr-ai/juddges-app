@@ -100,9 +100,9 @@ services:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
       - REDIS_HOST=redis
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_BACKEND_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BACKEND_URL=redis://:${REDIS_AUTH}@redis:6379/0
       # Gunicorn worker count. Unset → Dockerfile defaults to (2 * vCPU) + 1.
       # Override in .env (GUNICORN_WORKERS=...) to pin it for the prod host.
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-}
@@ -200,7 +200,22 @@ services:
     restart: unless-stopped
     expose:
       - "6379"
-    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    # `--requirepass` is what makes REDIS_AUTH mean anything. Without it the
+    # backend's startup gate (app/server.py, #191) demanded a password that no
+    # server ever asked for: setting the variable made clients authenticate
+    # against an open Redis, leaving it unset aborted boot. Both sides move
+    # together here. See #548.
+    command:
+      [
+        "redis-server",
+        "--save",
+        "60",
+        "1",
+        "--loglevel",
+        "warning",
+        "--requirepass",
+        "${REDIS_AUTH:?REDIS_AUTH must be set for production Redis}",
+      ]
     volumes:
       - redis-data:/data
     labels:
@@ -209,11 +224,15 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # REDISCLI_AUTH rather than `-a`, so the password never appears in the
+      # process list or in `docker inspect` health output.
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_AUTH\" redis-cli ping | grep -q PONG"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 5s
+    environment:
+      - REDIS_AUTH=${REDIS_AUTH:?REDIS_AUTH must be set for production Redis}
     logging:
       driver: "json-file"
       options:
@@ -271,9 +290,9 @@ services:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
       - REDIS_HOST=redis
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_BACKEND_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BACKEND_URL=redis://:${REDIS_AUTH}@redis:6379/0
       - CELERY_WORKER_STATE_DB=/var/lib/celery/worker-extraction-state
     # All environment variables loaded from env_file
     labels:
@@ -333,9 +352,9 @@ services:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
       - REDIS_HOST=redis
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_BACKEND_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BACKEND_URL=redis://:${REDIS_AUTH}@redis:6379/0
       - CELERY_WORKER_STATE_DB=/var/lib/celery/worker-maintenance-state
     labels:
       - "com.juddges.service=application"
@@ -391,9 +410,9 @@ services:
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_INTERNAL_URL=http://meilisearch:7700
       - REDIS_HOST=redis
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_BACKEND_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_AUTH}@redis:6379/0
+      - CELERY_BACKEND_URL=redis://:${REDIS_AUTH}@redis:6379/0
     labels:
       - "com.juddges.service=application"
       - "com.juddges.service.type=beat-scheduler"
