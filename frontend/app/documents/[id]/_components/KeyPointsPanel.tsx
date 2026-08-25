@@ -1,9 +1,12 @@
 import React from 'react';
 import { ChevronDown, ChevronUp, Scale, Loader2, Sparkles, MessageSquare, BookOpen } from 'lucide-react';
 
-import { BaseCard, Button, Badge, AIDisclaimerBadge } from '@/lib/styles/components';
+import { BaseCard, Button, Badge, AIDisclaimerBadge, ErrorCard } from '@/lib/styles/components';
 import type { ExtractKeyPointsResponse } from '@/lib/api';
 import { AuthRequiredAIActionsNotice } from './AuthRequiredAIActionsNotice';
+import logger from '@/lib/logger';
+
+const panelLogger = logger.child('KeyPointsPanel');
 
 interface KeyPointsPanelProps {
   isKeyPointsPanelOpen: boolean;
@@ -26,6 +29,12 @@ export function KeyPointsPanel({
   keyPointsResult,
   onExtractKeyPoints,
 }: KeyPointsPanelProps): React.JSX.Element {
+  // `keyPointsError` is the raw exception message from the extraction call. Keep it
+  // in the console for debugging and show the reader actionable copy instead.
+  React.useEffect(() => {
+    if (keyPointsError) panelLogger.error('Key-point extraction failed', keyPointsError);
+  }, [keyPointsError]);
+
   return (
     <div className="mb-6">
       <BaseCard
@@ -98,9 +107,13 @@ export function KeyPointsPanel({
 
               {/* Error */}
               {keyPointsError && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                  {keyPointsError}
-                </div>
+                <ErrorCard
+                  className="mb-4"
+                  title="Key points could not be extracted"
+                  message="The AI extraction service did not return arguments or holdings for this judgment. Nothing was saved and the document itself is untouched. Long judgments occasionally time out — try again, and if it keeps failing read the judgment text below directly."
+                  onRetry={onExtractKeyPoints}
+                  retryLabel={isExtractingKeyPoints ? 'Extracting…' : 'Try again'}
+                />
               )}
 
               {/* Key Points Result */}

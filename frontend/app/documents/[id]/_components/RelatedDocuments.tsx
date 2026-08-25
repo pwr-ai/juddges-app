@@ -1,8 +1,8 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, FileSearch } from 'lucide-react';
 
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
-import { BaseCard, Badge } from '@/lib/styles/components';
+import { BaseCard, Badge, EmptyState } from '@/lib/styles/components';
 import type { SimilarDocument } from './types';
 
 interface RelatedDocumentsProps {
@@ -15,8 +15,26 @@ export function RelatedDocuments({
   similarDocs,
   enrichedSimilarDocs,
   onNavigate,
-}: RelatedDocumentsProps): React.JSX.Element | null {
-  if (similarDocs.length === 0) return null;
+}: RelatedDocumentsProps): React.JSX.Element {
+  // Returning null here used to make the whole section disappear, which reads as
+  // "this feature is broken" rather than "we looked and found nothing". Keep the
+  // heading and explain the result instead.
+  if (similarDocs.length === 0) {
+    return (
+      <div className="mb-6 bg-transparent">
+        <h3 className="font-bold text-lg text-foreground mb-4">Similar Documents</h3>
+        <EmptyState
+          icon={FileSearch}
+          title="No similar documents found"
+          description="We compared this judgment against the rest of the corpus and nothing came back close enough to list. That usually means the corpus holds few cases on this subject yet, not that none exist. Try a search on the case's key terms to look more broadly."
+          primaryAction={{
+            label: 'Search the corpus',
+            onClick: () => onNavigate('/search'),
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mb-6 bg-transparent">

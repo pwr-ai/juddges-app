@@ -2,6 +2,11 @@
 
 import { CheckCircle2, AlertCircle, MinusCircle, Activity } from "lucide-react";
 import { useAdminSystemHealth, type ServiceHealth } from "@/lib/api/admin";
+import { ErrorCard } from "@/lib/styles/components";
+import logger from "@/lib/logger";
+import { useEffect } from "react";
+
+const pageLogger = logger.child("AdminSystemPage");
 
 interface StatusBadgeProps {
  status: ServiceHealth["status"];
@@ -81,7 +86,12 @@ function ServiceCardSkeleton() {
 }
 
 export default function AdminSystemPage() {
- const { data, isLoading, isError, error } = useAdminSystemHealth();
+ const { data, isLoading, isError, error, refetch } = useAdminSystemHealth();
+
+ // The raw exception is for us, not for the admin looking at the screen.
+ useEffect(() => {
+ if (error) pageLogger.error("Failed to load system health", error);
+ }, [error]);
 
  const services = data ? Object.entries(data.services) : [];
 
@@ -136,8 +146,13 @@ export default function AdminSystemPage() {
 
  {/* Error */}
  {isError && (
- <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
- Failed to load system health: {(error as Error).message}
+ <div role="alert"className="mb-6">
+ <ErrorCard
+ title="The health check could not be run"
+ message="The health endpoint did not respond, so the status of the database, search index and worker services is unknown. Unknown is not the same as down — the check itself failed. Re-run it, and if it keeps failing inspect the backend container logs directly."
+ onRetry={() => { void refetch(); }}
+ retryLabel="Re-run health check"
+ />
  </div>
  )}
 
@@ -146,10 +161,11 @@ export default function AdminSystemPage() {
  Array.from({ length: 4 }).map((_, i) => (
  <ServiceCardSkeleton key={i} />
  ))
- ) : services.length === 0 ? (
+ ) : isError ? null : services.length === 0 ? (
  <div className="rounded-2xl border border-border bg-card py-16 text-center">
  <p className="text-sm text-muted-foreground">
- No service health data available.
+ The health check ran but reported no services. Confirm the backend is
+ running with health reporting enabled, then re-run the check.
  </p>
  </div>
  ) : (

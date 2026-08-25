@@ -115,6 +115,7 @@ export const pl: Translations = {
 
     // Legal domain navigation
     searchJudgments: 'Szukaj orzeczeń',
+    searchExtractedData: 'Szukaj w danych z ekstrakcji',
     topicTrends: 'Trendy tematów',
     topicModeling: 'Modelowanie tematów',
     savedSearches: 'Zapisane wyszukiwania',
@@ -122,11 +123,22 @@ export const pl: Translations = {
     extractionResults: 'Wyniki ekstrakcji',
     baseTemplate: 'Bazowy schemat kodowania',
     compareDatasets: 'Porównaj zbiory danych',
+    precedentSearch: 'Wyszukiwanie precedensów',
+    argumentationAnalysis: 'Analiza argumentacji',
+    judgeFingerprint: 'Profil sędziego',
+
+    // Administration (admin-only surfaces)
+    administration: 'Administracja',
+    adminPanel: 'Panel administratora',
+
+    // Accessible names
+    homeLinkLabel: 'JuDDGES — przejdź do strony głównej',
 
     // Workflow phase labels
     phasePlan: '1. Zaplanuj',
     phaseSearch: '2. Wyszukaj',
-    phaseExport: '3. Eksportuj',
+    phaseAnalyze: '3. Analizuj',
+    phaseExport: '4. Eksportuj',
   },
 
   chat: {
@@ -399,5 +411,167 @@ export const pl: Translations = {
     reasoningPurposiveDescription: 'Interpretacja oparta na celach polityki prawnej lub intencji ustawodawcy.',
     reasoningTeleological: 'Teleologiczna',
     reasoningTeleologicalDescription: 'Interpretacja celowościowa, odwołująca się do celu i funkcji przepisu.',
+  },
+
+  reasoningLines: {
+    // Page header
+    pageTitle: 'Linie orzecznicze',
+    pageSubtitle: 'Odkrywaj klastry orzeczeń dotyczących tego samego zagadnienia prawnego',
+
+    // Tabs
+    tabDiscover: 'Odkrywanie',
+    tabSaved: 'Zapisane linie',
+    tabDag: 'Graf DAG',
+
+    // Discovery controls
+    paramsHeading: 'Parametry odkrywania',
+    paramSampleSize: 'Rozmiar próbki',
+    paramNumClusters: 'Liczba klastrów',
+    paramLegalDomain: 'Dziedzina prawa (opcjonalnie)',
+    paramLegalDomainPlaceholder: 'np. prawo podatkowe, prawo pracy...',
+    discoverButton: 'Odkryj linie',
+    discoverButtonPending: 'Odkrywanie...',
+
+    // Discovery states
+    discoverLoadingTitle: 'Odkrywanie linii orzeczniczych...',
+    discoverLoadingSubtitle: 'Klasteryzacja orzeczeń na podstawie podobieństwa semantycznego — większe próbki trwają dłużej',
+    discoverErrorTitle: 'Nie udało się przeprowadzić odkrywania',
+    discoverErrorMessage: 'Usługa klasteryzacji nie zwróciła wyniku, więc nie odkryto żadnych linii. Nic nie zostało zapisane. Spróbuj ponownie lub zmniejsz rozmiar próbki i liczbę klastrów, aby odciążyć zapytanie.',
+    discoverEmptyTitle: 'Nie uruchomiono jeszcze odkrywania',
+    discoverEmptyDescription: 'Nie przeprowadzono dotąd żadnej klasteryzacji. Ustaw powyżej rozmiar próbki, liczbę klastrów i — opcjonalnie — dziedzinę prawa, a następnie wybierz „Odkryj linie”, aby pogrupować orzeczenia dotyczące tego samego zagadnienia prawnego.',
+    discoveredHeading: 'Odkryte linie orzecznicze ({{count}})',
+
+    // Discovery statistics
+    statDocuments: 'Dokumenty',
+    statClusters: 'Klastry',
+    statCoherence: 'Koherencja',
+    statTime: 'Czas',
+
+    // How discovery works
+    howItWorks: 'Jak to działa',
+    howSemanticTitle: 'Klasteryzacja semantyczna',
+    howSemanticDescription: 'Orzeczenia są grupowane na podstawie znaczenia ich treści i uzasadnień, a nie zbieżności słów kluczowych.',
+    howSharedBasesTitle: 'Wspólne podstawy prawne',
+    howSharedBasesDescription: 'Klastry spaja wspólne odwołanie do tych samych przepisów i aktów prawnych.',
+    howCoherenceTitle: 'Analiza koherencji',
+    howCoherenceDescription: 'Każdy klaster otrzymuje ocenę spójności — im wyższa, tym bardziej jednorodna linia orzecznicza.',
+    howKeywordsTitle: 'Słowa kluczowe',
+    howKeywordsDescription: 'Najbardziej charakterystyczne terminy każdego klastra są wyodrębniane automatycznie.',
+
+    // Cluster / line cards
+    clusterCaseCount: 'Liczba spraw: {{count}}',
+    coherenceLabel: 'Koherencja',
+    coherenceValue: 'Koherencja: {{percent}}%',
+    legalBasesLabel: 'Podstawy prawne',
+    showCases: 'Pokaż sprawy ({{count}})',
+    hideCases: 'Ukryj sprawy',
+    saveCluster: 'Zapisz jako linię',
+    saveClusterPending: 'Zapisywanie...',
+    saveClusterDone: 'Zapisano',
+    caseCount: '{{count}} spraw',
+    similarityMatch: '{{percent}}% trafności',
+
+    // Status labels
+    statusActive: 'Aktywna',
+    statusArchived: 'Zarchiwizowana',
+    statusDeleted: 'Usunięta',
+
+    // Saved lines tab
+    searchPlaceholder: 'Szukaj linii orzeczniczych...',
+    searchAriaLabel: 'Szukaj linii orzeczniczych',
+    searchErrorTitle: 'Wyszukiwanie jest niedostępne',
+    searchErrorMessage: 'Nie udało się połączyć z usługą wyszukiwania linii orzeczniczych, więc nie wczytano żadnych wyników. Spróbuj ponownie za chwilę lub wyczyść pole wyszukiwania, aby przeglądać wszystkie zapisane linie.',
+    searchEmptyTitle: 'Żadna linia orzecznicza nie pasuje do zapytania',
+    searchEmptyDescription: 'Nic w zapisanym katalogu nie pasuje do „{{query}}”. Wyszukiwanie obejmuje nazwy, pytania prawne i słowa kluczowe — spróbuj ogólniejszego sformułowania albo wyczyść pole, aby przeglądać wszystkie zapisane linie.',
+    searchResultsHeading: 'Wyniki wyszukiwania ({{count}})',
+    savedLoading: 'Ładowanie zapisanych linii orzeczniczych...',
+    savedErrorTitle: 'Nie udało się wczytać zapisanych linii',
+    savedErrorMessage: 'Nie udało się pobrać zapisanych linii orzeczniczych z serwera. Nic nie zostało utracone — spróbuj ponownie lub odśwież stronę, jeśli problem się powtarza.',
+    savedEmptyTitle: 'Brak zapisanych linii orzeczniczych',
+    savedEmptyDescription: 'Do katalogu nie dodano dotąd żadnej linii. Przejdź do zakładki „Odkrywanie”, uruchom odkrywanie na korpusie orzeczeń i zapisz klastry warte obserwowania — pojawią się w tym miejscu.',
+    savedHeading: 'Zapisane linie orzecznicze ({{count}})',
+
+    // Automated pipeline card
+    pipelineHeading: 'Automatyczny pipeline',
+    pipelineWeekly: 'Co tydzień',
+    pipelineAssignTitle: 'Automatyczne przypisywanie',
+    pipelineAssignDescription: 'Nowe orzeczenia są automatycznie przypisywane do istniejących linii',
+    pipelineDiscoverTitle: 'Automatyczne odkrywanie',
+    pipelineDiscoverDescription: 'Nieprzypisane orzeczenia są grupowane w nowe linie',
+    pipelineEventsTitle: 'Wykrywanie zdarzeń',
+    pipelineEventsDescription: 'Rozgałęzienia i połączenia między liniami są wykrywane automatycznie',
+
+    // DAG tab
+    dagHeading: 'Graf DAG linii orzeczniczych',
+    detectEvents: 'Wykryj zdarzenia',
+    detectEventsPending: 'Wykrywanie...',
+    detectEventsError: 'Wykrywanie zdarzeń nie powiodło się. Nic nie zostało zmienione — spróbuj ponownie za chwilę.',
+    eventBranches: 'Rozgałęzienia: {{count}}',
+    eventMerges: 'Połączenia: {{count}}',
+    eventInfluences: 'Wpływy: {{count}}',
+    eventLinesAnalyzed: 'Przeanalizowanych linii: {{count}}',
+    eventProcessingTime: 'Czas: {{seconds}} s',
+    dagLoading: 'Ładowanie grafu DAG...',
+    dagErrorTitle: 'Nie udało się wczytać grafu',
+    dagErrorMessage: 'Nie udało się pobrać grafu linii orzeczniczych z serwera. Spróbuj ponownie; jeśli błąd się powtarza, graf może być wciąż przebudowywany po ostatnim przebiegu pipeline’u.',
+    dagEmptyTitle: 'Nie ma jeszcze czego pokazać',
+    dagEmptyDescriptionAdmin: 'Graf jest pusty, ponieważ nie zarejestrowano żadnych rozgałęzień, połączeń ani wpływów. Zapisz co najmniej dwie linie orzecznicze, a następnie wybierz „Wykryj zdarzenia”, aby zbudować graf.',
+    dagEmptyDescription: 'Graf jest pusty, ponieważ nie zarejestrowano jeszcze żadnych linii orzeczniczych ani powiązań między nimi. Graf buduje administrator — wróć tutaj, gdy linie zostaną zapisane i przeanalizowane.',
+    statNodes: 'Węzły',
+    statEdges: 'Krawędzie',
+    statBranches: 'Rozgałęzienia',
+    statMerges: 'Połączenia',
+
+    // Detail page — shell states
+    backToList: 'Powrót do linii orzeczniczych',
+    detailLoading: 'Ładowanie szczegółów linii orzeczniczej...',
+    detailErrorTitle: 'Nie udało się wczytać linii orzeczniczej',
+    detailErrorMessage: 'Nie udało się pobrać szczegółów tej linii orzeczniczej z serwera. Spróbuj ponownie lub wróć do listy i otwórz linię jeszcze raz.',
+    detailNotFoundTitle: 'Nie znaleziono linii orzeczniczej',
+    detailNotFoundDescription: 'Ta linia orzecznicza nie istnieje lub została usunięta. Wróć do listy, aby przejrzeć linie nadal dostępne w katalogu.',
+    createdLabel: 'Utworzono: {{date}}',
+
+    // Detail page — delete flow
+    deleteLine: 'Usuń linię',
+    deleteConfirmQuestion: 'Usunąć tę linię orzeczniczą dla wszystkich użytkowników?',
+    deleteConfirm: 'Tak, usuń',
+    deletePending: 'Usuwanie...',
+    deleteError: 'Nie udało się usunąć linii orzeczniczej. Nic nie zostało usunięte — spróbuj ponownie za chwilę.',
+
+    // Detail page — member judgments
+    membersHeading: 'Orzeczenia w linii ({{count}})',
+    membersEmptyTitle: 'Brak orzeczeń w tej linii',
+    membersEmptyDescription: 'Do tej linii orzeczniczej nie przypisano jeszcze żadnych orzeczeń. Cotygodniowe automatyczne przypisywanie dodaje pasujące, nowo zaimportowane orzeczenia — wróć po kolejnym przebiegu.',
+
+    // Detail page — outcome timeline
+    outcomeHeading: 'Ewolucja rozstrzygnięć w czasie',
+    classify: 'Klasyfikuj orzeczenia',
+    classifyPending: 'Klasyfikowanie...',
+    classifyError: 'Klasyfikacja nie powiodła się. Żadne rozstrzygnięcie nie zostało zmienione — spróbuj ponownie za chwilę.',
+    classifyClassified: 'Sklasyfikowano: {{count}}',
+    classifySkipped: 'Pominięto: {{count}}',
+    classifyErrors: 'Błędy: {{count}}',
+    timelineLoading: 'Ładowanie osi czasu rozstrzygnięć...',
+    timelineErrorAdmin: 'Brak osi czasu. Rozstrzygnięcia w tej linii nie zostały jeszcze sklasyfikowane — wybierz powyżej „Klasyfikuj orzeczenia”, aby ją wygenerować.',
+    timelineError: 'Brak osi czasu. Rozstrzygnięcia w tej linii nie zostały jeszcze sklasyfikowane, więc nie ma czego pokazać.',
+    timelineEmptyAdmin: 'Nie sklasyfikowano jeszcze żadnego orzeczenia. Wybierz powyżej „Klasyfikuj orzeczenia”, aby oznaczyć rozstrzygnięcia i zbudować oś czasu.',
+    timelineEmpty: 'Nie sklasyfikowano jeszcze żadnego orzeczenia, więc oś czasu rozstrzygnięć jest pusta.',
+    timelineTotalClassified: 'Sklasyfikowanych: {{count}}',
+    timelineTotalUnclassified: 'Niesklasyfikowanych: {{count}}',
+
+    // Detail page — language drift
+    driftHeading: 'Dryf językowy',
+    driftAnalyze: 'Analizuj dryf',
+    driftPending: 'Analizowanie...',
+    driftError: 'Analiza dryfu nie powiodła się. Nic nie zostało zmienione — spróbuj ponownie za chwilę.',
+    driftLoading: 'Analizowanie dryfu językowego...',
+    driftIdleAdmin: 'Dryf językowy nie został jeszcze przeanalizowany. Wybierz „Analizuj dryf”, aby zbadać, jak zmieniał się w czasie język orzeczeń w tej linii.',
+    driftIdle: 'Dryf językowy nie został jeszcze przeanalizowany dla tej linii, więc nie ma czego pokazać.',
+
+    // Detail page — related lines
+    relatedHeading: 'Powiązane linie orzecznicze',
+    relatedLoading: 'Ładowanie powiązanych linii orzeczniczych...',
+    relatedError: 'Nie udało się wczytać powiązanych linii orzeczniczych. Odśwież stronę, aby spróbować ponownie.',
+    relatedEmpty: 'Nie znaleziono powiązanych linii orzeczniczych. Powiązania opierają się na wspólnych podstawach prawnych i słowach kluczowych — pojawią się w miarę rozrostu katalogu.',
   },
 };

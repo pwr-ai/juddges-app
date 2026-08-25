@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 
 import { ActiveFilterChips } from "@/components/filters/extracted-search-filters";
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorCard } from "@/lib/styles/components";
+import logger from "@/lib/logger";
 import { useExtractionResults } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
 import type {
@@ -20,6 +22,8 @@ import type {
   BaseSchemaFilters,
 } from "@/types/base-schema-filter";
 import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
+
+const pageLogger = logger.child("ExtractionSearchPage");
 
 // =============================================================================
 // Adapter: BaseSchemaFilters (PG RPC) ↔ BaseFilters (drawer's union)
@@ -212,9 +216,13 @@ function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
 function ResultList({
   rows,
   isLoading,
+  hasActiveFilters,
+  onClearAll,
 }: {
   rows: BaseSchemaFilterResultRow[];
   isLoading: boolean;
+  hasActiveFilters: boolean;
+  onClearAll: () => void;
 }) {
   if (isLoading && rows.length === 0) {
     return (
@@ -229,8 +237,15 @@ function ResultList({
     return (
       <div className="rounded-lg border border-dashed p-8 text-center">
         <p className="text-sm text-muted-foreground">
-          No judgments match the current filters.
+          {hasActiveFilters
+            ? "No judgment in the corpus matches every filter at once. Extraction coverage is uneven, so combining several fields narrows results quickly — drop the most specific filter, or clear them all and add them back one at a time."
+            : "No extracted judgments are available yet. Once documents have been through structured extraction they become searchable here."}
         </p>
+        {hasActiveFilters && (
+          <Button variant="outline" size="sm" className="mt-4" onClick={onClearAll}>
+            Clear all filters
+          </Button>
+        )}
       </div>
     );
   }
@@ -267,7 +282,13 @@ function ExtractionSearchPage() {
     [filters, textQuery, page, pageSize],
   );
 
-  const { data, isLoading, isFetching, error } = useExtractionResults(request);
+  const { data, isLoading, isFetching, error, refetch } = useExtractionResults(request);
+
+  // Never render the raw exception: it leaks internals and gives the reader
+  // nothing to act on. Keep it in the console instead.
+  useEffect(() => {
+    if (error) pageLogger.error("Extraction search failed", error);
+  }, [error]);
   const rows = data?.documents ?? [];
   const total = data?.total_count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -391,12 +412,25 @@ function ExtractionSearchPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {(error as Error).message}
+        <div role="alert">
+        <ErrorCard
+          title="Results could not be loaded"
+          message="The extraction search did not return results. Your filters are still applied and nothing was lost. An unusual filter combination is the most common cause — reset the filters and add them back one at a time."
+          onRetry={() => { void refetch(); }}
+          retryLabel="Try again"
+          secondaryAction={{ label: "Reset filters", onClick: () => clearAll() }}
+        />
         </div>
       )}
 
-      <ResultList rows={rows} isLoading={isLoading} />
+      {!error && (
+        <ResultList
+          rows={rows}
+          isLoading={isLoading}
+          hasActiveFilters={activeCount > 0 || textQuery.trim().length > 0}
+          onClearAll={clearAll}
+        />
+      )}
 
       {total > pageSize && (
         <Pagination
@@ -413,9 +447,35 @@ function ExtractionSearchPage() {
   );
 }
 
+/**
+ * Placeholder for the filter bar and result list while the client component
+ * reads its filter state out of the URL. Without it the route rendered a blank
+ * screen on first paint.
+ */
+function ExtractionSearchPageSkeleton() {
+  return (
+    <div className="space-y-4 p-6" role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">Loading extraction search…</span>
+      <Skeleton className="h-9 w-64" />
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-28 rounded-full" />
+        ))}
+      </div>
+      <Skeleton className="h-5 w-40" />
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<ExtractionSearchPageSkeleton />}>
       <ExtractionSearchPage />
     </Suspense>
   );

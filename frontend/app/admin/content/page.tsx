@@ -2,6 +2,11 @@
 
 import { BookOpen, CheckCircle2, PenLine, Eye } from "lucide-react";
 import { useAdminContentStats } from "@/lib/api/admin";
+import { ErrorCard } from "@/lib/styles/components";
+import logger from "@/lib/logger";
+import { useEffect } from "react";
+
+const pageLogger = logger.child("AdminContentPage");
 
 function StatCardSkeleton() {
  return (
@@ -14,7 +19,12 @@ function StatCardSkeleton() {
 }
 
 export default function AdminContentPage() {
- const { data, isLoading, isError, error } = useAdminContentStats();
+ const { data, isLoading, isError, error, refetch } = useAdminContentStats();
+
+ // The raw exception is for us, not for the admin looking at the screen.
+ useEffect(() => {
+ if (error) pageLogger.error("Failed to load content stats", error);
+ }, [error]);
 
  const statCards = data
  ? [
@@ -55,8 +65,13 @@ export default function AdminContentPage() {
 
  {/* Error */}
  {isError && (
- <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
- Failed to load content stats: {(error as Error).message}
+ <div role="alert"className="mb-6">
+ <ErrorCard
+ title="Blog statistics could not be loaded"
+ message="The content statistics endpoint did not respond, so post, draft and view counts are unavailable. Published posts are unaffected — this is a reporting failure. Retry, and if it keeps failing check Admin → System for service health."
+ onRetry={() => { void refetch(); }}
+ retryLabel="Reload statistics"
+ />
  </div>
  )}
 
@@ -126,7 +141,9 @@ export default function AdminContentPage() {
 
  {!isLoading && !isError && !data && (
  <div className="rounded-2xl border border-border bg-card py-16 text-center">
- <p className="text-sm text-muted-foreground">No content data available.</p>
+ <p className="text-sm text-muted-foreground">
+ No blog posts have been created yet. Publish your first post and its statistics will appear here.
+ </p>
  </div>
  )}
 

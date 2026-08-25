@@ -2,9 +2,12 @@ import React from 'react';
 import { ChevronDown, ChevronUp, FileText, Loader2, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-import { BaseCard, Button, Badge, AIDisclaimerBadge } from '@/lib/styles/components';
+import { BaseCard, Button, Badge, AIDisclaimerBadge, ErrorCard } from '@/lib/styles/components';
 import type { SummarizeDocumentsResponse } from '@/lib/api';
 import { AuthRequiredAIActionsNotice } from './AuthRequiredAIActionsNotice';
+import logger from '@/lib/logger';
+
+const panelLogger = logger.child('AISummaryPanel');
 
 interface AISummaryPanelProps {
   isSummaryPanelOpen: boolean;
@@ -35,6 +38,12 @@ export function AISummaryPanel({
   summaryResult,
   onGenerateSummary,
 }: AISummaryPanelProps): React.JSX.Element {
+  // `summaryError` is the raw exception message from the generation call. Keep it
+  // in the console for debugging and show the reader actionable copy instead.
+  React.useEffect(() => {
+    if (summaryError) panelLogger.error('Summary generation failed', summaryError);
+  }, [summaryError]);
+
   return (
     <div className="mb-6">
       <BaseCard
@@ -141,9 +150,13 @@ export function AISummaryPanel({
 
               {/* Summary Error */}
               {summaryError && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                  {summaryError}
-                </div>
+                <ErrorCard
+                  className="mb-4"
+                  title="The summary could not be generated"
+                  message="The AI summarisation service did not return a summary for this judgment. Nothing was saved and the document itself is untouched. Long judgments occasionally time out — try again, or pick a shorter summary length before retrying."
+                  onRetry={onGenerateSummary}
+                  retryLabel={isSummarizing ? 'Generating…' : 'Try again'}
+                />
               )}
 
               {/* Summary Result */}

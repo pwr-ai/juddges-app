@@ -2,6 +2,11 @@
 
 import { FileText, Globe, Scale, Tag } from "lucide-react";
 import { useAdminDocumentStats } from "@/lib/api/admin";
+import { ErrorCard } from "@/lib/styles/components";
+import logger from "@/lib/logger";
+import { useEffect } from "react";
+
+const pageLogger = logger.child("AdminDocumentsPage");
 
 function StatCardSkeleton() {
  return (
@@ -63,7 +68,7 @@ function BreakdownTable({
  colSpan={2}
  className="px-6 py-8 text-center text-sm text-muted-foreground"
  >
- No data.
+ Nothing to break down here yet — no ingested document carries this attribute.
  </td>
  </tr>
  ) : (
@@ -86,7 +91,12 @@ function BreakdownTable({
 }
 
 export default function AdminDocumentsPage() {
- const { data, isLoading, isError, error } = useAdminDocumentStats();
+ const { data, isLoading, isError, error, refetch } = useAdminDocumentStats();
+
+ // The raw exception is for us, not for the admin looking at the screen.
+ useEffect(() => {
+ if (error) pageLogger.error("Failed to load document stats", error);
+ }, [error]);
 
  const statCards = data
  ? [
@@ -127,8 +137,13 @@ export default function AdminDocumentsPage() {
 
  {/* Error */}
  {isError && (
- <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
- Failed to load document stats: {(error as Error).message}
+ <div role="alert"className="mb-6">
+ <ErrorCard
+ title="Corpus statistics could not be loaded"
+ message="The document statistics endpoint did not respond, so the counters and breakdowns below are unavailable. The corpus itself is unaffected — this is a reporting failure. Retry, and if it keeps failing check Admin → System for service health."
+ onRetry={() => { void refetch(); }}
+ retryLabel="Reload statistics"
+ />
  </div>
  )}
 

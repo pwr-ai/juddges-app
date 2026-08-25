@@ -159,6 +159,7 @@ export interface NavigationTranslations {
 
   // Legal domain navigation
   searchJudgments: string;
+  searchExtractedData: string;
   topicTrends: string;
   topicModeling: string;
   savedSearches: string;
@@ -166,10 +167,21 @@ export interface NavigationTranslations {
   extractionResults: string;
   baseTemplate: string;
   compareDatasets: string;
+  precedentSearch: string;
+  argumentationAnalysis: string;
+  judgeFingerprint: string;
+
+  // Administration (admin-only surfaces)
+  administration: string;
+  adminPanel: string;
+
+  // Accessible names
+  homeLinkLabel: string;
 
   // Workflow phase labels
   phasePlan: string;
   phaseSearch: string;
+  phaseAnalyze: string;
   phaseExport: string;
 }
 
@@ -457,6 +469,172 @@ export interface JudgeFingerprintTranslations {
 }
 
 /**
+ * Translation namespace for the Reasoning Lines pages
+ * (`/reasoning-lines` and `/reasoning-lines/[id]`)
+ */
+export interface ReasoningLinesTranslations {
+  // Page header
+  pageTitle: string;
+  pageSubtitle: string;
+
+  // Tabs
+  tabDiscover: string;
+  tabSaved: string;
+  tabDag: string;
+
+  // Discovery controls
+  paramsHeading: string;
+  paramSampleSize: string;
+  paramNumClusters: string;
+  paramLegalDomain: string;
+  paramLegalDomainPlaceholder: string;
+  discoverButton: string;
+  discoverButtonPending: string;
+
+  // Discovery states
+  discoverLoadingTitle: string;
+  discoverLoadingSubtitle: string;
+  discoverErrorTitle: string;
+  discoverErrorMessage: string;
+  discoverEmptyTitle: string;
+  discoverEmptyDescription: string;
+  discoveredHeading: string;
+
+  // Discovery statistics
+  statDocuments: string;
+  statClusters: string;
+  statCoherence: string;
+  statTime: string;
+
+  // How discovery works
+  howItWorks: string;
+  howSemanticTitle: string;
+  howSemanticDescription: string;
+  howSharedBasesTitle: string;
+  howSharedBasesDescription: string;
+  howCoherenceTitle: string;
+  howCoherenceDescription: string;
+  howKeywordsTitle: string;
+  howKeywordsDescription: string;
+
+  // Cluster / line cards
+  clusterCaseCount: string;
+  coherenceLabel: string;
+  coherenceValue: string;
+  legalBasesLabel: string;
+  showCases: string;
+  hideCases: string;
+  saveCluster: string;
+  saveClusterPending: string;
+  saveClusterDone: string;
+  caseCount: string;
+  similarityMatch: string;
+
+  // Status labels
+  statusActive: string;
+  statusArchived: string;
+  statusDeleted: string;
+
+  // Saved lines tab
+  searchPlaceholder: string;
+  searchAriaLabel: string;
+  searchErrorTitle: string;
+  searchErrorMessage: string;
+  searchEmptyTitle: string;
+  searchEmptyDescription: string;
+  searchResultsHeading: string;
+  savedLoading: string;
+  savedErrorTitle: string;
+  savedErrorMessage: string;
+  savedEmptyTitle: string;
+  savedEmptyDescription: string;
+  savedHeading: string;
+
+  // Automated pipeline card
+  pipelineHeading: string;
+  pipelineWeekly: string;
+  pipelineAssignTitle: string;
+  pipelineAssignDescription: string;
+  pipelineDiscoverTitle: string;
+  pipelineDiscoverDescription: string;
+  pipelineEventsTitle: string;
+  pipelineEventsDescription: string;
+
+  // DAG tab
+  dagHeading: string;
+  detectEvents: string;
+  detectEventsPending: string;
+  detectEventsError: string;
+  eventBranches: string;
+  eventMerges: string;
+  eventInfluences: string;
+  eventLinesAnalyzed: string;
+  eventProcessingTime: string;
+  dagLoading: string;
+  dagErrorTitle: string;
+  dagErrorMessage: string;
+  dagEmptyTitle: string;
+  dagEmptyDescriptionAdmin: string;
+  dagEmptyDescription: string;
+  statNodes: string;
+  statEdges: string;
+  statBranches: string;
+  statMerges: string;
+
+  // Detail page — shell states
+  backToList: string;
+  detailLoading: string;
+  detailErrorTitle: string;
+  detailErrorMessage: string;
+  detailNotFoundTitle: string;
+  detailNotFoundDescription: string;
+  createdLabel: string;
+
+  // Detail page — delete flow
+  deleteLine: string;
+  deleteConfirmQuestion: string;
+  deleteConfirm: string;
+  deletePending: string;
+  deleteError: string;
+
+  // Detail page — member judgments
+  membersHeading: string;
+  membersEmptyTitle: string;
+  membersEmptyDescription: string;
+
+  // Detail page — outcome timeline
+  outcomeHeading: string;
+  classify: string;
+  classifyPending: string;
+  classifyError: string;
+  classifyClassified: string;
+  classifySkipped: string;
+  classifyErrors: string;
+  timelineLoading: string;
+  timelineErrorAdmin: string;
+  timelineError: string;
+  timelineEmptyAdmin: string;
+  timelineEmpty: string;
+  timelineTotalClassified: string;
+  timelineTotalUnclassified: string;
+
+  // Detail page — language drift
+  driftHeading: string;
+  driftAnalyze: string;
+  driftPending: string;
+  driftError: string;
+  driftLoading: string;
+  driftIdleAdmin: string;
+  driftIdle: string;
+
+  // Detail page — related lines
+  relatedHeading: string;
+  relatedLoading: string;
+  relatedError: string;
+  relatedEmpty: string;
+}
+
+/**
  * Translation namespace for legal terminology
  */
 export interface LegalTranslations {
@@ -502,6 +680,7 @@ export interface Translations {
   legal: LegalTranslations;
   dashboard: DashboardTranslations;
   judgeFingerprint: JudgeFingerprintTranslations;
+  reasoningLines: ReasoningLinesTranslations;
 }
 
 /**
@@ -519,7 +698,8 @@ export type TranslationKey =
   | `errors.${keyof ErrorTranslations}`
   | `legal.${keyof LegalTranslations}`
   | `dashboard.${keyof DashboardTranslations}`
-  | `judgeFingerprint.${keyof JudgeFingerprintTranslations}`;
+  | `judgeFingerprint.${keyof JudgeFingerprintTranslations}`
+  | `reasoningLines.${keyof ReasoningLinesTranslations}`;
 
 /**
  * Interpolation values for dynamic translations

@@ -53,6 +53,8 @@ import type {
 import Link from 'next/link';
 import { ReasoningDAG } from '@/components/reasoning-lines/ReasoningDAG';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { logger } from '@/lib/logger';
 
 /** Active tab on the reasoning lines page */
 type TabId = 'discover' | 'saved' | 'dag';
@@ -90,7 +92,7 @@ function formatCoherence(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
 
-/** Format date string to a shorter Polish-friendly format */
+/** Format date string to a short, locale-stable numeric format */
 function formatDate(dateStr: string): string {
   try {
     const date = new Date(dateStr);
@@ -105,6 +107,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ReasoningLinesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isAdmin = user?.app_metadata?.is_admin === true;
   const [activeTab, setActiveTab] = useState<TabId>('discover');
@@ -134,6 +137,9 @@ export default function ReasoningLinesPage() {
       setExpandedClusters(new Set());
       setSavedClusters(new Set());
     },
+    onError: (error) => {
+      logger.error('Reasoning line discovery request failed', error);
+    },
   });
 
   // Create reasoning line mutation
@@ -147,6 +153,9 @@ export default function ReasoningLinesPage() {
       if (cluster) {
         setSavedClusters((prev) => new Set(prev).add(cluster.cluster_id));
       }
+    },
+    onError: (error) => {
+      logger.error('Saving a discovered cluster as a reasoning line failed', error);
     },
   });
 
@@ -171,6 +180,9 @@ export default function ReasoningLinesPage() {
       setEventResult(result);
       // Refetch DAG after events are detected
       queryClient.invalidateQueries({ queryKey: ['reasoning-lines-dag'] });
+    },
+    onError: (error) => {
+      logger.error('Reasoning line event detection failed', error);
     },
   });
 
@@ -214,7 +226,6 @@ export default function ReasoningLinesPage() {
 
   const isLoading = discoveryMutation.isPending;
   const hasError = discoveryMutation.isError;
-  const errorMessage = discoveryMutation.error?.message ?? 'Nieznany blad';
 
   return (
     <PageContainer width="medium" fillViewport>
@@ -226,10 +237,10 @@ export default function ReasoningLinesPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Linie orzecznicze
+              {t('reasoningLines.pageTitle')}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Odkryj klastry orzeczen dotyczacych tych samych zagadnien prawnych
+              {t('reasoningLines.pageSubtitle')}
             </p>
           </div>
         </div>
@@ -249,7 +260,7 @@ export default function ReasoningLinesPage() {
           role="tab"
         >
           <Search className="h-4 w-4" />
-          Odkryj
+          {t('reasoningLines.tabDiscover')}
         </button>
         <button
           onClick={() => setActiveTab('saved')}
@@ -262,7 +273,7 @@ export default function ReasoningLinesPage() {
           role="tab"
         >
           <BookMarked className="h-4 w-4" />
-          Zapisane linie
+          {t('reasoningLines.tabSaved')}
         </button>
         <button
           onClick={() => setActiveTab('dag')}
@@ -275,7 +286,7 @@ export default function ReasoningLinesPage() {
           role="tab"
         >
           <Network className="h-4 w-4" />
-          Graf DAG
+          {t('reasoningLines.tabDag')}
         </button>
       </div>
 
@@ -288,14 +299,14 @@ export default function ReasoningLinesPage() {
           <BaseCard clickable={false} variant="light" className="rounded-[16px]">
             <div className="space-y-5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Parametry odkrywania
+                {t('reasoningLines.paramsHeading')}
               </label>
 
               {/* Sample size slider */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">
-                    Rozmiar probki
+                    {t('reasoningLines.paramSampleSize')}
                   </span>
                   <span className="text-sm text-muted-foreground tabular-nums">
                     {sampleSize}
@@ -318,7 +329,7 @@ export default function ReasoningLinesPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-foreground">
-                    Liczba klastrow
+                    {t('reasoningLines.paramNumClusters')}
                   </span>
                   <span className="text-sm text-muted-foreground tabular-nums">
                     {numClusters}
@@ -340,10 +351,10 @@ export default function ReasoningLinesPage() {
               {/* Legal domain filter */}
               <div className="space-y-2">
                 <span className="text-sm font-medium text-foreground">
-                  Dziedzina prawa (opcjonalnie)
+                  {t('reasoningLines.paramLegalDomain')}
                 </span>
                 <Input
-                  placeholder="np. prawo podatkowe, prawo pracy..."
+                  placeholder={t('reasoningLines.paramLegalDomainPlaceholder')}
                   value={legalDomainFilter}
                   onChange={(e) => setLegalDomainFilter(e.target.value)}
                   className="bg-white/50"
@@ -357,7 +368,9 @@ export default function ReasoningLinesPage() {
                 className="w-full sm:w-auto flex items-center gap-2"
               >
                 <Search className="h-4 w-4" />
-                {isLoading ? 'Odkrywanie...' : 'Odkryj linie'}
+                {isLoading
+                  ? t('reasoningLines.discoverButtonPending')
+                  : t('reasoningLines.discoverButton')}
               </Button>
             </div>
           </BaseCard>
@@ -367,18 +380,18 @@ export default function ReasoningLinesPage() {
             <LoadingIndicator
               variant="centered"
               size="lg"
-              message="Odkrywanie linii orzeczniczych..."
-              subtitle="Klasteryzacja orzeczen na podstawie podobienstwa semantycznego"
+              message={t('reasoningLines.discoverLoadingTitle')}
+              subtitle={t('reasoningLines.discoverLoadingSubtitle')}
             />
           )}
 
           {/* Error state */}
           {hasError && !isLoading && (
             <ErrorCard
-              title="Blad odkrywania"
-              message={errorMessage}
+              title={t('reasoningLines.discoverErrorTitle')}
+              message={t('reasoningLines.discoverErrorMessage')}
               onRetry={handleDiscover}
-              retryLabel="Sprobuj ponownie"
+              retryLabel={t('common.retry')}
             />
           )}
 
@@ -387,22 +400,22 @@ export default function ReasoningLinesPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
                 icon={Hash}
-                label="Dokumenty"
+                label={t('reasoningLines.statDocuments')}
                 value={results.statistics.total_documents.toLocaleString('pl-PL')}
               />
               <StatCard
                 icon={GitBranch}
-                label="Klastry"
+                label={t('reasoningLines.statClusters')}
                 value={results.statistics.num_clusters.toString()}
               />
               <StatCard
                 icon={BarChart3}
-                label="Koherencja"
+                label={t('reasoningLines.statCoherence')}
                 value={formatCoherence(results.statistics.avg_coherence)}
               />
               <StatCard
                 icon={Clock}
-                label="Czas"
+                label={t('reasoningLines.statTime')}
                 value={`${(results.statistics.processing_time_ms / 1000).toFixed(1)}s`}
               />
             </div>
@@ -412,7 +425,7 @@ export default function ReasoningLinesPage() {
           {results && !isLoading && results.clusters.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">
-                Odkryte linie orzecznicze ({results.clusters.length})
+                {t('reasoningLines.discoveredHeading', { count: results.clusters.length })}
               </h2>
               <div className="grid gap-4 lg:grid-cols-2">
                 {results.clusters.map((cluster, index) => (
@@ -438,38 +451,48 @@ export default function ReasoningLinesPage() {
           {!results && !isLoading && !hasError && (
             <div className="space-y-6">
               <EmptyState
-                title="Linie orzecznicze"
-                description="Skonfiguruj parametry powyzej i kliknij 'Odkryj linie', aby automatycznie pogrupowac orzeczenia dotyczace tych samych zagadnien prawnych."
+                title={t('reasoningLines.discoverEmptyTitle')}
+                description={t('reasoningLines.discoverEmptyDescription')}
                 icon={GitBranch}
               />
 
               {/* How it works explanation */}
               <BaseCard clickable={false} variant="light" className="rounded-[16px]">
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-foreground">Jak to dziala</h3>
+                  <h3 className="text-sm font-medium text-foreground">
+                    {t('reasoningLines.howItWorks')}
+                  </h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">Klasteryzacja semantyczna</div>
+                      <div className="text-xs font-medium text-primary">
+                        {t('reasoningLines.howSemanticTitle')}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Orzeczenia sa grupowane na podstawie podobienstwa znaczeniowego ich tresci i uzasadnien.
+                        {t('reasoningLines.howSemanticDescription')}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">Wspolne podstawy prawne</div>
+                      <div className="text-xs font-medium text-primary">
+                        {t('reasoningLines.howSharedBasesTitle')}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Klastry laczy wspolne odwolania do tych samych przepisow i aktow prawnych.
+                        {t('reasoningLines.howSharedBasesDescription')}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">Analiza koherencji</div>
+                      <div className="text-xs font-medium text-primary">
+                        {t('reasoningLines.howCoherenceTitle')}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Kazdy klaster otrzymuje ocene spojnosci — im wyzsza, tym bardziej jednorodna linia orzecznicza.
+                        {t('reasoningLines.howCoherenceDescription')}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">Slowa kluczowe</div>
+                      <div className="text-xs font-medium text-primary">
+                        {t('reasoningLines.howKeywordsTitle')}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Automatyczne wyodrebnianie najwazniejszych terminow charakteryzujacych kazdy klaster.
+                        {t('reasoningLines.howKeywordsDescription')}
                       </p>
                     </div>
                   </div>
@@ -551,6 +574,7 @@ function ClusterCard({
   isSaving: boolean;
   isSaved: boolean;
 }) {
+  const { t } = useTranslation();
   const colorClass = getClusterColor(colorIndex);
 
   return (
@@ -565,7 +589,7 @@ function ClusterCard({
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Hash className="h-3 w-3" />
-                Liczba spraw: {cluster.case_count}
+                {t('reasoningLines.clusterCaseCount', { count: cluster.case_count })}
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -575,7 +599,9 @@ function ClusterCard({
           </div>
           {/* Coherence indicator */}
           <div className="flex-shrink-0 text-right">
-            <p className="text-xs text-muted-foreground">Koherencja</p>
+            <p className="text-xs text-muted-foreground">
+              {t('reasoningLines.coherenceLabel')}
+            </p>
             <CoherenceBadge score={cluster.coherence_score} />
           </div>
         </div>
@@ -598,7 +624,7 @@ function ClusterCard({
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <Scale className="h-3 w-3" />
-              Podstawy prawne
+              {t('reasoningLines.legalBasesLabel')}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {cluster.legal_bases.map((base) => (
@@ -625,7 +651,9 @@ function ClusterCard({
               ) : (
                 <ChevronDown className="h-3.5 w-3.5" />
               )}
-              {isExpanded ? 'Ukryj sprawy' : `Pokaz sprawy (${cluster.top_cases.length})`}
+              {isExpanded
+                ? t('reasoningLines.hideCases')
+                : t('reasoningLines.showCases', { count: cluster.top_cases.length })}
             </button>
           ) : (
             <div />
@@ -648,10 +676,10 @@ function ClusterCard({
                 <Save className="h-3.5 w-3.5" />
               )}
               {isSaving
-                ? 'Zapisywanie...'
+                ? t('reasoningLines.saveClusterPending')
                 : isSaved
-                  ? 'Zapisano'
-                  : 'Zapisz jako linie'}
+                  ? t('reasoningLines.saveClusterDone')
+                  : t('reasoningLines.saveCluster')}
             </Button>
           )}
         </div>
@@ -738,6 +766,7 @@ function CoherenceBadge({ score }: { score: number }) {
 
 /** Status badge for a reasoning line */
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   const colorClass =
     status === 'active'
       ? 'bg-emerald-100 text-emerald-700'
@@ -746,9 +775,9 @@ function StatusBadge({ status }: { status: string }) {
         : 'bg-rose-100 text-rose-700';
 
   const labelMap: Record<string, string> = {
-    active: 'Aktywna',
-    archived: 'Zarchiwizowana',
-    deleted: 'Usunieta',
+    active: t('reasoningLines.statusActive'),
+    archived: t('reasoningLines.statusArchived'),
+    deleted: t('reasoningLines.statusDeleted'),
   };
 
   return (
@@ -766,6 +795,7 @@ function SavedLinesTab({
 }: {
   query: ReturnType<typeof useQuery<ReasoningLineSummary[]>>;
 }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -790,6 +820,19 @@ function SavedLinesTab({
     enabled: shouldSearch,
   });
 
+  // Keep the technical failure reason in the logs; the UI shows fixed, actionable copy.
+  useEffect(() => {
+    if (searchQuery.error) {
+      logger.error('Reasoning line search request failed', searchQuery.error);
+    }
+  }, [searchQuery.error]);
+
+  useEffect(() => {
+    if (query.error) {
+      logger.error('Loading the saved reasoning lines failed', query.error);
+    }
+  }, [query.error]);
+
   // Show search results when a search is active, otherwise show saved lines
   const isSearchActive = shouldSearch;
 
@@ -799,11 +842,11 @@ function SavedLinesTab({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Szukaj linii orzeczniczych..."
+          placeholder={t('reasoningLines.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 bg-white/50"
-          aria-label="Szukaj linii orzeczniczych"
+          aria-label={t('reasoningLines.searchAriaLabel')}
         />
         {searchQuery.isFetching && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -815,17 +858,17 @@ function SavedLinesTab({
         <>
           {searchQuery.isError && (
             <ErrorCard
-              title="Blad wyszukiwania"
-              message={searchQuery.error?.message ?? 'Nie udalo sie wyszukac linii.'}
+              title={t('reasoningLines.searchErrorTitle')}
+              message={t('reasoningLines.searchErrorMessage')}
               onRetry={() => searchQuery.refetch()}
-              retryLabel="Sprobuj ponownie"
+              retryLabel={t('common.retry')}
             />
           )}
 
           {searchQuery.data && searchQuery.data.results.length === 0 && (
             <EmptyState
-              title="Brak wynikow"
-              description={`Nie znaleziono linii orzeczniczych pasujacych do "${debouncedTerm}".`}
+              title={t('reasoningLines.searchEmptyTitle')}
+              description={t('reasoningLines.searchEmptyDescription', { query: debouncedTerm })}
               icon={Search}
             />
           )}
@@ -833,7 +876,7 @@ function SavedLinesTab({
           {searchQuery.data && searchQuery.data.results.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">
-                Wyniki wyszukiwania ({searchQuery.data.total_found})
+                {t('reasoningLines.searchResultsHeading', { count: searchQuery.data.total_found })}
               </h2>
               <div className="grid gap-4 lg:grid-cols-2">
                 {searchQuery.data.results.map((result, index) => (
@@ -852,23 +895,23 @@ function SavedLinesTab({
             <LoadingIndicator
               variant="centered"
               size="lg"
-              message="Ladowanie zapisanych linii..."
+              message={t('reasoningLines.savedLoading')}
             />
           )}
 
           {query.isError && (
             <ErrorCard
-              title="Blad ladowania"
-              message={query.error?.message ?? 'Nie udalo sie pobrac zapisanych linii.'}
+              title={t('reasoningLines.savedErrorTitle')}
+              message={t('reasoningLines.savedErrorMessage')}
               onRetry={() => query.refetch()}
-              retryLabel="Sprobuj ponownie"
+              retryLabel={t('common.retry')}
             />
           )}
 
           {!query.isLoading && !query.isError && (query.data ?? []).length === 0 && (
             <EmptyState
-              title="Brak zapisanych linii"
-              description="Odkryj klastry w zakladce 'Odkryj' i zapisz interesujace linie orzecznicze."
+              title={t('reasoningLines.savedEmptyTitle')}
+              description={t('reasoningLines.savedEmptyDescription')}
               icon={BookMarked}
             />
           )}
@@ -876,7 +919,7 @@ function SavedLinesTab({
           {!query.isLoading && !query.isError && (query.data ?? []).length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">
-                Zapisane linie orzecznicze ({(query.data ?? []).length})
+                {t('reasoningLines.savedHeading', { count: (query.data ?? []).length })}
               </h2>
               <div className="grid gap-4 lg:grid-cols-2">
                 {(query.data ?? []).map((line, index) => (
@@ -893,23 +936,37 @@ function SavedLinesTab({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-medium text-foreground">Automatyczny pipeline</h3>
+            <h3 className="text-sm font-medium text-foreground">
+              {t('reasoningLines.pipelineHeading')}
+            </h3>
           </div>
           <div className="grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
             <div className="space-y-1">
-              <div className="font-medium text-foreground">Auto-przypisanie</div>
-              <p>Nowe orzeczenia automatycznie przypisywane do istniejacych linii</p>
-              <Badge variant="outline" className="text-[10px]">Co tydzien</Badge>
+              <div className="font-medium text-foreground">
+                {t('reasoningLines.pipelineAssignTitle')}
+              </div>
+              <p>{t('reasoningLines.pipelineAssignDescription')}</p>
+              <Badge variant="outline" className="text-[10px]">
+                {t('reasoningLines.pipelineWeekly')}
+              </Badge>
             </div>
             <div className="space-y-1">
-              <div className="font-medium text-foreground">Auto-odkrywanie</div>
-              <p>Nieprzypisane orzeczenia grupowane w nowe linie</p>
-              <Badge variant="outline" className="text-[10px]">Co tydzien</Badge>
+              <div className="font-medium text-foreground">
+                {t('reasoningLines.pipelineDiscoverTitle')}
+              </div>
+              <p>{t('reasoningLines.pipelineDiscoverDescription')}</p>
+              <Badge variant="outline" className="text-[10px]">
+                {t('reasoningLines.pipelineWeekly')}
+              </Badge>
             </div>
             <div className="space-y-1">
-              <div className="font-medium text-foreground">Wykrywanie zdarzen</div>
-              <p>Automatyczne wykrywanie rozgalezien i polaczen</p>
-              <Badge variant="outline" className="text-[10px]">Co tydzien</Badge>
+              <div className="font-medium text-foreground">
+                {t('reasoningLines.pipelineEventsTitle')}
+              </div>
+              <p>{t('reasoningLines.pipelineEventsDescription')}</p>
+              <Badge variant="outline" className="text-[10px]">
+                {t('reasoningLines.pipelineWeekly')}
+              </Badge>
             </div>
           </div>
         </div>
@@ -926,6 +983,7 @@ function SearchResultCard({
   result: SearchResult;
   colorIndex: number;
 }) {
+  const { t } = useTranslation();
   const colorClass = getClusterColor(colorIndex);
   const similarityPct = Math.round(result.similarity * 100);
 
@@ -948,7 +1006,7 @@ function SearchResultCard({
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
               {/* Similarity badge */}
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-primary/10 text-primary">
-                {similarityPct}% trafnosc
+                {t('reasoningLines.similarityMatch', { percent: similarityPct })}
               </span>
               <CoherenceBadge score={result.coherence_score} />
             </div>
@@ -958,7 +1016,7 @@ function SearchResultCard({
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Hash className="h-3 w-3" />
-              {result.case_count} spraw
+              {t('reasoningLines.caseCount', { count: result.case_count })}
             </span>
           </div>
 
@@ -999,6 +1057,7 @@ function SavedLineCard({
   line: ReasoningLineSummary;
   colorIndex: number;
 }) {
+  const { t } = useTranslation();
   const colorClass = getClusterColor(colorIndex);
 
   return (
@@ -1027,7 +1086,7 @@ function SavedLineCard({
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Hash className="h-3 w-3" />
-              {line.case_count} spraw
+              {t('reasoningLines.caseCount', { count: line.case_count })}
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
@@ -1085,6 +1144,15 @@ function DAGTab({
   eventResult: EventDetectionResult | null;
   canDetectEvents: boolean;
 }) {
+  const { t } = useTranslation();
+
+  // Keep the technical failure reason in the logs; the UI shows fixed, actionable copy.
+  useEffect(() => {
+    if (dagQuery.error) {
+      logger.error('Loading the reasoning line DAG failed', dagQuery.error);
+    }
+  }, [dagQuery.error]);
+
   // Type-narrow the query data
   const dagData = dagQuery.data as
     | { nodes: import('@/types/reasoning-lines').DAGNode[]; edges: import('@/types/reasoning-lines').DAGEdge[]; statistics: import('@/types/reasoning-lines').DAGStatistics }
@@ -1096,7 +1164,7 @@ function DAGTab({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Network className="h-5 w-5 text-primary" />
-          Graf DAG linii orzeczniczych
+          {t('reasoningLines.dagHeading')}
         </h2>
         {canDetectEvents && (
           <Button
@@ -1107,7 +1175,9 @@ function DAGTab({
             className="flex items-center gap-1.5 text-xs"
           >
             <GitMerge className="h-3.5 w-3.5" />
-            {detectEventsMutation.isPending ? 'Wykrywanie...' : 'Wykryj zdarzenia'}
+            {detectEventsMutation.isPending
+              ? t('reasoningLines.detectEventsPending')
+              : t('reasoningLines.detectEvents')}
           </Button>
         )}
       </div>
@@ -1115,25 +1185,27 @@ function DAGTab({
       {/* Event detection feedback */}
       {detectEventsMutation.isError && (
         <span className="text-xs text-rose-600">
-          {detectEventsMutation.error?.message ?? 'Blad wykrywania zdarzen'}
+          {t('reasoningLines.detectEventsError')}
         </span>
       )}
       {eventResult && (
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="px-2 py-1 rounded bg-red-50 text-red-700">
-            Rozgalezienia: {eventResult.branches_detected}
+            {t('reasoningLines.eventBranches', { count: eventResult.branches_detected })}
           </span>
           <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700">
-            Polaczenia: {eventResult.merges_detected}
+            {t('reasoningLines.eventMerges', { count: eventResult.merges_detected })}
           </span>
           <span className="px-2 py-1 rounded bg-blue-50 text-blue-700">
-            Wplywy: {eventResult.influences_detected}
+            {t('reasoningLines.eventInfluences', { count: eventResult.influences_detected })}
           </span>
           <span className="px-2 py-1 rounded bg-slate-50 text-slate-600">
-            Linii: {eventResult.lines_analyzed}
+            {t('reasoningLines.eventLinesAnalyzed', { count: eventResult.lines_analyzed })}
           </span>
           <span className="px-2 py-1 rounded bg-slate-50 text-slate-600">
-            Czas: {(eventResult.processing_time_ms / 1000).toFixed(1)}s
+            {t('reasoningLines.eventProcessingTime', {
+              seconds: (eventResult.processing_time_ms / 1000).toFixed(1),
+            })}
           </span>
         </div>
       )}
@@ -1143,28 +1215,28 @@ function DAGTab({
         <LoadingIndicator
           variant="centered"
           size="lg"
-          message="Ladowanie grafu DAG..."
+          message={t('reasoningLines.dagLoading')}
         />
       )}
 
       {/* Error */}
       {dagQuery.isError && (
         <ErrorCard
-          title="Blad ladowania grafu"
-          message={(dagQuery.error as Error)?.message ?? 'Nie udalo sie pobrac grafu DAG.'}
+          title={t('reasoningLines.dagErrorTitle')}
+          message={t('reasoningLines.dagErrorMessage')}
           onRetry={() => dagQuery.refetch()}
-          retryLabel="Sprobuj ponownie"
+          retryLabel={t('common.retry')}
         />
       )}
 
       {/* Empty state */}
       {dagData && dagData.nodes.length === 0 && (
         <EmptyState
-          title="Brak danych w grafie"
+          title={t('reasoningLines.dagEmptyTitle')}
           description={
             canDetectEvents
-              ? 'Zapisz linie orzecznicze i wykryj zdarzenia, aby zobaczyc graf DAG.'
-              : 'Brak zapisanych linii lub zdarzen do wyswietlenia w grafie DAG.'
+              ? t('reasoningLines.dagEmptyDescriptionAdmin')
+              : t('reasoningLines.dagEmptyDescription')
           }
           icon={Network}
         />
@@ -1184,24 +1256,24 @@ function DAGTab({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             icon={Network}
-            label="Wezly"
+            label={t('reasoningLines.statNodes')}
             value={dagData.statistics.total_nodes.toString()}
           />
           <StatCard
             icon={GitBranch}
-            label="Krawedzie"
+            label={t('reasoningLines.statEdges')}
             value={dagData.statistics.total_edges.toString()}
           />
           {eventResult && (
             <>
               <StatCard
                 icon={GitBranch}
-                label="Rozgalezienia"
+                label={t('reasoningLines.statBranches')}
                 value={eventResult.branches_detected.toString()}
               />
               <StatCard
                 icon={GitMerge}
-                label="Polaczenia"
+                label={t('reasoningLines.statMerges')}
                 value={eventResult.merges_detected.toString()}
               />
             </>

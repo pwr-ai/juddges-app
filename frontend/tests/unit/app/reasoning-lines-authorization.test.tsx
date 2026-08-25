@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import ReasoningLineDetailPage from '@/app/reasoning-lines/[id]/page';
 import ReasoningLinesPage from '@/app/reasoning-lines/page';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import type { LocaleCode } from '@/lib/i18n';
 
 const mockUseAuth = jest.fn();
 const mockPush = jest.fn();
@@ -100,11 +102,15 @@ const reasoningLine = {
   members: [],
 };
 
-function renderWithQueryClient(ui: React.ReactElement) {
+function renderWithQueryClient(ui: React.ReactElement, locale: LocaleCode = 'en') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider initialLocale={locale}>{ui}</LanguageProvider>
+    </QueryClientProvider>,
+  );
 }
 
 describe('reasoning-lines admin-only controls', () => {
@@ -137,17 +143,18 @@ describe('reasoning-lines admin-only controls', () => {
 
     renderWithQueryClient(<ReasoningLinesPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Odkryj linie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Discover lines' }));
     expect(await screen.findByText('VAT deduction')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Zapisz jako linie' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save as line' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Graf DAG' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'DAG graph' }));
     await waitFor(() => expect(mockGetReasoningLineDAG).toHaveBeenCalled());
-    expect(screen.queryByRole('button', { name: 'Wykryj zdarzenia' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Detect events' })).not.toBeInTheDocument();
+    // A reader who cannot fix the emptiness is told why it is empty and who can.
     expect(
-      await screen.findByText('Brak zapisanych linii lub zdarzen do wyswietlenia w grafie DAG.'),
+      await screen.findByText(/The graph is built by an administrator/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Zapisz linie orzecznicze i wykryj zdarzenia/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/select .Detect events. to build the graph/)).not.toBeInTheDocument();
   });
 
   it('shows save and event detection controls to an admin user', async () => {
@@ -158,11 +165,11 @@ describe('reasoning-lines admin-only controls', () => {
 
     renderWithQueryClient(<ReasoningLinesPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Odkryj linie' }));
-    expect(await screen.findByRole('button', { name: 'Zapisz jako linie' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Discover lines' }));
+    expect(await screen.findByRole('button', { name: 'Save as line' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Graf DAG' }));
-    expect(await screen.findByRole('button', { name: 'Wykryj zdarzenia' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'DAG graph' }));
+    expect(await screen.findByRole('button', { name: 'Detect events' })).toBeInTheDocument();
   });
 
   it('hides detail mutations from a non-admin while retaining read-only data', async () => {
@@ -174,13 +181,19 @@ describe('reasoning-lines admin-only controls', () => {
     renderWithQueryClient(<ReasoningLineDetailPage />);
 
     expect(await screen.findByRole('heading', { name: 'VAT deduction' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Usun linie' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Klasyfikuj orzeczenia' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Analizuj dryf' })).not.toBeInTheDocument();
-    expect(screen.getByText('Brak sklasyfikowanych orzeczen do wyswietlenia.')).toBeInTheDocument();
-    expect(screen.getByText('Brak danych analizy dryfu.')).toBeInTheDocument();
-    expect(screen.queryByText(/Uzyj przycisku powyzej/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Kliknij "Analizuj dryf"/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete line' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Classify judgments' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Analyse drift' })).not.toBeInTheDocument();
+    // Empty states still say what happened and why, without offering an action
+    // this reader is not allowed to take.
+    expect(
+      screen.getByText(/so the outcome timeline is empty/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/so there is nothing to display/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Select .Classify judgments. above/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Select .Analyse drift./)).not.toBeInTheDocument();
   });
 
   it('shows detail mutations to an admin user', async () => {
@@ -191,10 +204,43 @@ describe('reasoning-lines admin-only controls', () => {
 
     renderWithQueryClient(<ReasoningLineDetailPage />);
 
-    expect(await screen.findByRole('button', { name: 'Usun linie' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Klasyfikuj orzeczenia' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Analizuj dryf' })).toBeInTheDocument();
-    expect(screen.getByText(/Uzyj przycisku powyzej/)).toBeInTheDocument();
-    expect(screen.getByText(/Kliknij "Analizuj dryf"/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Delete line' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Classify judgments' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Analyse drift' })).toBeInTheDocument();
+    // An admin gets the same explanation plus the action that resolves it.
+    expect(screen.getByText(/Select .Classify judgments. above/)).toBeInTheDocument();
+    expect(screen.getByText(/Select .Analyse drift./)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Regression guard for #519: this subtree used to hardcode stripped-diacritic
+ * Polish while the rest of the app was English. Assert both that the English
+ * locale is really English, and that the Polish locale is really Polish with
+ * correct diacritics — a hardcoded string would fail one side or the other.
+ */
+describe('reasoning-lines copy is localized, not hardcoded', () => {
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'admin-1', app_metadata: { is_admin: true } },
+      loading: false,
+    });
+  });
+
+  it('renders English copy and no stripped-diacritic Polish under the en locale', () => {
+    const { container } = renderWithQueryClient(<ReasoningLinesPage />, 'en');
+
+    expect(screen.getByRole('button', { name: 'Discover lines' })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(
+      /Ladowanie|Blad|Odkryj|Zapisz|Wykryj|Usun|orzecznicz/,
+    );
+  });
+
+  it('renders Polish copy with correct diacritics under the pl locale', () => {
+    const { container } = renderWithQueryClient(<ReasoningLinesPage />, 'pl');
+
+    // Some Polish diacritic must appear, and the stripped forms must not.
+    expect(container.textContent).toMatch(/[ąćęłńóśźż]/);
+    expect(container.textContent).not.toMatch(/Ladowanie|Blad ladowania|Brak wynikow/);
   });
 });

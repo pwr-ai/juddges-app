@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   GitBranch,
@@ -38,8 +38,10 @@ import Link from 'next/link';
 import { OutcomeTimeline } from '@/components/reasoning-lines/OutcomeTimeline';
 import { DriftChart } from '@/components/reasoning-lines/DriftChart';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { logger } from '@/lib/logger';
 
-/** Format date string to a Polish-friendly format */
+/** Format date string to a short, locale-stable numeric format */
 function formatDate(dateStr: string): string {
   try {
     const date = new Date(dateStr);
@@ -54,6 +56,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ReasoningLineDetailPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isAdmin = user?.app_metadata?.is_admin === true;
   const params = useParams<{ id: string }>();
@@ -97,6 +100,9 @@ export default function ReasoningLineDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['reasoning-lines'] });
       router.push('/reasoning-lines');
     },
+    onError: (error) => {
+      logger.error('Deleting a reasoning line failed', error);
+    },
   });
 
   // Classify outcomes mutation
@@ -108,6 +114,9 @@ export default function ReasoningLineDetailPage() {
       // Also refetch the detail to get updated outcome_direction on members
       queryClient.invalidateQueries({ queryKey: ['reasoning-line', id] });
     },
+    onError: (error) => {
+      logger.error('Classifying reasoning line outcomes failed', error);
+    },
   });
 
   // Drift analysis mutation
@@ -116,11 +125,27 @@ export default function ReasoningLineDetailPage() {
     onSuccess: (result) => {
       setDriftData(result);
     },
+    onError: (error) => {
+      logger.error('Reasoning line drift analysis failed', error);
+    },
   });
 
   const handleDelete = useCallback(() => {
     deleteMutation.mutate();
   }, [deleteMutation]);
+
+  // Keep the technical failure reason in the logs; the UI shows fixed, actionable copy.
+  useEffect(() => {
+    if (detailQuery.error) {
+      logger.error('Loading the reasoning line detail failed', detailQuery.error);
+    }
+  }, [detailQuery.error]);
+
+  useEffect(() => {
+    if (relatedQuery.error) {
+      logger.error('Loading related reasoning lines failed', relatedQuery.error);
+    }
+  }, [relatedQuery.error]);
 
   // Loading state
   if (detailQuery.isLoading) {
@@ -129,7 +154,7 @@ export default function ReasoningLineDetailPage() {
         <LoadingIndicator
           variant="centered"
           size="lg"
-          message="Ladowanie szczegulow linii orzeczniczej..."
+          message={t('reasoningLines.detailLoading')}
         />
       </PageContainer>
     );
@@ -140,10 +165,10 @@ export default function ReasoningLineDetailPage() {
     return (
       <PageContainer width="medium" fillViewport>
         <ErrorCard
-          title="Blad ladowania"
-          message={detailQuery.error?.message ?? 'Nie udalo sie pobrac szczegulow.'}
+          title={t('reasoningLines.detailErrorTitle')}
+          message={t('reasoningLines.detailErrorMessage')}
           onRetry={() => detailQuery.refetch()}
-          retryLabel="Sprobuj ponownie"
+          retryLabel={t('common.retry')}
         />
       </PageContainer>
     );
@@ -154,8 +179,8 @@ export default function ReasoningLineDetailPage() {
     return (
       <PageContainer width="medium" fillViewport>
         <EmptyState
-          title="Nie znaleziono"
-          description="Linia orzecznicza nie istnieje lub zostala usunieta."
+          title={t('reasoningLines.detailNotFoundTitle')}
+          description={t('reasoningLines.detailNotFoundDescription')}
           icon={GitBranch}
         />
       </PageContainer>
@@ -181,9 +206,9 @@ export default function ReasoningLineDetailPage() {
     deleted: 'bg-rose-100 text-rose-700',
   };
   const statusLabelMap: Record<string, string> = {
-    active: 'Aktywna',
-    archived: 'Zarchiwizowana',
-    deleted: 'Usunieta',
+    active: t('reasoningLines.statusActive'),
+    archived: t('reasoningLines.statusArchived'),
+    deleted: t('reasoningLines.statusDeleted'),
   };
 
   return (
@@ -194,7 +219,7 @@ export default function ReasoningLineDetailPage() {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Powrot do linii orzeczniczych
+        {t('reasoningLines.backToList')}
       </Link>
 
       {/* Header card */}
@@ -228,7 +253,7 @@ export default function ReasoningLineDetailPage() {
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums ${coherenceColor}`}
               >
-                Koherencja: {coherencePct}%
+                {t('reasoningLines.coherenceValue', { percent: coherencePct })}
               </span>
             </div>
           </div>
@@ -237,7 +262,7 @@ export default function ReasoningLineDetailPage() {
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Hash className="h-3 w-3" />
-              {line.case_count} spraw
+              {t('reasoningLines.caseCount', { count: line.case_count })}
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
@@ -245,7 +270,7 @@ export default function ReasoningLineDetailPage() {
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              Utworzono: {formatDate(line.created_at)}
+              {t('reasoningLines.createdLabel', { date: formatDate(line.created_at) })}
             </span>
           </div>
 
@@ -269,7 +294,7 @@ export default function ReasoningLineDetailPage() {
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                 <Scale className="h-3 w-3" />
-                Podstawy prawne
+                {t('reasoningLines.legalBasesLabel')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {line.legal_bases.map((base) => (
@@ -292,12 +317,12 @@ export default function ReasoningLineDetailPage() {
                   className="flex items-center gap-1.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Usun linie
+                  {t('reasoningLines.deleteLine')}
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    Czy na pewno chcesz usunac te linie?
+                    {t('reasoningLines.deleteConfirmQuestion')}
                   </span>
                   <Button
                     variant="destructive"
@@ -307,7 +332,9 @@ export default function ReasoningLineDetailPage() {
                     className="flex items-center gap-1.5 text-xs"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    {deleteMutation.isPending ? 'Usuwanie...' : 'Tak, usun'}
+                    {deleteMutation.isPending
+                      ? t('reasoningLines.deletePending')
+                      : t('reasoningLines.deleteConfirm')}
                   </Button>
                   <Button
                     variant="outline"
@@ -315,13 +342,13 @@ export default function ReasoningLineDetailPage() {
                     onClick={() => setShowDeleteConfirm(false)}
                     className="text-xs"
                   >
-                    Anuluj
+                    {t('common.cancel')}
                   </Button>
                 </div>
               )}
               {deleteMutation.isError && (
                 <span className="text-xs text-rose-600">
-                  {deleteMutation.error?.message ?? 'Blad usuwania'}
+                  {t('reasoningLines.deleteError')}
                 </span>
               )}
             </div>
@@ -333,13 +360,13 @@ export default function ReasoningLineDetailPage() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-primary" />
-          Orzeczenia w linii ({sortedMembers.length})
+          {t('reasoningLines.membersHeading', { count: sortedMembers.length })}
         </h2>
 
         {sortedMembers.length === 0 ? (
           <EmptyState
-            title="Brak orzeczen"
-            description="Ta linia orzecznicza nie zawiera jeszcze zadnych orzeczen."
+            title={t('reasoningLines.membersEmptyTitle')}
+            description={t('reasoningLines.membersEmptyDescription')}
             icon={Scale}
           />
         ) : (
@@ -368,7 +395,7 @@ export default function ReasoningLineDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            Ewolucja orzeczen w czasie
+            {t('reasoningLines.outcomeHeading')}
           </h2>
           {isAdmin && (
             <Button
@@ -380,8 +407,8 @@ export default function ReasoningLineDetailPage() {
             >
               <BarChart3 className="h-3.5 w-3.5" />
               {classifyMutation.isPending
-                ? 'Klasyfikowanie...'
-                : 'Klasyfikuj orzeczenia'}
+                ? t('reasoningLines.classifyPending')
+                : t('reasoningLines.classify')}
             </Button>
           )}
         </div>
@@ -390,23 +417,23 @@ export default function ReasoningLineDetailPage() {
         {classifyMutation.isSuccess && classifyMutation.data && (
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700">
-              Sklasyfikowano: {classifyMutation.data.classified}
+              {t('reasoningLines.classifyClassified', { count: classifyMutation.data.classified })}
             </span>
             {classifyMutation.data.skipped > 0 && (
               <span className="px-2 py-1 rounded bg-slate-50 text-slate-600">
-                Pominieto: {classifyMutation.data.skipped}
+                {t('reasoningLines.classifySkipped', { count: classifyMutation.data.skipped })}
               </span>
             )}
             {classifyMutation.data.errors > 0 && (
               <span className="px-2 py-1 rounded bg-rose-50 text-rose-600">
-                Bledy: {classifyMutation.data.errors}
+                {t('reasoningLines.classifyErrors', { count: classifyMutation.data.errors })}
               </span>
             )}
           </div>
         )}
         {classifyMutation.isError && (
           <span className="text-xs text-rose-600">
-            {classifyMutation.error?.message ?? 'Blad klasyfikacji orzeczen'}
+            {t('reasoningLines.classifyError')}
           </span>
         )}
 
@@ -415,14 +442,14 @@ export default function ReasoningLineDetailPage() {
           <LoadingIndicator
             variant="inline"
             size="sm"
-            message="Ladowanie osi czasu..."
+            message={t('reasoningLines.timelineLoading')}
           />
         )}
         {timelineQuery.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
             {isAdmin
-              ? 'Brak danych osi czasu. Sklasyfikuj orzeczenia, aby wygenerowac os czasu.'
-              : 'Brak danych osi czasu do wyswietlenia.'}
+              ? t('reasoningLines.timelineErrorAdmin')
+              : t('reasoningLines.timelineError')}
           </div>
         )}
         {timelineQuery.data && timelineQuery.data.points.length > 0 && (
@@ -431,11 +458,15 @@ export default function ReasoningLineDetailPage() {
             {/* Summary stats below the chart */}
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
               <span className="tabular-nums">
-                Sklasyfikowanych: {timelineQuery.data.total_classified}
+                {t('reasoningLines.timelineTotalClassified', {
+                  count: timelineQuery.data.total_classified,
+                })}
               </span>
               {timelineQuery.data.total_unclassified > 0 && (
                 <span className="tabular-nums">
-                  Niesklasyfikowanych: {timelineQuery.data.total_unclassified}
+                  {t('reasoningLines.timelineTotalUnclassified', {
+                    count: timelineQuery.data.total_unclassified,
+                  })}
                 </span>
               )}
             </div>
@@ -444,8 +475,8 @@ export default function ReasoningLineDetailPage() {
         {timelineQuery.data && timelineQuery.data.points.length === 0 && (
           <div className="text-xs text-muted-foreground py-4 text-center">
             {isAdmin
-              ? 'Brak sklasyfikowanych orzeczen. Uzyj przycisku powyzej, aby sklasyfikowac.'
-              : 'Brak sklasyfikowanych orzeczen do wyswietlenia.'}
+              ? t('reasoningLines.timelineEmptyAdmin')
+              : t('reasoningLines.timelineEmpty')}
           </div>
         )}
       </div>
@@ -457,7 +488,7 @@ export default function ReasoningLineDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            Dryf jezykowy
+            {t('reasoningLines.driftHeading')}
           </h2>
           {isAdmin && (
             <Button
@@ -468,14 +499,16 @@ export default function ReasoningLineDetailPage() {
               className="flex items-center gap-1.5 text-xs"
             >
               <Activity className="h-3.5 w-3.5" />
-              {driftMutation.isPending ? 'Analizowanie...' : 'Analizuj dryf'}
+              {driftMutation.isPending
+                ? t('reasoningLines.driftPending')
+                : t('reasoningLines.driftAnalyze')}
             </Button>
           )}
         </div>
 
         {driftMutation.isError && (
           <span className="text-xs text-rose-600">
-            {driftMutation.error?.message ?? 'Blad analizy dryfu'}
+            {t('reasoningLines.driftError')}
           </span>
         )}
 
@@ -483,7 +516,7 @@ export default function ReasoningLineDetailPage() {
           <LoadingIndicator
             variant="inline"
             size="sm"
-            message="Analizowanie dryfu jezykowego..."
+            message={t('reasoningLines.driftLoading')}
           />
         )}
 
@@ -491,9 +524,7 @@ export default function ReasoningLineDetailPage() {
 
         {!driftData && !driftMutation.isPending && !driftMutation.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            {isAdmin
-              ? 'Kliknij "Analizuj dryf", aby zbadac zmiany w jezyku orzeczen w czasie.'
-              : 'Brak danych analizy dryfu.'}
+            {isAdmin ? t('reasoningLines.driftIdleAdmin') : t('reasoningLines.driftIdle')}
           </div>
         )}
       </div>
@@ -504,26 +535,26 @@ export default function ReasoningLineDetailPage() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Link2 className="h-5 w-5 text-primary" />
-          Powiazane linie orzecznicze
+          {t('reasoningLines.relatedHeading')}
         </h2>
 
         {relatedQuery.isLoading && (
           <LoadingIndicator
             variant="inline"
             size="sm"
-            message="Ladowanie powiazanych linii..."
+            message={t('reasoningLines.relatedLoading')}
           />
         )}
 
         {relatedQuery.isError && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Nie udalo sie pobrac powiazanych linii orzeczniczych.
+            {t('reasoningLines.relatedError')}
           </div>
         )}
 
         {relatedQuery.data && relatedQuery.data.related.length === 0 && (
           <div className="text-xs text-muted-foreground py-4 text-center">
-            Brak powiazanych linii orzeczniczych dla tej linii.
+            {t('reasoningLines.relatedEmpty')}
           </div>
         )}
 
@@ -638,6 +669,7 @@ function TimelineEntry({
 
 /** Compact card for a related reasoning line (M6) */
 function RelatedLineCard({ related }: { related: RelatedLine }) {
+  const { t } = useTranslation();
   const relatednessPct = Math.round(related.relatedness_score * 100);
   const relatednessColor =
     relatednessPct >= 70
@@ -669,7 +701,7 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Hash className="h-3 w-3" />
-              {related.case_count} spraw
+              {t('reasoningLines.caseCount', { count: related.case_count })}
             </span>
           </div>
 
