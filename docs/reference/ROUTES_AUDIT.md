@@ -1,5 +1,13 @@
 # Audyt podstron, endpointów i testów
 
+> **Nieaktualne od 2026-08-21.** Bieżący stan aplikacji opisuje
+> [`APP_STATUS_2026-08-21.md`](APP_STATUS_2026-08-21.md). Największe usterki z
+> tego audytu zostały naprawione: proxy dla `/judge-fingerprint` i
+> `/reasoning-lines` istnieją, `/blog` pobiera prawdziwe dane, `npm run
+> typecheck` przechodzi, a testy jednostkowe backendu i frontendu są zielone.
+> Tabela poniżej pozostaje przydatna jako szczegółowy spis per-trasa — traktuj
+> jej werdykty jako historyczne.
+
 Stan repozytorium: 2026-08-05. Audyt obejmuje wszystkie 63 pliki `frontend/app/**/page.tsx`, ich zależności od 99 handlerów tras Next.js (96 pod `/api` i 3 poza nim), 38 routerów oraz 3 grupy LangServe rejestrowane w `backend/app/server.py` (290 unikalnych endpointów FastAPI w introspekcji runtime), a także testy Jest, Playwright i pytest.
 
 Wniosek: nie wszystkie podstrony są gotowe produkcyjnie. Najpoważniejsze problemy to niedziałające wywołania chronionego backendu z `/judge-fingerprint` i `/reasoning-lines*`, makiety zamiast integracji na `/blog*` oraz `/use-cases/uk-judgments`, pięć endpointów FastAPI zasłoniętych przez wcześniej zarejestrowane trasy dynamiczne, co najmniej pięć proxy kierujących do nieistniejącego upstreamu, brak publicznego dostępu do wielu stron informacyjnych i prawnych oraz nierówne pokrycie testami. `next typegen` poprawnie wygenerował typy routingu, ale pełny `npm run typecheck` nie przechodzi z powodu błędu TypeScript w `components/blog/admin/tiptap-editor.tsx:518`. Wszystkie 117 zestawów Jest (1629 testów) zaliczyły asercje, lecz proces nie zakończył się sam z powodu otwartych uchwytów. `poetry run pytest -q -m unit` zakończył się wynikiem 2621 zaliczonych, 24 pominiętych i 27 niezaliczonych testów; awarie obejmują kontrakty auth 401/403, tworzenie ekstrakcji zwracające 422, autocomplete/topic-click zwracające 422 i jeden test zgodności schematu. Testy Playwright nie zostały uruchomione, ponieważ wymagają działających usług i poświadczeń; pełny zestaw E2E jest w CI uruchamiany ręcznie.
