@@ -9,7 +9,7 @@ Date: 2026-02-23
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -20,6 +20,7 @@ from app.core.auth_jwt import (
     get_admin_supabase_client,
     require_admin,
 )
+from app.services.retention_service import RetentionService
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -167,6 +168,38 @@ class IngestionStatusResponse(BaseModel):
         default=None, description="Final summary once completed"
     )
     error: str | None = Field(default=None, description="Error message if failed")
+
+
+class DeletionRequestItem(BaseModel):
+    """One GDPR erasure request in the operator queue (#506)."""
+
+    id: str
+    user_id: str | None = None
+    request_type: str
+    data_types: list[str] = Field(default_factory=list)
+    status: str
+    created_at: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    processed_by: str | None = None
+    deletion_summary: dict[str, Any] = Field(default_factory=dict)
+    error_message: str | None = None
+
+
+class DeletionRequestListResponse(BaseModel):
+    """Erasure requests awaiting an operator, oldest first."""
+
+    requests: list[DeletionRequestItem]
+    total: int
+
+
+class DeletionRequestProcessResponse(BaseModel):
+    """Outcome of carrying out one erasure request."""
+
+    status: str
+    request_id: str
+    deletion_summary: dict[str, Any] = Field(default_factory=dict)
+    timestamp: str
 
 
 # ===== Endpoints =====
@@ -784,6 +817,79 @@ async def get_ingestion_status(
         progress=progress,
         result=final_result,
         error=error,
+    )
+
+
+@router.get("/data-deletion-requests", response_model=DeletionRequestListResponse)
+async def list_data_deletion_requests(
+    status: Literal["pending", "in_progress", "completed", "failed", "all"] = Query(
+        "pending", description="Filter by status; 'all' returns every request"
+    ),
+    limit: int = Query(100, ge=1, le=500),
+    admin: AuthenticatedUser = Depends(require_admin),
+) -> DeletionRequestListResponse:
+    """List GDPR erasure requests, oldest first (#506).
+
+    Defaults to `pending` because that is the operator's outstanding work.
+    """
+    client = get_admin_supabase_client()
+
+    query = client.table("data_deletion_requests").select(
+        "id, user_id, request_type, data_types, status, created_at, started_at, "
+        "completed_at, processed_by, deletion_summary, error_message"
+    )
+    if status != "all":
+        query = query.eq("status", status)
+
+    result = query.order("created_at", desc=False).limit(limit).execute()
+    rows = result.data or []
+
+    return DeletionRequestListResponse(
+        requests=[DeletionRequestItem(**row) for row in rows],
+        total=len(rows),
+    )
+
+
+@router.post(
+    "/data-deletion-requests/{request_id}/process",
+    response_model=DeletionRequestProcessResponse,
+)
+async def process_data_deletion_request(
+    request_id: str,
+    admin: AuthenticatedUser = Depends(require_admin),
+) -> DeletionRequestProcessResponse:
+    """Carry out a recorded erasure request (#506).
+
+    `RetentionService.process_deletion_request` has always been able to do this;
+    until now nothing called it, so requests accumulated unprocessed while the
+    subject had been told in writing they would be handled within 30 days.
+    """
+    try:
+        result = await RetentionService.process_deletion_request(
+            request_id=request_id, processed_by=admin.id
+        )
+    except ValueError as e:
+        # ValueError means "not found": it is the only one the service raises
+        # (retention_service.py:337). If another is ever added there, this
+        # would mislabel it as a missing request, which for an erasure queue
+        # would read as "already handled" — narrow this catch at that point.
+        logger.warning(f"Deletion request {request_id} not found: {e}")
+        raise HTTPException(
+            status_code=404, detail=f"Deletion request {request_id} not found"
+        ) from e
+    except Exception as e:
+        # The service already marked the request failed and recorded the cause.
+        # Do not echo it: it can carry connection strings and internal hostnames.
+        logger.error(f"Failed to process deletion request {request_id}: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to process deletion request"
+        ) from e
+
+    return DeletionRequestProcessResponse(
+        status=result["status"],
+        request_id=result["request_id"],
+        deletion_summary=result["deletion_summary"],
+        timestamp=result["timestamp"],
     )
 
 
