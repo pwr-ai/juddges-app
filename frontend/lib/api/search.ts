@@ -1,4 +1,8 @@
 import { SearchChunk, SearchDocument } from "@/types/search";
+import {
+  type GuestAllowance,
+  readGuestAllowance,
+} from "@/lib/guest/session";
 import { apiLogger } from './client';
 import { logger } from "@/lib/logger";
 
@@ -127,6 +131,26 @@ export interface SearchDocumentsResponse {
   query_time_ms: number | null;
   pagination: PaginationMetadata;
   total_count: number | null;
+  /** Free-search allowance for a signed-out visitor; null when signed in. */
+  guestAllowance?: GuestAllowance | null;
+}
+
+/**
+ * Raised when a signed-out visitor has spent their free searches (issue #510).
+ * Carries the sign-up target so the UI can prompt rather than show a generic
+ * failure.
+ */
+export class GuestSearchLimitError extends Error {
+  readonly upgradeUrl: string;
+  /** The allowance that was spent, as reported by the backend. */
+  readonly limit: number;
+
+  constructor(message: string, upgradeUrl: string, limit: number) {
+    super(message);
+    this.name = 'GuestSearchLimitError';
+    this.upgradeUrl = upgradeUrl;
+    this.limit = limit;
+  }
 }
 
 export async function searchDocumentsMeili(
@@ -165,10 +189,22 @@ export async function searchDocumentsMeili(
       .json()
       .catch(() => ({ error: "Failed to fetch search results" }));
     apiLogger.error("Meilisearch document search failed", response.status, errorData);
+    if (response.status === 429 && errorData?.error === "GUEST_SEARCH_LIMIT_REACHED") {
+      throw new GuestSearchLimitError(
+        typeof errorData.message === "string"
+          ? errorData.message
+          : "You have used all of your free searches.",
+        typeof errorData.upgrade_url === "string"
+          ? errorData.upgrade_url
+          : "/auth/signup",
+        Number.isInteger(errorData.limit) ? errorData.limit : 0
+      );
+    }
     throw new Error("Document search failed. Please try again.");
   }
 
-  return (await response.json()) as SearchDocumentsResponse;
+  const payload = (await response.json()) as SearchDocumentsResponse;
+  return { ...payload, guestAllowance: readGuestAllowance(response.headers) };
 }
 
 export async function searchChunks(

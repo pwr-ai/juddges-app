@@ -46,6 +46,13 @@ describe("Supabase middleware public route policy", () => {
     ["POST", "/api/graphql"],
     ["GET", `/api/extractions?job_id=${EXTRACTION_ID}`],
     ["HEAD", `/api/extractions?job_id=${EXTRACTION_ID}`],
+    // Issue #510 — guests may search and read judgments.
+    ["GET", "/search?q=vat&court=appeal"],
+    ["GET", "/documents/visible-doc"],
+    ["HEAD", "/documents/visible-doc"],
+    ["GET", "/api/search/documents?q=vat"],
+    ["GET", "/api/documents/visible-doc/similar?top_k=3"],
+    ["GET", "/api/documents/visible-doc/html"],
   ] as const)("passes through public %s %s", async (method, pathname) => {
     const response = await updateSession(
       new NextRequest(`http://localhost${pathname}`, { method }),
@@ -58,8 +65,13 @@ describe("Supabase middleware public route policy", () => {
   it.each([
     [
       "GET",
-      "/search?q=vat&court=appeal",
-      "http://localhost/auth/login?next=%2Fsearch%3Fq%3Dvat%26court%3Dappeal",
+      "/search/extractions?job=1",
+      "http://localhost/auth/login?next=%2Fsearch%2Fextractions%3Fjob%3D1",
+    ],
+    [
+      "GET",
+      "/documents",
+      "http://localhost/auth/login?next=%2Fdocuments",
     ],
     [
       "GET",
@@ -649,15 +661,17 @@ describe("Supabase middleware public route policy", () => {
     ["no_authorization", { code: "no_authorization", message: "authorization missing" }],
     ["status 401", { status: 401, message: "invalid bearer token" }],
     ["status 403", { status: 403, message: "credential rejected" }],
-  ])("treats %s as an anonymous document session", async (_label, error) => {
+    // Issue #510 — judgments are public, so a missing or rejected session is
+    // not a reason to bounce the visitor to a login form.
+  ])("serves the judgment page to an anonymous %s session", async (_label, error) => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error });
 
     const result = await updateSessionWithAuth(
       new NextRequest("http://localhost/documents/visible-doc"),
     );
 
-    expect(result.response.status).toBe(307);
-    expect(result.response.headers.get("location")).toContain("/auth/login");
+    expect(result.response.status).toBe(200);
+    expect(result.response.headers.get("location")).toBeNull();
     expect(result.authFailure).toBe("unauthenticated");
   });
 

@@ -28,6 +28,8 @@ const PUBLIC_HTML_PAGES = [
   '/auth/login',
   '/auth/sign-up',
   '/auth/forgot-password',
+  // Issue #510 — guests may search without an account.
+  '/search',
 ] as const;
 
 const PUBLIC_ASSET_ROUTES = ['/opengraph-image', '/twitter-image'] as const;
@@ -44,8 +46,8 @@ const PUBLIC_API_ROUTES = [
 const PROTECTED_REQUESTS = [
   {
     method: 'GET',
-    url: '/search?q=vat&court=appeal',
-    next: '/search?q=vat&court=appeal',
+    url: '/search/extractions',
+    next: '/search/extractions',
   },
   { method: 'GET', url: '/chat', next: '/chat' },
   { method: 'GET', url: '/collections', next: '/collections' },

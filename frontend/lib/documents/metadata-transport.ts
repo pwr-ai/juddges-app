@@ -5,6 +5,14 @@ export const DOCUMENT_METADATA_SIGNATURE_HEADER =
   'x-juddges-document-metadata-signature';
 export const VERIFIED_USER_HEADER = 'x-juddges-verified-user-id';
 
+/**
+ * Principal used when signing judgment metadata for a signed-out visitor
+ * (issue #510). Supabase user ids are UUIDs, so this can never collide with a
+ * real account. The value is only ever HMAC-bound context — it is not read by
+ * the page or forwarded to the client.
+ */
+export const ANONYMOUS_PRINCIPAL = 'anonymous';
+
 export function isDocumentMetadata(value: unknown): value is DocumentMetadata {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const metadata = value as Record<string, unknown>;

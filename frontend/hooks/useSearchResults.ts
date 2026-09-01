@@ -3,6 +3,7 @@ import {
   searchChunks,
   searchDocumentsMeili,
   fetchDocumentsByIds,
+  GuestSearchLimitError,
   PaginationMetadata,
   MeilisearchDocumentHit,
 } from '@/lib/api';
@@ -200,6 +201,7 @@ export function useSearchResults() {
     selectedLanguages,
     setIsSearching,
     setError,
+    setGuestAllowance,
     clearChunksCache,
     setSearchMetadata,
     setPageSize,
@@ -454,6 +456,7 @@ export function useSearchResults() {
           });
 
           setError(null);
+          setGuestAllowance(result.guestAllowance ?? null);
           setSearchMetadata(metadata, metadata.length, false);
           setPaginationMetadata(result.pagination);
           setPageSize(PAGE_SIZE);
@@ -463,6 +466,15 @@ export function useSearchResults() {
           if (options?.onComplete) options.onComplete();
           return;
         } catch (err) {
+          // A spent guest allowance is a prompt to sign up, not a failure
+          // (issue #510) — surface it as its own state, not 'search_error'.
+          if (err instanceof GuestSearchLimitError) {
+            setGuestAllowance({ limit: err.limit, remaining: 0 });
+            setSearchMetadata([], 0, false);
+            setError('guest_limit_reached');
+            setIsSearching(false);
+            return;
+          }
           searchLogger.error('Meilisearch search failed', err, { query: searchQuery });
           setSearchMetadata([], 0, false);
           setError('search_error');
@@ -618,6 +630,7 @@ export function useSearchResults() {
       baseFilters,
       selectedLanguages,
       setIsSearching,
+      setGuestAllowance,
       setError,
       clearChunksCache,
       setSearchMetadata,
@@ -681,7 +694,16 @@ export function useSearchResults() {
           loaded_count: currentPagination.loaded_count + result.documents.length,
         };
         setPaginationMetadata(updatedPagination);
+        useSearchStore.getState().setGuestAllowance(result.guestAllowance ?? null);
       } catch (err) {
+        if (err instanceof GuestSearchLimitError) {
+          useSearchStore
+            .getState()
+            .setGuestAllowance({ limit: err.limit, remaining: 0 });
+          setError('guest_limit_reached');
+          setIsLoadingMore(false);
+          return;
+        }
         searchLogger.error('Meilisearch loadMore failed', err);
         setError('load_more_error');
       } finally {
