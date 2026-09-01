@@ -1,16 +1,33 @@
 """
 Audit Service Module
 
-Provides comprehensive audit logging functionality for legal compliance.
-All user interactions with the AI system are logged for 7-year retention.
+Compliance audit trail backing the `audit_logs` table. Rows carry a 7-year
+`retention_until` (column default in
+supabase/migrations/20260810000004_create_saved_searches_versions_audit_tables.sql)
+and are archived by `app.services.retention_service`.
 
-This service implements:
-- Async audit logging (non-blocking)
-- Data sanitization (removes sensitive information)
-- IP address anonymization
-- Query and response logging
-- Document access tracking
-- Export tracking
+What is in the trail (issue #559) — deliberately narrower than "every user
+interaction", which this docstring used to claim while nothing wrote to the
+table at all:
+
+- Searches (`log_query`), judgment reads (`log_document_access`), data exports
+  (`log_export`), and the state-changing operations wired through `log_action`:
+  collection mutations, extraction jobs, admin ingestion and admin erasure.
+- Only requests with an accountable, authenticated subject. A request without
+  one writes no row. The corpus is public court rulings and signed-out reads
+  are anonymous by design (#510 / #561), so attributing a row to a guest
+  session id would build a re-identifiable per-visitor history that public
+  corpus access does not itself imply; a NULL-user row would be equally
+  useless to a compliance reader. Anonymous volume is covered by `app_events`.
+- Read-only browsing of list/facet/analytics endpoints, autocomplete and
+  product telemetry are NOT audited. Those belong to
+  `app.services.app_events`, a separate product-analytics stream with its own
+  event allowlist, retention and access rules. The two coexist on purpose:
+  different question, different retention, different reader.
+
+Every write is scheduled as a FastAPI background task by its caller and every
+method here swallows its own failures, so an audit write can never fail, slow
+or alter the user's request.
 
 Author: Juddges Backend Team
 Date: 2025-10-12
@@ -21,10 +38,14 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, Request
 from loguru import logger
 
 from app.core.auth_jwt import get_admin_supabase_client
+
+# Reserved principal the Next.js BFF sends in `X-User-ID` for a signed-out
+# visitor (frontend/lib/documents/metadata-transport.ts ANONYMOUS_PRINCIPAL).
+ANONYMOUS_PRINCIPAL = "anonymous"
 
 # Default salt for development only -- in production, set the AUDIT_HASH_SALT env var
 _DEFAULT_AUDIT_SALT = "juddges_audit_salt_2025_default"
@@ -524,6 +545,21 @@ def log_audit_background(
     background_tasks.add_task(
         AuditService.log_action, user_id=user_id, action_type=action_type, **kwargs
     )
+
+
+def audited_principal(request: Request) -> str | None:
+    """Resolve the accountable user id for a request, or None if there is none.
+
+    Endpoints that serve public corpus data have no JWT dependency; the
+    Next.js BFF forwards the caller's identity in `X-User-ID` behind the
+    server-only `BACKEND_API_KEY`, sending the reserved `anonymous` principal
+    for a signed-out visitor. Returning None here is the single place that
+    decides an anonymous request is not audited — see the module docstring.
+    """
+    user_id = (request.headers.get("X-User-ID") or "").strip()
+    if not user_id or user_id == ANONYMOUS_PRINCIPAL:
+        return None
+    return user_id
 
 
 logger.info("Audit service module initialized")

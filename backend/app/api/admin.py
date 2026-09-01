@@ -11,7 +11,7 @@ Date: 2026-02-23
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,7 @@ from app.core.auth_jwt import (
     get_admin_supabase_client,
     require_admin,
 )
+from app.services.audit_service import log_audit_background
 from app.services.retention_service import RetentionService
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -742,6 +743,7 @@ async def get_content_stats(
 @router.post("/ingestion/start", response_model=IngestionStartResponse)
 async def start_ingestion(
     payload: IngestionStartRequest,
+    background_tasks: BackgroundTasks,
     admin: AuthenticatedUser = Depends(require_admin),
 ) -> IngestionStartResponse:
     """Submit a background judgment-ingestion job to Celery (#104).
@@ -782,6 +784,16 @@ async def start_ingestion(
     logger.info(
         f"Ingestion job {task.id} submitted by {admin.email}: "
         f"polish={payload.polish}, uk={payload.uk}"
+    )
+    # Compliance audit trail (issue #559): a privileged action that changes the
+    # corpus every other user then searches.
+    log_audit_background(
+        background_tasks,
+        user_id=admin.id,
+        action_type="admin_ingestion_started",
+        input_data=payload.model_dump(),
+        resource_type="ingestion_job",
+        resource_id=task.id,
     )
     return IngestionStartResponse(task_id=task.id, status="PENDING")
 
@@ -856,6 +868,7 @@ async def list_data_deletion_requests(
 )
 async def process_data_deletion_request(
     request_id: str,
+    background_tasks: BackgroundTasks,
     admin: AuthenticatedUser = Depends(require_admin),
 ) -> DeletionRequestProcessResponse:
     """Carry out a recorded erasure request (#506).
@@ -884,6 +897,19 @@ async def process_data_deletion_request(
         raise HTTPException(
             status_code=500, detail="Failed to process deletion request"
         ) from e
+
+    # Compliance audit trail (issue #559): an admin acting irreversibly on
+    # another person's data is the single event a regulator is most likely to
+    # ask about, and the erasure itself destroys the subject's own record of it.
+    log_audit_background(
+        background_tasks,
+        user_id=admin.id,
+        action_type="admin_data_deletion_processed",
+        input_data={"request_id": request_id},
+        output_data={"status": result["status"]},
+        resource_type="data_deletion_request",
+        resource_id=request_id,
+    )
 
     return DeletionRequestProcessResponse(
         status=result["status"],
