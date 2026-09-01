@@ -14,6 +14,7 @@ import {
  SearchEmptyState,
  SearchResultsSection,
 } from '@/lib/styles/components';
+import { GuestLimitBanner } from '@/components/onboarding/GuestLimitBanner';
 import { ZeroResultsEmptyState } from '@/components/search/ZeroResultsEmptyState';
 import { SearchPageSkeleton } from '@/components/search/search-page-skeleton';
 import { SearchErrorBoundary } from '@/components/errors/SearchErrorBoundary';
@@ -127,6 +128,7 @@ function SearchPageContent(): React.JSX.Element | null {
  getFilteredMetadata,
  getFilteredMetadataCount,
  getAvailableFiltersFromMetadata,
+ guestAllowance,
  } = useSearchStore();
 
  // Defensive: Convert Set to array if old cached version is loaded
@@ -577,12 +579,14 @@ function SearchPageContent(): React.JSX.Element | null {
  <div
  className={cn(
  'flex-1 min-w-0 overflow-hidden',
- ((searchMetadata.length === 0 && query && hasPerformedSearch) || error) &&
+ ((searchMetadata.length === 0 && query && hasPerformedSearch) ||
+ (error && error !== 'guest_limit_reached')) &&
  !isSearching &&
  'flex items-center justify-center'
  )}
  >
- {!((searchMetadata.length === 0 && query && hasPerformedSearch) || error) && (
+ {!((searchMetadata.length === 0 && query && hasPerformedSearch) ||
+ (error && error !== 'guest_limit_reached')) && (
  <div className="flex items-center justify-between mb-4">
  <VariantButton intent="text" onClick={handleBack} icon={ArrowLeft}>
  Back
@@ -591,7 +595,9 @@ function SearchPageContent(): React.JSX.Element | null {
  </div>
  )}
 
- {error && !isSearching && hasPerformedSearch ? (
+ <GuestLimitBanner allowance={guestAllowance} />
+
+ {error && error !== 'guest_limit_reached' && !isSearching && hasPerformedSearch ? (
  <SearchEmptyState
  error={true}
  query={query}

@@ -42,16 +42,18 @@ describe('LandingPage', () => {
       />
     );
 
-    // /search is auth-gated; landing CTAs and demo links route through /auth/login
-    // so unauth visitors don't hit a redirect loop.
+    // Issue #510 — the landing page must deliver what it advertises: search
+    // CTAs and demo chips run a real search, not a login form.
     expect(
       screen
         .getAllByRole('link', { name: /try search/i })
-        .some((link) => link.getAttribute('href') === '/auth/login')
+        .some((link) => link.getAttribute('href') === '/search')
     ).toBe(true);
-    expect(screen.getByRole('link', { name: /frankowicze i abuzywne klauzule/i })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: /frankowicze i abuzywne klauzule/i })
+    ).toHaveAttribute(
       'href',
-      '/auth/login'
+      '/search?q=Frankowicze%20i%20abuzywne%20klauzule&lang=pl'
     );
     expect(screen.getByText(/popular demo queries/i)).toBeInTheDocument();
   });

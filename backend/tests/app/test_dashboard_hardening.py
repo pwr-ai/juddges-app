@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
@@ -157,31 +158,6 @@ async def test_dashboard_stats_returns_503_when_precomputed_and_fallback_fail(
 
 @pytest.mark.anyio
 @pytest.mark.api
-async def test_dashboard_trending_topics_enforces_route_rate_limit(
-    authenticated_client: AsyncClient,
-):
-    """Dashboard trending-topics should return 200s under limit and 429 when exceeded."""
-    limiter = app.state.limiter
-    previous_enabled = getattr(limiter, "enabled", None)
-    limiter.enabled = True
-
-    try:
-        statuses: list[int] = []
-        for _ in range(120):
-            response = await authenticated_client.get("/dashboard/trending-topics")
-            statuses.append(response.status_code)
-            if response.status_code == 429:
-                break
-
-        assert statuses[0] == 200
-        assert 429 in statuses
-    finally:
-        if previous_enabled is not None:
-            limiter.enabled = previous_enabled
-
-
-@pytest.mark.anyio
-@pytest.mark.api
 async def test_dashboard_health_requires_api_key(client: AsyncClient):
     """GET /dashboard/health must reject requests without X-API-Key (fixes #170)."""
     response = await client.get("/dashboard/health")
@@ -222,3 +198,28 @@ async def test_dashboard_refresh_stats_requires_admin(
         assert response.status_code == 403
     finally:
         app.dependency_overrides.pop(jwt_get_current_user, None)
+
+
+class TestNoFabricatedTrendingTopics:
+    """The dashboard must not serve invented search activity (#558).
+
+    `GET /dashboard/trending-topics` returned a hardcoded list — "Swiss Franc
+    Loans, +45%, query_count=1234" and four more — typed as real aggregates
+    and rendered to every anonymous visitor on the public home page. The
+    endpoint is gone; these tests keep it from coming back unbacked.
+    """
+
+    def test_trending_topics_route_is_not_registered(self) -> None:
+        paths = {getattr(r, "path", None) for r in app.routes}
+        assert "/dashboard/trending-topics" not in paths
+
+    def test_dashboard_module_has_no_hardcoded_topics(self) -> None:
+        source = Path(dashboard_module.__file__).read_text(encoding="utf-8")
+        for invented in (
+            "Swiss Franc Loans",
+            "GDPR Violations",
+            "VAT Deductions",
+            "Employment Contracts",
+            "Corporate Governance",
+        ):
+            assert invented not in source

@@ -6,6 +6,7 @@ const EXTRACTION_ID = '22222222-3333-4444-8555-666666666666';
 const EXACT_PUBLIC_PAGES = [
   '/',
   '/about',
+  '/search',
   '/ecosystem',
   '/onboarding',
   '/status',
@@ -47,10 +48,16 @@ const PUBLIC_READ_APIS = [
   '/api/publications/publication-1',
   `/api/chats/${CHAT_ID}/messages`,
   `/api/chats/${CHAT_ID.toUpperCase()}/messages`,
+  '/api/search/documents',
+  '/api/search/suggest',
+  '/api/search/autocomplete',
+  '/api/example_questions',
+  '/api/documents/visible-doc/similar',
+  '/api/documents/visible-doc/html',
 ] as const;
 
 const PROTECTED_PAGE_CASES = [
-  '/search',
+  '/search/extractions',
   '/chat',
   '/collections',
   '/documents',
@@ -84,6 +91,15 @@ const LOOKALIKE_CASES = [
   `/api/chats/${CHAT_ID}/messages/extra`,
   `/api/chats/${CHAT_ID}/messages-archive`,
   `/api/chats/${CHAT_ID}//messages`,
+  '/searchable',
+  '/search/nested',
+  '/api/search',
+  '/api/search/documents/nested',
+  '/api/search/documentss',
+  '/api/example_questions/nested',
+  '/api/documents/visible-doc/similar/nested',
+  '/api/documents/visible-doc/htmls',
+  '/api/documents/nested/visible-doc/html',
 ] as const;
 
 describe('isPublicRequest', () => {
@@ -245,6 +261,83 @@ describe('isPublicRequest', () => {
       ).toBe(false);
     },
   );
+
+  // Issue #510 — guests may search and read judgments.
+  it.each(['GET', 'HEAD'] as const)(
+    'allows anonymous judgment detail page %s',
+    (method) => {
+      for (const pathname of [
+        '/documents/judgment-1',
+        '/documents/PL_SN_2020_ABC.123',
+        '/documents/uk_ewca_civ_2019_1234',
+      ]) {
+        expect(isPublicRequest({ pathname, method })).toBe(true);
+      }
+    },
+  );
+
+  it.each([
+    '/documents',
+    '/documents/',
+    '/documents//',
+    '/documents/judgment-1/',
+    '/documents/judgment-1/versions',
+    '/documents/nested/judgment-1',
+    '/documents/has spaces',
+    '/documents/has%2Fslash',
+  ])('protects judgment detail lookalike %s', (pathname) => {
+    expect(isPublicRequest({ pathname, method: 'GET' })).toBe(false);
+  });
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])(
+    'protects judgment detail page method %s',
+    (method) => {
+      expect(
+        isPublicRequest({ pathname: '/documents/judgment-1', method }),
+      ).toBe(false);
+    },
+  );
+
+  it('allows anonymous product-analytics writes so guest activity is attributable', () => {
+    expect(isPublicRequest({ pathname: '/api/events', method: 'POST' })).toBe(true);
+  });
+
+  it.each([
+    ['GET', '/api/events'],
+    ['PUT', '/api/events'],
+    ['DELETE', '/api/events'],
+    ['POST', '/api/events/'],
+    ['POST', '/api/events/nested'],
+  ] as const)('protects analytics lookalike %s %s', (method, pathname) => {
+    expect(isPublicRequest({ pathname, method })).toBe(false);
+  });
+
+  // Acceptance criterion 3: identity-bearing surfaces stay behind auth.
+  it.each([
+    '/collections',
+    '/collections/my-collection',
+    '/history',
+    '/chat',
+    '/search/extractions',
+    '/extractions',
+    '/schemas',
+    '/api/search/analytics/history',
+    '/api/search/topics/my-clicks',
+    '/api/collections',
+    '/api/documents/search',
+    '/api/documents/batch',
+  ])('keeps identity-bearing surface %s behind auth', (pathname) => {
+    expect(isPublicRequest({ pathname, method: 'GET' })).toBe(false);
+  });
+
+  it.each([
+    ['POST', '/api/search/topic-click'],
+    ['POST', '/api/documents/search'],
+    ['POST', '/api/documents/batch'],
+    ['DELETE', '/api/search/analytics/history'],
+  ] as const)('keeps %s %s behind auth', (method, pathname) => {
+    expect(isPublicRequest({ pathname, method })).toBe(false);
+  });
 
   it.each([
     ['POST', '/api/health/invalidate'],

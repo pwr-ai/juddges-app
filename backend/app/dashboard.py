@@ -150,16 +150,6 @@ class DocumentSummary(BaseModel):
     document_id: str | None = None
 
 
-class TrendingTopic(BaseModel):
-    """Trending topic information."""
-
-    topic: str
-    change: str
-    trend: str  # "up", "down", "stable"
-    query_count: int
-    category: str
-
-
 # ---------------------------------------------------------------------------
 # Cache helpers
 # ---------------------------------------------------------------------------
@@ -577,71 +567,3 @@ async def get_featured_examples(
     except (PostgrestAPIError, StorageException) as e:
         logger.exception(f"Error fetching featured examples: {e}")
         return []
-
-
-@router.get("/trending-topics", response_model=list[TrendingTopic])
-@limiter.limit(DASHBOARD_READ_RATE_LIMIT)
-async def get_trending_topics(
-    request: Request,
-    response: Response,
-    category: str | None = None,
-    limit: int = Query(default=5, ge=1, le=10),
-    api_key: str = Depends(verify_api_key),
-):
-    """
-    Get trending legal topics based on search activity.
-
-    Phase 1 (MVP): Returns curated/editorial topics
-    Phase 2 (Future): Algorithm-based trending from search analytics
-
-    Args:
-        category: Optional category filter
-        limit: Number of topics to return (1-10)
-
-    Returns:
-        List of trending topics with metadata
-    """
-    # For MVP: Return curated trending topics
-    curated_topics = [
-        TrendingTopic(
-            topic="Swiss Franc Loans",
-            change="+45%",
-            trend="up",
-            query_count=1234,
-            category="Banking Law",
-        ),
-        TrendingTopic(
-            topic="GDPR Violations",
-            change="+32%",
-            trend="up",
-            query_count=892,
-            category="Data Protection",
-        ),
-        TrendingTopic(
-            topic="VAT Deductions",
-            change="0%",
-            trend="stable",
-            query_count=756,
-            category="Tax Law",
-        ),
-        TrendingTopic(
-            topic="Employment Contracts",
-            change="+18%",
-            trend="up",
-            query_count=645,
-            category="Labor Law",
-        ),
-        TrendingTopic(
-            topic="Corporate Governance",
-            change="-5%",
-            trend="down",
-            query_count=523,
-            category="Corporate Law",
-        ),
-    ]
-
-    # Filter by category if provided
-    if category:
-        curated_topics = [t for t in curated_topics if t.category == category]
-
-    return curated_topics[:limit]

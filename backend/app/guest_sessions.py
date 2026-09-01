@@ -11,6 +11,7 @@ Date: 2025-10-09
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import NamedTuple
 
 import redis.asyncio as redis
 from fastapi import APIRouter, Cookie, HTTPException, Response
@@ -418,41 +419,123 @@ async def delete_guest_session(
         raise HTTPException(status_code=500, detail="Failed to delete guest session")
 
 
+# ===== Anonymous Search Quota (issue #510) =====
+
+
+class GuestQuota(NamedTuple):
+    """A guest's standing with the anonymous-search allowance.
+
+    ``enforced`` is False when the quota could not be evaluated — Redis is not
+    configured, or it is unreachable. Callers must treat that as "allow": the
+    corpus is public court rulings, so a session store outage should degrade the
+    free-search counter, not the ability to search. Scripted abuse is bounded by
+    the per-IP limiter in ``app.rate_limiter``, which is independent of Redis.
+    """
+
+    session_id: str | None
+    searches_remaining: int
+    limit_reached: bool
+    enforced: bool
+
+
+def _unenforced_quota(session_id: str | None = None) -> GuestQuota:
+    return GuestQuota(
+        session_id=session_id,
+        searches_remaining=GUEST_SEARCH_LIMIT,
+        limit_reached=False,
+        enforced=False,
+    )
+
+
+def guest_quota_configured() -> bool:
+    """Return True when a Redis host is configured to hold guest counters.
+
+    Mirrors ``app.rate_limiter.build_rate_limit_storage_uri``: an unset
+    ``REDIS_HOST`` means no shared store, so the quota stays inert rather than
+    dialling localhost on every anonymous search.
+    """
+    return bool(os.getenv("REDIS_HOST", "").strip())
+
+
+async def open_guest_search_quota(session_id: str | None) -> GuestQuota:
+    """Resolve a guest's session and remaining allowance without charging it.
+
+    A missing, expired, or forged session id yields a fresh session with the
+    full allowance — the counter is keyed on a cookie the visitor controls, so
+    this is friction, not an access-control decision.
+    """
+    if not guest_quota_configured():
+        return _unenforced_quota()
+
+    try:
+        resolved_id = await get_or_create_guest_session(session_id)
+        usage = await get_guest_usage(resolved_id)
+    except Exception as exc:
+        logger.warning(f"Guest search quota unavailable, allowing search: {exc}")
+        return _unenforced_quota()
+
+    return GuestQuota(
+        session_id=resolved_id,
+        searches_remaining=usage["searches_remaining"],
+        limit_reached=usage["limit_reached"],
+        enforced=True,
+    )
+
+
+async def charge_guest_search(session_id: str | None) -> int:
+    """Charge one search against a guest session and return searches remaining.
+
+    Called only after a search actually returned, so a failing upstream never
+    costs the visitor part of their allowance.
+    """
+    if not session_id or not guest_quota_configured():
+        return GUEST_SEARCH_LIMIT
+
+    try:
+        await increment_guest_search_count(session_id)
+        usage = await get_guest_usage(session_id)
+    except Exception as exc:
+        logger.warning(f"Failed to charge guest search {session_id}: {exc}")
+        return GUEST_SEARCH_LIMIT
+
+    return usage["searches_remaining"]
+
+
+def guest_limit_exceeded_error() -> HTTPException:
+    """The 429 a guest receives once the free-search allowance is spent."""
+    return HTTPException(
+        status_code=429,
+        detail={
+            "error": "Rate limit exceeded",
+            "message": (
+                f"You've reached the limit of {GUEST_SEARCH_LIMIT} free searches. "
+                "Please register for unlimited access."
+            ),
+            "searches_used": GUEST_SEARCH_LIMIT,
+            "limit": GUEST_SEARCH_LIMIT,
+            "upgrade_url": "/auth/sign-up",
+        },
+    )
+
+
 # ===== Middleware Helper =====
 
 
 async def check_guest_rate_limit(
     session_id: str | None = Cookie(None, alias="guest_session_id"),
-) -> tuple[str, bool]:
-    """
-    Check if guest has reached rate limit.
+) -> tuple[str | None, bool]:
+    """FastAPI dependency form of the quota check.
 
-    Can be used as a dependency in search endpoints to enforce limits.
-
-    Args:
-        session_id: Guest session ID (from cookie)
+    Delegates to :func:`open_guest_search_quota` so there is one implementation
+    of the allowance rule.
 
     Returns:
         tuple: (session_id, within_limit)
 
     Raises:
-        HTTPException: If rate limit exceeded
+        HTTPException: 429 when the allowance is spent.
     """
-    # Get or create session
-    session_id = await get_or_create_guest_session(session_id)
-
-    # Check current usage
-    usage = await get_guest_usage(session_id)
-
-    if usage["limit_reached"]:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "Rate limit exceeded",
-                "message": "You've reached the limit of 5 free searches. Please register for unlimited access.",
-                "searches_used": usage["searches_used"],
-                "upgrade_url": "/auth/signup",
-            },
-        )
-
-    return session_id, True
+    quota = await open_guest_search_quota(session_id)
+    if quota.limit_reached:
+        raise guest_limit_exceeded_error()
+    return quota.session_id, True

@@ -1,59 +1,69 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { EditorialButton, Eyebrow } from "@/components/editorial";
+import {
+  type GuestAllowance,
+  isGuestLimitReached,
+  shouldPromptSignUp,
+} from "@/lib/guest/session";
+
+const SIGN_UP_HREF = "/auth/sign-up";
 
 interface GuestLimitBannerProps {
- remainingSearches: number;
+  /** Allowance reported by the last search; nullish when signed in. */
+  allowance: GuestAllowance | null | undefined;
 }
 
-export function GuestLimitBanner({ remainingSearches }: GuestLimitBannerProps) {
- const isLimitReached = remainingSearches === 0;
- const shouldPrompt = remainingSearches <= 2 && remainingSearches > 0;
+/**
+ * Sign-up prompt for a signed-out visitor (issue #510).
+ *
+ * Stays out of the way until the allowance is nearly spent, then hardens into a
+ * wall once it is. The counts come from the backend on every search, so this
+ * component holds no state of its own.
+ */
+export function GuestLimitBanner({
+  allowance,
+}: GuestLimitBannerProps): React.JSX.Element | null {
+  const limitReached = isGuestLimitReached(allowance);
+  if (!limitReached && !shouldPromptSignUp(allowance)) return null;
 
- if (!shouldPrompt && !isLimitReached) {
- return null;
- }
+  const remaining = allowance?.remaining ?? 0;
 
- if (isLimitReached) {
- return (
- <Alert className="mb-6 border-amber-200 bg-amber-50">
- <AlertCircle className="h-4 w-4 text-amber-600"/>
- <AlertDescription className="flex items-center justify-between gap-4">
- <div>
- <p className="font-medium text-amber-900 mb-1">
- You&apos;ve reached the guest search limit
- </p>
- <p className="text-sm text-amber-800">
- Sign up for free to continue searching and save your research
- </p>
- </div>
- <Button asChild className="flex-shrink-0">
- <Link href="/auth/sign-up">Sign Up Free</Link>
- </Button>
- </AlertDescription>
- </Alert>
- );
- }
-
- return (
- <Alert className="mb-6 border-blue-200 bg-blue-50">
- <Sparkles className="h-4 w-4 text-blue-600"/>
- <AlertDescription className="flex items-center justify-between gap-4">
- <div>
- <p className="font-medium text-blue-900 mb-1">
- {remainingSearches} {remainingSearches === 1 ? 'search' : 'searches'} remaining as a guest
- </p>
- <p className="text-sm text-blue-800">
- Sign up to get unlimited searches, save results, and access advanced features
- </p>
- </div>
- <Button asChild variant="outline"size="sm"className="flex-shrink-0">
- <Link href="/auth/sign-up">Sign Up Free</Link>
- </Button>
- </AlertDescription>
- </Alert>
- );
+  return (
+    <aside
+      role="status"
+      aria-live="polite"
+      className="mb-6 flex flex-col gap-4 border-l-2 border-[color:var(--oxblood)] bg-[color:var(--parchment-deep)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div>
+        <Eyebrow>{limitReached ? "Free searches used" : "Guest access"}</Eyebrow>
+        <p className="mt-1 text-[15px] text-[color:var(--ink)]">
+          {limitReached ? (
+            <>
+              You have used all of your free searches. Create a free account to
+              keep searching.
+            </>
+          ) : (
+            <>
+              <span className="font-medium">
+                {remaining} {remaining === 1 ? "search" : "searches"}
+              </span>{" "}
+              left as a guest.
+            </>
+          )}
+        </p>
+        <p className="mt-0.5 text-[13px] text-[color:var(--ink-soft)]">
+          An account adds unlimited search, saved collections, and extraction.
+        </p>
+      </div>
+      <EditorialButton
+        href={SIGN_UP_HREF}
+        variant={limitReached ? "primary" : "secondary"}
+        size="sm"
+        className="shrink-0"
+      >
+        Create free account
+      </EditorialButton>
+    </aside>
+  );
 }

@@ -280,23 +280,33 @@ describe('documents production HTTP/auth status matrix', () => {
         await response.text();
       }
 
+      // Issue #510 — judgments are public court rulings. Every way of failing to
+      // produce a signed-in identity still serves the judgment: no session, a
+      // rejected session, or an auth-service outage. What must NOT change is the
+      // gating of the lookalike paths below.
       const anonymousBff = await requestUntilReady(
         `${appUrl}/api/documents/visible-doc/metadata`
       );
-      expect(anonymousBff.status).toBe(401);
+      expect(anonymousBff.status).toBe(200);
       const anonymousContentType = anonymousBff.headers.get('content-type');
-      expect((await anonymousBff.json()).error).toBe('UNAUTHORIZED');
+      expect((await anonymousBff.json()).document_id).toBe('visible-doc');
       const anonymousBffHead = await requestUntilReady(
         `${appUrl}/api/documents/visible-doc/metadata`,
         { method: 'HEAD' }
       );
-      expect(anonymousBffHead.status).toBe(401);
+      expect(anonymousBffHead.status).toBe(200);
       expect(anonymousBffHead.headers.get('content-type')).toBe(anonymousContentType);
       expect(await anonymousBffHead.text()).toBe('');
       const anonymousLookalike = await requestUntilReady(
         `${appUrl}/api/documents/visible-doc/metadata/nested`
       );
       expect(anonymousLookalike.status).toBe(307);
+
+      const anonymousPage = await requestUntilReady(
+        `${appUrl}/documents/visible-doc`
+      );
+      expect(anonymousPage.status).toBe(200);
+      expect(await anonymousPage.text()).toContain('Visible judgment');
 
       const metadataBeforeAuthOutage = upstreamRequests.filter((item) =>
         item.endsWith('/documents/visible-doc/metadata')
@@ -305,39 +315,41 @@ describe('documents production HTTP/auth status matrix', () => {
         `${appUrl}/documents/visible-doc`,
         { headers: authOutage }
       );
-      expect(authOutagePage.status).toBe(503);
-      expect(await authOutagePage.text()).toMatch(/temporarily unavailable|try again/i);
+      expect(authOutagePage.status).toBe(200);
+      expect(await authOutagePage.text()).toContain('Visible judgment');
       const authOutageBff = await requestUntilReady(
         `${appUrl}/api/documents/visible-doc/metadata`,
         { headers: authOutage }
       );
-      expect(authOutageBff.status).toBe(503);
-      expect((await authOutageBff.json()).error).toBe('DATABASE_UNAVAILABLE');
+      expect(authOutageBff.status).toBe(200);
+      expect((await authOutageBff.json()).document_id).toBe('visible-doc');
+      // An auth outage used to short-circuit before upstream; the public page
+      // now goes on to fetch the judgment.
       expect(
         upstreamRequests.filter((item) =>
           item.endsWith('/documents/visible-doc/metadata')
         ).length
-      ).toBe(metadataBeforeAuthOutage);
+      ).toBe(metadataBeforeAuthOutage + 2);
 
       for (const invalidSession of [badJwt, status401]) {
         const invalidPage = await requestUntilReady(
           `${appUrl}/documents/visible-doc`,
           { headers: invalidSession }
         );
-        expect(invalidPage.status).toBe(307);
-        expect(invalidPage.headers.get('location')).toContain('/auth/login');
+        expect(invalidPage.status).toBe(200);
+        expect(await invalidPage.text()).toContain('Visible judgment');
         const invalidBff = await requestUntilReady(
           `${appUrl}/api/documents/visible-doc/metadata`,
           { headers: invalidSession }
         );
-        expect(invalidBff.status).toBe(401);
-        expect((await invalidBff.json()).error).toBe('UNAUTHORIZED');
+        expect(invalidBff.status).toBe(200);
+        expect((await invalidBff.json()).document_id).toBe('visible-doc');
       }
       expect(
         upstreamRequests.filter((item) =>
           item.endsWith('/documents/visible-doc/metadata')
         ).length
-      ).toBe(metadataBeforeAuthOutage);
+      ).toBe(metadataBeforeAuthOutage + 6);
 
       for (const extension of [
         'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp',
@@ -353,9 +365,14 @@ describe('documents production HTTP/auth status matrix', () => {
             },
           }
         );
-        expect(bypassProbe.status).toBe(307);
-        expect(bypassProbe.headers.get('location')).toContain('/auth/login');
-        await bypassProbe.text();
+        // Issue #510 — the judgment page is public, so a forged header is no
+        // longer stopped by a login redirect. It is stopped by the middleware
+        // stripping it: the page renders upstream's judgment, never the
+        // attacker's payload.
+        expect(bypassProbe.status).toBe(200);
+        const bypassBody = await bypassProbe.text();
+        expect(bypassBody).not.toContain('Forged document');
+        expect(bypassBody).toContain('Visible judgment');
       }
       for (const path of [
         '/documents/nested/attack.txt',

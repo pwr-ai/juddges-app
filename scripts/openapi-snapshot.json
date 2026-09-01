@@ -3506,6 +3506,159 @@
         "title": "DeleteSchemaResponse",
         "type": "object"
       },
+      "DeletionRequestItem": {
+        "description": "One GDPR erasure request in the operator queue (#506).",
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "data_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Data Types",
+            "type": "array"
+          },
+          "deletion_summary": {
+            "additionalProperties": true,
+            "title": "Deletion Summary",
+            "type": "object"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "processed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed By"
+          },
+          "request_type": {
+            "title": "Request Type",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "request_type",
+          "status"
+        ],
+        "title": "DeletionRequestItem",
+        "type": "object"
+      },
+      "DeletionRequestListResponse": {
+        "description": "Erasure requests awaiting an operator, oldest first.",
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/DeletionRequestItem"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requests",
+          "total"
+        ],
+        "title": "DeletionRequestListResponse",
+        "type": "object"
+      },
+      "DeletionRequestProcessResponse": {
+        "description": "Outcome of carrying out one erasure request.",
+        "properties": {
+          "deletion_summary": {
+            "additionalProperties": true,
+            "title": "Deletion Summary",
+            "type": "object"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "request_id",
+          "timestamp"
+        ],
+        "title": "DeletionRequestProcessResponse",
+        "type": "object"
+      },
       "DependenciesResponse": {
         "description": "Response listing all system dependencies.",
         "example": {
@@ -13383,40 +13536,6 @@
         "title": "TrackEventsRequest",
         "type": "object"
       },
-      "TrendingTopic": {
-        "description": "Trending topic information.",
-        "properties": {
-          "category": {
-            "title": "Category",
-            "type": "string"
-          },
-          "change": {
-            "title": "Change",
-            "type": "string"
-          },
-          "query_count": {
-            "title": "Query Count",
-            "type": "integer"
-          },
-          "topic": {
-            "title": "Topic",
-            "type": "string"
-          },
-          "trend": {
-            "title": "Trend",
-            "type": "string"
-          }
-        },
-        "required": [
-          "topic",
-          "change",
-          "trend",
-          "query_count",
-          "category"
-        ],
-        "title": "TrendingTopic",
-        "type": "object"
-      },
       "TrendingTopicItem": {
         "description": "A single trending topic with its cross-lingual (PL/UK) click split.",
         "properties": {
@@ -15500,6 +15619,124 @@
         ]
       }
     },
+    "/api/admin/data-deletion-requests": {
+      "get": {
+        "description": "List GDPR erasure requests, oldest first (#506).\n\nDefaults to `pending` because that is the operator's outstanding work.",
+        "operationId": "list_data_deletion_requests_api_admin_data_deletion_requests_get",
+        "parameters": [
+          {
+            "description": "Filter by status; 'all' returns every request",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "description": "Filter by status; 'all' returns every request",
+              "enum": [
+                "pending",
+                "in_progress",
+                "completed",
+                "failed",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionRequestListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Data Deletion Requests",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/data-deletion-requests/{request_id}/process": {
+      "post": {
+        "description": "Carry out a recorded erasure request (#506).\n\n`RetentionService.process_deletion_request` has always been able to do this;\nuntil now nothing called it, so requests accumulated unprocessed while the\nsubject had been told in writing they would be handled within 30 days.",
+        "operationId": "process_data_deletion_request_api_admin_data_deletion_requests__request_id__process_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionRequestProcessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Process Data Deletion Request",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/documents/stats": {
       "get": {
         "description": "Get document statistics grouped by type, country, and language.\n\nQueries the doc_type_stats pre-computed table for type counts, and\njudgments for country/language breakdowns and recent additions.",
@@ -17378,7 +17615,7 @@
     },
     "/api/search/documents": {
       "get": {
-        "description": "Paginated Meilisearch-backed document search for the /search results page.",
+        "description": "Paginated Meilisearch-backed document search for the /search results page.\n\nServes signed-out visitors (issue #510): the corpus is public court rulings.\nAnonymous callers get a capped free allowance tracked against a guest\nsession; signed-in callers are never metered here.",
         "operationId": "documents_search_api_search_documents_get",
         "parameters": [
           {
@@ -17463,6 +17700,22 @@
               "description": "When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical.",
               "title": "Parse Attributes",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "guest_session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guest Session Id"
             }
           }
         ],
@@ -20118,77 +20371,6 @@
           }
         ],
         "summary": "Get Dashboard Stats",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/trending-topics": {
-      "get": {
-        "description": "Get trending legal topics based on search activity.\n\nPhase 1 (MVP): Returns curated/editorial topics\nPhase 2 (Future): Algorithm-based trending from search analytics\n\nArgs:\n    category: Optional category filter\n    limit: Number of topics to return (1-10)\n\nReturns:\n    List of trending topics with metadata",
-        "operationId": "get_trending_topics_dashboard_trending_topics_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "category",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Category"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 5,
-              "maximum": 10,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TrendingTopic"
-                  },
-                  "title": "Response Get Trending Topics Dashboard Trending Topics Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get Trending Topics",
         "tags": [
           "dashboard"
         ]
