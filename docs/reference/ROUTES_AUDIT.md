@@ -5,6 +5,8 @@
 > tego audytu zostały naprawione: proxy dla `/judge-fingerprint` i
 > `/reasoning-lines` istnieją, `/blog` pobiera prawdziwe dane, `npm run
 > typecheck` przechodzi, a testy jednostkowe backendu i frontendu są zielone.
+> `/accessibility` jest już publiczna
+> (`frontend/lib/supabase/public-route-policy.ts:22`), wbrew wierszowi w tabeli.
 > Tabela poniżej pozostaje przydatna jako szczegółowy spis per-trasa — traktuj
 > jej werdykty jako historyczne.
 

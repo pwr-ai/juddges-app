@@ -1,16 +1,35 @@
-# Application status and one-week ship plan
+# Application status findings — 2026-08-21 snapshot
 
-**Snapshot date:** 2026-08-21 · **Repo state:** `main` @ `89950f8` · **Version file:** `1.3.0`
+**Probed:** 2026-08-21, `main` @ `89950f8` · **Corrected:** 2026-09-01 against
+`main` @ 34 commits past `prod-v1.4.0`
 
-This document answers four questions: what is implemented and working, what is
-hidden, what needs work, and what a one-week plan to hand the app to real users
-looks like.
+**This is a dated findings document, not a live status page.** It records what
+probing the code, the database and production turned up on 2026-08-21: what is
+implemented and working, what is built but hidden, and what is broken. Read
+every claim as "true on the stated date". A correction pass on 2026-09-01
+removed the findings that had since been fixed or were wrong, and marked what
+changed; anything not re-verified on that date still carries the 2026-08-21
+date only.
 
-It supersedes [`ROUTES_AUDIT.md`](ROUTES_AUDIT.md) (2026-08-05) as the current
-state-of-the-app reference. That audit's largest findings — the missing
-`/judge-fingerprint` and `/reasoning-lines` proxies, the mock-data blog, the
-`tiptap-editor` type error — have all been fixed since. Its per-route table is
-still useful for detail; treat its verdicts as stale.
+The original document ended with a one-week ship plan and a go/no-go checklist.
+Both were removed on 2026-09-01: the plan was largely executed (see §7), and a
+merged document that describes finished work as pending is worse than no plan
+at all.
+
+Companion references, both narrower, both maintained separately:
+
+- [`guest-access.md`](guest-access.md) — what a signed-out visitor can reach
+  after #510, and the metering that is supposed to apply to it.
+- [`sidebar-map.md`](sidebar-map.md) — nominally the canonical sidebar map. It
+  describes a **6-item** sidebar; `frontend/components/app-sidebar.tsx` renders
+  **17 distinct routes**. On that disagreement, `sidebar-map.md` is the stale
+  document, not §5b below.
+
+It supersedes [`ROUTES_AUDIT.md`](ROUTES_AUDIT.md) (2026-08-05). That audit's
+largest findings — the missing `/judge-fingerprint` and `/reasoning-lines`
+proxies, the mock-data blog, the `tiptap-editor` type error — have all been
+fixed since. Its per-route table is still useful for detail; treat its verdicts
+as stale.
 
 ---
 
@@ -18,33 +37,48 @@ still useful for detail; treat its verdicts as stale.
 
 The codebase is in better shape than the product is.
 
-Every automated gate is green. The infrastructure is live and healthy. What is
-missing is not engineering quality — it is that a stranger cannot get to the
-one thing this app does well.
+Every automated gate is green. The infrastructure is live (health `degraded`
+since 2026-09-01 — Meilisearch sync is stale). What is missing is not
+engineering quality — it is that a stranger cannot get to the one thing this
+app does well.
 
-Two facts block handing it to users, and neither is a code-quality problem:
+Two facts blocked handing it to users, and neither was a code-quality problem.
+Both have moved since 2026-08-21, and both still bite:
 
-1. **Production is running a build from 2026-05-15.** `main` is **532 commits
-   ahead** of the newest `prod-v*` tag. Three months of fixes — including every
-   fix listed in this document as "already done" — are not deployed.
-2. **A visitor cannot see a single judgment without an account and a confirmed
-   email.** `/search`, `/chat`, `/documents/[id]` all 307 to `/auth/login` in
-   production today. This is [#510](https://github.com/pwr-ai/juddges-app/issues/510),
-   filed as `priority: critical`.
+1. **Production is running a build from 2026-08-25.** The newest tag is
+   `prod-v1.4.0`; `main` is **34 commits ahead** of it. Smaller than the
+   three-month, 532-commit drift this document originally recorded — that gap
+   was closed by the `prod-v1.4.0` release — but the shape of the problem is
+   unchanged: deploys are manual, and every fix listed below as "already done"
+   is done on `main`, not in front of users.
+2. **A visitor could not see a single judgment without an account and a
+   confirmed email.** `/search`, `/chat`, `/documents/[id]` all 307'd to
+   `/auth/login`. This was
+   [#510](https://github.com/pwr-ai/juddges-app/issues/510), `priority: critical`.
 
-   And the wall is cosmetic. The `anon` key that production ships inside its own
-   landing-page HTML reads all 12,307 judgments and all 329,237 chunks directly
-   from Supabase REST — the database carries policies explicitly named
-   `"Public read access"`. **The gate blocks the user, not the data** (§4).
-   That removes the main risk from opening it, and removes most of the argument
-   for keeping it shut.
+   **Closed 2026-09-01 by PR
+   [#561](https://github.com/pwr-ai/juddges-app/pull/561).** On `main`, `/search`
+   and the judgment detail page are anonymous:
+   `frontend/lib/supabase/public-route-policy.ts:17` (`'/search'` in
+   `EXACT_PUBLIC_PAGES`) and `:71` (`PUBLIC_JUDGMENT_PAGE_PATTERN`).
+   `/search/extractions` deliberately stays gated.
+
+   **Production still returns `307` on `/search`** (probed 2026-09-01), because
+   it has not been redeployed since. The wall this document argues against is
+   gone from the code and still standing in front of users. That is fact 1
+   again, with a concrete cost attached.
+
+   And the wall was cosmetic anyway. The `anon` key that production ships inside
+   its own landing-page HTML reads all 12,307 judgments and all 329,237 chunks
+   directly from Supabase REST — the database carries policies explicitly named
+   `"Public read access"`. **The gate blocked the user, not the data** (§4).
 
 Beyond those, the product has one strong, complete spine — search and read over
 12,307 judgments, with 40+ structured fields already extracted from every one of
 them — wrapped in 63 pages, most of which are furnished rooms with nothing in
 them.
 
-**The week's job is not to build. It is to deploy, unlock, and de-clutter.**
+**The job is not to build. It is to deploy, unlock, and de-clutter.**
 
 ---
 
@@ -60,7 +94,7 @@ Every claim below is from a command run on 2026-08-21, not from documentation.
 | CI on `main` | `gh run list` | **green** |
 | Required checks | `gh api .../branches/main/protection` | 7: Backend Lint · Backend Unit Tests · Frontend Lint · Frontend Unit Tests · Frontend E2E Smoke (UI-only) · Database Contract · Frontend Route Contract (Chromium) |
 | Production reachability | `curl https://juddges.augustyniak.ai/` | **200** |
-| Production dependencies | `GET /api/health/status` | redis · postgresql · supabase · celery · langfuse · meilisearch — **all healthy** |
+| Production dependencies | `GET /api/health/status` | **`status: "degraded"`** — redis · postgresql · supabase · celery · langfuse healthy; **meilisearch degraded**, `"Meilisearch is accessible and healthy (sync stale)"`, `last_completed_at: null`, `last_error: "Event loop is closed"` *(re-probed 2026-09-01)* |
 | Data volumes | Supabase REST, `Prefer: count=exact` | see §4 |
 | pgvector search RPCs | `POST /rest/v1/rpc/...` | `count_judgments_filtered` → **12307** · `search_judgments_hybrid` → responds |
 | Access posture | `pg_class` / `pg_policies` over `DATABASE_URL`, read-only | 43 public tables, **RLS on for all 43** · see §4 |
@@ -74,18 +108,18 @@ Every claim below is from a command run on 2026-08-21, not from documentation.
 | Item | State |
 |---|---|
 | Production URL | `https://juddges.augustyniak.ai` — **live** |
-| All six backend dependencies | **healthy** (Redis, PostgreSQL, Supabase, Celery worker, Langfuse, Meilisearch) |
-| Newest production tag | `prod-v1.3.0`, **2026-05-15** |
-| Commits on `main` since that tag | **532** |
+| Overall prod health | **`degraded`** — five of six dependencies healthy, Meilisearch reports `sync stale` |
+| Newest production tag | `prod-v1.4.0`, **2026-08-25** |
+| Commits on `main` since that tag | **34** |
 | Version reported by prod health | `"unknown"` — the running image does not know its own version |
+| Anonymous `GET /search` in production | **`307`** — `main` opened it (#561), production has not been redeployed |
 | Image build | manual, `scripts/build_and_push_prod.sh` (not in CI, by design) |
-| Open PRs | 1 real ([#528](https://github.com/pwr-ai/juddges-app/issues/528)) + 9 Dependabot |
-| Open issues | 17 |
-| Active worktrees | 2 (`fix-228-history-bff`, a stale `.kangentic` one) |
 
-**Read this row twice:** the deploy pipeline works, has been used before, and
-simply has not been run in three months. The single highest-value action
-available this week costs one command.
+**Read those rows twice:** the deploy pipeline works and has been used —
+`prod-v1.4.0` closed a three-month, 532-commit gap. It then immediately started
+opening a new one, and the 34 commits sitting in it include the single change
+this document spent the most words arguing for. The highest-value action
+available still costs one command.
 
 ---
 
@@ -214,7 +248,8 @@ Given the named `"Public read access"` policies, this is almost certainly the
 intended posture for public court rulings. It should still be a conscious,
 recorded decision rather than an inherited one.
 
-**Three real weaknesses, all low severity, none blocking:**
+**Two real weaknesses, both low severity, neither blocking — plus one item
+the 2026-08-21 pass read backwards:**
 
 1. `contact_submissions` — `INSERT` for `{anon, authenticated}` with
    `WITH CHECK: true`. **Unbounded anonymous insert.** Because the anon key
@@ -229,15 +264,31 @@ recorded decision rather than an inherited one.
    pattern already recorded in `supabase-grants-are-not-a-boundary`: revoke at
    the grant layer, do not rely on policy discipline alone.
 3. **11 tables have RLS on with zero policies** — deny-all. For eight of them
-   that is correct. For **`blog_posts`, `blog_categories`, `blog_tags`** it is a
-   trap: `anon` holds a `SELECT` grant, so PostgREST answers `200` with an empty
-   array rather than an error. `publications` and its three satellite tables have
-   no grant either and return a hard `401 permission denied`.
+   the 2026-08-21 pass judged that correct. For the three blog tables it called
+   it a trap, and was wrong.
 
-   **This changes the Day 4 plan:** seeding rows into `blog_posts` or
-   `publications` will *not* make those pages work. They need a `SELECT` policy
-   first. The empty page has two independent causes, and fixing one leaves it
-   empty.
+   > **Corrected 2026-09-01.** The original text called the three blog tables a
+   > trap, claimed `anon` holds a `SELECT` grant on them, and recommended adding
+   > a `SELECT` policy before seeding. **All three parts were wrong, and the
+   > recommendation would have punched a hole in a deliberate boundary.**
+   >
+   > `supabase/migrations/20260804000001_create_blog_tables.sql:190-193` says so
+   > verbatim: *"blog_posts / blog_tags / blog_categories: intentionally no anon
+   > or authenticated policy or grant. Public reads are served by the backend
+   > through the service-role client (which bypasses RLS), matching the
+   > service_role-only EXECUTE grants on `list_public_blog_posts` and
+   > `get_public_blog_post`."* The grants at `:222-224` are `GRANT ALL … TO
+   > service_role` and nothing else — anon holds no `SELECT` grant.
+   >
+   > The read path is `backend/app/api/blog.py:279` and `:331`, both calling
+   > `get_admin_supabase_client().rpc(...)`. **Seeding rows into `blog_posts` is
+   > sufficient on its own**; no policy change is needed, and adding an anon
+   > `SELECT` policy would expose unpublished drafts that the RPCs filter out.
+
+   `publications` and its three satellite tables are in the same deny-all state
+   and return a hard `401 permission denied` to anon. Whether their read path is
+   equally service-role-mediated was **not re-verified** on 2026-09-01 — check
+   before acting on `/publications`.
 
 ### Performance
 
@@ -336,6 +387,12 @@ one schema route a user can reach is the read-only base definition.
 | `/topic-modeling` map | `judgments.umap_x` | NULL for all 12,307 |
 | Analytics funnel | `app_events` | 0 |
 
+`/blog` deserves a note of its own, because the 2026-08-21 pass got it wrong.
+The table is empty and that is the *only* reason the page is empty. Reads go
+through service-role RPCs (`backend/app/api/blog.py:279`, `:331`) that bypass
+RLS by design, so **seeding rows is sufficient** — no policy or grant change is
+needed, and adding one would expose drafts the RPCs filter out. See §4.
+
 `/extract` deserves a specific note: with `extraction_schemas` empty, a user who
 finds the extraction workbench has nothing to select. The feature is complete and
 unusable at the same time. Issue
@@ -343,13 +400,18 @@ unusable at the same time. Issue
 pipeline still runs end-to-end; the answer from the data is that it has never run
 in this environment.
 
-### 5d. Broken or degraded on `main` right now
+### 5d. Broken or degraded
+
+State on `main` as of 2026-09-01. Rows fixed between the 2026-08-21 probe and
+that date are marked inline and kept, because the failure they represent is
+still worth recognising; rows with no such marker are still broken.
 
 | Problem | Location | Note |
 |---|---|---|
-| `/history` 404s | missing `frontend/app/api/search/analytics/history/route.ts` | Regression from #525. **PR [#528](https://github.com/pwr-ai/juddges-app/pull/528) fixes it and is open.** `/history` is in the sidebar. |
-| Guest search is dead code | `frontend/lib/guestMode.ts` (69 lines) | Implements a 5-search localStorage allowance. **Imported by nothing.** The backend half (`backend/app/guest_sessions.py`, public router) is live. |
-| Meilisearch hybrid disabled | `#200`, `docs/how-to/re-enable-hybrid-search.md` | The `bge-m3` embedder is not registered on the live index, so `semantic_ratio > 0` returns 502. The UI option is hidden and persisted `hybrid` is migrated back to `text` to avoid a 502 loop (`searchStore.ts:1136`). **Vector mode via pgvector is unaffected and works.** |
+| Anonymous search is unmetered | `backend/app/server.py`, `backend/app/api/search.py:331` | PR [#561](https://github.com/pwr-ai/juddges-app/pull/561) opened `/search` to guests; the rate limit that was supposed to bound it never landed. `SlowAPIMiddleware` is **never registered** in `server.py` — only `app.state.limiter` and the exception handler are — so `DEFAULT_RATE_LIMITS` applies to nothing, and `documents_search` carries no `@limiter.limit` decorator (41 other call sites in `backend/app/` do). Tracked as [#565](https://github.com/pwr-ai/juddges-app/issues/565). This is the successor to the old "guest search is dead code" finding: `frontend/lib/guestMode.ts` was deleted in `0eb91b6c` and replaced by `frontend/lib/guest/session.ts`, a server-authoritative Redis counter on an HttpOnly cookie — the right shape, with the backstop missing. |
+| `/search/extractions` links every row to a route that does not exist | `frontend/app/search/extractions/page.tsx:185` | The row `<Link>` targets `/judgments/<row.id>` and there is no `frontend/app/judgments/` directory. **Every result row 404s.** The intended target is `/documents/[id]`. This is the surface §4 calls "the differentiated product": 100% populated, and unclickable. |
+| The public landing page invented its own trending searches | `/`, dashboard trending-topics | [#558](https://github.com/pwr-ai/juddges-app/issues/558) — the home page rendered hardcoded query counts as if they were real search activity. Fixed by PR [#564](https://github.com/pwr-ai/juddges-app/pull/564), 2026-09-01, which removed the fabricated data rather than backfilling it. Kept here because it is the same failure mode as the facets below: **production telling the first user something untrue.** |
+| Meilisearch hybrid disabled | `docs/how-to/re-enable-hybrid-search.md` | The `bge-m3` embedder is not registered on the live index, so `semantic_ratio > 0` returns 502. The UI option is hidden and persisted `hybrid` is coerced back to `text` to avoid a 502 loop (`frontend/lib/store/searchStore.ts:1143-1146`). **Vector mode via pgvector is unaffected and works.** |
 | Search results show boilerplate | `search-document-card.tsx:28` | See §4 defect 1 |
 | `base_case_name` ranked last | `meilisearch_config.py` `searchableAttributes` | `title` (boilerplate) is weighted highest; the clean case name is weighted lowest. Searching a party name ranks badly. |
 | Prod reports `version: "unknown"` | running image | No way to tell what is deployed from the outside |
@@ -357,17 +419,29 @@ in this environment.
 | 6 backend test files skipped as obsolete | `test_schemas_integration.py`, `test_schemas_validation.py` | "mock `app.schemas.InformationExtractor` which no longer exists" — schema extraction has **no active integration coverage** |
 | Unbounded anonymous insert | `contact_submissions` policy `WITH CHECK: true` | Reachable via PostgREST with the browser-shipped key, bypassing `/api/contact` entirely. Same shape on `feature_requests`, `search_feedback`. See §4. |
 | `anon` holds write grants on 33 of 43 tables | Supabase grants | Not exploitable today (no permissive policy), but the wrong default — one careless future policy turns it into a write hole. See §4. |
-| `blog_posts` / `publications` deny-all | RLS on, **zero policies** | `/blog` and `/publications` would stay empty even after seeding rows. `blog_posts` answers `200 []`; `publications` answers `401`. See §4. |
+| `/publications` masks an empty table | `publications` — RLS on, zero policies, no anon grant | Anon gets `401 permission denied`, and the page falls back to a static list rather than showing an honest empty state. Whether the intended read path is a service-role RPC (as it demonstrably is for `blog_*`) was **not verified**. See §4. |
 
 ### 5e. Known, filed, and correctly deferred
 
-17 open issues. The ones that shape the week:
+The issues that shaped this snapshot, with their state as of 2026-09-01:
 
-- **[#510](https://github.com/pwr-ai/juddges-app/issues/510) `priority: critical`** — landing page promises search, delivers a login form. Blocked on a product decision. **This is the week's decision.**
-- [#528](https://github.com/pwr-ai/juddges-app/pull/528) — the `/history` fix, ready
+- ~~[#510](https://github.com/pwr-ai/juddges-app/issues/510) `priority: critical`~~
+  — landing page promises search, delivers a login form. **Closed**, implemented
+  by PR [#561](https://github.com/pwr-ai/juddges-app/pull/561). Not deployed.
+- [#565](https://github.com/pwr-ai/juddges-app/issues/565) — **open**, and the
+  direct consequence of the above: anonymous search is unmetered because the
+  documented rate-limit backstop was never wired up (§5d).
 - [#527](https://github.com/pwr-ai/juddges-app/issues/527) — extraction detail page paints without schema/collection metadata
 - [#507](https://github.com/pwr-ai/juddges-app/issues/507) — verify the extraction pipeline still runs
-- [#506](https://github.com/pwr-ai/juddges-app/issues/506) — no subject-facing GDPR deletion route
+- [#506](https://github.com/pwr-ai/juddges-app/issues/506) — GDPR deletion
+  requests are **recorded and never processed**, while the API promises erasure
+  within 30 days. (The original text described this as "no deletion route",
+  which understated it: the route accepted requests and dropped them.)
+  **Partly addressed** by PR [#562](https://github.com/pwr-ai/juddges-app/pull/562),
+  which wired the deletion processor to an admin queue. Still open for the
+  subject-facing route and the admin UI.
+- [#546](https://github.com/pwr-ai/juddges-app/issues/546) — **open**; the
+  OpenAI key has no credits and no health check would show it (see §5a).
 - [#516](https://github.com/pwr-ai/juddges-app/issues/516) — landing runs 28 animations with no `prefers-reduced-motion` guard *(a global guard landed in `c9f0d48`; verify and close)*
 - [#518](https://github.com/pwr-ai/juddges-app/issues/518), [#195](https://github.com/pwr-ai/juddges-app/issues/195) — activation-funnel analytics
 - [#61](https://github.com/pwr-ai/juddges-app/issues/61), [#60](https://github.com/pwr-ai/juddges-app/issues/60) — Research Assistant, Schema Marketplace (large, deferred, correctly so)
@@ -378,241 +452,109 @@ in this environment.
 
 Four gaps, in order of how fast a first user hits them.
 
-1. **They hit a login wall before they see anything.** Nothing else matters until
-   this changes.
+1. **They hit a login wall before they see anything.** ~~Nothing else matters
+   until this changes.~~ **Fixed on `main`** by PR
+   [#561](https://github.com/pwr-ai/juddges-app/pull/561) (#510 closed
+   2026-09-01) — and **still true in production**, which has not been redeployed
+   and answers `307` on `/search`. The gap moved from a product decision to a
+   deploy.
 2. **If they get in, the results are unreadable.** Ten rows of
    `Sygn. akt : II AKa 145/13 WYROK W IMIENIU…` — when the clean case name is
    already sitting in the same row of the same table.
-3. **The nav points at empty rooms and hides the full ones.** `/history` 404s.
-   `/topics` and `/topic-modeling` have no coordinates. Meanwhile
-   `/search/extractions` — 100% populated, genuinely differentiated — is one
-   unlabelled entry, and `/extract` is not in the nav at all.
+3. **The nav points at empty rooms and hides the full ones.** `/topics` and
+   `/topic-modeling` have no coordinates. Meanwhile `/search/extractions` —
+   100% populated, genuinely differentiated — is one unlabelled entry whose
+   every result row 404s (§5d), and `/extract` is not in the nav at all.
+   *(The `/history` 404 that stood here was fixed by PR
+   [#528](https://github.com/pwr-ai/juddges-app/pull/528), merged 2026-08-25.)*
 4. **Two facets lie and two are empty.** `case_type: Civil` on criminal appeals,
    `court_level: Crown Court` on Court of Appeal decisions, `outcome` and
    `cited_legislation` empty.
 
-None of these is a rewrite. All four are reachable in five days.
+None of these is a rewrite.
 
 ---
 
-## 7. One-week plan
+## 7. Open follow-ups
 
-**Assumptions.** One developer, five working days. Scope is *ship what exists*,
-not *build what is missing*. Every change goes through the normal branch → PR →
-7-green-checks → merge flow.
+The original document ended here with a five-day plan. It is deleted, because
+most of it shipped and the rest has an issue number:
 
-**One decision is required before Day 2**, and it is the only thing in this plan
-that is not mine to make — see the box at the end of this section.
+| Original plan item | State on 2026-09-01 |
+|---|---|
+| Day 1 — merge #528, deploy, fix `version: "unknown"` | #528 merged 2026-08-25; `prod-v1.4.0` cut 2026-08-25. `version` still reports `"unknown"`. |
+| Day 2 — open `/search` and `/documents/[id]` to guests, meter them | Shipped by PR [#561](https://github.com/pwr-ai/juddges-app/pull/561). The metering did not ship — [#565](https://github.com/pwr-ai/juddges-app/issues/565). |
+| Day 3 — display `base_case_name`, re-weight Meilisearch, fix the lying facets | Not started. |
+| Day 4 — rebuild the sidebar, seed `extraction_schemas`, run one extraction job | Not started. |
+| Day 5 — cold-path walkthrough, GDPR deletion path, activation events | GDPR deletion partly shipped by PR [#562](https://github.com/pwr-ai/juddges-app/pull/562). The rest not started. |
 
-### Day 1 — Deploy what already exists, and stop lying about the version
+What remains from this snapshot with no issue tracking it. Listed as findings,
+not as a schedule — each is a one-line description of work someone will have to
+file before doing:
 
-Three months of merged fixes are sitting undeployed. Nothing else this week is
-worth doing until production and `main` are the same software.
-
-- [ ] Merge PR **#528** (`/history` BFF route). A sidebar entry currently 404s.
-- [ ] Triage the 9 Dependabot PRs: merge the two grouped minor/patch bumps
-      (#495, #500) if CI is green; close or defer the 7 majors — a major
-      `framer-motion` / `react-table` / `dnd-kit` bump is not a ship-week change.
-- [ ] Run `./scripts/build_and_push_prod.sh minor` → `prod-v1.4.0`, then
-      `./scripts/deploy_prod.sh`.
-- [ ] Fix `version: "unknown"` in `/api/health/status` — plumb `VERSION` into the
-      image. Without it there is no way to confirm a deploy landed.
-- [ ] Re-run the §2 production probes against the new build and confirm the
-      routes now public in `public-route-policy.ts` (`/privacy`, `/terms`,
-      `/blog`, `/publications`, `/legal/*`) actually return 200. **Today they
-      307 to login in production — that is how we know prod is stale.**
-
-*Exit criterion: `curl /api/health/status` reports `1.4.0`, and `/privacy`
-returns 200 without a cookie.*
-
-### Day 2 — Open the front door (#510)
-
-The one feature change of the week. Implement the decision from the box below.
-
-- [ ] Add `/search`, `/documents/[id]`, and the search BFF routes they need to
-      the public set in `frontend/lib/supabase/public-route-policy.ts`.
-- [ ] Wire `frontend/lib/guestMode.ts` — it is written, tested-shaped, and
-      imported by nothing. Enforce the allowance **server-side** in the search
-      BFF, not just in localStorage; the client copy is for the UI counter only.
-- [ ] Rate-limit anonymous search. `backend/app/rate_limiter.py` exists. Bind the
-      limit to the `guest_session_id` cookie that `backend/app/guest_sessions.py`
-      already issues. Document the number in the issue.
-- [ ] Keep behind auth, explicitly: collections, saved searches, history,
-      extraction, chat, settings, admin.
-- [ ] ~~Verify RLS for the anon role~~ — **already done, see §4.** The data layer
-      implements exactly this posture today: `judgments` and `document_chunks`
-      carry named `"Public read access"` policies, and `collections` / `chats` /
-      `profiles` are owner-scoped and verified to return 0 rows to anon. **No
-      RLS change is needed for Day 2, and opening `/search` adds no new data
-      exposure** — the corpus is already readable by anyone holding the key that
-      production ships in its own HTML.
-- [ ] Add route-contract E2E cases: anonymous `/search` → 200, anonymous
-      `/collections` → 307. The existing suite is the right home for this.
-- [ ] While in this area, close the one real hole: `contact_submissions` accepts
-      unbounded anonymous inserts (`WITH CHECK: true`) directly via PostgREST,
-      bypassing the app handler. Bound it — a per-session cap, or revoke the
-      grant and route inserts through the service-role backend.
-
-*Exit criterion: a cold browser reaches search results and opens a judgment
-without an account.*
-
-### Day 3 — Make results readable
-
-Highest ratio of perceived quality to effort in the whole plan. No new data
-needed; everything is already in the row.
-
-- [ ] Display title: `base_case_name` → `case_number` → `title`. One resolver
-      function, used by `search-document-card.tsx:28`, the document page header,
-      and the extractions table.
-- [ ] Re-weight Meilisearch `searchableAttributes`: `base_case_name` and
-      `base_neutral_citation_number` move to the top, `title` drops below them.
-      Reindex (the 8-hourly full-sync beat task already exists — trigger it
-      rather than hand-rolling).
-- [ ] Replace the `summary` column in the result card with a query-relevant
-      snippet from `full_text`. Meilisearch `_formatted` / crop already supports
-      this; `summary` is a duplicate of `title` and carries no information.
-- [ ] Fix the two lying facets. `case_type` for UK rows → `Criminal`;
-      `court_level` for EWCA Crim rows → `Court of Appeal`. A single migration
-      plus a reindex. Add a `Database Contract` test asserting that no
-      `jurisdiction = 'UK'` row with `base_convict_offences` non-empty is
-      labelled `Civil`.
-- [ ] Hide the two empty facets (`outcome`, `cited_legislation`) rather than
-      rendering an empty dropdown. Label `legal_topics` / `keywords` as
-      Polish-corpus-only, or hide them when the UK filter is active.
-
-*Exit criterion: ten search results, read aloud, sound like case law.*
-
-### Day 4 — De-clutter, then seed
-
-Stop pointing users at empty rooms; start pointing them at full ones.
-
-- [ ] **Rebuild the sidebar around what works.** Promote `/search/extractions`
-      (the differentiated feature, 100% populated) with a name that says what it
-      does. Add `/extract`, `/statistics`, `/help`, `/settings`. Remove or move
-      to a clearly-marked "Experimental" group: `/topic-modeling` and `/topics`
-      (no UMAP coordinates), `/judge-fingerprint`, `/dataset-comparison`,
-      `/argumentation-analysis`, `/precedents`.
-- [ ] **Seed `extraction_schemas`.** It is empty, which makes `/extract`,
-      `/schemas` and `/schema-chat` unusable. Three or four curated schemas —
-      the base schema plus a PL criminal-appeal and a UK sentencing variant.
-      `backend/judges_schemas_pl.json` and `lawyer_schemas*.json` are sitting in
-      the repo already.
-- [ ] **Run one extraction job end-to-end** against a seeded schema and a real
-      collection. This closes [#507](https://github.com/pwr-ai/juddges-app/issues/507)
-      with evidence and puts a non-zero row in `extraction_jobs`, which is also
-      the only way `/extractions` and `/extractions/[id]` become demonstrable.
-- [ ] **Before seeding anything into `blog_posts` or `publications`, add the
-      missing `SELECT` policies.** Both tables have RLS on with **zero
-      policies** (§4). `blog_posts` additionally holds an `anon` `SELECT` grant,
-      so PostgREST returns `200 []` rather than an error — seeding rows would
-      leave the page just as empty, with no error to explain why.
-- [ ] Then either seed 2–3 `publications` rows or remove `/publications` from
-      the public surface. The static fallback currently hides an empty table,
-      which is worse than an honest empty state.
-- [ ] Write the `/help` page content for the first-run path: what the corpus is
-      (12,307 judgments, PL Court of Appeal criminal + UK EWCA Crim, 2003–2024),
-      what it is not, and what the extracted fields mean.
-
-*Exit criterion: every sidebar entry leads somewhere with content in it.*
-
-### Day 5 — Verify as a stranger, then hand over
-
-- [ ] **Cold-path walkthrough**, incognito, no cookies, on production: land →
-      run a demo query → open a judgment → hit the guest limit → sign up →
-      confirm email → land somewhere useful. Record it. Every step that
-      surprises you is a bug for the list.
-- [ ] Run the full E2E suite against the deployed build, not just the 7 required
-      CI checks. Note per `route-contract-e2e-local-traps`: use the npm script,
-      not `npx`, and confirm the serial run did not silently skip.
-- [ ] Close [#516](https://github.com/pwr-ai/juddges-app/issues/516) with
-      evidence — the global `prefers-reduced-motion` guard landed in `c9f0d48`
-      but the issue is still open.
-- [ ] Ship the minimum GDPR surface
-      ([#506](https://github.com/pwr-ai/juddges-app/issues/506)): a deletion
-      request path. With real users this becomes a legal obligation, not a
-      backlog item. If a full self-serve flow does not fit, a documented mailto
-      on `/privacy` with a stated SLA is a defensible interim — but say so
-      explicitly rather than shipping silence.
-- [ ] Add the six activation events from
-      [#518](https://github.com/pwr-ai/juddges-app/issues/518). `app_events` has
-      0 rows; without them the first cohort's behaviour is unrecoverable, and a
-      first cohort only happens once.
-- [ ] Cut `prod-v1.5.0`, deploy, re-probe, and send the link.
-
-*Exit criterion: you have watched a person who is not you find a judgment.*
+- **`version: "unknown"`.** `VERSION` is not plumbed into the image, so there is
+  no way to confirm from outside which build is deployed. This is what made the
+  532-commit drift invisible for three months.
+- **Display title resolution.** One resolver — `base_case_name` → `case_number`
+  → `title` — used by `search-document-card.tsx:28`, the document page header
+  and the extractions table. The data is already in the row (§4).
+- **Meilisearch field weighting.** `searchableAttributes` in
+  `backend/app/services/meilisearch_config.py:75` puts `title` (boilerplate)
+  first and `base_neutral_citation_number` in the tie-break tail. Searching a
+  party name ranks badly.
+- **The two lying facets.** `case_type: Civil` and `court_level: Crown Court` on
+  UK criminal appeals — a migration plus a reindex, and a `Database Contract`
+  test asserting no `jurisdiction = 'UK'` row with non-empty
+  `base_convict_offences` is labelled `Civil`.
+- **The two empty facets.** `outcome` and `cited_legislation` render empty
+  dropdowns; `legal_topics` / `keywords` are Polish-only and silently halve the
+  corpus.
+- **`/search/extractions` result rows 404** (§5d) — a one-word href fix on the
+  surface this document calls the differentiated product.
+- **`extraction_schemas` is empty**, which makes `/extract`, `/schemas` and
+  `/schema-chat` complete and unusable at the same time.
+- **`contact_submissions` accepts unbounded anonymous inserts** via PostgREST,
+  bypassing `/api/contact` (§4).
+- **`anon` holds write grants on 33 of 43 tables** — not exploitable today, the
+  wrong default tomorrow (§4).
+- **Sidebar composition.** 17 sidebar routes against 63 pages, with the
+  populated surfaces buried and the empty ones promoted (§5b, §5c) — and
+  `sidebar-map.md` documenting a sidebar that has not existed for some time.
+- **Meilisearch sync is stale in production** (§2) — `last_completed_at: null`,
+  `last_error: "Event loop is closed"`.
+- **6 backend test files skipped as obsolete**, leaving schema extraction with
+  no active integration coverage (§5d).
 
 ---
 
-### The one decision that is not mine
-
-Issue #510 is filed as "blocked on product decision" with four open questions.
-Here is what I would do; it needs your sign-off before Day 2 starts.
-
-| Question | Recommendation | Why |
-|---|---|---|
-| Anonymous search? | **Yes**, 10 queries per guest session | The corpus is public court rulings — and per §4, the database already says so out loud, with policies literally named `"Public read access"`. The wall is not protecting it. |
-| `/documents/[id]` anonymous? | **Yes, in full** | A truncated judgment is worse than no judgment — a lawyer will not trust a source that hides text. |
-| Where does the sign-up prompt go? | On the 11th query, and on any save/collect/extract action | Ask for the account when the user wants something an account is genuinely required for. |
-| Rate limit | Per `guest_session_id` cookie, server-enforced | The cookie plumbing already exists in `guest_sessions.py`. Embedding cost per anonymous query is bounded and small at this volume. |
-
-**The §4 finding makes the alternative hard to defend.** Keeping the wall up
-does not keep anyone out: the `anon` key shipped in production's own HTML reads
-all 12,307 judgments directly from Supabase REST. The wall stops the lawyer you
-want and not the scraper you do not.
-
-If you still want it kept — a deliberate "not ready for the public yet" call is
-legitimate — then Day 2 becomes **"make the login wall honest"**: the landing
-page must stop advertising search it will not deliver, the demo query chips must
-go, and the `"Public read access"` policies should be narrowed to match, so the
-stated posture and the enforced one finally agree.
-
----
-
-## 8. Explicitly not in this week
+## 8. Explicitly deferred at the time of the snapshot
 
 Naming these so their absence is a decision rather than an oversight.
 
 | Deferred | Why |
 |---|---|
-| Re-enabling Meilisearch hybrid ([#200](https://github.com/pwr-ai/juddges-app/issues/200)) | Needs a BGE-M3 TEI server, an embedder registration and a full reindex. **Vector mode via pgvector already gives users semantic search.** |
+| Re-enabling Meilisearch hybrid | Needs a BGE-M3 TEI server, an embedder registration and a full reindex. **Vector mode via pgvector already gives users semantic search.** |
 | Deep analysis pipeline | `deep_analysis_status = pending` for all 12,307. A large batch LLM spend with no user-facing surface ready to consume it. |
-| UMAP coordinates / topic map | Same shape of cost. Hide the surface this week instead. |
+| UMAP coordinates / topic map | Same shape of cost. Hide the surface instead. |
 | Research Assistant ([#61](https://github.com/pwr-ai/juddges-app/issues/61)), Schema Marketplace ([#60](https://github.com/pwr-ai/juddges-app/issues/60)) | Multi-week features. Correctly deferred. |
-| Rewriting the 6 obsolete schema test files | Real debt, no user impact this week. File it. |
-| Splitting the 10+ files over 500 lines ([#59](https://github.com/pwr-ai/juddges-app/issues/59)) | Refactoring during a ship week trades certainty for tidiness. |
+| Rewriting the 6 obsolete schema test files | Real debt, no immediate user impact. File it. |
+| Splitting the 10+ files over 500 lines ([#59](https://github.com/pwr-ai/juddges-app/issues/59)) | Refactoring while shipping trades certainty for tidiness. |
 | Grafana dashboards ([#196](https://github.com/pwr-ai/juddges-app/issues/196)) | Sentry and Langfuse are live and sufficient for a first cohort. |
-| Major-version Dependabot bumps | Seven of them. Not during a ship week. |
+| Major-version Dependabot bumps | Not while shipping. |
 
 ---
 
-## 9. Go / no-go checklist
+## 9. Standing risks
 
-Ship when every line is true. Each is checkable in under a minute.
-
-- [ ] `GET /api/health/status` reports the version just built, not `"unknown"`
-- [ ] All six dependencies report `healthy`
-- [ ] A cookie-less `GET /search?q=<something>` returns results, not a 307
-- [ ] A cookie-less `GET /documents/<real-id>` returns the judgment
-- [ ] `GET /collections` still 307s without a session
-- [ ] The first ten search results show case names, not `Sygn. akt :` boilerplate
-- [ ] No sidebar entry 404s or leads to a zero-row page
-- [ ] No facet offers a value that contradicts the document (`Civil` on `R v …`)
-- [ ] `extraction_schemas` is non-empty and `/extract` can run a job
-- [ ] `app_events` receives rows from a real browser session
-- [ ] A deletion-request path exists and is reachable from `/privacy`
-- [ ] The full E2E suite passed against the deployed build, with no silent skips
-- [ ] `contact_submissions` no longer accepts unbounded anonymous inserts
-- [ ] Every page shown in the nav has a `SELECT` policy on the table behind it —
-      not merely rows in it
-- [ ] A real chat message gets a real answer in production — not a 429 (#546)
-
----
-
-## 10. Standing risks
-
-- **Manual deploys drift.** Three months and 532 commits is what "manual, when I
-  remember" produces. Whatever else changes, put a calendar trigger or a CI
-  release job behind `build_and_push_prod.sh`.
+- **Manual deploys drift, and they start drifting again immediately.** Three
+  months and 532 commits is what "manual, when I remember" produced the first
+  time. `prod-v1.4.0` closed that gap on 2026-08-25; by 2026-09-01 the gap was
+  34 commits and already contained the #510 fix. Whatever else changes, put a
+  calendar trigger or a CI release job behind `build_and_push_prod.sh`.
+- **Fixing something on `main` is not fixing it.** Every claim in this document
+  about what a user experiences has to be read against the deployed build, not
+  the branch. `version: "unknown"` in `/api/health/status` means there is no
+  cheap way to tell the two apart from outside.
 - **Green tests do not mean working pages.** PR #528's own description makes the
   point precisely: the `/history` unit tests mocked `fetch`, so a missing route
   was invisible. The route-contract suite is the antidote — extend it whenever a
@@ -623,8 +565,13 @@ Ship when every line is true. Each is checkable in under a minute.
   appeals will not come back, and will be right not to.
 - **Eight accounts and zero events** means there is no behavioural baseline. The
   first real cohort is the only chance to capture one.
-- **An empty page has two possible causes and they look identical.** Zero rows
-  and a deny-all RLS policy both render as "nothing here". Three tables in this
-  app are in the second state while looking like the first. Whenever a surface
-  is empty, check the policy before you check the data — and prefer an explicit
+- **An empty page has more than one possible cause and they look identical.**
+  Zero rows, a deny-all RLS policy, and a read path that deliberately runs
+  through a service-role RPC all render as "nothing here". Whenever a surface is
+  empty, read the migration before you read the data — and prefer an explicit
   `REVOKE` over relying on every future policy being written correctly.
+- **A deny-all table is not automatically a bug.** The 2026-08-21 pass read the
+  three blog tables' zero-policy state as a trap and recommended adding an anon
+  `SELECT` policy; the migration that created them says in a comment that the
+  absence is deliberate (§4). An audit that only queries `pg_policies` will
+  recommend widening a boundary someone closed on purpose. Read the migration.
