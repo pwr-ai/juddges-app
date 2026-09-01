@@ -17615,7 +17615,7 @@
     },
     "/api/search/documents": {
       "get": {
-        "description": "Paginated Meilisearch-backed document search for the /search results page.\n\nServes signed-out visitors (issue #510): the corpus is public court rulings.\nAnonymous callers get a capped free allowance tracked against a guest\nsession; signed-in callers are never metered here.",
+        "description": "Paginated Meilisearch-backed document search for the /search results page.\n\nServes signed-out visitors (issue #510): the corpus is public court rulings.\nAnonymous callers get a capped free allowance tracked against a guest\nsession; signed-in callers are never metered here.\n\nTwo limits apply on top of each other (issue #565). The guest allowance is\nfriction \u2014 it is keyed on a cookie the visitor can clear. The per-IP\n``@limiter.limit`` above is the actual backstop against scripted abuse, and\nit applies to every caller regardless of session.",
         "operationId": "documents_search_api_search_documents_get",
         "parameters": [
           {

@@ -133,18 +133,25 @@ export async function GET(
     const statusCode = error instanceof AppError ? error.statusCode : 500;
     const topMsg = (err?.message as string) || (error instanceof AppError ? error.message : 'An unexpected error occurred while fetching the document html');
     const stageInfo = errorRecord?.stage ? `<div>stage: <code>${esc(String(errorRecord.stage))}</code></div>` : '';
+    // This page is now served to anonymous visitors (issue #561), including on a
+    // plain 404. Stack traces, upstream messages and the diag log stay in the
+    // server log outside development; the visitor gets the requestId to quote.
+    const showDiagnostics = process.env.NODE_ENV !== 'production';
+    const diagDetail = showDiagnostics
+      ? `
+    <div>message: <code>${esc(topMsg)}</code></div>
+    <div>name: <code>${esc(String(err?.name || ''))}</code></div>
+    ${stageInfo}
+    <pre style="white-space:pre-wrap; margin-top:12px; color:#ccc">${esc(String(err?.stack || ''))}</pre>
+    ${diagBlock}`
+      : '';
     const diagHtml = `
 <!doctype html>
 <html lang="pl"><head><meta charset="utf-8"><title>Doc HTML error</title></head>
 <body style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding:16px; background:#0b0b0b; color:#eee">
   <div style="border:2px solid #c00; padding:16px; background:#1a1a1a">
     <div style="font-weight:bold; margin-bottom:8px;">[documents-html] Błąd generowania HTML</div>
-    <div>message: <code>${esc(topMsg)}</code></div>
-    <div>requestId: <code>${esc(requestId)}</code></div>
-    <div>name: <code>${esc(String(err?.name || ''))}</code></div>
-    ${stageInfo}
-    <pre style="white-space:pre-wrap; margin-top:12px; color:#ccc">${esc(String(err?.stack || ''))}</pre>
-    ${diagBlock}
+    <div>requestId: <code>${esc(requestId)}</code></div>${diagDetail}
   </div>
 </body></html>`;
 
