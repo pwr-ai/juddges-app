@@ -314,7 +314,7 @@ LangServe chains (`/qa`, `/chat`, `/enhance_query`).
 
 | Feature | Route | Evidence |
 |---|---|---|
-| Keyword search | `/search` (Text mode) | Meilisearch, 12,307 docs indexed, `meilisearch: healthy` in prod |
+| Keyword search | `/search` (Text mode) | Meilisearch, 12,307 docs indexed. As of 2026-09-01 prod reports `meilisearch: degraded` — `sync stale`, so the index may be behind the corpus. |
 | Semantic search | `/search` (Vector mode) | pgvector; `search_judgments_hybrid` RPC responds; 100% embedding coverage |
 | Structured-field search | `/search/extractions` | base-schema facets/histograms/NL-filter; 100% extraction coverage |
 | Document reader | `/documents/[id]` | metadata + HTML + similar + versions endpoints all present |
@@ -322,7 +322,7 @@ LangServe chains (`/qa`, `/chat`, `/enhance_query`).
 | Chat / RAG | `/chat`, `/chat/[id]` | LangServe `/chat` + pgvector chunks; fork/export/history routes present — **but see the LLM billing note below** |
 | Collections | `/collections`, `/collections/[id]` | 8 rows; full CRUD |
 | Admin panel | `/admin/*` | `require_admin` on every backend endpoint; stats/users/system/content |
-| Health & status | `/status` | public, polls `/api/health/status`; all six services green |
+| Health & status | `/status` | public, polls `/api/health/status`; **reports `degraded` as of 2026-09-01** (§2) |
 | Judge fingerprint | `/judge-fingerprint` | reads `judgments`; BFF proxy at `/api/judge-fingerprint/*` **(fixed since Aug-05)** |
 | Reasoning lines | `/reasoning-lines` | BFF proxy at `/api/reasoning-lines/[...path]` **(fixed since Aug-05)** |
 | Blog | `/blog` | now fetches `/api/blog/posts` **(mock data removed since Aug-05)** |
@@ -339,8 +339,8 @@ LangServe chains (`/qa`, `/chat`, `/enhance_query`).
 > If production shares that key, then **chat/RAG, the precedent finder,
 > argumentation analysis, schema generation and the extraction pipeline all fail
 > at the first request** — and nothing would have shown it, because
-> `/api/health/status` does not probe the LLM. All six services report healthy
-> while this is true.
+> `/api/health/status` does not probe the LLM. Every dependency it does probe
+> can report healthy while this is true.
 >
 > Search is unaffected either way: judgment and chunk embeddings are BGE-M3
 > served by TEI, and keyword search needs no LLM. Both `/search` modes keep
