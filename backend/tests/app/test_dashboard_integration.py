@@ -1,6 +1,6 @@
 """
 Integration tests for dashboard endpoints.
-Tests /dashboard/* routes for stats, documents, and trending topics.
+Tests /dashboard/* routes for stats and documents.
 """
 
 import pytest
@@ -66,59 +66,6 @@ async def test_dashboard_featured_examples_with_auth(authenticated_client: Async
     if response.status_code == 200:
         data = response.json()
         assert isinstance(data, list)
-
-
-@pytest.mark.anyio
-@pytest.mark.api
-async def test_dashboard_trending_topics_requires_auth(client: AsyncClient):
-    """Trending topics should reject unauthenticated requests."""
-    response = await client.get("/dashboard/trending-topics")
-    assert response.status_code in [401, 403]
-
-
-@pytest.mark.anyio
-@pytest.mark.api
-async def test_dashboard_trending_topics_with_auth(authenticated_client: AsyncClient):
-    """Trending topics should return curated topics."""
-    response = await authenticated_client.get("/dashboard/trending-topics")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    if len(data) > 0:
-        topic = data[0]
-        assert "topic" in topic
-        assert "change" in topic
-        assert "trend" in topic
-        assert "query_count" in topic
-        assert "category" in topic
-
-
-@pytest.mark.anyio
-@pytest.mark.api
-async def test_dashboard_trending_topics_filter_by_category(
-    authenticated_client: AsyncClient,
-):
-    """Trending topics should filter by category."""
-    response = await authenticated_client.get(
-        "/dashboard/trending-topics", params={"category": "Tax Law"}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list)
-    for topic in data:
-        assert topic["category"] == "Tax Law"
-
-
-@pytest.mark.anyio
-@pytest.mark.api
-async def test_dashboard_trending_topics_limit(authenticated_client: AsyncClient):
-    """Trending topics should respect limit parameter."""
-    response = await authenticated_client.get(
-        "/dashboard/trending-topics", params={"limit": 2}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) <= 2
 
 
 @pytest.mark.anyio

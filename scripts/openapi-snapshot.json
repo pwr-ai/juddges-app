@@ -13536,40 +13536,6 @@
         "title": "TrackEventsRequest",
         "type": "object"
       },
-      "TrendingTopic": {
-        "description": "Trending topic information.",
-        "properties": {
-          "category": {
-            "title": "Category",
-            "type": "string"
-          },
-          "change": {
-            "title": "Change",
-            "type": "string"
-          },
-          "query_count": {
-            "title": "Query Count",
-            "type": "integer"
-          },
-          "topic": {
-            "title": "Topic",
-            "type": "string"
-          },
-          "trend": {
-            "title": "Trend",
-            "type": "string"
-          }
-        },
-        "required": [
-          "topic",
-          "change",
-          "trend",
-          "query_count",
-          "category"
-        ],
-        "title": "TrendingTopic",
-        "type": "object"
-      },
       "TrendingTopicItem": {
         "description": "A single trending topic with its cross-lingual (PL/UK) click split.",
         "properties": {
@@ -20389,77 +20355,6 @@
           }
         ],
         "summary": "Get Dashboard Stats",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/trending-topics": {
-      "get": {
-        "description": "Get trending legal topics based on search activity.\n\nPhase 1 (MVP): Returns curated/editorial topics\nPhase 2 (Future): Algorithm-based trending from search analytics\n\nArgs:\n    category: Optional category filter\n    limit: Number of topics to return (1-10)\n\nReturns:\n    List of trending topics with metadata",
-        "operationId": "get_trending_topics_dashboard_trending_topics_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "category",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Category"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 5,
-              "maximum": 10,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TrendingTopic"
-                  },
-                  "title": "Response Get Trending Topics Dashboard Trending Topics Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "APIKeyHeader": []
-          }
-        ],
-        "summary": "Get Trending Topics",
         "tags": [
           "dashboard"
         ]
