@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { SearchResult, SearchDocument, SearchChunk, LegalDocumentMetadata } from '@/types/search';
 import { PaginationMetadata } from '@/lib/api';
+import type { GuestAllowance } from '@/lib/guest/session';
 import { parseISO, isValid } from 'date-fns';
 import logger from '@/lib/logger';
 
@@ -72,6 +73,9 @@ interface SearchState {
   searchResults: SearchResult | null;
   isSearching: boolean;
   error: string | null;
+  // Free-search allowance for a signed-out visitor (issue #510). Null when
+  // signed in, and whenever the backend did not meter the request.
+  guestAllowance: GuestAllowance | null;
 
   // New optimized search state
   searchMetadata: LegalDocumentMetadata[];
@@ -104,6 +108,7 @@ interface SearchState {
   setSearchResults: (results: SearchResult | null) => void;
   setIsSearching: (isSearching: boolean) => void;
   setError: (error: string | null) => void;
+  setGuestAllowance: (allowance: GuestAllowance | null) => void;
   setCurrentPage: (page: number) => void;
   setPageSize: (size: number) => void;
   setTotalResults: (total: number) => void;
@@ -218,6 +223,7 @@ export const useSearchStore = create<SearchState>()(
   searchResults: null,
   isSearching: false,
   error: null,
+  guestAllowance: null,
 
   // New optimized search state
   searchMetadata: [],
@@ -286,6 +292,8 @@ export const useSearchStore = create<SearchState>()(
   },
   setIsSearching: (isSearching: boolean) => set({ isSearching }),
   setError: (error: string | null) => set({ error }),
+  setGuestAllowance: (guestAllowance: GuestAllowance | null) =>
+    set({ guestAllowance }),
   setCurrentPage: (page: number) => set({ currentPage: page }),
   setPageSize: (size: number) => {
     const totalResults = get().totalResults;
@@ -1144,6 +1152,7 @@ export const useSearchStore = create<SearchState>()(
           // Never restore transient runtime state.
           isSearching: false,
           error: null,
+          guestAllowance: null,
           isDialogOpen: false,
           showSaveAllPopover: false,
         };

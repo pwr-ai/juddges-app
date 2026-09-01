@@ -61,7 +61,10 @@ function StatsUnavailable() {
   );
 }
 
-// Demo queries — language is derived from the `lang` URL param in each href.
+// Demo queries — each runs the query on /search, with `lang` selecting the
+// corpus. Open to signed-out visitors since issue #510; these previously
+// pointed at /auth/login, so the landing page advertised search and
+// delivered a login form.
 const demoQueries: ReadonlyArray<{
   label: string;
   href: string;
@@ -69,22 +72,22 @@ const demoQueries: ReadonlyArray<{
 }> = [
   {
     label: "Frankowicze i abuzywne klauzule",
-    href: "/auth/login",
+    href: "/search?q=Frankowicze%20i%20abuzywne%20klauzule&lang=pl",
     lang: "PL",
   },
   {
     label: "Murder conviction appeal",
-    href: "/auth/login",
+    href: "/search?q=Murder%20conviction%20appeal&lang=en",
     lang: "EN",
   },
   {
     label: "Skarga do sądu administracyjnego",
-    href: "/auth/login",
+    href: "/search?q=Skarga%20do%20s%C4%85du%20administracyjnego&lang=pl",
     lang: "PL",
   },
   {
     label: "Consumer protection in financial services",
-    href: "/auth/login",
+    href: "/search?q=Consumer%20protection%20in%20financial%20services&lang=en",
     lang: "EN",
   },
 ];
@@ -183,7 +186,7 @@ function HeroSection({ stats, statsLoading, statsError }: LandingPageProps) {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-wrap gap-3 mb-14"
           >
-            <EditorialButton href="/auth/login" size="lg" arrow>
+            <EditorialButton href="/search" size="lg" arrow>
               Try search
             </EditorialButton>
             <EditorialButton
@@ -468,7 +471,7 @@ const capabilities: ReadonlyArray<{
       "Cross-jurisdiction results",
       "Advanced filters by court, date, topic",
     ],
-    href: "/auth/login",
+    href: "/search",
     cta: "Try search",
   },
   {
@@ -783,7 +786,7 @@ function TrustCTASection() {
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center mb-10">
-            <EditorialButton href="/auth/login" size="lg" arrow>
+            <EditorialButton href="/search" size="lg" arrow>
               Open search
             </EditorialButton>
             <EditorialButton
