@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import {
@@ -97,6 +98,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const accessToken = sessionData.session?.access_token;
     if (accessToken) {
       headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    // Give each signed-in user their own rate-limit bucket (issue #565).
+    //
+    // `get_client_ip` (backend/app/rate_limiter.py) keys per user only when this
+    // header arrives with a matching X-API-Key; otherwise it falls back to the
+    // socket address, which for BFF-proxied traffic is this container — one
+    // bucket shared by every visitor. Hashed so the backend's rate-limit keys
+    // never carry a raw user id. Anonymous traffic sends nothing and keeps
+    // sharing the container bucket: the guest cookie is chosen by the caller,
+    // so it cannot serve as an identity.
+    const userId = sessionData.session?.user?.id;
+    if (accessToken && userId) {
+      headers["X-RateLimit-Identity"] = createHash("sha256")
+        .update(userId)
+        .digest("hex");
     }
 
     // Issue #510 — a signed-out visitor's free-search allowance lives on the
