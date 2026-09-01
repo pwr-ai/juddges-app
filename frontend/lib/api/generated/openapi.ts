@@ -1095,6 +1095,11 @@ export interface paths {
          *     Serves signed-out visitors (issue #510): the corpus is public court rulings.
          *     Anonymous callers get a capped free allowance tracked against a guest
          *     session; signed-in callers are never metered here.
+         *
+         *     Two limits apply on top of each other (issue #565). The guest allowance is
+         *     friction — it is keyed on a cookie the visitor can clear. The per-IP
+         *     ``@limiter.limit`` above is the actual backstop against scripted abuse, and
+         *     it applies to every caller regardless of session.
          */
         get: operations["documents_search_api_search_documents_get"];
         put?: never;

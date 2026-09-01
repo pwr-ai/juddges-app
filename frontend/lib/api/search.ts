@@ -196,7 +196,7 @@ export async function searchDocumentsMeili(
           : "You have used all of your free searches.",
         typeof errorData.upgrade_url === "string"
           ? errorData.upgrade_url
-          : "/auth/signup",
+          : "/auth/sign-up",
         Number.isInteger(errorData.limit) ? errorData.limit : 0
       );
     }

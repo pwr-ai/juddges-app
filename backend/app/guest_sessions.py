@@ -219,6 +219,12 @@ async def increment_guest_search_count(session_id: str) -> bool:
     # Increment search count
     searches_used = await client.hincrby(session_key, "searches_used", 1)
 
+    # Re-assert the TTL. ``hset``/``hincrby`` recreate a hash that expired
+    # between the quota check and this charge, and a recreated key carries no
+    # expiry — it would leak forever on the Redis that also backs Celery
+    # (issue #565).
+    await client.expire(session_key, SESSION_EXPIRY_HOURS * 3600)
+
     logger.info(
         f"Guest session {session_id} used {searches_used}/{GUEST_SEARCH_LIMIT} searches"
     )
