@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app.api.admin import DeletionRequestItem
 from app.core.auth_jwt import AuthenticatedUser, require_admin
 
 pytestmark = pytest.mark.unit
@@ -117,6 +118,25 @@ class TestListDeletionRequests:
             resp = await client.get("/api/admin/data-deletion-requests?status=bogus")
 
         assert resp.status_code == 422
+
+    @patch("app.api.admin.get_admin_supabase_client")
+    async def test_projection_covers_every_response_field(self, mock_client, admin_app):
+        """Guard against a dropped column.
+
+        The mock returns whatever rows the test hands it regardless of the
+        projection, so a narrowed `.select()` would leave these tests green
+        while the real endpoint 500s on the missing key. Assert the projection
+        against the response model instead of against the mock.
+        """
+        client_mock = _mock_supabase_returning([])
+        mock_client.return_value = client_mock
+
+        async with await _client(admin_app) as client:
+            await client.get("/api/admin/data-deletion-requests")
+
+        selected = client_mock.table.return_value.select.call_args[0][0]
+        columns = {c.strip() for c in selected.split(",")}
+        assert set(DeletionRequestItem.model_fields) <= columns
 
 
 class TestProcessDeletionRequest:

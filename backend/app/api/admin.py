@@ -869,6 +869,10 @@ async def process_data_deletion_request(
             request_id=request_id, processed_by=admin.id
         )
     except ValueError as e:
+        # ValueError means "not found": it is the only one the service raises
+        # (retention_service.py:337). If another is ever added there, this
+        # would mislabel it as a missing request, which for an erasure queue
+        # would read as "already handled" — narrow this catch at that point.
         logger.warning(f"Deletion request {request_id} not found: {e}")
         raise HTTPException(
             status_code=404, detail=f"Deletion request {request_id} not found"
