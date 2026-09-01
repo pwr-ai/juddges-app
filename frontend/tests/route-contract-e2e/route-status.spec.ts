@@ -5,6 +5,7 @@ import {
   type APIResponse,
   type BrowserContext,
   type Page,
+  type Response,
 } from '@playwright/test';
 
 const APP_BASE_URL = 'http://127.0.0.1:3006';
@@ -399,20 +400,50 @@ test.describe.serial('production route status contract', () => {
     await setSyntheticSession(context, 'valid');
     const page = await context.newPage();
 
-    const pollResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/extractions?job_id=') &&
-        response.request().method() === 'GET',
-    );
+    // The body is captured inside the `response` handler rather than read from
+    // the awaited Response afterwards. `Response.json()` fetches the body lazily
+    // over CDP (`Network.getResponseBody`), and Chromium only retains it while
+    // the owning request is still held. Reading it after `goto()` has settled
+    // raced that eviction and failed with "No data found for resource with given
+    // identifier" (#545). Reading it the moment the response arrives removes the
+    // dependency on Chromium's retention window entirely.
+    const isPoll = (response: Response): boolean =>
+      response.url().includes('/api/extractions?job_id=') &&
+      response.request().method() === 'GET';
+
+    let polledBody: unknown;
+    const bodyCaptured = new Promise<void>((resolve) => {
+      page.on('response', (response) => {
+        if (polledBody !== undefined || !isPoll(response)) return;
+        void response
+          .json()
+          .then((body: unknown) => {
+            polledBody = body;
+            resolve();
+          })
+          .catch(() => {
+            // Resolve anyway, leaving `polledBody` unset: the assertion below
+            // then reports what was actually received instead of this test
+            // hanging until the suite timeout on a body that never arrives.
+            resolve();
+          });
+      });
+    });
+
+    // `waitForResponse` still owns the waiting: it carries the suite timeout and
+    // produces a readable error if the poll never fires. The handler above only
+    // supplies the body.
+    const pollResponse = page.waitForResponse(isPoll);
     const response = await page.goto(`/extractions/${IDS.extraction.known}`);
     expect(response?.status()).toBe(200);
 
     const polled = await pollResponse;
     expect(polled.status()).toBe(200);
+    await bodyCaptured;
     // The stub serves no extraction_jobs row, so the BFF cannot resolve the name
     // from Supabase. It must return what the upstream response already carried
     // instead of answering null.
-    expect(await polled.json()).toMatchObject({
+    expect(polledBody).toMatchObject({
       job_id: IDS.extraction.known,
       schema_name: 'Route contract extraction schema',
     });

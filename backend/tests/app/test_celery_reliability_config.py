@@ -143,3 +143,16 @@ def test_every_routed_queue_has_a_consumer(compose_file: str) -> None:
         f"{compose_file} has no worker consuming {sorted(missing)}; "
         f"tasks routed there would queue forever"
     )
+
+
+@pytest.mark.unit
+def test_production_image_prepares_celery_state_directory() -> None:
+    """An empty named volume must inherit ownership usable by the app user."""
+    dockerfile = (REPO_ROOT / "backend/Dockerfile").read_text()
+    production = dockerfile.split("FROM python:3.12.10-slim AS production", 1)[1]
+
+    assert "mkdir -p /var/lib/celery" in production
+    assert "chown appuser:appuser /var/lib/celery" in production
+    assert production.index("chown appuser:appuser /var/lib/celery") < production.index(
+        "USER appuser"
+    )

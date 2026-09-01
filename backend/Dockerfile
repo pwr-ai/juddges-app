@@ -75,7 +75,9 @@ RUN mkdir -p /tmp/hf/hub /tmp/hf/transformers && chmod -R 777 /tmp/hf
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    mkdir -p /var/lib/celery && \
+    chown appuser:appuser /var/lib/celery
 USER appuser
 
 EXPOSE 8002
