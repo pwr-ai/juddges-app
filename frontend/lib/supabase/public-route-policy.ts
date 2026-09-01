@@ -11,6 +11,10 @@ const PUBLIC_READ_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);
 const EXACT_PUBLIC_PAGES: ReadonlySet<string> = new Set([
   '/',
   '/about',
+  // Issue #510 — the corpus is public court rulings, so search and judgment
+  // reading need no account. `/search` is exact on purpose: `/search/extractions`
+  // is an identity-bearing surface and stays behind auth.
+  '/search',
   '/ecosystem',
   '/onboarding',
   '/status',
@@ -42,6 +46,13 @@ const EXACT_PUBLIC_READ_APIS: ReadonlySet<string> = new Set([
   '/api/dashboard/stats',
   '/api/contact',
   '/api/blog/categories',
+  // Issue #510 — the read surface a guest search needs. Enumerated one path at
+  // a time rather than opening the `/api/search` subtree, which also holds
+  // `/analytics/history` and `/topics/my-clicks`.
+  '/api/search/documents',
+  '/api/search/suggest',
+  '/api/search/autocomplete',
+  '/api/example_questions',
 ]);
 
 const PUBLIC_READ_API_SUBTREES = [
@@ -52,8 +63,13 @@ const PUBLIC_READ_API_SUBTREES = [
 
 const CHAT_MESSAGES_PREFIX = '/api/chats/';
 const CHAT_MESSAGES_SUFFIX = '/messages';
-const DOCUMENT_METADATA_API_PATTERN =
-  /^\/api\/documents\/[a-zA-Z0-9_.-]{1,255}\/metadata$/;
+// Issue #510 — the read-only sub-resources the judgment page fetches. `versions`
+// and the write routes under `/api/documents` are deliberately absent.
+const DOCUMENT_PUBLIC_SUBRESOURCE_API_PATTERN =
+  /^\/api\/documents\/[a-zA-Z0-9_.-]{1,255}\/(?:metadata|similar|html)$/;
+// Judgment detail pages only. Bare `/documents` and any deeper path stay gated.
+const PUBLIC_JUDGMENT_PAGE_PATTERN = /^\/documents\/[a-zA-Z0-9_.-]{1,255}$/;
+const ANONYMOUS_ANALYTICS_PATH = '/api/events';
 const SCHEMA_API_PATTERN = /^\/api\/schemas\/[^/]+$/;
 
 function matchesSegmentTree(pathname: string, root: string): boolean {
@@ -77,6 +93,7 @@ function isPublicPage(pathname: string): boolean {
   if (matchesAnySegmentTree(pathname, PROTECTED_PAGE_SUBTREES)) return false;
   return (
     matchesExactPage(pathname) ||
+    PUBLIC_JUDGMENT_PAGE_PATTERN.test(pathname) ||
     matchesAnySegmentTree(pathname, PUBLIC_PAGE_SUBTREES)
   );
 }
@@ -99,13 +116,17 @@ export function isAnonymousSchemaBffRead({
   return PUBLIC_READ_METHODS.has(method) && SCHEMA_API_PATTERN.test(pathname);
 }
 
-export function isAnonymousDocumentBffRead({
+/**
+ * Read-only judgment sub-resources a signed-out visitor may fetch (issue #510):
+ * metadata, similar judgments, and the rendered HTML body.
+ */
+export function isPublicJudgmentSubresourceRead({
   pathname,
   method,
 }: PublicRouteRequest): boolean {
   return (
     PUBLIC_READ_METHODS.has(method) &&
-    DOCUMENT_METADATA_API_PATTERN.test(pathname)
+    DOCUMENT_PUBLIC_SUBRESOURCE_API_PATTERN.test(pathname)
   );
 }
 
@@ -118,7 +139,7 @@ function isPublicReadApi(
     EXACT_PUBLIC_READ_APIS.has(pathname) ||
     matchesAnySegmentTree(pathname, PUBLIC_READ_API_SUBTREES) ||
     isPublicChatMessagesRead(pathname) ||
-    isAnonymousDocumentBffRead({ pathname, method }) ||
+    isPublicJudgmentSubresourceRead({ pathname, method }) ||
     isAnonymousSchemaBffRead({ pathname, method }) ||
     isAnonymousExtractionBffRead({ pathname, method, searchParams })
   );
@@ -146,6 +167,10 @@ export function isPublicRequest({
 }: PublicRouteRequest): boolean {
   if (pathname === '/api/graphql') return true;
   if (pathname === '/api/contact' && method === 'POST') return true;
+  // Issue #510 — guest activity must reach app_events so `guest_session_id` can
+  // be stitched to the account on sign-up. The endpoint records events only; it
+  // reads nothing back.
+  if (pathname === ANONYMOUS_ANALYTICS_PATH && method === 'POST') return true;
   if (!PUBLIC_READ_METHODS.has(method)) return false;
   return isPublicPage(pathname) || isPublicReadApi(pathname, method, searchParams);
 }

@@ -1091,6 +1091,10 @@ export interface paths {
         /**
          * Documents Search
          * @description Paginated Meilisearch-backed document search for the /search results page.
+         *
+         *     Serves signed-out visitors (issue #510): the corpus is public court rulings.
+         *     Anonymous callers get a capped free allowance tracked against a guest
+         *     session; signed-in callers are never metered here.
          */
         get: operations["documents_search_api_search_documents_get"];
         put?: never;
@@ -14003,7 +14007,9 @@ export interface operations {
             };
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                guest_session_id?: string | null;
+            };
         };
         requestBody?: never;
         responses: {

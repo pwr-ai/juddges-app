@@ -17649,7 +17649,7 @@
     },
     "/api/search/documents": {
       "get": {
-        "description": "Paginated Meilisearch-backed document search for the /search results page.",
+        "description": "Paginated Meilisearch-backed document search for the /search results page.\n\nServes signed-out visitors (issue #510): the corpus is public court rulings.\nAnonymous callers get a capped free allowance tracked against a guest\nsession; signed-in callers are never metered here.",
         "operationId": "documents_search_api_search_documents_get",
         "parameters": [
           {
@@ -17734,6 +17734,22 @@
               "description": "When true, parse structural attributes (court, year/date range, case number, judge, jurisdiction) out of the free-text query at request time. Filterable attributes (jurisdiction, decision_date) become Meilisearch filter clauses; the remaining text is used as the FTS query. Default false keeps base-search behaviour identical.",
               "title": "Parse Attributes",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "guest_session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guest Session Id"
             }
           }
         ],
