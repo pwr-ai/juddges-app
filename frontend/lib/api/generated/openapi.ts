@@ -66,6 +66,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/data-deletion-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Data Deletion Requests
+         * @description List GDPR erasure requests, oldest first (#506).
+         *
+         *     Defaults to `pending` because that is the operator's outstanding work.
+         */
+        get: operations["list_data_deletion_requests_api_admin_data_deletion_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/data-deletion-requests/{request_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process Data Deletion Request
+         * @description Carry out a recorded erasure request (#506).
+         *
+         *     `RetentionService.process_deletion_request` has always been able to do this;
+         *     until now nothing called it, so requests accumulated unprocessed while the
+         *     subject had been told in writing they would be handled within 30 days.
+         */
+        post: operations["process_data_deletion_request_api_admin_data_deletion_requests__request_id__process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/documents/stats": {
         parameters: {
             query?: never;
@@ -7078,6 +7124,62 @@ export interface components {
             status: string;
         };
         /**
+         * DeletionRequestItem
+         * @description One GDPR erasure request in the operator queue (#506).
+         */
+        DeletionRequestItem: {
+            /** Completed At */
+            completed_at?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Data Types */
+            data_types?: string[];
+            /** Deletion Summary */
+            deletion_summary?: {
+                [key: string]: unknown;
+            };
+            /** Error Message */
+            error_message?: string | null;
+            /** Id */
+            id: string;
+            /** Processed By */
+            processed_by?: string | null;
+            /** Request Type */
+            request_type: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Status */
+            status: string;
+            /** User Id */
+            user_id?: string | null;
+        };
+        /**
+         * DeletionRequestListResponse
+         * @description Erasure requests awaiting an operator, oldest first.
+         */
+        DeletionRequestListResponse: {
+            /** Requests */
+            requests: components["schemas"]["DeletionRequestItem"][];
+            /** Total */
+            total: number;
+        };
+        /**
+         * DeletionRequestProcessResponse
+         * @description Outcome of carrying out one erasure request.
+         */
+        DeletionRequestProcessResponse: {
+            /** Deletion Summary */
+            deletion_summary?: {
+                [key: string]: unknown;
+            };
+            /** Request Id */
+            request_id: string;
+            /** Status */
+            status: string;
+            /** Timestamp */
+            timestamp: string;
+        };
+        /**
          * DependenciesResponse
          * @description Response listing all system dependencies.
          * @example {
@@ -12761,6 +12863,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContentStats"];
+                };
+            };
+        };
+    };
+    list_data_deletion_requests_api_admin_data_deletion_requests_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by status; 'all' returns every request */
+                status?: "pending" | "in_progress" | "completed" | "failed" | "all";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletionRequestListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_data_deletion_request_api_admin_data_deletion_requests__request_id__process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletionRequestProcessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
