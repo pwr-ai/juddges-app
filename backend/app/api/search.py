@@ -33,6 +33,7 @@ from app.judgments_pkg.query_attribute_parser import (
     parse_query_attributes,
 )
 from app.rate_limiter import limiter
+from app.services.audit_service import AuditService
 from app.services.search import (
     MeiliSearchService,
     SearchMode,
@@ -444,6 +445,27 @@ async def documents_search(
             processing_ms=processing_ms,
             filters=filters,
             user_id=user.id if user else None,
+        )
+
+    # Compliance audit trail (issue #559). Signed-in callers only — an
+    # anonymous corpus search has no accountable subject to attribute the row
+    # to; see app/services/audit_service.py. Scheduled off the response path
+    # like the analytics write above, and AuditService swallows its own
+    # failures, so this can never fail or slow the search.
+    if user is not None:
+        background_tasks.add_task(
+            AuditService.log_query,
+            user_id=user.id,
+            query=query,
+            # A summary, not a copy of the hits: the corpus text is already
+            # public and mirroring it would bloat a 7-year table.
+            response={
+                "result_count": len(hits),
+                "estimated_total": estimated_total,
+                "search_mode": result.get("search_mode", "keyword"),
+            },
+            metadata={"limit": limit, "offset": offset, "filters": filters},
+            duration_ms=processing_ms,
         )
 
     if quota is not None and quota.enforced and quota.session_id:

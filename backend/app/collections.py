@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
 from juddges_search.db.collections_db import UNSET
 from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.models import validate_id_format
+from app.services.audit_service import log_audit_background
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 
@@ -80,10 +81,22 @@ async def list_collections(
 @router.post("", response_model=Collection)
 async def create_collection(
     request: CreateCollectionRequest,
+    background_tasks: BackgroundTasks,
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
 ):
     collection = await db.create_collection(user.id, request.name, request.description)
+    # Compliance audit trail (issue #559): a collection is the user's curated
+    # set of judgments, so its lifecycle and membership are the state changes
+    # a reader of the trail needs. Names/descriptions are the user's own text
+    # and are not copied into a 7-year table.
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_created",
+        resource_type="collection",
+        resource_id=collection["id"],
+    )
     return Collection(**collection)
 
 
@@ -120,6 +133,7 @@ async def get_collection(
 @router.put("/{collection_id}", response_model=Collection)
 async def update_collection(
     request: UpdateCollectionRequest,
+    background_tasks: BackgroundTasks,
     collection_id: str = Path(..., description="Collection ID to update"),
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
@@ -137,11 +151,19 @@ async def update_collection(
     collection = await db.update_collection(
         collection_id, user.id, request.name, description_arg
     )
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_updated",
+        resource_type="collection",
+        resource_id=collection_id,
+    )
     return Collection(**collection)
 
 
 @router.delete("/{collection_id}")
 async def delete_collection(
+    background_tasks: BackgroundTasks,
     collection_id: str = Path(..., description="Collection ID to delete"),
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
@@ -154,6 +176,13 @@ async def delete_collection(
         raise HTTPException(status_code=400, detail=str(e))
 
     await db.delete_collection(collection_id, user.id)
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_deleted",
+        resource_type="collection",
+        resource_id=collection_id,
+    )
     return {"message": "Collection deleted successfully"}
 
 
@@ -177,6 +206,7 @@ async def get_collection_documents(
 @router.post("/{collection_id}/documents")
 async def add_document(
     request: AddDocumentRequest,
+    background_tasks: BackgroundTasks,
     collection_id: str = Path(..., description="Collection ID to add document to"),
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
@@ -189,6 +219,14 @@ async def add_document(
         raise HTTPException(status_code=400, detail=str(e))
 
     await db.add_document(collection_id, request.document_id, user.id)
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_document_added",
+        input_data={"document_ids": [request.document_id]},
+        resource_type="collection",
+        resource_id=collection_id,
+    )
     return {
         "message": "Document added successfully",
         "document_id": request.document_id,
@@ -216,6 +254,7 @@ class AddDocumentsRequest(BaseModel):
 @router.post("/{collection_id}/documents/batch")
 async def add_documents_batch(
     request: AddDocumentsRequest,
+    background_tasks: BackgroundTasks,
     collection_id: str = Path(..., description="Collection ID to add documents to"),
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
@@ -231,6 +270,15 @@ async def add_documents_batch(
     result = await db.bulk_add_documents(collection_id, request.document_ids, user.id)
     added = result["added"]
     failed = result["failed"]
+
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_document_added",
+        input_data={"document_ids": added},
+        resource_type="collection",
+        resource_id=collection_id,
+    )
 
     return {
         "message": f"Added {len(added)} documents, {len(failed)} failed",
@@ -256,6 +304,7 @@ class RemoveDocumentRequest(BaseModel):
 @router.delete("/{collection_id}/documents")
 async def remove_document_by_body(
     request: RemoveDocumentRequest,
+    background_tasks: BackgroundTasks,
     collection_id: str = Path(..., description="Collection ID to remove document from"),
     db=Depends(get_collections_db),
     user: AuthenticatedUser = Depends(get_current_user),
@@ -269,11 +318,20 @@ async def remove_document_by_body(
         raise HTTPException(status_code=400, detail=str(e))
 
     await db.remove_document(collection_id, request.document_id, user.id)
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_document_removed",
+        input_data={"document_ids": [request.document_id]},
+        resource_type="collection",
+        resource_id=collection_id,
+    )
     return {"message": "Document removed successfully"}
 
 
 @router.delete("/{collection_id}/documents/{document_id}")
 async def remove_document_by_url(
+    background_tasks: BackgroundTasks,
     collection_id: str = Path(..., description="Collection ID to remove document from"),
     document_id: str = Path(..., description="Document ID to remove"),
     db=Depends(get_collections_db),
@@ -289,4 +347,12 @@ async def remove_document_by_url(
         raise HTTPException(status_code=400, detail=str(e))
 
     await db.remove_document(collection_id, document_id, user.id)
+    log_audit_background(
+        background_tasks,
+        user_id=user.id,
+        action_type="collection_document_removed",
+        input_data={"document_ids": [document_id]},
+        resource_type="collection",
+        resource_id=collection_id,
+    )
     return {"message": "Document removed successfully"}
