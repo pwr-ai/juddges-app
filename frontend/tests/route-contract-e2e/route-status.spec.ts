@@ -572,30 +572,97 @@ test.describe.serial('production route status contract', () => {
     expect(domainRequests(requests)).toEqual([]);
   });
 
-  test('returns auth-outage 503s for a page and BFF without a domain read', async ({
+  test('serves the public judgment surface through an auth outage', async ({
     context,
     request,
   }) => {
     await setSyntheticSession(context, 'outage');
+    // Issue #510 — the judgment page carries no identity, so an auth-service
+    // outage must not take it down. A missing judgment is a domain 404, not an
+    // auth 503; the outage no longer short-circuits before the domain read.
     const pageBody = await navigate(
       context,
       `/documents/${IDS.document.missing}`,
-      503,
+      404,
     );
-    expect(pageBody).toContain('Document service 503');
+    expect(pageBody).toContain('Document not found');
 
     const bff = await expectWireStatus(
       context.request,
       'GET',
       `/api/documents/${IDS.document.missing}/metadata`,
-      503,
+      404,
     );
     expect(bff.headers()['content-type']).toContain('application/json');
-    expect(await bff.json()).toMatchObject({ code: 'DATABASE_UNAVAILABLE' });
+    expect(await bff.json()).toMatchObject({ code: 'DOCUMENT_NOT_FOUND' });
 
     const requests = await adapterRequests(request);
     expect(requests.some(({ path }) => path === '/auth/v1/user')).toBe(true);
-    expect(domainRequests(requests)).toEqual([]);
+    expect(domainRequests(requests).map(({ path }) => path)).toContain(
+      `/documents/${IDS.document.missing}/metadata`,
+    );
+  });
+
+  test('serves search and judgments to a signed-out visitor', async ({
+    browser,
+    request,
+  }) => {
+    // Issue #510 — the headline guarantee: no session at all, and the corpus is
+    // still readable. Previously both of these returned 307 to /auth/login.
+    const anonymous = await browser.newContext({
+      baseURL: APP_BASE_URL,
+      javaScriptEnabled: false,
+      serviceWorkers: 'block',
+    });
+    try {
+      await expectWireStatus(anonymous.request, 'GET', '/search', 200);
+      const judgment = await navigate(
+        anonymous,
+        `/documents/${IDS.document.known}`,
+        200,
+      );
+      expect(judgment).toContain('Route contract judgment');
+      await expectWireStatus(
+        anonymous.request,
+        'GET',
+        `/api/documents/${IDS.document.known}/metadata`,
+        200,
+      );
+
+      // The gated neighbours are unaffected by opening the exact `/search` path.
+      await expectWireStatus(anonymous.request, 'GET', '/search/extractions', 307);
+      await expectWireStatus(anonymous.request, 'GET', '/collections', 307);
+      await expectWireStatus(anonymous.request, 'GET', '/history', 307);
+
+      expect(
+        domainRequests(await adapterRequests(request)).map(({ path }) => path),
+      ).toContain(`/documents/${IDS.document.known}/metadata`);
+    } finally {
+      await anonymous.close();
+    }
+  });
+
+  test('keeps gated surfaces gated during an auth outage', async ({
+    context,
+    request,
+  }) => {
+    await setSyntheticSession(context, 'outage');
+    // Opening judgments (issue #510) must not soften anything identity-bearing:
+    // an auth outage still refuses the extraction detail page and its BFF.
+    await expectWireStatus(
+      context.request,
+      'GET',
+      `/extractions/${IDS.extraction.known}`,
+      307,
+    );
+    await expectWireStatus(
+      context.request,
+      'GET',
+      `/api/extractions?job_id=${IDS.extraction.known}`,
+      401,
+    );
+
+    expect(domainRequests(await adapterRequests(request))).toEqual([]);
   });
 
   test('redacts non-contract query fields from adapter diagnostics', async ({

@@ -129,21 +129,6 @@ export function SkeletonSearch({ className }: { className?: string }) {
  );
 }
 
-export function SkeletonTrendingTopic({ className }: { className?: string }) {
- return (
- <div className={cn("flex items-center justify-between gap-3 p-3 rounded-xl glass-card glass-card--tile", className)}>
- <div className="flex-1 min-w-0 space-y-2">
- <div className="h-4 w-32 rounded bg-gradient-to-r from-slate-200/60 via-slate-100/60 to-slate-200/60 backdrop-blur-sm animate-pulse"/>
- <div className="h-3 w-24 rounded bg-gradient-to-r from-slate-200/60 via-slate-100/60 to-slate-200/60 backdrop-blur-sm animate-pulse"/>
- </div>
- <div className="flex items-center gap-2 ml-2 shrink-0">
- <div className="h-4 w-4 rounded bg-gradient-to-r from-slate-200/60 via-slate-100/60 to-slate-200/60 backdrop-blur-sm animate-pulse"/>
- <div className="h-4 w-8 rounded bg-gradient-to-r from-slate-200/60 via-slate-100/60 to-slate-200/60 backdrop-blur-sm animate-pulse"/>
- </div>
- </div>
- );
-}
-
 export function SkeletonInsight({ className }: { className?: string }) {
  return (
  <div className={cn("flex justify-between items-center p-3 rounded-xl glass-card glass-card--tile", className)}>

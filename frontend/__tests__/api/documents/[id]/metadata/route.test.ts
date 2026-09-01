@@ -45,37 +45,41 @@ describe('GET /api/documents/[id]/metadata', () => {
     });
   });
 
-  it('returns an exact 401 before contacting upstream for anonymous callers', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+  // Issue #510 — judgment metadata is public court-ruling data. Every path that
+  // fails to produce a signed-in identity must still serve the judgment, under
+  // the reserved anonymous principal.
+  const upstreamPrincipal = () =>
+    ((global.fetch as jest.Mock).mock.calls[0][1].headers as Record<string, string>)[
+      'X-User-ID'
+    ];
 
-    const response = await callRoute();
-
-    expect(response.status).toBe(401);
-    expect((await response.json()).error).toBe('UNAUTHORIZED');
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('returns a safe 500 when auth lookup throws unexpectedly', async () => {
-    mockGetUser.mockRejectedValue(new Error('auth network crashed'));
-
-    const response = await callRoute();
-
-    expect(response.status).toBe(500);
-    expect((await response.json()).error).toBe('INTERNAL_ERROR');
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('returns a retryable 503 for an auth infrastructure error', async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: { message: 'upstream unavailable', status: 503 },
+  it.each([
+    ['no session', () => mockGetUser.mockResolvedValue({ data: { user: null }, error: null })],
+    ['a thrown auth lookup', () => mockGetUser.mockRejectedValue(new Error('auth network crashed'))],
+    [
+      'an auth infrastructure error',
+      () =>
+        mockGetUser.mockResolvedValue({
+          data: { user: null },
+          error: { message: 'upstream unavailable', status: 503 },
+        }),
+    ],
+  ])('serves judgment metadata anonymously given %s', async (_label, arrange) => {
+    arrange();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        document_id: 'doc-1',
+        document_type: 'judgment',
+        language: 'pl',
+      }),
     });
 
     const response = await callRoute();
 
-    expect(response.status).toBe(503);
-    expect((await response.json()).error).toBe('DATABASE_UNAVAILABLE');
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(upstreamPrincipal()).toBe('anonymous');
   });
 
   it('rejects invalid IDs before contacting upstream', async () => {

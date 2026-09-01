@@ -193,3 +193,29 @@ export function formatDateCompact(
     day: '2-digit',
   }).format(date);
 }
+
+/**
+ * Format a corpus "last updated" timestamp for display.
+ *
+ * Returns `null` when there is no usable timestamp so the caller can hide the
+ * field. It must never substitute the current date: doing so made the home
+ * page claim the corpus had been updated today no matter how stale it
+ * actually was (#558).
+ */
+export function formatLastUpdated(
+  value: DateLike | null | undefined
+): { value: string; label: string } | null {
+  const date = parseDate(value);
+  if (!date) return null;
+
+  const diffInHours = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60));
+
+  if (diffInHours < 1) return { value: 'Just now', label: '' };
+  if (diffInHours < 24) return { value: `${diffInHours}hrs`, label: 'ago' };
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return { value: 'Yesterday', label: '' };
+  if (diffInDays < 7) return { value: `${diffInDays} days`, label: 'ago' };
+
+  return { value: formatDateCompact(date), label: '' };
+}

@@ -31,14 +31,6 @@ export interface DashboardStats {
   computed_at: string | null;
 }
 
-interface TrendingTopic {
-  topic: string;
-  change: string;
-  trend: "up" | "down" | "stable";
-  query_count: number;
-  category: string;
-}
-
 /**
  * Hook to fetch dashboard statistics with React Query caching
  *
@@ -53,25 +45,6 @@ export function useDashboardStats(): ReturnType<typeof useQuery<DashboardStats>>
       return response.json();
     },
     staleTime: 4 * 60 * 60 * 1000, // 4 hours
-  });
-}
-
-/**
- * Hook to fetch trending topics with React Query caching
- *
- * Caches for 1 hour - trending data doesn't need to be real-time
- */
-export function useTrendingTopics(limit: number = 3) {
-  return useQuery({
-    queryKey: ["dashboard", "trending-topics", limit],
-    queryFn: async (): Promise<TrendingTopic[]> => {
-      const response = await fetch(
-        `/api/dashboard/trending-topics?limit=${limit}`
-      );
-      if (!response.ok) throw new Error("Failed to fetch trends");
-      return response.json();
-    },
-    staleTime: 1 * 60 * 60 * 1000, // 1 hour
   });
 }
 

@@ -12,6 +12,21 @@ import type { SessionUpdate } from "@/lib/supabase/middleware";
 
 const mockUpdateSessionWithAuth = jest.mocked(updateSessionWithAuth);
 
+const VALID_METADATA = {
+  document_id: "visible-doc",
+  document_type: "judgment",
+  language: "pl",
+};
+
+function metadataUpstreamOk(): void {
+  (global.fetch as jest.Mock).mockResolvedValue(
+    new Response(JSON.stringify(VALID_METADATA), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
 function unavailableSession(request: NextRequest): SessionUpdate {
   return {
     response: NextResponse.next({ request }),
@@ -47,18 +62,30 @@ describe("document detail auth failure boundary", () => {
     global.fetch = originalFetch;
   });
 
-  it.each([
-    ["page", "/documents/visible-doc", "text/html"],
-    ["metadata BFF", "/api/documents/visible-doc/metadata", "application/json"],
-  ])("returns retryable 503 for an auth outage on the exact %s", async (_, path, type) => {
-    const request = new NextRequest(`http://localhost${path}`);
+  // Issue #510 — the judgment page carries no identity, so an auth-service
+  // outage must not take the public reading path down with it.
+  it("serves the judgment page through an auth outage", async () => {
+    const request = new NextRequest("http://localhost/documents/visible-doc");
+    mockUpdateSessionWithAuth.mockResolvedValue(unavailableSession(request));
+    metadataUpstreamOk();
+
+    const response = await middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect((init.headers as Record<string, string>)["X-User-ID"]).toBe("anonymous");
+  });
+
+  it("lets the metadata BFF handle an auth outage itself", async () => {
+    const request = new NextRequest(
+      "http://localhost/api/documents/visible-doc/metadata",
+    );
     mockUpdateSessionWithAuth.mockResolvedValue(unavailableSession(request));
 
     const response = await middleware(request);
 
-    expect(response.status).toBe(503);
-    expect(response.headers.get("content-type")).toContain(type);
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.status).toBe(200);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -80,7 +107,7 @@ describe("document detail auth failure boundary", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("keeps an invalid metadata BFF session as 401", async () => {
+  it("passes an anonymous metadata BFF read through to the route", async () => {
     const request = new NextRequest(
       "http://localhost/api/documents/visible-doc/metadata",
     );
@@ -90,11 +117,21 @@ describe("document detail auth failure boundary", () => {
 
     const response = await middleware(request);
 
-    expect(response.status).toBe(401);
-    expect(await response.json()).toEqual(
-      expect.objectContaining({ error: "UNAUTHORIZED" }),
-    );
+    expect(response.status).toBe(200);
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("signs anonymous judgment metadata under the reserved principal", async () => {
+    const request = new NextRequest("http://localhost/documents/visible-doc");
+    mockUpdateSessionWithAuth.mockResolvedValue(
+      anonymousSession(request, NextResponse.next({ request })),
+    );
+    metadataUpstreamOk();
+
+    const response = await middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it.each([
