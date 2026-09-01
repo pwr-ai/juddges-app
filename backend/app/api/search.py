@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import (
     APIRouter,
     BackgroundTasks,
+    Cookie,
     Depends,
     HTTPException,
     Query,
@@ -20,6 +21,13 @@ from pydantic import BaseModel, Field
 
 from app.auth import verify_api_key
 from app.core.auth_jwt import AuthenticatedUser, get_current_user, get_optional_user
+from app.guest_sessions import (
+    GUEST_SEARCH_LIMIT,
+    SESSION_EXPIRY_HOURS,
+    charge_guest_search,
+    guest_limit_exceeded_error,
+    open_guest_search_quota,
+)
 from app.judgments_pkg.query_attribute_parser import (
     build_meili_filter,
     parse_query_attributes,
@@ -322,6 +330,7 @@ async def suggest(
 @router.get("/documents", response_model=DocumentSearchResponse)
 async def documents_search(
     background_tasks: BackgroundTasks,
+    response: Response,
     q: str = Query("", max_length=500, description="Search query (empty = match all)"),
     limit: int = Query(10, ge=1, le=100, description="Max documents to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
@@ -349,12 +358,26 @@ async def documents_search(
     ),
     search_service: MeiliSearchService = Depends(get_search_service),
     user: AuthenticatedUser | None = Depends(get_optional_user),
+    guest_session_id: str | None = Cookie(None, alias="guest_session_id"),
 ) -> DocumentSearchResponse:
-    """Paginated Meilisearch-backed document search for the /search results page."""
+    """Paginated Meilisearch-backed document search for the /search results page.
+
+    Serves signed-out visitors (issue #510): the corpus is public court rulings.
+    Anonymous callers get a capped free allowance tracked against a guest
+    session; signed-in callers are never metered here.
+    """
     query = q.strip()
 
     if not search_service.configured:
         raise HTTPException(status_code=503, detail="Meilisearch is not configured")
+
+    # Guest allowance is checked before the search runs, but only charged after
+    # one returns, so an upstream failure never costs part of the allowance.
+    quota = None
+    if user is None:
+        quota = await open_guest_search_quota(guest_session_id)
+        if quota.limit_reached:
+            raise guest_limit_exceeded_error()
 
     effective_query = query
     effective_filters = filters
@@ -407,6 +430,23 @@ async def documents_search(
             processing_ms=processing_ms,
             filters=filters,
             user_id=user.id if user else None,
+        )
+
+    if quota is not None and quota.enforced and quota.session_id:
+        remaining = await charge_guest_search(quota.session_id)
+        # The BFF reads these to seed the guest cookie and drive the sign-up
+        # nudge; they stay out of the response body so the search contract is
+        # identical for signed-in and signed-out callers.
+        response.headers["X-Guest-Session-Id"] = quota.session_id
+        response.headers["X-Guest-Search-Limit"] = str(GUEST_SEARCH_LIMIT)
+        response.headers["X-Guest-Searches-Remaining"] = str(remaining)
+        response.set_cookie(
+            key="guest_session_id",
+            value=quota.session_id,
+            max_age=SESSION_EXPIRY_HOURS * 3600,
+            httponly=True,
+            samesite="lax",
+            secure=os.getenv("PYTHON_ENV", "development") == "production",
         )
 
     return DocumentSearchResponse(

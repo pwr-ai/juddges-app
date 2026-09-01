@@ -94,10 +94,10 @@ describe('LandingPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('shows "Try search" CTA link routing through /auth/login', () => {
+    it('shows a "Try search" CTA that reaches search itself', () => {
       render(<LandingPage />);
       const searchLinks = screen.getAllByRole('link', { name: /try search/i });
-      const heroLink = searchLinks.find((l) => l.getAttribute('href') === '/auth/login');
+      const heroLink = searchLinks.find((l) => l.getAttribute('href') === '/search');
       expect(heroLink).toBeTruthy();
     });
 
@@ -118,10 +118,24 @@ describe('LandingPage', () => {
       expect(screen.getByText(/Consumer protection in financial services/i)).toBeInTheDocument();
     });
 
-    it('demo query links route through /auth/login (search is auth-gated)', () => {
+    it('demo query links run the query they advertise', () => {
       render(<LandingPage />);
       const link = screen.getByRole('link', { name: /Murder conviction appeal/i });
-      expect(link.getAttribute('href')).toBe('/auth/login');
+      expect(link.getAttribute('href')).toBe(
+        '/search?q=Murder%20conviction%20appeal&lang=en'
+      );
+    });
+
+    it.each([
+      [/Frankowicze i abuzywne klauzule/i, 'pl'],
+      [/Murder conviction appeal/i, 'en'],
+      [/Skarga do sądu administracyjnego/i, 'pl'],
+      [/Consumer protection in financial services/i, 'en'],
+    ])('sends demo query %s to /search with its corpus language', (name, lang) => {
+      render(<LandingPage />);
+      const href = screen.getByRole('link', { name }).getAttribute('href') ?? '';
+      expect(href.startsWith('/search?q=')).toBe(true);
+      expect(href).toContain(`&lang=${lang}`);
     });
   });
 
@@ -182,11 +196,11 @@ describe('LandingPage', () => {
       expect(schemaLink).toHaveAttribute('href', '/schema-chat');
     });
 
-    it('routes the primary hero CTAs to the auth pages', () => {
+    it('routes the hero CTAs to search and sign-up respectively', () => {
       render(<LandingPage />);
       const trySearch = screen.getAllByRole('link', { name: /try search/i });
       expect(trySearch.length).toBeGreaterThan(0);
-      expect(trySearch[0]).toHaveAttribute('href', '/auth/login');
+      expect(trySearch[0]).toHaveAttribute('href', '/search');
       const signUp = screen.getAllByRole('link', { name: /create free account/i });
       expect(signUp.length).toBeGreaterThan(0);
       signUp.forEach((link) => expect(link).toHaveAttribute('href', '/auth/sign-up'));

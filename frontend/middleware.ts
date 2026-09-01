@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getBackendUrl } from "@/app/api/utils/backend-url";
 import {
+  ANONYMOUS_PRINCIPAL,
   DOCUMENT_METADATA_HEADER,
   DOCUMENT_METADATA_SIGNATURE_HEADER,
   VERIFIED_USER_HEADER,
@@ -37,10 +38,7 @@ import {
   fetchSchemaDetail,
 } from "@/lib/server/schema-detail";
 import { updateSessionWithAuth } from "@/lib/supabase/middleware";
-import {
-  isAnonymousDocumentBffRead,
-  isAnonymousExtractionBffRead,
-} from "@/lib/supabase/public-route-policy";
+import { isAnonymousExtractionBffRead } from "@/lib/supabase/public-route-policy";
 
 const DOCUMENT_PAGE_PATTERN = /^\/documents\/([^/]+)$/;
 const DOCUMENT_ID_PATTERN = /^[a-zA-Z0-9_.-]{1,255}$/;
@@ -100,7 +98,7 @@ function isDocumentTimeout(error: unknown, signal: AbortSignal): boolean {
 
 async function preflightDocumentPage(
   request: NextRequest,
-  userId: string
+  principal: string
 ): Promise<DocumentPreflight> {
   const match = DOCUMENT_PAGE_PATTERN.exec(request.nextUrl.pathname);
   if (!match) return { kind: "not-document" };
@@ -133,7 +131,7 @@ async function preflightDocumentPage(
         headers: {
           Accept: "application/json",
           "X-API-Key": process.env.BACKEND_API_KEY ?? "",
-          "X-User-ID": userId,
+          "X-User-ID": principal,
         },
         cache: "no-store",
         signal: timeoutSignal,
@@ -290,55 +288,16 @@ export async function middleware(incomingRequest: NextRequest) {
   }
 
   const isRead = request.method === "GET" || request.method === "HEAD";
-  const isDocumentBffRead = isAnonymousDocumentBffRead({
-    pathname: request.nextUrl.pathname,
-    method: request.method,
-  });
-  if (!userId && isDocumentBffRead) {
-    const status = authFailure === "unavailable" ? 503 : 401;
-    return finishResponse(
-      new NextResponse(
-        request.method === "HEAD"
-          ? null
-          : JSON.stringify(
-              status === 503
-                ? {
-                    error: "DATABASE_UNAVAILABLE",
-                    code: "DATABASE_UNAVAILABLE",
-                    message: "Authentication service is temporarily unavailable.",
-                  }
-                : {
-                    error: "UNAUTHORIZED",
-                    code: "UNAUTHORIZED",
-                    message: "Authentication required",
-                  }
-            ),
-        {
-          status,
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "private, no-store",
-          },
-        }
-      ),
-      sessionResponse,
-      locale,
-      localeNeedsWrite
-    );
-  }
 
+  // Issue #510 — judgments are public court rulings, so the detail page and its
+  // metadata preflight serve signed-out visitors. A signed-out request is
+  // preflighted under a reserved principal; the signature still binds the
+  // metadata to this document and this request context.
   const documentMatch = DOCUMENT_PAGE_PATTERN.exec(request.nextUrl.pathname);
-  if (documentMatch && !userId && authFailure === "unavailable") {
-    return finishResponse(
-      documentStatusResponse(503),
-      sessionResponse,
-      locale,
-      localeNeedsWrite
-    );
-  }
+  const documentPrincipal = userId ?? ANONYMOUS_PRINCIPAL;
 
-  if (userId) {
-    const preflight = await preflightDocumentPage(request, userId);
+  if (userId || documentMatch) {
+    const preflight = await preflightDocumentPage(request, documentPrincipal);
     if (preflight.kind === "response") {
       return finishResponse(
         preflight.response,
@@ -357,12 +316,12 @@ export async function middleware(incomingRequest: NextRequest) {
         DOCUMENT_METADATA_SIGNATURE_HEADER,
         await signDocumentMetadataHeader(
           preflight.value,
-          userId,
+          documentPrincipal,
           preflight.documentId,
           process.env.BACKEND_API_KEY ?? ""
         )
       );
-      headers.set(VERIFIED_USER_HEADER, userId);
+      headers.set(VERIFIED_USER_HEADER, documentPrincipal);
       return finishResponse(
         NextResponse.next({ request: { headers } }),
         sessionResponse,

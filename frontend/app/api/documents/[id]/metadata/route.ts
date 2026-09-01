@@ -6,12 +6,8 @@ import {
   fetchDocumentMetadata,
   isValidDocumentId,
 } from '@/lib/documents/server-metadata';
-import {
-  AppError,
-  ErrorCode,
-  UnauthorizedError,
-  ValidationError,
-} from '@/lib/errors';
+import { ANONYMOUS_PRINCIPAL } from '@/lib/documents/metadata-transport';
+import { AppError, ErrorCode, ValidationError } from '@/lib/errors';
 import logger from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 
@@ -26,27 +22,18 @@ export async function GET(
   const requestId = crypto.randomUUID();
 
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-      const status = Number(error.status);
-      const message = error.message ?? '';
-      if (
-        status === 401 ||
-        status === 403 ||
-        message === 'Auth session missing!' ||
-        message.includes('refresh_token_not_found')
-      ) {
-        throw new UnauthorizedError();
-      }
-      throw new AppError(
-        'Authentication service is temporarily unavailable.',
-        ErrorCode.DATABASE_UNAVAILABLE,
-        503
-      );
-    }
-    if (!data.user) {
-      throw new UnauthorizedError();
+    // Issue #510 — judgment metadata is public court-ruling data. A session is
+    // read when present purely so upstream can attribute the request; a
+    // signed-out visitor is served under a reserved principal instead of a 401.
+    // An auth-service outage must not take the public judgment page down, so a
+    // lookup failure degrades to the anonymous principal rather than a 503.
+    let principal = ANONYMOUS_PRINCIPAL;
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data.user) principal = data.user.id;
+    } catch (authError) {
+      apiLogger.debug('Anonymous judgment metadata read', { requestId, authError });
     }
 
     const { id: documentId } = await params;
@@ -56,7 +43,7 @@ export async function GET(
 
     const metadata = await fetchDocumentMetadata(
       documentId,
-      data.user.id,
+      principal,
       request.signal
     );
 
@@ -88,12 +75,6 @@ export async function GET(
         ).toErrorDetail(),
         { status: error.statusCode }
       );
-    }
-
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json(error.toErrorDetail(), {
-        status: 401,
-      });
     }
 
     if (error instanceof AppError) {
