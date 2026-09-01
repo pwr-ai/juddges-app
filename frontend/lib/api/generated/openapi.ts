@@ -2101,36 +2101,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/dashboard/trending-topics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Trending Topics
-         * @description Get trending legal topics based on search activity.
-         *
-         *     Phase 1 (MVP): Returns curated/editorial topics
-         *     Phase 2 (Future): Algorithm-based trending from search analytics
-         *
-         *     Args:
-         *         category: Optional category filter
-         *         limit: Number of topics to return (1-10)
-         *
-         *     Returns:
-         *         List of trending topics with metadata
-         */
-        get: operations["get_trending_topics_dashboard_trending_topics_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/documents": {
         parameters: {
             query?: never;
@@ -12013,22 +11983,6 @@ export interface components {
             surface: "web" | "api";
         };
         /**
-         * TrendingTopic
-         * @description Trending topic information.
-         */
-        TrendingTopic: {
-            /** Category */
-            category: string;
-            /** Change */
-            change: string;
-            /** Query Count */
-            query_count: number;
-            /** Topic */
-            topic: string;
-            /** Trend */
-            trend: string;
-        };
-        /**
          * TrendingTopicItem
          * @description A single trending topic with its cross-lingual (PL/UK) click split.
          */
@@ -15581,38 +15535,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DashboardStats"];
-                };
-            };
-        };
-    };
-    get_trending_topics_dashboard_trending_topics_get: {
-        parameters: {
-            query?: {
-                category?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TrendingTopic"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -6,6 +6,7 @@
  */
 
 import {
+  formatLastUpdated,
   parseDate,
   formatDate,
   formatDateTime,
@@ -194,6 +195,36 @@ describe('date-utils', () => {
       // en-GB compact format: DD/MM/YYYY
       expect(result).toMatch(/2025/);
       expect(result.length).toBeLessThan(15);
+    });
+  });
+
+  // ── formatLastUpdated ──────────────────────────────────────────────────
+
+  describe('formatLastUpdated', () => {
+    it('returns null when there is no timestamp', () => {
+      // Regression: this used to fabricate today's date, so the home page
+      // always claimed the corpus was updated today no matter how stale it
+      // was (#558).
+      expect(formatLastUpdated(null)).toBeNull();
+    });
+
+    it('returns null for an unparseable timestamp', () => {
+      expect(formatLastUpdated('not-a-date')).toBeNull();
+    });
+
+    it('reports a fresh timestamp as "Just now"', () => {
+      const justNow = new Date().toISOString();
+      expect(formatLastUpdated(justNow)).toEqual({ value: 'Just now', label: '' });
+    });
+
+    it('reports hours elapsed within the same day', () => {
+      const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+      expect(formatLastUpdated(threeHoursAgo)).toEqual({ value: '3hrs', label: 'ago' });
+    });
+
+    it('falls back to DD/MM/YYYY for an old timestamp', () => {
+      const result = formatLastUpdated('2020-03-04T00:00:00Z');
+      expect(result).toEqual({ value: '04/03/2020', label: '' });
     });
   });
 });

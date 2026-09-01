@@ -1,18 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { SkeletonTrendingTopic } from "@/components/ui/skeleton-card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import {
   useDashboardStats,
-  useTrendingTopics,
   useCollectionsDocumentCount,
 } from "@/lib/api/dashboard";
+import { formatLastUpdated } from "@/lib/date-utils";
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   FileJson,
   Database,
   Copy,
@@ -39,44 +35,6 @@ const BIBTEX = `@software{juddges_app_2026,
   url     = {https://github.com/pwr-ai/juddges-app},
   license = {Apache-2.0}
 }`;
-
-function formatLastUpdated(dateString: string | null): { value: string; label: string } {
-  if (!dateString) {
-    // Temporary fix: return current date if no data
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    return { value: `${day}/${month}/${year}`, label: "Last Updated" };
-  }
-
-  const date = new Date(dateString);
-
-  // Check if date is valid
-  if (isNaN(date.getTime())) {
-    // Temporary fix: return current date if invalid
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    return { value: `${day}/${month}/${year}`, label: "Last Updated" };
-  }
-
-  const now = new Date();
-  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
-  if (diffInHours < 1) return { value: "Just now", label: "" };
-  if (diffInHours < 24) return { value: `${diffInHours}hrs`, label: "ago" };
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays === 1) return { value: "Yesterday", label: "" };
-  if (diffInDays < 7) return { value: `${diffInDays} days`, label: "ago" };
-
-  // Format date as DD/MM/YYYY
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return { value: `${day}/${month}/${year}`, label: "" };
-}
 
 // ---------- "View all" header action ----------------------------------------
 
@@ -202,7 +160,6 @@ export default function HomePage(): React.JSX.Element {
     error: statsErrorDetails,
   } = useDashboardStats();
 
-  const { data: trendingTopics = [], isLoading: trendsLoading } = useTrendingTopics(3);
 
   const { data: collectionsInfo, isLoading: collectionsLoading } =
     useCollectionsDocumentCount();
@@ -241,9 +198,6 @@ export default function HomePage(): React.JSX.Element {
   const jurisdictionCount = [plCount, ukCount].filter((n) => n > 0).length;
   const lastUpdated = stats ? formatLastUpdated(stats.computed_at) : null;
 
-  // Conditional trending display logic
-  const showTrending = trendsLoading || trendingTopics.length > 0;
-
   // For authenticated users, show the redesigned editorial dashboard
   return (
     <PageContainer width="standard" className="py-6">
@@ -253,7 +207,7 @@ export default function HomePage(): React.JSX.Element {
         {/* ============ ROW 1 ============ */}
 
         {/* Featured: Database overview (8 or 12 cols depending on trending visibility) */}
-        <div className={showTrending ? "lg:col-span-8" : "lg:col-span-12"}>
+        <div className="lg:col-span-12">
           <EditorialCard
             featured
             eyebrow={t("dashboard.databaseOverview")}
@@ -322,70 +276,6 @@ export default function HomePage(): React.JSX.Element {
             ) : null}
           </EditorialCard>
         </div>
-
-        {/* Popular legal topics (4 cols) - only show when loading or has content */}
-        {showTrending && (
-        <div className="lg:col-span-4">
-          <EditorialCard
-            eyebrow="Trending"
-            title={t("dashboard.popularLegalTopics")}
-            className="h-full"
-          >
-            {trendsLoading ? (
-              <ul className="divide-y divide-rule">
-                {[0, 1].map((i) => (
-                  <li key={i} className="py-3">
-                    <SkeletonTrendingTopic />
-                  </li>
-                ))}
-              </ul>
-            ) : trendingTopics.length > 0 ? (
-              <ul className="divide-y divide-rule">
-                {trendingTopics.map((topic, index) => (
-                  <li
-                    key={index}
-                    className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">
-                        {topic.topic}
-                      </p>
-                      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">
-                        {topic.category}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {topic.trend === "up" && (
-                        <TrendingUp className="size-3.5 text-oxblood" />
-                      )}
-                      {topic.trend === "down" && (
-                        <TrendingDown className="size-3.5 text-ink-soft" />
-                      )}
-                      {topic.trend === "stable" && (
-                        <Minus className="size-3.5 text-ink-soft" />
-                      )}
-                      <span
-                        className={cn(
-                          "font-mono text-[11px] font-medium tabular-nums",
-                          topic.trend === "up"
-                            ? "text-oxblood"
-                            : "text-ink-soft",
-                        )}
-                      >
-                        {topic.change}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="font-serif text-sm italic text-ink-soft">
-                {t("dashboard.noTrending")}
-              </p>
-            )}
-          </EditorialCard>
-        </div>
-        )}
 
         {/* ============ ROW 2 (3 cards × 4 cols) ============ */}
 
