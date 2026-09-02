@@ -54,6 +54,7 @@ from app.judgments_pkg import router as documents_router
 
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
+from app.llm_rate_limit import enforce_llm_rate_limit
 from app.precedents import router as precedents_router
 from app.publications import router as publications_router
 from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
@@ -635,15 +636,27 @@ async def redirect_root_to_docs():
 #            consent_router   — JWT enforced per-endpoint
 # ============================================================================
 
-# Add routes with API key protection
-add_routes(app, chain, path="/qa", dependencies=[Depends(verify_api_key)])
-add_routes(app, chat_chain, path="/chat", dependencies=[Depends(verify_api_key)])
+# Add routes with API key protection and an explicit LLM budget.
+# add_routes builds its own handlers, so @limiter.limit cannot reach them —
+# the budget is enforced as a dependency instead. See app/llm_rate_limit.py.
+add_routes(
+    app,
+    chain,
+    path="/qa",
+    dependencies=[Depends(verify_api_key), Depends(enforce_llm_rate_limit)],
+)
+add_routes(
+    app,
+    chat_chain,
+    path="/chat",
+    dependencies=[Depends(verify_api_key), Depends(enforce_llm_rate_limit)],
+)
 
 add_routes(
     app,
     enhance_query_chain,
     path="/enhance_query",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(verify_api_key), Depends(enforce_llm_rate_limit)],
 )
 
 # Routers protected by API key only (no extra prefix/tag overrides).
