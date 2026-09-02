@@ -1,16 +1,18 @@
 "use client";
 
 import {
- ColumnDef,
  flexRender,
- getCoreRowModel,
- useReactTable,
  SortingState,
- getSortedRowModel,
  ColumnFiltersState,
- getFilteredRowModel,
- VisibilityState,
+ ColumnVisibilityState,
 } from "@tanstack/react-table";
+import {
+ LegacyColumnDef,
+ getCoreRowModel,
+ getFilteredRowModel,
+ getSortedRowModel,
+ useLegacyTable,
+} from "@tanstack/react-table/legacy";
 import {
  Table,
  TableBody,
@@ -44,7 +46,7 @@ interface SchemaFieldsTableProps {
 export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable = false }: SchemaFieldsTableProps) {
  const [sorting, setSorting] = useState<SortingState>([]);
  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
- const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+ const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({});
  const [globalFilter, setGlobalFilter] = useState("");
  const [editingCell, setEditingCell] = useState<{ rowId: string; column: string } | null>(null);
  const [editValue, setEditValue] = useState<string>("");
@@ -196,7 +198,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  };
 
  // Define columns
- const columns: ColumnDef<FlatField>[] = [
+ const columns: LegacyColumnDef<FlatField>[] = [
  {
  accessorKey: "path",
  header: "Field Name",
@@ -456,7 +458,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  },
  ];
 
- const table = useReactTable({
+ const table = useLegacyTable({
  data: fields,
  columns,
  getCoreRowModel: getCoreRowModel(),

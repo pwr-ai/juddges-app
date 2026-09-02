@@ -70,6 +70,8 @@ const esmPackages = [
   'tough-cookie',
   'graphql',
   'statuses',
+  // TanStack Table v9 ships ESM-only (no CJS build).
+  '@tanstack/.*',
 ].join('|')
 
 // Add any custom config to be passed to Jest

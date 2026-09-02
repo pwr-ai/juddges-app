@@ -1,14 +1,13 @@
 "use client";
 
+import { flexRender, RowData, SortingState } from "@tanstack/react-table";
 import {
-  ColumnDef,
-  flexRender,
+  LegacyColumnDef,
   getCoreRowModel,
-  useReactTable,
   getPaginationRowModel,
-  SortingState,
   getSortedRowModel,
-} from "@tanstack/react-table";
+  useLegacyTable,
+} from "@tanstack/react-table/legacy";
 
 import {
   Table,
@@ -21,20 +20,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface DataTableProps<TData extends RowData, TValue> {
+  columns: LegacyColumnDef<TData, TValue>[];
   data: TData[];
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends RowData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const table = useReactTable({
+  const table = useLegacyTable<TData>({
     data,
-    columns,
+    columns: columns as LegacyColumnDef<TData>[],
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -116,4 +115,4 @@ export function DataTable<TData, TValue>({
       </div>
     </div>
   );
-} 
+}
