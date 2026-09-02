@@ -18,7 +18,7 @@ from loguru import logger
 from pydantic import BaseModel, EmailStr, Field
 
 from app.core.supabase import get_supabase_client
-from app.rate_limiter import RATE_LIMIT_STORAGE_URI, limiter
+from app.rate_limiter import RATE_LIMIT_STORAGE_URI, hit_with_fallback, limiter
 
 # Loose total ceiling on this endpoint, keyed on the caller's proxy address
 # (see get_client_ip). Registration is unauthenticated, so every external
@@ -61,8 +61,8 @@ class InviteRedemptionRequest(BaseModel):
 async def redeem_invite(request: Request, payload: InviteRedemptionRequest) -> dict:
     """Consume an invite code and create the corresponding account."""
     normalized_email = payload.email.strip().lower()
-    if not _email_limiter.hit(
-        _current_email_limit(), "invite-redeem", normalized_email
+    if not hit_with_fallback(
+        _email_limiter, _current_email_limit(), "invite-redeem", normalized_email
     ):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

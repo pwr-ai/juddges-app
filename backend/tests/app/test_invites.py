@@ -182,6 +182,57 @@ def test_rate_limited_attempt_does_not_call_the_rpc(api, monkeypatch):
 
 
 @pytest.mark.unit
+def test_email_limiter_storage_error_falls_back_instead_of_500(api, monkeypatch):
+    app, invites = api
+    monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "5/hour")
+    supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: supabase)
+
+    def _boom(*_args, **_kwargs):
+        raise ConnectionError("redis unreachable")
+
+    monkeypatch.setattr(invites._email_limiter, "hit", _boom)
+
+    response = TestClient(app).post(
+        "/auth/invites/redeem",
+        json={
+            "code": "PILOT-2026",
+            "email": "fallback-storage-error@example.org",
+            "password": "correct horse battery",
+        },
+    )
+
+    assert response.status_code == 201
+
+
+@pytest.mark.unit
+def test_email_limiter_fallback_still_enforces_limit(api, monkeypatch):
+    """The in-memory fallback must not become unlimited during an outage."""
+    app, invites = api
+    monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "1/hour")
+    supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: supabase)
+
+    def _boom(*_args, **_kwargs):
+        raise ConnectionError("redis unreachable")
+
+    monkeypatch.setattr(invites._email_limiter, "hit", _boom)
+
+    client = TestClient(app)
+    payload = {
+        "code": "PILOT-2026",
+        "email": "fallback-enforce@example.org",
+        "password": "correct horse battery",
+    }
+
+    first = client.post("/auth/invites/redeem", json=payload)
+    second = client.post("/auth/invites/redeem", json=payload)
+
+    assert first.status_code == 201
+    assert second.status_code == 429
+
+
+@pytest.mark.unit
 def test_email_normalization_shares_one_bucket(api, monkeypatch):
     app, invites = api
     monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "1/hour")

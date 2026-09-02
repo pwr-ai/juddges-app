@@ -18,7 +18,7 @@ from limits import RateLimitItem, parse
 from limits.storage import storage_from_string
 from limits.strategies import MovingWindowRateLimiter
 
-from app.rate_limiter import RATE_LIMIT_STORAGE_URI, get_client_ip
+from app.rate_limiter import RATE_LIMIT_STORAGE_URI, get_client_ip, hit_with_fallback
 
 DEFAULT_LLM_RATE_LIMIT = "20/hour"
 
@@ -32,7 +32,7 @@ def _current_limit() -> RateLimitItem:
 
 def enforce_llm_rate_limit(request: Request) -> None:
     """Charge one LLM call against the caller's budget, or reject with 429."""
-    if not _limiter.hit(_current_limit(), "llm", get_client_ip(request)):
+    if not hit_with_fallback(_limiter, _current_limit(), "llm", get_client_ip(request)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail={
