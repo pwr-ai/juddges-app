@@ -1,7 +1,7 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { LegacyColumnDef } from "@tanstack/react-table/legacy";
 import { JudgmentData } from "./types";
 
-export const columns: ColumnDef<JudgmentData>[] = [
+export const columns: LegacyColumnDef<JudgmentData>[] = [
   {
     accessorKey: "data_wyroku",
     header: "Judgment Date",
@@ -56,4 +56,4 @@ export const columns: ColumnDef<JudgmentData>[] = [
       );
     },
   },
-]; 
+];
