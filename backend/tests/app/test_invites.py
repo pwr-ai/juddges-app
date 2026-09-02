@@ -92,3 +92,120 @@ def test_short_password_is_rejected_before_the_code_is_spent(api, monkeypatch):
 
     assert response.status_code == 422
     supabase.rpc.assert_not_called()
+
+
+@pytest.mark.unit
+def test_email_rate_limit_returns_429_after_exceeding(api, monkeypatch):
+    app, invites = api
+    monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "2/hour")
+    supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: supabase)
+    client = TestClient(app)
+    payload = {
+        "code": "PILOT-2026",
+        "email": "rate-limit-same@example.org",
+        "password": "correct horse battery",
+    }
+
+    first = client.post("/auth/invites/redeem", json=payload)
+    second = client.post("/auth/invites/redeem", json=payload)
+    third = client.post("/auth/invites/redeem", json=payload)
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert third.status_code == 429
+    assert third.json()["detail"]["code"] == "INVITE_RATE_LIMIT_EXCEEDED"
+
+
+@pytest.mark.unit
+def test_different_emails_have_independent_budgets(api, monkeypatch):
+    app, invites = api
+    monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "1/hour")
+    supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: supabase)
+    client = TestClient(app)
+
+    exhausted = client.post(
+        "/auth/invites/redeem",
+        json={
+            "code": "PILOT-2026",
+            "email": "budget-a@example.org",
+            "password": "correct horse battery",
+        },
+    )
+    blocked = client.post(
+        "/auth/invites/redeem",
+        json={
+            "code": "PILOT-2026",
+            "email": "budget-a@example.org",
+            "password": "correct horse battery",
+        },
+    )
+    other_email = client.post(
+        "/auth/invites/redeem",
+        json={
+            "code": "PILOT-2026",
+            "email": "budget-b@example.org",
+            "password": "correct horse battery",
+        },
+    )
+
+    assert exhausted.status_code == 201
+    assert blocked.status_code == 429
+    assert other_email.status_code == 201
+
+
+@pytest.mark.unit
+def test_rate_limited_attempt_does_not_call_the_rpc(api, monkeypatch):
+    app, invites = api
+    monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "1/hour")
+    client = TestClient(app)
+    payload = {
+        "code": "PILOT-2026",
+        "email": "never-spend-a-code@example.org",
+        "password": "correct horse battery",
+    }
+
+    first_supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: first_supabase)
+    first = client.post("/auth/invites/redeem", json=payload)
+    assert first.status_code == 201
+
+    # Swap in a fresh double so this assertion can only be about the blocked
+    # call, not leftover calls from exhausting the budget above.
+    second_supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: second_supabase)
+    second = client.post("/auth/invites/redeem", json=payload)
+
+    assert second.status_code == 429
+    second_supabase.rpc.assert_not_called()
+
+
+@pytest.mark.unit
+def test_email_normalization_shares_one_bucket(api, monkeypatch):
+    app, invites = api
+    monkeypatch.setenv("INVITE_REDEEM_EMAIL_RATE_LIMIT", "1/hour")
+    supabase = _client_with_rpc_result(True)
+    monkeypatch.setattr(invites, "get_supabase_client", lambda: supabase)
+    client = TestClient(app)
+
+    first = client.post(
+        "/auth/invites/redeem",
+        json={
+            "code": "PILOT-2026",
+            "email": "A@Example.org ",
+            "password": "correct horse battery",
+        },
+    )
+    second = client.post(
+        "/auth/invites/redeem",
+        json={
+            "code": "PILOT-2026",
+            "email": "a@example.org",
+            "password": "correct horse battery",
+        },
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 429
+    assert second.json()["detail"]["code"] == "INVITE_RATE_LIMIT_EXCEEDED"

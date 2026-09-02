@@ -11,15 +11,43 @@ from __future__ import annotations
 import os
 
 from fastapi import APIRouter, HTTPException, Request, status
+from limits import RateLimitItem, parse
+from limits.storage import storage_from_string
+from limits.strategies import MovingWindowRateLimiter
 from loguru import logger
 from pydantic import BaseModel, EmailStr, Field
 
 from app.core.supabase import get_supabase_client
-from app.rate_limiter import limiter
+from app.rate_limiter import RATE_LIMIT_STORAGE_URI, limiter
 
-INVITE_REDEEM_RATE_LIMIT = os.getenv("INVITE_REDEEM_RATE_LIMIT", "5/hour")
+# Loose total ceiling on this endpoint, keyed on the caller's proxy address
+# (see get_client_ip). Registration is unauthenticated, so every external
+# request arrives from the frontend container's internal IP — this is a
+# SHARED bucket across every registrant, not per-client protection. It only
+# exists so a runaway client can't hammer the endpoint indefinitely; it must
+# stay loose enough that a handful of invitees registering within the same
+# hour don't lock each other out. The real control is the per-email limit
+# below.
+INVITE_REDEEM_RATE_LIMIT = os.getenv("INVITE_REDEEM_RATE_LIMIT", "60/hour")
+
+# Tight per-email limit — the actual brute-force / DoS protection. Charged
+# against the normalized email address, independent of the shared-bucket
+# ceiling above, so one registrant exhausting their own budget can't affect
+# anyone else's.
+DEFAULT_INVITE_REDEEM_EMAIL_RATE_LIMIT = "5/hour"
 
 router = APIRouter(prefix="/auth/invites", tags=["auth"])
+
+_email_limiter = MovingWindowRateLimiter(storage_from_string(RATE_LIMIT_STORAGE_URI))
+
+
+def _current_email_limit() -> RateLimitItem:
+    """Parse the configured per-email budget on every call so env overrides apply."""
+    return parse(
+        os.getenv(
+            "INVITE_REDEEM_EMAIL_RATE_LIMIT", DEFAULT_INVITE_REDEEM_EMAIL_RATE_LIMIT
+        )
+    )
 
 
 class InviteRedemptionRequest(BaseModel):
@@ -32,6 +60,18 @@ class InviteRedemptionRequest(BaseModel):
 @limiter.limit(INVITE_REDEEM_RATE_LIMIT)
 async def redeem_invite(request: Request, payload: InviteRedemptionRequest) -> dict:
     """Consume an invite code and create the corresponding account."""
+    normalized_email = payload.email.strip().lower()
+    if not _email_limiter.hit(
+        _current_email_limit(), "invite-redeem", normalized_email
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": "INVITE_RATE_LIMIT_EXCEEDED",
+                "message": "Too many registration attempts for this address. Try again later.",
+            },
+        )
+
     supabase = get_supabase_client()
     if supabase is None:
         raise HTTPException(
