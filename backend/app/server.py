@@ -30,6 +30,7 @@ from app.api.audit import router as audit_router
 from app.api.blog import router as blog_router
 from app.api.consent import router as consent_router
 from app.api.events import router as events_router
+from app.api.invites import router as invites_router
 from app.api.legal import router as legal_router
 from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
@@ -630,6 +631,9 @@ async def redirect_root_to_docs():
 #            guest_sessions_router (/api/guest-sessions — public)
 #            blog_router — public GET endpoints (list/get posts, categories)
 #            legal_router — static legal documents (DPA, retention policies)
+#            invites_router (/auth/invites/redeem — no API key; reached via
+#                            the BFF, protected by its own rate limit and
+#                            the invite code itself)
 #
 # API_KEY:   LangServe routes (/qa, /chat, /enhance_query)
 #            documents_router, collections_router, publications_router
@@ -708,6 +712,11 @@ for _router in API_KEY_PROTECTED_ROUTERS:
 # Include Day 1 feature routers
 # Guest sessions - no API key required (public endpoint)
 app.include_router(guest_sessions_router)
+
+# Invite-gated registration - no API key dependency; the browser reaches it
+# through the BFF, which supplies the key itself, and the endpoint's own
+# rate limit plus the invite code are its protection.
+app.include_router(invites_router)
 
 # App events - requires API key authentication (browser traffic goes through
 # the Next.js /api/events proxy, which injects the key server-side)
