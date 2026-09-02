@@ -88,6 +88,15 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       })
 
       if (!response.ok) {
+        // A 429 can come from either the per-email limiter (which has a
+        // detail.message) or the slowapi decorator's own handler (which
+        // returns {"error": "..."} with no detail at all) — check the
+        // status before falling back to the body shape, so a rate-limited
+        // invitee is told to wait rather than that their code is bad.
+        if (response.status === 429) {
+          setError('Too many attempts. Please wait a while and try again.')
+          return
+        }
         const body = await response.json()
         setError(body?.detail?.message ?? 'Registration failed. Check your invite code.')
         return
