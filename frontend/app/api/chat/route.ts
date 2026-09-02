@@ -105,6 +105,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         apiLogger.error('Failed to read error response', e, { requestId });
       }
 
+      // Preserve a 429 as-is so the budget message from llm_rate_limit.py
+      // reaches the user instead of a generic internal-error shape.
+      if (response.status === 429) {
+        let rateLimitMessage = 'Too many AI requests. Please try again later.';
+        try {
+          const parsed = JSON.parse(errorBody) as { detail?: { message?: string } };
+          if (parsed?.detail?.message) {
+            rateLimitMessage = parsed.detail.message;
+          }
+        } catch {
+          // Keep the default message if the backend body isn't JSON.
+        }
+
+        throw new AppError(
+          rateLimitMessage,
+          ErrorCode.RATE_LIMIT_EXCEEDED,
+          429,
+          {
+            backendStatus: response.status,
+            backendError: errorBody,
+            duration
+          }
+        );
+      }
+
       throw new AppError(
         `Backend chat service error: ${response.status} ${response.statusText}`,
         ErrorCode.INTERNAL_ERROR,
