@@ -713,9 +713,9 @@ for _router in API_KEY_PROTECTED_ROUTERS:
 # Guest sessions - no API key required (public endpoint)
 app.include_router(guest_sessions_router)
 
-# Invite-gated registration - no API key dependency; the browser reaches it
-# through the BFF, which supplies the key itself, and the endpoint's own
-# rate limit plus the invite code are its protection.
+# Invite-gated registration - no API key dependency; nothing on this router
+# verifies one. Its protection is the invite code plus its own rate limits
+# (shared IP ceiling and per-email budget — see app/api/invites.py).
 app.include_router(invites_router)
 
 # App events - requires API key authentication (browser traffic goes through

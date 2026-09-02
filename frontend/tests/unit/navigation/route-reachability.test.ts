@@ -34,7 +34,6 @@ const DEEP_LINK_ONLY_ROUTES: ReadonlyMap<string, string> = new Map([
   ['/accessibility', 'Accessibility statement; entered by direct URL only.'],
   ['/auth/error', 'Rendered by app/auth/confirm on a failed confirmation.'],
   ['/auth/forgot-password', 'Entered from the login form.'],
-  ['/auth/sign-up-success', 'Entered from the sign-up form after submit.'],
   ['/auth/update-password', 'Entered from the password-recovery email link.'],
   ['/blog', 'Public blog index; entered from post permalinks and external links.'],
   ['/blog/admin', 'Author tool; entered from the blog admin editors.'],
