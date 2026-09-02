@@ -11,7 +11,6 @@ type AuthContextType = {
   loading: boolean;
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,11 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await createClient().auth.signUp({ email, password });
-    if (error) throw error;
-  };
-
   const signOut = async () => {
     // Server-side signout first: clears auth cookies and emits the
     // server-authoritative auth_signed_out event (app/api/auth/signout).
@@ -80,7 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     signIn,
-    signUp,
     signOut,
   };
 

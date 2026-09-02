@@ -79,4 +79,42 @@ describe('GET /api/documents/[id]/html', () => {
     expect(notFound.status).toBe(404);
     expect(await notFound.text()).toContain("Document 'doc-1' not found");
   });
+
+  // Issue #565: this page is served to anonymous visitors now that judgment
+  // reading is public, and it fires on a plain 404. Upstream messages and stack
+  // traces must not travel to the browser in production.
+  it('withholds diagnostics from the error page in production', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'production',
+      configurable: true,
+    });
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      text: async () => 'missing',
+    });
+
+    try {
+      const notFound = await GET(
+        new NextRequest('http://localhost:3000/api/documents/doc-1/html'),
+        { params: Promise.resolve({ id: 'doc-1' }) }
+      );
+      const html = await notFound.text();
+
+      expect(notFound.status).toBe(404);
+      expect(html).not.toContain("Document 'doc-1' not found");
+      expect(html).not.toContain('message:');
+      expect(html).not.toContain('stage:');
+      // The correlation id is the one thing a visitor may quote to support.
+      expect(html).toContain('requestId:');
+    } finally {
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalNodeEnv,
+        configurable: true,
+      });
+    }
+  });
 });

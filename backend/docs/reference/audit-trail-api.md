@@ -4,11 +4,41 @@
 
 The Audit Trail and Legal Compliance system provides comprehensive logging and data management features for legal compliance, including:
 
-- **7-year audit trail** for all user interactions with the AI system
+- **7-year audit trail** covering searches, judgment reads, exports and the
+  state-changing operations listed under "What is audited" below — attributed
+  to a signed-in user. Anonymous corpus access (issue #510/#561) is
+  deliberately not in the trail; product-analytics volume lives in
+  `app_events` instead.
 - **User consent management** (GDPR, professional acknowledgment)
 - **Data retention policies** with configurable periods
 - **GDPR compliance** (right to data portability, right to erasure)
 - **Data Processing Agreement (DPA)** information
+
+## What is audited
+
+Written by `app/services/audit_service.py`; every write is scheduled as a
+FastAPI background task and swallows its own failures, so it can never fail,
+slow or alter the user's request.
+
+| Action type | Written from |
+|---|---|
+| `query` | `GET /api/search/documents` |
+| `document_view` | `GET /documents/{id}`, `GET /documents/{id}/metadata` |
+| `export` | `GET /api/audit/my-activity/export` |
+| `collection_created` / `collection_updated` / `collection_deleted` | `/collections` mutations |
+| `collection_document_added` / `collection_document_removed` | `/collections/{id}/documents` mutations |
+| `extraction_job_created` / `extraction_job_cancelled` / `extraction_job_deleted` | `/extractions` |
+| `admin_ingestion_started` | `POST /api/admin/ingestion/start` |
+| `admin_data_deletion_processed` | `POST /api/admin/data-deletion-requests/{id}/process` |
+
+Not audited, on purpose: read-only listing, faceting, autocomplete and
+analytics endpoints, and any request without an authenticated subject. The
+corpus is public court rulings and signed-out reads are anonymous by design,
+so there is no accountable subject to attribute a row to, and keying one on a
+guest session id would build a re-identifiable per-visitor history that public
+corpus access does not itself imply. Product analytics — including anonymous
+volume — is a separate stream, `app_events`, with its own allowlist and
+retention.
 
 ## Database Schema
 

@@ -37,6 +37,16 @@ from it.
 
 ## The anonymous search limit
 
+Two independent limits sit on `GET /api/search/documents`. They answer
+different questions and neither replaces the other:
+
+| Limit | Keyed on | Purpose | Returns |
+|---|---|---|---|
+| Guest allowance | `guest_session_id` cookie | product nudge toward sign-up | `429` with a JSON `detail` carrying `upgrade_url` |
+| Per-IP limiter | client address (`app/rate_limiter.py`) | backstop against scripted abuse | `429` with slowapi's plain `Rate limit exceeded` |
+
+### The guest allowance
+
 **5 free searches per guest session, over 24 hours.** A nudge appears with 2
 left; the 6th search returns `429`.
 
@@ -69,16 +79,57 @@ costs the visitor part of their allowance.
 
 This is friction, not an access-control boundary. It is keyed on a cookie the
 visitor can clear, and clearing it grants a fresh allowance. That is accepted:
-the data behind it is public either way. The backstop against scripted abuse is
-the per-IP limiter in `backend/app/rate_limiter.py`, which is independent of
-this counter.
+the data behind it is public either way. It is the per-IP limiter below, not
+this counter, that stands between the corpus and a script.
+
+### The per-IP limiter
+
+`GET /api/search/documents` carries `@limiter.limit(SEARCH_DOCUMENTS_RATE_LIMIT)`
+— **60 requests per minute** by default, overridable with the
+`SEARCH_DOCUMENTS_RATE_LIMIT` env var. It applies to every caller, signed in or
+not, and it is checked before the guest allowance.
+
+This was **not** true before issue #565. `DEFAULT_RATE_LIMITS`
+(`100/minute, 1000/hour`) in `backend/app/rate_limiter.py` reads like a global
+floor, but slowapi only applies default limits through `SlowAPIMiddleware`, and
+that middleware is not registered — `backend/app/server.py` installs the limiter
+on `app.state` and its exception handler, nothing more. Between #561 and #565,
+`documents_search` therefore had no limit at all. **Adding a route to the public
+allowlist does not give it a rate limit; the `@limiter.limit` decorator does.**
+
+Two known gaps remain, tracked on #565:
+
+- The search BFF (`frontend/app/api/search/documents/route.ts`) builds its own
+  header dict and forwards neither `X-Forwarded-For` nor
+  `X-RateLimit-Identity`, and `TRUSTED_PROXY` is unset in
+  `docker-compose.yml`. Every proxied request therefore keys on the frontend
+  container's address, so the limit is currently shared across all visitors
+  rather than per-visitor.
+- Cookieless anonymous searches still mint one Redis hash each. The per-IP
+  limit now bounds how fast that can happen, but the sessions are not minted
+  lazily at charge time.
+
+### Semantic search stays behind sign-in
+
+`semantic_ratio` is a query param, but the handler clamps it to `0` whenever
+there is no authenticated user (`backend/app/api/search.py`). Any value above 0
+embeds the query on the TEI GPU service, which costs real money per call — so
+an anonymous caller cannot opt into it with `?semantic_ratio=1`. Signed-in
+callers get the value they asked for.
 
 ### When Redis is down
 
-The quota **fails open**: search keeps working, unmetered, and a warning is
-logged. An outage in the free-search counter must not take down reading of
-public court rulings. The quota is also inert when `REDIS_HOST` is unset, which
-is what keeps it out of the way in unit tests.
+The guest allowance **fails open**: search keeps working, unmetered, and a
+warning is logged. An outage in the free-search counter must not take down
+reading of public court rulings. The allowance is also inert when `REDIS_HOST`
+is unset, which is what keeps it out of the way in unit tests.
+
+The per-IP limiter does not fail open. When its storage is unreachable slowapi
+marks the backend dead and switches to a process-local counter seeded with
+`DEFAULT_RATE_LIMITS` — so the limit survives a Redis outage, but each backend
+replica then counts on its own and the route's own 60/minute is replaced by the
+fallback's 100/minute. Unit tests pin `RATE_LIMIT_STORAGE_URI=memory://` so they
+exercise the configured limit rather than that fallback.
 
 ## Guest identity and sign-up stitching
 

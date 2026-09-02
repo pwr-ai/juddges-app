@@ -1095,6 +1095,11 @@ export interface paths {
          *     Serves signed-out visitors (issue #510): the corpus is public court rulings.
          *     Anonymous callers get a capped free allowance tracked against a guest
          *     session; signed-in callers are never metered here.
+         *
+         *     Two limits apply on top of each other (issue #565). The guest allowance is
+         *     friction — it is keyed on a cookie the visitor can clear. The per-IP
+         *     ``@limiter.limit`` above is the actual backstop against scripted abuse, and
+         *     it applies to every caller regardless of session.
          */
         get: operations["documents_search_api_search_documents_get"];
         put?: never;
@@ -1238,6 +1243,26 @@ export interface paths {
          * @description Analyze legal arguments in one or more documents, identifying premises, conclusions, reasoning patterns, and potential counter-arguments. Uses AI to decompose complex legal reasoning into structured components.
          */
         post: operations["analyze_arguments_argumentation_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/invites/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem Invite
+         * @description Consume an invite code and create the corresponding account.
+         */
+        post: operations["redeem_invite_auth_invites_redeem_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8716,6 +8741,18 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** InviteRedemptionRequest */
+        InviteRedemptionRequest: {
+            /** Code */
+            code: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+        };
         /**
          * InvokeResponseMetadata
          * @description Represents response metadata used for just single input/output LangServe
@@ -14166,6 +14203,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArgumentationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_invite_auth_invites_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteRedemptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

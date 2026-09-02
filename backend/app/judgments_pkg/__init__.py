@@ -15,7 +15,15 @@ import random
 import time
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, HTTPException, Path, Query, Response
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    Response,
+)
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -39,6 +47,7 @@ from app.models import (
     SimilarDocumentsResponse,
     validate_id_format,
 )
+from app.services.audit_service import AuditService, audited_principal
 from app.utils import (
     validate_array_size,
 )
@@ -103,6 +112,33 @@ __all__ = [
     "router",
     "search_documents",
 ]
+
+
+def _audit_document_view(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    document_id: str,
+) -> None:
+    """Record a judgment read in the compliance trail (issue #559).
+
+    These endpoints carry no JWT dependency because judgments are public court
+    rulings (#510 / #561); attribution comes from the `X-User-ID` header the
+    Next.js BFF injects behind the server-only API key. A signed-out visitor
+    arrives as the reserved `anonymous` principal and is deliberately not
+    audited — `audited_principal` returns None and nothing is written.
+
+    Call this only once the document is known to exist, so a 404 probe cannot
+    manufacture a "viewed" entry.
+    """
+    user_id = audited_principal(request)
+    if user_id is None:
+        return
+    background_tasks.add_task(
+        AuditService.log_document_access,
+        user_id=user_id,
+        document_id=document_id,
+        action="view",
+    )
 
 
 # ===== GET Endpoints =====
@@ -317,6 +353,8 @@ async def get_facets(
     summary="Get document metadata only",
 )
 async def get_document_metadata(
+    request: Request,
+    background_tasks: BackgroundTasks,
     document_id: str = Path(..., description="Document ID to retrieve metadata for"),
 ) -> dict:
     """Get document metadata without full text content."""
@@ -340,6 +378,7 @@ async def get_document_metadata(
         # Appellant, Appeal Outcome, …) only on this endpoint — search/list
         # responses don't need the bloat.
         _merge_base_extraction_fields(result, doc_data)
+        _audit_document_view(request, background_tasks, document_id)
         return result
 
     except HTTPException:
@@ -374,6 +413,8 @@ async def get_similar_to_document_endpoint(
     summary="Get document by ID",
 )
 async def get_document_by_id(
+    request: Request,
+    background_tasks: BackgroundTasks,
     document_id: str = Path(..., description="Document ID to retrieve"),
     return_vectors: bool = Query(False, description="Include vector embeddings"),
     include_base_fields: bool = Query(
@@ -405,6 +446,7 @@ async def get_document_by_id(
         if include_base_fields:
             document.base_fields = _extract_base_fields(doc_data)
             document.extraction_fields = _extract_extraction_fields(doc_data)
+        _audit_document_view(request, background_tasks, document_id)
         return DocumentResponse(document=document)
 
     except HTTPException:

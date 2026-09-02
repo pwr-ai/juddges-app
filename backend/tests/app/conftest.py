@@ -21,6 +21,13 @@ os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
 os.environ.setdefault("REDIS_HOST", "localhost")
 os.environ.setdefault("REDIS_PORT", "6379")
+# Unit tests run without a Redis server. Left to derive its storage from
+# REDIS_HOST, the SlowAPI limiter marks the backend dead on the first request
+# and silently swaps every per-route limit for the in-memory *fallback* limits,
+# so a test that enables the limiter would assert against DEFAULT_RATE_LIMITS
+# rather than the route's own. Pinning memory:// keeps the configured limit the
+# one under test.
+os.environ.setdefault("RATE_LIMIT_STORAGE_URI", "memory://")
 
 from app.auth import verify_api_key
 from app.core.auth_jwt import AuthenticatedUser

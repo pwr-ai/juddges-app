@@ -33,6 +33,7 @@ from app.judgments_pkg.query_attribute_parser import (
     parse_query_attributes,
 )
 from app.rate_limiter import limiter
+from app.services.audit_service import AuditService
 from app.services.search import (
     MeiliSearchService,
     SearchMode,
@@ -62,6 +63,8 @@ AUTOCOMPLETE_RATE_LIMIT = os.getenv("AUTOCOMPLETE_RATE_LIMIT", "60/minute")
 TOPIC_CLICK_RATE_LIMIT = os.getenv("TOPIC_CLICK_RATE_LIMIT", "30/minute")
 # Rate limit for corpus-suggestion endpoint (configurable via env)
 SUGGEST_RATE_LIMIT = os.getenv("SUGGEST_RATE_LIMIT", "60/minute")
+# Rate limit for the anonymous-reachable document search (configurable via env)
+SEARCH_DOCUMENTS_RATE_LIMIT = os.getenv("SEARCH_DOCUMENTS_RATE_LIMIT", "60/minute")
 # Optional secondary key that gates the eval-queries export endpoint.
 # When set, only callers presenting this exact key may access the endpoint.
 # When unset, any valid BACKEND_API_KEY is accepted.
@@ -328,7 +331,9 @@ async def suggest(
 
 
 @router.get("/documents", response_model=DocumentSearchResponse)
+@limiter.limit(SEARCH_DOCUMENTS_RATE_LIMIT)
 async def documents_search(
+    request: Request,
     background_tasks: BackgroundTasks,
     response: Response,
     q: str = Query("", max_length=500, description="Search query (empty = match all)"),
@@ -365,6 +370,11 @@ async def documents_search(
     Serves signed-out visitors (issue #510): the corpus is public court rulings.
     Anonymous callers get a capped free allowance tracked against a guest
     session; signed-in callers are never metered here.
+
+    Two limits apply on top of each other (issue #565). The guest allowance is
+    friction — it is keyed on a cookie the visitor can clear. The per-IP
+    ``@limiter.limit`` above is the actual backstop against scripted abuse, and
+    it applies to every caller regardless of session.
     """
     query = q.strip()
 
@@ -378,6 +388,11 @@ async def documents_search(
         quota = await open_guest_search_quota(guest_session_id)
         if quota.limit_reached:
             raise guest_limit_exceeded_error()
+
+    # Any ratio above 0 embeds the query on the TEI GPU service. That path costs
+    # real money per call and stays behind sign-in, so an anonymous caller
+    # cannot opt into it by passing ?semantic_ratio=1 (issue #565).
+    effective_semantic_ratio = semantic_ratio if user is not None else 0.0
 
     effective_query = query
     effective_filters = filters
@@ -408,7 +423,7 @@ async def documents_search(
             limit=limit,
             offset=offset,
             filters=effective_filters,
-            semantic_ratio=semantic_ratio,
+            semantic_ratio=effective_semantic_ratio,
         )
     except Exception as exc:
         raise HTTPException(
@@ -430,6 +445,27 @@ async def documents_search(
             processing_ms=processing_ms,
             filters=filters,
             user_id=user.id if user else None,
+        )
+
+    # Compliance audit trail (issue #559). Signed-in callers only — an
+    # anonymous corpus search has no accountable subject to attribute the row
+    # to; see app/services/audit_service.py. Scheduled off the response path
+    # like the analytics write above, and AuditService swallows its own
+    # failures, so this can never fail or slow the search.
+    if user is not None:
+        background_tasks.add_task(
+            AuditService.log_query,
+            user_id=user.id,
+            query=query,
+            # A summary, not a copy of the hits: the corpus text is already
+            # public and mirroring it would bloat a 7-year table.
+            response={
+                "result_count": len(hits),
+                "estimated_total": estimated_total,
+                "search_mode": result.get("search_mode", "keyword"),
+            },
+            metadata={"limit": limit, "offset": offset, "filters": filters},
+            duration_ms=processing_ms,
         )
 
     if quota is not None and quota.enforced and quota.session_id:

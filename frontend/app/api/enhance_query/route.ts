@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '@/app/api/utils/backend-url';
 import logger from '@/lib/logger';
@@ -7,6 +8,7 @@ import {
 } from '@/lib/errors';
 import { enhanceQueryRequestSchema } from '@/lib/validation/chat-endpoints';
 import { validateRequestBody } from '@/lib/validation/schemas';
+import { createClient } from '@/lib/supabase/server';
 
 const apiLogger = logger.child('enhance-query-api');
 const API_BASE_URL = getBackendUrl();
@@ -31,13 +33,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       queryLength: validated.query.length
     });
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY
+    };
+
+    // Give each signed-in user their own rate-limit bucket (issue #573).
+    //
+    // `get_client_ip` (backend/app/rate_limiter.py) keys per user only when
+    // this header arrives with a matching X-API-Key; otherwise it falls back
+    // to the socket address, which for BFF-proxied traffic is this
+    // container — one bucket shared by every visitor. Hashed so the
+    // backend's rate-limit keys never carry a raw user id. Anonymous traffic
+    // sends nothing and keeps sharing the container bucket.
+    const supabase = await createClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
+    if (sessionData.session?.access_token && userId) {
+      headers['X-RateLimit-Identity'] = createHash('sha256')
+        .update(userId)
+        .digest('hex');
+    }
+
     // Call backend API
     const response = await fetch(`${API_BASE_URL}/enhance_query/invoke`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': API_KEY
-      } as HeadersInit,
+      headers: headers as HeadersInit,
       body: JSON.stringify({
         input: {
           query: validated.query

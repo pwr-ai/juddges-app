@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from celery.result import AsyncResult
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Body,
     Depends,
     HTTPException,
@@ -50,6 +51,7 @@ from app.models import (
     SimpleExtractionRequest,
 )
 from app.rate_limiter import limiter
+from app.services.audit_service import log_audit_background
 from app.workers import celery_app, extract_information_from_documents_task
 
 EXTRACTION_SUBMIT_RATE_LIMIT: str = os.getenv(
@@ -80,6 +82,38 @@ _TERMINAL_DOCUMENT_STATUSES = {
     DocumentProcessingStatus.FAILED.value,
     DocumentProcessingStatus.PARTIALLY_COMPLETED.value,
 }
+
+
+def _audit_extraction_job(
+    background_tasks: BackgroundTasks,
+    *,
+    user_id: str,
+    action_type: str,
+    job_id: str,
+    document_ids: list[str] | None = None,
+    collection_id: str | None = None,
+    api_endpoint: str | None = None,
+) -> None:
+    """Record an extraction-job state change in the compliance trail (#559).
+
+    Extraction is where judgment text is handed to an LLM, so which user ran
+    which schema over which documents is the AI-processing record the trail
+    exists to hold. Scheduled as a background task; AuditService swallows its
+    own failures, so this cannot affect the submission.
+    """
+    log_audit_background(
+        background_tasks,
+        user_id=user_id,
+        action_type=action_type,
+        input_data={
+            "job_id": job_id,
+            "collection_id": collection_id,
+            "document_count": len(document_ids) if document_ids is not None else None,
+        },
+        resource_type="extraction_job",
+        resource_id=job_id,
+        api_endpoint=api_endpoint,
+    )
 
 
 def _pending_batch_response(job_id: str) -> BatchExtractionResponse:
@@ -544,6 +578,7 @@ def _count_processed_documents(results: list[dict]) -> int | None:
 async def create_extraction_job(
     request: Request,
     payload: DocumentExtractionRequest | SimpleExtractionRequest,
+    background_tasks: BackgroundTasks,
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> DocumentExtractionSubmissionResponse:
     """
@@ -596,6 +631,15 @@ async def create_extraction_job(
         )
         _validate_collection_id(extraction_request.collection_id)
         task_id = _submit_extraction_task(extraction_request, user_id=user.id)
+        _audit_extraction_job(
+            background_tasks,
+            user_id=user.id,
+            action_type="extraction_job_created",
+            job_id=task_id,
+            document_ids=extraction_request.document_ids,
+            collection_id=extraction_request.collection_id,
+            api_endpoint=request.url.path,
+        )
         return _create_extraction_response(task_id)
 
     except HTTPException:
@@ -625,6 +669,7 @@ async def create_extraction_job(
 async def create_extraction_job_db(
     request: Request,
     payload: DocumentExtractionRequest | SimpleExtractionRequest,
+    background_tasks: BackgroundTasks,
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> DocumentExtractionSubmissionResponse:
     """
@@ -717,6 +762,15 @@ async def create_extraction_job_db(
 
         # Submit and return
         task_id = _submit_extraction_task(extraction_request, user_id=user.id)
+        _audit_extraction_job(
+            background_tasks,
+            user_id=user.id,
+            action_type="extraction_job_created",
+            job_id=task_id,
+            document_ids=extraction_request.document_ids,
+            collection_id=extraction_request.collection_id,
+            api_endpoint=request.url.path,
+        )
         return _create_extraction_response(task_id)
 
     except HTTPException:
@@ -745,6 +799,7 @@ async def create_extraction_job_db(
 @limiter.limit(EXTRACTION_SUBMIT_RATE_LIMIT)
 async def create_bulk_extraction(
     request: Request,
+    background_tasks: BackgroundTasks,
     payload: BulkExtractionRequest = Body(...),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> BulkExtractionResponse:
@@ -802,6 +857,15 @@ async def create_bulk_extraction(
 
                 # Submit to Celery
                 task_id = _submit_extraction_task(extraction_request, user_id=user.id)
+                _audit_extraction_job(
+                    background_tasks,
+                    user_id=user.id,
+                    action_type="extraction_job_created",
+                    job_id=task_id,
+                    document_ids=document_ids,
+                    collection_id=payload.collection_id,
+                    api_endpoint=request.url.path,
+                )
 
                 jobs.append(
                     BulkExtractionJobInfo(
@@ -1159,6 +1223,7 @@ async def list_extraction_jobs(
     description="Cancel a running extraction job or delete a completed job. Only the job owner can cancel/delete it.",
 )
 async def cancel_or_delete_extraction_job(
+    background_tasks: BackgroundTasks,
     job_id: str = Path(..., description="Extraction job ID to cancel"),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> CancelJobResponse:
@@ -1234,6 +1299,13 @@ async def cancel_or_delete_extraction_job(
 
         logger.info(f"Successfully revoked job {job_id} for user {user_id}")
 
+        _audit_extraction_job(
+            background_tasks,
+            user_id=user_id,
+            action_type="extraction_job_cancelled",
+            job_id=job_id,
+        )
+
         return CancelJobResponse(
             task_id=job_id,
             status="cancelled",
@@ -1261,6 +1333,7 @@ async def cancel_or_delete_extraction_job(
     description="Permanently delete an extraction job from the database. This action cannot be undone.",
 )
 async def delete_extraction_job(
+    background_tasks: BackgroundTasks,
     job_id: str = Path(..., description="Extraction job ID to delete"),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> CancelJobResponse:
@@ -1317,6 +1390,12 @@ async def delete_extraction_job(
 
         if delete_response.data:
             logger.info(f"Successfully deleted job {job_id} from database")
+            _audit_extraction_job(
+                background_tasks,
+                user_id=user_id,
+                action_type="extraction_job_deleted",
+                job_id=job_id,
+            )
             return CancelJobResponse(
                 task_id=job_id, status="deleted", message="Job deleted successfully"
             )
