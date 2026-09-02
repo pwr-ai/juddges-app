@@ -6895,6 +6895,34 @@
         "title": "InvalidToolCall",
         "type": "object"
       },
+      "InviteRedemptionRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 12,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "email",
+          "password"
+        ],
+        "title": "InviteRedemptionRequest",
+        "type": "object"
+      },
       "InvokeResponseMetadata": {
         "description": "Represents response metadata used for just single input/output LangServe\nresponses.",
         "properties": {
@@ -18123,6 +18151,50 @@
         "summary": "Analyze legal arguments in documents",
         "tags": [
           "argumentation"
+        ]
+      }
+    },
+    "/auth/invites/redeem": {
+      "post": {
+        "description": "Consume an invite code and create the corresponding account.",
+        "operationId": "redeem_invite_auth_invites_redeem_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteRedemptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Redeem Invite Auth Invites Redeem Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Redeem Invite",
+        "tags": [
+          "auth"
         ]
       }
     },
