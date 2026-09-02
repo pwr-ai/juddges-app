@@ -486,6 +486,23 @@ if os.getenv("VIRTUAL_HOST_FRONTEND"):
 
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 
+# Global backstop: without this, slowapi's default_limits are consulted for
+# no route at all and any endpoint lacking an explicit @limiter.limit runs
+# unthrottled. Per-route decorators still take precedence.
+#
+# Registered first (innermost) deliberately: Starlette builds the middleware
+# stack in reverse registration order, so the LAST middleware added ends up
+# OUTERMOST. SlowAPIMiddleware is BaseHTTPMiddleware-based and short-circuits
+# a 429 without calling call_next, so if it were outermost a rate-limited
+# cross-origin response would skip CORSMiddleware entirely and arrive with no
+# Access-Control-Allow-Origin header — an unreadable network error for the
+# caller instead of a readable 429. CORSMiddleware is added last below so it
+# stays outermost and wraps every response, including 429s.
+app.add_middleware(SlowAPIMiddleware)
+
+# Add GZip compression middleware for better performance
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,  # Specific origins only
@@ -499,14 +516,6 @@ app.add_middleware(
         "X-Request-ID",
     ],
 )
-
-# Add GZip compression middleware for better performance
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-# Global backstop: without this, slowapi's default_limits are consulted for
-# no route at all and any endpoint lacking an explicit @limiter.limit runs
-# unthrottled. Per-route decorators still take precedence.
-app.add_middleware(SlowAPIMiddleware)
 
 
 @app.middleware("http")
