@@ -15,6 +15,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
@@ -40,8 +41,8 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
       setPasswordError('Password is required')
       return false
     }
-    if (value.length < 6) {
-      setPasswordError('Password must be at least 6 characters')
+    if (value.length < 12) {
+      setPasswordError('Password must be at least 12 characters')
       return false
     }
     setPasswordError(null)
@@ -80,15 +81,25 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
+      const response = await fetch('/api/auth/redeem-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode, email, password }),
       })
-      if (error) throw error
-      router.push('/auth/sign-up-success')
+
+      if (!response.ok) {
+        const body = await response.json()
+        setError(body?.detail?.message ?? 'Registration failed. Check your invite code.')
+        return
+      }
+
+      // The account exists and is confirmed; sign in immediately.
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        router.push('/auth/login')
+        return
+      }
+      router.push('/')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -111,6 +122,19 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
         <form onSubmit={handleSignUp}>
           <div className="flex flex-col gap-5">
+              <div className="grid gap-2">
+                <Label htmlFor="invite-code" className="text-sm font-medium">Invite code</Label>
+                <Input
+                  id="invite-code"
+                  name="invite-code"
+                  type="text"
+                  required
+                  value={inviteCode}
+                  onChange={(event) => setInviteCode(event.target.value)}
+                  disabled={isLoading}
+                  className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
