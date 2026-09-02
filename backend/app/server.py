@@ -20,6 +20,7 @@ from psycopg_pool import AsyncConnectionPool
 # Rate limiting imports
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Import admin router (JWT + require_admin auth, no API key dependency)
 from app.api.admin import router as admin_router
@@ -501,6 +502,11 @@ app.add_middleware(
 
 # Add GZip compression middleware for better performance
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Global backstop: without this, slowapi's default_limits are consulted for
+# no route at all and any endpoint lacking an explicit @limiter.limit runs
+# unthrottled. Per-route decorators still take precedence.
+app.add_middleware(SlowAPIMiddleware)
 
 
 @app.middleware("http")
