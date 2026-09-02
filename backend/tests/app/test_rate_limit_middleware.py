@@ -8,7 +8,7 @@ middleware an undecorated route has no limit whatsoever.
 from __future__ import annotations
 
 import pytest
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -123,3 +123,45 @@ def test_production_app_registers_cors_outermost_of_the_rate_limiter():
         "app/server.py so it ends up outermost and a 429 still carries "
         "Access-Control-Allow-Origin"
     )
+
+
+@pytest.mark.unit
+def test_include_router_routes_are_not_covered_by_default_limits():
+    """Characterizes a known gap (#574) — this is NOT desired behaviour.
+
+    On the pinned FastAPI, slowapi's route lookup only matches routes
+    registered directly on ``app``; routes mounted via ``include_router``
+    (most of this API) are not matched and get no default-limit coverage.
+    Pins the gap so nobody assumes the backstop protects routes it does not.
+    """
+    limiter = Limiter(
+        key_func=lambda request: "fixed-test-key-gap",
+        default_limits=["1 per minute"],
+        storage_uri="memory://",
+    )
+    app = FastAPI()
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
+    @app.get("/direct")
+    async def direct():
+        return {"ok": True}
+
+    router = APIRouter()
+
+    @router.get("/included")
+    async def included():
+        return {"ok": True}
+
+    app.include_router(router)
+
+    client = TestClient(app)
+
+    # Registered directly on `app`: covered by default_limits.
+    assert client.get("/direct").status_code == 200
+    assert client.get("/direct").status_code == 429
+
+    # Mounted via include_router: NOT covered — the gap tracked in #574.
+    assert client.get("/included").status_code == 200
+    assert client.get("/included").status_code == 200

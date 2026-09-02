@@ -486,9 +486,13 @@ if os.getenv("VIRTUAL_HOST_FRONTEND"):
 
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 
-# Global backstop: without this, slowapi's default_limits are consulted for
-# no route at all and any endpoint lacking an explicit @limiter.limit runs
-# unthrottled. Per-route decorators still take precedence.
+# Without this, slowapi never consults default_limits at all — only
+# @limiter.limit-decorated routes are enforced. On the pinned FastAPI, its
+# route lookup only matches routes registered directly on `app` (the
+# LangServe chains, /docs, /openapi.json); routes mounted via include_router
+# — most of this API — are not matched and get NO default-limit coverage
+# (tracked in #574). @limiter.limit decorators are unaffected and enforce
+# regardless of mounting style.
 #
 # Registered first (innermost) deliberately: Starlette builds the middleware
 # stack in reverse registration order, so the LAST middleware added ends up
