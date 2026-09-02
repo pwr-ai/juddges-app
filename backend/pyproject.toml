@@ -41,6 +41,7 @@ sentry-sdk = { version = "^2.0.0", extras = ["fastapi"], optional = true }
 strawberry-graphql = {extras = ["fastapi"], version = ">=0.291.3,<0.325.0"}
 cachetools = ">=5.5,<8.0"
 defusedxml = "^0.7.1"
+email-validator = ">=2.0.0,<3.0.0"
 
 [tool.poetry.extras]
 observability = ["sentry-sdk"]

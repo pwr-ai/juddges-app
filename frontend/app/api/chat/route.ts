@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBackendUrl } from '../utils/backend-url';
 import { createClient } from '@/lib/supabase/server';
@@ -15,7 +16,7 @@ const API_KEY = process.env.BACKEND_API_KEY as string;
 
 /**
  * POST /api/chat - Process chat request with streaming support
- * 
+ *
  * Query parameters:
  * - stream: boolean (default: false) - Enable streaming mode
  */
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         'X-API-Key': API_KEY,
         'X-User-ID': userId,
         'X-Request-ID': requestId,
+        // Give each signed-in user their own rate-limit bucket (issue #573).
+        //
+        // `get_client_ip` (backend/app/rate_limiter.py) keys per user only when
+        // this header arrives with a matching X-API-Key; otherwise it falls back
+        // to the socket address, which for BFF-proxied traffic is this
+        // container — one bucket shared by every visitor. Hashed so the
+        // backend's rate-limit keys never carry a raw user id.
+        'X-RateLimit-Identity': createHash('sha256').update(userId).digest('hex'),
       } as HeadersInit,
       body: JSON.stringify(backendPayload),
     });
@@ -96,6 +105,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         apiLogger.error('Failed to read error response', e, { requestId });
       }
 
+      // Preserve a 429 as-is so the budget message from llm_rate_limit.py
+      // reaches the user instead of a generic internal-error shape.
+      if (response.status === 429) {
+        let rateLimitMessage = 'Too many AI requests. Please try again later.';
+        try {
+          const parsed = JSON.parse(errorBody) as { detail?: { message?: string } };
+          if (parsed?.detail?.message) {
+            rateLimitMessage = parsed.detail.message;
+          }
+        } catch {
+          // Keep the default message if the backend body isn't JSON.
+        }
+
+        throw new AppError(
+          rateLimitMessage,
+          ErrorCode.RATE_LIMIT_EXCEEDED,
+          429,
+          {
+            backendStatus: response.status,
+            backendError: errorBody,
+            duration
+          }
+        );
+      }
+
       throw new AppError(
         `Backend chat service error: ${response.status} ${response.statusText}`,
         ErrorCode.INTERNAL_ERROR,
@@ -111,10 +145,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // If streaming, return the stream as-is
     if (streamEnabled) {
       apiLogger.info('Streaming response initiated', { requestId });
-      
+
       // Create a TransformStream to pass through and log the stream
       const { readable, writable } = new TransformStream();
-      
+
       // Pipe the response through our transform stream
       response.body?.pipeTo(writable).catch((error) => {
         apiLogger.error('Stream pipe error', error, { requestId });

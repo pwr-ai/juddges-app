@@ -1249,6 +1249,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/invites/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem Invite
+         * @description Consume an invite code and create the corresponding account.
+         */
+        post: operations["redeem_invite_auth_invites_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/blog/admin/posts": {
         parameters: {
             query?: never;
@@ -8721,6 +8741,18 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** InviteRedemptionRequest */
+        InviteRedemptionRequest: {
+            /** Code */
+            code: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+        };
         /**
          * InvokeResponseMetadata
          * @description Represents response metadata used for just single input/output LangServe
@@ -14171,6 +14203,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArgumentationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_invite_auth_invites_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteRedemptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

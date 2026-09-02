@@ -73,15 +73,6 @@ export class AuthPage {
   }
 
   /**
-   * Sign up with email and password
-   */
-  async signUp(email: string, password: string) {
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
-    await this.signUpButton.click();
-  }
-
-  /**
    * Verify sign in was successful
    */
   async verifySignInSuccess() {

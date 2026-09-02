@@ -7,10 +7,14 @@ import re
 import secrets
 from typing import TYPE_CHECKING
 
+from limits.storage import MemoryStorage
+from limits.strategies import MovingWindowRateLimiter
+from loguru import logger
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 if TYPE_CHECKING:
+    from limits import RateLimitItem
     from starlette.requests import Request
 
 
@@ -106,3 +110,30 @@ limiter = Limiter(
     # Emit X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset headers.
     headers_enabled=True,
 )
+
+# Process-local fallback for the callers below that talk to `limits` directly
+# (LangServe LLM budget, invite-code redemption) rather than through the
+# slowapi `Limiter` above, which already has its own fallback. A single
+# module-level instance so the fallback keeps enforcing across calls within
+# a process rather than resetting its counters on every hit.
+_fallback_limiter = MovingWindowRateLimiter(MemoryStorage())
+
+
+def hit_with_fallback(
+    limiter_instance: MovingWindowRateLimiter,
+    item: RateLimitItem,
+    *identifiers: str,
+) -> bool:
+    """Hit ``limiter_instance``, degrading to an in-memory limiter on a storage error.
+
+    A Redis outage must not fail open (unbounded OpenAI spend) or fail closed
+    (an unrelated outage taking down chat/registration). This keeps enforcing
+    the same limit against a process-local counter until storage recovers.
+    """
+    try:
+        return limiter_instance.hit(item, *identifiers)
+    except Exception:
+        logger.warning(
+            "Rate limit storage unreachable - falling back to in-memory limiter"
+        )
+        return _fallback_limiter.hit(item, *identifiers)

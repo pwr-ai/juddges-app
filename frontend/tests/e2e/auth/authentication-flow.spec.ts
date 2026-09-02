@@ -85,19 +85,32 @@ test.describe('Authentication Flow', () => {
     expect(onLoginPage || hasLoginForm).toBeTruthy();
   });
 
-  test('user can sign up with new account', async ({ page }) => {
-    // Mock Supabase sign up
-    await page.route('**/auth/v1/signup**', route => {
+  test('user can sign up with a valid invite code', async ({ page }) => {
+    // The sign-up form no longer calls Supabase's signup endpoint directly —
+    // it redeems the invite code through the BFF route, then signs in.
+    await page.route('**/api/auth/redeem-invite', route => {
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'created' })
+      });
+    });
+
+    // A successful redemption immediately signs the user in.
+    await page.route('**/auth/v1/token**', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
+          access_token: 'mock-access-token',
+          token_type: 'bearer',
+          expires_in: 3600,
+          refresh_token: 'mock-refresh-token',
           user: {
             id: 'new-user-456',
             email: 'newuser@example.com',
             created_at: new Date().toISOString()
-          },
-          session: null // Typically requires email confirmation
+          }
         })
       });
     });
@@ -105,21 +118,24 @@ test.describe('Authentication Flow', () => {
     // Navigate to sign up page
     await authPage.gotoSignUp();
 
-    // Verify sign up form is visible
+    // Verify sign up form is visible. authPage.passwordInput matches
+    // /password/i, which is now ambiguous on this page (it also matches the
+    // repeat-password field), so check the exact "Password" field directly.
     await expect(authPage.emailInput).toBeVisible();
-    await expect(authPage.passwordInput).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
 
-    // Sign up
-    await authPage.signUp('newuser@example.com', 'SecurePass123!');
+    // Fill the invite code plus the rest of the form directly — the
+    // shared signUp() helper predates the invite-code and repeat-password
+    // fields and doesn't fill either.
+    await page.getByLabel(/invite code/i).fill('PILOT-2026');
+    await page.getByLabel('Email', { exact: true }).fill('newuser@example.com');
+    await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
+    await page.getByLabel(/repeat password/i).fill('correct horse battery');
+    await authPage.signUpButton.click();
 
-    // Wait for a success indicator or a confirmation URL to appear
-    await page.waitForLoadState('domcontentloaded');
-
-    // Should show success message or confirmation page
-    const hasSuccessMessage = await page.locator('text=/check.*email|confirmation|verify|success/i').isVisible({ timeout: 3000 }).catch(() => false);
-    const onConfirmationPage = page.url().includes('/sign-up-success') || page.url().includes('/confirmation');
-
-    expect(hasSuccessMessage || onConfirmationPage).toBeTruthy();
+    // A valid invite code redeems, signs the user in, and redirects home.
+    // No .catch() guard: if the redirect doesn't happen, the test must fail.
+    await page.waitForURL(/\/$/, { timeout: 10000 });
   });
 
   test('user sees error with invalid credentials', async ({ page }) => {

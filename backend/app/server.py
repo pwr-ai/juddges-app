@@ -20,6 +20,7 @@ from psycopg_pool import AsyncConnectionPool
 # Rate limiting imports
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Import admin router (JWT + require_admin auth, no API key dependency)
 from app.api.admin import router as admin_router
@@ -29,6 +30,7 @@ from app.api.audit import router as audit_router
 from app.api.blog import router as blog_router
 from app.api.consent import router as consent_router
 from app.api.events import router as events_router
+from app.api.invites import router as invites_router
 from app.api.legal import router as legal_router
 from app.api.research_agent import router as research_agent_v2_router
 from app.api.schema_generator import router as schema_generator_router
@@ -54,6 +56,7 @@ from app.judgments_pkg import router as documents_router
 
 # Import LangChain cache setup
 from app.langchain_cache import setup_langchain_cache
+from app.llm_rate_limit import enforce_llm_rate_limit
 from app.precedents import router as precedents_router
 from app.publications import router as publications_router
 from app.rate_limiter import DEFAULT_RATE_LIMITS, RATE_LIMIT_STORAGE_URI, limiter
@@ -484,6 +487,27 @@ if os.getenv("VIRTUAL_HOST_FRONTEND"):
 
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 
+# Without this, slowapi never consults default_limits at all — only
+# @limiter.limit-decorated routes are enforced. On the pinned FastAPI, its
+# route lookup only matches routes registered directly on `app` (the
+# LangServe chains, /docs, /openapi.json); routes mounted via include_router
+# — most of this API — are not matched and get NO default-limit coverage
+# (tracked in #574). @limiter.limit decorators are unaffected and enforce
+# regardless of mounting style.
+#
+# Registered first (innermost) deliberately: Starlette builds the middleware
+# stack in reverse registration order, so the LAST middleware added ends up
+# OUTERMOST. SlowAPIMiddleware is BaseHTTPMiddleware-based and short-circuits
+# a 429 without calling call_next, so if it were outermost a rate-limited
+# cross-origin response would skip CORSMiddleware entirely and arrive with no
+# Access-Control-Allow-Origin header — an unreadable network error for the
+# caller instead of a readable 429. CORSMiddleware is added last below so it
+# stays outermost and wraps every response, including 429s.
+app.add_middleware(SlowAPIMiddleware)
+
+# Add GZip compression middleware for better performance
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,  # Specific origins only
@@ -497,9 +521,6 @@ app.add_middleware(
         "X-Request-ID",
     ],
 )
-
-# Add GZip compression middleware for better performance
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.middleware("http")
@@ -610,6 +631,9 @@ async def redirect_root_to_docs():
 #            guest_sessions_router (/api/guest-sessions — public)
 #            blog_router — public GET endpoints (list/get posts, categories)
 #            legal_router — static legal documents (DPA, retention policies)
+#            invites_router (/auth/invites/redeem — no API key; reached via
+#                            the BFF, protected by its own rate limit and
+#                            the invite code itself)
 #
 # API_KEY:   LangServe routes (/qa, /chat, /enhance_query)
 #            documents_router, collections_router, publications_router
@@ -635,15 +659,27 @@ async def redirect_root_to_docs():
 #            consent_router   — JWT enforced per-endpoint
 # ============================================================================
 
-# Add routes with API key protection
-add_routes(app, chain, path="/qa", dependencies=[Depends(verify_api_key)])
-add_routes(app, chat_chain, path="/chat", dependencies=[Depends(verify_api_key)])
+# Add routes with API key protection and an explicit LLM budget.
+# add_routes builds its own handlers, so @limiter.limit cannot reach them —
+# the budget is enforced as a dependency instead. See app/llm_rate_limit.py.
+add_routes(
+    app,
+    chain,
+    path="/qa",
+    dependencies=[Depends(verify_api_key), Depends(enforce_llm_rate_limit)],
+)
+add_routes(
+    app,
+    chat_chain,
+    path="/chat",
+    dependencies=[Depends(verify_api_key), Depends(enforce_llm_rate_limit)],
+)
 
 add_routes(
     app,
     enhance_query_chain,
     path="/enhance_query",
-    dependencies=[Depends(verify_api_key)],
+    dependencies=[Depends(verify_api_key), Depends(enforce_llm_rate_limit)],
 )
 
 # Routers protected by API key only (no extra prefix/tag overrides).
@@ -676,6 +712,11 @@ for _router in API_KEY_PROTECTED_ROUTERS:
 # Include Day 1 feature routers
 # Guest sessions - no API key required (public endpoint)
 app.include_router(guest_sessions_router)
+
+# Invite-gated registration - no API key dependency; nothing on this router
+# verifies one. Its protection is the invite code plus its own rate limits
+# (shared IP ceiling and per-email budget — see app/api/invites.py).
+app.include_router(invites_router)
 
 # App events - requires API key authentication (browser traffic goes through
 # the Next.js /api/events proxy, which injects the key server-side)
