@@ -52,3 +52,4 @@ $$;
 -- entirely — see 20260623000001_lock_down_security_definer_rpcs.sql for the
 -- same gotcha on other SECURITY DEFINER RPCs in this project.
 REVOKE ALL ON FUNCTION public.redeem_invite_code(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT  EXECUTE ON FUNCTION public.redeem_invite_code(TEXT) TO service_role;
