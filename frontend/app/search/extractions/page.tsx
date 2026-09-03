@@ -376,6 +376,7 @@ function ExtractionSearchPage() {
             className="flex-1"
             aria-label="Full-text search"
           />
+          <NlFilterDialog onApply={applyNlFilters} />
         </div>
 
         <SubstringInputs
@@ -393,12 +394,9 @@ function ExtractionSearchPage() {
         />
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
-              Advanced filters
-            </span>
-            <NlFilterDialog onApply={applyNlFilters} />
-          </div>
+          <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
+            Advanced filters
+          </span>
           <BaseFiltersDrawer
             filters={drawerFilters}
             onChange={setDrawerFilter}
