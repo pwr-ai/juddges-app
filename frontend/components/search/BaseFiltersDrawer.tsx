@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { ChevronDown } from "lucide-react";
 import {
   FIELDS_BY_GROUP,
   GROUP_ORDER,
@@ -26,6 +27,8 @@ export interface BaseFiltersDrawerProps {
   onTagQueryChange?: (field: string, q: string) => void;
   /** Disable all controls (e.g. while a search is in flight). */
   disabled?: boolean;
+  /** Render expanded on first mount. Defaults to collapsed. */
+  defaultOpen?: boolean;
 }
 
 export function BaseFiltersDrawer({
@@ -35,24 +38,43 @@ export function BaseFiltersDrawer({
   facetCounts,
   onTagQueryChange,
   disabled,
+  defaultOpen = false,
 }: BaseFiltersDrawerProps): React.JSX.Element {
+  const [open, setOpen] = React.useState(defaultOpen);
   const activeCount = Object.values(filters).filter(Boolean).length;
   return (
-    <div className="space-y-4 rounded-md border border-[color:var(--rule)] bg-[color:var(--parchment)] p-3">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
+    <div
+      data-testid="advanced-filters-drawer"
+      className="space-y-4 rounded-md border border-[color:var(--rule)] bg-[color:var(--parchment)] p-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+          className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]"
+        >
+          <ChevronDown
+            aria-hidden
+            className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
+          />
           Filters
-        </span>
+          {activeCount > 0 && (
+            <span className="rounded-full bg-[color:var(--gold-soft)] px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-[color:var(--ink)]">
+              {activeCount} active
+            </span>
+          )}
+        </button>
         <button
           type="button"
           onClick={onReset}
           disabled={disabled || activeCount === 0}
-          className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--oxblood)] hover:text-[color:var(--oxblood-deep)] disabled:opacity-50"
+          className="rounded border border-[color:var(--rule)] px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-[color:var(--oxblood)] hover:text-[color:var(--oxblood-deep)] disabled:opacity-50"
         >
           Reset{activeCount > 0 ? ` (${activeCount})` : ""}
         </button>
       </div>
-      {GROUP_ORDER.map((group) => {
+      {open && GROUP_ORDER.map((group) => {
         const fields = (FIELDS_BY_GROUP[group] ?? []).filter(
           (cfg) => cfg.control !== "substring",
         );

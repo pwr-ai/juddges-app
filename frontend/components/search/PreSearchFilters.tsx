@@ -193,6 +193,7 @@ export function PreSearchFilters({
                 onReset={onResetBaseFilters}
                 facetCounts={facetCounts}
                 disabled={disabled ?? false}
+                defaultOpen
               />
             </div>
           )}
