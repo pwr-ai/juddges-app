@@ -53,14 +53,27 @@ export function QuickFilters({
       <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
         Quick filters
       </span>
-      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-12">
         {QUICK_FILTER_CONFIGS.map((cfg) => {
           const v = filters[cfg.field];
           const setVal = (next: BaseFilterValue | undefined) =>
             onChange(cfg.field, next);
+
+          let colSpan = "lg:col-span-2";
+          if (cfg.control === "date_range") {
+            colSpan = "md:col-span-2 lg:col-span-3";
+          } else if (cfg.control === "tag_array") {
+            colSpan = "md:col-span-2 lg:col-span-3";
+          } else if (cfg.control === "enum_multi") {
+            colSpan = "md:col-span-1 lg:col-span-2";
+          } else if (cfg.control === "boolean_tri") {
+            colSpan = "md:col-span-1 lg:col-span-2";
+          }
+
+          let controlNode: React.ReactNode = null;
           switch (cfg.control) {
             case "numeric_range":
-              return (
+              controlNode = (
                 <NumericRangeControl
                   key={cfg.field}
                   label={cfg.label}
@@ -70,8 +83,9 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "date_range":
-              return (
+              controlNode = (
                 <DateRangeControl
                   key={cfg.field}
                   label={cfg.label}
@@ -81,8 +95,9 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "boolean_tri":
-              return (
+              controlNode = (
                 <BooleanTriControl
                   key={cfg.field}
                   label={cfg.label}
@@ -92,8 +107,9 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "enum_multi":
-              return (
+              controlNode = (
                 <EnumMultiControl
                   key={cfg.field}
                   label={cfg.label}
@@ -105,8 +121,9 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "tag_array":
-              return (
+              controlNode = (
                 <TagArrayControl
                   key={cfg.field}
                   label={cfg.label}
@@ -122,9 +139,16 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "substring":
-              return null; // substring fields live in their own inputs above
+              return null;
           }
+
+          return (
+            <div key={cfg.field} className={colSpan}>
+              {controlNode}
+            </div>
+          );
         })}
       </div>
     </div>

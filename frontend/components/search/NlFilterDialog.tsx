@@ -121,17 +121,18 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="gap-1.5"
+          className="gap-1.5 border-[color:var(--rule)] bg-white/60 hover:bg-[color:var(--parchment-deep)] text-xs font-mono"
+          title="Describe what you are looking for in natural language to set structured filters"
         >
-          <Sparkles className="size-4 text-[color:var(--gold)]" aria-hidden />
-          Paste your question
+          <Sparkles className="size-3.5 text-[color:var(--gold)]" aria-hidden />
+          <span>Ask in plain language</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Paste your question</DialogTitle>
-          <DialogDescription>
-            Describe what you&apos;re looking for in plain language. We&apos;ll
+          <DialogTitle className="font-serif text-lg">Natural Language Filter Assistant</DialogTitle>
+          <DialogDescription className="text-xs text-[color:var(--ink-soft)]">
+            Describe what you&apos;re looking for in plain English. We&apos;ll
             translate it into structured filters for you to review and edit
             before searching.
           </DialogDescription>

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorCard } from "@/lib/styles/components";
 import logger from "@/lib/logger";
-import { useExtractionResults } from "@/lib/extractions/base-schema-filter-api";
+import { useExtractionResults, useExtractionFacet } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
 import type {
   BaseSchemaFilterRequest,
@@ -235,16 +235,29 @@ function ResultList({
   }
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed p-8 text-center">
-        <p className="text-sm text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-[color:var(--rule-strong)] bg-[color:var(--parchment)] p-8 text-center space-y-4">
+        <p className="text-sm text-[color:var(--ink-soft)] max-w-lg mx-auto">
           {hasActiveFilters
             ? "No judgment in the corpus matches every filter at once. Extraction coverage is uneven, so combining several fields narrows results quickly — drop the most specific filter, or clear them all and add them back one at a time."
             : "No extracted judgments are available yet. Once documents have been through structured extraction they become searchable here."}
         </p>
-        {hasActiveFilters && (
-          <Button variant="outline" size="sm" className="mt-4" onClick={onClearAll}>
+        {hasActiveFilters ? (
+          <Button variant="outline" size="sm" onClick={onClearAll} className="border-[color:var(--rule)] hover:bg-[color:var(--parchment-deep)]">
             Clear all filters
           </Button>
+        ) : (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/extract">
+              <Button size="sm" className="bg-[color:var(--oxblood)] hover:bg-[color:var(--oxblood-deep)] text-white">
+                Run Extraction Job
+              </Button>
+            </Link>
+            <Link href="/schemas/base">
+              <Button variant="outline" size="sm" className="border-[color:var(--rule)] hover:bg-[color:var(--parchment-deep)]">
+                View Base Schema
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
     );
@@ -283,6 +296,24 @@ function ExtractionSearchPage() {
   );
 
   const { data, isLoading, isFetching, error, refetch } = useExtractionResults(request);
+
+  // Load facet suggestions for autocomplete in TagArray fields
+  const offencesFacet = useExtractionFacet("convict_offences");
+  const courtsFacet = useExtractionFacet("conv_court_names");
+  const facetCounts = useMemo<Record<string, Record<string, number>>>(() => {
+    const map: Record<string, Record<string, number>> = {};
+    if (offencesFacet.data && Array.isArray(offencesFacet.data)) {
+      map.convict_offences = Object.fromEntries(
+        offencesFacet.data.map((f) => [f.value, f.count]),
+      );
+    }
+    if (courtsFacet.data && Array.isArray(courtsFacet.data)) {
+      map.conv_court_names = Object.fromEntries(
+        courtsFacet.data.map((f) => [f.value, f.count]),
+      );
+    }
+    return map;
+  }, [offencesFacet.data, courtsFacet.data]);
 
   // Never render the raw exception: it leaks internals and gives the reader
   // nothing to act on. Keep it in the console instead.
@@ -339,10 +370,10 @@ function ExtractionSearchPage() {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 space-y-4">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold">Search by extracted data</h1>
-        <p className="text-sm text-muted-foreground">
-          Filter judgments across the full extracted base schema. Combine
-          structured filters with free-text search.
+        <h1 className="text-2xl font-serif font-bold text-[color:var(--ink)]">Search by extracted data</h1>
+        <p className="text-sm text-[color:var(--ink-soft)]">
+          Filter judgments across structured legal extractions. Combine
+          discrete attributes with free-text search.
         </p>
       </header>
 
@@ -352,7 +383,7 @@ function ExtractionSearchPage() {
             placeholder="Search case names, judges, charges, courts…"
             value={textQuery}
             onChange={(e) => setTextQuery(e.target.value)}
-            className="flex-1"
+            className="flex-1 bg-white border-[color:var(--rule)]"
             aria-label="Full-text search"
           />
         </div>
@@ -362,27 +393,26 @@ function ExtractionSearchPage() {
           appealCourtJudgesNames={filters.appeal_court_judges_names}
           offenderRepresentativeName={filters.offender_representative_name}
           onChange={setSubstringFilter}
-          disabled={isLoading}
         />
 
         <QuickFilters
           filters={drawerFilters}
           onChange={setDrawerFilter}
-          disabled={isLoading}
+          facetCounts={facetCounts}
         />
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
-              Advanced filters
+              All Filter Fields
             </span>
-            <NlFilterDialog onApply={applyNlFilters} disabled={isLoading} />
+            <NlFilterDialog onApply={applyNlFilters} />
           </div>
           <BaseFiltersDrawer
             filters={drawerFilters}
             onChange={setDrawerFilter}
             onReset={resetDrawerFilters}
-            disabled={isLoading}
+            facetCounts={facetCounts}
           />
         </div>
       </div>
@@ -396,7 +426,7 @@ function ExtractionSearchPage() {
       />
 
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[color:var(--ink-soft)]">
           {isLoading
             ? "Searching…"
             : total === 0
@@ -404,9 +434,14 @@ function ExtractionSearchPage() {
               : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
           {isFetching && !isLoading && " (updating…)"}
         </p>
-        {error && (
-          <Button variant="ghost" size="sm" onClick={() => clearAll()}>
-            Reset
+        {(activeCount > 0 || textQuery.trim().length > 0) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => clearAll()}
+            className="text-xs text-[color:var(--oxblood)] hover:text-[color:var(--oxblood-deep)] hover:bg-[color:var(--gold-soft)]/50"
+          >
+            Clear all filters
           </Button>
         )}
       </div>

@@ -514,7 +514,8 @@ export const FIELDS_BY_GROUP: Record<FilterGroup, FilterFieldConfig[]> =
     {} as Record<FilterGroup, FilterFieldConfig[]>,
   );
 
-/** Format a snake_case enum value for display ("gender_male" → "Gender male"). */
+/** Format a snake_case enum value for display, stripping redundant field prefixes ("gender_male" → "Male", "outcome_dismissed_or_refused" → "Dismissed or refused"). */
 export function formatEnumLabel(value: string): string {
-  return value.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  const stripped = value.replace(/^(outcome|gender|appeal|intox|serve)_/i, "");
+  return stripped.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
