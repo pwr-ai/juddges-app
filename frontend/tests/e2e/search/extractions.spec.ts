@@ -32,10 +32,12 @@
  * NOTE (selector scoping): since #139/#275/#276 merged, `offender_gender`
  * ("Gender") is surfaced both in the always-visible `QuickFilters` strip *and*
  * in the advanced `BaseFiltersDrawer`, both rendering an identically-labelled
- * "Gender female" checkbox. A bare `getByLabel('Gender female')` therefore
- * resolves to two nodes and trips Playwright strict mode, so every gender
- * interaction below is scoped to the advanced drawer via the `advancedDrawer`
- * locator (the only filter panel carrying the "Reset" control).
+ * "Female" checkbox (the field's "gender_" prefix is stripped from the option
+ * label via `formatEnumOptionLabel` — see #581 — since it duplicates the
+ * fieldset legend "Gender"). A bare `getByLabel('Female')` therefore resolves
+ * to two nodes and trips Playwright strict mode, so every gender interaction
+ * below is scoped to the advanced drawer via the `advancedDrawer` locator
+ * (the only filter panel carrying the "Reset" control).
  */
 
 import { test, expect } from '../helpers/auth-fixture';
@@ -112,7 +114,7 @@ async function mockExtractionApis(page: Page): Promise<void> {
 
 /**
  * The advanced `BaseFiltersDrawer` panel — the filter container that carries the
- * "Reset" control. Used to disambiguate the "Gender female" checkbox, which also
+ * "Reset" control. Used to disambiguate the "Female" checkbox, which also
  * appears in the always-visible QuickFilters strip (see header note).
  */
 function advancedDrawer(page: Page): Locator {
@@ -125,9 +127,9 @@ function advancedDrawer(page: Page): Locator {
     .first();
 }
 
-/** The drawer-scoped "Gender female" enum checkbox. */
+/** The drawer-scoped "Female" (offender_gender = gender_female) enum checkbox. */
 function genderFemaleCheckbox(page: Page): Locator {
-  return advancedDrawer(page).getByLabel('Gender female', { exact: true });
+  return advancedDrawer(page).getByLabel('Female', { exact: true });
 }
 
 test.describe('/search/extractions', () => {
@@ -147,7 +149,7 @@ test.describe('/search/extractions', () => {
     await page.getByLabel('Full-text search').fill('robbery');
     await expect(page.getByText(/80 judgments/)).toBeVisible();
 
-    // 2. Select offender_gender = gender_female ("Gender female" via formatEnumLabel).
+    // 2. Select offender_gender = gender_female ("Female" via formatEnumOptionLabel).
     await genderFemaleCheckbox(page).check();
     await expect(page.getByText(/50 judgments/)).toBeVisible();
 

@@ -41,6 +41,13 @@ export interface FilterFieldConfig {
   control: FilterControl;
   /** Allowed values for enum controls. Undefined for free-text arrays. */
   enumValues?: readonly string[];
+  /**
+   * For `numeric_range` fields: whether to fetch/render the distribution
+   * histogram and range slider. Defaults to `true`; set `false` for
+   * identifier-like fields (e.g. `case_number`) where a value distribution
+   * is meaningless.
+   */
+  showDistribution?: boolean;
 }
 
 export const GROUP_LABELS: Record<FilterGroup, string> = {
@@ -179,6 +186,7 @@ export const FILTER_FIELDS: readonly FilterFieldConfig[] = [
     label: "Case number",
     group: "court_date",
     control: "numeric_range",
+    showDistribution: false,
   },
   {
     field: "conv_court_names",
@@ -517,4 +525,66 @@ export const FIELDS_BY_GROUP: Record<FilterGroup, FilterFieldConfig[]> =
 /** Format a snake_case enum value for display ("gender_male" → "Gender male"). */
 export function formatEnumLabel(value: string): string {
   return value.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/** Split on "_" — the token unit enum values and field names are built from. */
+function toTokens(value: string): string[] {
+  return value.split("_");
+}
+
+/**
+ * The leading run of "_"-tokens shared by every value in `values` (e.g. all of
+ * `["gender_male", "gender_female"]` start with the token "gender"). Empty
+ * when the first tokens diverge.
+ */
+function commonLeadingTokens(values: readonly string[]): string[] {
+  if (values.length === 0) return [];
+  const tokenLists = values.map(toTokens);
+  const common: string[] = [];
+  for (let i = 0; i < tokenLists[0].length; i++) {
+    const tok = tokenLists[0][i];
+    if (!tokenLists.every((toks) => toks[i] === tok)) break;
+    common.push(tok);
+  }
+  return common;
+}
+
+/**
+ * Format an `enum_multi` option's checkbox label, stripping the field's
+ * shared leading-token prefix so it doesn't repeat the fieldset legend
+ * (`appeal_outcome`'s "outcome_dismissed_or_refused" → "Dismissed or
+ * refused" instead of "Outcome dismissed or refused" next to a legend that
+ * already reads "Appeal outcome").
+ *
+ * CONSTRAINED: only strips when every stripped token also appears in the
+ * field's own name or config label — otherwise a coincidental shared prefix
+ * (e.g. a hypothetical "not_") could be dropped even though it carries
+ * meaning the legend doesn't convey. Falls back to the unstripped
+ * `formatEnumLabel` result whenever that test fails, stripping would leave
+ * an empty string, or the field has fewer than two enum values.
+ */
+export function formatEnumOptionLabel(field: string, value: string): string {
+  const cfg = FILTER_FIELD_BY_NAME[field];
+  const enumValues = cfg?.enumValues;
+  if (!enumValues || enumValues.length < 2) return formatEnumLabel(value);
+
+  const commonTokens = commonLeadingTokens(enumValues);
+  if (commonTokens.length === 0) return formatEnumLabel(value);
+
+  const nameTokens = new Set(toTokens(field.toLowerCase()));
+  const labelWords = new Set(
+    cfg.label.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),
+  );
+  const allTokensRecognized = commonTokens.every(
+    (tok) => nameTokens.has(tok) || labelWords.has(tok),
+  );
+  if (!allTokensRecognized) return formatEnumLabel(value);
+
+  const prefix = `${commonTokens.join("_")}_`;
+  if (!value.startsWith(prefix)) return formatEnumLabel(value);
+
+  const remainder = value.slice(prefix.length);
+  if (remainder === "") return formatEnumLabel(value);
+
+  return formatEnumLabel(remainder);
 }

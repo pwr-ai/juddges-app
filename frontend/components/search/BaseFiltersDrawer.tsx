@@ -4,7 +4,7 @@ import {
   FIELDS_BY_GROUP,
   GROUP_ORDER,
   GROUP_LABELS,
-  formatEnumLabel,
+  formatEnumOptionLabel,
 } from "@/lib/extractions/base-schema-filter-config";
 import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
 import { NumericRangeControl } from "./controls/NumericRangeControl";
@@ -76,6 +76,7 @@ export function BaseFiltersDrawer({
                       description={cfg.help}
                       value={v?.kind === "numeric_range" ? v : undefined}
                       onChange={setVal}
+                      showDistribution={cfg.showDistribution}
                       disabled={disabled}
                     />
                   );
@@ -108,7 +109,7 @@ export function BaseFiltersDrawer({
                       label={cfg.label}
                       description={cfg.help}
                       options={cfg.enumValues ?? []}
-                      optionLabel={formatEnumLabel}
+                      optionLabel={(optValue) => formatEnumOptionLabel(cfg.field, optValue)}
                       value={v?.kind === "enum_multi" ? v : undefined}
                       onChange={setVal}
                       disabled={disabled}
