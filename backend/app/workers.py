@@ -296,6 +296,45 @@ def _update_job_results_in_supabase(
         return False
 
 
+def _merge_failure_into_results(
+    existing: list[dict[str, Any]],
+    document_ids: list[str],
+    collection_id: str,
+    error_message: str,
+) -> list[dict[str, Any]]:
+    """Mark unfinished documents failed while preserving finished ones.
+
+    The previous behaviour built a FAILED entry for every requested document
+    and overwrote the whole results column, so a worker restart followed by an
+    early failure in the redelivered attempt destroyed everything the earlier
+    attempt had completed and paid for.
+    """
+    done = {row["document_id"]: row for row in existing}
+    now = datetime.now(UTC).isoformat()
+    merged: list[dict[str, Any]] = []
+    for doc_id in document_ids:
+        finished = done.get(doc_id)
+        if finished is not None and finished.get("status") == (
+            DocumentProcessingStatus.COMPLETED.value
+        ):
+            merged.append(finished)
+            continue
+        merged.append(
+            DocumentExtractionResponse(
+                collection_id=collection_id,
+                document_id=doc_id,
+                status=DocumentProcessingStatus.FAILED,
+                created_at=now,
+                updated_at=now,
+                started_at=now,
+                completed_at=now,
+                error_message=error_message,
+                extracted_data=None,
+            ).model_dump(mode="json")
+        )
+    return merged
+
+
 def _claim_job(job_id: str, total_documents: int) -> None:
     """Mark the job as owned by this worker run.
 
@@ -368,6 +407,36 @@ def _cancellation_requested(job_id: str) -> bool:
         # transient database blip would be the worse failure.
         logger.warning(f"Cancellation check failed for job {job_id}: {check_error}")
         return False
+
+
+def _fetch_job_results_from_supabase(job_id: str) -> list[dict[str, Any]]:
+    """Read back whatever results are currently persisted for this job.
+
+    Used by the late-failure handler: under ``task_acks_late`` a redelivered
+    attempt runs this task function from scratch, so an earlier attempt's
+    completed documents live only in Supabase, not in this process's memory.
+    """
+    if not supabase_client:
+        return []
+    try:
+        response = (
+            supabase_client.table("extraction_jobs")
+            .select("results")
+            .eq("job_id", job_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        if not rows:
+            return []
+        return rows[0].get("results") or []
+    except Exception as fetch_error:
+        logger.warning(
+            f"Failed to read existing results for job {job_id}: {fetch_error}"
+        )
+        return []
 
 
 def _build_celery_failure_metadata(
@@ -768,21 +837,18 @@ def extract_information_from_documents_task(
         )
 
         logger.exception(f"Error in extraction task: {full_error_msg}")
-        failed_results = []
-        for doc_id in request.document_ids:
-            failed_results.append(
-                DocumentExtractionResponse(
-                    collection_id=request.collection_id,
-                    document_id=doc_id,
-                    status=DocumentProcessingStatus.FAILED,
-                    created_at=datetime.now(UTC).isoformat(),
-                    updated_at=datetime.now(UTC).isoformat(),
-                    started_at=datetime.now(UTC).isoformat(),
-                    completed_at=datetime.now(UTC).isoformat(),
-                    error_message=full_error_msg,
-                    extracted_data=None,
-                ).model_dump(mode="json")
-            )
+
+        # Read completed results back from Supabase rather than relying on
+        # this invocation's local `results`: under task_acks_late, a failure
+        # that struck a redelivered attempt runs this task from scratch after
+        # a worker restart, so an earlier attempt's completed documents exist
+        # only in Supabase, never in this process's memory.
+        failed_results = _merge_failure_into_results(
+            existing=_fetch_job_results_from_supabase(self.request.id),
+            document_ids=request.document_ids,
+            collection_id=request.collection_id,
+            error_message=full_error_msg,
+        )
         # NOTE: Do NOT call update_state() before returning!
         # When we manually set state and then return a value, Celery's Redis backend may store
         # the metadata from update_state() instead of the actual return value when fetching with .get().
