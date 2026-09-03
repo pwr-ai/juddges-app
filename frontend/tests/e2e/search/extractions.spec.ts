@@ -25,9 +25,9 @@
  * mock, see `tests/e2e/search/README.md`.
  *
  * NOTE: the inline filter drawer on this page renders every group's controls
- * directly (no per-group expand step), so the "expand Offender" action from the
- * issue text is a no-op here — the gender checkbox is already in the DOM. The
- * selections themselves match the acceptance criteria exactly.
+ * directly (no per-group expand step); the drawer itself now starts
+ * *collapsed* behind a "Filters" toggle (see #581 task 2), so every test that
+ * touches a drawer-only control expands it first via `expandDrawer`.
  *
  * NOTE (selector scoping): since #139/#275/#276 merged, `offender_gender`
  * ("Gender") is surfaced both in the always-visible `QuickFilters` strip *and*
@@ -35,9 +35,13 @@
  * "Female" checkbox (the field's "gender_" prefix is stripped from the option
  * label via `formatEnumOptionLabel` — see #581 — since it duplicates the
  * fieldset legend "Gender"). A bare `getByLabel('Female')` therefore resolves
- * to two nodes and trips Playwright strict mode, so every gender interaction
- * below is scoped to the advanced drawer via the `advancedDrawer` locator
- * (the only filter panel carrying the "Reset" control).
+ * to two nodes and trips Playwright strict mode, and scoping by the drawer's
+ * outer container alone is still ambiguous — the drawer also renders a
+ * "Victim gender" fieldset with its own "Female" checkbox. Every gender
+ * interaction below is instead scoped through the accessible "Gender"
+ * fieldset group (`EnumMultiControl` renders `<fieldset><legend>Gender</legend>…`)
+ * inside the advanced drawer via the `advancedDrawer` locator (the only
+ * filter panel carrying the "Reset" control).
  */
 
 import { test, expect } from '../helpers/auth-fixture';
@@ -113,23 +117,32 @@ async function mockExtractionApis(page: Page): Promise<void> {
 }
 
 /**
- * The advanced `BaseFiltersDrawer` panel — the filter container that carries the
- * "Reset" control. Used to disambiguate the "Female" checkbox, which also
- * appears in the always-visible QuickFilters strip (see header note).
+ * The advanced `BaseFiltersDrawer` panel — scoped via its `data-testid`
+ * (`components/search/BaseFiltersDrawer.tsx`). Used to disambiguate controls
+ * that also appear in the always-visible QuickFilters strip (see header
+ * note) — a `div`-ancestor filter on the "Reset" button is not narrow enough
+ * for this, since every ancestor `div` up to the page root also "has" that
+ * button, so `.first()` would resolve to a near-page-root scope instead of
+ * the drawer itself.
  */
 function advancedDrawer(page: Page): Locator {
-  // The drawer's root <div> is the *outermost* div that contains the "Reset"
-  // control; divs are returned in DOM order (ancestor before descendant), so
-  // `.first()` selects that root (which also wraps every group's controls).
-  return page
-    .locator('div')
-    .filter({ has: page.getByRole('button', { name: /^Reset/ }) })
-    .first();
+  return page.getByTestId('advanced-filters-drawer');
+}
+
+/**
+ * Expand the collapsed advanced drawer via its "Filters" toggle. Idempotent
+ * within a test only in the sense that callers invoke it once before the
+ * first drawer-control interaction — the drawer stays expanded afterwards.
+ */
+async function expandDrawer(page: Page): Promise<void> {
+  await advancedDrawer(page).getByRole('button', { name: /^Filters/ }).click();
 }
 
 /** The drawer-scoped "Female" (offender_gender = gender_female) enum checkbox. */
 function genderFemaleCheckbox(page: Page): Locator {
-  return advancedDrawer(page).getByLabel('Female', { exact: true });
+  return advancedDrawer(page)
+    .getByRole('group', { name: 'Gender', exact: true })
+    .getByLabel('Female', { exact: true });
 }
 
 test.describe('/search/extractions', () => {
@@ -150,6 +163,7 @@ test.describe('/search/extractions', () => {
     await expect(page.getByText(/80 judgments/)).toBeVisible();
 
     // 2. Select offender_gender = gender_female ("Female" via formatEnumOptionLabel).
+    await expandDrawer(page);
     await genderFemaleCheckbox(page).check();
     await expect(page.getByText(/50 judgments/)).toBeVisible();
 
@@ -174,6 +188,7 @@ test.describe('/search/extractions', () => {
     await expect(page.getByText(/120 judgments/)).toBeVisible({ timeout: 15_000 });
 
     await page.getByLabel('Full-text search').fill('robbery');
+    await expandDrawer(page);
     await genderFemaleCheckbox(page).check();
     await page.getByLabel('Co-defendants count minimum').fill('2');
     await expect(page.getByText(/40 judgments/)).toBeVisible();
@@ -193,7 +208,9 @@ test.describe('/search/extractions', () => {
     await expect(page.locator('text=/Gender:\\s*1/')).toBeVisible();
     await expect(page.getByText('Co-defendants count:', { exact: false })).toBeVisible();
 
-    // Drawer control selections restored.
+    // Drawer control selections restored (drawer starts collapsed on this
+    // fresh navigation too — expand it before asserting on its controls).
+    await expandDrawer(page);
     await expect(genderFemaleCheckbox(page)).toBeChecked();
     await expect(page.getByLabel('Co-defendants count minimum')).toHaveValue('2');
 
@@ -208,6 +225,7 @@ test.describe('/search/extractions', () => {
     await expect(page.getByText(/120 judgments/)).toBeVisible({ timeout: 15_000 });
 
     await page.getByLabel('Full-text search').fill('robbery');
+    await expandDrawer(page);
     await genderFemaleCheckbox(page).check();
     await expect(page.getByText(/50 judgments/)).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get('f')).toBeTruthy();
