@@ -213,7 +213,7 @@ function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
   );
 }
 
-function ResultList({
+export function ResultList({
   rows,
   isLoading,
   hasActiveFilters,
@@ -241,9 +241,13 @@ function ResultList({
             ? "No judgment in the corpus matches every filter at once. Extraction coverage is uneven, so combining several fields narrows results quickly — drop the most specific filter, or clear them all and add them back one at a time."
             : "No extracted judgments are available yet. Once documents have been through structured extraction they become searchable here."}
         </p>
-        {hasActiveFilters && (
+        {hasActiveFilters ? (
           <Button variant="outline" size="sm" className="mt-4" onClick={onClearAll}>
             Clear all filters
+          </Button>
+        ) : (
+          <Button asChild size="sm" className="mt-4">
+            <Link href="/extract">Extract from a collection</Link>
           </Button>
         )}
       </div>
