@@ -187,7 +187,7 @@ function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
   return (
     <Link
       href={`/judgments/${row.id}`}
-      className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment)]"
+      className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -393,18 +393,13 @@ function ExtractionSearchPage() {
           onTagQueryChange={onTagQueryChange}
         />
 
-        <div className="space-y-2">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
-            Advanced filters
-          </span>
-          <BaseFiltersDrawer
-            filters={drawerFilters}
-            onChange={setDrawerFilter}
-            onReset={resetDrawerFilters}
-            facetCounts={facetCounts}
-            onTagQueryChange={onTagQueryChange}
-          />
-        </div>
+        <BaseFiltersDrawer
+          filters={drawerFilters}
+          onChange={setDrawerFilter}
+          onReset={resetDrawerFilters}
+          facetCounts={facetCounts}
+          onTagQueryChange={onTagQueryChange}
+        />
       </div>
 
       {/*

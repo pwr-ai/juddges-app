@@ -194,6 +194,7 @@ export function PreSearchFilters({
                 facetCounts={facetCounts}
                 disabled={disabled ?? false}
                 defaultOpen
+                hideToggle
               />
             </div>
           )}
