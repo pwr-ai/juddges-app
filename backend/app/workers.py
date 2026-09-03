@@ -439,6 +439,23 @@ def _fetch_job_results_from_supabase(job_id: str) -> list[dict[str, Any]]:
         return []
 
 
+def _load_completed_results(job_id: str) -> list[dict[str, Any]]:
+    """Return the already-COMPLETED per-document results for a job.
+
+    Redelivery replays the original task message, so without this the task
+    restarts at document zero and re-bills OpenAI for work already paid for.
+    FAILED entries are deliberately not returned: a failure may have been
+    transient and is worth another attempt. Errors reading Supabase are
+    already handled by ``_fetch_job_results_from_supabase``, which degrades
+    to an empty list rather than crashing the job.
+    """
+    return [
+        row
+        for row in _fetch_job_results_from_supabase(job_id)
+        if row.get("status") == DocumentProcessingStatus.COMPLETED.value
+    ]
+
+
 def _build_celery_failure_metadata(
     exception: BaseException | None = None, **extra_meta: Any
 ) -> dict[str, Any]:
@@ -670,70 +687,89 @@ def extract_information_from_documents_task(
                 raise type(e)(f"{error_type}: {error_msg}") from e
             raise
 
+        # Resume support: a redelivered task (task_acks_late) replays the
+        # original document list from scratch. Documents already COMPLETED
+        # in a prior attempt are skipped rather than re-sent to the LLM;
+        # FAILED ones are retried since the failure may have been transient.
+        completed_by_id = {
+            row["document_id"]: row for row in _load_completed_results(self.request.id)
+        }
+
         results: list[DocumentExtractionResponse] = []
         total_documents = len(documents)
 
-        for idx, doc in enumerate(documents):
-            # Extract information - this may fail if LLM service is unavailable
-            # The extractor has its own retry logic, but we catch connection errors here too
-            # Select language-specific extraction instructions based on request language
-            language = request.language or "pl"
-
-            # Load additional instructions from YAML config files
-            base_instructions = InformationExtractor.get_additional_instructions(
-                language=language
+        if completed_by_id:
+            logger.info(
+                f"Job {self.request.id}: resuming, skipping "
+                f"{len(completed_by_id)}/{total_documents} already-completed "
+                f"document(s) from a prior attempt"
             )
 
-            # Combine base instructions with any existing additional_instructions
-            combined_instructions = base_instructions
-            if request.additional_instructions:
-                combined_instructions = (
-                    f"{base_instructions}\n\n{request.additional_instructions}"
+        for idx, doc in enumerate(documents):
+            already_completed = completed_by_id.get(doc.document_id)
+            if already_completed is not None:
+                results.append(already_completed)
+            else:
+                # Extract information - this may fail if LLM service is unavailable
+                # The extractor has its own retry logic, but we catch connection errors here too
+                # Select language-specific extraction instructions based on request language
+                language = request.language or "pl"
+
+                # Load additional instructions from YAML config files
+                base_instructions = InformationExtractor.get_additional_instructions(
+                    language=language
                 )
 
-            try:
-                extracted_data = loop.run_until_complete(
-                    extractor.extract_information_with_structured_output(
-                        {
-                            "extraction_context": request.extraction_context,
-                            "additional_instructions": combined_instructions,
-                            "language": request.language,
-                            "full_text": doc.full_text,
-                        }
+                # Combine base instructions with any existing additional_instructions
+                combined_instructions = base_instructions
+                if request.additional_instructions:
+                    combined_instructions = (
+                        f"{base_instructions}\n\n{request.additional_instructions}"
                     )
-                )
 
-                results.append(
-                    DocumentExtractionResponse(
-                        collection_id=request.collection_id,
-                        document_id=doc.document_id,
-                        status=DocumentProcessingStatus.COMPLETED,
-                        created_at=datetime.now(UTC).isoformat(),
-                        updated_at=datetime.now(UTC).isoformat(),
-                        started_at=datetime.now(UTC).isoformat(),
-                        completed_at=datetime.now(UTC).isoformat(),
-                        error_message=None,
-                        extracted_data=extracted_data,
-                    ).model_dump(mode="json")
-                )
-            except Exception as doc_error:
-                # Individual document failed - mark it as failed but continue with other documents
-                logger.exception(
-                    f"Error extracting from document {doc.document_id}: {doc_error}"
-                )
-                results.append(
-                    DocumentExtractionResponse(
-                        collection_id=request.collection_id,
-                        document_id=doc.document_id,
-                        status=DocumentProcessingStatus.FAILED,
-                        created_at=datetime.now(UTC).isoformat(),
-                        updated_at=datetime.now(UTC).isoformat(),
-                        started_at=datetime.now(UTC).isoformat(),
-                        completed_at=datetime.now(UTC).isoformat(),
-                        error_message=str(doc_error),
-                        extracted_data=None,
-                    ).model_dump(mode="json")
-                )
+                try:
+                    extracted_data = loop.run_until_complete(
+                        extractor.extract_information_with_structured_output(
+                            {
+                                "extraction_context": request.extraction_context,
+                                "additional_instructions": combined_instructions,
+                                "language": request.language,
+                                "full_text": doc.full_text,
+                            }
+                        )
+                    )
+
+                    results.append(
+                        DocumentExtractionResponse(
+                            collection_id=request.collection_id,
+                            document_id=doc.document_id,
+                            status=DocumentProcessingStatus.COMPLETED,
+                            created_at=datetime.now(UTC).isoformat(),
+                            updated_at=datetime.now(UTC).isoformat(),
+                            started_at=datetime.now(UTC).isoformat(),
+                            completed_at=datetime.now(UTC).isoformat(),
+                            error_message=None,
+                            extracted_data=extracted_data,
+                        ).model_dump(mode="json")
+                    )
+                except Exception as doc_error:
+                    # Individual document failed - mark it as failed but continue with other documents
+                    logger.exception(
+                        f"Error extracting from document {doc.document_id}: {doc_error}"
+                    )
+                    results.append(
+                        DocumentExtractionResponse(
+                            collection_id=request.collection_id,
+                            document_id=doc.document_id,
+                            status=DocumentProcessingStatus.FAILED,
+                            created_at=datetime.now(UTC).isoformat(),
+                            updated_at=datetime.now(UTC).isoformat(),
+                            started_at=datetime.now(UTC).isoformat(),
+                            completed_at=datetime.now(UTC).isoformat(),
+                            error_message=str(doc_error),
+                            extracted_data=None,
+                        ).model_dump(mode="json")
+                    )
 
             # Update progress with timing information
             completed_documents = idx + 1
