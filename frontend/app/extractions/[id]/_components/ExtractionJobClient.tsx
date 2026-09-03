@@ -26,6 +26,7 @@ import {
  FolderOpen,
  Table2,
  LayoutList,
+ History,
 } from "lucide-react";
 import Link from "next/link";
 import { ExtractionDataViewer } from "@/lib/styles/components/extraction";
@@ -228,6 +229,16 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  const processedCount = completedResults.length;
  const failedCount = failedResults.length;
 
+ // `attempts` counts worker claims on this job, so anything above 1 means a
+ // worker died or was restarted mid-run and a later one picked the job back
+ // up. Documents already recorded COMPLETED are skipped on that second pass,
+ // so the user needs to be told this is recovery, not a failure (#579).
+ const resumedAttempts =
+ typeof jobData.attempts === "number" && jobData.attempts > 1
+ ? jobData.attempts
+ : null;
+ const resumeProgress = jobData.progress ?? null;
+
  // Compute table data: flatten all completed results and extract columns
  const tableData = useMemo(() => {
  if (completedResults.length === 0) {
@@ -351,6 +362,26 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </div>
 
  <div className="space-y-4">
+ {resumedAttempts !== null && (
+ <BaseCard variant="light" className="border-amber-200">
+ <div className="flex items-start gap-3 -m-3.5 p-6" role="status">
+ <History className="h-5 w-5 text-amber-700 flex-shrink-0 mt-0.5" />
+ <div>
+ <h2 className="font-semibold text-amber-900">
+ This job was interrupted and resumed
+ </h2>
+ <p className="text-sm text-amber-800">
+ {resumeProgress
+ ? `Documents already finished were not re-processed. ${resumeProgress.completed} of ${resumeProgress.total} documents are complete.`
+ : "Documents already finished were not re-processed."}
+ </p>
+ <p className="mt-1 text-xs text-amber-700">
+ Attempt {resumedAttempts}.
+ </p>
+ </div>
+ </div>
+ </BaseCard>
+ )}
  <BaseCard
  variant="light"
  title={

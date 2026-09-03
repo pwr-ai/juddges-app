@@ -526,6 +526,7 @@ export async function GET(request: NextRequest) {
       job_id: jobData.job_id,
       status: jobData.status,
       results: extractions,
+      attempts: jobData.attempts,
       progress: jobData.progress,
       created_at: jobData.created_at,
       updated_at: jobData.updated_at,

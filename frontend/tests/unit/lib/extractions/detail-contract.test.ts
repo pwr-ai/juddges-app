@@ -232,4 +232,81 @@ describe("folding a poll response into page state", () => {
 
     expect(mergeExtractionJobUpdate(done, lateInFlight)).toBe(done);
   });
+
+  // #579: `attempts` drives the resume notice. `normalizeExtractionJobPayload`
+  // always emits the key, so a response that omits it spreads
+  // `attempts: undefined` over a known value and the notice vanishes mid-poll.
+  it("never drops a known attempt count for a response that omits it", () => {
+    const resumed: ExtractionJobResponse = { ...rendered, attempts: 2 };
+
+    const merged = mergeExtractionJobUpdate(resumed, {
+      ...pollWithNulledMetadata,
+      attempts: undefined,
+    });
+
+    expect(merged.attempts).toBe(2);
+  });
+
+  it("never lets an attempt count go backwards", () => {
+    const resumed: ExtractionJobResponse = { ...rendered, attempts: 3 };
+
+    expect(
+      mergeExtractionJobUpdate(resumed, {
+        ...pollWithNulledMetadata,
+        attempts: 1,
+      }).attempts
+    ).toBe(3);
+  });
+
+  it("adopts a higher attempt count reported by a later poll", () => {
+    const firstRun: ExtractionJobResponse = { ...rendered, attempts: 1 };
+
+    expect(
+      mergeExtractionJobUpdate(firstRun, {
+        ...pollWithNulledMetadata,
+        attempts: 2,
+      }).attempts
+    ).toBe(2);
+  });
+
+  it("keeps the last known progress when a poll cannot report it", () => {
+    const merged = mergeExtractionJobUpdate(rendered, {
+      ...pollWithNulledMetadata,
+      progress: undefined,
+    });
+
+    expect(merged.progress).toEqual({ completed: 1, total: 4 });
+  });
+
+  it("derives progress from the backend document counters", () => {
+    const normalized = normalizeExtractionJobPayload(
+      {
+        job_id: JOB_ID,
+        status: "IN_PROGRESS",
+        results: [],
+        attempts: 2,
+        completed_documents: 300,
+        total_documents: 500,
+      },
+      JOB_ID
+    );
+
+    expect(normalized?.attempts).toBe(2);
+    expect(normalized?.progress).toEqual({ completed: 300, total: 500 });
+  });
+
+  it("refuses to invent progress from half-populated counters", () => {
+    const normalized = normalizeExtractionJobPayload(
+      {
+        job_id: JOB_ID,
+        status: "IN_PROGRESS",
+        results: [],
+        completed_documents: 300,
+      },
+      JOB_ID
+    );
+
+    expect(normalized).not.toBeNull();
+    expect(normalized?.progress).toBeUndefined();
+  });
 });
