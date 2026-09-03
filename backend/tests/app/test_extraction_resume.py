@@ -235,3 +235,57 @@ def test_resumed_job_skips_completed_and_retries_failed_documents(
     )
     assert results_by_id["d2"]["status"] == "completed", "the retry succeeded"
     assert results_by_id["d3"]["status"] == "completed"
+
+
+@pytest.mark.unit
+def test_malformed_stored_rows_never_crash_the_reader(monkeypatch):
+    """A row with no document_id must be dropped, not raise.
+
+    Both callers key this list by document_id and one of them runs inside the
+    outer failure handler, where a KeyError would escape a handler that is
+    already handling a failure -- the job would die without persisting and
+    task_acks_late would redeliver it into an unbounded crash loop.
+    """
+    from app import workers
+
+    stored = [
+        {"document_id": "doc-1", "status": "completed"},
+        {"status": "completed"},  # no document_id
+        {"document_id": None, "status": "completed"},  # unusable document_id
+        "not-a-dict-at-all",
+        {"document_id": "doc-2", "status": "failed"},
+    ]
+    supabase = MagicMock()
+    supabase.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[{"results": stored}]
+    )
+    monkeypatch.setattr(workers, "supabase_client", supabase)
+
+    usable = workers._fetch_job_results_from_supabase("job-1")
+
+    assert [row["document_id"] for row in usable] == ["doc-1", "doc-2"]
+    assert [row["document_id"] for row in workers._load_completed_results("job-1")] == [
+        "doc-1"
+    ]
+
+
+@pytest.mark.unit
+def test_merge_survives_malformed_existing_rows():
+    """The late-failure merge must not raise on a row lacking document_id."""
+    from app.workers import _merge_failure_into_results
+
+    merged = _merge_failure_into_results(
+        existing=[
+            {"document_id": "doc-1", "status": "completed", "extracted_data": {"a": 1}},
+            {"status": "completed"},
+            "not-a-dict-at-all",
+        ],
+        document_ids=["doc-1", "doc-2"],
+        collection_id="col-1",
+        error_message="worker lost",
+    )
+
+    by_id = {row["document_id"]: row for row in merged}
+    assert by_id["doc-1"]["status"] == "completed"
+    assert by_id["doc-1"]["extracted_data"] == {"a": 1}
+    assert by_id["doc-2"]["status"] == "failed"

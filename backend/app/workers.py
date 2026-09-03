@@ -309,7 +309,15 @@ def _merge_failure_into_results(
     early failure in the redelivered attempt destroyed everything the earlier
     attempt had completed and paid for.
     """
-    done = {row["document_id"]: row for row in existing}
+    # ``existing`` normally arrives from _fetch_job_results_from_supabase,
+    # which already drops rows without a usable document_id. Guarded again
+    # here because this helper is also called directly and runs inside the
+    # failure handler, where raising would cost the whole job.
+    done = {
+        row["document_id"]: row
+        for row in existing
+        if isinstance(row, dict) and isinstance(row.get("document_id"), str)
+    }
     now = datetime.now(UTC).isoformat()
     merged: list[dict[str, Any]] = []
     for doc_id in document_ids:
@@ -431,7 +439,24 @@ def _fetch_job_results_from_supabase(job_id: str) -> list[dict[str, Any]]:
             rows = [rows]
         if not rows:
             return []
-        return rows[0].get("results") or []
+        stored = rows[0].get("results") or []
+        # Drop anything that is not a usable per-document entry. Both callers
+        # key this list by ``document_id``, and one of them runs INSIDE the
+        # outer failure handler -- a KeyError raised there would escape a
+        # handler that is already handling a failure, so the job would die
+        # without persisting anything and task_acks_late would redeliver it
+        # into an unbounded crash loop. A malformed row is not worth that.
+        usable = [
+            row
+            for row in stored
+            if isinstance(row, dict) and isinstance(row.get("document_id"), str)
+        ]
+        if len(usable) != len(stored):
+            logger.warning(
+                f"Job {job_id}: ignoring {len(stored) - len(usable)} stored "
+                f"result row(s) with no usable document_id"
+            )
+        return usable
     except Exception as fetch_error:
         logger.warning(
             f"Failed to read existing results for job {job_id}: {fetch_error}"
