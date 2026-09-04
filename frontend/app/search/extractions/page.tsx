@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { ActiveFilterChips } from "@/components/filters/extracted-search-filters";
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { Eyebrow, Headline } from "@/components/editorial";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorCard } from "@/lib/styles/components";
 import logger from "@/lib/logger";
-import { useExtractionResults } from "@/lib/extractions/base-schema-filter-api";
+import {
+  useExtractionFacet,
+  useExtractionResults,
+} from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
 import type {
   BaseSchemaFilterRequest,
@@ -183,7 +187,7 @@ function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
   return (
     <Link
       href={`/judgments/${row.id}`}
-      className="block rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+      className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -191,7 +195,7 @@ function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
             {row.title ?? row.case_number ?? row.id}
           </h3>
           {row.case_number && row.title && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 font-mono text-[11px] text-[color:var(--ink-soft)]">
               {row.case_number}
             </p>
           )}
@@ -295,6 +299,22 @@ function ExtractionSearchPage() {
 
   const clearText = () => setTextQuery("");
 
+  // Tag-field autocomplete: lazily fetch facet counts for whichever tag_array
+  // field the user last focused/typed into (issue #581 — the page never wired
+  // this before, so TagArrayControl's suggestion list was permanently empty).
+  const [activeFacetField, setActiveFacetField] = useState<string | null>(null);
+  const { data: activeFacetValues } = useExtractionFacet(
+    activeFacetField,
+    Boolean(activeFacetField),
+  );
+  const facetCounts = useMemo(() => {
+    if (!activeFacetField || !activeFacetValues) return undefined;
+    const counts: Record<string, number> = {};
+    for (const { value, count } of activeFacetValues) counts[value] = count;
+    return { [activeFacetField]: counts };
+  }, [activeFacetField, activeFacetValues]);
+  const onTagQueryChange = (field: string) => setActiveFacetField(field);
+
   // Drawer state management
   const drawerFilters = toDrawerFilters(filters);
 
@@ -338,9 +358,10 @@ function ExtractionSearchPage() {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold">Search by extracted data</h1>
-        <p className="text-sm text-muted-foreground">
+      <header className="flex flex-col gap-2">
+        <Eyebrow tone="oxblood">Search</Eyebrow>
+        <Headline as="h1" size="xs">Search by extracted data</Headline>
+        <p className="max-w-2xl text-sm text-[color:var(--ink-soft)]">
           Filter judgments across the full extracted base schema. Combine
           structured filters with free-text search.
         </p>
@@ -355,6 +376,7 @@ function ExtractionSearchPage() {
             className="flex-1"
             aria-label="Full-text search"
           />
+          <NlFilterDialog onApply={applyNlFilters} />
         </div>
 
         <SubstringInputs
@@ -362,28 +384,45 @@ function ExtractionSearchPage() {
           appealCourtJudgesNames={filters.appeal_court_judges_names}
           offenderRepresentativeName={filters.offender_representative_name}
           onChange={setSubstringFilter}
-          disabled={isLoading}
         />
 
         <QuickFilters
           filters={drawerFilters}
           onChange={setDrawerFilter}
-          disabled={isLoading}
+          facetCounts={facetCounts}
+          onTagQueryChange={onTagQueryChange}
         />
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
-              Advanced filters
-            </span>
-            <NlFilterDialog onApply={applyNlFilters} disabled={isLoading} />
-          </div>
-          <BaseFiltersDrawer
-            filters={drawerFilters}
-            onChange={setDrawerFilter}
-            onReset={resetDrawerFilters}
-            disabled={isLoading}
-          />
+        <BaseFiltersDrawer
+          filters={drawerFilters}
+          onChange={setDrawerFilter}
+          onReset={resetDrawerFilters}
+          facetCounts={facetCounts}
+          onTagQueryChange={onTagQueryChange}
+        />
+      </div>
+
+      {/*
+        Results feedback bar. Sticky at the top of the scrollable content area:
+        the app's Navbar (components/navbar.tsx) is a flex sibling *outside*
+        that scroll container (see AppLayoutWrapper), not inside it, so it
+        never overlaps this bar — no top-* offset needed.
+      */}
+      <div className="sticky top-0 z-10 border-b border-[color:var(--rule)] bg-[color:var(--parchment)] py-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-[color:var(--ink-soft)]">
+            {isLoading
+              ? "Searching…"
+              : total === 0
+                ? "No results"
+                : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
+            {isFetching && !isLoading && " (updating…)"}
+          </p>
+          {error && (
+            <Button variant="ghost" size="sm" onClick={() => clearAll()}>
+              Reset
+            </Button>
+          )}
         </div>
       </div>
 
@@ -394,22 +433,6 @@ function ExtractionSearchPage() {
         onClearText={clearText}
         onClearAll={clearAll}
       />
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {isLoading
-            ? "Searching…"
-            : total === 0
-              ? "No results"
-              : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
-          {isFetching && !isLoading && " (updating…)"}
-        </p>
-        {error && (
-          <Button variant="ghost" size="sm" onClick={() => clearAll()}>
-            Reset
-          </Button>
-        )}
-      </div>
 
       {error && (
         <div role="alert">

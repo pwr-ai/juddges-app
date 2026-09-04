@@ -2,7 +2,7 @@
 import React from "react";
 import {
   QUICK_FILTER_CONFIGS,
-  formatEnumLabel,
+  formatEnumOptionLabel,
 } from "@/lib/extractions/base-schema-filter-config";
 import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
 import { NumericRangeControl } from "./controls/NumericRangeControl";
@@ -29,12 +29,13 @@ export interface QuickFiltersProps {
 }
 
 /**
- * Always-visible one-row strip of the highest-signal extraction filters, shown
- * above the advanced drawer on `/search/extractions`. Wires the same controls
- * the drawer uses to the same shared filter state, so the two stay in sync.
+ * Always-visible strip of the highest-signal extraction filters, shown above
+ * the advanced drawer on `/search/extractions`. Wires the same controls the
+ * drawer uses to the same shared filter state, so the two stay in sync.
  *
- * Responsive: hidden below `md:` (use the drawer on small screens) and lays the
- * controls out in a single row from `lg:` upward.
+ * Responsive: hidden below `md:` (use the drawer on small screens), 2 columns
+ * from `md:` upward, and 3 from `xl:` upward — narrow enough that a
+ * date-range control's two inputs never overflow into a neighbouring column.
  */
 export function QuickFilters({
   filters,
@@ -53,27 +54,28 @@ export function QuickFilters({
       <span className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--ink-soft)]">
         Quick filters
       </span>
-      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2 xl:grid-cols-3">
         {QUICK_FILTER_CONFIGS.map((cfg) => {
           const v = filters[cfg.field];
           const setVal = (next: BaseFilterValue | undefined) =>
             onChange(cfg.field, next);
+          let content: React.JSX.Element | null;
           switch (cfg.control) {
             case "numeric_range":
-              return (
+              content = (
                 <NumericRangeControl
-                  key={cfg.field}
                   label={cfg.label}
                   description={cfg.help}
                   value={v?.kind === "numeric_range" ? v : undefined}
                   onChange={setVal}
+                  showDistribution={cfg.showDistribution}
                   disabled={disabled}
                 />
               );
+              break;
             case "date_range":
-              return (
+              content = (
                 <DateRangeControl
-                  key={cfg.field}
                   label={cfg.label}
                   description={cfg.help}
                   value={v?.kind === "date_range" ? v : undefined}
@@ -81,10 +83,10 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "boolean_tri":
-              return (
+              content = (
                 <BooleanTriControl
-                  key={cfg.field}
                   label={cfg.label}
                   description={cfg.help}
                   value={v?.kind === "boolean_tri" ? v : undefined}
@@ -92,23 +94,23 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "enum_multi":
-              return (
+              content = (
                 <EnumMultiControl
-                  key={cfg.field}
                   label={cfg.label}
                   description={cfg.help}
                   options={cfg.enumValues ?? []}
-                  optionLabel={formatEnumLabel}
+                  optionLabel={(optValue) => formatEnumOptionLabel(cfg.field, optValue)}
                   value={v?.kind === "enum_multi" ? v : undefined}
                   onChange={setVal}
                   disabled={disabled}
                 />
               );
+              break;
             case "tag_array":
-              return (
+              content = (
                 <TagArrayControl
-                  key={cfg.field}
                   label={cfg.label}
                   description={cfg.help}
                   value={v?.kind === "tag_array" ? v : undefined}
@@ -122,9 +124,17 @@ export function QuickFilters({
                   disabled={disabled}
                 />
               );
+              break;
             case "substring":
-              return null; // substring fields live in their own inputs above
+              content = null; // substring fields live in their own inputs above
+              break;
           }
+          if (content === null) return null;
+          return (
+            <div key={cfg.field} className="min-w-0">
+              {content}
+            </div>
+          );
         })}
       </div>
     </div>

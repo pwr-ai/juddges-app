@@ -33,12 +33,16 @@ export function EnumMultiControl({
         {options.map((opt) => {
           const text = optionLabel?.(opt) ?? opt;
           return (
-            <label key={opt} className="flex items-center gap-1 text-xs text-[color:var(--ink)]">
+            <label
+              key={opt}
+              className="flex cursor-pointer items-center gap-1 py-0.5 text-xs text-[color:var(--ink)]"
+            >
               <input
                 type="checkbox" disabled={disabled}
                 checked={selected.has(opt)}
                 onChange={() => toggle(opt)}
                 aria-label={text}
+                className="accent-[var(--oxblood)] size-3.5 shrink-0"
               />
               <span>{text}</span>
             </label>
