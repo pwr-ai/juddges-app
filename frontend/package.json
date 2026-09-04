@@ -205,7 +205,8 @@
     },
     "docx": {
       "nanoid": "^5.1.16"
-    }
+    },
+    "fast-uri": "^4.1.4"
   },
   "optionalDependencies": {
     "lightningcss-linux-arm64-musl": "^1.33.0",
