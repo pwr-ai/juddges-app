@@ -131,13 +131,45 @@ class TestSupabaseSearchClient:
 
         mock_client, mock_table = mock_supabase_client
 
-        # Setup mock response
+        # The RPC returns rows ordered by vector similarity.
         mock_response = Mock()
-        mock_response.data = sample_chunk_data
-        mock_table.select.return_value.in_.return_value.execute.return_value = (
-            mock_response
-        )
-        mock_table.select.return_value.execute.return_value = mock_response
+        mock_response.data = [
+            {
+                "chunk_id": "chunk-123",
+                "document_id": "doc_123",
+                "chunk_index": 1,
+                "chunk_text": sample_chunk_data[0]["chunk_text"],
+                "chunk_type": "paragraph",
+                "section_title": "Facts",
+                "is_key_section": False,
+                "token_count": 10,
+                "language": "pl",
+                "similarity": 0.89,
+                "case_number": "II FSK 1234/21",
+                "jurisdiction": "PL",
+                "court_name": "Supreme Court",
+                "decision_date": "2024-01-15",
+                "title": "Smith v. Jones",
+            },
+            {
+                "chunk_id": "chunk-456",
+                "document_id": "doc_456",
+                "chunk_index": 2,
+                "chunk_text": sample_chunk_data[1]["chunk_text"],
+                "chunk_type": "paragraph",
+                "section_title": "Decision",
+                "is_key_section": False,
+                "token_count": 11,
+                "language": "en",
+                "similarity": 0.75,
+                "case_number": "CA 2024/789",
+                "jurisdiction": "UK",
+                "court_name": "Court of Appeal",
+                "decision_date": "2024-02-20",
+                "title": "Brown v. Green",
+            },
+        ]
+        mock_client.rpc.return_value.execute.return_value = mock_response
 
         with patch(
             "juddges_search.retrieval.supabase_search.create_client",
@@ -157,6 +189,18 @@ class TestSupabaseSearchClient:
             assert results[0].document_id == "doc_123"
             assert results[0].chunk_text == "The court ruled in favor of the plaintiff."
             assert results[0].similarity == 0.89
+            assert [result.similarity for result in results] == [0.89, 0.75]
+            mock_client.rpc.assert_called_once_with(
+                "search_chunks_by_embedding",
+                {
+                    "query_embedding": query_embedding,
+                    "match_threshold": 0.5,
+                    "match_count": 10,
+                    "filter_language": None,
+                    "filter_jurisdiction": None,
+                    "boost_key_sections": False,
+                },
+            )
 
     @pytest.mark.asyncio
     async def test_vector_search_chunks_with_filters(
@@ -168,17 +212,9 @@ class TestSupabaseSearchClient:
 
         mock_client, mock_table = mock_supabase_client
 
-        # Setup mock chain
-        mock_select = Mock()
-        mock_in_lang = Mock()
-        mock_in_doc = Mock()
         mock_response = Mock()
         mock_response.data = sample_chunk_data[:1]  # Return only one result
-
-        mock_table.select.return_value = mock_select
-        mock_select.in_.return_value = mock_in_lang
-        mock_in_lang.in_.return_value = mock_in_doc
-        mock_in_doc.execute.return_value = mock_response
+        mock_client.rpc.return_value.execute.return_value = mock_response
 
         with patch(
             "juddges_search.retrieval.supabase_search.create_client",
@@ -196,8 +232,36 @@ class TestSupabaseSearchClient:
                 document_types=["judgment"],
             )
 
-            # Verify filters were applied (mock chain was called)
-            mock_table.select.assert_called_once()
+            mock_client.rpc.assert_called_once_with(
+                "search_chunks_by_embedding",
+                {
+                    "query_embedding": query_embedding,
+                    "match_threshold": 0.5,
+                    "match_count": 10,
+                    "filter_language": "pl",
+                    "filter_jurisdiction": None,
+                    "boost_key_sections": False,
+                },
+            )
+
+    @pytest.mark.asyncio
+    async def test_vector_search_chunks_surfaces_rpc_errors(
+        self, mock_supabase_client, monkeypatch
+    ):
+        """Database errors must remain visible to callers."""
+        monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+        mock_client, _ = mock_supabase_client
+        mock_client.rpc.side_effect = RuntimeError("database unavailable")
+
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
+            client = SupabaseSearchClient()
+
+            with pytest.raises(RuntimeError, match="database unavailable"):
+                await client.vector_search_chunks(query_embedding=[0.1] * 1024)
 
     @pytest.mark.asyncio
     async def test_full_text_search_chunks_success(
