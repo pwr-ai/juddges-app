@@ -64,55 +64,62 @@ class SupabaseSearchClient:
         Returns:
             List of DocumentChunk objects with similarity scores
         """
-        try:
-            # Build the base query
-            query_builder = self.client.table("document_chunks").select(
-                "*, judgments!inner(jurisdiction, court_name, decision_date)"
-            )
-
-            # Apply filters
-            if languages:
-                query_builder = query_builder.in_("language", languages)
-            if document_types:
-                query_builder = query_builder.in_("document_type", document_types)
-
-            # Execute vector similarity search
-            # Note: Supabase pgvector uses <=> for cosine distance
-            # Similarity = 1 - distance
-            response = query_builder.execute()
-
-            if not response.data:
-                return []
-
-            # Convert to DocumentChunk objects
-            chunks = []
-            for row in response.data[:match_count]:
-                # Calculate similarity from cosine distance
-                # Assuming the embedding comparison is done via RPC function
-                chunk = DocumentChunk(
-                    document_id=row.get("document_id", ""),
-                    document_type=row.get("document_type"),
-                    language=row.get("language"),
-                    chunk_id=row.get("chunk_id", 0),
-                    chunk_text=row.get("chunk_text", ""),
-                    segment_type=row.get("segment_type"),
-                    position=row.get("position"),
-                    similarity=row.get("similarity"),
-                    vector_score=row.get("similarity"),
-                    metadata={
-                        "court_name": row.get("judgments", {}).get("court_name"),
-                        "decision_date": row.get("judgments", {}).get("decision_date"),
-                        "jurisdiction": row.get("judgments", {}).get("jurisdiction"),
-                    },
-                )
-                chunks.append(chunk)
-
-            logger.info(f"Vector search returned {len(chunks)} chunks")
-            return chunks
-
-        except Exception as e:
-            logger.error(f"Vector search failed: {e}")
+        if document_types and any(document_type != "judgment" for document_type in document_types):
             return []
+
+        # The database function accepts one language at a time. Query each
+        # requested language separately, then merge the already-ranked result
+        # sets so a multi-language request still returns the global top-k.
+        filter_languages = languages or [None]
+        rows: list[dict[str, Any]] = []
+        for language in filter_languages:
+            response = self.client.rpc(
+                "search_chunks_by_embedding",
+                {
+                    "query_embedding": query_embedding,
+                    "match_threshold": match_threshold,
+                    "match_count": match_count,
+                    "filter_language": language,
+                    "filter_jurisdiction": None,
+                    # Return the raw cosine similarity requested by callers;
+                    # key-section boosting changes the meaning of the score.
+                    "boost_key_sections": False,
+                },
+            ).execute()
+            rows.extend(response.data or [])
+
+        rows.sort(key=lambda row: float(row.get("similarity") or 0.0), reverse=True)
+        chunks = [
+            DocumentChunk(
+                document_id=str(row.get("document_id", "")),
+                # document_chunks are judgment-only in the current schema.
+                document_type="judgment",
+                language=row.get("language"),
+                # DocumentChunk.chunk_id is the per-document integer index;
+                # preserve the RPC UUID in metadata for callers that need it.
+                chunk_id=row.get("chunk_index", 0),
+                chunk_text=row.get("chunk_text", ""),
+                chunk_type=row.get("chunk_type"),
+                position=row.get("chunk_index"),
+                similarity=row.get("similarity"),
+                vector_score=row.get("similarity"),
+                metadata={
+                    "chunk_uuid": row.get("chunk_id"),
+                    "section_title": row.get("section_title"),
+                    "is_key_section": row.get("is_key_section"),
+                    "token_count": row.get("token_count"),
+                    "case_number": row.get("case_number"),
+                    "title": row.get("title"),
+                    "court_name": row.get("court_name"),
+                    "decision_date": row.get("decision_date"),
+                    "jurisdiction": row.get("jurisdiction"),
+                },
+            )
+            for row in rows[:match_count]
+        ]
+
+        logger.info(f"Vector search returned {len(chunks)} chunks")
+        return chunks
 
     async def full_text_search_chunks(
         self,
