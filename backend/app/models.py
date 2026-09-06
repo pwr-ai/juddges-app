@@ -479,6 +479,21 @@ class BatchExtractionResponse(BaseModel):
     )
     status: str
     results: list[DocumentExtractionResponse] | None = None
+    attempts: int | None = Field(
+        default=None,
+        description=(
+            "How many times a worker has claimed this job. Greater than 1 means "
+            "the job was interrupted and resumed rather than run once."
+        ),
+    )
+    completed_documents: int | None = Field(
+        default=None,
+        description="Documents that have finished processing, from the job row.",
+    )
+    total_documents: int | None = Field(
+        default=None,
+        description="Documents the job was submitted with, from the job row.",
+    )
 
 
 class SimilarDocumentsRequest(BaseModel):

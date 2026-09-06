@@ -5915,6 +5915,16 @@ export interface components {
         /** BatchExtractionResponse */
         BatchExtractionResponse: {
             /**
+             * Attempts
+             * @description How many times a worker has claimed this job. Greater than 1 means the job was interrupted and resumed rather than run once.
+             */
+            attempts?: number | null;
+            /**
+             * Completed Documents
+             * @description Documents that have finished processing, from the job row.
+             */
+            completed_documents?: number | null;
+            /**
              * Job Id
              * @description Job ID (also known as task_id for backward compatibility)
              */
@@ -5923,6 +5933,11 @@ export interface components {
             results?: components["schemas"]["DocumentExtractionResponse"][] | null;
             /** Status */
             status: string;
+            /**
+             * Total Documents
+             * @description Documents the job was submitted with, from the job row.
+             */
+            total_documents?: number | null;
         };
         /**
          * BatchResponseMetadata

@@ -694,7 +694,7 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents",
+            "job_id, user_id, status, completed_documents, total_documents, attempts",
             "job_id, user_id, results",
         ]
 
@@ -737,11 +737,97 @@ class TestGetExtractionJobEndpoint:
             ]
             selected_fields = query.select.call_args.args[0]
             assert selected_fields == (
-                "job_id, user_id, status, completed_documents, total_documents"
+                "job_id, user_id, status, completed_documents, total_documents, attempts"
             )
             assert "results" not in selected_fields
             assert "document_ids" not in selected_fields
             assert "prompt_id" not in selected_fields
+
+    @pytest.mark.unit
+    async def test_job_detail_reports_attempts_and_progress(
+        self, client, valid_api_headers
+    ) -> None:
+        """A resumed job must say so on the wire (#579).
+
+        `attempts` and the document counters live only on the job row. Until
+        this endpoint copied them onto the response the UI had no way to tell a
+        first run from a job that was interrupted and picked back up.
+        """
+        _install_jwt_user_override(_USER_001)
+        mock_result = MagicMock()
+        mock_result.state = "STARTED"
+        mock_result.ready.return_value = False
+        mock_result.info = {"completed_documents": 300}
+
+        mock_supabase = _owned_job_store(
+            {
+                "job_id": _GET_JOB_ID,
+                "user_id": _USER_001,
+                "status": "STARTED",
+                "completed_documents": 300,
+                "total_documents": 500,
+                "attempts": 2,
+            }
+        )
+
+        with (
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router.update_job_status_in_supabase",
+                return_value=True,
+            ),
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["attempts"] == 2
+        assert data["completed_documents"] == 300
+        assert data["total_documents"] == 500
+
+    @pytest.mark.unit
+    async def test_job_detail_leaves_missing_counters_null(
+        self, client, valid_api_headers
+    ) -> None:
+        """A row without counters must report null, never a fabricated zero."""
+        _install_jwt_user_override(_USER_001)
+        mock_result = MagicMock()
+        mock_result.state = "STARTED"
+        mock_result.ready.return_value = False
+        mock_result.info = None
+
+        mock_supabase = _owned_job_store(
+            {"job_id": _GET_JOB_ID, "user_id": _USER_001, "status": "STARTED"}
+        )
+
+        with (
+            patch(
+                "app.extraction_domain.jobs_router.AsyncResult",
+                return_value=mock_result,
+            ),
+            patch(
+                "app.extraction_domain.jobs_router.update_job_status_in_supabase",
+                return_value=True,
+            ),
+            patch("app.extraction_domain.jobs_router.supabase", mock_supabase),
+        ):
+            response = await client.get(
+                f"/extractions/{_GET_JOB_ID}",
+                headers={**valid_api_headers, **_BEARER_HEADERS},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["attempts"] is None
+        assert data["completed_documents"] is None
+        assert data["total_documents"] is None
 
     @pytest.mark.unit
     async def test_lightweight_poll_omits_terminal_results(
@@ -784,7 +870,7 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents"
+            "job_id, user_id, status, completed_documents, total_documents, attempts"
         ]
 
     @pytest.mark.unit
@@ -834,10 +920,10 @@ class TestGetExtractionJobEndpoint:
             for call in mock_supabase.table.return_value.select.call_args_list
         ]
         assert selected_fields == [
-            "job_id, user_id, status, completed_documents, total_documents",
+            "job_id, user_id, status, completed_documents, total_documents, attempts",
             (
                 "job_id, user_id, status, completed_documents, total_documents, "
-                "collection_id, schema_id, document_ids, language, "
+                "attempts, collection_id, schema_id, document_ids, language, "
                 "extraction_context, prompt_id"
             ),
         ]

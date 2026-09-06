@@ -71,7 +71,9 @@ _WORKER_UNAVAILABLE_MARKERS = (
     "not available",
 )
 _RESULT_METADATA_MARKERS = ("started_at", "elapsed_time_seconds", "exc_type")
-_JOB_STATE_FIELDS = "job_id, user_id, status, completed_documents, total_documents"
+_JOB_STATE_FIELDS = (
+    "job_id, user_id, status, completed_documents, total_documents, attempts"
+)
 _JOB_RECOVERY_FIELDS = (
     f"{_JOB_STATE_FIELDS}, collection_id, schema_id, document_ids, "
     "language, extraction_context, prompt_id"
@@ -133,6 +135,41 @@ def _with_optional_results(
     if include_results:
         return response
     return response.model_copy(update={"results": None})
+
+
+def _optional_count(value: object) -> int | None:
+    """Coerce a persisted counter to an int, or None when it is not one."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value
+
+
+def _with_job_progress(
+    response: BatchExtractionResponse,
+    job_record: dict,
+    completed_documents: int | None = None,
+) -> BatchExtractionResponse:
+    """Attach the persisted attempt and progress counters to a job response.
+
+    These live on the `extraction_jobs` row, not in Celery state, so every
+    response path in the detail endpoint has to copy them across. `attempts` is
+    what tells the UI a job was interrupted and resumed instead of run once;
+    without it the counters never leave the database.
+
+    Fields stay None when the row does not carry a usable value — a missing
+    counter is not a zero.
+    """
+    return response.model_copy(
+        update={
+            "attempts": _optional_count(job_record.get("attempts")),
+            "completed_documents": (
+                completed_documents
+                if completed_documents is not None
+                else _optional_count(job_record.get("completed_documents"))
+            ),
+            "total_documents": _optional_count(job_record.get("total_documents")),
+        }
+    )
 
 
 def _worker_unavailable_error() -> HTTPException:
@@ -969,37 +1006,52 @@ async def get_extraction_job(
         task_result = AsyncResult(id=job_id, app=celery_app)
         task_state = _safe_get_task_state(task_result, job_id)
         if task_state is None:
-            return _with_optional_results(
-                _resolve_pending_job(
-                    job_id, user.id, job_record, include_results=include_results
+            return _with_job_progress(
+                _with_optional_results(
+                    _resolve_pending_job(
+                        job_id, user.id, job_record, include_results=include_results
+                    ),
+                    include_results,
                 ),
-                include_results,
+                job_record,
             )
 
         if task_state == "PENDING" and not task_result.info:
-            return _with_optional_results(
-                _resolve_pending_job(
-                    job_id, user.id, job_record, include_results=include_results
+            return _with_job_progress(
+                _with_optional_results(
+                    _resolve_pending_job(
+                        job_id, user.id, job_record, include_results=include_results
+                    ),
+                    include_results,
                 ),
-                include_results,
+                job_record,
             )
 
         not_ready_response = _handle_not_ready_task(task_result, task_state, job_id)
         if not_ready_response:
-            return _with_optional_results(not_ready_response, include_results)
+            return _with_job_progress(
+                _with_optional_results(not_ready_response, include_results), job_record
+            )
 
         failed_response = _handle_failed_task(task_result, task_state, job_id)
         if failed_response:
-            return _with_optional_results(failed_response, include_results)
+            return _with_job_progress(
+                _with_optional_results(failed_response, include_results), job_record
+            )
 
         if not include_results:
             persisted_response = _preserve_existing_job_progress(job_id, job_record)
             if persisted_response:
-                return _with_optional_results(persisted_response, False)
-            return BatchExtractionResponse(
-                task_id=job_id,
-                status=simplify_job_status(task_state),
-                results=None,
+                return _with_job_progress(
+                    _with_optional_results(persisted_response, False), job_record
+                )
+            return _with_job_progress(
+                BatchExtractionResponse(
+                    task_id=job_id,
+                    status=simplify_job_status(task_state),
+                    results=None,
+                ),
+                job_record,
             )
 
         try:
@@ -1017,13 +1069,16 @@ async def get_extraction_job(
                 update_job_status_in_supabase(
                     job_id, simplified_status, error_message=str(error_msg)
                 )
-                return _with_optional_results(
-                    BatchExtractionResponse(
-                        task_id=job_id,
-                        status=simplified_status,
-                        results=[],
+                return _with_job_progress(
+                    _with_optional_results(
+                        BatchExtractionResponse(
+                            task_id=job_id,
+                            status=simplified_status,
+                            results=[],
+                        ),
+                        include_results,
                     ),
-                    include_results,
+                    job_record,
                 )
 
             responses, normalized_results = _parse_task_results(results)
@@ -1035,13 +1090,20 @@ async def get_extraction_job(
                 completed_documents=processed_count,
                 results=normalized_results,
             )
-            return _with_optional_results(
-                BatchExtractionResponse(
-                    task_id=job_id,
-                    status=simplified_status,
-                    results=responses,
+            # The row was read before the task finished, so its
+            # completed_documents is stale here; the freshly counted value is
+            # the one just written back to Supabase.
+            return _with_job_progress(
+                _with_optional_results(
+                    BatchExtractionResponse(
+                        task_id=job_id,
+                        status=simplified_status,
+                        results=responses,
+                    ),
+                    include_results,
                 ),
-                include_results,
+                job_record,
+                completed_documents=processed_count,
             )
         except Exception as get_error:
             # Broad catch: Celery task.get() can raise backend errors, celery.exceptions,
