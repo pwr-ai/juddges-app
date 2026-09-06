@@ -36,13 +36,13 @@ export function DateRangeControl({
       {description && (
         <div className="mb-1 text-[11px] text-[color:var(--ink-soft)]">{description}</div>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="date" disabled={disabled}
           value={epochSecondsToDate(range.min)}
           aria-label={`${label} minimum`}
           onChange={(e) => emit("min", e.target.value)}
-          className="w-full rounded border border-[color:var(--rule)] bg-white px-2 py-1 text-xs text-[color:var(--ink)] focus:outline-none focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50"
+          className="min-w-0 flex-1 basis-[130px] rounded border border-[color:var(--rule)] bg-white px-2 py-1 text-xs text-[color:var(--ink)] focus:outline-none focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50"
         />
         <span className="text-[color:var(--ink-soft)]">–</span>
         <input
@@ -50,7 +50,7 @@ export function DateRangeControl({
           value={epochSecondsToDate(range.max)}
           aria-label={`${label} maximum`}
           onChange={(e) => emit("max", e.target.value)}
-          className="w-full rounded border border-[color:var(--rule)] bg-white px-2 py-1 text-xs text-[color:var(--ink)] focus:outline-none focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50"
+          className="min-w-0 flex-1 basis-[130px] rounded border border-[color:var(--rule)] bg-white px-2 py-1 text-xs text-[color:var(--ink)] focus:outline-none focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50"
         />
       </div>
     </div>

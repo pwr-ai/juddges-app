@@ -14,6 +14,13 @@ export interface NumericRangeControlProps {
   field?: string;
   min?: number;
   step?: number;
+  /**
+   * Whether to fetch/render the distribution histogram and range slider.
+   * Defaults to `true`. Set `false` for identifier-like fields (e.g. case
+   * number) where a value distribution is meaningless — only the min/max
+   * inputs render.
+   */
+  showDistribution?: boolean;
   disabled?: boolean;
 }
 
@@ -31,7 +38,7 @@ function fmtEdge(n: number): string {
 const CHART_HEIGHT = 56;
 
 export function NumericRangeControl({
-  label, description, value, onChange, field, min, step, disabled,
+  label, description, value, onChange, field, min, step, showDistribution = true, disabled,
 }: NumericRangeControlProps) {
   const range = value?.range ?? {};
 
@@ -45,9 +52,15 @@ export function NumericRangeControl({
   };
 
   // -------------------------------------------------------------------------
-  // Distribution histogram (cached 1h). Only fetched when a field is provided.
+  // Distribution histogram (cached 1h). Only fetched when a field is provided
+  // and the caller hasn't opted out (e.g. identifier-like fields such as
+  // case_number, where a value distribution is meaningless).
   // -------------------------------------------------------------------------
-  const histogram = useNumericHistogram(field ?? null, 20, Boolean(field));
+  const histogram = useNumericHistogram(
+    field ?? null,
+    20,
+    Boolean(field) && showDistribution,
+  );
   const buckets = React.useMemo(
     () => histogram.data?.buckets ?? [],
     [histogram.data],
@@ -95,7 +108,7 @@ export function NumericRangeControl({
   });
 
   const inputClass =
-    "w-full rounded border border-[color:var(--rule)] bg-white px-2 py-1 text-xs text-[color:var(--ink)] focus:outline-none focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50";
+    "min-w-0 flex-1 rounded border border-[color:var(--rule)] bg-white px-2 py-1 text-xs text-[color:var(--ink)] focus:outline-none focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50";
 
   return (
     <div>
@@ -105,7 +118,7 @@ export function NumericRangeControl({
       )}
 
       {/* Distribution histogram — purely informational, hidden from a11y tree */}
-      {field && (histogram.isLoading || chartData.length > 0) && (
+      {field && showDistribution && (histogram.isLoading || chartData.length > 0) && (
         <div className="mb-1" style={{ height: CHART_HEIGHT }} aria-hidden="true">
           {histogram.isLoading ? (
             <div className="flex h-full items-center justify-center text-[11px] text-[color:var(--ink-soft)]">
@@ -147,7 +160,7 @@ export function NumericRangeControl({
       )}
 
       {/* Range slider — overlays the histogram domain */}
-      {field && hasDomain && (
+      {field && showDistribution && hasDomain && (
         <Slider
           value={sliderValue}
           min={domainMin}
@@ -166,6 +179,7 @@ export function NumericRangeControl({
           type="number" min={min} step={step}
           value={range.min ?? ""} disabled={disabled}
           aria-label={`${label} minimum`}
+          placeholder="min"
           onChange={(e) => emitSide("min", e.target.value)}
           className={inputClass}
         />
@@ -174,6 +188,7 @@ export function NumericRangeControl({
           type="number" min={min} step={step}
           value={range.max ?? ""} disabled={disabled}
           aria-label={`${label} maximum`}
+          placeholder="max"
           onChange={(e) => emitSide("max", e.target.value)}
           className={inputClass}
         />
