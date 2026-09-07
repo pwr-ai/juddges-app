@@ -1,0 +1,133 @@
+- id: UXD-001
+  title: Extraction search page broken quick-filter layout, repetitive enum labels, and flickering inputs
+  source: heuristic-audit-2026-09
+  area: extractions
+  type: consistency
+  severity: 3
+  reach: 0.60
+  frequency: high
+  effort: 2
+  evidence:
+    - "frontend/app/search/extractions/page.tsx: quick filters grid lg:grid-cols-5 collides and wraps date inputs"
+    - "frontend/lib/extractions/base-schema-filter-config.ts: formatEnumLabel prepends redundant prefix like Outcome dismissed or refused"
+    - "github issue #581: all filter inputs get disabled={isLoading} flashing disabled on every keystroke/refetch"
+  workaround: "users scroll past broken quick filter columns and squint at wrapped labels"
+  state: fixed
+  owner: frontend-team
+  issue: 581
+  first_seen: 2026-09-03
+  review_by: 2026-12-03
+
+- id: UXD-002
+  title: Framer motion ignores OS prefers-reduced-motion in global animation wrappers
+  source: a11y-audit-2026-08
+  area: landing-and-app
+  type: feedback
+  severity: 3
+  reach: 0.20
+  frequency: high
+  effort: 1
+  evidence:
+    - "frontend/components/landing/LandingPage.tsx: uses motion.section whileInView without reducedMotion config"
+    - "github issue #516: landing page runs 28 animations with no prefers-reduced-motion guard"
+  workaround: "users with vestibular sensitivities experience unwanted motion on load"
+  state: fixed
+  owner: frontend-team
+  issue: 516
+  first_seen: 2026-08-17
+  review_by: 2026-11-17
+
+- id: UXD-003
+  title: Empty extraction search lacks call-to-action to extract or view schemas
+  source: heuristic-audit-2026-09
+  area: extractions
+  type: onboarding
+  severity: 3
+  reach: 0.45
+  frequency: medium
+  effort: 1
+  evidence:
+    - "frontend/app/search/extractions/page.tsx:242: displays text 'No extracted judgments are available yet' with no link to /extract or /schemas"
+    - "github issue #579: extraction path unreachable from search empty state"
+  workaround: "users must manually know the URL /extract or /schemas to initiate extractions"
+  state: fixed
+  owner: frontend-team
+  issue: 579
+  first_seen: 2026-09-02
+  review_by: 2026-12-02
+
+- id: UXD-004
+  title: Natural language query button label 'Paste your question' is ambiguous
+  source: heuristic-audit-2026-09
+  area: extractions
+  type: copy
+  severity: 2
+  reach: 0.40
+  frequency: medium
+  effort: 1
+  evidence:
+    - "frontend/components/search/NlFilterDialog.tsx:135: button label 'Paste your question' does not clarify it converts NL to structured filters"
+    - "github issue #581: button label does not explain action"
+  workaround: "users open dialog out of curiosity without knowing it will extract filters"
+  state: fixed
+  owner: frontend-team
+  issue: 581
+  first_seen: 2026-09-03
+  review_by: 2026-12-03
+
+- id: UXD-005
+  title: Advanced filters drawer pushes search results below the fold on desktop
+  source: heuristic-audit-2026-09
+  area: extractions
+  type: efficiency
+  severity: 2
+  reach: 0.55
+  frequency: high
+  effort: 2
+  evidence:
+    - "frontend/components/search/BaseFiltersDrawer.tsx: all 9 field groups rendered simultaneously expanded"
+    - "github issue #581: results/count are below fold with no visible feedback"
+  workaround: "users must scroll through tall filter forms on every search"
+  state: fixed
+  owner: frontend-team
+  issue: 581
+  first_seen: 2026-09-03
+  review_by: 2026-12-03
+
+- id: UXD-006
+  title: Feature discoverability gap in navigation sidebar for operational routes
+  source: heuristic-audit-2026-08
+  area: navigation
+  type: navigation
+  severity: 2
+  reach: 0.50
+  frequency: medium
+  effort: 2
+  evidence:
+    - "frontend/components/app-sidebar.tsx: /extract and /reasoning-lines omitted from sidebar"
+    - "github issue #536: harmonize sidebar and header navigation"
+  workaround: "users rely on command palette or URL navigation"
+  state: accepted
+  owner: frontend-team
+  issue: 536
+  first_seen: 2026-08-24
+  review_by: 2026-11-24
+
+- id: UXD-007
+  title: Search history not surfaced directly in main search interface
+  source: heuristic-audit-2026-06
+  area: search
+  type: efficiency
+  severity: 2
+  reach: 0.35
+  frequency: medium
+  effort: 2
+  evidence:
+    - "frontend/app/search/page.tsx: recent searches dropdown omitted from search bar"
+    - "github issue #228: surface user search history with easy re-run"
+  workaround: "users navigate to /history page to view previous searches"
+  state: accepted
+  owner: frontend-team
+  issue: 228
+  first_seen: 2026-06-15
+  review_by: 2026-12-15
