@@ -206,7 +206,7 @@ class TestSupabaseSearchClient:
     async def test_vector_search_chunks_with_filters(
         self, mock_supabase_client, sample_chunk_data, monkeypatch
     ):
-        """Test vector search with language and document type filters."""
+        """Test vector search with language and mixed document type filters."""
         monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
 
@@ -229,20 +229,43 @@ class TestSupabaseSearchClient:
                 query_embedding=query_embedding,
                 match_count=10,
                 languages=["pl"],
-                document_types=["judgment"],
+                document_types=["judgment", "statute"],
             )
 
             mock_client.rpc.assert_called_once_with(
                 "search_chunks_by_embedding",
                 {
                     "query_embedding": query_embedding,
-                    "match_threshold": 0.5,
+                    "match_threshold": 0.2,
                     "match_count": 10,
                     "filter_language": "pl",
                     "filter_jurisdiction": None,
                     "boost_key_sections": False,
                 },
             )
+
+    @pytest.mark.asyncio
+    async def test_vector_search_chunks_skips_non_judgment_document_types(
+        self, mock_supabase_client, monkeypatch
+    ):
+        """Do not query the judgment-only RPC for incompatible document types."""
+        monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+        mock_client, _ = mock_supabase_client
+
+        with patch(
+            "juddges_search.retrieval.supabase_search.create_client",
+            return_value=mock_client,
+        ):
+            client = SupabaseSearchClient()
+
+            results = await client.vector_search_chunks(
+                query_embedding=[0.1] * 1024,
+                document_types=["statute"],
+            )
+
+        assert results == []
+        mock_client.rpc.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_vector_search_chunks_surfaces_rpc_errors(

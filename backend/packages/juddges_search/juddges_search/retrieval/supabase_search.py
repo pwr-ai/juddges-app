@@ -47,7 +47,7 @@ class SupabaseSearchClient:
         self,
         query_embedding: list[float],
         match_count: int = 10,
-        match_threshold: float = 0.5,
+        match_threshold: float = 0.2,
         languages: list[str] | None = None,
         document_types: list[str] | None = None,
     ) -> list[DocumentChunk]:
@@ -64,7 +64,7 @@ class SupabaseSearchClient:
         Returns:
             List of DocumentChunk objects with similarity scores
         """
-        if document_types and any(document_type != "judgment" for document_type in document_types):
+        if document_types and "judgment" not in document_types:
             return []
 
         # The database function accepts one language at a time. Query each
