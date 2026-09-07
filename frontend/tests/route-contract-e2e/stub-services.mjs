@@ -45,8 +45,22 @@ const IDS = {
     invalid: '30000000-0000-4000-8000-000000000004',
     rateLimited: '30000000-0000-4000-8000-000000000005',
     unavailable: '30000000-0000-4000-8000-000000000006',
+    // The job `POST /extractions/db` hands back for the extraction-path spec.
+    // It is the only id whose GET answers a *sequence* rather than a fixed
+    // state, so the fixed-state contracts above stay exactly as they were.
+    sequenced: '30000000-0000-4000-8000-000000000007',
   },
 };
+
+// `extractionRequestSchema` (frontend/lib/validation/schemas.ts) validates
+// `collection_id` and `schema_id` as UUIDs, so the submit path needs a
+// UUID-shaped collection. `IDS.collection.known` is deliberately not one — the
+// route-status contract asserts on that literal — hence a separate id here.
+const EXTRACTABLE_COLLECTION_ID = '50000000-0000-4000-8000-000000000001';
+const EXTRACTABLE_DOCUMENT_IDS = [
+  'route-contract-extract-document-1',
+  'route-contract-extract-document-2',
+];
 const CHAT_OWNERS = new Map([
   [IDS.chat.known, USER_ID],
   [IDS.chat.hidden, OTHER_USER_ID],
@@ -54,6 +68,8 @@ const CHAT_OWNERS = new Map([
 
 let requests = [];
 let shuttingDown = false;
+let sequencedPolls = 0;
+let sequencedServed = [];
 
 function sendJson(response, status, body, headers = {}) {
   response.writeHead(status, {
@@ -221,6 +237,127 @@ function profileResponse(response) {
   sendJson(response, 200, [{ email: 'route-contract@example.test' }]);
 }
 
+function collectionListResponse(response) {
+  sendJson(response, 200, [
+    {
+      id: EXTRACTABLE_COLLECTION_ID,
+      user_id: USER_ID,
+      name: 'Route contract extraction collection',
+      description: 'Collection the extraction-path contract submits against',
+      created_at: '2026-08-06T00:00:00.000Z',
+      updated_at: '2026-08-06T00:00:00.000Z',
+      documents: [],
+      document_count: EXTRACTABLE_DOCUMENT_IDS.length,
+    },
+  ]);
+}
+
+function collectionDocumentsResponse(response) {
+  sendJson(
+    response,
+    200,
+    EXTRACTABLE_DOCUMENT_IDS.map((documentId, index) => ({
+      id: `route-contract-collection-row-${index + 1}`,
+      document_id: documentId,
+      document_date: '2026-08-06',
+      volume_number: index + 1,
+      title: `Route contract extraction source ${index + 1}`,
+      document_type: 'judgment',
+      document_number: `II AKa 21${index + 4}/2026`,
+    })),
+  );
+}
+
+function schemasDbResponse(response) {
+  sendJson(response, 200, {
+    data: [
+      {
+        id: IDS.schema.known,
+        name: 'Route contract schema',
+        description: 'Schema the extraction-path contract extracts with',
+        type: 'judgment',
+        category: 'legal',
+        text: {},
+        dates: {},
+        status: 'published',
+        is_verified: true,
+        created_at: '2026-08-06T00:00:00.000Z',
+        updated_at: '2026-08-06T00:00:00.000Z',
+        user_id: USER_ID,
+      },
+    ],
+    pagination: { page: 1, page_size: 100, total: 1, total_pages: 1 },
+  });
+}
+
+/**
+ * The states `GET /extractions/{sequenced}` walks through, in order.
+ *
+ * A stub that answers a terminal state on the first poll would let a spec claim
+ * it "watched a job progress" while proving only that one response rendered.
+ * The names are the ones the real endpoint emits: `_pending_batch_response` and
+ * `_in_progress_batch_response` (backend/app/extraction_domain/jobs_router.py)
+ * plus `simplify_job_status`, which maps Celery SUCCESS onto COMPLETED.
+ */
+const SEQUENCED_EXTRACTION_STEPS = [
+  { status: 'PENDING', completed_documents: 0, results: null },
+  { status: 'IN_PROGRESS', completed_documents: 1, results: null },
+  {
+    status: 'COMPLETED',
+    completed_documents: 2,
+    results: EXTRACTABLE_DOCUMENT_IDS.map((documentId, index) => ({
+      collection_id: EXTRACTABLE_COLLECTION_ID,
+      document_id: documentId,
+      status: 'completed',
+      created_at: '2026-08-06T00:00:00.000Z',
+      updated_at: '2026-08-06T00:01:00.000Z',
+      started_at: '2026-08-06T00:00:30.000Z',
+      completed_at: '2026-08-06T00:01:00.000Z',
+      error_message: null,
+      extracted_data: {
+        case_number: `II AKa 21${index + 4}/2026`,
+        ruling_summary: `Appeal outcome recorded for document ${index + 1}`,
+      },
+    })),
+  },
+];
+
+function sequencedExtractionResponse(url, response) {
+  // The middleware builds the SSR snapshot with `include_results=false`
+  // (frontend/middleware.ts). That read must observe the current state without
+  // consuming a step, or the browser polls would start mid-sequence.
+  const isSnapshotRead = url.searchParams.get('include_results') === 'false';
+  const step =
+    SEQUENCED_EXTRACTION_STEPS[
+      Math.min(sequencedPolls, SEQUENCED_EXTRACTION_STEPS.length - 1)
+    ];
+  if (!isSnapshotRead) {
+    sequencedPolls += 1;
+    // Recorded here rather than sniffed in the browser. Observed while
+    // building this spec: one page load issues two polls milliseconds apart
+    // and one of the two responses reaches Chromium with no readable body —
+    // sometimes with no `response` event at all. What the stub answered has
+    // no such window.
+    sequencedServed.push({
+      status: step.status,
+      completed_documents: step.completed_documents,
+      total_documents: EXTRACTABLE_DOCUMENT_IDS.length,
+    });
+  }
+
+  sendJson(response, 200, {
+    job_id: IDS.extraction.sequenced,
+    status: step.status,
+    schema_name: 'Route contract schema',
+    collection_name: 'Route contract extraction collection',
+    completed_documents: step.completed_documents,
+    total_documents: EXTRACTABLE_DOCUMENT_IDS.length,
+    created_at: '2026-08-06T00:00:00.000Z',
+    updated_at: '2026-08-06T00:01:00.000Z',
+    results: isSnapshotRead ? null : step.results,
+  });
+}
+
 function extractionResponse(jobId, response) {
   const statusById = new Map([
     [IDS.extraction.missing, 404],
@@ -259,6 +396,8 @@ const server = createServer((request, response) => {
 
   if (request.method === 'POST' && url.pathname === `${CONTROL_PREFIX}reset`) {
     requests = [];
+    sequencedPolls = 0;
+    sequencedServed = [];
     response.writeHead(204);
     response.end();
     return;
@@ -266,6 +405,14 @@ const server = createServer((request, response) => {
 
   if (request.method === 'GET' && url.pathname === `${CONTROL_PREFIX}requests`) {
     sendJson(response, 200, { requests });
+    return;
+  }
+
+  if (
+    request.method === 'GET' &&
+    url.pathname === `${CONTROL_PREFIX}extraction-sequence`
+  ) {
+    sendJson(response, 200, { served: sequencedServed });
     return;
   }
 
@@ -335,6 +482,47 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/collections') {
+    logRequest(request, url);
+    collectionListResponse(response);
+    return;
+  }
+
+  if (request.method === 'GET' && url.pathname === '/schemas/db') {
+    logRequest(request, url);
+    schemasDbResponse(response);
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/documents/batch') {
+    logRequest(request, url);
+    request.resume();
+    // Metadata enrichment is best-effort in the extract page, so an empty list
+    // exercises the real code path without inventing judgment metadata.
+    sendJson(response, 200, { documents: [] });
+    return;
+  }
+
+  if (request.method === 'POST' && url.pathname === '/extractions/db') {
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 202, {
+      job_id: IDS.extraction.sequenced,
+      status: 'accepted',
+      message: 'Extraction job created successfully',
+    });
+    return;
+  }
+
+  const collectionDocumentsMatch = url.pathname.match(
+    /^\/collections\/([^/]+)\/documents$/,
+  );
+  if (request.method === 'GET' && collectionDocumentsMatch) {
+    logRequest(request, url);
+    collectionDocumentsResponse(response);
+    return;
+  }
+
   const collectionMatch = url.pathname.match(/^\/collections\/([^/]+)$/);
   if (request.method === 'GET' && collectionMatch) {
     logRequest(request, url);
@@ -354,7 +542,12 @@ const server = createServer((request, response) => {
   const extractionMatch = url.pathname.match(/^\/extractions\/([^/]+)$/);
   if (request.method === 'GET' && extractionMatch) {
     logRequest(request, url);
-    extractionResponse(decodeURIComponent(extractionMatch[1]), response);
+    const jobId = decodeURIComponent(extractionMatch[1]);
+    if (jobId === IDS.extraction.sequenced) {
+      sequencedExtractionResponse(url, response);
+      return;
+    }
+    extractionResponse(jobId, response);
     return;
   }
 

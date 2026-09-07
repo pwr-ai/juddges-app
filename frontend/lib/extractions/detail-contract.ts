@@ -20,6 +20,12 @@ export interface ExtractionJobSnapshot {
   schema_id?: string | null;
   schema_name?: string | null;
   status: string;
+  /**
+   * How many times a worker has claimed this job. `> 1` means the job was
+   * interrupted and resumed; the detail page says so rather than leaving the
+   * user to read a restarted job as a bug (#579).
+   */
+  attempts?: number | null;
   progress?: {
     completed: number;
     total: number;
@@ -67,12 +73,13 @@ export function normalizeExtractionJobPayload(
     job_id: expectedJobId,
     status: record.status,
     results: results as DocumentExtractionResult[],
+    attempts: optionalCount(record.attempts),
     progress:
       record.progress === null
         ? null
         : isProgress(record.progress)
           ? record.progress
-          : undefined,
+          : progressFromDocumentCounts(record),
     created_at: optionalString(record.created_at),
     updated_at: optionalString(record.updated_at),
     collection_id: optionalString(record.collection_id),
@@ -112,9 +119,13 @@ const JOB_IDENTITY_FIELDS = [
  * it rendered, permanently, because nothing ever restored it.
  *
  * So identity metadata is only ever filled in, never cleared. `status`,
- * `progress`, `results` and `updated_at` are the live fields and are taken from
- * the response — except that a terminal status is never walked back to a
+ * `results` and `updated_at` are the live fields and are taken from the
+ * response — except that a terminal status is never walked back to a
  * non-terminal one, which a late-arriving in-flight response would otherwise do.
+ *
+ * `progress` follows the same fill-in-only rule as identity metadata, and
+ * `attempts` only ever counts up (#579): both back the resume notice, and a
+ * poll that cannot report them is missing information, not reporting zero.
  */
 export function mergeExtractionJobUpdate(
   current: ExtractionJobResponse,
@@ -131,7 +142,23 @@ export function mergeExtractionJobUpdate(
   for (const field of JOB_IDENTITY_FIELDS) {
     merged[field] = next[field] ?? current[field];
   }
+  // `attempts` only ever counts up. A response that omits it spreads
+  // `attempts: undefined` over a known value, which would make the resume
+  // notice appear on first paint and vanish three seconds later.
+  merged.attempts = maxDefined(current.attempts, next.attempts);
+  // Same reasoning for the counters behind the notice's numbers: a poll that
+  // cannot report progress is missing information, not reporting zero.
+  merged.progress = next.progress ?? current.progress;
   return merged;
+}
+
+function maxDefined(
+  ...values: Array<number | null | undefined>
+): number | undefined {
+  const numbers = values.filter((value): value is number =>
+    typeof value === "number" && Number.isFinite(value)
+  );
+  return numbers.length > 0 ? Math.max(...numbers) : undefined;
 }
 
 const OPTIONAL_STRING_FIELDS = [
@@ -211,6 +238,40 @@ export function isTerminalExtractionStatus(status: string): boolean {
 
 function optionalString(value: unknown): string | null | undefined {
   return value === null || typeof value === "string" ? value : undefined;
+}
+
+/**
+ * Derive `{ completed, total }` from the backend's document counters.
+ *
+ * `progress` was dead on arrival before #579: the BFF forwarded a `progress`
+ * key that `BatchExtractionResponse` never emitted, so the value was always
+ * `undefined` and the validator behind it had nothing to validate. The job row
+ * counts documents; this is where those counts become the shape the page reads.
+ *
+ * A half-populated row yields `undefined` rather than an object, because an
+ * object failing `isProgress` would make the whole payload be rejected.
+ */
+function progressFromDocumentCounts(
+  record: Record<string, unknown>
+): { completed: number; total: number } | undefined {
+  const completed = record.completed_documents;
+  const total = record.total_documents;
+  if (
+    !Number.isInteger(completed) ||
+    !Number.isInteger(total) ||
+    (completed as number) < 0 ||
+    (total as number) < 0 ||
+    (completed as number) > (total as number)
+  ) {
+    return undefined;
+  }
+  return { completed: completed as number, total: total as number };
+}
+
+function optionalCount(value: unknown): number | undefined {
+  return Number.isInteger(value) && (value as number) >= 0
+    ? (value as number)
+    : undefined;
 }
 
 function isProgress(
@@ -311,6 +372,7 @@ export function decodeExtractionSnapshot(
     return {
       job_id: expectedJobId,
       status: record.status,
+      attempts: optionalCount(record.attempts),
       progress:
         record.progress === null
           ? null

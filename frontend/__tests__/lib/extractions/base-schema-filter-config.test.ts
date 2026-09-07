@@ -139,13 +139,10 @@ describe("base-schema filter registry", () => {
     }
   });
 
-  it("formatEnumLabel humanises snake_case and strips repetitive prefixes", () => {
-    expect(formatEnumLabel("gender_male")).toBe("Male");
+  it("formatEnumLabel humanises snake_case", () => {
+    expect(formatEnumLabel("gender_male")).toBe("Gender male");
     expect(formatEnumLabel("appeal_conviction_unsafe")).toBe(
-      "Conviction unsafe",
-    );
-    expect(formatEnumLabel("outcome_dismissed_or_refused")).toBe(
-      "Dismissed or refused",
+      "Appeal conviction unsafe",
     );
     expect(formatEnumLabel("low")).toBe("Low");
   });

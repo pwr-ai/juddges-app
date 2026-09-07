@@ -29,28 +29,22 @@ export function EnumMultiControl({
       {description && (
         <div className="mb-1 text-[11px] text-[color:var(--ink-soft)]">{description}</div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 gap-1">
         {options.map((opt) => {
           const text = optionLabel?.(opt) ?? opt;
-          const isChecked = selected.has(opt);
           return (
             <label
               key={opt}
-              className={`flex items-start gap-1.5 rounded px-1.5 py-1 text-xs transition-colors cursor-pointer select-none ${
-                isChecked
-                  ? "bg-[color:var(--gold-soft)]/50 text-[color:var(--ink)] font-medium"
-                  : "text-[color:var(--ink)] hover:bg-black/5"
-              }`}
+              className="flex cursor-pointer items-center gap-1 py-0.5 text-xs text-[color:var(--ink)]"
             >
               <input
-                type="checkbox"
-                disabled={disabled}
-                checked={isChecked}
+                type="checkbox" disabled={disabled}
+                checked={selected.has(opt)}
                 onChange={() => toggle(opt)}
                 aria-label={text}
-                className="mt-0.5 h-3.5 w-3.5 rounded border-[color:var(--rule-strong)] text-[color:var(--oxblood)] accent-[color:var(--oxblood)] focus:ring-1 focus:ring-[color:var(--oxblood)] disabled:opacity-50 cursor-pointer"
+                className="accent-[var(--oxblood)] size-3.5 shrink-0"
               />
-              <span className="leading-tight break-words">{text}</span>
+              <span>{text}</span>
             </label>
           );
         })}

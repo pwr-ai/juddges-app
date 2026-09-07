@@ -296,6 +296,53 @@ def _update_job_results_in_supabase(
         return False
 
 
+def _merge_failure_into_results(
+    existing: list[dict[str, Any]],
+    document_ids: list[str],
+    collection_id: str,
+    error_message: str,
+) -> list[dict[str, Any]]:
+    """Mark unfinished documents failed while preserving finished ones.
+
+    The previous behaviour built a FAILED entry for every requested document
+    and overwrote the whole results column, so a worker restart followed by an
+    early failure in the redelivered attempt destroyed everything the earlier
+    attempt had completed and paid for.
+    """
+    # ``existing`` normally arrives from _fetch_job_results_from_supabase,
+    # which already drops rows without a usable document_id. Guarded again
+    # here because this helper is also called directly and runs inside the
+    # failure handler, where raising would cost the whole job.
+    done = {
+        row["document_id"]: row
+        for row in existing
+        if isinstance(row, dict) and isinstance(row.get("document_id"), str)
+    }
+    now = datetime.now(UTC).isoformat()
+    merged: list[dict[str, Any]] = []
+    for doc_id in document_ids:
+        finished = done.get(doc_id)
+        if finished is not None and finished.get("status") == (
+            DocumentProcessingStatus.COMPLETED.value
+        ):
+            merged.append(finished)
+            continue
+        merged.append(
+            DocumentExtractionResponse(
+                collection_id=collection_id,
+                document_id=doc_id,
+                status=DocumentProcessingStatus.FAILED,
+                created_at=now,
+                updated_at=now,
+                started_at=now,
+                completed_at=now,
+                error_message=error_message,
+                extracted_data=None,
+            ).model_dump(mode="json")
+        )
+    return merged
+
+
 def _claim_job(job_id: str, total_documents: int) -> None:
     """Mark the job as owned by this worker run.
 
@@ -368,6 +415,70 @@ def _cancellation_requested(job_id: str) -> bool:
         # transient database blip would be the worse failure.
         logger.warning(f"Cancellation check failed for job {job_id}: {check_error}")
         return False
+
+
+def _fetch_job_results_from_supabase(job_id: str) -> list[dict[str, Any]]:
+    """Read back whatever results are currently persisted for this job.
+
+    Used by the late-failure handler: under ``task_acks_late`` a redelivered
+    attempt runs this task function from scratch, so an earlier attempt's
+    completed documents live only in Supabase, not in this process's memory.
+    """
+    if not supabase_client:
+        return []
+    try:
+        response = (
+            supabase_client.table("extraction_jobs")
+            .select("results")
+            .eq("job_id", job_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        if not rows:
+            return []
+        stored = rows[0].get("results") or []
+        # Drop anything that is not a usable per-document entry. Both callers
+        # key this list by ``document_id``, and one of them runs INSIDE the
+        # outer failure handler -- a KeyError raised there would escape a
+        # handler that is already handling a failure, so the job would die
+        # without persisting anything and task_acks_late would redeliver it
+        # into an unbounded crash loop. A malformed row is not worth that.
+        usable = [
+            row
+            for row in stored
+            if isinstance(row, dict) and isinstance(row.get("document_id"), str)
+        ]
+        if len(usable) != len(stored):
+            logger.warning(
+                f"Job {job_id}: ignoring {len(stored) - len(usable)} stored "
+                f"result row(s) with no usable document_id"
+            )
+        return usable
+    except Exception as fetch_error:
+        logger.warning(
+            f"Failed to read existing results for job {job_id}: {fetch_error}"
+        )
+        return []
+
+
+def _load_completed_results(job_id: str) -> list[dict[str, Any]]:
+    """Return the already-COMPLETED per-document results for a job.
+
+    Redelivery replays the original task message, so without this the task
+    restarts at document zero and re-bills OpenAI for work already paid for.
+    FAILED entries are deliberately not returned: a failure may have been
+    transient and is worth another attempt. Errors reading Supabase are
+    already handled by ``_fetch_job_results_from_supabase``, which degrades
+    to an empty list rather than crashing the job.
+    """
+    return [
+        row
+        for row in _fetch_job_results_from_supabase(job_id)
+        if row.get("status") == DocumentProcessingStatus.COMPLETED.value
+    ]
 
 
 def _build_celery_failure_metadata(
@@ -601,70 +712,89 @@ def extract_information_from_documents_task(
                 raise type(e)(f"{error_type}: {error_msg}") from e
             raise
 
+        # Resume support: a redelivered task (task_acks_late) replays the
+        # original document list from scratch. Documents already COMPLETED
+        # in a prior attempt are skipped rather than re-sent to the LLM;
+        # FAILED ones are retried since the failure may have been transient.
+        completed_by_id = {
+            row["document_id"]: row for row in _load_completed_results(self.request.id)
+        }
+
         results: list[DocumentExtractionResponse] = []
         total_documents = len(documents)
 
-        for idx, doc in enumerate(documents):
-            # Extract information - this may fail if LLM service is unavailable
-            # The extractor has its own retry logic, but we catch connection errors here too
-            # Select language-specific extraction instructions based on request language
-            language = request.language or "pl"
-
-            # Load additional instructions from YAML config files
-            base_instructions = InformationExtractor.get_additional_instructions(
-                language=language
+        if completed_by_id:
+            logger.info(
+                f"Job {self.request.id}: resuming, skipping "
+                f"{len(completed_by_id)}/{total_documents} already-completed "
+                f"document(s) from a prior attempt"
             )
 
-            # Combine base instructions with any existing additional_instructions
-            combined_instructions = base_instructions
-            if request.additional_instructions:
-                combined_instructions = (
-                    f"{base_instructions}\n\n{request.additional_instructions}"
+        for idx, doc in enumerate(documents):
+            already_completed = completed_by_id.get(doc.document_id)
+            if already_completed is not None:
+                results.append(already_completed)
+            else:
+                # Extract information - this may fail if LLM service is unavailable
+                # The extractor has its own retry logic, but we catch connection errors here too
+                # Select language-specific extraction instructions based on request language
+                language = request.language or "pl"
+
+                # Load additional instructions from YAML config files
+                base_instructions = InformationExtractor.get_additional_instructions(
+                    language=language
                 )
 
-            try:
-                extracted_data = loop.run_until_complete(
-                    extractor.extract_information_with_structured_output(
-                        {
-                            "extraction_context": request.extraction_context,
-                            "additional_instructions": combined_instructions,
-                            "language": request.language,
-                            "full_text": doc.full_text,
-                        }
+                # Combine base instructions with any existing additional_instructions
+                combined_instructions = base_instructions
+                if request.additional_instructions:
+                    combined_instructions = (
+                        f"{base_instructions}\n\n{request.additional_instructions}"
                     )
-                )
 
-                results.append(
-                    DocumentExtractionResponse(
-                        collection_id=request.collection_id,
-                        document_id=doc.document_id,
-                        status=DocumentProcessingStatus.COMPLETED,
-                        created_at=datetime.now(UTC).isoformat(),
-                        updated_at=datetime.now(UTC).isoformat(),
-                        started_at=datetime.now(UTC).isoformat(),
-                        completed_at=datetime.now(UTC).isoformat(),
-                        error_message=None,
-                        extracted_data=extracted_data,
-                    ).model_dump(mode="json")
-                )
-            except Exception as doc_error:
-                # Individual document failed - mark it as failed but continue with other documents
-                logger.exception(
-                    f"Error extracting from document {doc.document_id}: {doc_error}"
-                )
-                results.append(
-                    DocumentExtractionResponse(
-                        collection_id=request.collection_id,
-                        document_id=doc.document_id,
-                        status=DocumentProcessingStatus.FAILED,
-                        created_at=datetime.now(UTC).isoformat(),
-                        updated_at=datetime.now(UTC).isoformat(),
-                        started_at=datetime.now(UTC).isoformat(),
-                        completed_at=datetime.now(UTC).isoformat(),
-                        error_message=str(doc_error),
-                        extracted_data=None,
-                    ).model_dump(mode="json")
-                )
+                try:
+                    extracted_data = loop.run_until_complete(
+                        extractor.extract_information_with_structured_output(
+                            {
+                                "extraction_context": request.extraction_context,
+                                "additional_instructions": combined_instructions,
+                                "language": request.language,
+                                "full_text": doc.full_text,
+                            }
+                        )
+                    )
+
+                    results.append(
+                        DocumentExtractionResponse(
+                            collection_id=request.collection_id,
+                            document_id=doc.document_id,
+                            status=DocumentProcessingStatus.COMPLETED,
+                            created_at=datetime.now(UTC).isoformat(),
+                            updated_at=datetime.now(UTC).isoformat(),
+                            started_at=datetime.now(UTC).isoformat(),
+                            completed_at=datetime.now(UTC).isoformat(),
+                            error_message=None,
+                            extracted_data=extracted_data,
+                        ).model_dump(mode="json")
+                    )
+                except Exception as doc_error:
+                    # Individual document failed - mark it as failed but continue with other documents
+                    logger.exception(
+                        f"Error extracting from document {doc.document_id}: {doc_error}"
+                    )
+                    results.append(
+                        DocumentExtractionResponse(
+                            collection_id=request.collection_id,
+                            document_id=doc.document_id,
+                            status=DocumentProcessingStatus.FAILED,
+                            created_at=datetime.now(UTC).isoformat(),
+                            updated_at=datetime.now(UTC).isoformat(),
+                            started_at=datetime.now(UTC).isoformat(),
+                            completed_at=datetime.now(UTC).isoformat(),
+                            error_message=str(doc_error),
+                            extracted_data=None,
+                        ).model_dump(mode="json")
+                    )
 
             # Update progress with timing information
             completed_documents = idx + 1
@@ -768,21 +898,18 @@ def extract_information_from_documents_task(
         )
 
         logger.exception(f"Error in extraction task: {full_error_msg}")
-        failed_results = []
-        for doc_id in request.document_ids:
-            failed_results.append(
-                DocumentExtractionResponse(
-                    collection_id=request.collection_id,
-                    document_id=doc_id,
-                    status=DocumentProcessingStatus.FAILED,
-                    created_at=datetime.now(UTC).isoformat(),
-                    updated_at=datetime.now(UTC).isoformat(),
-                    started_at=datetime.now(UTC).isoformat(),
-                    completed_at=datetime.now(UTC).isoformat(),
-                    error_message=full_error_msg,
-                    extracted_data=None,
-                ).model_dump(mode="json")
-            )
+
+        # Read completed results back from Supabase rather than relying on
+        # this invocation's local `results`: under task_acks_late, a failure
+        # that struck a redelivered attempt runs this task from scratch after
+        # a worker restart, so an earlier attempt's completed documents exist
+        # only in Supabase, never in this process's memory.
+        failed_results = _merge_failure_into_results(
+            existing=_fetch_job_results_from_supabase(self.request.id),
+            document_ids=request.document_ids,
+            collection_id=request.collection_id,
+            error_message=full_error_msg,
+        )
         # NOTE: Do NOT call update_state() before returning!
         # When we manually set state and then return a value, Celery's Redis backend may store
         # the metadata from update_state() instead of the actual return value when fetching with .get().

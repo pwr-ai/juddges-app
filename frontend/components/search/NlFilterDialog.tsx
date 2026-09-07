@@ -1,10 +1,10 @@
 "use client";
 
 // =============================================================================
-// NlFilterDialog — opt-in "paste your question" shortcut for /search/extractions.
+// NlFilterDialog — opt-in "describe your search" shortcut for /search/extractions.
 //
-// Issue #141. An unobtrusive secondary entry point next to the Advanced filters
-// drawer. The user pastes a plain-language question; we POST it to
+// Issue #141. An alternative entry point next to the full-text search input,
+// not an advanced-filter accessory. The user pastes a plain-language question; we POST it to
 // /api/extractions/base-schema/nl-filter, preview the translated filter object,
 // then — on apply — pre-fill the form state. We deliberately DO NOT auto-run the
 // search: the "review before run" step is the UX guard against LLM hallucination.
@@ -121,20 +121,18 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="gap-1.5 border-[color:var(--rule)] bg-white/60 hover:bg-[color:var(--parchment-deep)] text-xs font-mono"
-          title="Describe what you are looking for in natural language to set structured filters"
+          className="gap-1.5"
         >
-          <Sparkles className="size-3.5 text-[color:var(--gold)]" aria-hidden />
-          <span>Ask in plain language</span>
+          <Sparkles className="size-4 text-[color:var(--gold)]" aria-hidden />
+          Describe your search
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-serif text-lg">Natural Language Filter Assistant</DialogTitle>
-          <DialogDescription className="text-xs text-[color:var(--ink-soft)]">
-            Describe what you&apos;re looking for in plain English. We&apos;ll
-            translate it into structured filters for you to review and edit
-            before searching.
+          <DialogTitle>Describe your search</DialogTitle>
+          <DialogDescription>
+            Write what you are looking for in plain language — it will be
+            turned into the filters below for review.
           </DialogDescription>
         </DialogHeader>
 

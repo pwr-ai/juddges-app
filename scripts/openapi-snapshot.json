@@ -968,6 +968,30 @@
       },
       "BatchExtractionResponse": {
         "properties": {
+          "attempts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many times a worker has claimed this job. Greater than 1 means the job was interrupted and resumed rather than run once.",
+            "title": "Attempts"
+          },
+          "completed_documents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Documents that have finished processing, from the job row.",
+            "title": "Completed Documents"
+          },
           "job_id": {
             "description": "Job ID (also known as task_id for backward compatibility)",
             "title": "Job Id",
@@ -990,6 +1014,18 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "total_documents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Documents the job was submitted with, from the job row.",
+            "title": "Total Documents"
           }
         },
         "required": [
