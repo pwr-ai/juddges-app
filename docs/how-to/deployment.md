@@ -575,15 +575,33 @@ ENABLE_LANGFUSE=true
 
 Tracks: LLM query analysis, embedding generation, chat chain invocations, query enhancement.
 
-### Watchtower Labels
+### Service Labels
 
-Services are labeled for Watchtower auto-update support:
+Services carry `com.juddges.*` labels for identification:
 
 ```yaml
 labels:
-  - "com.centurylinklabs.watchtower.enable=true"
   - "com.juddges.service=application"
+  - "com.juddges.service.type=frontend"
 ```
+
+Watchtower auto-update labels (`com.centurylinklabs.watchtower.enable`) were removed
+on 2026-09-08. Images here are built and deployed manually via
+`scripts/build_and_push_prod.sh` and `scripts/deploy_prod.sh`, so Watchtower added no
+value — and it actively broke deploys: when it recreated `juddges-frontend` or
+`juddges-backend` after a Docker Hub push, the new containers lost their
+`com.docker.compose.project` and `com.docker.compose.service` labels. `docker compose
+down` could then no longer see them, and the next `docker compose up` aborted with
+`Conflict. The container name "/juddges-frontend" is already in use` — after compose had
+already torn down Meilisearch, Redis and the Celery containers, leaving the stack down.
+
+The host Watchtower runs with `--label-enable`, so it only touches containers that opt
+in. Removing the label is sufficient to exclude the stack entirely.
+
+If a deploy ever fails on that name conflict again, confirm the cause with
+`docker inspect <container-id> --format '{{json .Config.Labels}}'` (an empty compose
+project label means Watchtower recreated it), then run
+`docker rm -f juddges-frontend juddges-backend` and redeploy.
 
 ---
 
