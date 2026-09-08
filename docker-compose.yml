@@ -48,8 +48,6 @@ services:
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://juddges.augustyniak.ai}
     # All other environment variables loaded from env_file
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-      - "com.centurylinklabs.watchtower.depends-on=backend"
       - "com.juddges.service=application"
       - "com.juddges.service.type=frontend"
     extra_hosts:
@@ -108,7 +106,6 @@ services:
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-}
     # All other environment variables loaded from env_file
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
       - "com.juddges.service=application"
       - "com.juddges.service.type=backend-api"
     depends_on:
