@@ -400,50 +400,67 @@ test.describe.serial('production route status contract', () => {
     await setSyntheticSession(context, 'valid');
     const page = await context.newPage();
 
-    // The body is captured inside the `response` handler rather than read from
-    // the awaited Response afterwards. `Response.json()` fetches the body lazily
-    // over CDP (`Network.getResponseBody`), and Chromium only retains it while
-    // the owning request is still held. Reading it after `goto()` has settled
-    // raced that eviction and failed with "No data found for resource with given
-    // identifier" (#545). Reading it the moment the response arrives removes the
-    // dependency on Chromium's retention window entirely.
+    // The body is taken from an intercepting route, not from the observed
+    // `Response`. The page's first poll is routinely aborted: the polling effect
+    // in `ExtractionJobClient` calls `requestController.abort()` in its cleanup,
+    // and that effect re-runs once on mount, so poll #1 is cancelled ~40 ms
+    // before poll #2 answers. An aborted request's body is never retrievable
+    // over CDP, so reading the first observed response failed whenever that read
+    // lost the race, leaving the assertion with `undefined` (#545, #567).
+    //
+    // `route.fetch()` performs the request from Playwright itself, so the body
+    // belongs to the test and survives the page aborting its own copy. That
+    // removes the dependency on Chromium's response-body retention entirely.
     const isPoll = (response: Response): boolean =>
       response.url().includes('/api/extractions?job_id=') &&
       response.request().method() === 'GET';
 
-    let polledBody: unknown;
-    const bodyCaptured = new Promise<void>((resolve) => {
-      page.on('response', (response) => {
-        if (polledBody !== undefined || !isPoll(response)) return;
-        void response
-          .json()
-          .then((body: unknown) => {
-            polledBody = body;
-            resolve();
-          })
-          .catch(() => {
-            // Resolve anyway, leaving `polledBody` unset: the assertion below
-            // then reports what was actually received instead of this test
-            // hanging until the suite timeout on a body that never arrives.
-            resolve();
-          });
-      });
-    });
+    let polledBody: string | undefined;
+    await page.route(
+      (url) =>
+        url.pathname === '/api/extractions' &&
+        url.searchParams.get('job_id') === IDS.extraction.known,
+      async (route) => {
+        let upstream: APIResponse;
+        try {
+          upstream = await route.fetch();
+        } catch {
+          // The page aborted this poll before it could be replayed. Poll #2
+          // carries the same body, so there is nothing to capture here.
+          await route.abort().catch(() => undefined);
+          return;
+        }
+        const body = await upstream.text();
+        // Only the first poll is the one under test; later polls pass through.
+        polledBody ??= body;
+        try {
+          await route.fulfill({ response: upstream, body });
+        } catch {
+          // The page aborted this poll while the handler was fulfilling it —
+          // the abort described above. The body is already captured.
+        }
+      },
+    );
 
     // `waitForResponse` still owns the waiting: it carries the suite timeout and
-    // produces a readable error if the poll never fires. The handler above only
-    // supplies the body.
+    // produces a readable error if no poll ever completes. The route handler
+    // above only supplies the body.
     const pollResponse = page.waitForResponse(isPoll);
     const response = await page.goto(`/extractions/${IDS.extraction.known}`);
     expect(response?.status()).toBe(200);
 
     const polled = await pollResponse;
     expect(polled.status()).toBe(200);
-    await bodyCaptured;
+
+    // The route handler stores the body before `fulfill` delivers it, so by the
+    // time the response above is observed the capture has already happened.
+    if (polledBody === undefined) {
+      throw new Error('No poll was intercepted, so no response body was captured.');
+    }
     // The stub serves no extraction_jobs row, so the BFF cannot resolve the name
     // from Supabase. It must return what the upstream response already carried
     // instead of answering null.
-    expect(polledBody).toMatchObject({
+    expect(JSON.parse(polledBody)).toMatchObject({
       job_id: IDS.extraction.known,
       schema_name: 'Route contract extraction schema',
     });
