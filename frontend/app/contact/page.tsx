@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, MapPin, Phone, Github, Globe, HelpCircle, Send, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, MapPin, Phone, Globe, HelpCircle, Send, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { GithubIcon } from "@/components/icons/brand";
 import {
   PageContainer,
   Header,
@@ -302,7 +303,7 @@ export default function ContactPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
               >
-                <Github className="size-6 text-muted-foreground" />
+                <GithubIcon className="size-6 text-muted-foreground" />
                 <div className="flex-1">
                   <p className="font-medium text-sm mb-1">GitHub Repository</p>
                   <p className="text-xs text-muted-foreground">

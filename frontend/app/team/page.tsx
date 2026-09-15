@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Linkedin, Mail, Users, ArrowRight } from "lucide-react";
+import { Mail, Users, ArrowRight } from "lucide-react";
+import { LinkedinIcon } from "@/components/icons/brand";
 import { Header, Badge, LightCard, VariantButton, PageContainer, SecondaryHeader } from "@/lib/styles/components";
 
 interface TeamMember {
@@ -93,7 +94,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
  className="flex-1 !h-9 !min-h-[36px] !max-h-[36px]"
  onClick={() => window.open(member.linkedin, '_blank')}
  >
- <Linkedin className="h-4 w-4 mr-2"/>
+ <LinkedinIcon className="h-4 w-4 mr-2"/>
  LinkedIn
  </VariantButton>
  )}

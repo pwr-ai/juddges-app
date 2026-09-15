@@ -2,7 +2,6 @@
 
 import {
  Mail,
- Github,
  BookOpen,
  Users,
  Globe,
@@ -12,6 +11,7 @@ import {
  Sparkles,
  Network,
 } from "lucide-react";
+import { GithubIcon } from "@/components/icons/brand";
 import { Header, SectionHeader, SecondaryHeader, LightCard, VariantButton, PageContainer, Badge } from "@/lib/styles/components";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -324,7 +324,7 @@ export default function AboutPage(): React.JSX.Element {
  rel="noopener noreferrer"
  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
  >
- <Github className="size-3.5" /> pwr-ai/JuDDGES
+ <GithubIcon className="size-3.5" /> pwr-ai/JuDDGES
  </a>
  </LightCard>
 
@@ -345,7 +345,7 @@ export default function AboutPage(): React.JSX.Element {
  rel="noopener noreferrer"
  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
  >
- <Github className="size-3.5" /> tsantosh7/hitl-tool
+ <GithubIcon className="size-3.5" /> tsantosh7/hitl-tool
  </a>
  </LightCard>
 
@@ -365,7 +365,7 @@ export default function AboutPage(): React.JSX.Element {
  rel="noopener noreferrer"
  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
  >
- <Github className="size-3.5" /> pwr-ai/juddges-app
+ <GithubIcon className="size-3.5" /> pwr-ai/juddges-app
  </a>
  </LightCard>
  </div>
@@ -458,7 +458,7 @@ export default function AboutPage(): React.JSX.Element {
  onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}
  >
  <div className="flex flex-col items-center gap-3">
- <Github className="size-6"/>
+ <GithubIcon className="size-6"/>
  <div className="text-center">
  <div className="font-semibold mb-1">Open Source</div>
  <div className="text-xs text-muted-foreground">View on GitHub</div>
