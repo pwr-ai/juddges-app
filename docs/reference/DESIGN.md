@@ -108,7 +108,7 @@ floated initial.
 | Square numeral | `<SectionHeader numeral="03">` | `--pwr-red` square, white Tenor Sans digit — the SIW page-number block. |
 | Grey panel | `bg-pwr-panel`, `<PaperBackground deep>` | `#EFEFEF` aside, no border needed. |
 | Card rule | `.editorial-card` | 2 px `--pwr-red` top rule, black on hover; 1 px `--pwr-line` elsewhere. |
-| Corners / shadows | everywhere | 0 px, none. Pills only on `QueryPill` and `Badge`. |
+| Corners / shadows | everywhere | ≤ 2 px (`--radius: 0.125rem`), none. Pills only on `QueryPill` and `Badge`. |
 | Shadow tokens | `--shadow-2xs` … `--shadow-lg` | Layered, one light source, tinted with `--ink` via `color-mix`. `--shadow-xl`/`--shadow-2xl` alias `lg` — elevation caps there. |
 
 ### Logotype

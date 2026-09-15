@@ -113,7 +113,7 @@ export function SchemaFilters({
             <Filter className="h-4 w-4" />
           </div>
           <div>
-            <h2 className="text-base font-serif italic text-ink leading-none">
+            <h2 className="text-base font-serif text-ink leading-none">
               Filters
             </h2>
             <p className="text-[10px] text-ink-soft mt-1 font-mono uppercase tracking-[0.14em]">

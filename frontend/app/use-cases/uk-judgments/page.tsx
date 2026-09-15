@@ -29,12 +29,12 @@ import {
   type JurisdictionYearlyItem,
 } from "./uk-stats";
 
-const COLOR_INK = "#1A1A2E";
-const COLOR_INK_SOFT = "#5A5A75";
-const COLOR_RULE = "#C9C2B0";
-const COLOR_RULE_STRONG = "#A89F88";
-const COLOR_OXBLOOD = "#8B1E3F";
-const COLOR_PARCHMENT = "#F5F1E8";
+const COLOR_INK = "#000000";
+const COLOR_INK_SOFT = "#5A5A5A";
+const COLOR_RULE = "#D9D9D9";
+const COLOR_RULE_STRONG = "#9A9A9A";
+const COLOR_OXBLOOD = "#9A342D";
+const COLOR_PARCHMENT = "#FFFFFF";
 
 function ChartLoadingState(): React.JSX.Element {
   return (
@@ -51,7 +51,7 @@ function ChartLoadingState(): React.JSX.Element {
 
 function EmptyChart({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
-    <div className="flex h-[300px] items-center justify-center border border-dashed border-[color:var(--rule-strong)] px-6 text-center font-serif text-base italic text-[color:var(--ink-soft)]">
+    <div className="flex h-[300px] items-center justify-center border border-dashed border-[color:var(--rule-strong)] px-6 text-center font-serif text-base text-[color:var(--ink-soft)]">
       {children}
     </div>
   );
@@ -142,7 +142,7 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
             title="Unable to load judgment statistics"
             role="alert"
           >
-            <p className="font-serif text-base italic text-[color:var(--ink-soft)]">
+            <p className="font-serif text-base text-[color:var(--ink-soft)]">
               {message}
             </p>
             <EditorialButton
@@ -184,7 +184,7 @@ export default function UKJudgmentsAnalysisPage(): React.JSX.Element {
           title="Corpus statistics are not available yet"
           role="status"
         >
-          <p className="font-serif text-base italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-base text-[color:var(--ink-soft)]">
             No United Kingdom judgment statistics are available yet. The page
             will populate when jurisdiction-scoped records are indexed.
           </p>
