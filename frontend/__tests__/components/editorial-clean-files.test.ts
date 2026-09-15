@@ -42,6 +42,7 @@ const CLEAN_FILES = [
   'components/reasoning-lines/OutcomeTimeline.tsx',
   'components/reasoning-lines/ReasoningDAG.tsx',
   'lib/charts/reasoning-palette.ts',
+  'app/about/page.tsx',
 ];
 
 /**
@@ -81,6 +82,14 @@ const CHART_FILES = [...RECHARTS_FILES, 'components/reasoning-lines/ReasoningDAG
 describe('chart components', () => {
   it.each(CHART_FILES)('%s has no colour literals (hex, rgb(), hsl())', (file) => {
     expect(read(file)).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/);
+  });
+});
+
+describe('app/about/page.tsx', () => {
+  it('carries no marketing superlatives (#641 copy list)', () => {
+    expect(read('app/about/page.tsx')).not.toMatch(
+      /world-class|cutting-edge|innovative|state-of-the-art|revolutioniz|Empower|AI-powered/,
+    );
   });
 });
 
