@@ -37,6 +37,24 @@ const CLEAN_FILES = [
   'lib/styles/components/light-card.tsx',
   'lib/styles/components/loading-indicator.tsx',
   'lib/styles/components/page-container.tsx',
+  'components/judge-fingerprint/JudgeRadarChart.tsx',
+  'components/reasoning-lines/DriftChart.tsx',
+  'components/reasoning-lines/OutcomeTimeline.tsx',
+  'components/reasoning-lines/ReasoningDAG.tsx',
+  'lib/charts/reasoning-palette.ts',
+];
+
+/**
+ * Recharts writes `stroke`/`fill` as SVG presentation attributes, where
+ * `hsl(var(--border))` is invalid twice over: the tokens are already full
+ * colours (see tests/unit/app/globals-css-tokens.test.ts), and `var()` does
+ * not resolve in attributes. Charts must take literal hex from
+ * `lib/charts/editorial-plot.ts`.
+ */
+const RECHARTS_FILES = [
+  'components/judge-fingerprint/JudgeRadarChart.tsx',
+  'components/reasoning-lines/DriftChart.tsx',
+  'components/reasoning-lines/OutcomeTimeline.tsx',
 ];
 
 function read(relative: string): string {
@@ -48,6 +66,21 @@ describe('migrated files stay free of banned classes', () => {
     const counts = countBannedPatterns([{ path: file, content: read(file) }]);
     const hits = Object.fromEntries(Object.entries(counts).filter(([, n]) => n !== 0));
     expect(hits).toEqual({});
+  });
+});
+
+describe('recharts components', () => {
+  it.each(RECHARTS_FILES)('%s has no hsl(var(--…)) colours', (file) => {
+    expect(read(file)).not.toMatch(/hsl\(\s*var\(--/);
+  });
+});
+
+/** Canvas + recharts charts: every colour comes from `editorialPalette`, never a literal. */
+const CHART_FILES = [...RECHARTS_FILES, 'components/reasoning-lines/ReasoningDAG.tsx'];
+
+describe('chart components', () => {
+  it.each(CHART_FILES)('%s has no colour literals (hex, rgb(), hsl())', (file) => {
+    expect(read(file)).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/);
   });
 });
 
