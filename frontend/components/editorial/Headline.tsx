@@ -16,7 +16,7 @@ interface HeadlineProps extends React.HTMLAttributes<HTMLHeadingElement> {
   as?: "h1" | "h2" | "h3" | "h4";
   /** Display size — defaults to `md`. */
   size?: HeadlineSize;
-  /** Render in italic for editorial emphasis. */
+  /** Accepted for backwards compatibility; Tenor Sans has no italic, so this has no visual effect. */
   italic?: boolean;
   /** Color override — defaults to `ink`. */
   tone?: "ink" | "oxblood" | "ink-soft";
@@ -51,7 +51,6 @@ export function Headline({
       className={cn(
         "editorial-display",
         sizeClasses[size],
-        italic && "italic",
         toneClass,
         className,
       )}

@@ -69,7 +69,7 @@ export const Featured = () => (
   <ChartFigure
     figure="02"
     eyebrow="Coverage"
-    title={<>Where the <em className="italic text-oxblood">reasoning</em> comes from</>}
+    title={<>Where the <em>reasoning</em> comes from</>}
     caption="Featured figure carries a short oxblood mark on the top rule."
     source="JuDDGES corpus snapshot, March 2026"
     featured

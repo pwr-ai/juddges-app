@@ -104,6 +104,11 @@ describe('globals.css colour tokens', () => {
     expect(rule('.editorial-button-secondary')).toMatch(/border:\s*1px solid var\(--pwr-black\);/);
   });
 
+  it('danger colours use the SIW faculty red', () => {
+    expect(rootBlock).toMatch(/--destructive:\s*#D63120;/i);
+    expect(rootBlock).toMatch(/--error:\s*#D63120;/i);
+  });
+
   it('paper grain and noise overlays are gone', () => {
     expect(css).not.toMatch(/feTurbulence/);
     expect(rule('.editorial-paper')).not.toMatch(/radial-gradient/);

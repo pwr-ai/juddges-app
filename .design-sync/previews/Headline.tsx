@@ -26,6 +26,6 @@ export const Tones = () => (
     <Headline size="sm" tone="ink">Ink — the default headline colour</Headline>
     <Headline size="sm" tone="oxblood">Oxblood — authority and emphasis</Headline>
     <Headline size="sm" tone="ink-soft">Ink soft — secondary headlines</Headline>
-    <Headline size="sm" italic>Italic — the whole line in editorial emphasis</Headline>
+    <Headline size="sm" italic>Emphasis — colour, never italic (Tenor Sans has none)</Headline>
   </div>
 );
