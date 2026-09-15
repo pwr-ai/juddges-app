@@ -121,11 +121,11 @@ export const pl: Translations = {
     savedSearches: 'Zapisane wyszukiwania',
     dataExtraction: 'Ekstrakcja danych',
     extractionResults: 'Wyniki ekstrakcji',
-    baseTemplate: 'Bazowy schemat kodowania',
-    compareDatasets: 'Porównaj zbiory danych',
+    schemas: 'Schematy',
     precedentSearch: 'Wyszukiwanie precedensów',
     argumentationAnalysis: 'Analiza argumentacji',
     judgeFingerprint: 'Profil sędziego',
+    reasoningLines: 'Linie orzecznicze',
 
     // Administration (admin-only surfaces)
     administration: 'Administracja',
@@ -138,7 +138,6 @@ export const pl: Translations = {
     phasePlan: '1. Zaplanuj',
     phaseSearch: '2. Wyszukaj',
     phaseAnalyze: '3. Analizuj',
-    phaseExport: '4. Eksportuj',
   },
 
   chat: {

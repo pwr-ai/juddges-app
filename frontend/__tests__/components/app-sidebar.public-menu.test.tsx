@@ -118,6 +118,7 @@ describe('AppSidebar public navigation', () => {
   });
 
   // Regression guard for #511: these routes were fully built and unreachable.
+  // #607 promoted /reasoning-lines and /schemas into the same set.
   it('links the chat and analysis routes for authenticated users', () => {
     mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
 
@@ -131,10 +132,42 @@ describe('AppSidebar public navigation', () => {
       '/chat',
       '/search/extractions',
       '/precedents',
-      '/argumentation-analysis',
-      '/judge-fingerprint',
+      '/reasoning-lines',
+      '/schemas',
+      '/topics',
     ]) {
       expect(container.querySelector(`a[href="${href}"]`)).toBeInTheDocument();
+    }
+  });
+
+  // #607: research tools live in the admin group; phase 4 and /schemas/base are gone.
+  it('keeps research tools out of the non-admin menu and shows them to admins', () => {
+    const researchTools = ['/argumentation-analysis', '/judge-fingerprint', '/topic-modeling'];
+
+    mockUseAuth.mockReturnValue({ user: { id: 'u1', app_metadata: {} }, loading: false });
+    const { container: nonAdmin } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    for (const href of [...researchTools, '/dataset-comparison', '/schemas/base']) {
+      expect(nonAdmin.querySelector(`a[href="${href}"]`)).not.toBeInTheDocument();
+    }
+    expect(nonAdmin.textContent).not.toContain('navigation.phaseExport');
+
+    mockUseAuth.mockReturnValue({
+      user: { id: 'u2', app_metadata: { is_admin: true } },
+      loading: false,
+    });
+    const { container: admin } = render(
+      <SidebarProvider>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    for (const href of researchTools) {
+      expect(admin.querySelector(`a[href="${href}"]`)).toBeInTheDocument();
     }
   });
 

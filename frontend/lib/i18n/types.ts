@@ -165,11 +165,11 @@ export interface NavigationTranslations {
   savedSearches: string;
   dataExtraction: string;
   extractionResults: string;
-  baseTemplate: string;
-  compareDatasets: string;
+  schemas: string;
   precedentSearch: string;
   argumentationAnalysis: string;
   judgeFingerprint: string;
+  reasoningLines: string;
 
   // Administration (admin-only surfaces)
   administration: string;
@@ -182,7 +182,6 @@ export interface NavigationTranslations {
   phasePlan: string;
   phaseSearch: string;
   phaseAnalyze: string;
-  phaseExport: string;
 }
 
 /**
