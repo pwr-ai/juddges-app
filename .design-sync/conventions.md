@@ -31,7 +31,7 @@ Conventions that make it read as *this* brand: headlines in `Headline` (Instrume
 - Type: `Headline` (`as`, `size` xs–xl, `tone`, `italic`), `Eyebrow`, `DropCap`, `Citation` (`marker="¹"`).
 - Cards & data: `EditorialCard` (`eyebrow`, `title`, `action`, `featured`, `flat`, `bare`), `Stat` (`value`, `label`, `suffix`, `marker`, `static`), `DualStatCard` (UK vs PL values), `ChartFigure` (FIG. nn frame around any chart).
 - Actions: `EditorialButton` (`variant` primary|secondary|ghost, `size`, `arrow`, `href`), `QueryPill` (newsprint chip). Use the shadcn `Button` only inside dense app UI (tables, dialogs); prefer `EditorialButton` on marketing/reading surfaces.
-- App UI (shadcn/Radix, already themed with the same tokens): `Card*`, `Input`, `Textarea`, `Select*`, `Checkbox`, `Switch`, `Tabs*`, `Table*`, `Dialog*`, `DropdownMenu*`, `Tooltip*`, `Badge`, `Alert*`, `Accordion*`, `Breadcrumb`, `Pagination*`, `Progress`, `Slider`, `Avatar*`, `Skeleton*`, `EmptyState`, `Sidebar*`, `Toast`/`ToastProvider`.
+- App UI (shadcn/Radix, already themed with the same tokens; each wrapper accepts every native prop of its element — `placeholder`, `disabled`, `type`, `onClick`, `aria-*` — even though its `.d.ts` lists only the DS-specific ones): `Card*`, `Input`, `Textarea`, `Select*`, `Checkbox`, `Switch`, `Tabs*`, `Table*`, `Dialog*`, `DropdownMenu*`, `Tooltip*`, `Badge`, `Alert*`, `Accordion*`, `Breadcrumb`, `Pagination*`, `Progress`, `Slider`, `Avatar*`, `Skeleton*`, `EmptyState`, `Sidebar*`, `Toast`/`ToastProvider`.
 
 ## Where the truth lives
 

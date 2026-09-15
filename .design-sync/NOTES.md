@@ -51,6 +51,12 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - `frontend/package.json` `version` becomes the DS version in README.
 - Instrument Serif files are vendored; if the app switches faces, update
   `.design-sync/fonts.css` + `tailwind.css` `:root` vars.
+- Grades follow the preview `.tsx`, not the CSS. When #622 lands the four skeleton previews will
+  carry forward as `unchanged` with nobody prompted to look — re-grade them explicitly:
+  `node .ds-sync/package-capture.mjs --out ./ds-bundle --components Skeleton,SidebarMenuSkeleton,SkeletonExtractionCard,SkeletonSearch --spot-check-components Skeleton,SidebarMenuSkeleton,SkeletonExtractionCard,SkeletonSearch`
+- `guidelines/DESIGN.md` (= `docs/reference/DESIGN.md`) §4 lists 12 of the 15 editorial
+  primitives (missing `ChartFigure`, `DualStatCard`, `Section`) and calls `EditorialButton`
+  "primary or outline" (actual `primary|secondary|ghost`). Docs drift, fix in the repo doc.
 - Converter version staged in `.ds-sync/` is copied from the bundled skill each run;
   a stale copy runs an old converter.
 
