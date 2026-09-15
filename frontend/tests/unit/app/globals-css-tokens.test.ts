@@ -19,4 +19,108 @@ describe('globals.css colour tokens', () => {
       .map(({ line, no }) => `${no}: ${line}`);
     expect(offenders).toEqual([]);
   });
+
+  // The PWr layer (SIW 2025-12) is the source of truth; the editorial names
+  // are aliases so the ~880 existing utilities keep working (#629).
+  const PWR_TOKENS: Record<string, string> = {
+    '--pwr-red': '#9A342D',
+    '--pwr-red-deep': '#7E2A25',
+    '--pwr-sand': '#F1D1A2',
+    '--pwr-gold': '#B49A5E',
+    '--pwr-black': '#000000',
+    '--pwr-grey': '#5A5A5A',
+    '--pwr-paper': '#FFFFFF',
+    '--pwr-panel': '#EFEFEF',
+    '--pwr-line': '#D9D9D9',
+    '--pwr-line-strong': '#9A9A9A',
+  };
+
+  const ALIASES: Record<string, string> = {
+    '--parchment': '--pwr-paper',
+    '--parchment-deep': '--pwr-panel',
+    '--ink': '--pwr-black',
+    '--ink-soft': '--pwr-grey',
+    '--rule': '--pwr-line',
+    '--rule-strong': '--pwr-line-strong',
+    '--oxblood': '--pwr-red',
+    '--oxblood-deep': '--pwr-red-deep',
+    '--gold': '--pwr-gold',
+    '--gold-soft': '--pwr-sand',
+  };
+
+  const rootBlock = css.slice(css.indexOf(':root {'), css.indexOf('\n}', css.indexOf(':root {')));
+
+  it.each(Object.entries(PWR_TOKENS))('defines %s as %s in :root', (token, hex) => {
+    const re = new RegExp(`${token}:\\s*${hex}\\s*;`, 'i');
+    expect(rootBlock).toMatch(re);
+  });
+
+  it.each(Object.entries(ALIASES))('aliases %s to %s', (alias, target) => {
+    const re = new RegExp(`${alias}:\\s*var\\(${target}\\)\\s*;`);
+    expect(rootBlock).toMatch(re);
+  });
+
+  it.each(Object.keys(PWR_TOKENS).map((t) => t.replace('--', '--color-')))(
+    'exposes %s through @theme inline',
+    (themeVar) => {
+      expect(css).toMatch(new RegExp(`${themeVar}:\\s*var\\(${themeVar.replace('--color-', '--')}\\)\\s*;`));
+    },
+  );
+
+  it('routes display type through Tenor Sans', () => {
+    expect(rootBlock).toMatch(/--font-display:\s*var\(--font-tenor-sans\),\s*Optima,\s*"URW Classico",\s*"Gill Sans",\s*sans-serif;/);
+    expect(rootBlock).toMatch(/--font-serif:\s*var\(--font-display\);/);
+    expect(css).not.toMatch(/instrument-serif|Instrument Serif|Iowan Old Style/);
+  });
+
+  it('keeps display emphasis upright (Tenor Sans has no italic)', () => {
+    const emRule = css.slice(css.indexOf('.editorial-display em'), css.indexOf('}', css.indexOf('.editorial-display em')));
+    expect(emRule).toMatch(/font-style:\s*normal;/);
+    expect(emRule).toMatch(/color:\s*var\(--pwr-red\);/);
+  });
+
+  const rule = (selector: string) => {
+    const start = css.indexOf(`${selector} {`);
+    expect(start).toBeGreaterThan(-1);
+    return css.slice(start, css.indexOf('}', start));
+  };
+
+  it('defines the SIW red bar', () => {
+    const bar = rule('.pwr-bar');
+    expect(bar).toMatch(/background:\s*var\(--pwr-red\);/);
+    expect(bar).toMatch(/color:\s*var\(--pwr-paper\);/);
+    expect(bar).toMatch(/font-family:\s*var\(--font-display\);/);
+    expect(bar).toMatch(/border-radius:\s*0;/);
+  });
+
+  it('cards carry a red top rule that turns black on hover', () => {
+    expect(rule('.editorial-card')).toMatch(/border-top:\s*2px solid var\(--pwr-red\);/);
+    expect(rule('.editorial-card:hover')).toMatch(/border-top-color:\s*var\(--pwr-black\);/);
+  });
+
+  it('primary button is PWr red, secondary is black outline', () => {
+    expect(rule('.editorial-button-primary')).toMatch(/background:\s*var\(--pwr-red\);/);
+    expect(rule('.editorial-button-primary:hover')).toMatch(/background:\s*var\(--pwr-red-deep\);/);
+    expect(rule('.editorial-button-secondary')).toMatch(/border:\s*1px solid var\(--pwr-black\);/);
+  });
+
+  it('danger colours use the SIW faculty red', () => {
+    expect(rootBlock).toMatch(/--destructive:\s*#D63120;/i);
+    expect(rootBlock).toMatch(/--error:\s*#D63120;/i);
+  });
+
+  it('paper grain and noise overlays are gone', () => {
+    expect(css).not.toMatch(/feTurbulence/);
+    expect(rule('.editorial-paper')).not.toMatch(/radial-gradient/);
+    expect(css).not.toMatch(/\.editorial-paper::before/);
+  });
+
+  it('DESIGN.md palette table matches :root', () => {
+    const md = readFileSync(join(__dirname, '../../../../docs/reference/DESIGN.md'), 'utf8');
+    const rows = [...md.matchAll(/^\|\s*`(--pwr-[a-z-]+)`\s*\|\s*`(#[0-9A-Fa-f]{6})`/gm)];
+    expect(rows.length).toBe(10);
+    for (const [, token, hex] of rows) {
+      expect(rootBlock).toMatch(new RegExp(`${token}:\\s*${hex}\\s*;`, 'i'));
+    }
+  });
 });

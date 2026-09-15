@@ -77,23 +77,26 @@ shared primitives in `frontend/components/editorial/` (barrel re-export at
 glassmorphism cards, purple gradients, or `bg-{indigo,purple,violet}-100`
 icon-pill motifs.
 
-Canonical raw colour tokens live in `frontend/app/globals.css`:
+Canonical tokens live in `frontend/app/globals.css` — the PWr identity layer
+(SIW 2025-12); the editorial names are aliases kept for existing utilities:
 
-| Token | Hex | Use |
-|---|---|---|
-| `--parchment` | `#F5F1E8` | Page surface |
-| `--parchment-deep` | `#EFE9D8` | Tonal section bands |
-| `--ink` | `#1A1A2E` | Primary text, strong rules |
-| `--ink-soft` | `#5A5A75` | Secondary text |
-| `--rule` | `#C9C2B0` | Hairline borders |
-| `--rule-strong` | `#A89F88` | Medium dividers |
-| `--oxblood` | `#8B1E3F` | Authority — primary action, italic emphasis |
-| `--oxblood-deep` | `#6F1230` | Hover state for oxblood |
-| `--gold` | `#B8954A` | Citation gold — markers, highlights |
-| `--gold-soft` | `#E8DCB8` | Tinted accent backgrounds |
+| Token | Hex | Use | Alias |
+|---|---|---|---|
+| `--pwr-red` | `#9A342D` | Pantone 484 — authority, primary action, bars | `--oxblood` |
+| `--pwr-red-deep` | `#7E2A25` | Hover for red | `--oxblood-deep` |
+| `--pwr-sand` | `#F1D1A2` | Pantone 156 — tinted accents | `--gold-soft` |
+| `--pwr-gold` | `#B49A5E` | Pantone 873 (web approx.) — citation markers | `--gold` |
+| `--pwr-black` | `#000000` | Text, strong rules | `--ink` |
+| `--pwr-grey` | `#5A5A5A` | Secondary text | `--ink-soft` |
+| `--pwr-paper` | `#FFFFFF` | Page surface | `--parchment` |
+| `--pwr-panel` | `#EFEFEF` | Grey info panels, `--muted` | `--parchment-deep` |
+| `--pwr-line` | `#D9D9D9` | Hairline borders | `--rule` |
+| `--pwr-line-strong` | `#9A9A9A` | Medium dividers | `--rule-strong` |
 
-Typography: `Instrument Serif` (display) · `Geist Sans` (body) · `Geist Mono`
-(citations / eyebrows / tabular numerals).
+Typography: `Tenor Sans` (display, `--font-display`; `--font-serif` aliases
+it) · `Geist Sans` (body) · `Geist Mono` (citations / eyebrows / tabular
+numerals). The PWr logotype is **not** used (no permission) — palette, type
+and patterns only.
 
 ### Database
 PostgreSQL via Supabase. Main schema: `supabase/migrations/20260209000001_create_judgments_table.sql` and follow-on migrations. The `judgments` table has full-text (GIN) and semantic (pgvector HNSW) indexes — combine for hybrid search.

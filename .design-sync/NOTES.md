@@ -29,15 +29,17 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 
 ## Fonts
 
-- `next/font` sets `--font-geist-sans/--font-geist-mono/--font-instrument-serif` at
+- `next/font` sets `--font-geist-sans/--font-geist-mono/--font-tenor-sans` at
   runtime; the bundle defines them in `.design-sync/tailwind.css` `:root` and ships
   `@font-face` via `cfg.extraFonts` → `.design-sync/fonts.css`. Geist from
-  `frontend/app/fonts/*.woff`; Instrument Serif (SIL OFL 1.1, Google Fonts v5,
-  latin + latin-ext) committed under `.design-sync/fonts/` — user chose to vendor it.
+  `frontend/app/fonts/*.woff`; Tenor Sans (SIL OFL 1.1, Google Fonts, latin + latin-ext,
+  single weight 400, no italic) committed under `.design-sync/fonts/` as
+  `TenorSans-Regular-{latin,latin-ext}.woff2` — the open substitute for the PWr
+  identity face (Zapf Humanist / Optima), see #629.
 
 ## Known render warns (validate)
 
-- `[FONT_MISSING] "JetBrains Mono", "Iowan Old Style"` — these are the app's own
+- `[FONT_MISSING] "JetBrains Mono", Optima, "URW Classico", "Gill Sans"` — these are the app's own
   *fallback* families in `--font-mono` / `--font-serif` stacks, never shipped by the
   app either. Accepted; nothing to source.
 - `tokens: 1 missing, below threshold` — informational.
@@ -49,7 +51,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   `.design-sync/tailwind.css`. A design-agent utility the app never uses is silently
   absent; extend the safelist rather than the app.
 - `frontend/package.json` `version` becomes the DS version in README.
-- Instrument Serif files are vendored; if the app switches faces, update
+- Tenor Sans files are vendored; if the app switches faces, update
   `.design-sync/fonts.css` + `tailwind.css` `:root` vars.
 - Grades follow the preview `.tsx`, not the CSS. When #622 lands the four skeleton previews will
   carry forward as `unchanged` with nobody prompted to look — re-grade them explicitly:

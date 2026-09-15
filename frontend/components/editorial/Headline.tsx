@@ -16,16 +16,16 @@ interface HeadlineProps extends React.HTMLAttributes<HTMLHeadingElement> {
   as?: "h1" | "h2" | "h3" | "h4";
   /** Display size — defaults to `md`. */
   size?: HeadlineSize;
-  /** Render in italic for editorial emphasis. */
+  /** Accepted for backwards compatibility; Tenor Sans has no italic, so this has no visual effect. */
   italic?: boolean;
   /** Color override — defaults to `ink`. */
   tone?: "ink" | "oxblood" | "ink-soft";
 }
 
 /**
- * Editorial headline — Instrument Serif with tight tracking and confident
+ * Editorial headline — Tenor Sans (PWr display face) with open tracking and confident
  * leading. Use for hero headlines, section titles, and CTA banners. Supports
- * inline `<em>` styling that renders italic + oxblood.
+ * inline `<em>` styling that renders upright in PWr red.
  *
  * @example
  *   <Headline as="h1" size="lg">An open archive of <em>judicial reasoning</em></Headline>
@@ -51,7 +51,6 @@ export function Headline({
       className={cn(
         "editorial-display",
         sizeClasses[size],
-        italic && "italic",
         toneClass,
         className,
       )}

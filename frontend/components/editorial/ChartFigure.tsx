@@ -12,7 +12,7 @@ interface ChartFigureProps {
   caption?: React.ReactNode;
   /** Optional source / dataset attribution rendered in mono small caps. */
   source?: React.ReactNode;
-  /** Add an oxblood top mark for the page-featured figure. */
+  /** Add a black top mark for the page-featured figure. */
   featured?: boolean;
   className?: string;
   /** The chart itself — a `<Plot/>`, SVG, or hand-rolled markup. */
@@ -62,7 +62,7 @@ export function ChartFigure({
       {featured && (
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-px left-0 h-[2px] w-12 bg-[color:var(--oxblood)]"
+          className="pointer-events-none absolute -top-px left-0 h-[2px] w-12 bg-pwr-black"
         />
       )}
       {hasHeader && (
@@ -79,7 +79,7 @@ export function ChartFigure({
             </span>
           )}
           {title && (
-            <h3 className="mt-1.5 font-serif text-xl sm:text-2xl leading-[1.1] tracking-[-0.01em] text-[color:var(--ink)]">
+            <h3 className="editorial-display mt-1.5 font-serif text-xl sm:text-2xl leading-[1.1] tracking-[-0.01em] text-[color:var(--ink)]">
               {title}
             </h3>
           )}
