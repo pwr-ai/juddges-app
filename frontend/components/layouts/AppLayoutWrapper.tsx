@@ -12,6 +12,29 @@ import { LegalComplianceWrapper } from "@/components/legal/legal-compliance-wrap
 import { CommandPaletteProvider } from "@/contexts/CommandPaletteContext";
 import { PWAProvider } from "@/components/PWAProvider";
 
+// Navbar wrapped in Suspense to handle useSearchParams().
+//
+// Declared at module scope: defining it inside the layout's render gave it a
+// new identity on every render, so React tore down and rebuilt the whole
+// Suspense subtree instead of updating it. It closes over nothing, so there is
+// nothing to pass in.
+function NavbarWithSuspense() {
+  return (
+    <Suspense fallback={
+      <header className="flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem] bg-background sticky top-0 z-30">
+        <div className="flex items-center gap-3 md:gap-5">
+          <div className="w-9 h-9 rounded-lg bg-muted/50 animate-pulse" />
+        </div>
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="w-20 h-10 bg-muted/50 rounded animate-pulse" />
+        </div>
+      </header>
+    }>
+      <Navbar />
+    </Suspense>
+  );
+}
+
 export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isDebugPage = pathname?.includes("/extractions/debug");
@@ -59,21 +82,6 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Navbar wrapped in Suspense to handle useSearchParams()
-  const NavbarWithSuspense = () => (
-    <Suspense fallback={
-      <header className="flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem] bg-background sticky top-0 z-30">
-        <div className="flex items-center gap-3 md:gap-5">
-          <div className="w-9 h-9 rounded-lg bg-muted/50 animate-pulse" />
-        </div>
-        <div className="flex items-center gap-2 md:gap-4">
-          <div className="w-20 h-10 bg-muted/50 rounded animate-pulse" />
-        </div>
-      </header>
-    }>
-      <Navbar />
-    </Suspense>
-  );
 
   // No loading gate here, deliberately. This used to return a full-screen
   // "Initializing application" panel while `isInitialLoad || authLoading` was

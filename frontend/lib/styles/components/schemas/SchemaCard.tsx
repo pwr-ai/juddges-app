@@ -179,7 +179,11 @@ export function SchemaCard({
  });
  };
 
- const ActionButtons = () => (
+ // A plain element, not a component. Declared as `const ActionButtons = () => …`
+ // it was re-created on every render, so React saw a new component type each
+ // time and remounted the whole subtree — closing the open dropdown. As an
+ // element the types are stable and React just updates it.
+ const actionButtons = (
  <div
  className={cn(
 "shrink-0 flex items-center justify-center -space-x-1",
@@ -350,7 +354,7 @@ export function SchemaCard({
  {/* Footer: Action Buttons */}
  <div className="mt-auto pt-0.5 border-t border-slate-100">
  <div className="flex justify-center">
- <ActionButtons />
+ {actionButtons}
  </div>
  </div>
  </>
@@ -384,7 +388,7 @@ export function SchemaCard({
  )}
  </div>
  </div>
- <ActionButtons />
+ {actionButtons}
  </div>
 
  {/* 4. Metadata Block: Created • Updated • Fields • Extractions */}
