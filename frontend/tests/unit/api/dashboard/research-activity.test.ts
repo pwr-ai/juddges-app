@@ -1,5 +1,6 @@
 import { getCollections } from "@/lib/api/collections";
 import {
+  dashboardResearchActivityQueryKey,
   fetchDashboardResearchActivity,
 } from "@/lib/api/dashboard";
 import { getUserSearchHistory } from "@/lib/api/search-history";
@@ -33,6 +34,12 @@ const search = (query: string) => ({
 });
 
 describe("fetchDashboardResearchActivity", () => {
+  it("isolates cached activity by user", () => {
+    expect(dashboardResearchActivityQueryKey("user-1")).not.toEqual(
+      dashboardResearchActivityQueryKey("user-2"),
+    );
+  });
+
   it("combines totals and limits continuation lists to three items", async () => {
     jest.mocked(getCollections).mockResolvedValue([
       collection("1", 1, "2026-09-12T08:00:00Z"),

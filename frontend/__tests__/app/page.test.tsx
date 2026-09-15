@@ -97,6 +97,19 @@ describe("HomePage dashboard", () => {
   it("makes the research workflow and continuation actions explicit", () => {
     render(<HomePage />);
 
+    expect(useDashboardResearchActivity).toHaveBeenCalledWith("user-1");
+    expect(
+      screen.getByRole("heading", {
+        name: "Move from a legal question to structured, reviewable evidence.",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Plan, search, then analyze", level: 3 }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Build an evidence set", level: 4 }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Continue your research" }),
     ).toBeInTheDocument();
@@ -114,6 +127,12 @@ describe("HomePage dashboard", () => {
       "href",
       "/collections/collection-1",
     );
+    expect(
+      screen.getByRole("link", { name: /datasets and project ecosystem/i }),
+    ).toHaveAttribute("href", "/ecosystem");
+    expect(
+      screen.getByRole("button", { name: /copy JUDDGES citation/i }),
+    ).toBeInTheDocument();
   });
 
   it("labels the corpus total as judgments, not recent judgments", () => {

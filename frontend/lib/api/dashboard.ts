@@ -69,6 +69,9 @@ export interface DashboardResearchActivity {
   searchesUnavailable: boolean;
 }
 
+export const dashboardResearchActivityQueryKey = (userId: string | undefined) =>
+  ["dashboard", "research-activity", userId] as const;
+
 /**
  * Fetches the user's latest research entry points for the dashboard. Each source
  * can fail independently so a history outage does not hide collections, and vice
@@ -114,13 +117,13 @@ export async function fetchDashboardResearchActivity(): Promise<DashboardResearc
   };
 }
 
-export function useDashboardResearchActivity(enabled = true): ReturnType<
+export function useDashboardResearchActivity(userId?: string): ReturnType<
   typeof useQuery<DashboardResearchActivity>
 > {
   return useQuery({
-    queryKey: ["dashboard", "research-activity"],
+    queryKey: dashboardResearchActivityQueryKey(userId),
     queryFn: fetchDashboardResearchActivity,
-    enabled,
+    enabled: Boolean(userId),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

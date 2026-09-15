@@ -8,7 +8,7 @@ import {
   useDashboardStats,
 } from "@/lib/api/dashboard";
 import { formatLastUpdated } from "@/lib/date-utils";
-import { Database, FileJson, FolderOpen, Search } from "lucide-react";
+import { Check, Copy, Database, FileJson, FolderOpen, Search } from "lucide-react";
 import { PageContainer } from "@/lib/styles/components";
 import { formatStatNumber } from "@/lib/format-stats";
 import { LandingPage } from "@/components/landing/LandingPage";
@@ -19,6 +19,16 @@ import {
   Stat,
 } from "@/components/editorial";
 import React from "react";
+
+const BIBTEX = `@software{juddges_app_2026,
+  title   = {Juddges App},
+  author  = {Augustyniak, Łukasz and Binkowski, Jakub and Sawczyn, Albert and Tagowski, Kamil and Bernaczyk, Michał and Kamiński, Krzysztof and Kajdanowicz, Tomasz},
+  year    = {2026},
+  version = {0.1.0},
+  doi     = {10.5281/zenodo.19911856},
+  url     = {https://github.com/pwr-ai/juddges-app},
+  license = {Apache-2.0}
+}`;
 
 // ---------- "View all" header action ----------------------------------------
 
@@ -83,6 +93,53 @@ function OnboardingBanner(): React.JSX.Element | null {
   );
 }
 
+function CitationCopyAction(): React.JSX.Element {
+  const [state, setState] = React.useState<"idle" | "copied" | "failed">("idle");
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleCopy = React.useCallback(async () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    try {
+      await navigator.clipboard.writeText(BIBTEX);
+      setState("copied");
+    } catch {
+      setState("failed");
+    }
+    timerRef.current = setTimeout(() => setState("idle"), 2000);
+  }, []);
+
+  const label =
+    state === "copied"
+      ? "Citation copied"
+      : state === "failed"
+        ? "Copy failed"
+        : "Copy JUDDGES citation";
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={label}
+      className="group flex w-full items-center justify-between gap-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <span className="flex items-center gap-3 text-sm font-medium text-ink group-hover:text-oxblood">
+        {state === "copied" ? (
+          <Check className="size-4 text-ink-soft" aria-hidden />
+        ) : (
+          <Copy className="size-4 text-ink-soft" aria-hidden />
+        )}
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export default function HomePage(): React.JSX.Element {
   const { user, loading: authLoading } = useAuth();
   const { t, locale } = useTranslation();
@@ -100,7 +157,7 @@ export default function HomePage(): React.JSX.Element {
     data: researchActivity,
     isLoading: activityLoading,
     isError: activityError,
-  } = useDashboardResearchActivity(!authLoading && Boolean(user));
+  } = useDashboardResearchActivity(authLoading ? undefined : user?.id);
 
   // For unauthenticated users, show the premium landing page
   if (!authLoading && !user) {
@@ -149,9 +206,9 @@ export default function HomePage(): React.JSX.Element {
           <p className="font-mono text-[11px] font-medium uppercase tracking-[0.2em] text-oxblood">
             Research workspace
           </p>
-          <h1 className="mt-2 font-serif text-3xl leading-tight text-ink sm:text-4xl">
+          <h2 className="mt-2 font-serif text-3xl leading-tight text-ink sm:text-4xl">
             Move from a legal question to structured, reviewable evidence.
-          </h1>
+          </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft sm:text-base">
             Search Polish and UK judgments, organise the relevant decisions, then
             extract comparable facts with a shared coding schema.
@@ -180,7 +237,7 @@ export default function HomePage(): React.JSX.Element {
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-oxblood">
                   01 · Plan
                 </p>
-                <h2 className="mt-2 text-base font-medium text-ink">Build an evidence set</h2>
+                <h4 className="mt-2 text-base font-medium text-ink">Build an evidence set</h4>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                   Create a research collection for the question, jurisdiction, and
                   judgments you need to compare.
@@ -197,7 +254,7 @@ export default function HomePage(): React.JSX.Element {
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-oxblood">
                   02 · Search
                 </p>
-                <h2 className="mt-2 text-base font-medium text-ink">Find and review judgments</h2>
+                <h4 className="mt-2 text-base font-medium text-ink">Find and review judgments</h4>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                   Combine semantic and full-text search, refine the result set, and
                   save authoritative decisions.
@@ -214,7 +271,7 @@ export default function HomePage(): React.JSX.Element {
                 <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-oxblood">
                   03 · Analyze
                 </p>
-                <h2 className="mt-2 text-base font-medium text-ink">Extract comparable facts</h2>
+                <h4 className="mt-2 text-base font-medium text-ink">Extract comparable facts</h4>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                   Choose a coding schema, run extraction on the collection, and
                   inspect the structured results.
@@ -258,12 +315,12 @@ export default function HomePage(): React.JSX.Element {
               <div className="grid gap-6 md:grid-cols-2 md:gap-0">
                 <section className="md:pr-6" aria-labelledby="recent-searches-heading">
                   <div className="flex items-center justify-between gap-4">
-                    <h2
+                    <h4
                       id="recent-searches-heading"
                       className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft"
                     >
                       Recent searches
-                    </h2>
+                    </h4>
                     <ViewAllAction href="/history" label="View history" />
                   </div>
                   {activityError || researchActivity?.searchesUnavailable ? (
@@ -311,12 +368,12 @@ export default function HomePage(): React.JSX.Element {
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h2
+                      <h4
                         id="recent-collections-heading"
                         className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft"
                       >
                         Latest collections
-                      </h2>
+                      </h4>
                       {researchActivity && !researchActivity.collectionsUnavailable && (
                         <p className="mt-1 text-xs text-ink-soft">
                           {formatStatNumber(researchActivity.collectionCount)} collections
@@ -445,14 +502,15 @@ export default function HomePage(): React.JSX.Element {
                 <span aria-hidden className="text-ink-soft group-hover:text-oxblood">→</span>
               </Link>
               <Link
-                href="/about"
+                href="/ecosystem"
                 className="group flex items-center justify-between gap-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <span className="text-sm font-medium text-ink group-hover:text-oxblood">
-                  About JUDDGES and datasets
+                  Datasets and project ecosystem
                 </span>
                 <span aria-hidden className="text-ink-soft group-hover:text-oxblood">→</span>
               </Link>
+              <CitationCopyAction />
             </nav>
           </EditorialCard>
         </div>
