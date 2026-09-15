@@ -7,7 +7,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 
 - The frontend is a Next.js app, not a published package: no `dist/`, no `.d.ts`.
   `cfg.buildCmd` (`node .design-sync/build.mjs`) materialises `frontend/.ds-pkg/`
-  (gitignored) — entry re-exporting `components/editorial` + `components/ui/*.tsx`
+  (gitignored) — entry re-exporting `components/editorial` + `components/ui/*.tsx`,
   `tsc --emitDeclarationOnly` declarations, and a Tailwind 4 compile
   of `.design-sync/tailwind.css` into `dist/styles.css`. Run it before the converter.
 - Converter invocation (from repo root):
@@ -21,7 +21,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - `components/ui/logo.tsx` is excluded from the entry (renders an app-relative brand
   asset through next/image; also the converter's tsconfig-paths plugin resolves
   `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` is excluded
-  (originally a duplicate `SkeletonCard` export vs `skeleton-card.tsx`; #645 deleted the
+  (originally a duplicate `SkeletonCard` export vs `skeleton-card.tsx`; #635 deleted the
   latter, so including the barrel is now possible but is a separate decision — it adds
   `SkeletonCard`/`SkeletonText` as new components).
 - `srcDir: ../components` (relative to `.ds-pkg`) gives JSDoc + grouping; `ui` is a
@@ -85,7 +85,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   rule (~1103) that kills `bg-gradient-*`, every Skeleton (`Skeleton`, `SidebarMenuSkeleton`,
   `SkeletonExtractionCard`, `SkeletonSearch`) renders fully transparent — in the app
   too (verified in headless Chromium). Fix in the app: `color-mix(in oklab, var(--muted) 30%, transparent)`.
-  Those four previews graded `needs-work` on 2026-09-15 (faithful, not hacked). Fixed in #622 / synced via #627; `SkeletonExtractionCard` and `SkeletonSearch` were later deleted as dead UI in #645 (resync #653).
+  Those four previews graded `needs-work` on 2026-09-15 (faithful, not hacked). Fixed in #622 / synced via #627; `SkeletonExtractionCard` and `SkeletonSearch` were later deleted with `skeleton-card.tsx` in #635 (resynced in #653).
 
 ## Preview-authoring conventions used
 
