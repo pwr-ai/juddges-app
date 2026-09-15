@@ -8,7 +8,7 @@
  * See docs/reference/DESIGN.md.
  */
 
-const FONT_SANS =
+export const FONT_SANS =
   'Geist, "Geist Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 
 export const editorialPalette = {
