@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { BlogPostCard } from "@/components/blog/blog-post-card";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { SkeletonStat, SkeletonCard } from "@/components/ui/skeleton-card";
+import { Stat } from "@/components/editorial";
+import { SkeletonCard } from "@/components/ui/skeletons";
 import { toast } from "sonner";
 import {
   Select,
@@ -26,10 +26,7 @@ import {
   Settings,
   MoreVertical,
   Trash2,
-  Eye,
   FileText,
-  TrendingUp,
-  Users,
   Grid3x3,
   List,
   Download,
@@ -170,37 +167,44 @@ export default function AdminBlogPage(): React.JSX.Element {
         {loading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
-              <SkeletonStat key={i} />
+              <div key={i} className="border border-rule bg-parchment-deep/30 p-5 space-y-2">
+                <div className="h-8 w-20 bg-rule/50 animate-pulse" />
+                <div className="h-3 w-28 bg-rule/40 animate-pulse" />
+              </div>
             ))}
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              value={stats.published.toString()}
-              label="Published Posts"
-              icon={<FileText />}
-              gradient="from-blue-500/10 to-blue-600/5"
-              trend="success"
-              trendValue={`${stats.total_posts} total`}
-            />
-            <StatCard
-              value={stats.total_views.toLocaleString()}
-              label="Total Views"
-              icon={<Eye />}
-              gradient="from-purple-500/10 to-purple-600/5"
-            />
-            <StatCard
-              value={stats.total_likes.toString()}
-              label="Total Likes"
-              icon={<TrendingUp />}
-              gradient="from-amber-500/10 to-amber-600/5"
-            />
-            <StatCard
-              value={`${Math.round(stats.avg_read_time)} min`}
-              label="Avg. Read Time"
-              icon={<Users />}
-              gradient="from-green-500/10 to-green-600/5"
-            />
+            <div className="border border-rule bg-parchment-deep/30 p-5">
+              <Stat
+                value={stats.published}
+                label="Published Posts"
+                detail={`${stats.total_posts} total`}
+                size="sm"
+              />
+            </div>
+            <div className="border border-rule bg-parchment-deep/30 p-5">
+              <Stat
+                value={stats.total_views}
+                label="Total Views"
+                size="sm"
+              />
+            </div>
+            <div className="border border-rule bg-parchment-deep/30 p-5">
+              <Stat
+                value={stats.total_likes}
+                label="Total Likes"
+                size="sm"
+              />
+            </div>
+            <div className="border border-rule bg-parchment-deep/30 p-5">
+              <Stat
+                value={Math.round(stats.avg_read_time)}
+                suffix=" min"
+                label="Avg. Read Time"
+                size="sm"
+              />
+            </div>
           </div>
         ) : null}
       </div>

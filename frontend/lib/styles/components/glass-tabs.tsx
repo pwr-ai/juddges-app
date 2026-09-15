@@ -78,98 +78,86 @@ export function GlassTabs({
 }
 
 /**
- * Glass Tabs List Component
- * Liquid glass container - transparent with backdrop blur
+ * Tabs List Component
+ * Clean editorial container with rule border
  */
 export function GlassTabsList({
- className,
- ...props
+  className,
+  ...props
 }: GlassTabsListProps): React.JSX.Element {
- return (
- <TabsPrimitive.List
- data-slot="glass-tabs-list"
- className={cn(
-"inline-flex h-12 w-fit items-center justify-center rounded-full",
- // Liquid glass container - more visible background
-"bg-slate-200/40",
-"backdrop-blur-[20px] backdrop-saturate-[180%]",
-"border border-white/30",
-"p-1.5 gap-1.5",
-"shadow-[inset_0_0_12px_rgba(255,255,255,0.15)]",
- className
- )}
- {...props}
- />
- );
+  return (
+    <TabsPrimitive.List
+      data-slot="glass-tabs-list"
+      className={cn(
+        "inline-flex h-10 w-fit items-center justify-center border border-rule bg-parchment-deep/40 p-1 gap-1 text-ink-soft",
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 /**
- * Glass Tabs Trigger Component
- * Liquid glass pill - transparent glass with backdrop blur, background shows through
+ * Tabs Trigger Component
+ * Editorial tab trigger with ink text and parchment indicator
  */
 export function GlassTabsTrigger({
- className,
- value,
- children,
- ...props
+  className,
+  value,
+  children,
+  ...props
 }: GlassTabsTriggerProps): React.JSX.Element {
- const context = React.useContext(GlassTabsContext);
- const isActive = context.value === value;
+  const context = React.useContext(GlassTabsContext);
+  const isActive = context.value === value;
 
- return (
- <TabsPrimitive.Trigger
- value={value}
- data-slot="glass-tabs-trigger"
- className={cn(
- // Base styles
-"relative inline-flex h-full flex-1 items-center justify-center",
-"rounded-full px-5 py-2 text-sm",
-"whitespace-nowrap",
-"transition-all duration-[400ms] ease-out",
-"z-10", // Ensure text is above the glass pill
+  return (
+    <TabsPrimitive.Trigger
+      value={value}
+      data-slot="glass-tabs-trigger"
+      className={cn(
+        // Base styles
+        "relative inline-flex h-full flex-1 items-center justify-center",
+        "px-4 py-1.5 font-mono text-xs uppercase tracking-[0.14em]",
+        "whitespace-nowrap",
+        "transition-colors duration-150 ease-out",
+        "z-10",
 
- // Text colors - adapts to theme
- isActive
- ? "text-slate-900 font-semibold"
- : "text-slate-600 font-medium hover:text-slate-800",
+        // Text colors
+        isActive
+          ? "text-ink font-semibold"
+          : "text-ink-soft hover:text-ink",
 
- // Focus styles
-"focus-visible:outline-none",
-"focus-visible:ring-2 focus-visible:ring-white/30",
-"focus-visible:ring-offset-2",
+        // Focus styles
+        "focus-visible:outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 
- // Disabled state
-"disabled:pointer-events-none disabled:opacity-30",
+        // Disabled state
+        "disabled:pointer-events-none disabled:opacity-30",
 
- className
- )}
- {...props}
- >
- {isActive && (
- <motion.div
- layoutId="glass-tabs-indicator"
- className={cn(
-"absolute inset-0 rounded-full",
- // Subtle glass effect - minimal gradient
-"bg-white/50",
- // Blur for glass integration
-"backdrop-blur-[12px]",
- // Subtle border - reduced glow on dark theme
-"border border-white/40",
- // Minimal shadow for depth
-"shadow-[0_1px_3px_rgba(0,0,0,0.1)]",
-"-z-10"// Behind the text
- )}
- transition={{
- type: "spring",
- bounce: 0.2,
- duration: 0.5
- }}
- />
- )}
- <span className="relative z-10">{children}</span>
- </TabsPrimitive.Trigger>
- );
+        className
+      )}
+      {...props}
+    >
+      {isActive && (
+        <motion.div
+          layoutId="glass-tabs-indicator"
+          className={cn(
+            "absolute inset-0",
+            "bg-parchment",
+            "border border-rule/80",
+            "shadow-sm",
+            "-z-10"
+          )}
+          transition={{
+            type: "spring",
+            bounce: 0.15,
+            duration: 0.35,
+          }}
+        />
+      )}
+      <span className="relative z-10">{children}</span>
+    </TabsPrimitive.Trigger>
+  );
 }
 
 /**
