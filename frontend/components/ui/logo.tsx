@@ -7,7 +7,6 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   className?: string;
-  showGlow?: boolean;
   /** Override brand for preview purposes */
   brandOverride?: BrandType;
 }
@@ -43,7 +42,6 @@ export function Logo({
   size = 'md',
   showText = true,
   className = '',
-  showGlow = true,
   brandOverride,
 }: LogoProps) {
   const config = getBrandConfig();
@@ -89,23 +87,12 @@ export function Logo({
             <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path>
           </svg>
         )}
-        {/* Pulsing glow effect on the indicator dot */}
-        {showGlow && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-80 animate-pulse">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-ping opacity-75" />
-          </div>
-        )}
       </div>
       {showText && (
         <h1
-          className={cn(
-            'font-semibold text-foreground transition-colors duration-300 relative',
-            textSize
-          )}
+          className={cn('font-serif font-normal text-ink relative', textSize)}
         >
-          <span className="bg-gradient-to-r from-foreground via-primary to-primary bg-clip-text text-transparent animate-text-shimmer bg-[length:200%_auto]">
-            {brandName}
-          </span>
+          {brandName}
         </h1>
       )}
     </div>
