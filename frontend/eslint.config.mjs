@@ -36,7 +36,8 @@ export default [
       "react-hooks/preserve-manual-memoization": "warn",
       "react-hooks/refs": "warn",
       "react-hooks/immutability": "warn",
-      "react-hooks/purity": "warn",
+      // #605: cleared, so it is enforced again.
+      "react-hooks/purity": "error",
 
       "no-console": ["error", { allow: ["warn", "error"] }],
       "@typescript-eslint/no-explicit-any": "off",
