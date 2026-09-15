@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -30,7 +30,7 @@ router = APIRouter()
 )
 @limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
 async def get_reasoning_line_timeline(
-    request: Request, line_id: str
+    request: Request, response: Response, line_id: str
 ) -> ReasoningLineTimeline:
     """
     Return time-bucketed outcome distribution for a reasoning line, suitable

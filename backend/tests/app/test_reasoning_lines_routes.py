@@ -178,3 +178,54 @@ def test_get_reasoning_line_not_found(
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
+
+# Regression for #614: the shared limiter has headers_enabled=True, so slowapi
+# needs a `response: Response` parameter on every limited endpoint to write the
+# X-RateLimit-* headers into. The autouse fixture disables the limiter, which
+# is why the missing parameter never surfaced here while every route 500ed in
+# production.
+def test_rate_limit_headers_do_not_break_reasoning_routes(
+    reasoning_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_db = _FakeVectorDb()
+    monkeypatch.setattr("app.reasoning_lines.events.get_vector_db", lambda: fake_db)
+    monkeypatch.setattr("app.reasoning_lines.crud.get_vector_db", lambda: fake_db)
+
+    limiter = app.state.limiter
+    limiter.enabled = True
+    try:
+        response = reasoning_client.get(
+            "/reasoning-lines/dag", headers={"X-API-Key": _API_KEY}
+        )
+    finally:
+        limiter.enabled = False
+
+    assert response.status_code == 200
+    assert "x-ratelimit-limit" in response.headers
+
+
+def test_every_limited_reasoning_route_declares_a_response_parameter() -> None:
+    import inspect
+
+    from fastapi.routing import APIRoute
+
+    from app.reasoning_lines import (
+        crud,
+        discovery,
+        drift,
+        events,
+        outcomes,
+        search,
+        timeline,
+    )
+
+    missing = [
+        f"{module.__name__}:{route.path}"
+        for module in (crud, discovery, drift, events, outcomes, search, timeline)
+        for route in module.router.routes
+        if isinstance(route, APIRoute)
+        and "response" not in inspect.signature(route.endpoint).parameters
+    ]
+
+    assert missing == []
