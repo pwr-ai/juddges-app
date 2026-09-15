@@ -3,8 +3,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-// import { SourcesBadge } from './SourcesBadge'; // DISABLED: Replaced with CollapsibleButton
-import { SourceCard } from './SourceCard'; // KEPT: Functionality preserved but rendering disabled
 import { CollapsibleButton, DocumentCard, BaseCard } from '@/lib/styles/components';
 import { BookOpen } from 'lucide-react';
 import { useSourceDocuments } from '@/hooks/useSourceDocuments';
