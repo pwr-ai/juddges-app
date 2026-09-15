@@ -403,7 +403,7 @@ export interface ErrorTranslations {
 export interface DashboardTranslations {
   title: string;
   databaseOverview: string;
-  recentJudgments: string;
+  judgments: string;
   popularLegalTopics: string;
   researchCollections: string;
   viewAll: string;
