@@ -721,10 +721,19 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
  showIcon?: boolean
 }): React.JSX.Element {
- // Random width between 50 to 90%.
+ // Width varies between 50% and 90% so stacked skeleton rows do not look like
+ // a solid block. This used to call Math.random() during render, which is
+ // impure: React may re-render at any time and the bar would jump, and the
+ // server and client renders disagreed. useId is stable across both and unique
+ // per instance, so widths still vary from row to row.
+ const id = React.useId()
  const width = React.useMemo(() => {
- return `${Math.floor(Math.random() * 40) + 50}%`
- }, [])
+ let hash = 0
+ for (let i = 0; i < id.length; i++) {
+ hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+ }
+ return `${(hash % 40) + 50}%`
+ }, [id])
 
  return (
  <div
