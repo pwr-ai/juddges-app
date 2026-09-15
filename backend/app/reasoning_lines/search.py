@@ -20,6 +20,7 @@ from .similarity import (
     _jaccard_similarity,
     _text_overlap_score,
     _tokenize,
+    parse_embedding,
 )
 
 router = APIRouter()
@@ -94,7 +95,7 @@ async def search_reasoning_lines(
 
         if use_embedding and query_embedding is not None:
             # Embedding-based similarity
-            row_embedding_raw = row.get("avg_embedding")
+            row_embedding_raw = parse_embedding(row.get("avg_embedding"))
             if row_embedding_raw is not None:
                 try:
                     row_embedding = np.array(row_embedding_raw, dtype=np.float32)
