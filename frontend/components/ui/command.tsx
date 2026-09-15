@@ -21,13 +21,9 @@ function Command({
  <CommandPrimitive
  data-slot="command"
  className={cn(
- // Modern background with subtle gradient
-"bg-gradient-to-br from-background via-background/95 to-muted/50",
-"text-foreground",
-"flex h-full w-full flex-col overflow-hidden rounded-xl",
- // Enhanced shadow and border
-"shadow-2xl shadow-primary/10",
-"border border-border/50",
+"bg-parchment text-foreground",
+"flex h-full w-full flex-col overflow-hidden rounded-md",
+"shadow-lg border border-rule",
  className
  )}
  {...props}
@@ -66,9 +62,9 @@ function CommandInput({
  return (
  <div
  data-slot="command-input-wrapper"
- className="group flex h-14 items-center gap-3 border-b border-border/50 bg-gradient-to-r from-muted/20 via-muted/30 to-muted/20 px-4 transition-all duration-300 hover:bg-gradient-to-r hover:from-muted/30 hover:via-muted/40 hover:to-muted/30 focus-within:bg-gradient-to-r focus-within:from-primary/5 focus-within:via-primary/10 focus-within:to-primary/5 focus-within:border-primary/30"
+ className="group flex h-14 items-center gap-3 border-b border-rule px-4 transition-colors focus-within:border-oxblood/30"
  >
- <SearchIcon className="size-5 shrink-0 text-muted-foreground transition-all duration-300 group-hover:text-foreground group-focus-within:text-primary group-focus-within:scale-110"/>
+ <SearchIcon className="size-5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-focus-within:text-primary"/>
  <CommandPrimitive.Input
  data-slot="command-input"
  className={cn(
@@ -149,20 +145,16 @@ function CommandItem({
  <CommandPrimitive.Item
  data-slot="command-item"
  className={cn(
-"relative flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm outline-hidden select-none transition-all duration-200",
+"relative flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-hidden select-none transition-colors",
  // Default state
 "text-foreground/90",
- // Hover state with gradient background
-"hover:bg-gradient-to-r hover:from-primary/10 hover:via-primary/15 hover:to-primary/10",
-"hover:text-foreground hover:shadow-sm hover:scale-[1.01]",
- // Selected state with enhanced gradient
-"data-[selected=true]:bg-gradient-to-r data-[selected=true]:from-primary/15 data-[selected=true]:via-primary/20 data-[selected=true]:to-primary/15",
-"data-[selected=true]:text-foreground data-[selected=true]:shadow-md data-[selected=true]:scale-[1.02]",
-"data-[selected=true]:border data-[selected=true]:border-primary/20",
+ // Hover state
+"hover:bg-parchment-deep hover:text-foreground",
+ // Selected state
+"data-[selected=true]:bg-gold-soft data-[selected=true]:text-foreground",
  // Icon styling
 "[&_svg:not([class*='text-'])]:text-muted-foreground data-[selected=true]:[&_svg]:text-primary",
-"[&_svg]:transition-all [&_svg]:duration-200",
-"data-[selected=true]:[&_svg]:scale-110",
+"[&_svg]:transition-colors",
  // Disabled state
 "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
 "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
