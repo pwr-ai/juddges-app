@@ -4,7 +4,7 @@ JuDDGES is a legal case-law research product (Polish + England & Wales judgments
 
 ## Setup — nothing to wrap
 
-No provider is required. `styles.css` (imports `_ds_bundle.css` + `fonts/fonts.css`) already sets `body { background: var(--background); color: var(--foreground) }` — white page, black text — and ships the brand fonts as `@font-face`: **Tenor Sans** (display, `font-display` / `font-serif`), **Geist** (body, `font-sans`), **Geist Mono** (eyebrows, citations, tabular numerals, `font-mono`). Radix-based components (`Dialog`, `DropdownMenu`, `Select`, `Tooltip`, `Popover`, `Sheet`) need no theme provider; `Tooltip` needs a `TooltipProvider` ancestor, `Sidebar*` needs `SidebarProvider`, `useToast` needs `ToastProvider`.
+No provider is required. `styles.css` (imports `_ds_bundle.css` + `fonts/fonts.css`) already sets `body { background: var(--background); color: var(--foreground) }` — white page, black text — and ships the brand fonts as `@font-face`: **Tenor Sans** (display, `font-display` / `font-serif`), **Geist** (body, `font-sans`), **Geist Mono** (eyebrows, citations, tabular numerals, `font-mono`). Radix-based components (`Dialog`, `DropdownMenu`, `Select`, `Tooltip`, `Popover`, `Sheet`) need no theme provider; `Tooltip` needs a `TooltipProvider` ancestor, `Sidebar*` needs `SidebarProvider`.
 
 ## Styling idiom — Tailwind 4 utilities + PWr tokens
 
@@ -32,7 +32,7 @@ Conventions that make it read as *this* brand: **one** red bar per surface (`Mas
 - Type: `Headline` (`as`, `size` xs–xl, `tone`), `Eyebrow`, `DropCap`, `Citation` (`marker="¹"`).
 - Cards & data: `EditorialCard` (`eyebrow`, `title`, `action`, `featured`, `flat`, `bare`), `Stat` (`value`, `label`, `suffix`, `marker`, `static`), `DualStatCard` (UK vs PL values), `ChartFigure` (FIG. nn frame around any chart).
 - Actions: `EditorialButton` (`variant` primary|secondary|ghost, `size`, `arrow`, `href`), `QueryPill`. Use the shadcn `Button` only inside dense app UI (tables, dialogs).
-- App UI (shadcn/Radix, themed with the same tokens; each wrapper accepts every native prop of its element — `placeholder`, `disabled`, `type`, `onClick`, `aria-*` — even though its `.d.ts` lists only the DS-specific ones): `Card*`, `Input`, `Textarea`, `Select*`, `Checkbox`, `Switch`, `Tabs*`, `Table*`, `Dialog*`, `DropdownMenu*`, `Tooltip*`, `Badge`, `Alert*`, `Accordion*`, `Breadcrumb`, `Pagination*`, `Progress`, `Slider`, `Avatar*`, `Skeleton*`, `EmptyState`, `Sidebar*`, `Toast`/`ToastProvider`.
+- App UI (shadcn/Radix, themed with the same tokens; each wrapper accepts every native prop of its element — `placeholder`, `disabled`, `type`, `onClick`, `aria-*` — even though its `.d.ts` lists only the DS-specific ones): `Card*`, `Input`, `Textarea`, `Select*`, `Checkbox`, `Switch`, `Tabs*`, `Table*`, `Dialog*`, `DropdownMenu*`, `Tooltip*`, `Badge`, `Alert*`, `Accordion*`, `Breadcrumb`, `Progress`, `Slider`, `Avatar*`, `Skeleton`, `EmptyState`, `Sidebar*`.
 
 ## Where the truth lives
 
