@@ -8,7 +8,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - The frontend is a Next.js app, not a published package: no `dist/`, no `.d.ts`.
   `cfg.buildCmd` (`node .design-sync/build.mjs`) materialises `frontend/.ds-pkg/`
   (gitignored) — entry re-exporting `components/editorial` + `components/ui/*.tsx`
-  (+ `ui/toast`), `tsc --emitDeclarationOnly` declarations, and a Tailwind 4 compile
+  `tsc --emitDeclarationOnly` declarations, and a Tailwind 4 compile
   of `.design-sync/tailwind.css` into `dist/styles.css`. Run it before the converter.
 - Converter invocation (from repo root):
   `node .ds-sync/package-build.mjs --config .design-sync/config.json --node-modules frontend/node_modules --entry frontend/.ds-pkg/dist/index.js --out ./ds-bundle`
@@ -21,11 +21,13 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - `components/ui/logo.tsx` is excluded from the entry (renders an app-relative brand
   asset through next/image; also the converter's tsconfig-paths plugin resolves
   `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` is excluded
-  (duplicate `SkeletonCard` export vs `skeleton-card.tsx`).
+  (originally a duplicate `SkeletonCard` export vs `skeleton-card.tsx`; #645 deleted the
+  latter, so including the barrel is now possible but is a separate decision — it adds
+  `SkeletonCard`/`SkeletonText` as new components).
 - `srcDir: ../components` (relative to `.ds-pkg`) gives JSDoc + grouping; `ui` is a
   generic dir name so shadcn primitives land in group `general`, editorial in `editorial`.
 - shadcn sub-parts (`CardHeader`, `DialogTitle`, …) are flat exports, not `Card.Header`,
-  so the converter treats all 187 exports as roots — most ship the floor card by design.
+  so the converter treats all exports (187 at #629, 162 after #645) as roots — most ship the floor card by design.
 
 ## Fonts
 
@@ -53,9 +55,10 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - `frontend/package.json` `version` becomes the DS version in README.
 - Tenor Sans files are vendored; if the app switches faces, update
   `.design-sync/fonts.css` + `tailwind.css` `:root` vars.
-- Grades follow the preview `.tsx`, not the CSS. When #622 lands the four skeleton previews will
-  carry forward as `unchanged` with nobody prompted to look — re-grade them explicitly:
-  `node .ds-sync/package-capture.mjs --out ./ds-bundle --components Skeleton,SidebarMenuSkeleton,SkeletonExtractionCard,SkeletonSearch --spot-check-components Skeleton,SidebarMenuSkeleton,SkeletonExtractionCard,SkeletonSearch`
+- Grades follow the preview `.tsx`, not the CSS (driver keys on `sourceKeys`; a `styleSha`
+  change alone keeps grades). A CSS-only change that could move a preview is not re-graded
+  automatically — spot-check explicitly:
+  `node .ds-sync/package-capture.mjs --out ./ds-bundle --components Button,Alert,Badge,Skeleton,Stat --spot-check-components Button,Alert,Badge,Skeleton,Stat`
 - `guidelines/DESIGN.md` (= `docs/reference/DESIGN.md`) §4 lists 12 of the 15 editorial
   primitives (missing `ChartFigure`, `DualStatCard`, `Section`) and calls `EditorialButton`
   "primary or outline" (actual `primary|secondary|ghost`). Docs drift, fix in the repo doc.
@@ -82,7 +85,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   rule (~1103) that kills `bg-gradient-*`, every Skeleton (`Skeleton`, `SidebarMenuSkeleton`,
   `SkeletonExtractionCard`, `SkeletonSearch`) renders fully transparent — in the app
   too (verified in headless Chromium). Fix in the app: `color-mix(in oklab, var(--muted) 30%, transparent)`.
-  Until then those four previews grade `needs-work` (faithful, not hacked). Tracked in #622; user chose to defer and upload as-is on 2026-09-15.
+  Those four previews graded `needs-work` on 2026-09-15 (faithful, not hacked). Fixed in #622 / synced via #627; `SkeletonExtractionCard` and `SkeletonSearch` were later deleted as dead UI in #645 (resync #653).
 
 ## Preview-authoring conventions used
 

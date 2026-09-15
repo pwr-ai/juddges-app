@@ -33,12 +33,6 @@
     "Breadcrumb": {
       "cardMode": "column"
     },
-    "Pagination": {
-      "cardMode": "column"
-    },
-    "PaginationEllipsis": {
-      "cardMode": "column"
-    },
     "Tabs": {
       "cardMode": "column"
     },
