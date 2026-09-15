@@ -976,7 +976,7 @@
 
 .animate-shimmer {
   animation: shimmer 2s infinite linear;
-  background: oklch(var(--muted) / 0.45);
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
   background-size: 1000px 100%;
 }
 
@@ -1108,7 +1108,7 @@ html {
     [class*="bg-[conic-gradient"]
   ) {
     background-image: none !important;
-    background-color: oklch(var(--muted) / 0.3);
+    background-color: color-mix(in oklab, var(--muted) 30%, transparent);
   }
 
   :where(button, [role="button"], a):where(
@@ -1118,21 +1118,21 @@ html {
     [class*="bg-[conic-gradient"]
   ) {
     background-image: none !important;
-    background-color: oklch(var(--primary));
-    border-color: oklch(var(--primary) / 0.4);
-    color: oklch(var(--primary-foreground)) !important;
-    box-shadow: 0 1px 2px oklch(var(--foreground) / 0.15);
+    background-color: var(--primary);
+    border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+    color: var(--primary-foreground) !important;
+    box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 15%, transparent);
   }
 
   :where([class*="bg-clip-text"][class*="text-transparent"]) {
     background-image: none !important;
     -webkit-text-fill-color: currentColor !important;
-    color: oklch(var(--foreground)) !important;
+    color: var(--foreground) !important;
   }
 
   :where([style*="gradient("]) {
     background-image: none !important;
-    background-color: oklch(var(--muted) / 0.28) !important;
+    background-color: color-mix(in oklab, var(--muted) 28%, transparent) !important;
   }
 
   :where(
@@ -1142,7 +1142,7 @@ html {
     [class*="before:bg-[conic-gradient"]
   )::before {
     background-image: none !important;
-    background-color: oklch(var(--muted) / 0.25) !important;
+    background-color: color-mix(in oklab, var(--muted) 25%, transparent) !important;
   }
 
   :where(
@@ -1152,7 +1152,7 @@ html {
     [class*="after:bg-[conic-gradient"]
   )::after {
     background-image: none !important;
-    background-color: oklch(var(--muted) / 0.25) !important;
+    background-color: color-mix(in oklab, var(--muted) 25%, transparent) !important;
   }
 }
 
@@ -1348,16 +1348,16 @@ html[dir="rtl"] [data-slot="command-input"] {
 }
 
 ::-webkit-scrollbar-track {
-  background: oklch(var(--muted) / 0.3);
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: oklch(var(--muted-foreground) / 0.3);
+  background: color-mix(in oklab, var(--muted-foreground) 30%, transparent);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(var(--muted-foreground) / 0.5);
+  background: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
 }
 
 /* Modern Dropdown Menu Item Styles */
