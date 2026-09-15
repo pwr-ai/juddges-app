@@ -287,7 +287,7 @@ export default function HomePage(): React.JSX.Element {
             className="h-full"
           >
             <div className="flex flex-1 flex-col gap-3">
-              <p className="font-serif italic text-ink-soft text-sm leading-snug">
+              <p className="font-serif text-ink-soft text-sm leading-snug">
                 Judicial Decision Data Gathering, Encoding &amp; Sharing
               </p>
               <p className="text-sm text-ink leading-relaxed">
@@ -342,7 +342,7 @@ export default function HomePage(): React.JSX.Element {
             className="h-full"
           >
             <div className="flex flex-1 flex-col gap-3">
-              <p className="font-serif italic text-ink-soft text-sm leading-snug">
+              <p className="font-serif text-ink-soft text-sm leading-snug">
                 The canonical extraction template
               </p>
               <p className="text-sm text-ink leading-relaxed">

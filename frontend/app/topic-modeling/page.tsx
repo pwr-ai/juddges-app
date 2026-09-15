@@ -37,11 +37,11 @@ import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import { cn } from "@/lib/utils";
 
 // Editorial palette references for chart fills.
-const COLOR_INK = "#1A1A2E";
-const COLOR_INK_SOFT = "#5A5A75";
-const COLOR_RULE = "#C9C2B0";
-const COLOR_OXBLOOD = "#8B1E3F";
-const COLOR_GOLD = "#B8954A";
+const COLOR_INK = "#000000";
+const COLOR_INK_SOFT = "#5A5A5A";
+const COLOR_RULE = "#D9D9D9";
+const COLOR_OXBLOOD = "#9A342D";
+const COLOR_GOLD = "#B49A5E";
 
 const TREND_TONE: Record<
   TopicTrend,
@@ -207,7 +207,7 @@ function TopicCard({
           </span>
         </div>
         {topic.top_documents.length === 0 ? (
-          <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-sm text-[color:var(--ink-soft)]">
             No representative judgments above the relevance threshold.
           </p>
         ) : (
@@ -351,7 +351,7 @@ export default function TopicModelingPage(): React.JSX.Element {
           title="Unable to analyze topics"
           flat
         >
-          <p className="font-serif text-base italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-base text-[color:var(--ink-soft)]">
             {error instanceof Error
               ? error.message
               : "An unknown error occurred while analyzing topics."}
@@ -366,7 +366,7 @@ export default function TopicModelingPage(): React.JSX.Element {
 
       {!enabled && !data && !isError && (
         <EditorialCard flat bare className="py-12 text-center">
-          <p className="font-serif text-lg italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-lg text-[color:var(--ink-soft)]">
             Run an analysis to surface the latent themes across the judgments
             corpus.
           </p>
@@ -377,7 +377,7 @@ export default function TopicModelingPage(): React.JSX.Element {
 
       {!isFetching && enabled && !isError && topics.length === 0 && data && (
         <EditorialCard flat bare className="py-12 text-center">
-          <p className="font-serif text-lg italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-lg text-[color:var(--ink-soft)]">
             No topics could be extracted from the current corpus sample.
           </p>
         </EditorialCard>

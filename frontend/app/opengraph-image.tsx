@@ -1,13 +1,13 @@
 import { ImageResponse } from "next/og";
 import { getBrandConfig } from "@/lib/brand";
 
-// Editorial Jurisprudence palette (see docs/reference/DESIGN.md).
-const PARCHMENT = "#F5F1E8";
-const INK = "#1A1A2E";
-const INK_SOFT = "#5A5A75";
-const OXBLOOD = "#8B1E3F";
-const GOLD = "#B8954A";
-const RULE = "#C9C2B0";
+// PWr identity palette, resolved hex (see docs/reference/DESIGN.md).
+const PARCHMENT = "#FFFFFF";
+const INK = "#000000";
+const INK_SOFT = "#5A5A5A";
+const OXBLOOD = "#9A342D";
+const GOLD = "#B49A5E";
+const RULE = "#D9D9D9";
 
 export const alt =
   "Juddges — Judicial Decision Data Gathering, Encoding, and Sharing";
