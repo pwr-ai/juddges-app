@@ -120,7 +120,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
             </div>
             {/* Command Palette - Available globally via Cmd/Ctrl+K */}
             <CommandPalette />
-            {/* PWA: Service worker registration + install prompt */}
+            {/* PWA: Service worker registration */}
             <PWAProvider />
           </LegalComplianceWrapper>
         </ChatProvider>
