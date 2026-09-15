@@ -4,7 +4,6 @@
 
 @plugin "tailwindcss-animate";
 
-
 :root {
   /* ─────────────────────────────────────────────
      EDITORIAL JURISPRUDENCE PALETTE
@@ -194,7 +193,6 @@
   --max-width-page-xl: 120rem;       /* 1920px - For visualizations */
 }
 
-
 /* Resizable Panel Constraints - Prevent overflow between panels */
 [data-slot="resizable-panel"] {
   overflow: hidden !important;
@@ -246,48 +244,6 @@
   p {
     @apply leading-7;
     letter-spacing: 0;
-  }
-
-  /* Serif heading utility — for premium headings that use Instrument Serif */
-  .heading-serif {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    font-style: normal;
-  }
-
-  /* Uppercase label utility — wide tracking for small caps/labels */
-  .label-caps {
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  /* Legal-specific typography */
-  .text-legal {
-    @apply font-mono;
-    letter-spacing: -0.01em;
-  }
-
-  .text-case-number {
-    @apply font-mono text-sm;
-    letter-spacing: -0.02em;
-  }
-
-  /* Display text for hero sections — tight leading, negative tracking */
-  .text-display {
-    @apply text-5xl md:text-6xl lg:text-7xl font-bold;
-    letter-spacing: -0.03em;
-    line-height: 0.95;
-  }
-
-  /* Better line heights for dense legal text */
-  .text-legal-dense {
-    @apply text-sm leading-relaxed;
-  }
-
-  .text-legal-expanded {
-    @apply text-base leading-loose;
   }
 
   /* Enhanced focus states */
@@ -382,12 +338,6 @@
   }
 
   /* Hairline rules */
-  .editorial-rule {
-    border: 0;
-    border-top: 1px solid var(--rule);
-    margin: 0;
-  }
-
   .editorial-rule-strong {
     border: 0;
     border-top: 1px solid var(--ink);
@@ -547,242 +497,6 @@
     background-attachment: fixed;
   }
 
-  /* Optional noise overlay */
-  .app-noise-overlay {
-    pointer-events: none;
-    position: fixed;
-    inset: 0;
-    opacity: 0.05;
-    mix-blend-mode: soft-light;
-    z-index: 0;
-  }
-
-  /* Glassmorphism card base - Enhanced 2.0 */
-  .glass-card {
-    background: rgba(255, 255, 255, 0.35);
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow:
-      0 20px 50px rgba(15, 23, 42, 0.12),
-      0 10px 25px rgba(99, 102, 241, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(32px) saturate(200%);
-    -webkit-backdrop-filter: blur(32px) saturate(200%);
-  }
-
-
-
-  /* Hero card (Search Configuration) */
-  .glass-card--hero {
-    padding: 20px 24px;
-  }
-
-  /* Tile cards (Example queries) */
-  .glass-card--tile {
-    padding: 18px 20px;
-  }
-
-  /* Neomorphic chips */
-  .neo-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: #f8fafc;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-      4px 4px 10px rgba(15, 23, 42, 0.09),
-      -3px -3px 8px rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    font-weight: 500;
-    color: #111827;
-    cursor: pointer;
-    transition: box-shadow 0.18s ease, transform 0.18s ease,
-                background 0.18s ease, color 0.18s ease;
-  }
-
-  .neo-chip:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      6px 6px 14px rgba(15, 23, 42, 0.12),
-      -4px -4px 10px rgba(255, 255, 255, 0.95);
-  }
-
-  /* Active/pressed state - "Tinted Ink" Style (Precision Indicator) */
-  .neo-chip--active {
-    /* 1. Faint Blue Tint Background (not solid white - removes "Input Field" look) */
-    background-color: rgba(59, 130, 246, 0.1) !important; /* 10% Blue Tint */
-
-    /* 2. The Precision Edge */
-    border-color: #3B82F6 !important; /* Royal Blue */
-    border-width: 1px;
-
-    /* 3. High Contrast Text */
-    color: #1E3A8A !important; /* Deep Navy Blue (Authority) */
-    font-weight: 600;
-
-    /* 4. Remove Shadows - Active chips are "locked in", not floating */
-    box-shadow: none !important;
-
-    /* Remove scale transform */
-    transform: none;
-  }
-
-  /* Fix the Checkmark Icon color to match text */
-  .neo-chip--active svg {
-    color: #2563EB !important; /* Slightly brighter blue for the icon */
-  }
-
-  /* Compact chips for popular searches */
-  .neo-chip--compact {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-
-  /* Glass search input */
-  .glass-search-input {
-    flex: 1;
-    padding: 14px 16px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.45);
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    font-size: 14px;
-    outline: none;
-    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
-    transition: all 0.18s ease;
-  }
-
-  .glass-search-input::placeholder {
-    color: #9ca3af;
-  }
-
-  .glass-search-input:focus-visible {
-    border-color: #a855f7;
-    box-shadow:
-      0 0 0 1px rgba(168, 85, 247, 0.4),
-      0 12px 32px rgba(168, 85, 247, 0.25);
-  }
-
-  /* Clean Blue Button - Simple and Effective */
-  .glass-button {
-    /* 1. GEOMETRY */
-    padding: 0 24px;
-    min-height: 48px;
-    height: 48px;
-    border-radius: 12px;
-    outline: none;
-    cursor: pointer;
-
-    /* 2. THE MATERIAL (solid professional blue) */
-    background: #2563EB;
-
-    /* 3. SIMPLE SHADOWS */
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
-      0 4px 12px rgba(37, 99, 235, 0.3);
-
-    /* 4. THE EDGE */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-
-    /* Typography */
-    color: #FFFFFF;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-
-    /* Physics */
-    transition: all 0.2s ease;
-  }
-
-  /* Size variants for glass-button */
-  .glass-button.h-9 {
-    min-height: 36px;
-    height: 36px;
-    padding: 0 20px;
-    font-size: 13px;
-    border-radius: 10px;
-  }
-
-  .glass-button.h-12 {
-    min-height: 48px;
-    height: 48px;
-    padding: 0 24px;
-    font-size: 15px;
-    border-radius: 12px;
-  }
-
-  .glass-button.h-14 {
-    min-height: 56px;
-    height: 56px;
-    padding: 0 28px;
-    font-size: 16px;
-    border-radius: 14px;
-  }
-
-  .glass-button.h-16 {
-    min-height: 64px;
-    height: 64px;
-    padding: 0 32px;
-    font-size: 17px;
-    border-radius: 16px;
-  }
-
-  /* Full width variant */
-  .glass-button.w-full {
-    width: 100%;
-    border-radius: 12px;
-  }
-
-  /* HOVER STATE */
-  .glass-button:hover {
-    transform: translateY(-1px);
-    background: #1D4ED8;
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
-      0 6px 16px rgba(37, 99, 235, 0.4);
-  }
-
-  /* ACTIVE STATE */
-  .glass-button:active {
-    transform: translateY(0) scale(0.98);
-    background: #2563EB;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-
-  .glass-button:focus-visible {
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.4),
-      inset 0 -2px 0 0 rgba(0, 0, 0, 0.1),
-      0 0 0 2px #ffffff,
-      0 0 0 4px rgba(29, 78, 216, 0.5),
-      0 10px 20px -5px rgba(29, 78, 216, 0.4),
-      0 2px 4px -1px rgba(0, 0, 0, 0.1);
-  }
-
-  .glass-button:disabled,
-  .glass-button[disabled] {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  /* Example card hover */
-  .example-card {
-    position: relative;
-    cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-  }
-
-  .example-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
-  }
-
 }
 
 @keyframes fade-in-up {
@@ -845,65 +559,6 @@
   }
 }
 
-/* Search loading animations */
-@keyframes shuffle-front {
-  0%, 100% {
-    transform: rotate(0deg) translateY(0px);
-    opacity: 1;
-  }
-  50% {
-    transform: rotate(2deg) translateY(-4px);
-    opacity: 1;
-  }
-}
-
-@keyframes shuffle-mid {
-  0%, 100% {
-    transform: rotate(1deg) translateX(4px);
-    opacity: 0.6;
-  }
-  50% {
-    transform: rotate(-1deg) translateX(2px);
-    opacity: 0.7;
-  }
-}
-
-@keyframes shuffle-back {
-  0%, 100% {
-    transform: rotate(-3deg) translateX(8px);
-    opacity: 0.4;
-  }
-  50% {
-    transform: rotate(-2deg) translateX(6px);
-    opacity: 0.5;
-  }
-}
-
-@keyframes progress-shimmer {
-  0% {
-    width: 0%;
-    background-position: -200% 0;
-  }
-  90% {
-    width: 85%;
-  }
-  100% {
-    width: 90%;
-    background-position: 200% 0;
-  }
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
-  }
-}
-
 @keyframes fade-out-down {
   from {
     opacity: 1;
@@ -912,27 +567,6 @@
   to {
     opacity: 0;
     transform: translateY(-8px);
-  }
-}
-
-/* Floating Crystal Prism Dropdown Animation */
-@keyframes dropdown-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes dropdown-exit {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
   }
 }
 
@@ -988,38 +622,13 @@
   animation: text-shimmer 3s ease-in-out infinite;
 }
 
-/* Search loading animation classes */
-.animate-shuffle-front {
-  animation: shuffle-front 2.5s ease-in-out infinite;
-}
-
-.animate-shuffle-mid {
-  animation: shuffle-mid 2.5s ease-in-out infinite 0.3s;
-}
-
-.animate-shuffle-back {
-  animation: shuffle-back 2.5s ease-in-out infinite 0.6s;
-}
-
-.animate-progress-shimmer {
-  animation: progress-shimmer 15s ease-out forwards;
-}
-
-.animate-pulse-ring {
-  animation: pulse-ring 2s ease-out infinite;
-}
-
 .animate-fade-out-down {
   animation: fade-out-down 300ms ease-in forwards;
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-  .animate-shimmer::after,
-  .animate-shuffle-front,
-  .animate-shuffle-mid,
-  .animate-shuffle-back,
-  .animate-pulse-ring {
+  .animate-shimmer::after {
     animation: none;
   }
 
@@ -1172,11 +781,6 @@ html[dir="rtl"] {
 html[dir="rtl"] .ml-auto { margin-right: auto; margin-left: 0; }
 html[dir="rtl"] .mr-auto { margin-left: auto; margin-right: 0; }
 
-/* Flip directional icons in RTL mode */
-html[dir="rtl"] .rtl-flip {
-  transform: scaleX(-1);
-}
-
 /* RTL-aware flexbox */
 html[dir="rtl"] .flex-row { flex-direction: row-reverse; }
 html[dir="rtl"] .rtl-flex-row-reverse { flex-direction: row; }
@@ -1191,38 +795,9 @@ html[dir="rtl"] [data-sidebar="menu-button"] {
   text-align: right;
 }
 
-/* Search input RTL */
-html[dir="rtl"] .glass-search-input {
-  text-align: right;
-  direction: rtl;
-}
-
 /* Dropdown menu RTL positioning */
 html[dir="rtl"] [data-slot="dropdown-menu-content"] {
   text-align: right;
-}
-
-/* Card and panel RTL adjustments */
-html[dir="rtl"] .glass-card {
-  text-align: right;
-}
-
-/* Icon positioning in RTL */
-html[dir="rtl"] .icon-left {
-  margin-right: 0;
-  margin-left: 0.5rem;
-}
-
-html[dir="rtl"] .icon-right {
-  margin-left: 0;
-  margin-right: 0.5rem;
-}
-
-/* Navigation arrows flip in RTL */
-html[dir="rtl"] .nav-arrow,
-html[dir="rtl"] .chevron-right,
-html[dir="rtl"] .arrow-right {
-  transform: scaleX(-1);
 }
 
 /* List markers RTL */
@@ -1249,11 +824,6 @@ html[dir="rtl"] td {
   text-align: right;
 }
 
-/* Breadcrumb separator flip */
-html[dir="rtl"] .breadcrumb-separator {
-  transform: scaleX(-1);
-}
-
 /* Progress bar RTL */
 html[dir="rtl"] [role="progressbar"] {
   direction: rtl;
@@ -1271,24 +841,9 @@ html[dir="rtl"] [data-slot="tooltip-content"][data-side="left"] {
 }
 
 /* Chat bubbles RTL */
-html[dir="rtl"] .chat-message-user {
-  margin-left: 0;
-  margin-right: auto;
-}
-
 html[dir="rtl"] .chat-message-assistant {
   margin-right: 0;
   margin-left: auto;
-}
-
-/* Smooth RTL transition */
-html {
-  transition: direction 0.3s ease;
-}
-
-/* RTL transition for layout elements */
-.rtl-transition {
-  transition: transform 0.3s ease, margin 0.3s ease, padding 0.3s ease;
 }
 
 /* Ensure proper text rendering for RTL languages */
@@ -1313,26 +868,10 @@ html[dir="rtl"] button svg:first-child:not(:only-child) {
   margin-right: 0;
 }
 
-/* Badge positioning RTL */
-html[dir="rtl"] .badge-right {
-  left: 0;
-  right: auto;
-}
-
-html[dir="rtl"] .badge-left {
-  right: 0;
-  left: auto;
-}
-
 /* Modal/Dialog RTL close button */
 html[dir="rtl"] [data-slot="dialog-close"] {
   left: 1rem;
   right: auto;
-}
-
-/* Notification/Toast RTL */
-html[dir="rtl"] [data-slot="toast"] {
-  text-align: right;
 }
 
 /* Command palette RTL */
