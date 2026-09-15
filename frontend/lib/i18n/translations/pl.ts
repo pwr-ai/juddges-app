@@ -366,7 +366,7 @@ export const pl: Translations = {
   dashboard: {
     title: 'Pulpit',
     databaseOverview: 'Przegląd bazy danych',
-    recentJudgments: 'Ostatnie orzeczenia',
+    judgments: 'Orzeczenia',
     popularLegalTopics: 'Popularne tematy prawne',
     researchCollections: 'Kolekcje badawcze',
     viewAll: 'Zobacz wszystko',

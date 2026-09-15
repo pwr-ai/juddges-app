@@ -366,7 +366,7 @@ export const en: Translations = {
   dashboard: {
     title: 'Dashboard',
     databaseOverview: 'Database Overview',
-    recentJudgments: 'Recent Judgments',
+    judgments: 'Judgments',
     popularLegalTopics: 'Popular Legal Topics',
     researchCollections: 'Research Collections',
     viewAll: 'View all',

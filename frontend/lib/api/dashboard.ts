@@ -1,4 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { getCollections } from "@/lib/api/collections";
+import {
+  getUserSearchHistory,
+  type UserSearchHistoryItem,
+} from "@/lib/api/search-history";
 
 export interface DashboardStats {
   total_judgments: number;
@@ -48,38 +53,74 @@ export function useDashboardStats(): ReturnType<typeof useQuery<DashboardStats>>
   });
 }
 
-interface Collection {
+export interface DashboardRecentCollection {
   id: string;
   name: string;
-  documents: Array<{ id: string }>;
+  documentCount: number;
+  updatedAt: string;
 }
 
-interface CollectionsInfo {
+export interface DashboardResearchActivity {
   documentCount: number;
   collectionCount: number;
+  recentCollections: DashboardRecentCollection[];
+  recentSearches: UserSearchHistoryItem[];
+  collectionsUnavailable: boolean;
+  searchesUnavailable: boolean;
 }
 
 /**
- * Hook to fetch collections and calculate total document count and collection count
+ * Fetches the user's latest research entry points for the dashboard. Each source
+ * can fail independently so a history outage does not hide collections, and vice
+ * versa.
  */
-export function useCollectionsDocumentCount() {
+export async function fetchDashboardResearchActivity(): Promise<DashboardResearchActivity> {
+  const [collectionsResult, searchesResult] = await Promise.allSettled([
+    getCollections(),
+    getUserSearchHistory(30, 3),
+  ]);
+
+  if (
+    collectionsResult.status === "rejected" &&
+    searchesResult.status === "rejected"
+  ) {
+    throw new Error("Failed to fetch dashboard research activity");
+  }
+
+  const collections =
+    collectionsResult.status === "fulfilled" ? collectionsResult.value : [];
+  const recentSearches =
+    searchesResult.status === "fulfilled" ? searchesResult.value : [];
+  const documentCount = collections.reduce((sum, collection) => {
+    return sum + (collection.document_count ?? collection.documents?.length ?? 0);
+  }, 0);
+  const collectionsByRecentActivity = [...collections].sort((left, right) => {
+    return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+  });
+
+  return {
+    documentCount,
+    collectionCount: collections.length,
+    recentCollections: collectionsByRecentActivity.slice(0, 3).map((collection) => ({
+      id: collection.id,
+      name: collection.name,
+      documentCount:
+        collection.document_count ?? collection.documents?.length ?? 0,
+      updatedAt: collection.updated_at,
+    })),
+    recentSearches: recentSearches.slice(0, 3),
+    collectionsUnavailable: collectionsResult.status === "rejected",
+    searchesUnavailable: searchesResult.status === "rejected",
+  };
+}
+
+export function useDashboardResearchActivity(enabled = true): ReturnType<
+  typeof useQuery<DashboardResearchActivity>
+> {
   return useQuery({
-    queryKey: ["dashboard", "collections-document-count"],
-    queryFn: async (): Promise<CollectionsInfo> => {
-      const response = await fetch("/api/collections", {
-        cache: 'no-store',
-      });
-      if (!response.ok) throw new Error("Failed to fetch collections");
-      const collections: Collection[] = await response.json();
-      // Sum up all documents across all collections
-      const documentCount = collections.reduce((sum, collection) => {
-        return sum + (collection.documents?.length || 0);
-      }, 0);
-      return {
-        documentCount,
-        collectionCount: collections.length,
-      };
-    },
+    queryKey: ["dashboard", "research-activity"],
+    queryFn: fetchDashboardResearchActivity,
+    enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
