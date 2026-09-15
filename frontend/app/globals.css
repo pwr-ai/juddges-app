@@ -94,7 +94,8 @@
   --sidebar-ring: var(--oxblood);
 
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
-  --font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+  --font-display: var(--font-tenor-sans), Optima, "URW Classico", "Gill Sans", sans-serif;
+  --font-serif: var(--font-display); /* alias — font-serif / .editorial-display keep working */
   --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
   /* Sharp, paper-like radii — editorial, not SaaS-rounded */
   --radius: 0.125rem;
@@ -272,7 +273,7 @@
     letter-spacing: 0;
   }
 
-  /* Serif heading utility — for premium headings that use Instrument Serif */
+  /* Display heading utility — Tenor Sans, the PWr display face */
   .heading-serif {
     font-family: var(--font-serif);
     font-weight: 400;
@@ -357,20 +358,21 @@
    ───────────────────────────────────────────── */
 
 @layer components {
-  /* Display headlines — Instrument Serif, tight leading, italic accents */
+  /* Display headlines — Tenor Sans (Optima-like), open tracking, red accents */
   .editorial-display {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-weight: 400;
     font-style: normal;
-    letter-spacing: -0.025em;
-    line-height: 0.95;
-    color: var(--ink);
+    letter-spacing: 0;
+    line-height: 1.02;
+    color: var(--pwr-black);
   }
 
+  /* Tenor Sans has no italic: emphasis is colour, never faux-italic */
   .editorial-display em,
   .editorial-display i {
-    font-style: italic;
-    color: var(--oxblood);
+    font-style: normal;
+    color: var(--pwr-red);
   }
 
   /* Eyebrow — small caps tag with horizontal rule */
@@ -395,14 +397,14 @@
 
   /* Drop cap — large initial that floats next to the first paragraph */
   .editorial-dropcap::first-letter {
-    font-family: var(--font-serif);
-    font-style: italic;
+    font-family: var(--font-display);
+    font-style: normal;
     font-weight: 400;
     float: left;
     font-size: 4.5em;
     line-height: 0.85;
     margin: 0.05em 0.08em -0.05em 0;
-    color: var(--oxblood);
+    color: var(--pwr-red);
   }
 
   /* Hairline rules */
@@ -420,11 +422,11 @@
 
   /* Tabular numerals for stat figures */
   .editorial-numeral {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-feature-settings: "tnum" 1, "lnum" 1;
     font-variant-numeric: tabular-nums lining-nums;
-    letter-spacing: -0.02em;
-    color: var(--ink);
+    letter-spacing: 0;
+    color: var(--pwr-black);
   }
 
   /* Citation marker (¹ ² ³) */

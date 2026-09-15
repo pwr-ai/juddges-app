@@ -66,4 +66,16 @@ describe('globals.css colour tokens', () => {
       expect(css).toMatch(new RegExp(`${themeVar}:\\s*var\\(${themeVar.replace('--color-', '--')}\\)\\s*;`));
     },
   );
+
+  it('routes display type through Tenor Sans', () => {
+    expect(rootBlock).toMatch(/--font-display:\s*var\(--font-tenor-sans\),\s*Optima,\s*"URW Classico",\s*"Gill Sans",\s*sans-serif;/);
+    expect(rootBlock).toMatch(/--font-serif:\s*var\(--font-display\);/);
+    expect(css).not.toMatch(/instrument-serif|Instrument Serif|Iowan Old Style/);
+  });
+
+  it('keeps display emphasis upright (Tenor Sans has no italic)', () => {
+    const emRule = css.slice(css.indexOf('.editorial-display em'), css.indexOf('}', css.indexOf('.editorial-display em')));
+    expect(emRule).toMatch(/font-style:\s*normal;/);
+    expect(emRule).toMatch(/color:\s*var\(--pwr-red\);/);
+  });
 });
