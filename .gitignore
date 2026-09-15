@@ -218,3 +218,12 @@ skills-lock.json
 .kangentic/
 .claude/settings.local.json
 kangentic.local.json
+
+# design-sync (claude.ai/design) machine state - inputs in .design-sync/ are committed
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+frontend/.ds-pkg/
+.design-sync/shims/*.d.ts

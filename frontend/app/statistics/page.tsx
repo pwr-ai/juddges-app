@@ -165,40 +165,53 @@ const tooltipYearly = makeTooltipRenderer({
 export default function StatisticsPage(): React.JSX.Element {
   const { data: stats, isLoading, isError, error } = useDashboardStats();
 
+  // Pulled out of `stats` first so each useMemo can depend on a plain
+  // identifier. With `[stats?.case_types]` the React Compiler infers a
+  // dependency on `stats` itself, cannot reconcile that with the narrower
+  // manual dependency, and responds by skipping optimisation of this whole
+  // component. Destructuring keeps the narrow dependency — these still only
+  // recompute when their own slice changes — while matching what the compiler
+  // infers.
+  const decisionsPerYear = stats?.decisions_per_year;
+  const caseTypes = stats?.case_types;
+  const decisionTypes = stats?.decision_types;
+  const courtLevels = stats?.court_levels;
+  const topCourtsRaw = stats?.top_courts;
+
   const yearlyData = useMemo(() => {
-    if (!stats?.decisions_per_year) return [];
-    return [...stats.decisions_per_year]
+    if (!decisionsPerYear) return [];
+    return [...decisionsPerYear]
       .sort((a, b) => a.year - b.year)
       .map((row) => ({
         year: row.year,
         count: row.count,
         partial: row.year >= PARTIAL_YEAR_THRESHOLD,
       }));
-  }, [stats?.decisions_per_year]);
+  }, [decisionsPerYear]);
 
   const caseTypeData = useMemo(() => {
-    if (!stats?.case_types) return [];
-    return [...stats.case_types]
+    if (!caseTypes) return [];
+    return [...caseTypes]
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-  }, [stats?.case_types]);
+  }, [caseTypes]);
 
   const decisionTypeData = useMemo(() => {
-    if (!stats?.decision_types) return [];
-    return [...stats.decision_types]
+    if (!decisionTypes) return [];
+    return [...decisionTypes]
       .sort((a, b) => b.count - a.count)
       .slice(0, 12);
-  }, [stats?.decision_types]);
+  }, [decisionTypes]);
 
   const courtLevelData = useMemo(() => {
-    if (!stats?.court_levels) return [];
-    return [...stats.court_levels].sort((a, b) => b.count - a.count);
-  }, [stats?.court_levels]);
+    if (!courtLevels) return [];
+    return [...courtLevels].sort((a, b) => b.count - a.count);
+  }, [courtLevels]);
 
   const topCourts = useMemo(() => {
-    if (!stats?.top_courts) return [];
-    return [...stats.top_courts].sort((a, b) => b.count - a.count).slice(0, 15);
-  }, [stats?.top_courts]);
+    if (!topCourtsRaw) return [];
+    return [...topCourtsRaw].sort((a, b) => b.count - a.count).slice(0, 15);
+  }, [topCourtsRaw]);
 
   if (isError) {
     return (
