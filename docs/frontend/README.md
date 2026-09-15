@@ -4,7 +4,7 @@ Persistent frontend documentation for the Juddges App.
 
 ## Documents
 
-- [styling-guide/](./styling-guide/) — legacy "Legal Glass 2.0" styling notes. The canonical design system is **Editorial Jurisprudence** — see [`../reference/DESIGN.md`](../reference/DESIGN.md) and the shared primitives in `frontend/components/editorial/`.
+- [`../reference/DESIGN.md`](../reference/DESIGN.md) — **Editorial Jurisprudence**, the canonical design system, with the shared primitives in `frontend/components/editorial/`. The legacy "Legal Glassmorphism 2.0" styling guide was removed (#615); its style demo page and the runtime endpoint that read component source files were retired in August 2026 and must not be recreated.
 
 Dated planning artifacts (Feb 2026 UX/UI review, testing strategy roadmap, component implementation templates) were archived to `.context/`:
 
