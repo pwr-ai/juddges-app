@@ -5,22 +5,25 @@ import { Headline } from "./Headline";
 
 interface SectionHeaderProps {
   eyebrow?: string;
-  /** May contain `<em>` for italic-oxblood emphasis. */
+  /** May contain `<em>` for red emphasis. */
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** Auto-numbered marker, e.g. `01`, `02`, … rendered as a watermark. */
+  /** Section number, e.g. `01`, `02`, … rendered as a PWr red square. */
   numeral?: string;
   /** Alignment — `start` (default) or `center`. */
   align?: "start" | "center";
+  /** `bar` wraps eyebrow + title in the SIW red header bar. */
+  variant?: "default" | "bar";
   /** Optional right-side action (e.g. CTA link). */
   action?: React.ReactNode;
   className?: string;
 }
 
 /**
- * Editorial section header — eyebrow + serif title + description, with a
- * giant marginal numeral as an optional decorative element. Drop this in at
- * the top of every long-form section for visual rhythm.
+ * Editorial section header — eyebrow + display title + description, with an
+ * optional section number rendered as the SIW red square (the identity
+ * system's page-number block). `variant="bar"` turns the header into the
+ * full red bar used on SIW document pages.
  *
  * @example
  *   <SectionHeader
@@ -36,9 +39,29 @@ export function SectionHeader({
   description,
   numeral,
   align = "start",
+  variant = "default",
   action,
   className,
 }: SectionHeaderProps) {
+  const numeralBlock = numeral && (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-flex h-7 w-7 shrink-0 items-center justify-center font-display text-sm leading-none",
+        variant === "bar" ? "bg-pwr-paper text-pwr-red" : "bg-pwr-red text-pwr-paper",
+        align === "center" && "mx-auto",
+      )}
+    >
+      {numeral}
+    </span>
+  );
+
+  const heading = (
+    <Headline as="h2" size="md" className={variant === "bar" ? "text-pwr-paper" : undefined}>
+      {title}
+    </Headline>
+  );
+
   return (
     <div
       className={cn(
@@ -48,29 +71,32 @@ export function SectionHeader({
         className,
       )}
     >
-      {numeral && (
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute -z-0 select-none font-serif italic text-[color:var(--gold-soft)]",
-            "text-[8rem] sm:text-[10rem] leading-none opacity-60",
-            align === "center" ? "left-1/2 -top-12 -translate-x-1/2" : "-left-2 -top-10",
-          )}
-        >
-          {numeral}
-        </span>
-      )}
       <div className="relative z-10 flex flex-col gap-4">
-        {eyebrow && (
-          <Eyebrow as="span" tone="oxblood">
-            {eyebrow}
-          </Eyebrow>
+        {variant === "bar" ? (
+          <div className="pwr-bar flex flex-col gap-2 py-4">
+            {eyebrow && (
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-pwr-sand">
+                {eyebrow}
+              </span>
+            )}
+            <div className="flex items-start gap-3">
+              {numeralBlock}
+              {heading}
+            </div>
+          </div>
+        ) : (
+          <>
+            {numeralBlock}
+            {eyebrow && (
+              <Eyebrow as="span" tone="oxblood">
+                {eyebrow}
+              </Eyebrow>
+            )}
+            {heading}
+          </>
         )}
-        <Headline as="h2" size="md">
-          {title}
-        </Headline>
         {description && (
-          <p className="max-w-2xl text-[17px] leading-[1.65] text-[color:var(--ink-soft)]">
+          <p className="max-w-2xl text-[17px] leading-[1.65] text-pwr-grey">
             {description}
           </p>
         )}

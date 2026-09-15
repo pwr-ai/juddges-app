@@ -1,7 +1,7 @@
 import React from "react";
 import "@/app/globals.css";
 import localFont from "next/font/local";
-import { Instrument_Serif } from "next/font/google";
+import { Tenor_Sans } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -27,12 +27,13 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
+// Display face: Tenor Sans is the open substitute for Zapf Humanist / Optima,
+// the PWr identity typeface (SIW 2025-12). Single weight, no italic.
+const tenorSans = Tenor_Sans({
+  subsets: ["latin", "latin-ext"],
   weight: "400",
-  display: "swap", // Avoid invisible text (FOIT) while the serif loads
-  variable: "--font-instrument-serif",
-  preload: false, // Only used on admin and landing pages, not globally
+  display: "swap", // Avoid invisible text (FOIT) while the display face loads
+  variable: "--font-tenor-sans",
 });
 
 // Get brand configuration at build/render time
@@ -166,7 +167,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: runtimeConfig }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${tenorSans.variable} font-sans antialiased`}>
         <JsonLd data={getSiteStructuredData()} />
         <ChunkErrorBoundary>
           <QueryProvider>

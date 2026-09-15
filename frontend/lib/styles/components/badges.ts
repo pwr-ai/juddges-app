@@ -19,14 +19,13 @@ import { cn } from '@/lib/utils';
  * </Badge>
  */
 export const getFilterToggleBadgeStyle = (
- additionalClasses?: string
+  additionalClasses?: string
 ): string => {
- return cn(
-"relative text-[10px] px-1.5 py-0.5 h-4 font-semibold flex items-center gap-0.5 transition-all rounded-lg",
- // BaseCard icon container style
-"bg-gradient-to-br from-primary/10 via-indigo-400/10 to-purple-400/10",
- additionalClasses
- );
+  return cn(
+    "relative text-[10px] px-1.5 py-0.5 h-4 font-semibold flex items-center gap-0.5 rounded-md",
+    "bg-parchment-deep text-ink border border-rule",
+    additionalClasses
+  );
 };
 
 /**
@@ -37,12 +36,12 @@ export const getFilterToggleBadgeStyle = (
  * @returns Combined className string
  */
 export const getFilterToggleBadgeIconStyle = (
- additionalClasses?: string
+  additionalClasses?: string
 ): string => {
- return cn(
-"h-2.5 w-2.5 text-primary relative z-10",
- additionalClasses
- );
+  return cn(
+    "h-2.5 w-2.5 text-ink-soft relative z-10",
+    additionalClasses
+  );
 };
 
 /**
@@ -54,10 +53,10 @@ export const getFilterToggleBadgeIconStyle = (
  * @returns Combined className string
  */
 export const getFilterToggleBadgeTextStyle = (
- additionalClasses?: string
+  additionalClasses?: string
 ): string => {
- return cn(
-"text-primary relative z-10",
- additionalClasses
- );
+  return cn(
+    "text-ink relative z-10 font-mono",
+    additionalClasses
+  );
 };

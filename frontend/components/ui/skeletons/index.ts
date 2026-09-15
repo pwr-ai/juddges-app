@@ -7,6 +7,3 @@
 
 export { SkeletonText } from './SkeletonText';
 export { SkeletonCard } from './SkeletonCard';
-export { SearchResultsSkeleton } from './SearchResultsSkeleton';
-export { ChatMessageSkeleton } from './ChatMessageSkeleton';
-export { TableSkeleton } from './TableSkeleton';

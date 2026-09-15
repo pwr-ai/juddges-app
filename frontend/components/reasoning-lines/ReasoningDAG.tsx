@@ -10,8 +10,10 @@ import React, { useRef, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Loader2, Target } from 'lucide-react';
-import { BaseCard } from '@/lib/styles/components';
 import { Button } from '@/components/ui/button';
+import { ChartFigure } from '@/components/editorial';
+import { editorialPalette, FONT_SANS } from '@/lib/charts/editorial-plot';
+import { DAG_EDGE_STYLE, DAG_NODE_STYLE } from '@/lib/charts/reasoning-palette';
 import type { DAGNode, DAGEdge, DAGNodeStatus, DAGEdgeEventType } from '@/types/reasoning-lines';
 
 // Dynamically import ForceGraph2D to avoid SSR issues (canvas-based)
@@ -25,24 +27,8 @@ const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
 });
 
 // ---------------------------------------------------------------------------
-// Color maps
+// Labels — colours live in lib/charts/reasoning-palette.ts
 // ---------------------------------------------------------------------------
-
-/** Node fill color keyed by status */
-const NODE_STATUS_COLORS: Record<DAGNodeStatus, string> = {
-  active: '#22c55e',     // green-500
-  merged: '#3b82f6',     // blue-500
-  superseded: '#9ca3af', // gray-400
-  dormant: '#f59e0b',    // amber-500
-};
-
-/** Edge color keyed by event type */
-const EDGE_EVENT_COLORS: Record<DAGEdgeEventType, string> = {
-  branch: '#ef4444',    // red-500
-  merge: '#22c55e',     // green-500
-  influence: '#3b82f6', // blue-500
-  drift: '#f97316',     // orange-500
-};
 
 /** Polish labels for legend */
 const STATUS_LABELS: Record<DAGNodeStatus, string> = {
@@ -149,43 +135,37 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
 
       // Radius proportional to case_count (min 4, max 18)
       const radius = Math.max(4, Math.min(18, 4 + Math.sqrt(data.case_count) * 2));
-      const color = NODE_STATUS_COLORS[data.status] ?? '#9ca3af';
+      const style = DAG_NODE_STYLE[data.status] ?? DAG_NODE_STYLE.superseded;
 
       ctx.save();
-
-      // Shadow for depth
-      ctx.shadowBlur = 4;
-      ctx.shadowColor = 'rgba(0,0,0,0.12)';
 
       // Circle
       ctx.beginPath();
       ctx.arc(data.x, data.y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
+      ctx.fillStyle = style.fill;
       ctx.fill();
 
       // Border
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = style.stroke;
       ctx.lineWidth = 1.5;
       ctx.stroke();
-
-      ctx.shadowBlur = 0;
 
       // Label — only render when zoomed in enough
       if (globalScale >= 0.6) {
         const label =
           data.label.length > 24 ? data.label.slice(0, 22) + '...' : data.label;
         const fontSize = Math.max(9, 11 / globalScale);
-        ctx.font = `600 ${fontSize}px system-ui, sans-serif`;
+        ctx.font = `500 ${fontSize}px ${FONT_SANS}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
         // Background for readability
         const textWidth = ctx.measureText(label).width;
         const labelY = data.y + radius + 3;
-        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillStyle = editorialPalette.parchment;
         ctx.fillRect(data.x - textWidth / 2 - 2, labelY - 1, textWidth + 4, fontSize + 2);
 
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = editorialPalette.ink;
         ctx.fillText(label, data.x, labelY);
       }
 
@@ -194,7 +174,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
     []
   );
 
-  // Custom link (edge) rendering — directed arrows colored by event type
+  // Custom link (edge) rendering — directed arrows coloured + dashed by event type
   const renderLink = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (link: any, ctx: CanvasRenderingContext2D) => {
@@ -206,7 +186,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       const tgt = data.target;
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) return;
 
-      const color = EDGE_EVENT_COLORS[data.event_type] ?? '#9ca3af';
+      const { color, dash } = DAG_EDGE_STYLE[data.event_type] ?? DAG_EDGE_STYLE.influence;
       // Width proportional to confidence (min 0.8, max 3)
       const width = 0.8 + data.confidence * 2.2;
 
@@ -218,8 +198,10 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       ctx.lineTo(tgt.x, tgt.y);
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
+      ctx.setLineDash(dash);
       ctx.globalAlpha = 0.7;
       ctx.stroke();
+      ctx.setLineDash([]);
 
       // Arrowhead
       const arrowLen = 6;
@@ -250,7 +232,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
   );
 
   return (
-    <BaseCard clickable={false} variant="light" className="rounded-[16px] relative overflow-hidden">
+    <ChartFigure className="overflow-hidden">
       {/* Graph canvas */}
       <div style={{ height }} className="w-full">
         {/* eslint-disable @typescript-eslint/no-explicit-any */}
@@ -279,7 +261,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
         <Button
           size="icon"
           variant="secondary"
-          className="shadow-lg bg-background/95 backdrop-blur h-8 w-8"
+          className="h-8 w-8 bg-parchment"
           onClick={handleCenterGraph}
           title="Wycentruj graf"
         >
@@ -288,36 +270,49 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       </div>
 
       {/* Legend — bottom left */}
-      <div className="absolute bottom-3 left-3 bg-background/95 backdrop-blur rounded-xl border p-3 shadow-lg text-xs space-y-2 max-w-[220px]">
+      <div className="absolute bottom-3 left-3 bg-parchment border border-rule p-3 text-xs space-y-2 max-w-[220px]">
         {/* Node statuses */}
-        <p className="font-medium text-foreground">Wezly (status)</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">Wezly (status)</p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(Object.keys(NODE_STATUS_COLORS) as DAGNodeStatus[]).map((status) => (
+          {(Object.keys(STATUS_LABELS) as DAGNodeStatus[]).map((status) => (
             <div key={status} className="flex items-center gap-1.5">
-              <div
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: NODE_STATUS_COLORS[status] }}
-              />
-              <span className="text-muted-foreground">{STATUS_LABELS[status]}</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0" aria-hidden>
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="4"
+                  fill={DAG_NODE_STYLE[status].fill}
+                  stroke={DAG_NODE_STYLE[status].stroke}
+                  strokeWidth="1.5"
+                />
+              </svg>
+              <span className="text-ink-soft">{STATUS_LABELS[status]}</span>
             </div>
           ))}
         </div>
 
         {/* Edge types */}
-        <p className="font-medium text-foreground pt-1">Krawedzie (typ)</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft pt-1">Krawedzie (typ)</p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(Object.keys(EDGE_EVENT_COLORS) as DAGEdgeEventType[]).map((eventType) => (
+          {(Object.keys(EVENT_LABELS) as DAGEdgeEventType[]).map((eventType) => (
             <div key={eventType} className="flex items-center gap-1.5">
-              <div
-                className="w-4 h-0.5 flex-shrink-0 rounded"
-                style={{ backgroundColor: EDGE_EVENT_COLORS[eventType] }}
-              />
-              <span className="text-muted-foreground">{EVENT_LABELS[eventType]}</span>
+              <svg width="20" height="4" viewBox="0 0 20 4" className="flex-shrink-0" aria-hidden>
+                <line
+                  x1="0"
+                  y1="2"
+                  x2="20"
+                  y2="2"
+                  stroke={DAG_EDGE_STYLE[eventType].color}
+                  strokeWidth="2"
+                  strokeDasharray={DAG_EDGE_STYLE[eventType].dash.join(' ') || undefined}
+                />
+              </svg>
+              <span className="text-ink-soft">{EVENT_LABELS[eventType]}</span>
             </div>
           ))}
         </div>
       </div>
-    </BaseCard>
+    </ChartFigure>
   );
 }
 
