@@ -22,7 +22,7 @@ System design and technical decisions:
 
 ### 💻 [Frontend](frontend/)
 Frontend-specific documentation:
-- [Styling Guide](frontend/styling-guide/) - Color system, component creation, and UI standards
+- [Design System](reference/DESIGN.md) - Editorial Jurisprudence: tokens, typography, component primitives
 
 ### ⚙️ [Backend](backend/)
 Backend-specific documentation:

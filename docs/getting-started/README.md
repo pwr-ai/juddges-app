@@ -74,7 +74,7 @@ Before you begin, ensure you have:
 After getting the app running:
 - [Data Ingestion Guide](../how-to/data-ingestion.md) - Load more judgment data
 - [Architecture Overview](../architecture/overview.md) - Understand the system
-- [Frontend Styling Guide](../frontend/styling-guide/README.md) - Learn the UI system
+- [Design System](../reference/DESIGN.md) - Learn the UI system (Editorial Jurisprudence)
 - [API Reference](../api/API_REFERENCE.md) - Explore API endpoints
 
 ## 🆘 Troubleshooting
