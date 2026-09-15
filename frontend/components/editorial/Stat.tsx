@@ -5,8 +5,11 @@ import { motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface StatProps {
-  /** Numeric value to render. Will be auto-formatted (47K, 1.2M). */
-  value: number;
+  /**
+   * Figure to render. Numbers are auto-formatted (47K, 1.2M) and tween in;
+   * strings pass through verbatim (years, ranks, "3M") with no animation.
+   */
+  value: number | string;
   /** Optional suffix (`+`, `%`, etc). */
   suffix?: string;
   /** Bottom label. */
@@ -24,7 +27,8 @@ interface StatProps {
   className?: string;
 }
 
-function formatStat(n: number): string {
+function formatStat(n: number | string): string {
+  if (typeof n === "string") return n;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${Math.floor(n / 1_000).toLocaleString()}K`;
   return n.toLocaleString();
@@ -51,7 +55,7 @@ export function Stat({
   const [display, setDisplay] = useState(() => formatStat(value));
 
   useEffect(() => {
-    if (isStatic || value === 0) {
+    if (isStatic || typeof value === "string" || value === 0) {
       setDisplay(formatStat(value));
       return;
     }
@@ -69,6 +73,7 @@ export function Stat({
       return;
     }
 
+    const target = value;
     let cancelled = false;
     let rafId = 0;
     const duration = 1800;
@@ -79,7 +84,7 @@ export function Stat({
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.floor(eased * value);
+      const current = Math.floor(eased * target);
       setDisplay(formatStat(current));
       // One-shot tween: schedule the next frame only until we resolve to the
       // final value, then the rAF loop unmounts itself.
