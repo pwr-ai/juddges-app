@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,14 +63,7 @@ export function SchemaTestRunner({
  const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
  const [showResultDialog, setShowResultDialog] = useState(false);
 
- useEffect(() => {
- if (collectionId) {
- fetchDocuments();
- }
- // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [collectionId]);
-
- const fetchDocuments = async () => {
+ const fetchDocuments = useCallback(async () => {
  setIsLoading(true);
  try {
  const response = await fetch(`/api/collections/${collectionId}/documents`);
@@ -89,7 +82,14 @@ export function SchemaTestRunner({
  } finally {
  setIsLoading(false);
  }
- };
+ }, [collectionId]);
+
+ useEffect(() => {
+ if (collectionId) {
+ fetchDocuments();
+ }
+ }, [collectionId, fetchDocuments]);
+
 
  const handleDocumentToggle = (docId: string) => {
  const newSelected = new Set(selectedDocs);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,14 +120,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  const [citations, setCitations] = useState<number | undefined>(publication?.citations);
  const [manuscriptNumber, setManuscriptNumber] = useState(publication?.manuscriptNumber || "");
 
- // Fetch available resources on mount (only when editing)
- useEffect(() => {
- if (isEditing) {
- fetchAvailableResources();
- }
- }, [isEditing]);
-
- const fetchAvailableResources = async () => {
+ const fetchAvailableResources = useCallback(async () => {
  setResourceLoading(true);
  try {
  // Fetch schemas
@@ -155,7 +148,15 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  } finally {
  setResourceLoading(false);
  }
- };
+ }, []);
+
+ // Fetch available resources on mount (only when editing)
+ useEffect(() => {
+ if (isEditing) {
+ fetchAvailableResources();
+ }
+ }, [isEditing, fetchAvailableResources]);
+
 
  const handleAuthorChange = (index: number, field: keyof PublicationAuthor, value: string) => {
  const newAuthors = [...authors];
