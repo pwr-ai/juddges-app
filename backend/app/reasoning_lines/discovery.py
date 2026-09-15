@@ -1,6 +1,5 @@
 """Legal-question cluster discovery endpoint (#147 split)."""
 
-import json
 import time
 from typing import Any
 
@@ -23,6 +22,7 @@ from .schemas import (
 )
 from .similarity import (
     _extract_legal_bases,
+    parse_embedding,
 )
 from .timeline_math import (
     _compute_date_range,
@@ -81,12 +81,7 @@ async def discover_reasoning_lines(
     # Step 2: Parse and filter to documents with valid embeddings
     # Embeddings may be stored as JSON strings or lists depending on the table
     for doc in docs:
-        emb = doc.get("embedding")
-        if isinstance(emb, str):
-            try:
-                doc["embedding"] = json.loads(emb)
-            except (json.JSONDecodeError, TypeError):
-                doc["embedding"] = None
+        doc["embedding"] = parse_embedding(doc.get("embedding"))
 
     docs_with_embeddings = [
         doc

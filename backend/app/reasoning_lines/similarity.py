@@ -1,5 +1,6 @@
 """Pure vector/text similarity & legal-basis helpers (#147 split)."""
 
+import json
 from collections import Counter
 from typing import Any
 
@@ -32,6 +33,22 @@ def _extract_legal_bases(
             entry for entry, _ in legislation_counter.most_common(top_n)
         ]
     return result
+
+
+def parse_embedding(raw: Any) -> list[float] | None:
+    """Return a pgvector value as a list, or None if absent or unparsable.
+
+    PostgREST serialises ``vector`` columns as a JSON string (``"[0.1,0.2]"``),
+    while the fake stores used in tests hand back lists. Callers must accept both.
+    """
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return None
+    if isinstance(raw, list) and len(raw) > 0:
+        return raw
+    return None
 
 
 def _compute_cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
@@ -113,16 +130,9 @@ def _pair_centroid_similarity(
     line_a: dict[str, Any], line_b: dict[str, Any]
 ) -> float | None:
     """Compute cosine similarity between two lines' avg embeddings, or None if missing."""
-    emb_a = line_a.get("avg_embedding")
-    emb_b = line_b.get("avg_embedding")
-    if not (
-        emb_a
-        and isinstance(emb_a, list)
-        and len(emb_a) > 0
-        and emb_b
-        and isinstance(emb_b, list)
-        and len(emb_b) > 0
-    ):
+    emb_a = parse_embedding(line_a.get("avg_embedding"))
+    emb_b = parse_embedding(line_b.get("avg_embedding"))
+    if emb_a is None or emb_b is None:
         return None
     vec_a = np.array(emb_a, dtype=np.float32)
     vec_b = np.array(emb_b, dtype=np.float32)
