@@ -108,7 +108,7 @@ names become aliases so every current class keeps working.
 | **Red bar** `.pwr-bar` | `background: var(--pwr-red); color: #fff; font-family: var(--font-display); padding: 0.5rem 1.25rem; border-radius: 0`. Used by `Masthead` and `SectionHeader variant="bar"`. |
 | **Nameplate underline** | `Masthead`: 1 px `--pwr-black` line under the nameplate row, full width of the nameplate (SIW's "pozioma linia podkreślająca"). Inside a red bar the line is white. |
 | **Square numeral** | `SectionHeader` numeral: `--pwr-red` square, white Tenor Sans digit, `1.75rem` side, no radius (SIW page-number block). |
-| **Grey panel** | `EditorialCard flat`, `bg-parchment-deep`, `--muted` all resolve to `#EFEFEF`. |
+| **Grey panel** | `EditorialCard flat`, `bg-parchment-deep`, `--muted` all resolve to `#EFEFEF`. — *Implementation note (2026-09-15): `EditorialCard flat` renders a white bordered card in code; the docs follow the code, grey panels come from `bg-pwr-panel` / `PaperBackground deep`.* |
 | **Card rule** | `.editorial-card`: `border-top: 2px solid var(--pwr-red)`, hover `border-top-color: var(--pwr-black)` (inverse of today). Body border `1px solid var(--pwr-line)`. |
 | **Eyebrow** | leading hairline `--pwr-red` instead of gold; text `--pwr-grey`. |
 | **Buttons** | `.editorial-button-primary` fill `--pwr-red`, hover `--pwr-red-deep`, text white; `.editorial-button-secondary` `1px solid var(--pwr-black)`, text black, hover fill black/text white; ghost unchanged. |

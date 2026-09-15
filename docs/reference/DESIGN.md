@@ -127,7 +127,7 @@ All under `frontend/components/editorial/` and re-exported from the barrel
 
 | Primitive | Purpose |
 |---|---|
-| `<ChartFigure>` | Sharp-edged chart card with "FIG. nn" eyebrow, serif title, caption + source line |
+| `<ChartFigure>` | Sharp-edged chart card with "FIG. nn" eyebrow, display title, caption + source line |
 | `<Citation>` | Gold superscripted footnote marker |
 | `<DropCap>` | Editorial drop-cap paragraph |
 | `<DualStatCard>` | Bilateral KPI card — two values side-by-side with a hairline divider |
@@ -203,7 +203,7 @@ a white Tenor Sans digit, not a marginal (out-of-flow) numeral.
 ### Card grid (asymmetric)
 
 Use a 12-col grid and let one card take 7 cols (featured), the others 5 → 4 →
-4. Reserve `featured` (red top mark) for the most important card on the
+4. Reserve `featured` (black top mark) for the most important card on the
 surface.
 
 ```tsx

@@ -70,7 +70,7 @@ export const Featured = () => (
     figure="02"
     eyebrow="Coverage"
     title={<>Where the <em>reasoning</em> comes from</>}
-    caption="Featured figure carries a short oxblood mark on the top rule."
+    caption="Featured figure carries a short black mark on the top rule."
     source="JuDDGES corpus snapshot, March 2026"
     featured
   >
