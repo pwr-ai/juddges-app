@@ -23,6 +23,7 @@ from .schemas import (
 )
 from .similarity import (
     _compute_cosine_similarity,
+    parse_embedding,
 )
 
 router = APIRouter()
@@ -86,8 +87,8 @@ async def create_reasoning_line(
     # Compute centroid from member embeddings
     embeddings_list: list[np.ndarray] = []
     for jid in unique_ids:
-        emb = judgments_by_id[jid].get("embedding")
-        if emb and isinstance(emb, list) and len(emb) > 0:
+        emb = parse_embedding(judgments_by_id[jid].get("embedding"))
+        if emb is not None:
             embeddings_list.append(np.array(emb, dtype=np.float32))
 
     avg_embedding: list[float] | None = None
@@ -113,6 +114,33 @@ async def create_reasoning_line(
     date_range_start = dates[0] if dates else None
     date_range_end = dates[-1] if dates else None
 
+    # Per-member similarity to the centroid; the line's coherence is their mean
+    # unless the caller supplied one (discovery does).
+    similarities: dict[str, float] = {}
+    for jid in sorted_ids:
+        similarity = 0.0
+        if centroid is not None:
+            emb = parse_embedding(judgments_by_id[jid].get("embedding"))
+            if emb is not None:
+                similarity = _compute_cosine_similarity(
+                    np.array(emb, dtype=np.float32), centroid
+                )
+        similarities[jid] = round(similarity, 4)
+
+    coherence_score = body.coherence_score
+    if coherence_score is None and similarities:
+        coherence_score = round(sum(similarities.values()) / len(similarities), 4)
+
+    # Embed the legal question so search / related-lines can match this line.
+    # Best effort: a provider outage must not block creating the line.
+    legal_question_embedding: list[float] | None = None
+    try:
+        from app.judgments_pkg.utils import generate_embedding
+
+        legal_question_embedding = await generate_embedding(body.legal_question)
+    except Exception as e:
+        logger.warning(f"Could not embed legal question for new reasoning line: {e}")
+
     now = datetime.now(UTC).isoformat()
     line_id = str(uuid.uuid4())
 
@@ -127,13 +155,15 @@ async def create_reasoning_line(
         "case_count": len(sorted_ids),
         "date_range_start": date_range_start,
         "date_range_end": date_range_end,
-        "coherence_score": body.coherence_score,
+        "coherence_score": coherence_score,
         "created_at": now,
         "updated_at": now,
     }
-    # Only include avg_embedding if we have one (pgvector expects list or null)
+    # Only include embeddings we have (pgvector expects list or null)
     if avg_embedding is not None:
         line_row["avg_embedding"] = avg_embedding
+    if legal_question_embedding:
+        line_row["legal_question_embedding"] = legal_question_embedding
 
     try:
         db.client.table("reasoning_lines").insert(line_row).execute()
@@ -147,22 +177,14 @@ async def create_reasoning_line(
 
     for position, jid in enumerate(sorted_ids, start=1):
         judgment = judgments_by_id[jid]
-
-        # Compute similarity to centroid for this member
-        similarity = 0.0
-        if centroid is not None:
-            emb = judgment.get("embedding")
-            if emb and isinstance(emb, list) and len(emb) > 0:
-                similarity = _compute_cosine_similarity(
-                    np.array(emb, dtype=np.float32), centroid
-                )
+        similarity = similarities[jid]
 
         member_rows.append(
             {
                 "reasoning_line_id": line_id,
                 "judgment_id": jid,
                 "position_in_line": position,
-                "similarity_to_centroid": round(similarity, 4),
+                "similarity_to_centroid": similarity,
             }
         )
 
@@ -178,7 +200,7 @@ async def create_reasoning_line(
                     else None
                 ),
                 position_in_line=position,
-                similarity_to_centroid=round(similarity, 4),
+                similarity_to_centroid=similarity,
             )
         )
 
@@ -205,7 +227,7 @@ async def create_reasoning_line(
         legal_bases=body.legal_bases,
         status="active",
         case_count=len(members),
-        coherence_score=body.coherence_score,
+        coherence_score=coherence_score,
         date_range_start=date_range_start,
         date_range_end=date_range_end,
         created_at=now,
