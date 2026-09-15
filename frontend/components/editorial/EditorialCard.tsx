@@ -12,7 +12,7 @@ interface EditorialCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
   clickable?: boolean;
   /** Disable the top ink rule. */
   flat?: boolean;
-  /** Increase emphasis — adds a small oxblood corner mark. */
+  /** Increase emphasis — adds a small black corner mark. */
   featured?: boolean;
   /** Hide the bordered shell entirely. */
   bare?: boolean;
@@ -60,7 +60,7 @@ export function EditorialCard({
       {featured && (
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-px left-0 h-[2px] w-12 bg-[color:var(--oxblood)]"
+          className="pointer-events-none absolute -top-px left-0 h-[2px] w-12 bg-pwr-black"
         />
       )}
       {(eyebrow || title || action) && (
@@ -72,7 +72,7 @@ export function EditorialCard({
               </span>
             )}
             {title && (
-              <h3 className="font-serif text-xl sm:text-2xl leading-[1.1] tracking-[-0.01em] text-[color:var(--ink)]">
+              <h3 className="editorial-display font-serif text-xl sm:text-2xl leading-[1.1] tracking-[-0.01em] text-[color:var(--ink)]">
                 {title}
               </h3>
             )}

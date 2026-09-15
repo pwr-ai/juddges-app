@@ -41,6 +41,18 @@
     },
     "Tabs": {
       "cardMode": "column"
+    },
+    "DualStatCard": {
+      "cardMode": "column"
+    },
+    "Headline": {
+      "cardMode": "column"
+    },
+    "Section": {
+      "cardMode": "column"
+    },
+    "SectionHeader": {
+      "cardMode": "column"
     }
   }
 }

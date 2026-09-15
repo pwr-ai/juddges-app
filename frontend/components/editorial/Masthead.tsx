@@ -2,17 +2,18 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface MastheadProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Top tag — small caps, e.g. "EST. 2024 · WROCLAW". */
+  /** Left tag — small caps, e.g. "EST. 2024 · WROCLAW". */
   badge?: React.ReactNode;
-  /** Volume / issue / version label rendered on the right. */
+  /** Volume / issue / version label rendered on the right, in PWr sand. */
   meta?: React.ReactNode;
-  /** Add a heavy bottom rule. */
+  /** Draw the SIW nameplate underline beneath the bar. */
   ruled?: boolean;
 }
 
 /**
- * Editorial masthead — used at the top of the landing hero to evoke a
- * legal periodical's nameplate. Two small rows separated by a strong rule.
+ * Editorial masthead — the SIW red header bar: PWr red block, white
+ * small-caps text, sand meta on the right, and the horizontal underline the
+ * identity system places under the university wordmark.
  *
  * @example
  *   <Masthead badge="Est. 2024 · Wroclaw" meta="VOL I · NO 1" ruled />
@@ -27,14 +28,14 @@ export function Masthead({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]",
-        ruled && "border-b border-[color:var(--ink)]",
+        "pwr-bar flex items-center justify-between gap-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em]",
+        ruled && "border-b border-pwr-black",
         className,
       )}
       {...props}
     >
       {badge && <span>{badge}</span>}
-      {meta && <span className="text-[color:var(--oxblood)]">{meta}</span>}
+      {meta && <span className="text-pwr-sand">{meta}</span>}
     </div>
   );
 }
