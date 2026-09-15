@@ -163,3 +163,58 @@ class TestLangchainCacheDriver:
         engine = mock_cache_cls.call_args.args[0]
         assert engine.dialect.driver == "psycopg"
         assert str(engine.url) == "postgresql+psycopg://u:***@localhost:5432/main"
+
+
+@pytest.mark.unit
+class TestLangchainCacheCreateRace:
+    """Eight gunicorn workers build the cache concurrently at boot, so the
+    CREATE TABLE inside SQLAlchemyMd5Cache can lose a race against a sibling
+    worker. The table exists by then, so a retry succeeds."""
+
+    @staticmethod
+    def _unique_violation():
+        from sqlalchemy.exc import IntegrityError
+
+        return IntegrityError(
+            "CREATE TABLE full_md5_llm_cache (...)",
+            {},
+            Exception(
+                "duplicate key value violates unique constraint "
+                '"pg_type_typname_nsp_index"'
+            ),
+        )
+
+    @patch("app.langchain_cache.set_llm_cache")
+    @patch("app.langchain_cache.SQLAlchemyMd5Cache")
+    @patch("app.langchain_cache.create_engine")
+    def test_retries_once_when_a_sibling_worker_wins_the_create(
+        self, mock_engine, mock_cache_cls, mock_set, monkeypatch
+    ):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/main")
+        winning_cache = MagicMock()
+        mock_cache_cls.side_effect = [self._unique_violation(), winning_cache]
+
+        from app.langchain_cache import setup_langchain_cache
+
+        setup_langchain_cache()
+
+        mock_set.assert_called_once_with(winning_cache)
+
+    @patch("app.langchain_cache.set_llm_cache")
+    @patch("app.langchain_cache.SQLAlchemyMd5Cache")
+    @patch("app.langchain_cache.create_engine")
+    def test_gives_up_after_a_second_failure(
+        self, mock_engine, mock_cache_cls, mock_set, monkeypatch
+    ):
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/main")
+        mock_cache_cls.side_effect = [
+            self._unique_violation(),
+            self._unique_violation(),
+        ]
+
+        from app.langchain_cache import setup_langchain_cache
+
+        # Must not raise — the app still boots without a cache.
+        setup_langchain_cache()
+
+        mock_set.assert_not_called()
