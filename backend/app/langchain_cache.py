@@ -48,6 +48,14 @@ def setup_langchain_cache() -> None:
         safe_host = f"{parsed.hostname}:{parsed.port or 5432}/{parsed.path.lstrip('/')}"
         logger.info(f"Setting up LangChain PostgreSQL cache at {safe_host}")
 
+        # The image ships psycopg 3 only. SQLAlchemy resolves a bare
+        # "postgresql://" URL to the psycopg2 dialect, which is not installed,
+        # so pin the driver explicitly instead of silently losing the cache.
+        if database_url.startswith("postgresql://"):
+            database_url = database_url.replace(
+                "postgresql://", "postgresql+psycopg://", 1
+            )
+
         engine = create_engine(database_url)
         set_llm_cache(SQLAlchemyMd5Cache(engine))
 
