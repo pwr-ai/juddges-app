@@ -538,6 +538,13 @@
     padding: 0.5rem 1.25rem;
     border-radius: 0;
   }
+
+  /* On the red bar, emphasised words must stay white — the standard
+     oxblood em/i reset would render oxblood-on-oxblood and vanish. */
+  .pwr-bar .editorial-display em,
+  .pwr-bar .editorial-display i {
+    color: var(--pwr-paper);
+  }
 }
 
 /* Landing page animations */
