@@ -109,6 +109,7 @@ floated initial.
 | Grey panel | `bg-pwr-panel`, `<PaperBackground deep>` | `#EFEFEF` aside, no border needed. |
 | Card rule | `.editorial-card` | 2 px `--pwr-red` top rule, black on hover; 1 px `--pwr-line` elsewhere. |
 | Corners / shadows | everywhere | ≤ 2 px (`--radius: 0.125rem`), none. Pills only on `QueryPill` and `Badge`. |
+| Shadow tokens | `--shadow-2xs` … `--shadow-lg` | Layered, one light source, tinted with `--ink` via `color-mix`. `--shadow-xl`/`--shadow-2xl` alias `lg` — elevation caps there. |
 
 ### Logotype
 
@@ -253,7 +254,11 @@ the existing primitives in this library for figure animation.
 Pages that still use the legacy glassmorphism cards, purple gradients, or
 `bg-indigo-100` icon-boxes should be migrated incrementally:
 
-1. Swap `BaseCard` for `<EditorialCard>` (most APIs map directly).
+1. Swap `BaseCard` for `<EditorialCard>` (most APIs map directly). Until then,
+   `BaseCard` and `LightCard` own their edges and surface: any `rounded-*` or
+   `bg-*` class passed in `className` is stripped, so legacy call-site radii
+   such as `rounded-[16px]` are inert and can be deleted when the page is
+   migrated.
 2. Replace `<h2 className="text-base font-semibold">` patterns with
    `<EditorialCard title=…>` or `<Headline as="h3" size="xs">`.
 3. Replace icon-in-pastel-box motifs with the eyebrow + title pattern, or a
