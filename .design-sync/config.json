@@ -1,0 +1,46 @@
+{
+  "projectId": "cf257da9-cdd2-47c0-99d6-a08ee168aaac",
+  "shape": "package",
+  "pkg": "@juddges/design-system",
+  "globalName": "JuddgesDS",
+  "buildCmd": "node .design-sync/build.mjs",
+  "srcDir": "../components",
+  "tsconfig": "../../.design-sync/tsconfig.json",
+  "cssEntry": "dist/styles.css",
+  "extraFonts": [
+    "../../.design-sync/fonts.css"
+  ],
+  "guidelinesGlob": [
+    "../../docs/reference/DESIGN.md"
+  ],
+  "readmeHeader": ".design-sync/conventions.md",
+  "overrides": {
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "900x700"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "viewport": "900x700"
+    },
+    "DropdownMenu": {
+      "cardMode": "single",
+      "viewport": "900x700"
+    },
+    "DropCap": {
+      "cardMode": "column"
+    },
+    "Breadcrumb": {
+      "cardMode": "column"
+    },
+    "Pagination": {
+      "cardMode": "column"
+    },
+    "PaginationEllipsis": {
+      "cardMode": "column"
+    },
+    "Tabs": {
+      "cardMode": "column"
+    }
+  }
+}
