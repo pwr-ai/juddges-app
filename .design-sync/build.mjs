@@ -23,6 +23,18 @@ const DS_SYNC = join(ROOT, ".ds-sync"); // staged converter scripts + their node
 
 const frontendPkg = JSON.parse(readFileSync(join(FRONTEND, "package.json"), "utf8"));
 
+// The converter deps live in the gitignored .ds-sync/ (staged per machine by the
+// design-sync skill). Fail early with the install command rather than an ENOENT
+// deep inside tsc / tailwind.
+const tsc = join(DS_SYNC, "node_modules/typescript/bin/tsc");
+const twCli = join(DS_SYNC, "node_modules/@tailwindcss/cli/dist/index.mjs");
+for (const [bin, pkg] of [[tsc, "typescript"], [twCli, "@tailwindcss/cli"]]) {
+  if (!existsSync(bin)) {
+    console.error(`\u2717 ${bin} missing \u2014 run: (cd .ds-sync && npm i esbuild ts-morph @types/react typescript @tailwindcss/cli playwright)`);
+    process.exit(1);
+  }
+}
+
 // -- 1. entry: every file in components/editorial + components/ui/*.tsx ------
 // Star re-exports drop ambiguous names silently, so the two ui sub-folders that
 // duplicate names already exported by a sibling (skeletons/SkeletonCard vs
@@ -87,11 +99,11 @@ writeFileSync(
     2,
   ) + "\n",
 );
-const tsc = join(DS_SYNC, "node_modules/typescript/bin/tsc");
 try {
   execFileSync(process.execPath, [tsc, "-p", join(PKG, "tsconfig.json")], { stdio: "inherit" });
 } catch (e) {
   // tsc exits non-zero on type errors but still emits; only a missing tree is fatal.
+  if (e.code === "ENOENT") throw e;
   console.error("  ! tsc reported errors (declarations still emitted if possible)");
 }
 const typesEntry = join(PKG, "dist/types/.ds-pkg/src/index.d.ts");
@@ -104,7 +116,6 @@ if (!existsSync(typesEntry)) {
 // cwd = frontend/ so Tailwind's automatic source detection and the
 // `@import "tailwindcss"` / `@plugin` resolution inside globals.css behave as
 // in the app build.
-const twCli = join(DS_SYNC, "node_modules/@tailwindcss/cli/dist/index.mjs");
 execFileSync(
   process.execPath,
   [twCli, "-i", join(ROOT, ".design-sync/tailwind.css"), "-o", join(PKG, "dist/styles.css"), "--minify"],
