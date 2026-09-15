@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { VariantButton } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { PublicationWithResources, PublicationStatus } from "@/types/publication";
 import {
  FileText,
@@ -29,39 +30,21 @@ interface PublicationCardProps {
  currentUserId?: string;
 }
 
-const statusConfig = {
- [PublicationStatus.PUBLISHED]: {
- label: "Published",
- icon: CheckCircle,
- className: "bg-green-400/10 text-green-600 border-green-400/30"
- },
- [PublicationStatus.ACCEPTED]: {
- label: "Accepted",
- icon: CheckCircle,
- className: "bg-blue-400/10 text-blue-600 border-blue-400/30"
- },
- [PublicationStatus.UNDER_REVIEW]: {
- label: "Under Review",
- icon: Clock,
- className: "bg-amber-400/10 text-amber-700 border-amber-400/30"
- },
- [PublicationStatus.PREPRINT]: {
- label: "Preprint",
- icon: FileText,
- className: "bg-slate-100/50 text-slate-700 border-slate-300/30"
- }
+const statusLabelConfig: Record<PublicationStatus, string> = {
+  [PublicationStatus.PUBLISHED]: "Published",
+  [PublicationStatus.ACCEPTED]: "Accepted",
+  [PublicationStatus.UNDER_REVIEW]: "Under Review",
+  [PublicationStatus.PREPRINT]: "Preprint",
 };
 
 export const PublicationCard: FC<PublicationCardProps> = ({ publication, currentUserId }) => {
  const [isExpanded, setIsExpanded] = useState(false);
- const statusInfo = statusConfig[publication.status];
- const StatusIcon = statusInfo.icon;
 
  // Check if current user can edit (owner or system publication with null userId)
  const canEdit = currentUserId && (!publication.userId || publication.userId === currentUserId);
 
  const formatAuthors = (): string => {
- return publication.authors.map(a => a.name).join(",");
+ return publication.authors.map(a => a.name).join(", ");
  };
 
  const formatDate = (): string => {
@@ -74,17 +57,17 @@ export const PublicationCard: FC<PublicationCardProps> = ({ publication, current
 
  return (
  <Card className={cn(
-"group border border-slate-200/50",
-"bg-gradient-to-br from-blue-400/15 via-indigo-400/10 to-blue-400/8",
-"hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300"
+ "group border border-rule",
+ "bg-parchment",
+ "hover:-translate-y-px transition-transform"
  )}>
  <CardHeader className="space-y-3">
  {/* Status */}
  <div className="flex items-center gap-2 flex-wrap">
- <Badge variant="outline"className={cn("font-medium", statusInfo.className)}>
- <StatusIcon className="h-3 w-3 mr-1"/>
- {statusInfo.label}
- </Badge>
+ <StatusBadge
+ status={publication.status}
+ label={statusLabelConfig[publication.status] ?? publication.status}
+ />
  {publication.manuscriptNumber && (
  <Badge variant="outline"className="text-xs text-foreground/70 border-slate-300/50">
  {publication.manuscriptNumber}

@@ -10,6 +10,7 @@ import {
  PageContainer,
  SearchableDropdownButton,
 } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { DocumentExtractionResult, DocumentProcessingStatus } from "@/types/search";
 import {
@@ -72,13 +73,6 @@ function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string
 }
 
 export const dynamic = 'force-dynamic';
-
-// Status badge colors
-const STATUS_COLORS = {
- completed: "bg-green-100 text-green-800 border-green-200",
- processing: "bg-blue-100 text-blue-800 border-blue-200",
- failed: "bg-red-100 text-red-800 border-red-200",
-};
 
 interface ExtractionJobClientProps {
  jobId: string;
@@ -284,12 +278,12 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  const getStatusBadge = (result: DocumentExtractionResult) => {
  const status = normalizeStatus(result.status);
  if (status === DocumentProcessingStatus.COMPLETED || status === 'completed' || status === 'success') {
- return { className: STATUS_COLORS.completed, label: 'Completed', icon: CheckCircle2 };
+ return { label: 'Completed', icon: CheckCircle2 };
  }
  if (status === DocumentProcessingStatus.FAILED || status === 'failed' || status === 'failure') {
- return { className: STATUS_COLORS.failed, label: 'Failed', icon: XCircle };
+ return { label: 'Failed', icon: XCircle };
  }
- return { className: STATUS_COLORS.processing, label: 'In Progress', icon: RefreshCw };
+ return { label: 'In Progress', icon: RefreshCw };
  };
 
  // Create document options for selector
@@ -457,19 +451,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  {/* Status */}
  <div className="space-y-1">
  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</div>
- <Badge
- variant={jobData.status?.toLowerCase() === 'failed' || jobData.status?.toLowerCase() === 'failure' ? 'destructive' : 'outline'}
- className={cn(
-"font-medium w-fit",
- (jobData.status?.toLowerCase() === 'completed' || jobData.status?.toLowerCase() === 'success') &&"bg-green-100 text-green-800 border-green-200",
- jobData.status?.toLowerCase() === 'processing' &&"bg-blue-100 text-blue-800 border-blue-200"
- )}
- >
- {jobData.status?.toLowerCase() === 'processing' && <RefreshCw className="h-3 w-3 mr-1 animate-spin"/>}
- {(jobData.status?.toLowerCase() === 'completed' || jobData.status?.toLowerCase() === 'success') && <CheckCircle2 className="h-3 w-3 mr-1"/>}
- {(jobData.status?.toLowerCase() === 'failed' || jobData.status?.toLowerCase() === 'failure') && <XCircle className="h-3 w-3 mr-1"/>}
- {jobData.status.charAt(0).toUpperCase() + jobData.status.slice(1)}
- </Badge>
+ <StatusBadge status={jobData.status} />
  </div>
 
  {/* Completion Time */}

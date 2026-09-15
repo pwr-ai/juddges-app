@@ -1,49 +1,13 @@
 "use client";
 
-import { CheckCircle2, AlertCircle, MinusCircle, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { useAdminSystemHealth, type ServiceHealth } from "@/lib/api/admin";
 import { ErrorCard } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import logger from "@/lib/logger";
 import { useEffect } from "react";
 
 const pageLogger = logger.child("AdminSystemPage");
-
-interface StatusBadgeProps {
- status: ServiceHealth["status"];
-}
-
-function StatusBadge({ status }: StatusBadgeProps) {
- if (status === "healthy") {
- return (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">
- <CheckCircle2 className="size-3"/>
- Healthy
- </span>
- );
- }
- if (status === "degraded") {
- return (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
- <AlertCircle className="size-3"/>
- Degraded
- </span>
- );
- }
- if (status === "unhealthy") {
- return (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">
- <AlertCircle className="size-3"/>
- Unhealthy
- </span>
- );
- }
- return (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground">
- <MinusCircle className="size-3"/>
- Unknown
- </span>
- );
-}
 
 interface InfoRowProps {
  label: string;
@@ -107,42 +71,33 @@ export default function AdminSystemPage() {
  </p>
  </div>
 
- {/* Overall status banner */}
- {!isLoading && data && (
- <div
- className={[
-"mb-6 flex items-center gap-3 rounded-xl border px-5 py-3",
- data.status === "healthy"
- ? "border-green-200 bg-green-50"
- : data.status === "degraded"
- ? "border-amber-200 bg-amber-50"
- : "border-red-200 bg-red-50",
- ].join("")}
- >
- <Activity
- className={[
-"size-4",
- data.status === "healthy"
- ? "text-green-600"
- : data.status === "degraded"
- ? "text-amber-600"
- : "text-red-600",
- ].join("")}
- />
- <span
- className={[
-"text-sm font-medium capitalize",
- data.status === "healthy"
- ? "text-green-700"
- : data.status === "degraded"
- ? "text-amber-700"
- : "text-red-700",
- ].join("")}
- >
- Overall status: {data.status}
- </span>
- </div>
- )}
+      {/* Overall status banner */}
+      {!isLoading && data && (
+        <div
+          className={[
+            "mb-6 flex items-center gap-3 rounded-none border border-rule bg-parchment px-5 py-3 border-l-2",
+            data.status === "healthy"
+              ? "border-l-ink"
+              : data.status === "degraded"
+                ? "border-l-gold"
+                : "border-l-oxblood",
+          ].join(" ")}
+        >
+          <Activity
+            className={[
+              "size-4",
+              data.status === "healthy"
+                ? "text-ink"
+                : data.status === "degraded"
+                  ? "text-gold"
+                  : "text-oxblood",
+            ].join(" ")}
+          />
+          <span className="text-sm font-medium font-mono capitalize text-ink">
+            Overall status: {data.status}
+          </span>
+        </div>
+      )}
 
  {/* Error */}
  {isError && (

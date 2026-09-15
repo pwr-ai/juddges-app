@@ -27,6 +27,7 @@ import { Search, FileCode, Calendar, List, Hash, CheckSquare, Link as LinkIcon, 
 import { useState } from "react";
 import { FlatField, formatSchemaFieldName, getFieldTypeLabel } from "@/lib/schema-utils";
 import { Badge, VariantButton, DropdownButton } from "@/lib/styles/components";
+import { FieldTypeBadge, getFieldMarker } from "@/components/editorial/FieldTypeBadge";
 import { cn } from "@/lib/utils";
 
 interface SchemaFieldsTableProps {
@@ -66,86 +67,6 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  return 'enum';
  }
  return field.type;
- };
-
- // Get type color and icon
- const getTypeStyle = (type: string) => {
- const normalizedType = type.toLowerCase();
- const styles: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
- date: {
- color: 'text-blue-700',
- bg: 'bg-blue-100/80',
- border: 'border-blue-200/60',
- icon: <Calendar className="h-3.5 w-3.5"/>
- },
- text: {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- list: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- array: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- number: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- integer: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- boolean: {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- 'yes/no': {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- object: {
- color: 'text-indigo-700',
- bg: 'bg-indigo-100/80',
- border: 'border-indigo-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- enum: {
- color: 'text-violet-700',
- bg: 'bg-violet-100/80',
- border: 'border-violet-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- email: {
- color: 'text-cyan-700',
- bg: 'bg-cyan-100/80',
- border: 'border-cyan-200/60',
- icon: <LinkIcon className="h-3.5 w-3.5"/>
- },
- };
-
- return styles[normalizedType] || {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- };
  };
 
  // Handle cell edit

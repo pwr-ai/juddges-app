@@ -18,10 +18,32 @@ import { Database, Json } from '../database.types';
 // DATABASE TYPES
 // ============================================================================
 
+import type { LucideIcon } from 'lucide-react';
+import { Type, Hash, Binary, ToggleLeft, List, Box, CircleOff } from 'lucide-react';
+
 /**
  * Field type enum matching JSON Schema primitive types
  */
 export type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'null';
+
+export interface FieldTypeMarker {
+  icon: LucideIcon;
+  label: string;
+}
+
+/**
+ * Canonical semantic markers for FieldType (#640).
+ * 14 px ink icon + mono label, outline, no fill.
+ */
+export const FIELD_TYPE_MARKERS: Record<FieldType, FieldTypeMarker> = {
+  string: { icon: Type, label: 'STRING' },
+  number: { icon: Hash, label: 'NUMBER' },
+  integer: { icon: Binary, label: 'INTEGER' },
+  boolean: { icon: ToggleLeft, label: 'BOOLEAN' },
+  array: { icon: List, label: 'ARRAY' },
+  object: { icon: Box, label: 'OBJECT' },
+  null: { icon: CircleOff, label: 'NULL' },
+};
 
 /**
  * Editor mode enum
@@ -941,13 +963,13 @@ export function buildFieldPath(...segments: string[]): FieldPath {
  * Default type colors for visual editor
  */
 export const TYPE_COLORS: Record<FieldType, string> = {
-  string: '#3b82f6',    // blue
-  number: '#10b981',    // green
-  integer: '#059669',   // darker green
-  boolean: '#8b5cf6',   // purple
-  array: '#f59e0b',     // orange
-  object: '#14b8a6',    // teal
-  null: '#6b7280',      // gray
+  string: '#1A1A2E',
+  number: '#1A1A2E',
+  integer: '#1A1A2E',
+  boolean: '#1A1A2E',
+  array: '#1A1A2E',
+  object: '#1A1A2E',
+  null: '#1A1A2E',
 } as const;
 
 /**

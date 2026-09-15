@@ -18,7 +18,7 @@ import {
   Loader2,
   Network,
   GitMerge,
-  Zap,
+  Activity,
 } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -30,6 +30,7 @@ import {
   ErrorCard,
   Badge,
 } from '@/lib/styles/components';
+import { StatusBadge as EditorialStatusBadge } from '@/components/editorial';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -59,28 +60,14 @@ import { logger } from '@/lib/logger';
 /** Active tab on the reasoning lines page */
 type TabId = 'discover' | 'saved' | 'dag';
 
-/** Color palette for cluster badges and indicators */
+/** Editorial semantic cluster styles: 6 distinct border/text styles */
 const CLUSTER_COLORS = [
-  'bg-blue-100 text-blue-800',
-  'bg-emerald-100 text-emerald-800',
-  'bg-amber-100 text-amber-800',
-  'bg-purple-100 text-purple-800',
-  'bg-rose-100 text-rose-800',
-  'bg-cyan-100 text-cyan-800',
-  'bg-orange-100 text-orange-800',
-  'bg-indigo-100 text-indigo-800',
-  'bg-lime-100 text-lime-800',
-  'bg-fuchsia-100 text-fuchsia-800',
-  'bg-teal-100 text-teal-800',
-  'bg-red-100 text-red-800',
-  'bg-sky-100 text-sky-800',
-  'bg-yellow-100 text-yellow-800',
-  'bg-violet-100 text-violet-800',
-  'bg-pink-100 text-pink-800',
-  'bg-green-100 text-green-800',
-  'bg-stone-100 text-stone-800',
-  'bg-slate-100 text-slate-800',
-  'bg-zinc-100 text-zinc-800',
+  'border border-rule text-ink bg-transparent',
+  'border border-oxblood text-oxblood bg-transparent',
+  'border border-gold text-gold bg-transparent',
+  'border border-rule text-ink-soft bg-transparent border-dashed',
+  'border border-oxblood text-oxblood bg-transparent border-dashed',
+  'border border-gold text-gold bg-transparent border-dashed',
 ];
 
 function getClusterColor(clusterIndex: number): string {
@@ -744,20 +731,19 @@ function ClusterCard({
   );
 }
 
-/** Small coherence score badge with color coding */
+/** Small coherence score badge with semantic color coding */
 function CoherenceBadge({ score }: { score: number }) {
   const pct = Math.round(score * 100);
-  // Color thresholds: green >= 70%, yellow >= 50%, red < 50%
-  const colorClass =
+  const toneClass =
     pct >= 70
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'text-ink'
       : pct >= 50
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-rose-100 text-rose-700';
+        ? 'text-gold'
+        : 'text-oxblood';
 
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums ${colorClass}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule tabular-nums ${toneClass}`}
     >
       {pct}%
     </span>
@@ -767,26 +753,13 @@ function CoherenceBadge({ score }: { score: number }) {
 /** Status badge for a reasoning line */
 function StatusBadge({ status }: { status: string }) {
   const { t } = useTranslation();
-  const colorClass =
-    status === 'active'
-      ? 'bg-emerald-100 text-emerald-700'
-      : status === 'archived'
-        ? 'bg-slate-100 text-slate-700'
-        : 'bg-rose-100 text-rose-700';
-
   const labelMap: Record<string, string> = {
     active: t('reasoningLines.statusActive'),
     archived: t('reasoningLines.statusArchived'),
     deleted: t('reasoningLines.statusDeleted'),
   };
 
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-    >
-      {labelMap[status] ?? status}
-    </span>
-  );
+  return <EditorialStatusBadge status={status} label={labelMap[status] ?? status} />;
 }
 
 /** Saved Lines tab content — includes semantic search bar (M6) */
@@ -935,7 +908,7 @@ function SavedLinesTab({
       <BaseCard clickable={false} variant="light" className="rounded-[16px]">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-primary" />
+            <Activity className="h-4 w-4 text-ink" />
             <h3 className="text-sm font-medium text-foreground">
               {t('reasoningLines.pipelineHeading')}
             </h3>
