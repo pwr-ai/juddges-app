@@ -212,15 +212,8 @@ export function Navbar(): React.ReactElement {
   return (
     <header className={cn(
       "flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem]",
-      // Modern gradient background with blur
-      "bg-gradient-to-r from-background via-background/95 to-background",
-      "backdrop-blur-md",
-      // Enhanced border with gradient
-      "border-b border-border/50",
-      // Subtle shadow for depth
-      "shadow-[0_1px_2px_rgba(0,0,0,0.02)]",
+      "bg-parchment/95 backdrop-blur-sm border-b border-rule",
       "sticky top-0 z-30",
-      "transition-all duration-300",
       isCollectionDetail && collectionData && user ? "relative" : ""
     )}>
       <div className="flex items-center gap-3 md:gap-5">

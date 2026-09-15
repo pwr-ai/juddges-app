@@ -37,7 +37,14 @@ services:
     env_file:
       - .env
     environment:
-      # Runtime configuration
+      # Runtime configuration.
+      # NODE_ENV must be set here, not only via the image's ENV: Compose resolves
+      # `environment:` above `env_file:`, and .env carries NODE_ENV=development for
+      # local work. Without this line the production frontend runs in development
+      # mode, which silently drops the Secure flag from the guest-session cookie,
+      # sends /auth/callback down its isLocalEnv branch, and leaks stack traces
+      # from the document-html error page to anonymous visitors.
+      - NODE_ENV=production
       - PORT=3006
       - HOSTNAME=0.0.0.0
       # Server-side routes inside the frontend container must use Docker service names

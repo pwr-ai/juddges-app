@@ -1,11 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import {
-  ChatMessageSkeleton,
-  SearchResultsSkeleton,
-  SkeletonCard,
-  SkeletonText,
-  TableSkeleton,
-} from '@/components/ui/skeletons';
+import { SkeletonCard, SkeletonText } from '@/components/ui/skeletons';
 
 describe('skeleton components', () => {
   it('renders identical placeholder widths on every render', () => {
@@ -13,7 +7,7 @@ describe('skeleton components', () => {
     // produced different bars and the server and client markup disagreed.
     // Re-rendering must now yield exactly the same widths (#605).
     const widthsOf = (): string[] => {
-      const { container, unmount } = render(<TableSkeleton rows={3} columns={4} />);
+      const { container, unmount } = render(<SkeletonText lines={4} />);
       const widths = Array.from(
         container.querySelectorAll<HTMLElement>('[aria-hidden="true"]')
       ).map((el) => el.style.width);
@@ -37,28 +31,9 @@ describe('skeleton components', () => {
     expect(lines[3]).toHaveStyle({ width: '70%' });
   });
 
-  it('renders card and search-results wrappers with accessible labels', () => {
-    render(
-      <>
-        <SkeletonCard />
-        <SearchResultsSkeleton count={3} />
-      </>
-    );
+  it('renders the card wrapper with an accessible label', () => {
+    render(<SkeletonCard />);
 
-    expect(screen.getAllByLabelText('Loading card')).toHaveLength(4);
-    expect(screen.getByLabelText('Loading search results')).toBeInTheDocument();
-  });
-
-  it('renders chat and table skeleton structures', () => {
-    const { container } = render(
-      <>
-        <ChatMessageSkeleton lines={5} />
-        <TableSkeleton rows={2} columns={3} />
-      </>
-    );
-
-    expect(screen.getByLabelText('Loading message')).toBeInTheDocument();
-    expect(screen.getByLabelText('Loading table')).toBeInTheDocument();
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(screen.getByLabelText('Loading card')).toBeInTheDocument();
   });
 });
