@@ -5,7 +5,7 @@ from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -39,7 +39,7 @@ router = APIRouter()
     ),
 )
 @limiter.limit(REASONING_LINES_LLM_RATE_LIMIT)
-async def detect_events(request: Request) -> EventDetectionResult:
+async def detect_events(request: Request, response: Response) -> EventDetectionResult:
     """
     Milestone 4 — Branch & Merge Detection.
 
@@ -200,7 +200,7 @@ async def detect_events(request: Request) -> EventDetectionResult:
     ),
 )
 @limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
-async def get_dag(request: Request) -> ReasoningLineDAG:
+async def get_dag(request: Request, response: Response) -> ReasoningLineDAG:
     """
     Milestone 4 — DAG Visualization.
 

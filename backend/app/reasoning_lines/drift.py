@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -35,7 +35,9 @@ router = APIRouter()
     summary="Detect language drift within a reasoning line over time",
 )
 @limiter.limit(REASONING_LINES_RATE_LIMIT)
-async def analyze_drift(request: Request, line_id: str) -> DriftAnalysisResponse:
+async def analyze_drift(
+    request: Request, response: Response, line_id: str
+) -> DriftAnalysisResponse:
     """
     Detect language drift within a reasoning line by analyzing how the
     embedding centroid shifts across rolling time windows.
