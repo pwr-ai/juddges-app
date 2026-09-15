@@ -127,6 +127,7 @@ Docker images live on Docker Hub as `${DOCKER_USERNAME}/juddges-{frontend,backen
 ./scripts/build_and_push_prod.sh minor     # minor bump
 ./scripts/build_and_push_prod.sh 2.1.0     # explicit version
 ./scripts/deploy_prod.sh                   # deploy :latest
+./scripts/deploy_prod.sh --yes             # deploy :latest, non-interactive
 ./scripts/deploy_prod.sh --rollback        # roll back
 ```
 

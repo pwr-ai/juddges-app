@@ -8,6 +8,8 @@
 #   ./scripts/deploy_prod.sh 0.2.0        # Deploy specific version
 #   ./scripts/deploy_prod.sh --status      # Show running containers status
 #   ./scripts/deploy_prod.sh --rollback    # Rollback to previous version
+#   ./scripts/deploy_prod.sh --yes         # Non-interactive (skip confirmations)
+#   ./scripts/deploy_prod.sh -y --rollback # Non-interactive rollback
 # ==============================================================================
 
 set -euo pipefail
@@ -275,7 +277,40 @@ post_deploy_validation() {
 # Main
 # ------------------------------------------------------------------------------
 main() {
-    local arg="${1:-latest}"
+    local arg=""
+    local auto_confirm=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -y|--yes)
+                auto_confirm=true
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: $0 [OPTIONS] [latest|x.y.z]"
+                echo ""
+                echo "Options:"
+                echo "  -y, --yes       Skip all confirmation prompts (non-interactive mode)"
+                echo "  -s, --status    Show running containers status and exit"
+                echo "  -r, --rollback  Deploy the previous version from the deploy history"
+                echo "  -h, --help      Show this help message"
+                echo ""
+                echo "Examples:"
+                echo "  $0                  # Interactive, deploy :latest"
+                echo "  $0 0.2.0            # Interactive, deploy a specific version"
+                echo "  $0 --yes            # Non-interactive, deploy :latest"
+                echo "  $0 -y --rollback    # Non-interactive rollback"
+                exit 0
+                ;;
+            *)
+                arg="$1"
+                shift
+                ;;
+        esac
+    done
+
+    arg="${arg:-latest}"
 
     info "=== Juddges Production Deployment ==="
     echo ""
@@ -292,10 +327,14 @@ main() {
             local prev
             prev=$(get_previous_version)
             warn "Rolling back to version: ${prev}"
-            read -rp "Confirm rollback to ${prev}? [y/N] " confirm
-            if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
-                info "Aborted."
-                exit 0
+            if [[ "${auto_confirm}" != true ]]; then
+                read -rp "Confirm rollback to ${prev}? [y/N] " confirm
+                if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
+                    info "Aborted."
+                    exit 0
+                fi
+            else
+                ok "Auto-confirmed: rolling back to ${prev}"
             fi
             arg="${prev}"
             ;;
@@ -338,10 +377,14 @@ main() {
     echo ""
 
     # Confirm
-    read -rp "Deploy v${tag}? [y/N] " confirm
-    if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
-        info "Aborted."
-        exit 0
+    if [[ "${auto_confirm}" != true ]]; then
+        read -rp "Deploy v${tag}? [y/N] " confirm
+        if [[ "${confirm}" != "y" && "${confirm}" != "Y" ]]; then
+            info "Aborted."
+            exit 0
+        fi
+    else
+        ok "Auto-confirmed: deploying v${tag}"
     fi
     echo ""
 
