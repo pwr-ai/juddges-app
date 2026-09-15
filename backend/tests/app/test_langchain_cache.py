@@ -46,7 +46,7 @@ class TestSetupLangchainCache:
         setup_langchain_cache()
 
         mock_engine.assert_called_once_with(
-            "postgresql://user:pass@localhost:5432/mydb"
+            "postgresql+psycopg://user:pass@localhost:5432/mydb"
         )
         mock_cache_cls.assert_called_once_with(mock_engine_instance)
         mock_set_cache.assert_called_once_with(mock_cache_instance)
@@ -97,7 +97,9 @@ class TestLangchainCacheDatabaseUrlFallback:
 
         setup_langchain_cache()
 
-        mock_engine.assert_called_once_with("postgresql://u:p@localhost:5432/main")
+        mock_engine.assert_called_once_with(
+            "postgresql+psycopg://u:p@localhost:5432/main"
+        )
         mock_set.assert_called_once()
 
     @patch("app.langchain_cache.set_llm_cache")
@@ -115,4 +117,49 @@ class TestLangchainCacheDatabaseUrlFallback:
 
         setup_langchain_cache()
 
-        mock_engine.assert_called_once_with("postgresql://u:p@cache-host:5432/cache")
+        mock_engine.assert_called_once_with(
+            "postgresql+psycopg://u:p@cache-host:5432/cache"
+        )
+
+
+@pytest.mark.unit
+class TestLangchainCacheDriver:
+    """The backend image ships psycopg 3 only, so a bare ``postgresql://`` URL
+    must not resolve to SQLAlchemy's default psycopg2 dialect."""
+
+    @patch("app.langchain_cache.set_llm_cache")
+    @patch("app.langchain_cache.SQLAlchemyMd5Cache")
+    def test_bare_postgresql_url_uses_psycopg3_driver(
+        self, mock_cache_cls, mock_set, monkeypatch
+    ):
+        monkeypatch.delenv("LANGCHAIN_CACHE_DATABASE_URL", raising=False)
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/main")
+
+        from app.langchain_cache import setup_langchain_cache
+
+        setup_langchain_cache()
+
+        assert mock_cache_cls.called, (
+            "cache was never initialised — building the engine raised"
+        )
+        engine = mock_cache_cls.call_args.args[0]
+        assert engine.dialect.driver == "psycopg"
+
+    @patch("app.langchain_cache.set_llm_cache")
+    @patch("app.langchain_cache.SQLAlchemyMd5Cache")
+    def test_explicit_psycopg_driver_is_left_alone(
+        self, mock_cache_cls, mock_set, monkeypatch
+    ):
+        monkeypatch.delenv("LANGCHAIN_CACHE_DATABASE_URL", raising=False)
+        monkeypatch.setenv(
+            "DATABASE_URL", "postgresql+psycopg://u:p@localhost:5432/main"
+        )
+
+        from app.langchain_cache import setup_langchain_cache
+
+        setup_langchain_cache()
+
+        assert mock_cache_cls.called
+        engine = mock_cache_cls.call_args.args[0]
+        assert engine.dialect.driver == "psycopg"
+        assert str(engine.url) == "postgresql+psycopg://u:***@localhost:5432/main"
