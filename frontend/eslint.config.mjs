@@ -1,13 +1,9 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+// eslint-config-next 16 ships flat configs directly, so the FlatCompat bridge
+// this file used to need is gone. Loading the v16 configs through FlatCompat
+// fails outright — @eslint/eslintrc tries to validate them as eslintrc data and
+// throws on the plugin objects' circular references.
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
 export default [
   {
@@ -22,14 +18,30 @@ export default [
       reportUnusedDisableDirectives: "off",
     },
   },
-  ...compat.config({
-    extends: ["next/core-web-vitals", "next/typescript"],
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  {
+    // Keep these last so they win over the shared configs above.
     rules: {
       "react-hooks/exhaustive-deps": "error",
+
+      // eslint-plugin-react-hooks v6 arrives with this config and turns on the
+      // React Compiler rule set, which our code trips 97 times. None of it was
+      // enforced under eslint-config-next 15, so it is newly surfaced debt
+      // rather than a regression, and fixing it is not part of a config bump.
+      // Kept visible as warnings and tracked in #605, which promotes each rule
+      // back to "error" as it is cleared.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
+
       "no-console": ["error", { allow: ["warn", "error"] }],
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },
-  }),
+  },
 ];
