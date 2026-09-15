@@ -1,7 +1,7 @@
 """Semantic search & cross-reference endpoints (#147 split)."""
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -33,6 +33,7 @@ router = APIRouter()
 @limiter.limit(REASONING_LINES_SEARCH_RATE_LIMIT)
 async def search_reasoning_lines(
     request: Request,
+    response: Response,
     body: ReasoningLineSearchRequest,
 ) -> ReasoningLineSearchResponse:
     """
@@ -166,6 +167,7 @@ async def search_reasoning_lines(
 @limiter.limit(REASONING_LINES_SEARCH_RATE_LIMIT)
 async def get_related_reasoning_lines(
     request: Request,
+    response: Response,
     line_id: str,
     limit: int = Query(default=10, ge=1, le=50, description="Max related lines"),
 ) -> RelatedLinesResponse:
