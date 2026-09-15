@@ -78,4 +78,35 @@ describe('globals.css colour tokens', () => {
     expect(emRule).toMatch(/font-style:\s*normal;/);
     expect(emRule).toMatch(/color:\s*var\(--pwr-red\);/);
   });
+
+  const rule = (selector: string) => {
+    const start = css.indexOf(`${selector} {`);
+    expect(start).toBeGreaterThan(-1);
+    return css.slice(start, css.indexOf('}', start));
+  };
+
+  it('defines the SIW red bar', () => {
+    const bar = rule('.pwr-bar');
+    expect(bar).toMatch(/background:\s*var\(--pwr-red\);/);
+    expect(bar).toMatch(/color:\s*var\(--pwr-paper\);/);
+    expect(bar).toMatch(/font-family:\s*var\(--font-display\);/);
+    expect(bar).toMatch(/border-radius:\s*0;/);
+  });
+
+  it('cards carry a red top rule that turns black on hover', () => {
+    expect(rule('.editorial-card')).toMatch(/border-top:\s*2px solid var\(--pwr-red\);/);
+    expect(rule('.editorial-card:hover')).toMatch(/border-top-color:\s*var\(--pwr-black\);/);
+  });
+
+  it('primary button is PWr red, secondary is black outline', () => {
+    expect(rule('.editorial-button-primary')).toMatch(/background:\s*var\(--pwr-red\);/);
+    expect(rule('.editorial-button-primary:hover')).toMatch(/background:\s*var\(--pwr-red-deep\);/);
+    expect(rule('.editorial-button-secondary')).toMatch(/border:\s*1px solid var\(--pwr-black\);/);
+  });
+
+  it('paper grain and noise overlays are gone', () => {
+    expect(css).not.toMatch(/feTurbulence/);
+    expect(rule('.editorial-paper')).not.toMatch(/radial-gradient/);
+    expect(css).not.toMatch(/\.editorial-paper::before/);
+  });
 });
