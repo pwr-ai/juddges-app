@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -35,7 +35,7 @@ router = APIRouter()
 )
 @limiter.limit(REASONING_LINES_RATE_LIMIT)
 async def create_reasoning_line(
-    request: Request, body: CreateReasoningLineRequest
+    request: Request, response: Response, body: CreateReasoningLineRequest
 ) -> ReasoningLineDetail:
     """
     Persist a reasoning line with its member judgments.
@@ -222,6 +222,7 @@ async def create_reasoning_line(
 @limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
 async def list_reasoning_lines(
     request: Request,
+    response: Response,
     status: str | None = Query(default=None, description="Filter by status"),
     limit: int = Query(default=50, ge=1, le=200, description="Max results to return"),
     offset: int = Query(default=0, ge=0, description="Offset for pagination"),
@@ -290,7 +291,9 @@ async def list_reasoning_lines(
     summary="Get full detail of a reasoning line with all members",
 )
 @limiter.limit(REASONING_LINES_READ_RATE_LIMIT)
-async def get_reasoning_line(request: Request, line_id: str) -> ReasoningLineDetail:
+async def get_reasoning_line(
+    request: Request, response: Response, line_id: str
+) -> ReasoningLineDetail:
     """
     Retrieve a single reasoning line by ID, including all member judgments
     with their metadata joined from the judgments table.
@@ -408,7 +411,9 @@ async def get_reasoning_line(request: Request, line_id: str) -> ReasoningLineDet
     summary="Soft-delete a reasoning line by setting status to superseded",
 )
 @limiter.limit(REASONING_LINES_RATE_LIMIT)
-async def delete_reasoning_line(request: Request, line_id: str) -> dict[str, str]:
+async def delete_reasoning_line(
+    request: Request, response: Response, line_id: str
+) -> dict[str, str]:
     """
     Soft-delete a reasoning line by setting its status to 'superseded'.
     The line and its members remain in the database for historical reference.

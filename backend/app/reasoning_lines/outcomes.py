@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from juddges_search.llms import get_default_llm
 from langchain_core.output_parsers import JsonOutputParser
@@ -56,7 +56,7 @@ Return JSON: {{"outcome_direction": "for|against|mixed|procedural", \
 )
 @limiter.limit(REASONING_LINES_LLM_RATE_LIMIT)
 async def analyze_outcomes(
-    request: Request, line_id: str
+    request: Request, response: Response, line_id: str
 ) -> OutcomeClassificationResult:
     """
     Use LLM to classify each member judgment's outcome direction relative
