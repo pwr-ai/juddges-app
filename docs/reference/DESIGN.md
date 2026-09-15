@@ -1,11 +1,13 @@
-# Design System — Editorial Jurisprudence
+# Design System — Editorial Jurisprudence, PWr edition
 
-> **Status:** active · **Adopted:** 2026-05-07 · **Owner:** frontend
+> **Status:** active · **Adopted:** 2026-05-07 · **PWr identity:** 2026-09-15 (#629) · **Owner:** frontend
 
-The Juddges design system. A scholarly, editorial aesthetic inspired by legal
-periodicals and case reporters — confident serif typography, ink-and-parchment
-palette, rule-driven hierarchy, density that respects the seriousness of the
-subject.
+The Juddges design system: the editorial framework of a legal periodical
+(eyebrows, hairline rules, drop caps, marginal numerals, sharp paper edges)
+carried in the visual identity of Politechnika Wrocławska — PWr red on white
+paper, humanist display type, red header bars and square numerals — as
+defined in the university's *System Identyfikacji Wizualnej* (SIW, edition
+2025-12, <https://pwr.edu.pl/kontakt/logotyp>).
 
 This is the source of truth. Tokens live in
 [`frontend/app/globals.css`](../../frontend/app/globals.css) and React
@@ -17,42 +19,43 @@ primitives live in [`frontend/components/editorial/`](../../frontend/components/
 
 | Principle | What it means in practice |
 |---|---|
-| **Editorial, not SaaS** | Serif headlines, drop caps, hairline rules, marginal numerals. No glassmorphism, no rainbow gradients, no rounded blob cards. |
-| **Ink on paper** | Parchment background, deep-ink text, oxblood for authority. The page should feel like a printed document. |
+| **Editorial, not SaaS** | Display headlines, drop caps, hairline rules, marginal numerals. No glassmorphism, no rainbow gradients, no rounded blob cards. |
+| **PWr on paper** | White page, black text, Pantone 484 red for authority, sand for tinted accents, `#EFEFEF` panels for asides. The page should feel like a PWr document. |
 | **Sharp paper edges** | Cards and buttons use 0–2 px radii. Curvature is reserved for pills and chips. |
-| **Confident typography** | Instrument Serif at large display sizes does the heavy lifting. Geist sans for body, Geist mono for citations and tabular numerals. |
+| **Confident typography** | Tenor Sans (open substitute for the identity's Zapf Humanist / Optima) at large display sizes does the heavy lifting; emphasis is red, never faux-italic. Geist sans for body, Geist mono for citations and tabular numerals. |
 | **Asymmetric layouts** | Break the grid. Lead with the most important card; demote secondary cards. Leave generous negative space. |
-| **One memorable signature** | Each surface earns one distinctive moment — a drop cap, an oversized italic numeral, a case-citation marker. Do not stack them. |
+| **One memorable signature** | Each surface earns one distinctive moment — a drop cap, an oversized red-square numeral, a case-citation marker. Do not stack them. |
 
 ---
 
 ## 2. Palette
 
-The canonical raw tokens are defined in `:root` in `globals.css` and re-exposed
-through `--background`, `--foreground`, `--primary`, etc. Always reference the
-**raw editorial token** when you mean an editorial color.
+The PWr layer is the source of truth (`:root` in `globals.css`). Every
+editorial name the app already uses is an **alias** of a PWr token, so
+`bg-parchment`, `text-ink`, `text-oxblood` … keep working; new code should use
+the `pwr-*` names.
 
-| Token | Hex (approx.) | OKLCH | Use |
-|---|---|---|---|
-| `--parchment` | `#F5F1E8` | `oklch(0.96 0.012 85)` | Page surface |
-| `--parchment-deep` | `#EFE9D8` | `oklch(0.93 0.018 82)` | Tonal section bands |
-| `--ink` | `#1A1A2E` | `oklch(0.18 0.020 280)` | Primary text, strong rules |
-| `--ink-soft` | `#5A5A75` | `oklch(0.36 0.018 275)` | Secondary text |
-| `--rule` | `#C9C2B0` | `oklch(0.82 0.018 80)` | Hairline rules, card borders |
-| `--rule-strong` | `#A89F88` | `oklch(0.70 0.020 78)` | Medium dividers, eyebrow rules |
-| `--oxblood` | `#8B1E3F` | `oklch(0.42 0.135 12)` | Authority — primary action, italic emphasis, the "judges' robes" colour |
-| `--oxblood-deep` | `#6F1230` | `oklch(0.34 0.135 14)` | Hover state for oxblood |
-| `--gold` | `#B8954A` | `oklch(0.68 0.105 80)` | Citation gold — markers, highlights |
-| `--gold-soft` | `#E8DCB8` | `oklch(0.86 0.055 85)` | Tinted backgrounds, accent fills |
+| Token | Hex | Source (SIW 2025-12) | Use | Editorial alias |
+|---|---|---|---|---|
+| `--pwr-red` | `#9A342D` | Pantone 484 · C0 M95 Y100 K29 | Authority — primary action, emphasis, bars, card rule | `--oxblood` |
+| `--pwr-red-deep` | `#7E2A25` | derived | Hover for red | `--oxblood-deep` |
+| `--pwr-sand` | `#F1D1A2` | Pantone 156 · C0 M22 Y42 K0 | Tinted accents, meta on red | `--gold-soft` |
+| `--pwr-gold` | `#B49A5E` | Pantone 873 (metallic), web approximation | Citation markers | `--gold` |
+| `--pwr-black` | `#000000` | K100 | Text, strong rules, secondary button outline | `--ink` |
+| `--pwr-grey` | `#5A5A5A` | derived | Secondary text | `--ink-soft` |
+| `--pwr-paper` | `#FFFFFF` | white document surface | Page, cards | `--parchment` |
+| `--pwr-panel` | `#EFEFEF` | SIW info panel | Tonal bands, flat cards, `--muted` | `--parchment-deep` |
+| `--pwr-line` | `#D9D9D9` | derived | Hairline rules, card borders | `--rule` |
+| `--pwr-line-strong` | `#9A9A9A` | derived | Medium dividers | `--rule-strong` |
 
 ### Tailwind class names
 
 Each editorial token is exposed through Tailwind via `@theme inline`:
 
 ```html
-<div class="bg-parchment text-ink border-rule">…</div>
-<span class="text-oxblood">overruled</span>
-<sup class="text-gold">¹</sup>
+<div class="bg-pwr-paper text-pwr-black border-pwr-line">…</div>
+<span class="text-pwr-red">overruled</span>
+<sup class="text-pwr-gold">¹</sup>
 ```
 
 ### Avoid
@@ -67,18 +70,18 @@ Each editorial token is exposed through Tailwind via `@theme inline`:
 ## 3. Typography
 
 ```
---font-sans   = Geist Sans            (body, UI)
---font-serif  = Instrument Serif      (display, italic emphasis)
---font-mono   = Geist Mono            (citations, eyebrows, tabular numerals)
+--font-sans     = Geist Sans            (body, UI)
+--font-display  = Tenor Sans            (display; --font-serif is an alias)
+--font-mono     = Geist Mono            (citations, eyebrows, tabular numerals)
 ```
 
 ### Scale
 
 | Use | Class / utility | Size | Notes |
 |---|---|---|---|
-| Hero display | `<Headline size="lg">` | 5xl → 7xl | Instrument Serif, italic accents in oxblood |
+| Hero display | `<Headline size="lg">` | 5xl → 7xl | Tenor Sans, red accents (upright — the face has no italic) |
 | Section title | `<Headline size="md">` | 4xl → 5xl | Always paired with an eyebrow |
-| Card title | `<EditorialCard title=…>` | 2xl serif | Auto-applied |
+| Card title | `<EditorialCard title=…>` | 2xl display | Auto-applied (`font-serif`, aliasing Tenor Sans) |
 | Body | default `<p>` | 16–17 px | `leading-[1.65]`, `text-ink-soft` for prose |
 | Eyebrow | `<Eyebrow>` | 11 px mono | Letter-spacing `0.18em`, uppercase |
 | Numeral | `editorial-numeral` | inherits | Tabular lining figures |
@@ -87,12 +90,33 @@ Each editorial token is exposed through Tailwind via `@theme inline`:
 ### Drop cap
 
 Use `<DropCap>` (or `.editorial-dropcap`) **at most once per page** as the
-opener of long-form copy. Renders the first letter as a 4.5em italic
-oxblood floated initial.
+opener of long-form copy. Renders the first letter as a 4.5em upright red
+floated initial.
 
 ```tsx
 <DropCap>The JuDDGES project aims to revolutionize…</DropCap>
 ```
+
+---
+
+## 3a. PWr patterns
+
+| Pattern | Class / component | Rule |
+|---|---|---|
+| Red bar | `.pwr-bar`, `<Masthead>`, `<SectionHeader variant="bar">` | Full-width `--pwr-red` block, white display text, 0 px radius. One per surface. |
+| Nameplate underline | `<Masthead ruled>` | 1 px black line under the bar — the SIW underline beneath the wordmark. |
+| Square numeral | `<SectionHeader numeral="03">` | `--pwr-red` square, white Tenor Sans digit — the SIW page-number block. |
+| Grey panel | `bg-pwr-panel`, `<EditorialCard flat>`, `<PaperBackground deep>` | `#EFEFEF` aside, no border needed. |
+| Card rule | `.editorial-card` | 2 px `--pwr-red` top rule, black on hover; 1 px `--pwr-line` elsewhere. |
+| Corners / shadows | everywhere | 0 px, none. Pills only on `QueryPill` and `Badge`. |
+
+### Logotype
+
+**The PWr emblem and wordmark are not used in this product.** SIW requires
+written permission from logotyp@pwr.edu.pl and forbids using any element of
+the mark separately; no permission has been obtained. Express the identity
+through palette, type and patterns only. Do not add the eagle, the compass or
+the "Politechnika Wrocławska" wordmark to any surface.
 
 ---
 
@@ -103,18 +127,21 @@ All under `frontend/components/editorial/` and re-exported from the barrel
 
 | Primitive | Purpose |
 |---|---|
-| `<Masthead>` | Top-of-page nameplate strip — small caps + ink rule |
-| `<Eyebrow>` | Small-caps section kicker with leading hairline |
-| `<Headline>` | Serif display headline (h1–h4, 5 sizes, italic accents) |
-| `<SectionHeader>` | Eyebrow + Headline + description, with optional marginal numeral |
-| `<DropCap>` | Editorial drop-cap paragraph |
-| `<Rule>` | Hairline / medium / ink horizontal rules |
-| `<Stat>` | Animated tabular numeral + label + optional citation marker |
+| `<ChartFigure>` | Sharp-edged chart card with "FIG. nn" eyebrow, serif title, caption + source line |
 | `<Citation>` | Gold superscripted footnote marker |
-| `<EditorialCard>` | Sharp-edged card with eyebrow + title header |
+| `<DropCap>` | Editorial drop-cap paragraph |
+| `<DualStatCard>` | Bilateral KPI card — two values side-by-side with a hairline divider |
+| `<EditorialButton>` | Sharp-edged action; `variant`: `primary` \| `secondary` \| `ghost` |
+| `<EditorialCard>` | Sharp-edged card with eyebrow + title header; `flat` for a grey-panel tone |
+| `<Eyebrow>` | Small-caps section kicker with leading hairline |
+| `<Headline>` | Tenor Sans display headline (h1–h4, 5 sizes, upright red accents) |
+| `<Masthead>` | Top-of-page nameplate — the SIW red bar, white text, optional `ruled` underline |
+| `<PaperBackground>` | White (or `deep` grey-panel) wrapper; `grain` prop is a no-op |
 | `<QueryPill>` | Newsprint pill for demo queries |
-| `<EditorialButton>` | Sharp ink/oxblood primary or outline action |
-| `<PaperBackground>` | Parchment wrapper with optional paper-grain noise |
+| `<Rule>` | Hairline / medium / ink horizontal rules |
+| `<Section>` | Numbered dashboard section wrapping `SectionHeader` + content |
+| `<SectionHeader>` | Eyebrow + Headline + description; red square `numeral`, or full red bar via `variant="bar"` |
+| `<Stat>` | Animated tabular numeral + label + optional citation marker |
 
 ### Importing
 
@@ -136,7 +163,7 @@ import {
 ### Hero
 
 ```tsx
-<PaperBackground grain className="py-24">
+<PaperBackground className="py-24">
   <Masthead badge="Est. 2024 · Wroclaw" meta="VOL I · NO 1" ruled />
   <Headline as="h1" size="lg">
     An open archive of <em>judicial reasoning</em>,
@@ -155,7 +182,11 @@ import {
 </PaperBackground>
 ```
 
-### Section with marginal numeral
+`<PaperBackground>` no longer takes a `grain` prop effect — the paper is flat
+white (or grey-panel with `deep`); the prop is accepted but is a no-op for
+backwards compatibility.
+
+### Section with red-square numeral
 
 ```tsx
 <SectionHeader
@@ -166,25 +197,28 @@ import {
 />
 ```
 
+The `numeral` renders as the SIW page-number block: a `--pwr-red` square with
+a white Tenor Sans digit, not a marginal (out-of-flow) numeral.
+
 ### Card grid (asymmetric)
 
 Use a 12-col grid and let one card take 7 cols (featured), the others 5 → 4 →
-4. Reserve `featured` (oxblood top mark) for the most important card on the
+4. Reserve `featured` (red top mark) for the most important card on the
 surface.
 
 ```tsx
-<div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-rule">
-  <div className="lg:col-span-7 bg-parchment">
+<div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-pwr-line">
+  <div className="lg:col-span-7 bg-pwr-paper">
     <EditorialCard featured eyebrow="Database" title="Coverage" />
   </div>
-  <div className="lg:col-span-5 bg-parchment">
+  <div className="lg:col-span-5 bg-pwr-paper">
     <EditorialCard eyebrow="Recent" title="Conversations" />
   </div>
 </div>
 ```
 
-The `gap-px bg-rule` trick paints hairline rules between cards without extra
-borders.
+The `gap-px bg-pwr-line` trick paints hairline rules between cards without
+extra borders.
 
 ---
 
@@ -238,3 +272,4 @@ Pages that still use the legacy glassmorphism cards, purple gradients, or
 - Components: [`frontend/components/editorial/`](../../frontend/components/editorial)
 - Landing page implementation: [`frontend/components/landing/LandingPage.tsx`](../../frontend/components/landing/LandingPage.tsx)
 - Dashboard implementation: [`frontend/app/page.tsx`](../../frontend/app/page.tsx)
+- Politechnika Wrocławska, *System Identyfikacji Wizualnej*, ed. 2025-12 — <https://pwr.edu.pl/kontakt/logotyp>

@@ -109,4 +109,13 @@ describe('globals.css colour tokens', () => {
     expect(rule('.editorial-paper')).not.toMatch(/radial-gradient/);
     expect(css).not.toMatch(/\.editorial-paper::before/);
   });
+
+  it('DESIGN.md palette table matches :root', () => {
+    const md = readFileSync(join(__dirname, '../../../../docs/reference/DESIGN.md'), 'utf8');
+    const rows = [...md.matchAll(/^\|\s*`(--pwr-[a-z-]+)`\s*\|\s*`(#[0-9A-Fa-f]{6})`/gm)];
+    expect(rows.length).toBe(10);
+    for (const [, token, hex] of rows) {
+      expect(rootBlock).toMatch(new RegExp(`${token}:\\s*${hex}\\s*;`, 'i'));
+    }
+  });
 });
