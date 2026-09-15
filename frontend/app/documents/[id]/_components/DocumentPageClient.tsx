@@ -6,7 +6,6 @@ import { ArrowLeft } from 'lucide-react';
 
 import { LoadingIndicator, Breadcrumb, PageContainer, ErrorCard } from '@/lib/styles/components';
 import { KeyInformation } from '@/lib/styles/components/key-information';
-import { VersionHistory } from '@/components/VersionHistory';
 
 import { DocumentHeader } from './DocumentHeader';
 import { RelatedDocuments } from './RelatedDocuments';
@@ -220,12 +219,6 @@ export function DocumentPageClient({
                 keyPointsError={keyPointsError}
                 keyPointsResult={keyPointsResult}
                 onExtractKeyPoints={handleExtractKeyPoints}
-              />
-
-              {/* Version History */}
-              <VersionHistory
-                documentId={documentId}
-                onRevert={fetchDocumentData}
               />
 
               {/* Main Content - Document HTML or Fallback */}

@@ -40,8 +40,8 @@ export function SkeletonCard({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border p-4",
-        "bg-card backdrop-blur-sm",
+        "rounded-sm border border-rule p-4",
+        "bg-card",
         className
       )}
       role="status"
