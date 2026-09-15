@@ -7,48 +7,60 @@
 
 :root {
   /* ─────────────────────────────────────────────
-     EDITORIAL JURISPRUDENCE PALETTE
+     PWR IDENTITY — source of truth
+     System Identyfikacji Wizualnej PWr, ed. 2025-12
+     (https://pwr.edu.pl/kontakt/logotyp). Derived values are marked.
      See docs/reference/DESIGN.md for the full system.
-     parchment / ink / oxblood / gold / paper-rule
      ───────────────────────────────────────────── */
+  --pwr-red:          #9A342D;   /* Pantone 484 — authority, primary action */
+  --pwr-red-deep:     #7E2A25;   /* derived — hover for --pwr-red */
+  --pwr-sand:         #F1D1A2;   /* Pantone 156 — tinted accents */
+  --pwr-gold:         #B49A5E;   /* Pantone 873 (metallic) — web approximation */
+  --pwr-black:        #000000;   /* K100 — text, strong rules */
+  --pwr-grey:         #5A5A5A;   /* derived — secondary text */
+  --pwr-paper:        #FFFFFF;   /* white document surface */
+  --pwr-panel:        #EFEFEF;   /* SIW info panel grey */
+  --pwr-line:         #D9D9D9;   /* derived — hairline */
+  --pwr-line-strong:  #9A9A9A;   /* derived — medium divider */
 
-  /* Raw editorial tokens (canonical) */
-  --parchment:        oklch(0.96 0.012 85);    /* #F5F1E8 page surface */
-  --parchment-deep:   oklch(0.93 0.018 82);    /* slightly toned card */
-  --ink:              oklch(0.18 0.020 280);   /* #1A1A2E deep ink */
-  --ink-soft:         oklch(0.36 0.018 275);   /* secondary text */
-  --rule:             oklch(0.82 0.018 80);    /* #C9C2B0 paper rule */
-  --rule-strong:      oklch(0.70 0.020 78);    /* hairline divider */
-  --oxblood:          oklch(0.42 0.135 12);    /* #8B1E3F authority */
-  --oxblood-deep:     oklch(0.34 0.135 14);    /* hover state */
-  --gold:             oklch(0.68 0.105 80);    /* #B8954A citation gold */
-  --gold-soft:        oklch(0.86 0.055 85);    /* tinted background */
-
+  /* Editorial aliases — the names the app's utilities use (bg-parchment,
+     text-ink, text-oxblood, …). Kept so no call site changes; new code
+     should use the pwr-* names. */
+  --parchment:        var(--pwr-paper);
+  --parchment-deep:   var(--pwr-panel);
+  --ink:              var(--pwr-black);
+  --ink-soft:         var(--pwr-grey);
+  --rule:             var(--pwr-line);
+  --rule-strong:      var(--pwr-line-strong);
+  --oxblood:          var(--pwr-red);
+  --oxblood-deep:     var(--pwr-red-deep);
+  --gold:             var(--pwr-gold);
+  --gold-soft:        var(--pwr-sand);
   /* Mapped to the existing token API (do not rename — many components
      consume these variables. We change the values, not the names.) */
   --background: var(--parchment);
   --foreground: var(--ink);
 
-  --card: oklch(0.985 0.010 85);
+  --card: var(--pwr-paper);
   --card-foreground: var(--ink);
 
-  --popover: oklch(0.985 0.010 85);
+  --popover: var(--pwr-paper);
   --popover-foreground: var(--ink);
 
   --primary: var(--oxblood);
-  --primary-foreground: oklch(0.98 0.008 85);
+  --primary-foreground: var(--pwr-paper);
 
-  --secondary: oklch(0.92 0.020 82);
+  --secondary: var(--pwr-panel);
   --secondary-foreground: var(--ink);
 
-  --muted: oklch(0.93 0.015 82);
+  --muted: var(--pwr-panel);
   --muted-foreground: var(--ink-soft);
 
   --accent: var(--gold-soft);
-  --accent-foreground: oklch(0.40 0.110 80);
+  --accent-foreground: var(--pwr-red-deep);
 
   --destructive: oklch(0.55 0.20 25);
-  --destructive-foreground: oklch(0.98 0.008 85);
+  --destructive-foreground: var(--pwr-paper);
 
   --success: oklch(0.50 0.13 150);
   --warning: var(--gold);
@@ -72,12 +84,12 @@
   --chart-5: oklch(0.55 0.11 35);
   --chart-6: oklch(0.40 0.09 285);
 
-  --sidebar: oklch(0.94 0.014 82);
+  --sidebar: var(--pwr-panel);
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--oxblood);
-  --sidebar-primary-foreground: oklch(0.98 0.008 85);
+  --sidebar-primary-foreground: var(--pwr-paper);
   --sidebar-accent: var(--gold-soft);
-  --sidebar-accent-foreground: oklch(0.40 0.110 80);
+  --sidebar-accent-foreground: var(--pwr-red-deep);
   --sidebar-border: var(--rule);
   --sidebar-ring: var(--oxblood);
 
@@ -122,6 +134,18 @@
   --color-oxblood-deep: var(--oxblood-deep);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
+
+  /* PWr identity tokens — bg-pwr-red, text-pwr-grey, border-pwr-line, … */
+  --color-pwr-red: var(--pwr-red);
+  --color-pwr-red-deep: var(--pwr-red-deep);
+  --color-pwr-sand: var(--pwr-sand);
+  --color-pwr-gold: var(--pwr-gold);
+  --color-pwr-black: var(--pwr-black);
+  --color-pwr-grey: var(--pwr-grey);
+  --color-pwr-paper: var(--pwr-paper);
+  --color-pwr-panel: var(--pwr-panel);
+  --color-pwr-line: var(--pwr-line);
+  --color-pwr-line-strong: var(--pwr-line-strong);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
