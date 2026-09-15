@@ -25,7 +25,7 @@ interface HeadlineProps extends React.HTMLAttributes<HTMLHeadingElement> {
 /**
  * Editorial headline — Tenor Sans (PWr display face) with open tracking and confident
  * leading. Use for hero headlines, section titles, and CTA banners. Supports
- * inline `<em>` styling that renders italic + oxblood.
+ * inline `<em>` styling that renders upright in PWr red.
  *
  * @example
  *   <Headline as="h1" size="lg">An open archive of <em>judicial reasoning</em></Headline>
