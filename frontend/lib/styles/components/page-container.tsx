@@ -70,8 +70,8 @@ export function PageContainer({
   return (
     <div
       className={cn(
-        // Full width container with glass background
-        "w-full glass-page-background",
+        // Full-width parchment surface; min-h-screen matches the removed page-level CSS rule
+        "relative w-full min-h-screen bg-background",
         // Optional viewport filling - allows growth beyond viewport for full page components
         // Uses min-height to ensure at least viewport height, but allows natural growth beyond
         fillViewport && "min-h-[calc(100vh-4rem)]",

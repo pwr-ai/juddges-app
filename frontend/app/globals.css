@@ -98,14 +98,15 @@
   --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
   /* Sharp, paper-like radii — editorial, not SaaS-rounded */
   --radius: 0.125rem;
-  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
-  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
-  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
-  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
-  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
-  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+  /* Ink-tinted, layered, one light source (straight above); elevation caps at lg */
+  --shadow-2xs: 0 1px 1px color-mix(in oklab, var(--ink) 5%, transparent);
+  --shadow-xs: 0 1px 2px color-mix(in oklab, var(--ink) 6%, transparent);
+  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--ink) 6%, transparent), 0 2px 6px -2px color-mix(in oklab, var(--ink) 6%, transparent);
+  --shadow: var(--shadow-sm);
+  --shadow-md: 0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent), 0 4px 12px -4px color-mix(in oklab, var(--ink) 10%, transparent);
+  --shadow-lg: 0 1px 2px color-mix(in oklab, var(--ink) 8%, transparent), 0 10px 24px -8px color-mix(in oklab, var(--ink) 14%, transparent);
+  --shadow-xl: var(--shadow-lg);
+  --shadow-2xl: var(--shadow-lg);
 }
 
 /* ============================================
@@ -198,7 +199,16 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: var(--radius);
+
+  /* Motion — hover 180ms ease-out; reveals 600ms; stat counters 1800ms */
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-stat: cubic-bezier(0.33, 1, 0.68, 1);
+  --duration-hover: 180ms;
+  --duration-reveal: 600ms;
+  --duration-stat: 1800ms;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -518,18 +528,6 @@
   }
 }
 
-/* Glassmorphism styles for search page */
-@layer components {
-  /* Page background for glassmorphism effect */
-  .glass-page-background {
-    position: relative;
-    min-height: 100vh;
-    /* Professional, non-gradient page surface */
-    background: #f8f7f4;
-    background-attachment: fixed;
-  }
-
-}
 
 @keyframes fade-in-up {
   from {
@@ -565,24 +563,6 @@
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes shimmer-slide {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(200%);
-  }
-}
-
-@keyframes text-shimmer {
   0% {
     background-position: -200% 0;
   }
@@ -644,14 +624,6 @@
   animation: shimmer 2s infinite linear;
   background: color-mix(in oklab, var(--muted) 45%, transparent);
   background-size: 1000px 100%;
-}
-
-.animate-shimmer-slide {
-  animation: shimmer-slide 3s ease-in-out infinite;
-}
-
-.animate-text-shimmer {
-  animation: text-shimmer 3s ease-in-out infinite;
 }
 
 .animate-fade-out-down {
