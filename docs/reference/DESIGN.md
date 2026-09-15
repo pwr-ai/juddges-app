@@ -3,7 +3,7 @@
 > **Status:** active · **Adopted:** 2026-05-07 · **PWr identity:** 2026-09-15 (#629) · **Owner:** frontend
 
 The Juddges design system: the editorial framework of a legal periodical
-(eyebrows, hairline rules, drop caps, marginal numerals, sharp paper edges)
+(eyebrows, hairline rules, drop caps, square numerals, sharp paper edges)
 carried in the visual identity of Politechnika Wrocławska — PWr red on white
 paper, humanist display type, red header bars and square numerals — as
 defined in the university's *System Identyfikacji Wizualnej* (SIW, edition
@@ -19,7 +19,7 @@ primitives live in [`frontend/components/editorial/`](../../frontend/components/
 
 | Principle | What it means in practice |
 |---|---|
-| **Editorial, not SaaS** | Display headlines, drop caps, hairline rules, marginal numerals. No glassmorphism, no rainbow gradients, no rounded blob cards. |
+| **Editorial, not SaaS** | Display headlines, drop caps, hairline rules, square numerals. No glassmorphism, no rainbow gradients, no rounded blob cards. |
 | **PWr on paper** | White page, black text, Pantone 484 red for authority, sand for tinted accents, `#EFEFEF` panels for asides. The page should feel like a PWr document. |
 | **Sharp paper edges** | Cards and buttons use 0–2 px radii. Curvature is reserved for pills and chips. |
 | **Confident typography** | Tenor Sans (open substitute for the identity's Zapf Humanist / Optima) at large display sizes does the heavy lifting; emphasis is red, never faux-italic. Geist sans for body, Geist mono for citations and tabular numerals. |
@@ -106,7 +106,7 @@ floated initial.
 | Red bar | `.pwr-bar`, `<Masthead>`, `<SectionHeader variant="bar">` | Full-width `--pwr-red` block, white display text, 0 px radius. One per surface. |
 | Nameplate underline | `<Masthead ruled>` | 1 px black line under the bar — the SIW underline beneath the wordmark. |
 | Square numeral | `<SectionHeader numeral="03">` | `--pwr-red` square, white Tenor Sans digit — the SIW page-number block. |
-| Grey panel | `bg-pwr-panel`, `<EditorialCard flat>`, `<PaperBackground deep>` | `#EFEFEF` aside, no border needed. |
+| Grey panel | `bg-pwr-panel`, `<PaperBackground deep>` | `#EFEFEF` aside, no border needed. |
 | Card rule | `.editorial-card` | 2 px `--pwr-red` top rule, black on hover; 1 px `--pwr-line` elsewhere. |
 | Corners / shadows | everywhere | 0 px, none. Pills only on `QueryPill` and `Badge`. |
 
@@ -132,7 +132,7 @@ All under `frontend/components/editorial/` and re-exported from the barrel
 | `<DropCap>` | Editorial drop-cap paragraph |
 | `<DualStatCard>` | Bilateral KPI card — two values side-by-side with a hairline divider |
 | `<EditorialButton>` | Sharp-edged action; `variant`: `primary` \| `secondary` \| `ghost` |
-| `<EditorialCard>` | Sharp-edged card with eyebrow + title header; `flat` for a grey-panel tone |
+| `<EditorialCard>` | Sharp-edged card with eyebrow + title header; `flat` for a plain bordered card without the red top rule |
 | `<Eyebrow>` | Small-caps section kicker with leading hairline |
 | `<Headline>` | Tenor Sans display headline (h1–h4, 5 sizes, upright red accents) |
 | `<Masthead>` | Top-of-page nameplate — the SIW red bar, white text, optional `ruled` underline |
