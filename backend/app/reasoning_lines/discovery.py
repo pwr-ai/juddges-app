@@ -5,7 +5,7 @@ import time
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from juddges_search.db.supabase_db import get_vector_db
 from loguru import logger
 
@@ -38,7 +38,7 @@ router = APIRouter()
 )
 @limiter.limit(REASONING_LINES_RATE_LIMIT)
 async def discover_reasoning_lines(
-    request: Request, body: ReasoningLineDiscoveryRequest
+    request: Request, response: Response, body: ReasoningLineDiscoveryRequest
 ) -> ReasoningLineDiscoveryResponse:
     """
     Discover reasoning-line clusters by combining embedding similarity with

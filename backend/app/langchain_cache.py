@@ -11,6 +11,7 @@ from langchain_community.cache import SQLAlchemyMd5Cache
 from langchain_core.globals import set_llm_cache
 from loguru import logger
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 
 
 def setup_langchain_cache() -> None:
@@ -57,7 +58,18 @@ def setup_langchain_cache() -> None:
             )
 
         engine = create_engine(database_url)
-        set_llm_cache(SQLAlchemyMd5Cache(engine))
+
+        # Every gunicorn worker runs this at boot, so the CREATE TABLE inside
+        # SQLAlchemyMd5Cache races its siblings and the losers get a unique
+        # violation on the Postgres catalog. The tables exist by then, so one
+        # retry is enough.
+        try:
+            cache = SQLAlchemyMd5Cache(engine)
+        except IntegrityError:
+            logger.info("Another worker created the LLM cache tables first — retrying")
+            cache = SQLAlchemyMd5Cache(engine)
+
+        set_llm_cache(cache)
 
         logger.info("LangChain PostgreSQL cache initialized successfully")
     except Exception as e:

@@ -32,9 +32,11 @@ export default [
       // Kept visible as warnings and tracked in #605, which promotes each rule
       // back to "error" as it is cleared.
       "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/static-components": "warn",
+      // #605: cleared, so it is enforced again.
+      "react-hooks/static-components": "error",
       "react-hooks/preserve-manual-memoization": "warn",
-      "react-hooks/refs": "warn",
+      // #605: cleared, so it is enforced again.
+      "react-hooks/refs": "error",
       "react-hooks/immutability": "warn",
       // #605: cleared, so it is enforced again.
       "react-hooks/purity": "error",

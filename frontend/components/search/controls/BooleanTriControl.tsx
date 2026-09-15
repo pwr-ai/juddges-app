@@ -10,13 +10,21 @@ export interface BooleanTriControlProps {
   disabled?: boolean;
 }
 
-export function BooleanTriControl({ label, description, value, onChange, disabled }: BooleanTriControlProps) {
-  const v = value?.value;
-  const set = (next: true | false | undefined) => {
-    if (next === undefined) onChange(undefined);
-    else onChange({ kind: "boolean_tri", value: next });
-  };
-  const Pill = ({ active, text, action }: { active: boolean; text: string; action: () => void }) => (
+// Declared at module scope, not inside BooleanTriControl. A component created
+// during render gets a new identity every time, so React unmounts and remounts
+// the buttons on each render instead of updating them — losing focus mid-click.
+function Pill({
+  active,
+  text,
+  action,
+  disabled,
+}: {
+  active: boolean;
+  text: string;
+  action: () => void;
+  disabled?: boolean;
+}) {
+  return (
     <button
       type="button"
       disabled={disabled}
@@ -28,6 +36,14 @@ export function BooleanTriControl({ label, description, value, onChange, disable
       {text}
     </button>
   );
+}
+
+export function BooleanTriControl({ label, description, value, onChange, disabled }: BooleanTriControlProps) {
+  const v = value?.value;
+  const set = (next: true | false | undefined) => {
+    if (next === undefined) onChange(undefined);
+    else onChange({ kind: "boolean_tri", value: next });
+  };
   return (
     <div>
       <label className="mb-1 block text-xs font-medium text-[color:var(--ink)]">{label}</label>
@@ -35,9 +51,9 @@ export function BooleanTriControl({ label, description, value, onChange, disable
         <div className="mb-1 text-[11px] text-[color:var(--ink-soft)]">{description}</div>
       )}
       <div className="flex gap-1">
-        <Pill active={v === undefined} text="Any" action={() => set(undefined)} />
-        <Pill active={v === true} text="Yes" action={() => set(true)} />
-        <Pill active={v === false} text="No" action={() => set(false)} />
+        <Pill active={v === undefined} text="Any" action={() => set(undefined)} disabled={disabled} />
+        <Pill active={v === true} text="Yes" action={() => set(true)} disabled={disabled} />
+        <Pill active={v === false} text="No" action={() => set(false)} disabled={disabled} />
       </div>
     </div>
   );

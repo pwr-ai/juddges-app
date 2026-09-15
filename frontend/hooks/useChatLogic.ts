@@ -53,9 +53,16 @@ export function useChatLogic(options = { maxDocuments: 20, responseFormat: "adap
     useState<AbortController | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // Always-current messages ref to avoid stale closures after async operations
+  // Always-current messages ref to avoid stale closures after async operations.
+  // Synced from an effect rather than assigned during render: writing a ref
+  // while rendering is impure, and React may render without committing, which
+  // would leave the ref describing a screen the user never saw. Every reader
+  // here runs after commit (async callbacks and event handlers), so seeing the
+  // value one commit later is not observable to them.
   const messagesRef = useRef<Message[]>(messages);
-  messagesRef.current = messages;
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   // Track the current assistant message ID being generated to ignore responses from aborted generations
   const currentAssistantMessageIdRef = useRef<string | null>(null);
 

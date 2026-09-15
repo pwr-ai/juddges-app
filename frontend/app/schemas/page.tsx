@@ -80,25 +80,17 @@ export default function SchemasPage() {
  });
  const [showFilters, setShowFilters] = useState(false);
 
- // Track changes for animation key
- const animationKeyRef = useRef(0);
- const prevActiveTabRef = useRef<TabValue>(activeTab);
- const prevFiltersRef = useRef<FilterState>(filters);
- const prevViewModeRef = useRef<ViewMode>(viewMode);
+ // Identity of the currently displayed result set. AnimatePresence remounts
+ // (and so replays the entrance animation) whenever this changes.
+ //
+ // This was a ref bumped from an effect, which could not work: the key is read
+ // during render, the effect ran after it, and writing a ref triggers no
+ // re-render. A filter-only change therefore animated nothing, and the bumped
+ // value then leaked into whatever unrelated render happened next, animating
+ // then instead. Deriving it from the values themselves makes the key change in
+ // the same render as the data it describes.
+ const animationKey = `${activeTab}-${viewMode}-${JSON.stringify(filters)}`;
 
- // Update animation key when tab, filters, or view mode changes
- useEffect(() => {
- const tabChanged = prevActiveTabRef.current !== activeTab;
- const filtersChanged = JSON.stringify(prevFiltersRef.current) !== JSON.stringify(filters);
- const viewModeChanged = prevViewModeRef.current !== viewMode;
-
- if (tabChanged || filtersChanged || viewModeChanged) {
- animationKeyRef.current += 1;
- prevActiveTabRef.current = activeTab;
- prevFiltersRef.current = filters;
- prevViewModeRef.current = viewMode;
- }
- }, [activeTab, filters, viewMode]);
 
  // Fetch schemas
  const fetchSchemas = useCallback(async () => {
@@ -495,7 +487,7 @@ export default function SchemasPage() {
  )}
  <AnimatePresence mode="wait">
  <motion.div
- key={`all-${activeTab}-${animationKeyRef.current}-${viewMode}`}
+ key={`all-${animationKey}`}
  initial={{ opacity: 0, y: 10, filter: "blur(2px)"}}
  animate={{ opacity: 1, y: 0, filter: "blur(0px)"}}
  exit={{ opacity: 0, y: -10, filter: "blur(2px)"}}
@@ -590,7 +582,7 @@ export default function SchemasPage() {
  )}
  <AnimatePresence mode="wait">
  <motion.div
- key={`my-${activeTab}-${animationKeyRef.current}-${viewMode}`}
+ key={`my-${animationKey}`}
  initial={{ opacity: 0, y: 10, filter: "blur(2px)"}}
  animate={{ opacity: 1, y: 0, filter: "blur(0px)"}}
  exit={{ opacity: 0, y: -10, filter: "blur(2px)"}}
@@ -685,7 +677,7 @@ export default function SchemasPage() {
  )}
  <AnimatePresence mode="wait">
  <motion.div
- key={`public-${activeTab}-${animationKeyRef.current}-${viewMode}`}
+ key={`public-${animationKey}`}
  initial={{ opacity: 0, y: 10, filter: "blur(2px)"}}
  animate={{ opacity: 1, y: 0, filter: "blur(0px)"}}
  exit={{ opacity: 0, y: -10, filter: "blur(2px)"}}
