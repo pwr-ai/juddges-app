@@ -44,16 +44,15 @@ const DEEP_LINK_ONLY_ROUTES: ReadonlyMap<string, string> = new Map([
   ['/onboarding', 'Entered from the dashboard onboarding prompt.'],
   ['/publications/admin', 'Editor tool; entered from /publications.'],
   ['/publications/admin/new', 'Entered from /publications/admin.'],
-  ['/reasoning-lines', 'Entered from a reasoning-line detail page.'],
   ['/schema-chat', 'Entered from the dashboard and the schema pages.'],
-  ['/schemas', 'Entered from the extraction and schema detail pages.'],
+  ['/schemas/base', 'Entered from /schemas.'],
   ['/settings', 'Entered from the user card menu.'],
   ['/statistics', 'Entered from the dashboard, settings and dataset comparison.'],
   ['/use-cases', 'Entered from /about and the login form.'],
   ['/use-cases/uk-judgments', 'Entered from /use-cases.'],
 ]);
 
-/** The orphans fixed by #511 — each must stay on a primary nav surface. */
+/** The orphans fixed by #511 and #607 — each must stay on a primary nav surface. */
 const NAV_LINKED_ROUTES = [
   '/chat',
   '/admin',
@@ -62,6 +61,9 @@ const NAV_LINKED_ROUTES = [
   '/argumentation-analysis',
   '/judge-fingerprint',
   '/status',
+  '/reasoning-lines',
+  '/schemas',
+  '/dataset-comparison',
 ] as const;
 
 const HREF_PATTERN = /(?:href|to)\s*[:=]\s*\{?\s*["'`](\/[^"'`#?]*)/g;

@@ -47,6 +47,9 @@ export function CompactFooter({ className }: { className?: string }) {
  <Link href="/publications"className="hover:text-slate-800 transition-colors">
  Publications
  </Link>
+ <Link href="/dataset-comparison"className="hover:text-slate-800 transition-colors">
+ Datasets
+ </Link>
  <Link href="/help"className="hover:text-slate-800 transition-colors">
  Help
  </Link>

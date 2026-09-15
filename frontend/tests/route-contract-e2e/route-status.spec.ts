@@ -650,6 +650,7 @@ test.describe.serial('production route status contract', () => {
       await expectWireStatus(anonymous.request, 'GET', '/search/extractions', 307);
       await expectWireStatus(anonymous.request, 'GET', '/collections', 307);
       await expectWireStatus(anonymous.request, 'GET', '/history', 307);
+      await expectWireStatus(anonymous.request, 'GET', '/reasoning-lines', 307);
 
       expect(
         domainRequests(await adapterRequests(request)).map(({ path }) => path),

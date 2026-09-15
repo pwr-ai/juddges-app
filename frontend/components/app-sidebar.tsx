@@ -18,7 +18,6 @@ import {
  FolderOpen,
  Bookmark,
  FileJson,
- BarChart3,
  TrendingUp,
  Layers,
  LogIn,
@@ -28,6 +27,7 @@ import {
  Scale,
  GitBranch,
  Fingerprint,
+ Waypoints,
  ShieldCheck,
  History,
 } from "lucide-react";
@@ -257,11 +257,11 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuItem>
 
  <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.baseTemplate')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/schemas/base"}>
- <Link href="/schemas/base">
+ <ConditionalTooltip content={t('navigation.schemas')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname.startsWith("/schemas")}>
+ <Link href="/schemas">
  <FileJson />
- <span>{t('navigation.baseTemplate')}</span>
+ <span>{t('navigation.schemas')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
@@ -320,30 +320,6 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuItem>
 
  <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.topicModeling')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/topic-modeling"}>
- <Link href="/topic-modeling">
- <Layers />
- <span>{t('navigation.topicModeling')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- {isAdmin && (
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.savedSearches')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/saved-searches"}>
- <Link href="/saved-searches">
- <Bookmark />
- <span>{t('navigation.savedSearches')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
- )}
-
- <SidebarMenuItem>
    <ConditionalTooltip content="Search History" isIconMode={isIconMode}>
      <SidebarMenuButton asChild isActive={pathname === "/history"}>
        <Link href="/history">
@@ -374,6 +350,51 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuItem>
 
  <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.reasoningLines')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname.startsWith("/reasoning-lines")}>
+ <Link href="/reasoning-lines">
+ <Waypoints />
+ <span>{t('navigation.reasoningLines')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+ </SidebarMenu>
+ </SidebarGroupContent>
+ </SidebarGroup>
+
+ {/* Administration — only rendered for admins; AdminGuard enforces the same
+    app_metadata.is_admin check server-side on every /admin page. Research
+    tools (#607) sit here too: they work, but need a raw document ID or a
+    judge-rich corpus, so they are not part of the user workflow. */}
+ {isAdmin && (
+ <SidebarGroup className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.administration')}</SidebarGroupLabel>
+ <SidebarGroupContent className="px-0">
+ <SidebarMenu className="space-y-1">
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.savedSearches')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/saved-searches"}>
+ <Link href="/saved-searches">
+ <Bookmark />
+ <span>{t('navigation.savedSearches')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
+ <ConditionalTooltip content={t('navigation.topicModeling')} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={pathname === "/topic-modeling"}>
+ <Link href="/topic-modeling">
+ <Layers />
+ <span>{t('navigation.topicModeling')}</span>
+ </Link>
+ </SidebarMenuButton>
+ </ConditionalTooltip>
+ </SidebarMenuItem>
+
+ <SidebarMenuItem>
  <ConditionalTooltip content={t('navigation.argumentationAnalysis')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/argumentation-analysis"}>
  <Link href="/argumentation-analysis">
@@ -394,36 +415,7 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
- </SidebarMenu>
- </SidebarGroupContent>
- </SidebarGroup>
 
- {/* Phase 4 — Export: compare datasets / export annotated collections */}
- <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseExport')}</SidebarGroupLabel>
- <SidebarGroupContent className="px-0">
- <SidebarMenu className="space-y-1">
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.compareDatasets')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/dataset-comparison"}>
- <Link href="/dataset-comparison">
- <BarChart3 />
- <span>{t('navigation.compareDatasets')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
- </SidebarMenu>
- </SidebarGroupContent>
- </SidebarGroup>
-
- {/* Administration — only rendered for admins; AdminGuard enforces the same
-    app_metadata.is_admin check server-side on every /admin page. */}
- {isAdmin && (
- <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.administration')}</SidebarGroupLabel>
- <SidebarGroupContent className="px-0">
- <SidebarMenu className="space-y-1">
  <SidebarMenuItem>
  <ConditionalTooltip content={t('navigation.adminPanel')} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={pathname === "/admin" || pathname.startsWith("/admin/")}>
