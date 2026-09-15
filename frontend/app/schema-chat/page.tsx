@@ -226,7 +226,7 @@ function SchemaStudioPageContent(): React.JSX.Element {
 
  return (
  <>
- <div className="w-full glass-page-background h-[calc(100vh-4rem)] flex flex-col">
+ <div className="relative w-full bg-background h-[calc(100vh-4rem)] flex flex-col">
  <div className="w-full max-w-page-wide mx-auto px-0 py-0 flex flex-col flex-1 min-h-0">
  <div className="w-full flex flex-col flex-1 min-h-0">
  {/* Toolbar */}

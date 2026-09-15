@@ -114,116 +114,99 @@ export function EmptyState({
  className,
  variant = 'default',
 }: EmptyStateProps): React.JSX.Element {
- const renderTip = (): React.JSX.Element | null => {
- if (!tip) return null;
+  const renderTip = (): React.JSX.Element | null => {
+    if (!tip) return null;
 
- return (
- <div className={cn(
-"w-full text-center",
- tipPosition === 'above' ? "mb-5": "mt-6"
- )}>
- {typeof tip === 'string' ? (
- <div className="inline-flex items-start gap-2 px-4 py-3 rounded-xl bg-gradient-to-br from-blue-400/50 via-indigo-400/50 to-purple-400/50 backdrop-blur-sm border border-blue-200/50 shadow-sm">
- <p className="text-sm text-muted-foreground/80 leading-relaxed text-left">
- {tip}
- </p>
- </div>
- ) : (
- tip
- )}
- </div>
- );
- };
+    return (
+      <div className={cn(
+        "w-full text-center",
+        tipPosition === 'above' ? "mb-5" : "mt-6"
+      )}>
+        {typeof tip === 'string' ? (
+          <div className="inline-flex items-start gap-2 px-4 py-3 bg-parchment-deep border border-rule text-left">
+            <p className="text-sm text-ink-soft leading-relaxed">
+              {tip}
+            </p>
+          </div>
+        ) : (
+          tip
+        )}
+      </div>
+    );
+  };
 
- return (
- <div
- className={cn(
-"flex flex-col items-center justify-center",
-"pt-2 pb-8 px-6",
- className
- )}
- >
- <div className="flex flex-col items-center justify-center w-full">
- {/* Tip card - above content */}
- {tipPosition === 'above' && renderTip()}
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center",
+        "pt-4 pb-8 px-6",
+        className
+      )}
+    >
+      <div className="flex flex-col items-center justify-center w-full max-w-md">
+        {/* Tip card - above content */}
+        {tipPosition === 'above' && renderTip()}
 
- {/* Icon with glow effect */}
- <div className="relative mb-5">
- <div className={cn(
-"absolute inset-0 rounded-full blur-2xl animate-pulse",
- variant === 'search'
- ? "bg-gradient-to-br from-primary/30 via-indigo-400/30 to-purple-400/30"
- : "bg-gradient-to-br from-primary/20 via-indigo-400/20 to-purple-400/20"
- )} />
- <div className={cn(
-"relative rounded-full p-4 border-2 shadow-lg",
- variant === 'search'
- ? "bg-gradient-to-br from-primary/15 via-indigo-400/15 to-purple-400/15 border-primary/30 shadow-primary/20"
- : "bg-gradient-to-br from-primary/10 via-indigo-400/10 to-purple-400/10 border-primary/20 shadow-primary/10"
- )}>
- <Icon className={cn(
- variant === 'search' ? "h-7 w-7": "h-6 w-6",
-"text-primary"
- )} />
- </div>
- </div>
+        {/* 16px ink icon in sharp card container */}
+        <div className="mb-4 flex items-center justify-center w-10 h-10 border border-rule bg-card">
+          <Icon className="h-4 w-4 text-ink" />
+        </div>
 
- {/* Title */}
- <h3 className={cn(
- variant === 'search' ? "text-xl": "text-lg",
-"font-bold mb-3 bg-gradient-to-br from-foreground via-primary to-purple-500 bg-clip-text text-transparent"
- )}>
- {title}
- </h3>
+        {/* Headline */}
+        <h3 className="font-serif font-medium text-lg sm:text-xl text-ink mb-2 text-center">
+          {title}
+        </h3>
 
- {/* Description and query badge */}
- {(description || query) && (
- <div className="max-w-lg text-center mb-4">
- {description && (
- <p className="text-sm text-muted-foreground/80 leading-relaxed mb-3">
- {description}
- </p>
- )}
- {query && (
- <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-slate-100/80 via-blue-400/50 to-indigo-400/50 backdrop-blur-sm border border-slate-200/50 shadow-sm">
- <span className="text-sm font-semibold text-foreground/80">&quot;{query}&quot;</span>
- </div>
- )}
- </div>
- )}
+        {/* Description and query badge */}
+        {(description || query) && (
+          <div className="text-center mb-4 space-y-2">
+            {description && (
+              <p className="text-sm text-ink-soft leading-relaxed">
+                {description}
+              </p>
+            )}
+            {query && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-parchment-deep border border-rule text-xs font-mono text-ink">
+                <span>&quot;{query}&quot;</span>
+              </div>
+            )}
+          </div>
+        )}
 
- {/* Action buttons */}
- {(primaryAction || secondaryAction || actions) && (
- <div className="flex flex-col sm:flex-row gap-3">
- {secondaryAction && (
- <VariantButton intent="secondary"
- onClick={secondaryAction.onClick}
- icon={secondaryAction.icon}
- size={secondaryAction.size || "md"}
- disabled={secondaryAction.disabled}
- className={secondaryAction.className}
- >
- {secondaryAction.label}
- </VariantButton>
- )}
- {primaryAction && (
- <VariantButton intent="primary"
- onClick={primaryAction.onClick}
- icon={primaryAction.icon}
- size={primaryAction.size || "md"}
- disabled={primaryAction.disabled}
- className={primaryAction.className}
- >
- {primaryAction.label}
- </VariantButton>
- )}
- {actions}
- </div>
- )}
+        {/* Action buttons */}
+        {(primaryAction || secondaryAction || actions) && (
+          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+            {secondaryAction && (
+              <VariantButton
+                intent="secondary"
+                onClick={secondaryAction.onClick}
+                icon={secondaryAction.icon}
+                size={secondaryAction.size || "md"}
+                disabled={secondaryAction.disabled}
+                className={secondaryAction.className}
+              >
+                {secondaryAction.label}
+              </VariantButton>
+            )}
+            {primaryAction && (
+              <VariantButton
+                intent="primary"
+                onClick={primaryAction.onClick}
+                icon={primaryAction.icon}
+                size={primaryAction.size || "md"}
+                disabled={primaryAction.disabled}
+                className={primaryAction.className}
+              >
+                {primaryAction.label}
+              </VariantButton>
+            )}
+            {actions}
+          </div>
+        )}
 
- {/* Tip card - below content */}
- {tipPosition === 'below' && renderTip()}
- </div>
- </div>
- );
+        {/* Tip card - below content */}
+        {tipPosition === 'below' && renderTip()}
+      </div>
+    </div>
+  );
 }

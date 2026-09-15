@@ -13,6 +13,10 @@
  * When migrating a variant into the cva component, run these snapshots: a class
  * drift fails here, forcing an intentional `--ci=false -u` baseline update and a
  * visual sign-off rather than a silent regression.
+ *
+ * The pinned strings are no longer the #144 pixels: the Editorial migration
+ * (#639) deliberately restyled the shared `ui/button.tsx` base and these
+ * variants, and the snapshots were re-baselined with that visual sign-off.
  */
 
 import React from 'react';

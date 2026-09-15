@@ -236,7 +236,7 @@ function Sidebar({
  <div
  data-slot="sidebar"
  className={cn(
-"bg-gradient-to-br from-blue-100/70 via-indigo-100/50 to-purple-100/40 text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+"bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
  className
  )}
  {...props}
@@ -320,15 +320,8 @@ function Sidebar({
  data-sidebar="sidebar"
  data-slot="sidebar-inner"
  className={cn(
- // Legal Glass 2.0 Container (Glass Pane)
- // Light mode: Crystal - rgba(255, 255, 255, 0.65) with 50px blur
- // Dark mode: Stealth - rgba(2, 6, 23, 0.80) with 40px blur
-"bg-[rgba(255,255,255,0.65)]",
-"backdrop-blur-[50px]",
- // Right Border - 0.0625rem (1px) Solid Line
- // Light mode: #FFFFFF (Solid White)
- // Dark mode: rgba(255, 255, 255, 0.08)
-"border-r-[0.0625rem] border-r-[#FFFFFF]",
+ // Flat parchment pane with a hairline rule on the right
+"bg-sidebar border-r border-r-sidebar-border",
 "group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm",
 "group-data-[collapsible=icon]:overflow-visible"
  )}
@@ -363,7 +356,7 @@ function SidebarTrigger({
  icon={iconMode ? LayoutGrid : PanelLeftIcon}
  data-sidebar="trigger"
  data-slot="sidebar-trigger"
- className={cn("size-7 h-9 w-9 rounded-lg bg-muted/50 border border-border/30 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]", className)}
+ className={cn("size-7 h-9 w-9 rounded-md bg-muted/50 border border-border/30 shadow-sm transition-colors hover:bg-muted", className)}
  onClick={handleClick}
  aria-label={iconMode ? "Disable Icon Mode": "Enable Icon Mode"}
  size="md"
@@ -387,7 +380,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">): R
  onClick={toggleSidebar}
  title="Toggle Sidebar"
  className={cn(
-"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
+"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-[left,right,width] ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
 "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
 "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
 "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
@@ -406,7 +399,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">): Re
  data-slot="sidebar-inset"
  className={cn(
 "bg-background relative flex w-full flex-1 flex-col",
-"md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
+"md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-md md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
  className
  )}
  {...props}
@@ -587,10 +580,10 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">): R
 }
 
 const sidebarMenuButtonVariants = cva(
- // Legal Glass 2.0 Navigation Item (Floating Pill)
+ // Editorial navigation item
  // Reduced spacing to prevent text wrapping: padding 0.75rem (was 1rem), gap 0.375rem (was 0.5rem)
  // Border space always reserved to prevent layout shift on hover
-"peer/menu-button flex w-full items-center gap-1.5 rounded-[0.75rem] px-3 py-2.5 text-left outline-hidden transition-all duration-200 ease-out text-[0.875rem] font-[500] bg-transparent text-ink-soft [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:transition-all [&>svg]:duration-200 [&>svg]:stroke-[1.5] [&>svg]:text-ink-soft [&>svg]:overflow-visible focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-1! group-data-[collapsible=icon]:justify-center [&>span:last-child]:truncate [&>span:last-child]:min-w-0 group-data-[collapsible=icon]:[&>span]:hidden group-data-[collapsible=icon]:[&_span]:hidden group-data-[collapsible=icon]:[&>svg]:block group-data-[collapsible=icon]:[&_svg]:block group-data-[collapsible=icon]:[&>svg]:opacity-100 group-data-[collapsible=icon]:[&_svg]:opacity-100 border border-transparent overflow-visible hover:bg-[rgba(248,250,252,0.95)] hover: hover:text-ink hover: hover:[&>svg]:text-ink hover: hover:border-[rgba(248,250,252,0.95)] hover: hover:shadow-[rgba(0,0,0,0.08)] hover: hover:font-[600] hover:scale-[1.04] group-data-[collapsible=icon]:hover:scale-[1.04] group-data-[collapsible=icon]:hover:bg-[rgba(248,250,252,0.95)] group-data-[collapsible=icon]:hover: data-[active=true]:bg-oxblood/10 data-[active=true]: data-[active=true]:text-oxblood data-[active=true]: data-[active=true]:[&>svg]:text-oxblood data-[active=true]: data-[active=true]:border-oxblood/25 data-[active=true]: data-[active=true]:shadow-[0_0_0_1px_rgba(139,30,63,0.15)] data-[active=true]: data-[active=true]:font-[600] data-[active=true]:[&>svg]:stroke-[2.5]",
+"peer/menu-button flex w-full items-center gap-1.5 rounded-md px-3 py-2.5 text-left outline-hidden transition-[color,background-color,border-color] text-[0.875rem] font-[500] bg-transparent text-ink-soft [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:transition-colors [&>svg]:stroke-[1.5] [&>svg]:text-ink-soft [&>svg]:overflow-visible focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-1! group-data-[collapsible=icon]:justify-center [&>span:last-child]:truncate [&>span:last-child]:min-w-0 group-data-[collapsible=icon]:[&>span]:hidden group-data-[collapsible=icon]:[&_span]:hidden group-data-[collapsible=icon]:[&>svg]:block group-data-[collapsible=icon]:[&_svg]:block group-data-[collapsible=icon]:[&>svg]:opacity-100 group-data-[collapsible=icon]:[&_svg]:opacity-100 border border-transparent overflow-visible hover:bg-parchment-deep hover:text-ink hover:[&>svg]:text-ink hover:border-rule hover:font-[600] group-data-[collapsible=icon]:hover:bg-parchment-deep data-[active=true]:bg-oxblood/10 data-[active=true]:text-oxblood data-[active=true]:[&>svg]:text-oxblood data-[active=true]:border-oxblood/25 data-[active=true]:font-[600] data-[active=true]:[&>svg]:stroke-[2.5]",
  {
  variants: {
  variant: {
@@ -810,9 +803,9 @@ function SidebarMenuSubButton({
  data-size={size}
  data-active={isActive}
  className={cn(
-"flex h-7 min-w-0 items-center gap-2 rounded-[0.75rem] px-3 py-2.5 text-left outline-hidden transition-all duration-200 ease-out font-[500] bg-transparent text-ink-soft [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:transition-all [&>svg]:duration-200 [&>svg]:stroke-[1.5] [&>svg]:text-ink-soft [&>svg]:overflow-visible focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>span:last-child]:min-w-0 border border-transparent overflow-visible",
-"hover:bg-[rgba(248,250,252,0.95)] hover: hover:text-ink hover: hover:[&>svg]:text-ink hover: hover:border-[rgba(248,250,252,0.95)] hover: hover:shadow-[rgba(0,0,0,0.08)] hover: hover:font-[600] hover:scale-[1.04]",
-"data-[active=true]:bg-oxblood/10 data-[active=true]: data-[active=true]:text-oxblood data-[active=true]: data-[active=true]:[&>svg]:text-oxblood data-[active=true]: data-[active=true]:border-oxblood/25 data-[active=true]: data-[active=true]:shadow-[0_0_0_1px_rgba(139,30,63,0.15)] data-[active=true]: data-[active=true]:font-[600] data-[active=true]:[&>svg]:stroke-[2.5]",
+"flex h-7 min-w-0 items-center gap-2 rounded-md px-3 py-2.5 text-left outline-hidden transition-[color,background-color,border-color] font-[500] bg-transparent text-ink-soft [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:transition-colors [&>svg]:stroke-[1.5] [&>svg]:text-ink-soft [&>svg]:overflow-visible focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>span:last-child]:min-w-0 border border-transparent overflow-visible",
+"hover:bg-parchment-deep hover:text-ink hover:[&>svg]:text-ink hover:border-rule hover:font-[600]",
+"data-[active=true]:bg-oxblood/10 data-[active=true]:text-oxblood data-[active=true]:[&>svg]:text-oxblood data-[active=true]:border-oxblood/25 data-[active=true]:font-[600] data-[active=true]:[&>svg]:stroke-[2.5]",
  size === "sm"&&"text-xs",
  size === "md"&&"text-sm",
 "group-data-[collapsible=icon]:hidden",
