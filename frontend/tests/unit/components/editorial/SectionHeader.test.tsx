@@ -17,6 +17,13 @@ describe("SectionHeader (PWr)", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Two jurisdictions");
   });
 
+  it("bar variant renders the numeral as a white square with red text", () => {
+    render(<SectionHeader variant="bar" numeral="02" title="Coverage" />);
+    const numeral = screen.getByText("02");
+    expect(numeral.className).toContain("bg-pwr-paper");
+    expect(numeral.className).toContain("text-pwr-red");
+  });
+
   it("default variant has no bar", () => {
     const { container } = render(<SectionHeader title="Plain" />);
     expect(container.querySelector(".pwr-bar")).toBeNull();

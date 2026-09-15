@@ -47,7 +47,8 @@ export function SectionHeader({
     <span
       aria-hidden
       className={cn(
-        "inline-flex h-7 w-7 shrink-0 items-center justify-center bg-pwr-red font-display text-sm leading-none text-pwr-paper",
+        "inline-flex h-7 w-7 shrink-0 items-center justify-center font-display text-sm leading-none",
+        variant === "bar" ? "bg-pwr-paper text-pwr-red" : "bg-pwr-red text-pwr-paper",
         align === "center" && "mx-auto",
       )}
     >

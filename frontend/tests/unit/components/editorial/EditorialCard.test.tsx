@@ -1,19 +1,15 @@
 import { render, screen } from "@testing-library/react";
 
-import { ChartFigure } from "@/components/editorial/ChartFigure";
+import { EditorialCard } from "@/components/editorial/EditorialCard";
 
-describe("ChartFigure (title follows the display-headline rule)", () => {
+describe("EditorialCard (title follows the display-headline rule)", () => {
   it("gives its title the editorial-display class", () => {
-    render(
-      <ChartFigure title={<>Where the <em>reasoning</em> comes from</>}>x</ChartFigure>,
-    );
+    render(<EditorialCard title="x" />);
     expect(screen.getByRole("heading", { level: 3 }).className).toContain("editorial-display");
   });
 
   it("renders a black top mark when featured", () => {
-    const { container } = render(
-      <ChartFigure featured title="x">y</ChartFigure>,
-    );
+    const { container } = render(<EditorialCard featured title="x" />);
     const mark = container.querySelector("span[aria-hidden]");
     expect(mark?.className).toContain("bg-pwr-black");
   });
