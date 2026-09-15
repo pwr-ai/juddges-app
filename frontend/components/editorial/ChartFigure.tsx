@@ -79,7 +79,7 @@ export function ChartFigure({
             </span>
           )}
           {title && (
-            <h3 className="mt-1.5 font-serif text-xl sm:text-2xl leading-[1.1] tracking-[-0.01em] text-[color:var(--ink)]">
+            <h3 className="editorial-display mt-1.5 font-serif text-xl sm:text-2xl leading-[1.1] tracking-[-0.01em] text-[color:var(--ink)]">
               {title}
             </h3>
           )}
