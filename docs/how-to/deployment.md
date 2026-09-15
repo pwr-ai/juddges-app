@@ -204,7 +204,14 @@ cp .env.example .env
 ./scripts/deploy_prod.sh              # Deploy :latest
 ./scripts/deploy_prod.sh 0.2.0        # Deploy specific version
 ./scripts/deploy_prod.sh --status     # Show running containers
+./scripts/deploy_prod.sh --yes        # Non-interactive (skip confirmations)
+./scripts/deploy_prod.sh -y --rollback  # Non-interactive rollback
 ```
+
+`--yes` / `-y` mirrors the same flag on `build_and_push_prod.sh`. Without it the script
+asks `Deploy v<tag>? [y/N]`, and `read` fails outright when there is no stdin — under
+`set -e` the script then exits 1 before pulling anything. Use `--yes` whenever the deploy
+runs from CI, a cron job, or a backgrounded shell.
 
 ### What the deploy script does
 
