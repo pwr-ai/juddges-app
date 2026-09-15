@@ -2,7 +2,6 @@
 
 import {
   Network,
-  Github,
   ArrowRight,
   Users,
   Database,
@@ -15,6 +14,7 @@ import {
   Mail,
   GraduationCap,
 } from "lucide-react";
+import { GithubIcon } from "@/components/icons/brand";
 import { Header, SectionHeader, SecondaryHeader, LightCard, VariantButton, PageContainer, Badge } from "@/lib/styles/components";
 import { useRouter } from "next/navigation";
 import { MermaidDiagram } from "@/components/ecosystem/MermaidDiagram";
@@ -277,7 +277,7 @@ export default function EcosystemPage(): React.JSX.Element {
                   onClick={() => window.open(project.href, "_blank")}
                   className="shrink-0"
                 >
-                  <Github className="size-4 mr-2" />
+                  <GithubIcon className="size-4 mr-2" />
                   View on GitHub
                   <ExternalLink className="size-3.5 ml-2 opacity-60" />
                 </VariantButton>
@@ -470,7 +470,7 @@ export default function EcosystemPage(): React.JSX.Element {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
               >
-                <Github className="size-4 shrink-0" />
+                <GithubIcon className="size-4 shrink-0" />
                 <span>
                   <span className="font-medium text-foreground">
                     Santosh Tirunagari
@@ -512,7 +512,7 @@ export default function EcosystemPage(): React.JSX.Element {
             }
           >
             <div className="flex flex-col items-center gap-3">
-              <Github className="size-6" />
+              <GithubIcon className="size-6" />
               <div className="text-center">
                 <div className="font-semibold mb-1">JuDDGES (research)</div>
                 <div className="text-xs text-muted-foreground">
@@ -529,7 +529,7 @@ export default function EcosystemPage(): React.JSX.Element {
             }
           >
             <div className="flex flex-col items-center gap-3">
-              <Github className="size-6" />
+              <GithubIcon className="size-6" />
               <div className="text-center">
                 <div className="font-semibold mb-1">HITL Annotation Tool</div>
                 <div className="text-xs text-muted-foreground">
@@ -546,7 +546,7 @@ export default function EcosystemPage(): React.JSX.Element {
             }
           >
             <div className="flex flex-col items-center gap-3">
-              <Github className="size-6" />
+              <GithubIcon className="size-6" />
               <div className="text-center">
                 <div className="font-semibold mb-1">JuDDGES App</div>
                 <div className="text-xs text-muted-foreground">This platform</div>

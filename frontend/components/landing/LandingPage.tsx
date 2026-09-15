@@ -12,9 +12,9 @@ import {
   Users,
   FlaskConical,
   Network,
-  Github,
   type LucideIcon,
 } from "lucide-react";
+import { GithubIcon } from "@/components/icons/brand";
 import { cn } from "@/lib/utils";
 import {
   DropCap,
@@ -433,13 +433,13 @@ function AboutProjectSection() {
             <Rule weight="hairline" className="mt-6" />
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--ink-soft)]">
               <span className="inline-flex items-center gap-1.5">
-                <Github className="size-3.5" aria-hidden /> pwr-ai/JuDDGES
+                <GithubIcon className="size-3.5" aria-hidden /> pwr-ai/JuDDGES
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Github className="size-3.5" aria-hidden /> tsantosh7/hitl-tool
+                <GithubIcon className="size-3.5" aria-hidden /> tsantosh7/hitl-tool
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Github className="size-3.5" aria-hidden /> pwr-ai/juddges-app
+                <GithubIcon className="size-3.5" aria-hidden /> pwr-ai/juddges-app
               </span>
             </div>
           </EditorialCard>
