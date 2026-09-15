@@ -88,7 +88,7 @@ export default function OnboardingPage(): React.JSX.Element {
         <h1 className="font-serif text-4xl leading-tight text-ink sm:text-5xl">
           Get started with JUDDGES
         </h1>
-        <p className="font-serif text-lg italic leading-snug text-ink-soft">
+        <p className="font-serif text-lg leading-snug text-ink-soft">
           A three-step tour for legal researchers — search the corpus, build a
           collection, and read the base coding schema.
         </p>
@@ -155,7 +155,7 @@ export default function OnboardingPage(): React.JSX.Element {
                       </figure>
                     ) : (
                       <div className="flex h-full min-h-[260px] items-center justify-center border border-dashed border-rule bg-parchment-deep/20 p-6 text-center">
-                        <p className="font-serif text-sm italic text-ink-soft">
+                        <p className="font-serif text-sm text-ink-soft">
                           Screenshot coming next — run{" "}
                           <code className="font-mono text-xs text-ink">
                             npm run docs:screens

@@ -58,12 +58,12 @@
   --accent: var(--gold-soft);
   --accent-foreground: var(--pwr-red-deep);
 
-  --destructive: #D63120; /* SIW W4N faculty red — danger, distinct from --pwr-red */
+  --destructive: #C42D1D; /* derived from SIW W4N faculty red #D63120, darkened for AA on --pwr-panel */
   --destructive-foreground: var(--pwr-paper);
 
   --success: oklch(0.50 0.13 150);
   --warning: var(--gold);
-  --error: #D63120; /* SIW W4N faculty red — danger, distinct from --pwr-red */
+  --error: #C42D1D; /* derived from SIW W4N faculty red #D63120, darkened for AA on --pwr-panel */
   --info: oklch(0.45 0.12 230);
 
   --border: var(--rule);

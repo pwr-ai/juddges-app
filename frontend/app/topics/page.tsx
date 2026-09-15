@@ -47,7 +47,7 @@ function ListSkeleton({ rows = 6 }: { rows?: number }): React.JSX.Element {
 
 function EmptyNote({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
-    <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+    <p className="font-serif text-sm text-[color:var(--ink-soft)]">
       {children}
     </p>
   );
