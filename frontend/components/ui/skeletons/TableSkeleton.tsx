@@ -1,5 +1,12 @@
 import { cn } from '@/lib/utils';
 
+// Placeholder widths, cycled by index. These were Math.random() calls in the
+// render body, which is impure: the bars changed on every re-render and the
+// server and client markup disagreed. Fixed patterns keep the ragged look and
+// render identically every time.
+const HEADER_WIDTHS = ['72%', '88%', '64%', '96%', '80%'] as const;
+const CELL_WIDTHS = ['84%', '62%', '95%', '70%', '58%', '90%'] as const;
+
 interface TableSkeletonProps {
   /**
    * Number of rows to display
@@ -58,7 +65,7 @@ export function TableSkeleton({
                   <th key={i} className="p-4">
                     <div
                       className="h-4 bg-muted rounded animate-pulse"
-                      style={{ width: `${60 + Math.random() * 40}%` }}
+                      style={{ width: HEADER_WIDTHS[i % HEADER_WIDTHS.length] }}
                       aria-hidden="true"
                     />
                   </th>
@@ -73,7 +80,12 @@ export function TableSkeleton({
                   <td key={colIndex} className="p-4">
                     <div
                       className="h-4 bg-muted rounded animate-pulse"
-                      style={{ width: `${50 + Math.random() * 50}%` }}
+                      style={{
+                        width:
+                          CELL_WIDTHS[
+                            (rowIndex * columns + colIndex) % CELL_WIDTHS.length
+                          ],
+                      }}
                       aria-hidden="true"
                     />
                   </td>
