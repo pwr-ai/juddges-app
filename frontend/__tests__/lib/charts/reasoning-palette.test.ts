@@ -47,12 +47,15 @@ describe('DAG_EDGE_STYLE', () => {
     }
   });
 
-  it('distinguishes event types by dash pattern, not colour alone', () => {
-    const dashes = new Set(Object.values(DAG_EDGE_STYLE).map(({ dash }) => dash.join(',')));
-    expect(dashes.size).toBeGreaterThanOrEqual(2);
-    for (const { dash } of Object.values(DAG_EDGE_STYLE)) {
-      expect(Array.isArray(dash)).toBe(true);
-    }
+  it('gives every event type a distinct (colour, dash) pair', () => {
+    const pairs = Object.values(DAG_EDGE_STYLE).map(({ color, dash }) => `${color}|${dash.join(',')}`);
+    expect(new Set(pairs).size).toBe(pairs.length);
+  });
+
+  it('uses dash as a second channel — at least one dashed and one solid type', () => {
+    const dashed = Object.values(DAG_EDGE_STYLE).filter(({ dash }) => dash.length > 0);
+    expect(dashed.length).toBeGreaterThan(0);
+    expect(dashed.length).toBeLessThan(Object.keys(DAG_EDGE_STYLE).length);
   });
 });
 

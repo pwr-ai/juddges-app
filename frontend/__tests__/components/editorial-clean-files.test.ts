@@ -75,6 +75,15 @@ describe('recharts components', () => {
   });
 });
 
+/** Canvas + recharts charts: every colour comes from `editorialPalette`, never a literal. */
+const CHART_FILES = [...RECHARTS_FILES, 'components/reasoning-lines/ReasoningDAG.tsx'];
+
+describe('chart components', () => {
+  it.each(CHART_FILES)('%s has no colour literals (hex, rgb(), hsl())', (file) => {
+    expect(read(file)).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/);
+  });
+});
+
 describe('components/ui/sidebar.tsx', () => {
   const source = read('components/ui/sidebar.tsx');
 
