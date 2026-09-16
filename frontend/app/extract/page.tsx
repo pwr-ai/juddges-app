@@ -80,7 +80,7 @@ function ExtractPageContent() {
       />
 
       {/* Subtle visual separator */}
-      <div className="my-8 border-t border-slate-200/30" />
+      <div className="my-8 border-t border-rule" />
 
       {/* Extraction Configuration Section */}
       <ExtractionConfigPanel
