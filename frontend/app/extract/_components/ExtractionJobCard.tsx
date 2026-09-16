@@ -1,5 +1,6 @@
-import { Calendar, FileCode, Eye, Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Calendar, FileCode, Eye, Clock, RefreshCw } from "lucide-react";
 import { BaseCard, VariantButton } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial/StatusBadge";
 import { cn } from "@/lib/utils";
 import { ExtractionJob, formatName, formatTimeFromSeconds } from "./types";
 
@@ -10,77 +11,39 @@ interface ExtractionJobCardProps {
 }
 
 export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardProps) {
-  const statusConfig: Record<typeof job.status, {
-    icon: typeof CheckCircle2;
-    color: string;
-    bg: string;
-    border: string;
-    label: string;
-  }> = {
-    completed: {
-      icon: CheckCircle2,
-      color: 'text-green-600',
-      bg: 'bg-green-50/50',
-      border: 'border-green-200/50',
-      label: 'Completed',
-    },
-    failed: {
-      icon: XCircle,
-      color: 'text-red-600',
-      bg: 'bg-red-50/50',
-      border: 'border-red-200/50',
-      label: 'Failed',
-    },
-    in_progress: {
-      icon: Clock,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50/50',
-      border: 'border-blue-200/50',
-      label: 'In Progress',
-    },
+  const statusLabel: Record<typeof job.status, string> = {
+    completed: 'Completed',
+    failed: 'Failed',
+    in_progress: 'In Progress',
   };
 
-  const config = statusConfig[job.status];
-  const StatusIcon = config.icon;
   const timeAgo = new Date(job.created_at).toLocaleDateString();
 
-  // Determine progress bar color based on status
+  // Progress bar: ink when done, oxblood when failed, gold while running
   const getProgressBarColor = () => {
     if (job.status === 'completed') {
-      return 'bg-green-600';
+      return 'bg-ink';
     } else if (job.status === 'failed') {
-      return 'bg-red-500';
+      return 'bg-oxblood';
     }
-    return 'bg-primary';
+    return 'bg-gold';
   };
 
   return (
     <BaseCard
       variant="light"
-      className="group hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50 transition-all duration-200 h-full flex flex-col cursor-pointer"
+      className="group h-full flex flex-col"
       onClick={() => onOpen(job.id)}
     >
       <div className="flex flex-col h-full space-y-4 -m-3.5 p-8">
         <div className="flex items-start justify-between gap-3 min-h-[3rem]">
           <h4 className="font-semibold text-base line-clamp-2 flex-1 min-w-0">{job.collection_name}</h4>
-          <div
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium shrink-0",
-              config.bg,
-              config.border,
-              "border",
-              "transition-all duration-200 ease-in-out",
-              "hover:opacity-90 hover:shadow-md",
-              "transform-gpu will-change-transform",
-              "relative z-10"
-            )}
-            onClick={(e) => e.stopPropagation()}
-            onMouseEnter={(e) => e.stopPropagation()}
-            onMouseLeave={(e) => e.stopPropagation()}
-          >
-            <StatusIcon className={cn("h-3.5 w-3.5", config.color)} />
-            <span className={config.color}>{config.label}</span>
-          </div>
+          <StatusBadge
+            status={job.status}
+            label={statusLabel[job.status]}
+            size="sm"
+            className="shrink-0"
+          />
         </div>
 
         <div className="space-y-2 text-sm text-muted-foreground flex-shrink-0">
@@ -104,9 +67,9 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
                   {job.completed_documents} / {job.document_count}
                 </span>
               </div>
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
+              <div className="relative h-1.5 w-full overflow-hidden bg-parchment-deep">
                 <div
-                  className={cn("h-full transition-all", getProgressBarColor())}
+                  className={cn("h-full transition-[width]", getProgressBarColor())}
                   style={{
                     width: `${job.status === 'failed'
                       ? 100
@@ -157,8 +120,7 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
 
           {job.status === 'failed' && (
             <VariantButton
-              intent="glass"
-              variant="white"
+              intent="secondary"
               onClick={() => {
                 onRetry(job);
               }}

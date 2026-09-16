@@ -43,6 +43,13 @@ const CLEAN_FILES = [
   'components/reasoning-lines/ReasoningDAG.tsx',
   'lib/charts/reasoning-palette.ts',
   'app/about/page.tsx',
+  'app/extractions/page.tsx',
+  'app/extractions/[id]/_components/ExtractionJobClient.tsx',
+  'app/extract/_components/ExtractionJobCard.tsx',
+  'app/extract/_components/ExtractionConfigPanel.tsx',
+  'app/extract/_components/RecentExtractions.tsx',
+  'app/extract/_components/DocumentSelector.tsx',
+  'app/extract/_components/types.ts',
 ];
 
 /**

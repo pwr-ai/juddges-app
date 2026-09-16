@@ -49,8 +49,8 @@ export interface ExtractionJob {
 }
 
 const documentTypeBadgeStyles: Record<string, string> = {
-  judgment: "bg-blue-400/8 text-blue-800 border border-blue-400/15 shadow-sm shadow-blue-400/5",
-  default: "bg-slate-200/40 text-slate-700 border border-slate-200/30",
+  judgment: "border border-rule bg-transparent font-mono uppercase tracking-wider text-ink",
+  default: "border border-rule bg-transparent font-mono uppercase tracking-wider text-ink-soft",
 };
 
 const formatDocumentTypeLabel = (type: string) =>

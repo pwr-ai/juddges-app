@@ -1,4 +1,4 @@
-import { Wand2, Link as LinkIcon, Sparkles, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
+import { Plus, Link as LinkIcon, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { SchemaPreview } from "@/lib/styles/components/schema-preview";
 import { BaseCard, VariantButton, SearchableDropdownButton, DropdownButton } from "@/lib/styles/components";
@@ -70,7 +70,7 @@ export function ExtractionConfigPanel({
           >
             <div className="space-y-6 -mt-3 -m-3.5 p-8">
               {hasUrlPreselection && (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-xs text-ink-soft">
                   <LinkIcon className="h-3.5 w-3.5" />
                   <span>Pre-selected from URL</span>
                 </div>
@@ -120,7 +120,7 @@ export function ExtractionConfigPanel({
                   <VariantButton intent="secondary"
                     size="sm"
                     onClick={onGenerateSchema}
-                    icon={Wand2}
+                    icon={Plus}
                   >
                     Generate New
                   </VariantButton>
@@ -175,13 +175,12 @@ export function ExtractionConfigPanel({
                   clickable={false}
                   className={cn(
                     "p-3",
-                    "bg-amber-50/50",
-                    "border-amber-200/50"
+                    "border-l-2 border-l-gold bg-parchment-deep"
                   )}
                 >
                   <div className="flex items-start gap-2.5 w-full">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground leading-relaxed">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-gold" />
+                    <span className="text-sm font-medium text-ink-soft leading-relaxed">
                       Please select at least one document to start extraction
                     </span>
                   </div>
@@ -190,7 +189,7 @@ export function ExtractionConfigPanel({
 
               <div className="flex gap-2">
                 <VariantButton
-                  intent="glass"
+                  intent="primary"
                   onClick={onExtract}
                   disabled={
                     !selectedCollection ||
@@ -207,15 +206,11 @@ export function ExtractionConfigPanel({
                   {isLoading ? (
                     <span>Starting Extraction...</span>
                   ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      {isLoadingDocuments
-                        ? "Loading Documents..."
-                        : selectedDocuments.size > 0
-                          ? `Start Extraction (${selectedDocuments.size} ${selectedDocuments.size === 1 ? 'document' : 'documents'})`
-                          : "Start Extraction"
-                      }
-                    </>
+                    isLoadingDocuments
+                      ? "Loading Documents..."
+                      : selectedDocuments.size > 0
+                        ? `Start Extraction (${selectedDocuments.size} ${selectedDocuments.size === 1 ? 'document' : 'documents'})`
+                        : "Start Extraction"
                   )}
                 </VariantButton>
                 <VariantButton intent="secondary"
