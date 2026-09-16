@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Badge, VariantButton, LightCard } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import {
  Calendar,
@@ -13,7 +14,6 @@ import {
  Heart,
  Edit,
  Trash2,
- Sparkles,
  ArrowRight,
 } from "lucide-react";
 import type { BlogPost } from "@/types/blog";
@@ -38,12 +38,6 @@ function formatDate(dateString: string | undefined): string {
  return"Invalid date";
  }
 }
-
-const statusColors = {
- published: "bg-emerald-100 text-emerald-700 border-emerald-200",
- draft: "bg-amber-100 text-amber-700 border-amber-200",
- scheduled: "bg-blue-100 text-blue-700 border-blue-200",
-} as const;
 
 export function BlogPostCard({
  post,
@@ -78,9 +72,7 @@ export function BlogPostCard({
  {isValidImage && post.featured_image ? (
  <>
  {imageLoading && (
- <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/10 to-primary/5 flex items-center justify-center">
- <Sparkles className="size-16 text-primary/30 animate-pulse"/>
- </div>
+ <div className="absolute inset-0 bg-parchment animate-pulse" />
  )}
  <Image
  src={post.featured_image}
@@ -100,21 +92,14 @@ export function BlogPostCard({
  />
  </>
  ) : (
- <div className="w-full h-full bg-gradient-to-br from-primary/10 via-accent/10 to-primary/5 flex items-center justify-center">
- <Sparkles className="size-16 text-primary/30"/>
+ <div className="w-full h-full bg-parchment flex items-center justify-center text-muted-foreground text-xs font-mono">
+ No image
  </div>
  )}
 
  {/* Status Badge - Floating */}
  <div className="absolute top-4 right-4">
- <Badge
- className={cn(
-"px-3 py-1 text-xs font-semibold rounded-full backdrop-blur-sm shadow-lg border capitalize",
- statusColors[post.status]
- )}
- >
- {post.status}
- </Badge>
+ <StatusBadge status={post.status} />
  </div>
 
  {/* Admin Action Buttons - Appear on hover */}
@@ -199,9 +184,8 @@ export function BlogPostCard({
 
  {/* AI Summary - if available */}
  {post.ai_summary && (
- <div className="mb-4 p-3 rounded-lg bg-accent/50 border border-accent">
- <p className="text-xs font-medium text-accent-foreground mb-1.5 flex items-center gap-1.5">
- <Sparkles className="size-3"/>
+ <div className="mb-4 p-3 border border-rule bg-parchment rounded-none">
+ <p className="text-xs font-mono font-medium text-ink mb-1.5">
  AI Insight
  </p>
  <p className="text-xs text-foreground/90 line-clamp-2">

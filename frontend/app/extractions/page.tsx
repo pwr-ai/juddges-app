@@ -10,6 +10,7 @@ import {
  VariantButton,
  PageContainer,
 } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { Input } from "@/components/ui/input";
 import {
  Popover,
@@ -24,7 +25,7 @@ import {
  Clock,
  FileText,
  FolderOpen,
- Sparkles,
+ Plus,
  Eye,
  Trash2,
  Search,
@@ -46,22 +47,6 @@ export const dynamic = 'force-dynamic';
 // Status types
 type StatusFilter = 'all' | 'completed' | 'in_progress' | 'failed';
 type SortOption = 'newest' | 'oldest';
-
-// Status badge colors
-const STATUS_COLORS = {
- completed: "bg-green-100 text-green-700 border-green-200",
- processing: "bg-blue-100 text-blue-700 border-blue-200",
- failed: "bg-red-100 text-red-700 border-red-200",
- pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
-};
-
-// Status shadow colors for cards
-const STATUS_SHADOWS = {
- completed: "shadow-[0_0_20px_rgba(34,197,94,0.08),0_0_40px_rgba(34,197,94,0.04)] hover:shadow-[0_0_30px_rgba(34,197,94,0.12),0_0_60px_rgba(34,197,94,0.06)] hover:border-green-500/50",
- processing: "shadow-[0_0_20px_rgba(59,130,246,0.08),0_0_40px_rgba(59,130,246,0.04)] hover:shadow-[0_0_30px_rgba(59,130,246,0.12),0_0_60px_rgba(59,130,246,0.06)] hover:border-blue-500/50",
- failed: "shadow-[0_0_20px_rgba(239,68,68,0.08),0_0_40px_rgba(239,68,68,0.04)] hover:shadow-[0_0_30px_rgba(239,68,68,0.12),0_0_60px_rgba(239,68,68,0.06)] hover:border-red-500/50",
- pending: "shadow-[0_0_20px_rgba(234,179,8,0.08),0_0_40px_rgba(234,179,8,0.04)] hover:shadow-[0_0_30px_rgba(234,179,8,0.12),0_0_60px_rgba(234,179,8,0.06)] hover:border-yellow-500/50",
-};
 
 interface ExtractionJob {
  job_id: string;
@@ -406,7 +391,7 @@ function ExtractionsContent() {
  primaryAction={{
  label: "Start Extraction",
  onClick: () => router.push("/extract"),
- icon: Sparkles,
+ icon: Plus,
  }}
  secondaryAction={{
  label: "Browse Schemas",
@@ -421,10 +406,7 @@ function ExtractionsContent() {
  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
  <div className="flex items-center gap-2">
  <p className="text-base font-medium text-foreground">
- Browse your{' '}
- <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
- extraction jobs
- </span>
+ Browse your extraction jobs
  </p>
  <Popover>
  <PopoverTrigger asChild>
@@ -437,7 +419,7 @@ function ExtractionsContent() {
  </button>
  </PopoverTrigger>
  <PopoverContent
- className="w-80 p-5 backdrop-blur-2xl bg-gradient-to-br from-white/20 via-white/15 to-white/10 border border-slate-200/20 shadow-2xl shadow-slate-200/20 ring-1 ring-white/5"
+ className="w-80 p-5 bg-parchment border border-rule shadow-md"
  align="start"
  >
  <div className="space-y-3">
@@ -451,7 +433,7 @@ function ExtractionsContent() {
  </Popover>
  </div>
  <VariantButton intent="primary"
- icon={Sparkles}
+ icon={Plus}
  onClick={() => router.push('/extract')}
  >
  New Extraction
@@ -581,18 +563,17 @@ function ExtractionsContent() {
  role="button"
  tabIndex={0}
  className={cn(
-"group relative",
-"flex flex-col",
-"min-h-[280px]",
-"p-5 rounded-xl",
-"bg-white/60",
-"backdrop-blur-sm",
-"border border-slate-200/50",
-"hover:scale-[1.02]",
-"transition-all duration-300",
-"cursor-pointer",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- STATUS_SHADOWS[status]
+ "group relative",
+ "flex flex-col",
+ "min-h-[280px]",
+ "p-5 rounded-none",
+ "bg-parchment",
+ "border border-rule",
+ "border-t-2 border-t-ink",
+ "hover:-translate-y-px",
+ "transition-transform",
+ "cursor-pointer",
+ "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
  )}
  aria-label={`Extraction: ${job.schema_name || 'Unnamed'}. Status: ${getStatusDisplayText(job.status)}. Click to view details.`}
  >
@@ -601,11 +582,12 @@ function ExtractionsContent() {
  <h3 className="text-lg font-semibold text-foreground line-clamp-2 leading-tight">
  {job.schema_name || 'Extraction Job'}
  </h3>
- <div className="flex gap-2 flex-wrap">
- <Badge className={cn("text-xs px-2 py-0.5 rounded-full", STATUS_COLORS[status])}>
- {getStatusDisplayText(job.status)}
- </Badge>
- <Badge variant="outline"className="text-xs px-2 py-0.5">
+ <div className="flex gap-2 flex-wrap items-center">
+ <StatusBadge
+ status={job.status}
+ label={getStatusDisplayText(job.status)}
+ />
+ <Badge variant="outline" className="text-xs px-2 py-0.5">
  {job.completed_documents || 0}/{job.total_documents || 0} docs
  </Badge>
  </div>

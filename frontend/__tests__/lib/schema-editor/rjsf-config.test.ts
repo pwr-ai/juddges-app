@@ -146,9 +146,9 @@ describe('fieldTypeColors', () => {
     }
   });
 
-  it('returns HSL color strings', () => {
+  it('returns valid color strings', () => {
     for (const color of Object.values(fieldTypeColors)) {
-      expect(color).toMatch(/^hsl\(/);
+      expect(color).toMatch(/^(#|hsl\()/);
     }
   });
 });

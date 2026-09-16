@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAdminUsers } from "@/lib/api/admin";
 import { ErrorCard } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import logger from "@/lib/logger";
 import { useEffect } from "react";
 
@@ -167,15 +168,11 @@ export default function AdminUsersPage() {
  {formatDate(user.last_sign_in_at)}
  </td>
  <td className="px-6 py-4">
- {user.email_confirmed_at ? (
- <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">
- confirmed
- </span>
- ) : (
- <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground">
- pending
- </span>
- )}
+ <StatusBadge
+ status={user.email_confirmed_at ? "verified" : "pending"}
+ label={user.email_confirmed_at ? "confirmed" : "pending"}
+ size="sm"
+ />
  </td>
  <td className="px-6 py-4 text-right">
  <button

@@ -8,7 +8,6 @@ import {
   BookOpen,
   GraduationCap,
   ArrowRight,
-  Sparkles,
   TrendingUp,
   Grid3x3,
   List,
@@ -16,6 +15,7 @@ import {
 import type { BlogCategory, BlogPost } from "@/types/blog";
 import { cn } from "@/lib/utils";
 import { Header, Badge, PageContainer, SearchInput, EmptyState, VariantButton, LightCard, FilterToggleGroup } from "@/lib/styles/components";
+import { EditorialCardSkeleton } from "@/components/editorial";
 import { logger } from "@/lib/logger";
 
 interface BlogPagination {
@@ -257,11 +257,11 @@ export default function BlogPage(): React.JSX.Element {
         {/* Title Section */}
         <div className="mb-8">
           <Badge variant="outline" className="mb-4 flex items-center gap-1.5 w-fit">
-            <Sparkles className="size-3" />
+            <BookOpen className="size-3" />
             Latest Insights
           </Badge>
           <Header
-            icon={Sparkles}
+            icon={BookOpen}
             title="Research & Insights"
             size="4xl"
             description={
@@ -365,18 +365,7 @@ export default function BlogPage(): React.JSX.Element {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             <span className="sr-only">Loading blog posts…</span>
             {[...Array(6)].map((_, i) => (
-              <LightCard key={i} className="h-full min-h-[400px] p-0">
-                <div className="relative h-64 bg-gradient-to-br from-muted/50 to-muted/30 animate-pulse" />
-                <div className="p-6 space-y-4">
-                  <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-                  <div className="space-y-2">
-                    <div className="h-5 w-full rounded bg-muted animate-pulse" />
-                    <div className="h-5 w-3/4 rounded bg-muted animate-pulse" />
-                  </div>
-                  <div className="h-4 w-full rounded bg-muted animate-pulse" />
-                  <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
-                </div>
-              </LightCard>
+              <EditorialCardSkeleton key={i} minHeight="400px" lines={4} />
             ))}
           </div>
         ) : error ? (

@@ -22,11 +22,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { LightCard, VariantButton, Badge } from "@/lib/styles/components";
 import {
-  Sparkles,
   Image as ImageIcon,
   Upload,
   X,
-  Wand2,
   Tag,
   Eye,
   Save,
@@ -188,7 +186,6 @@ export function PostEditor({
                 <Label htmlFor="content">Content *</Label>
                 <VariantButton intent="secondary"
                   size="sm"
-                  icon={Wand2}
                   onClick={() => {}}
                 >
                   AI Assist
@@ -256,7 +253,6 @@ export function PostEditor({
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                  <Sparkles className="size-5 text-primary" />
                   AI-Generated Summary
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -265,7 +261,6 @@ export function PostEditor({
               </div>
               <VariantButton intent="secondary"
                 size="sm"
-                icon={isGeneratingSummary ? Sparkles : Wand2}
                 onClick={handleGenerateSummary}
                 disabled={isGeneratingSummary || !content}
               >
@@ -376,7 +371,6 @@ export function PostEditor({
               <h3 className="text-lg font-semibold">Tags</h3>
               <VariantButton intent="secondary"
                 size="sm"
-                icon={Sparkles}
                 onClick={handleGenerateTags}
               >
                 AI Suggest
@@ -508,9 +502,8 @@ export function PostEditor({
 
             {/* AI Summary */}
             {aiSummary && (
-              <LightCard padding="md" className="bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/50">
+              <LightCard padding="md" className="bg-parchment border border-rule">
                 <p className="text-sm font-semibold text-accent-foreground mb-3 flex items-center gap-2">
-                  <Sparkles className="size-4" />
                   AI-Generated Summary
                 </p>
                 <p className="text-base leading-relaxed text-foreground">{aiSummary}</p>

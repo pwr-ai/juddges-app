@@ -23,6 +23,7 @@ import {
   ErrorCard,
   Badge,
 } from '@/lib/styles/components';
+import { StatusBadge } from '@/components/editorial';
 import { Button } from '@/components/ui/button';
 import {
   getReasoningLineDetail,
@@ -193,18 +194,13 @@ export default function ReasoningLineDetailPage() {
   );
 
   const coherencePct = Math.round(line.coherence_score * 100);
-  const coherenceColor =
+  const coherenceTone =
     coherencePct >= 70
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'text-ink'
       : coherencePct >= 50
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-rose-100 text-rose-700';
+        ? 'text-gold'
+        : 'text-oxblood';
 
-  const statusColorMap: Record<string, string> = {
-    active: 'bg-emerald-100 text-emerald-700',
-    archived: 'bg-slate-100 text-slate-700',
-    deleted: 'bg-rose-100 text-rose-700',
-  };
   const statusLabelMap: Record<string, string> = {
     active: t('reasoningLines.statusActive'),
     archived: t('reasoningLines.statusArchived'),
@@ -243,15 +239,9 @@ export default function ReasoningLineDetailPage() {
               </div>
             </div>
             <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+              <StatusBadge status={line.status} label={statusLabelMap[line.status] ?? line.status} />
               <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  statusColorMap[line.status] ?? 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                {statusLabelMap[line.status] ?? line.status}
-              </span>
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums ${coherenceColor}`}
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule tabular-nums ${coherenceTone}`}
               >
                 {t('reasoningLines.coherenceValue', { percent: coherencePct })}
               </span>
@@ -587,12 +577,12 @@ function TimelineEntry({
   isLast: boolean;
 }) {
   const similarityPct = Math.round(member.similarity_to_centroid * 100);
-  const similarityColor =
+  const similarityTone =
     similarityPct >= 80
-      ? 'text-emerald-600'
+      ? 'text-ink'
       : similarityPct >= 60
-        ? 'text-amber-600'
-        : 'text-rose-600';
+        ? 'text-gold'
+        : 'text-oxblood';
 
   return (
     <Link
@@ -602,8 +592,8 @@ function TimelineEntry({
       <div className="relative flex items-start gap-4 pl-0">
         {/* Timeline dot */}
         <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-[47px]">
-          <div className="w-7 h-7 rounded-full bg-white border-2 border-primary/30 group-hover:border-primary flex items-center justify-center transition-colors">
-            <span className="text-[10px] font-bold text-primary tabular-nums">
+          <div className="w-7 h-7 rounded-full bg-parchment border border-rule group-hover:border-ink flex items-center justify-center transition-colors">
+            <span className="text-[10px] font-mono text-ink tabular-nums">
               {member.position_in_line || index + 1}
             </span>
           </div>
@@ -611,7 +601,7 @@ function TimelineEntry({
 
         {/* Card content */}
         <div className="flex-1 min-w-0 pb-3">
-          <div className="p-3 rounded-xl bg-white/50 border border-slate-100 group-hover:border-primary/20 group-hover:bg-white/80 transition-all">
+          <div className="p-3 rounded-none bg-parchment border border-rule hover:-translate-y-px transition-transform">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 space-y-1">
                 {/* Signature */}
@@ -640,12 +630,12 @@ function TimelineEntry({
                 {/* Extra metadata */}
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   {member.reasoning_pattern && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-rule text-ink bg-transparent">
                       {member.reasoning_pattern}
                     </span>
                   )}
                   {member.outcome_direction && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-rule text-ink bg-transparent">
                       {member.outcome_direction}
                     </span>
                   )}
@@ -654,7 +644,7 @@ function TimelineEntry({
 
               {/* Right side: similarity + link icon */}
               <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                <span className={`text-xs font-medium tabular-nums ${similarityColor}`}>
+                <span className={`text-xs font-mono tabular-nums ${similarityTone}`}>
                   {similarityPct}%
                 </span>
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -671,19 +661,19 @@ function TimelineEntry({
 function RelatedLineCard({ related }: { related: RelatedLine }) {
   const { t } = useTranslation();
   const relatednessPct = Math.round(related.relatedness_score * 100);
-  const relatednessColor =
+  const relatednessTone =
     relatednessPct >= 70
-      ? 'bg-emerald-100 text-emerald-700'
+      ? 'text-ink'
       : relatednessPct >= 50
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-slate-100 text-slate-600';
+        ? 'text-gold'
+        : 'text-oxblood';
 
   return (
     <Link
       href={`/reasoning-lines/${related.id}`}
       className="block group"
     >
-      <div className="flex items-start justify-between gap-3 p-3 rounded-xl bg-white/50 border border-slate-100 hover:border-primary/20 hover:bg-white/80 transition-all">
+      <div className="flex items-start justify-between gap-3 p-3 rounded-none bg-parchment border border-rule hover:-translate-y-px transition-transform">
         <div className="min-w-0 flex-1 space-y-2">
           {/* Label */}
           <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
@@ -722,8 +712,8 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
               {related.shared_keywords.map((kw) => (
                 <Badge
                   key={kw}
-                  variant="secondary"
-                  className="text-xs bg-blue-50 text-blue-700"
+                  variant="outline"
+                  className="text-xs font-mono border-rule text-ink bg-transparent"
                 >
                   {kw}
                 </Badge>
@@ -735,7 +725,7 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
         {/* Right side: relatedness score + arrow */}
         <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums ${relatednessColor}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule tabular-nums ${relatednessTone}`}
           >
             {relatednessPct}%
           </span>

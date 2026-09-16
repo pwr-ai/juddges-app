@@ -5,10 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { VariantButton, LoadingIndicator, BaseCard, Badge } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import {
  Layers,
- Sparkles,
+ Info,
  CheckCircle2,
  XCircle,
  Clock,
@@ -237,23 +238,23 @@ export function BulkExtractionDialog({
  const getJobStatusIcon = (status: string) => {
  const normalized = status.toUpperCase();
  if (['COMPLETED', 'SUCCESS'].includes(normalized)) {
- return <CheckCircle2 className="h-4 w-4 text-green-500"/>;
+ return <CheckCircle2 className="h-4 w-4 text-ink"/>;
  }
  if (['FAILED', 'FAILURE', 'CANCELLED'].includes(normalized)) {
- return <XCircle className="h-4 w-4 text-red-500"/>;
+ return <XCircle className="h-4 w-4 text-oxblood"/>;
  }
  if (normalized === 'PARTIALLY_COMPLETED') {
- return <AlertCircle className="h-4 w-4 text-yellow-500"/>;
+ return <AlertCircle className="h-4 w-4 text-gold"/>;
  }
- return <Loader2 className="h-4 w-4 text-blue-500 animate-spin"/>;
+ return <Loader2 className="h-4 w-4 text-gold animate-spin"/>;
  };
 
  const getJobStatusColor = (status: string): string => {
  const normalized = status.toUpperCase();
- if (['COMPLETED', 'SUCCESS'].includes(normalized)) return 'bg-green-500';
- if (['FAILED', 'FAILURE'].includes(normalized)) return 'bg-red-500';
- if (normalized === 'PARTIALLY_COMPLETED') return 'bg-yellow-500';
- return 'bg-blue-500';
+ if (['COMPLETED', 'SUCCESS'].includes(normalized)) return 'bg-ink';
+ if (['FAILED', 'FAILURE'].includes(normalized)) return 'bg-oxblood';
+ if (normalized === 'PARTIALLY_COMPLETED') return 'bg-gold';
+ return 'bg-gold';
  };
 
  return (
@@ -324,9 +325,7 @@ export function BulkExtractionDialog({
  {formatName(schema.name)}
  </span>
  {schema.is_verified && (
- <Badge className="text-xs px-1.5 py-0 bg-green-100 text-green-700">
- Verified
- </Badge>
+ <StatusBadge status="verified" size="sm"/>
  )}
  </div>
  {schema.description && (
@@ -365,13 +364,13 @@ export function BulkExtractionDialog({
  <BaseCard
  clickable={false}
  className={cn(
-"p-3",
-"bg-blue-50/50",
-"border-blue-200/50"
+ "p-3",
+ "bg-parchment",
+ "border-rule"
  )}
  >
  <div className="flex items-start gap-2.5 w-full">
- <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-blue-500"/>
+ <Info className="h-4 w-4 shrink-0 mt-0.5 text-ink"/>
  <span className="text-sm text-muted-foreground leading-relaxed">
  This will create <span className="font-semibold text-foreground">{selectedSchemas.size}</span> extraction
  {selectedSchemas.size > 1 ? ' jobs' : ' job'}, each processing{' '}
@@ -388,7 +387,7 @@ export function BulkExtractionDialog({
  <VariantButton intent="secondary" onClick={onClose}>
  Cancel
  </VariantButton>
- <VariantButton intent="glass"
+ <VariantButton intent="primary"
  onClick={handleSubmit}
  disabled={selectedSchemas.size === 0 || isSubmitting}
  isLoading={isSubmitting}
@@ -396,10 +395,7 @@ export function BulkExtractionDialog({
  {isSubmitting ? (
  'Starting...'
  ) : (
- <>
- <Sparkles className="h-4 w-4"/>
- Start Bulk Extraction ({selectedSchemas.size} schema{selectedSchemas.size > 1 ? 's' : ''})
- </>
+ `Start Bulk Extraction (${selectedSchemas.size} schema{selectedSchemas.size > 1 ? 's' : ''})`
  )}
  </VariantButton>
  </div>
@@ -429,9 +425,9 @@ export function BulkExtractionDialog({
  <div
  key={job.schema_id}
  className={cn(
-"p-4 rounded-lg border",
-"bg-white/60",
-"border-slate-200/50"
+ "p-4 rounded-none border",
+ "bg-parchment",
+ "border-rule"
  )}
  >
  <div className="flex items-center justify-between mb-2">

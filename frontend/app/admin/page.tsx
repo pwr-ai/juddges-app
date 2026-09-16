@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/admin";
 import { useDashboardStats } from "@/lib/api/dashboard";
 import { ErrorCard } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import logger from "@/lib/logger";
 import { useEffect } from "react";
 
@@ -327,27 +328,7 @@ export default function AdminDashboardPage() {
  <span className="text-sm text-foreground capitalize">
  {svc.name ?? key}
  </span>
- {svc.status === "healthy"? (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-green-50 text-green-700">
- <CheckCircle2 className="size-3"/>
- Healthy
- </span>
- ) : svc.status === "degraded"? (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-amber-50 text-amber-700">
- <AlertCircle className="size-3"/>
- Degraded
- </span>
- ) : svc.status === "unhealthy"? (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">
- <AlertCircle className="size-3"/>
- Unhealthy
- </span>
- ) : (
- <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground">
- <MinusCircle className="size-3"/>
- Unknown
- </span>
- )}
+ <StatusBadge status={svc.status} />
  </div>
  ))
  ) : (

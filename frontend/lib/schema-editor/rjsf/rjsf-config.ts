@@ -447,19 +447,19 @@ export const defaultFieldEditorData: FieldEditorFormData = {
  * Field type color mapping for visual consistency
  */
 export const fieldTypeColors: Record<PydanticFieldType, string> = {
-  string: 'hsl(221, 83%, 53%)', // blue
-  integer: 'hsl(142, 71%, 45%)', // green
-  number: 'hsl(142, 71%, 45%)', // green
-  boolean: 'hsl(262, 83%, 58%)', // purple
-  array: 'hsl(38, 92%, 50%)', // orange
-  object: 'hsl(174, 72%, 46%)', // teal
-  date: 'hsl(199, 89%, 48%)', // cyan
-  datetime: 'hsl(199, 89%, 48%)', // cyan
-  time: 'hsl(199, 89%, 48%)', // cyan
-  email: 'hsl(221, 83%, 53%)', // blue
-  url: 'hsl(221, 83%, 53%)', // blue
-  uuid: 'hsl(280, 67%, 60%)', // violet
-  enum: 'hsl(262, 83%, 58%)', // purple
+  string: '#000000',
+  integer: '#000000',
+  number: '#000000',
+  boolean: '#000000',
+  array: '#000000',
+  object: '#000000',
+  date: '#000000',
+  datetime: '#000000',
+  time: '#000000',
+  email: '#000000',
+  url: '#000000',
+  uuid: '#000000',
+  enum: '#000000',
 };
 
 /**

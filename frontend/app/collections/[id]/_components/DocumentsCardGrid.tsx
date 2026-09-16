@@ -1,8 +1,9 @@
 import { FC } from "react";
-import { Search, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, AlertTriangle } from "lucide-react";
 import { SearchDocument } from "@/types/search";
 import { cn } from "@/lib/utils";
 import { BaseCard, EmptyState, DocumentCard } from "@/lib/styles/components";
+import { EditorialCardSkeleton, EditorialPagination } from "@/components/editorial";
 
 interface DocumentsCardGridProps {
   collectionDocumentIds: (string | number)[];
@@ -146,31 +147,10 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
 
           if (isLoadingDoc || !document) {
             return (
-              <div
+              <EditorialCardSkeleton
                 key={documentId}
-                className="border rounded-xl shadow-sm bg-card animate-pulse overflow-hidden"
-                style={{ minHeight: '360px' }}
-              >
-                <div className="px-4 pt-3 pb-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="h-4 w-32 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded"></div>
-                    <div className="h-6 w-16 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded"></div>
-                  </div>
-                </div>
-                <div className="px-4 py-3 space-y-3">
-                  <div className="h-4 w-24 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded"></div>
-                  <div className="h-20 w-full bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-lg"></div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <div className="h-6 w-20 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-full"></div>
-                    <div className="h-6 w-24 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-full"></div>
-                    <div className="h-6 w-16 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-full"></div>
-                  </div>
-                </div>
-                <div className="px-4 pt-2 pb-2 border-t mt-auto flex items-center gap-2">
-                  <div className="h-8 flex-1 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded"></div>
-                  <div className="h-8 w-20 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded"></div>
-                </div>
-              </div>
+                minHeight="360px"
+              />
             );
           }
 
@@ -201,82 +181,14 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
       )}
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-8">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className={cn(
-              "flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-              currentPage === 1
-                ? "bg-slate-100 text-muted-foreground cursor-not-allowed opacity-50"
-                : "bg-slate-100 text-foreground hover:bg-slate-200"
-            )}
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </button>
-
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                // Show first, last, current, and adjacent pages
-                if (page === 1 || page === totalPages) return true;
-                if (Math.abs(page - currentPage) <= 1) return true;
-                return false;
-              })
-              .map((page, index, arr) => {
-                // Add ellipsis if there's a gap
-                const prevPage = arr[index - 1];
-                const showEllipsis = prevPage && page - prevPage > 1;
-
-                return (
-                  <span key={page}>
-                    {showEllipsis && (
-                      <span className="px-2 text-muted-foreground">...</span>
-                    )}
-                    <button
-                      onClick={() => setCurrentPageValue(page)}
-                      className={cn(
-                        "w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200",
-                        currentPage === page
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-slate-100 text-muted-foreground hover:text-foreground hover:bg-slate-200"
-                      )}
-                      aria-label={`Page ${page}`}
-                      aria-current={currentPage === page ? 'page' : undefined}
-                    >
-                      {page}
-                    </button>
-                  </span>
-                );
-              })}
-          </div>
-
-          <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className={cn(
-              "flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-              currentPage === totalPages
-                ? "bg-slate-100 text-muted-foreground cursor-not-allowed opacity-50"
-                : "bg-slate-100 text-foreground hover:bg-slate-200"
-            )}
-            aria-label="Next page"
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Page info */}
-      {totalPages > 1 && (
-        <div className="text-center text-sm text-muted-foreground mt-4">
-          Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredDocumentIds.length)} of {filteredDocumentIds.length} documents
-        </div>
-      )}
+      <EditorialPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPageValue(page)}
+        totalItems={filteredDocumentIds.length}
+        itemsPerPage={itemsPerPage}
+        itemLabel="documents"
+      />
     </>
   );
 };

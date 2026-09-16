@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { VariantButton, UserAvatar, UserCard, Badge } from "@/lib/styles/components";
-import { AIBadge } from "@/lib/styles/components/ai-badge";
 
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -302,18 +301,10 @@ export function Navbar(): React.ReactElement {
           <NavbarHeading>Dashboard</NavbarHeading>
         )}
         {isChat && user && (
-          <div className="flex items-center gap-3">
-            <NavbarHeading>Assistant</NavbarHeading>
-            <AIBadge text="AI" size="sm" className="scale-150" />
-          </div>
+          <NavbarHeading>Assistant</NavbarHeading>
         )}
         {isSearch && user && (
-          <div className="flex items-center gap-3">
-            <NavbarHeading>Search</NavbarHeading>
-            {searchType === 'thinking' && (
-              <AIBadge text="AI-powered" size="sm" />
-            )}
-          </div>
+          <NavbarHeading>Search</NavbarHeading>
         )}
         {isCollections && user && !isCollectionDetail && (
           <NavbarHeading>Collections</NavbarHeading>
@@ -325,10 +316,7 @@ export function Navbar(): React.ReactElement {
           <NavbarHeading>Schemas</NavbarHeading>
         )}
         {isPrecedents && user && (
-          <div className="flex items-center gap-3">
-            <NavbarHeading>Precedent Finder</NavbarHeading>
-            <AIBadge text="AI" size="sm" />
-          </div>
+          <NavbarHeading>Precedent Finder</NavbarHeading>
         )}
       </div>
 

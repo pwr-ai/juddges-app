@@ -69,41 +69,20 @@ interface SortState {
 // ============================================================================
 
 /**
- * Formats boolean values with emojis
+ * Formats boolean values with semantic indicators
  */
 function formatBoolean(value: boolean): React.ReactNode {
  return value ? (
- <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+ <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-rule text-ink font-mono text-xs">
  <Check className="h-3.5 w-3.5"/>
- <span className="text-xs font-medium">Yes</span>
+ <span>Yes</span>
  </span>
  ) : (
- <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+ <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-rule text-oxblood font-mono text-xs">
  <XCircle className="h-3.5 w-3.5"/>
- <span className="text-xs font-medium">No</span>
+ <span>No</span>
  </span>
  );
-}
-
-/**
- * Generates a consistent color for a label based on hash
- */
-function getLabelColor(value: string): string {
- const colors = [
-"bg-blue-100 text-blue-800 border-blue-200",
-"bg-purple-100 text-purple-800 border-purple-200",
-"bg-emerald-100 text-emerald-800 border-emerald-200",
-"bg-orange-100 text-orange-800 border-orange-200",
-"bg-pink-100 text-pink-800 border-pink-200",
-"bg-cyan-100 text-cyan-800 border-cyan-200",
-"bg-amber-100 text-amber-800 border-amber-200",
-"bg-indigo-100 text-indigo-800 border-indigo-200",
-"bg-teal-100 text-teal-800 border-teal-200",
-"bg-rose-100 text-rose-800 border-rose-200",
- ];
-
- const hash = value.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
- return colors[hash % colors.length];
 }
 
 /**
@@ -111,12 +90,7 @@ function getLabelColor(value: string): string {
  */
 function formatLabel(value: string): React.ReactNode {
  return (
- <span
- className={cn(
-"inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border",
- getLabelColor(value)
- )}
- >
+ <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule text-ink bg-transparent">
  {value}
  </span>
  );
