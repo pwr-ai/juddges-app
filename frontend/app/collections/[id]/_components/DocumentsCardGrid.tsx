@@ -106,7 +106,6 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
               (document.document_type === 'error' && (
                 document.summary?.toLowerCase().includes('source information cannot be loaded') ||
                 document.summary?.toLowerCase().includes('database') ||
-                document.summary?.toLowerCase().includes('database') ||
                 document.summary?.toLowerCase().includes('unavailable') ||
                 document.title?.toUpperCase().includes('ERROR') ||
                 document.document_id?.toUpperCase().includes('ERROR')

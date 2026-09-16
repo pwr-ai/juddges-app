@@ -275,7 +275,7 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
  if (entries.length === 0) return null;
 
  return (
- <div key={idx} className="text-xs bg-muted p-2 rounded space-y-1">
+ <div key={idx} className="text-xs bg-parchment-deep border border-rule p-2 rounded-none space-y-1">
  {entries.map(([k, v]) => {
  const cleanValue = typeof v === 'string' ? v.replace(/<[^>]*>/g, '') : String(v);
  return (
@@ -363,29 +363,29 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
  }
  }
 
- // If no string values found, show as JSON
- return (
- <div className="text-xs bg-muted p-2 rounded font-mono">
- {JSON.stringify(value, null, 2)}
- </div>
- );
- }
+  // If no string values found, show as JSON
+  return (
+    <div className="text-xs bg-parchment-deep border border-rule p-2 rounded-none font-mono">
+      {JSON.stringify(value, null, 2)}
+    </div>
+  );
+  }
 
- if (typeof value === 'string' && isUrl(value)) {
- // Strip HTML tags from URL
- const cleanUrl = value.replace(/<[^>]*>/g, '');
- return (
- <a
- href={cleanUrl}
- target="_blank"
- rel="noopener noreferrer"
- className="text-primary hover:underline flex items-center gap-1"
- >
- {cleanUrl}
- <LinkIcon className="w-3 h-3"/>
- </a>
- );
- }
+  if (typeof value === 'string' && isUrl(value)) {
+    // Strip HTML tags from URL
+    const cleanUrl = value.replace(/<[^>]*>/g, '');
+    return (
+      <a
+        href={cleanUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-oxblood hover:underline flex items-center gap-1 font-mono text-xs"
+      >
+        {cleanUrl}
+        <LinkIcon className="w-3 h-3"/>
+      </a>
+    );
+  }
 
  // Check if it's a JSON string
  if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
@@ -415,7 +415,7 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
  }
  if (isObject(parsed)) {
  return (
- <div className="text-xs bg-muted p-2 rounded font-mono">
+ <div className="text-xs bg-parchment-deep border border-rule p-2 rounded-none font-mono">
  {JSON.stringify(parsed, null, 2)}
  </div>
  );
