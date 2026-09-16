@@ -20,14 +20,15 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   (rootDir forbids the shims) — keep the two tsconfigs separate.
 - `components/ui/logo.tsx` is excluded from the entry (renders an app-relative brand
   asset through next/image; also the converter's tsconfig-paths plugin resolves
-  `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` is excluded
-  (originally a duplicate `SkeletonCard` export vs `skeleton-card.tsx`; #635 deleted the
-  latter, so including the barrel is now possible but is a separate decision — it adds
-  `SkeletonCard`/`SkeletonText` as new components).
+  `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` ships via its
+  barrel since #657 (it was excluded while `skeleton-card.tsx` exported a duplicate
+  `SkeletonCard`; #635 deleted that file). Star re-exports drop ambiguous names silently,
+  so a new `ui/*` export must not reuse `Skeleton`/`SkeletonCard`/`SkeletonText`. The
+  nested dir makes the converter group them as `skeletons` (last non-generic path segment).
 - `srcDir: ../components` (relative to `.ds-pkg`) gives JSDoc + grouping; `ui` is a
   generic dir name so shadcn primitives land in group `general`, editorial in `editorial`.
 - shadcn sub-parts (`CardHeader`, `DialogTitle`, …) are flat exports, not `Card.Header`,
-  so the converter treats all exports (187 at #629, 162 after #645) as roots — most ship the floor card by design.
+  so the converter treats all exports (187 at #629, 162 after #645, 168 after #657) as roots — most ship the floor card by design.
 
 ## Fonts
 
