@@ -26,14 +26,14 @@ import { formatStatNumber } from "@/lib/format-stats";
 import { cn } from "@/lib/utils";
 
 // Editorial palette references for chart fills.
-const COLOR_INK = "#1A1A2E";
-const COLOR_INK_SOFT = "#5A5A75";
-const COLOR_RULE = "#C9C2B0";
-const COLOR_RULE_STRONG = "#A89F88";
-const COLOR_OXBLOOD = "#8B1E3F";
-const COLOR_GOLD = "#B8954A";
-const COLOR_GOLD_SOFT = "#E8DCB8";
-const COLOR_PARCHMENT = "#F5F1E8";
+const COLOR_INK = "#000000";
+const COLOR_INK_SOFT = "#5A5A5A";
+const COLOR_RULE = "#D9D9D9";
+const COLOR_RULE_STRONG = "#9A9A9A";
+const COLOR_OXBLOOD = "#9A342D";
+const COLOR_GOLD = "#B49A5E";
+const COLOR_GOLD_SOFT = "#F1D1A2";
+const COLOR_PARCHMENT = "#FFFFFF";
 
 // 2025 is a partial-year tail in the source dataset; flag it so users don't
 // read the artificially-low bar as a real decline.
@@ -221,7 +221,7 @@ export default function StatisticsPage(): React.JSX.Element {
           title="Unable to load database statistics"
           flat
         >
-          <p className="font-serif text-base italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-base text-[color:var(--ink-soft)]">
             {error instanceof Error
               ? error.message
               : "An unknown error occurred while loading dashboard statistics."}
@@ -355,7 +355,7 @@ export default function StatisticsPage(): React.JSX.Element {
           {isLoading || !stats ? (
             <ChartSkeleton height={260} />
           ) : caseTypeData.length === 0 ? (
-            <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+            <p className="font-serif text-sm text-[color:var(--ink-soft)]">
               No case-type data available.
             </p>
           ) : (
@@ -402,7 +402,7 @@ export default function StatisticsPage(): React.JSX.Element {
           {isLoading || !stats ? (
             <ChartSkeleton height={260} />
           ) : courtLevelData.length === 0 ? (
-            <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+            <p className="font-serif text-sm text-[color:var(--ink-soft)]">
               No court-level data available.
             </p>
           ) : (
@@ -452,7 +452,7 @@ export default function StatisticsPage(): React.JSX.Element {
         {isLoading || !stats ? (
           <ChartSkeleton height={320} />
         ) : decisionTypeData.length === 0 ? (
-          <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+          <p className="font-serif text-sm text-[color:var(--ink-soft)]">
             No decision-type data available.
           </p>
         ) : (
@@ -509,7 +509,7 @@ export default function StatisticsPage(): React.JSX.Element {
                 ))}
               </ul>
             ) : topCourts.length === 0 ? (
-              <p className="font-serif text-sm italic text-[color:var(--ink-soft)]">
+              <p className="font-serif text-sm text-[color:var(--ink-soft)]">
                 No top-court data available.
               </p>
             ) : (

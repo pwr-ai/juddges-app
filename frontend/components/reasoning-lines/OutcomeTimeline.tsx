@@ -18,20 +18,15 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { ReasoningLineTimeline, TimelinePoint } from '@/types/reasoning-lines';
-import { editorialPalette } from '@/lib/charts/editorial-plot';
-import { cn } from '@/lib/utils';
+import { ChartFigure } from '@/components/editorial';
+import { OUTCOME_SERIES, rechartsTheme } from '@/lib/charts/reasoning-palette';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Color mapping for outcome categories using Editorial palette */
-const OUTCOME_COLORS = {
-  for_count: editorialPalette.ink,
-  against_count: editorialPalette.oxblood,
-  mixed_count: editorialPalette.gold,
-  procedural_count: editorialPalette.ruleStrong,
-} as const;
+/** Color mapping for outcome categories — see lib/charts/reasoning-palette.ts */
+const OUTCOME_COLORS = OUTCOME_SERIES;
 
 /** Polish labels for outcome categories */
 const OUTCOME_LABELS: Record<string, string> = {
@@ -41,27 +36,27 @@ const OUTCOME_LABELS: Record<string, string> = {
   procedural_count: 'Proceduralne',
 };
 
-/** Polish labels for trend values */
+/** Polish labels for trend values; `color` is the text tone on a rule-bordered pill */
 const TREND_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   emerging_consensus: {
-    label: 'Kształtujący się konsensus',
+    label: 'Ksztaltujacy sie konsensus',
     icon: TrendingUp,
-    color: 'border-rule text-ink',
+    color: 'text-ink',
   },
   stable_split: {
-    label: 'Stabilny podział',
+    label: 'Stabilny podzial',
     icon: Minus,
-    color: 'border-rule text-gold',
+    color: 'text-gold',
   },
   direction_change: {
     label: 'Zmiana kierunku',
     icon: TrendingDown,
-    color: 'border-rule text-oxblood',
+    color: 'text-oxblood',
   },
   insufficient_data: {
-    label: 'Niewystarczające dane',
+    label: 'Niewystarczajace dane',
     icon: AlertTriangle,
-    color: 'border-rule text-ink-soft',
+    color: 'text-ink-soft',
   },
 };
 
@@ -97,95 +92,87 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
 
   if (data.points.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8 text-sm text-ink-soft">
-        Brak danych do wyświetlenia. Sklasyfikuj orzeczenia, aby zobaczyć oś czasu.
+      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+        Brak danych do wyswietlenia. Sklasyfikuj orzeczenia, aby zobaczyc os czasu.
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Trend badge */}
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-0.5 border text-xs font-mono uppercase',
-            trendInfo.color
-          )}
-        >
-          <TrendIcon className="h-3.5 w-3.5" />
-          {trendInfo.label}
-        </span>
-        {data.trend_slope !== 0 && (
-          <span className="text-xs font-mono text-ink-soft tabular-nums">
-            (nachylenie: {data.trend_slope > 0 ? '+' : ''}
-            {data.trend_slope.toFixed(2)})
+    <ChartFigure>
+      <div className="space-y-3">
+        {/* Trend badge */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 border border-rule px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider ${trendInfo.color}`}
+          >
+            <TrendIcon className="h-3.5 w-3.5" />
+            {trendInfo.label}
           </span>
-        )}
-      </div>
+          {data.trend_slope !== 0 && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              (nachylenie: {data.trend_slope > 0 ? '+' : ''}
+              {data.trend_slope.toFixed(2)})
+            </span>
+          )}
+        </div>
 
-      {/* Chart */}
-      <div style={{ width: '100%', height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={editorialPalette.rule} />
-            <XAxis
-              dataKey="name"
-              tick={{ fill: editorialPalette.ink, fontSize: 11, fontFamily: 'monospace' }}
-              tickLine={false}
-              axisLine={{ stroke: editorialPalette.rule }}
-            />
-            <YAxis
-              allowDecimals={false}
-              tick={{ fill: editorialPalette.ink, fontSize: 11, fontFamily: 'monospace' }}
-              tickLine={false}
-              axisLine={{ stroke: editorialPalette.rule }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'var(--parchment)',
-                border: '1px solid var(--rule)',
-                borderRadius: '0px',
-                fontSize: '12px',
-                fontFamily: 'monospace',
-                color: editorialPalette.ink,
-              }}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              formatter={(value: any) => [`${value}`]}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              labelFormatter={(label: any) => `Okres: ${label}`}
-            />
-            <Legend
-              wrapperStyle={{ fontSize: '12px', fontFamily: 'monospace', paddingTop: '8px' }}
-            />
-            <Bar
-              dataKey="Za"
-              stackId="outcomes"
-              fill={OUTCOME_COLORS.for_count}
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey="Przeciw"
-              stackId="outcomes"
-              fill={OUTCOME_COLORS.against_count}
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey="Mieszane"
-              stackId="outcomes"
-              fill={OUTCOME_COLORS.mixed_count}
-              radius={[0, 0, 0, 0]}
-            />
-            <Bar
-              dataKey="Proceduralne"
-              stackId="outcomes"
-              fill={OUTCOME_COLORS.procedural_count}
-              radius={[0, 0, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        {/* Chart */}
+        <div style={{ width: '100%', height }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={rechartsTheme.grid} />
+              <XAxis
+                dataKey="name"
+                tick={{ fill: rechartsTheme.tick, fontSize: 11 }}
+                tickLine={false}
+                axisLine={{ stroke: rechartsTheme.axis }}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: rechartsTheme.tick, fontSize: 11 }}
+                tickLine={false}
+                axisLine={{ stroke: rechartsTheme.axis }}
+              />
+              <Tooltip
+                contentStyle={rechartsTheme.tooltip}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                formatter={(value: any) => [`${value}`]}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                labelFormatter={(label: any) => `Okres: ${label}`}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+              />
+              <Bar
+                dataKey="Za"
+                stackId="outcomes"
+                fill={OUTCOME_COLORS.for_count}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="Przeciw"
+                stackId="outcomes"
+                fill={OUTCOME_COLORS.against_count}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="Mieszane"
+                stackId="outcomes"
+                fill={OUTCOME_COLORS.mixed_count}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="Proceduralne"
+                stackId="outcomes"
+                fill={OUTCOME_COLORS.procedural_count}
+                radius={[0, 0, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-    </div>
+    </ChartFigure>
   );
 }
 

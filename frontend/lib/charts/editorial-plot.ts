@@ -1,27 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Editorial Jurisprudence chart styling — single source of truth for any
- * Plotly figure on the platform. Colours mirror the OKLCH tokens in
- * `frontend/app/globals.css`; we use the resolved hex values here because
- * Plotly needs concrete RGB, not CSS variables.
+ * Editorial chart styling — single source of truth for any Plotly figure on
+ * the platform. Colours mirror the PWr identity tokens (`--pwr-*`) in
+ * `frontend/app/globals.css`, keyed by their editorial alias names; we use
+ * the resolved hex values here because Plotly needs concrete RGB, not CSS
+ * variables.
  *
  * See docs/reference/DESIGN.md.
  */
 
-const FONT_SANS =
+export const FONT_SANS =
   'Geist, "Geist Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 
 export const editorialPalette = {
-  ink: '#1A1A2E',
-  inkSoft: '#5A5A75',
-  parchment: '#F5F1E8',
-  parchmentDeep: '#EFE9D8',
-  rule: '#C9C2B0',
-  ruleStrong: '#A89F88',
-  oxblood: '#8B1E3F',
-  oxbloodDeep: '#6F1230',
-  gold: '#B8954A',
-  goldSoft: '#E8DCB8',
+  ink: '#000000',
+  inkSoft: '#5A5A5A',
+  parchment: '#FFFFFF',
+  parchmentDeep: '#EFEFEF',
+  rule: '#D9D9D9',
+  ruleStrong: '#9A9A9A',
+  oxblood: '#9A342D',
+  oxbloodDeep: '#7E2A25',
+  gold: '#B49A5E',
+  goldSoft: '#F1D1A2',
 } as const;
 
 /** Two-jurisdiction palette: ink (UK, established) + oxblood (PL, authority). */

@@ -104,9 +104,9 @@ describe('globals.css colour tokens', () => {
     expect(rule('.editorial-button-secondary')).toMatch(/border:\s*1px solid var\(--pwr-black\);/);
   });
 
-  it('danger colours use the SIW faculty red', () => {
-    expect(rootBlock).toMatch(/--destructive:\s*#D63120;/i);
-    expect(rootBlock).toMatch(/--error:\s*#D63120;/i);
+  it('danger colours use the SIW faculty red, darkened for AA on --pwr-panel (#644)', () => {
+    expect(rootBlock).toMatch(/--destructive:\s*#C42D1D;/i);
+    expect(rootBlock).toMatch(/--error:\s*#C42D1D;/i);
   });
 
   it('paper grain and noise overlays are gone', () => {

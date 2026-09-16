@@ -11,8 +11,9 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Loader2, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { editorialPalette } from '@/lib/charts/editorial-plot';
-import { Eyebrow } from '@/components/editorial';
+import { ChartFigure } from '@/components/editorial';
+import { editorialPalette, FONT_SANS } from '@/lib/charts/editorial-plot';
+import { DAG_EDGE_STYLE, DAG_NODE_STYLE } from '@/lib/charts/reasoning-palette';
 import type { DAGNode, DAGEdge, DAGNodeStatus, DAGEdgeEventType } from '@/types/reasoning-lines';
 
 // Dynamically import ForceGraph2D to avoid SSR issues (canvas-based)
@@ -26,24 +27,8 @@ const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
 });
 
 // ---------------------------------------------------------------------------
-// Color maps
+// Labels — colours live in lib/charts/reasoning-palette.ts
 // ---------------------------------------------------------------------------
-
-/** Node status style: active=oxblood, merged=ink, dormant=gold, superseded=hollow */
-const NODE_STATUS_CONFIG: Record<DAGNodeStatus, { color: string; hollow?: boolean }> = {
-  active: { color: editorialPalette.oxblood },
-  merged: { color: editorialPalette.ink },
-  dormant: { color: editorialPalette.gold },
-  superseded: { color: editorialPalette.ruleStrong, hollow: true },
-};
-
-/** Edge config keyed by event type: branch=solid oxblood, merge=solid ink, influence=dashed ink-soft, drift=dotted gold */
-const EDGE_EVENT_CONFIG: Record<DAGEdgeEventType, { color: string; dash: number[] }> = {
-  branch: { color: editorialPalette.oxblood, dash: [] },
-  merge: { color: editorialPalette.ink, dash: [] },
-  influence: { color: editorialPalette.inkSoft, dash: [4, 4] },
-  drift: { color: editorialPalette.gold, dash: [2, 3] },
-};
 
 /** Polish labels for legend */
 const STATUS_LABELS: Record<DAGNodeStatus, string> = {
@@ -150,43 +135,37 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
 
       // Radius proportional to case_count (min 4, max 18)
       const radius = Math.max(4, Math.min(18, 4 + Math.sqrt(data.case_count) * 2));
-      const config = NODE_STATUS_CONFIG[data.status] ?? { color: editorialPalette.ruleStrong };
+      const style = DAG_NODE_STYLE[data.status] ?? DAG_NODE_STYLE.superseded;
 
       ctx.save();
 
       // Circle
       ctx.beginPath();
       ctx.arc(data.x, data.y, radius, 0, 2 * Math.PI);
-      if (config.hollow) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = config.color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = config.color;
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
+      ctx.fillStyle = style.fill;
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = style.stroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
       // Label — only render when zoomed in enough
       if (globalScale >= 0.6) {
         const label =
           data.label.length > 24 ? data.label.slice(0, 22) + '...' : data.label;
         const fontSize = Math.max(9, 11 / globalScale);
-        ctx.font = `600 ${fontSize}px system-ui, sans-serif`;
+        ctx.font = `500 ${fontSize}px ${FONT_SANS}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
         // Background for readability
         const textWidth = ctx.measureText(label).width;
         const labelY = data.y + radius + 3;
-        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillStyle = editorialPalette.parchment;
         ctx.fillRect(data.x - textWidth / 2 - 2, labelY - 1, textWidth + 4, fontSize + 2);
 
-        ctx.fillStyle = '#1a1a1a';
+        ctx.fillStyle = editorialPalette.ink;
         ctx.fillText(label, data.x, labelY);
       }
 
@@ -195,7 +174,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
     []
   );
 
-  // Custom link (edge) rendering — directed arrows colored by event type
+  // Custom link (edge) rendering — directed arrows coloured + dashed by event type
   const renderLink = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (link: any, ctx: CanvasRenderingContext2D) => {
@@ -207,8 +186,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       const tgt = data.target;
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) return;
 
-      const edgeConfig = EDGE_EVENT_CONFIG[data.event_type] ?? { color: editorialPalette.ruleStrong, dash: [] };
-      const color = edgeConfig.color;
+      const { color, dash } = DAG_EDGE_STYLE[data.event_type] ?? DAG_EDGE_STYLE.influence;
       // Width proportional to confidence (min 0.8, max 3)
       const width = 0.8 + data.confidence * 2.2;
 
@@ -216,14 +194,14 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
 
       // Line
       ctx.beginPath();
-      ctx.setLineDash(edgeConfig.dash);
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(tgt.x, tgt.y);
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
-      ctx.globalAlpha = 0.8;
+      ctx.setLineDash(dash);
+      ctx.globalAlpha = 0.7;
       ctx.stroke();
-      ctx.setLineDash([]); // reset dash for arrow
+      ctx.setLineDash([]);
 
       // Arrowhead
       const arrowLen = 6;
@@ -254,7 +232,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
   );
 
   return (
-    <div className="relative border border-rule bg-parchment overflow-hidden">
+    <ChartFigure className="overflow-hidden">
       {/* Graph canvas */}
       <div style={{ height }} className="w-full">
         {/* eslint-disable @typescript-eslint/no-explicit-any */}
@@ -283,7 +261,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
         <Button
           size="icon"
           variant="secondary"
-          className="border border-rule bg-parchment hover:bg-parchment-deep rounded-none h-8 w-8 text-ink"
+          className="h-8 w-8 bg-parchment"
           onClick={handleCenterGraph}
           title="Wycentruj graf"
         >
@@ -292,48 +270,49 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       </div>
 
       {/* Legend — bottom left */}
-      <div className="absolute bottom-3 left-3 bg-parchment/95 border border-rule p-3 text-xs space-y-2 max-w-[240px]">
+      <div className="absolute bottom-3 left-3 bg-parchment border border-rule p-3 text-xs space-y-2 max-w-[220px]">
         {/* Node statuses */}
-        <Eyebrow className="text-[10px]">Węzły (status)</Eyebrow>
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft">Wezly (status)</p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(Object.keys(NODE_STATUS_CONFIG) as DAGNodeStatus[]).map((status) => {
-            const cfg = NODE_STATUS_CONFIG[status];
-            return (
-              <div key={status} className="flex items-center gap-1.5 font-mono text-[11px]">
-                <div
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{
-                    backgroundColor: cfg.hollow ? '#ffffff' : cfg.color,
-                    border: cfg.hollow ? `1.5px solid ${cfg.color}` : 'none',
-                  }}
+          {(Object.keys(STATUS_LABELS) as DAGNodeStatus[]).map((status) => (
+            <div key={status} className="flex items-center gap-1.5">
+              <svg width="10" height="10" viewBox="0 0 10 10" className="flex-shrink-0" aria-hidden>
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="4"
+                  fill={DAG_NODE_STYLE[status].fill}
+                  stroke={DAG_NODE_STYLE[status].stroke}
+                  strokeWidth="1.5"
                 />
-                <span className="text-ink-soft">{STATUS_LABELS[status]}</span>
-              </div>
-            );
-          })}
+              </svg>
+              <span className="text-ink-soft">{STATUS_LABELS[status]}</span>
+            </div>
+          ))}
         </div>
 
         {/* Edge types */}
-        <Eyebrow className="text-[10px] pt-1">Krawędzie (typ)</Eyebrow>
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-soft pt-1">Krawedzie (typ)</p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(Object.keys(EDGE_EVENT_CONFIG) as DAGEdgeEventType[]).map((eventType) => {
-            const cfg = EDGE_EVENT_CONFIG[eventType];
-            return (
-              <div key={eventType} className="flex items-center gap-1.5 font-mono text-[11px]">
-                <div
-                  className="w-4 h-0.5 flex-shrink-0"
-                  style={{
-                    backgroundColor: cfg.color,
-                    borderTop: cfg.dash.length > 0 ? `1px dashed ${cfg.color}` : undefined,
-                  }}
+          {(Object.keys(EVENT_LABELS) as DAGEdgeEventType[]).map((eventType) => (
+            <div key={eventType} className="flex items-center gap-1.5">
+              <svg width="20" height="4" viewBox="0 0 20 4" className="flex-shrink-0" aria-hidden>
+                <line
+                  x1="0"
+                  y1="2"
+                  x2="20"
+                  y2="2"
+                  stroke={DAG_EDGE_STYLE[eventType].color}
+                  strokeWidth="2"
+                  strokeDasharray={DAG_EDGE_STYLE[eventType].dash.join(' ') || undefined}
                 />
-                <span className="text-ink-soft">{EVENT_LABELS[eventType]}</span>
-              </div>
-            );
-          })}
+              </svg>
+              <span className="text-ink-soft">{EVENT_LABELS[eventType]}</span>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </ChartFigure>
   );
 }
 
