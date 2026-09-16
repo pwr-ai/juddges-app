@@ -50,6 +50,9 @@ const CLEAN_FILES = [
   'app/extract/_components/RecentExtractions.tsx',
   'app/extract/_components/DocumentSelector.tsx',
   'app/extract/_components/types.ts',
+  'app/precedents/page.tsx',
+  'app/reasoning-lines/page.tsx',
+  'app/reasoning-lines/[id]/page.tsx',
 ];
 
 /**

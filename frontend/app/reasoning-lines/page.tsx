@@ -23,14 +23,18 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   PageContainer,
-  BaseCard,
   AIDisclaimerBadge,
   LoadingIndicator,
   EmptyState,
   ErrorCard,
   Badge,
 } from '@/lib/styles/components';
-import { StatusBadge as EditorialStatusBadge } from '@/components/editorial';
+import {
+  EditorialCard,
+  Eyebrow,
+  Headline,
+  StatusBadge as EditorialStatusBadge,
+} from '@/components/editorial';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -217,62 +221,60 @@ export default function ReasoningLinesPage() {
   return (
     <PageContainer width="medium" fillViewport>
       {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <GitBranch className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {t('reasoningLines.pageTitle')}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t('reasoningLines.pageSubtitle')}
-            </p>
-          </div>
+      <header className="mb-6">
+        <Eyebrow tone="oxblood" className="mb-2">
+          Jurisprudence Analysis
+        </Eyebrow>
+        <Headline as="h1" size="md">
+          {t('reasoningLines.pageTitle')}
+        </Headline>
+        <p className="mt-2 text-base text-ink-soft">
+          {t('reasoningLines.pageSubtitle')}
+        </p>
+        <div className="mt-3">
+          <AIDisclaimerBadge />
         </div>
-        <AIDisclaimerBadge />
-      </div>
+      </header>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl bg-muted/50 w-fit">
+      <div className="flex border-b border-rule mb-6">
         <button
           onClick={() => setActiveTab('discover')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors border-b-2 -mb-px ${
             activeTab === 'discover'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'border-ink text-ink font-semibold'
+              : 'border-transparent text-ink-soft hover:text-ink'
           }`}
           aria-selected={activeTab === 'discover'}
           role="tab"
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-3.5 w-3.5" />
           {t('reasoningLines.tabDiscover')}
         </button>
         <button
           onClick={() => setActiveTab('saved')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors border-b-2 -mb-px ${
             activeTab === 'saved'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'border-ink text-ink font-semibold'
+              : 'border-transparent text-ink-soft hover:text-ink'
           }`}
           aria-selected={activeTab === 'saved'}
           role="tab"
         >
-          <BookMarked className="h-4 w-4" />
+          <BookMarked className="h-3.5 w-3.5" />
           {t('reasoningLines.tabSaved')}
         </button>
         <button
           onClick={() => setActiveTab('dag')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-mono text-xs uppercase tracking-wider transition-colors border-b-2 -mb-px ${
             activeTab === 'dag'
-              ? 'bg-white text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'border-ink text-ink font-semibold'
+              : 'border-transparent text-ink-soft hover:text-ink'
           }`}
           aria-selected={activeTab === 'dag'}
           role="tab"
         >
-          <Network className="h-4 w-4" />
+          <Network className="h-3.5 w-3.5" />
           {t('reasoningLines.tabDag')}
         </button>
       </div>
@@ -283,9 +285,9 @@ export default function ReasoningLinesPage() {
       {activeTab === 'discover' && (
         <>
           {/* Discovery controls */}
-          <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+          <EditorialCard flat className="p-5">
             <div className="space-y-5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <label className="text-xs font-mono uppercase tracking-wider text-ink-soft">
                 {t('reasoningLines.paramsHeading')}
               </label>
 
@@ -344,7 +346,7 @@ export default function ReasoningLinesPage() {
                   placeholder={t('reasoningLines.paramLegalDomainPlaceholder')}
                   value={legalDomainFilter}
                   onChange={(e) => setLegalDomainFilter(e.target.value)}
-                  className="bg-white/50"
+                  className="bg-parchment rounded-none border-rule"
                 />
               </div>
 
@@ -352,7 +354,7 @@ export default function ReasoningLinesPage() {
               <Button
                 onClick={handleDiscover}
                 disabled={isLoading}
-                className="w-full sm:w-auto flex items-center gap-2"
+                className="w-full sm:w-auto flex items-center gap-2 rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep transition-colors"
               >
                 <Search className="h-4 w-4" />
                 {isLoading
@@ -360,7 +362,7 @@ export default function ReasoningLinesPage() {
                   : t('reasoningLines.discoverButton')}
               </Button>
             </div>
-          </BaseCard>
+          </EditorialCard>
 
           {/* Loading state */}
           {isLoading && (
@@ -444,47 +446,47 @@ export default function ReasoningLinesPage() {
               />
 
               {/* How it works explanation */}
-              <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+              <EditorialCard flat className="p-5">
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-foreground">
+                  <h3 className="text-sm font-semibold font-serif text-ink">
                     {t('reasoningLines.howItWorks')}
                   </h3>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">
+                      <div className="text-xs font-mono uppercase tracking-wider text-oxblood">
                         {t('reasoningLines.howSemanticTitle')}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-ink-soft leading-relaxed">
                         {t('reasoningLines.howSemanticDescription')}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">
+                      <div className="text-xs font-mono uppercase tracking-wider text-oxblood">
                         {t('reasoningLines.howSharedBasesTitle')}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-ink-soft leading-relaxed">
                         {t('reasoningLines.howSharedBasesDescription')}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">
+                      <div className="text-xs font-mono uppercase tracking-wider text-oxblood">
                         {t('reasoningLines.howCoherenceTitle')}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-ink-soft leading-relaxed">
                         {t('reasoningLines.howCoherenceDescription')}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-medium text-primary">
+                      <div className="text-xs font-mono uppercase tracking-wider text-oxblood">
                         {t('reasoningLines.howKeywordsTitle')}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-ink-soft leading-relaxed">
                         {t('reasoningLines.howKeywordsDescription')}
                       </p>
                     </div>
                   </div>
                 </div>
-              </BaseCard>
+              </EditorialCard>
             </div>
           )}
         </>
@@ -529,17 +531,17 @@ function StatCard({
   value: string;
 }) {
   return (
-    <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+    <EditorialCard flat className="p-3">
       <div className="flex items-center gap-3">
-        <div className="p-1.5 rounded-lg bg-primary/10">
-          <Icon className="h-4 w-4 text-primary" />
+        <div className="p-1.5 border border-rule bg-parchment-deep">
+          <Icon className="h-4 w-4 text-oxblood" />
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
+          <p className="font-mono text-xs uppercase tracking-wider text-ink-soft">{label}</p>
+          <p className="font-mono text-lg font-semibold text-ink tabular-nums">{value}</p>
         </div>
       </div>
-    </BaseCard>
+    </EditorialCard>
   );
 }
 
@@ -565,7 +567,7 @@ function ClusterCard({
   const colorClass = getClusterColor(colorIndex);
 
   return (
-    <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+    <EditorialCard flat className="p-4">
       <div className="space-y-3">
         {/* Cluster header */}
         <div className="flex items-start justify-between gap-2">
@@ -658,7 +660,7 @@ function ClusterCard({
               {isSaving ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : isSaved ? (
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                <CheckCircle className="h-3.5 w-3.5 text-ink" />
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}
@@ -683,7 +685,7 @@ function ClusterCard({
                 href={`/documents/${caseItem.judgment_id}`}
                 className="block group/case"
               >
-                <div className="flex items-start justify-between gap-3 p-3 rounded-xl bg-white/50 border border-slate-100 hover:border-primary/20 hover:bg-white/80 transition-all">
+                <div className="flex items-start justify-between gap-3 p-3 rounded-none bg-parchment border border-rule hover:border-ink transition-colors">
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="text-sm font-medium text-foreground group-hover/case:text-primary transition-colors truncate">
                       {caseItem.signature}
@@ -702,7 +704,7 @@ function ClusterCard({
                         {caseItem.cited_legislation.slice(0, 3).map((leg) => (
                           <span
                             key={leg}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600"
+                            className="text-[10px] font-mono px-1.5 py-0.5 rounded-none bg-parchment-deep border border-rule text-ink-soft"
                           >
                             {leg}
                           </span>
@@ -727,7 +729,7 @@ function ClusterCard({
           </div>
         )}
       </div>
-    </BaseCard>
+    </EditorialCard>
   );
 }
 
@@ -743,7 +745,7 @@ function CoherenceBadge({ score }: { score: number }) {
 
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule tabular-nums ${toneClass}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-none text-xs font-mono border border-rule tabular-nums ${toneClass}`}
     >
       {pct}%
     </span>
@@ -818,7 +820,7 @@ function SavedLinesTab({
           placeholder={t('reasoningLines.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 bg-white/50"
+          className="pl-10 rounded-none border-rule bg-parchment font-mono text-sm focus-visible:border-ink"
           aria-label={t('reasoningLines.searchAriaLabel')}
         />
         {searchQuery.isFetching && (
@@ -905,45 +907,45 @@ function SavedLinesTab({
       )}
 
       {/* Pipeline status info card */}
-      <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+      <EditorialCard flat className="p-4">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-ink" />
-            <h3 className="text-sm font-medium text-foreground">
+            <h3 className="text-sm font-semibold font-serif text-ink">
               {t('reasoningLines.pipelineHeading')}
             </h3>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
+          <div className="grid gap-4 sm:grid-cols-3 text-xs text-ink-soft">
             <div className="space-y-1">
-              <div className="font-medium text-foreground">
+              <div className="font-semibold text-ink">
                 {t('reasoningLines.pipelineAssignTitle')}
               </div>
               <p>{t('reasoningLines.pipelineAssignDescription')}</p>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[10px] rounded-none font-mono uppercase tracking-wider border-rule text-ink-soft">
                 {t('reasoningLines.pipelineWeekly')}
               </Badge>
             </div>
             <div className="space-y-1">
-              <div className="font-medium text-foreground">
+              <div className="font-semibold text-ink">
                 {t('reasoningLines.pipelineDiscoverTitle')}
               </div>
               <p>{t('reasoningLines.pipelineDiscoverDescription')}</p>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[10px] rounded-none font-mono uppercase tracking-wider border-rule text-ink-soft">
                 {t('reasoningLines.pipelineWeekly')}
               </Badge>
             </div>
             <div className="space-y-1">
-              <div className="font-medium text-foreground">
+              <div className="font-semibold text-ink">
                 {t('reasoningLines.pipelineEventsTitle')}
               </div>
               <p>{t('reasoningLines.pipelineEventsDescription')}</p>
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[10px] rounded-none font-mono uppercase tracking-wider border-rule text-ink-soft">
                 {t('reasoningLines.pipelineWeekly')}
               </Badge>
             </div>
           </div>
         </div>
-      </BaseCard>
+      </EditorialCard>
     </div>
   );
 }
@@ -962,23 +964,23 @@ function SearchResultCard({
 
   return (
     <Link href={`/reasoning-lines/${result.id}`} className="block group">
-      <BaseCard clickable variant="light" className="rounded-[16px]">
+      <EditorialCard flat className="p-4 group-hover:border-ink transition-colors">
         <div className="space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1 flex-1 min-w-0">
-              <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors truncate">
+              <h3 className="font-serif font-semibold text-base text-ink group-hover:text-oxblood transition-colors truncate">
                 {result.label}
               </h3>
               {result.legal_question && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="text-xs text-ink-soft line-clamp-2">
                   {result.legal_question}
                 </p>
               )}
             </div>
             <div className="flex-shrink-0 flex flex-col items-end gap-1">
               {/* Similarity badge */}
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-primary/10 text-primary">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-none font-mono text-xs font-semibold tabular-nums border border-oxblood/30 bg-oxblood/5 text-oxblood">
                 {t('reasoningLines.similarityMatch', { percent: similarityPct })}
               </span>
               <CoherenceBadge score={result.coherence_score} />
@@ -986,7 +988,7 @@ function SearchResultCard({
           </div>
 
           {/* Metadata row */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-ink-soft font-mono">
             <span className="flex items-center gap-1">
               <Hash className="h-3 w-3" />
               {t('reasoningLines.caseCount', { count: result.case_count })}
@@ -1010,14 +1012,14 @@ function SearchResultCard({
           {result.legal_bases.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {result.legal_bases.map((base) => (
-                <Badge key={base} variant="outline" className="text-xs">
+                <Badge key={base} variant="outline" className="text-xs rounded-none font-mono border-rule text-ink-soft">
                   {base}
                 </Badge>
               ))}
             </div>
           )}
         </div>
-      </BaseCard>
+      </EditorialCard>
     </Link>
   );
 }
@@ -1035,16 +1037,16 @@ function SavedLineCard({
 
   return (
     <Link href={`/reasoning-lines/${line.id}`} className="block group">
-      <BaseCard clickable variant="light" className="rounded-[16px]">
+      <EditorialCard flat className="p-4 group-hover:border-ink transition-colors">
         <div className="space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
             <div className="space-y-1 flex-1 min-w-0">
-              <h3 className="font-semibold text-base text-foreground group-hover:text-primary transition-colors truncate">
+              <h3 className="font-serif font-semibold text-base text-ink group-hover:text-oxblood transition-colors truncate">
                 {line.label}
               </h3>
               {line.legal_question && (
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="text-xs text-ink-soft line-clamp-2">
                   {line.legal_question}
                 </p>
               )}
@@ -1056,7 +1058,7 @@ function SavedLineCard({
           </div>
 
           {/* Metadata row */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-ink-soft font-mono">
             <span className="flex items-center gap-1">
               <Hash className="h-3 w-3" />
               {t('reasoningLines.caseCount', { count: line.case_count })}
@@ -1088,14 +1090,14 @@ function SavedLineCard({
           {line.legal_bases.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {line.legal_bases.map((base) => (
-                <Badge key={base} variant="outline" className="text-xs">
+                <Badge key={base} variant="outline" className="text-xs rounded-none font-mono border-rule text-ink-soft">
                   {base}
                 </Badge>
               ))}
             </div>
           )}
         </div>
-      </BaseCard>
+      </EditorialCard>
     </Link>
   );
 }
@@ -1145,9 +1147,9 @@ function DAGTab({
             size="sm"
             onClick={() => detectEventsMutation.mutate()}
             disabled={detectEventsMutation.isPending}
-            className="flex items-center gap-1.5 text-xs"
+            className="flex items-center gap-1.5 text-xs font-mono rounded-none border-rule"
           >
-            <GitMerge className="h-3.5 w-3.5" />
+            <GitMerge className="h-3.5 w-3.5 text-oxblood" />
             {detectEventsMutation.isPending
               ? t('reasoningLines.detectEventsPending')
               : t('reasoningLines.detectEvents')}
@@ -1157,25 +1159,25 @@ function DAGTab({
 
       {/* Event detection feedback */}
       {detectEventsMutation.isError && (
-        <span className="text-xs text-rose-600">
+        <span className="text-xs font-mono text-oxblood">
           {t('reasoningLines.detectEventsError')}
         </span>
       )}
       {eventResult && (
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="px-2 py-1 rounded bg-red-50 text-red-700">
+          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-oxblood">
             {t('reasoningLines.eventBranches', { count: eventResult.branches_detected })}
           </span>
-          <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700">
+          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
             {t('reasoningLines.eventMerges', { count: eventResult.merges_detected })}
           </span>
-          <span className="px-2 py-1 rounded bg-blue-50 text-blue-700">
+          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-gold">
             {t('reasoningLines.eventInfluences', { count: eventResult.influences_detected })}
           </span>
-          <span className="px-2 py-1 rounded bg-slate-50 text-slate-600">
+          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
             {t('reasoningLines.eventLinesAnalyzed', { count: eventResult.lines_analyzed })}
           </span>
-          <span className="px-2 py-1 rounded bg-slate-50 text-slate-600">
+          <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
             {t('reasoningLines.eventProcessingTime', {
               seconds: (eventResult.processing_time_ms / 1000).toFixed(1),
             })}
