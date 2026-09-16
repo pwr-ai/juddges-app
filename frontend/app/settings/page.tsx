@@ -49,17 +49,17 @@ const CHANNEL_CONFIG: Record<string, { label: string; icon: React.ReactNode; col
   email: {
     label: "Email",
     icon: <Mail className="h-3 w-3" />,
-    color: "bg-blue-100 text-blue-800",
+    color: "border border-rule text-ink bg-transparent font-mono",
   },
   in_app: {
     label: "In-App",
     icon: <Bell className="h-3 w-3" />,
-    color: "bg-green-100 text-green-800",
+    color: "border border-rule text-ink bg-transparent font-mono",
   },
   webhook: {
     label: "Webhook",
     icon: <Webhook className="h-3 w-3" />,
-    color: "bg-purple-100 text-purple-800",
+    color: "border border-rule text-ink bg-transparent font-mono",
   },
 };
 

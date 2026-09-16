@@ -10,6 +10,7 @@ import {
  VariantButton,
  PageContainer,
 } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { Input } from "@/components/ui/input";
 import {
  Popover,
@@ -54,7 +55,6 @@ const TOOLBAR_BUTTON = "inline-flex items-center gap-1.5 border px-3 py-1.5 font
 const TOOLBAR_BUTTON_IDLE = "border-rule bg-transparent text-ink-soft hover:border-ink hover:text-ink";
 const TOOLBAR_BUTTON_ACTIVE = "border-ink bg-ink text-parchment";
 const TOOLBAR_BUTTON_DISABLED = "border-rule text-ink-soft opacity-50 cursor-not-allowed";
-
 interface ExtractionJob {
  job_id: string;
  collection_id?: string;
@@ -564,8 +564,8 @@ TOOLBAR_BUTTON,
  role="button"
  tabIndex={0}
  className={cn(
-"group min-h-[280px]",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+ "group min-h-[280px]",
+ "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
  )}
  aria-label={`Extraction: ${job.schema_name || 'Unnamed'}. Status: ${getStatusDisplayText(job.status)}. Click to view details.`}
  >
@@ -574,9 +574,12 @@ TOOLBAR_BUTTON,
  <h3 className="editorial-display text-lg leading-tight line-clamp-2 text-ink">
  {job.schema_name || 'Extraction Job'}
  </h3>
- <div className="flex gap-2 flex-wrap">
+ <div className="flex gap-2 flex-wrap items-center">
  <StatusBadge status={status} label={getStatusDisplayText(job.status)} size="sm" />
- <Badge variant="outline"className="font-mono text-xs px-2 py-0.5 tabular-nums">
+ <Badge variant="outline" className="font-mono text-xs px-2 py-0.5 tabular-nums">
+ {job.completed_documents || 0}/{job.total_documents || 0} docs
+ </Badge>
+ </div>
  {job.completed_documents || 0}/{job.total_documents || 0} docs
  </Badge>
  </div>

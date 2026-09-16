@@ -10,7 +10,6 @@
 // search: the "review before run" step is the UX guard against LLM hallucination.
 // =============================================================================
 
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -121,9 +120,8 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="gap-1.5"
+          className="gap-1.5 border-gold text-gold hover:text-gold"
         >
-          <Sparkles className="size-4 text-[color:var(--gold)]" aria-hidden />
           Describe your search
         </Button>
       </DialogTrigger>

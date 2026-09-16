@@ -17,7 +17,7 @@ import {
   Lock,
   ArrowRight,
   Shield,
-  Zap,
+  Clock,
   FileSearch,
   Brain,
   CheckCircle2,
@@ -156,7 +156,7 @@ export function LoginFormEnhanced({
       description: 'Enterprise-grade security with full GDPR compliance',
     },
     {
-      icon: Zap,
+      icon: Clock,
       title: 'Lightning Fast',
       description: 'Process thousands of documents in seconds with cutting-edge AI',
     },

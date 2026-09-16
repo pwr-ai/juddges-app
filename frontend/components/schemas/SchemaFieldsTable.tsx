@@ -27,6 +27,7 @@ import { Search, FileCode, Calendar, List, Hash, CheckSquare, Link as LinkIcon, 
 import { useState } from "react";
 import { FlatField, formatSchemaFieldName, getFieldTypeLabel } from "@/lib/schema-utils";
 import { Badge, VariantButton, DropdownButton } from "@/lib/styles/components";
+import { FieldTypeBadge, getFieldMarker } from "@/components/editorial/FieldTypeBadge";
 import { cn } from "@/lib/utils";
 
 interface SchemaFieldsTableProps {
@@ -66,86 +67,6 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  return 'enum';
  }
  return field.type;
- };
-
- // Get type color and icon
- const getTypeStyle = (type: string) => {
- const normalizedType = type.toLowerCase();
- const styles: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
- date: {
- color: 'text-blue-700',
- bg: 'bg-blue-100/80',
- border: 'border-blue-200/60',
- icon: <Calendar className="h-3.5 w-3.5"/>
- },
- text: {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- list: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- array: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- number: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- integer: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- boolean: {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- 'yes/no': {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- object: {
- color: 'text-indigo-700',
- bg: 'bg-indigo-100/80',
- border: 'border-indigo-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- enum: {
- color: 'text-violet-700',
- bg: 'bg-violet-100/80',
- border: 'border-violet-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- email: {
- color: 'text-cyan-700',
- bg: 'bg-cyan-100/80',
- border: 'border-cyan-200/60',
- icon: <LinkIcon className="h-3.5 w-3.5"/>
- },
- };
-
- return styles[normalizedType] || {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- };
  };
 
  // Handle cell edit
@@ -310,24 +231,25 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  cell: ({ row }) => {
  const displayType = getDisplayType(row.original);
  const typeLabel = getFieldTypeLabel(displayType);
- const style = getTypeStyle(displayType);
+ const marker = getFieldMarker(displayType);
+ const MarkerIcon = marker.icon;
 
  // Nested and choice types should not be changeable in table view - use field editor instead
- const isComplexType = typeLabel === "nested"|| typeLabel === "choice";
+ const isComplexType = typeLabel === "nested" || typeLabel === "choice";
 
  if (editable && onFieldUpdate && !isComplexType) {
  // Only allow simple types to be changed in table view
  const availableOptions = [
- { value: "text", label: "text"},
- { value: "number", label: "number"},
- { value: "yes/no", label: "yes/no"},
- { value: "list", label: "list"},
+ { value: "text", label: "text" },
+ { value: "number", label: "number" },
+ { value: "yes/no", label: "yes/no" },
+ { value: "list", label: "list" },
  ];
 
  return (
  <div className="py-1">
  <DropdownButton
- icon={style.icon}
+ icon={<MarkerIcon className="h-3.5 w-3.5" />}
  label={typeLabel}
  value={typeLabel}
  options={availableOptions}
@@ -341,20 +263,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
 
  return (
  <div className="py-1">
- <Badge
- variant="outline"
- className={cn(
-"flex items-center justify-start gap-1.5 px-3 py-1.5 text-xs font-semibold",
-"backdrop-blur-sm shadow-sm ring-1 w-24",
- style.color,
- style.bg,
- style.border,
-"ring-slate-200/20"
- )}
- >
- {style.icon}
- <span>{typeLabel}</span>
- </Badge>
+ <FieldTypeBadge type={displayType} />
  </div>
  );
  },

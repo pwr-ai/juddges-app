@@ -222,27 +222,12 @@ describe('Navbar', () => {
       mockPathname = '/chat';
       render(<Navbar />);
       expect(screen.getByText('Assistant')).toBeInTheDocument();
-      expect(screen.getByTestId('ai-badge')).toBeInTheDocument();
     });
 
     it('shows Search title on /search', () => {
       mockPathname = '/search';
       render(<Navbar />);
       expect(screen.getByText('Search')).toBeInTheDocument();
-    });
-
-    it('shows AI badge on search page when thinking mode is active', () => {
-      mockPathname = '/search';
-      mockSearchType = 'thinking';
-      render(<Navbar />);
-      expect(screen.getByTestId('ai-badge')).toBeInTheDocument();
-    });
-
-    it('does not show AI badge on search page when standard mode', () => {
-      mockPathname = '/search';
-      mockSearchType = 'standard';
-      render(<Navbar />);
-      expect(screen.queryByTestId('ai-badge')).not.toBeInTheDocument();
     });
 
     it('shows Collections title on /collections', () => {

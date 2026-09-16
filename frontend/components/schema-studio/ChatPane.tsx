@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge, UserMessage, AssistantMessage, AIBadge } from "@/lib/styles/components";
-import { Loader2, User, Bot, FileJson, Sparkles } from "lucide-react";
+import { Loader2, User, Bot, FileJson } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatInput } from "@/lib/styles/components";
 import type { SchemaMessage } from "./types";
@@ -234,7 +234,7 @@ export function ChatPane({
  /* Empty state hint */
  <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-border/50">
  <div className="flex items-start gap-2">
- <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0"/>
+ <Bot className="h-4 w-4 text-ink-soft mt-0.5 flex-shrink-0"/>
  <p className="text-xs text-muted-foreground leading-relaxed">
  Describe what information to extract. Use questions like
  {""}

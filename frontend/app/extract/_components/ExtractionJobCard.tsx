@@ -1,6 +1,6 @@
 import { Calendar, FileCode, Eye, Clock, RefreshCw } from "lucide-react";
 import { BaseCard, VariantButton } from "@/lib/styles/components";
-import { StatusBadge } from "@/components/editorial/StatusBadge";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { ExtractionJob, formatName, formatTimeFromSeconds } from "./types";
 
@@ -32,7 +32,7 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
   return (
     <BaseCard
       variant="light"
-      className="group h-full flex flex-col"
+      className="group hover:-translate-y-px transition-transform h-full flex flex-col cursor-pointer"
       onClick={() => onOpen(job.id)}
     >
       <div className="flex flex-col h-full space-y-4 -m-3.5 p-8">

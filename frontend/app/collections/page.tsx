@@ -8,11 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CollectionWithDocuments } from "@/types/collection";
 import { createCollection, getCollections, deleteCollection } from "@/lib/api/collections";
-import { Plus, FolderOpen, BookMarked, Scale, Lightbulb, X, Search, Calendar, Clock, User, FileText, ChevronLeft, ChevronRight, Eye, Trash2 } from "lucide-react";
+import { Plus, FolderOpen, BookMarked, Scale, Lightbulb, X, Search, Calendar, Clock, User, FileText, Eye, Trash2 } from "lucide-react";
 import logger from "@/lib/logger";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, VariantButton, BaseCard, DeleteConfirmationDialog, showSuccessToast, PageContainer, Badge } from "@/lib/styles/components";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EditorialCardSkeleton, EditorialPagination } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -271,45 +273,27 @@ export default function CollectionsPage() {
  if (isLoading) {
  return (
  <PageContainer width="standard"fillViewport>
- {/* Header skeleton */}
- <div className="mb-8">
- <div className="flex justify-between items-start mb-3">
- <div className="flex-1 max-w-4xl">
- <div className="mb-4">
- <div className="h-10 w-64 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-lg animate-pulse mb-2"></div>
- <div className="h-1 w-16 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-full animate-pulse"></div>
- </div>
- <div className="space-y-3">
- <div className="h-5 w-full max-w-2xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- <div className="h-5 w-3/4 max-w-xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- </div>
- </div>
- <div className="h-9 w-32 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-md animate-pulse"></div>
- </div>
- </div>
+      {/* Header skeleton */}
+      <div className="mb-8">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1 max-w-4xl space-y-3">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-5 w-full max-w-2xl" />
+            <Skeleton className="h-5 w-3/4 max-w-xl" />
+          </div>
+          <Skeleton className="h-9 w-32" />
+        </div>
+      </div>
 
- {/* Collection cards skeleton - Grid layout */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
- {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
- <div
- key={i}
- className="min-h-[260px] p-5 rounded-xl bg-white/60 backdrop-blur-sm border border-slate-200/50"
- >
- <div className="flex flex-col gap-2 mb-3">
- <div className="h-6 w-3/4 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- <div className="h-5 w-20 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded-full animate-pulse"></div>
- </div>
- <div className="space-y-2 mb-4">
- <div className="h-4 w-full bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- <div className="h-4 w-2/3 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- </div>
- <div className="mt-auto space-y-2">
- <div className="h-4 w-24 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- <div className="h-4 w-28 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded animate-pulse"></div>
- </div>
- </div>
- ))}
- </div>
+      {/* Collection cards skeleton - Grid layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <EditorialCardSkeleton
+            key={i}
+            minHeight="260px"
+          />
+        ))}
+      </div>
  </PageContainer>
  );
  }
@@ -664,83 +648,17 @@ export default function CollectionsPage() {
  })}
  </div>
 
- {/* Pagination Controls */}
- {totalPages > 1 && (
- <div className="flex items-center justify-center gap-2 mt-8">
- <button
- onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
- disabled={currentPage === 1}
- className={cn(
-"flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
- currentPage === 1
- ? "bg-slate-100 text-muted-foreground cursor-not-allowed opacity-50"
- : "bg-slate-100 text-foreground hover:bg-slate-200"
- )}
- aria-label="Previous page"
- >
- <ChevronLeft className="h-4 w-4"/>
- Previous
- </button>
-
- <div className="flex items-center gap-1">
- {Array.from({ length: totalPages }, (_, i) => i + 1)
- .filter(page => {
- // Show first, last, current, and adjacent pages
- if (page === 1 || page === totalPages) return true;
- if (Math.abs(page - currentPage) <= 1) return true;
- return false;
- })
- .map((page, index, arr) => {
- // Add ellipsis if there's a gap
- const prevPage = arr[index - 1];
- const showEllipsis = prevPage && page - prevPage > 1;
-
- return (
- <div key={page} className="flex items-center">
- {showEllipsis && (
- <span className="px-2 text-muted-foreground">...</span>
- )}
- <button
- onClick={() => setCurrentPage(page)}
- className={cn(
-"w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200",
- currentPage === page
- ? "bg-primary text-primary-foreground shadow-sm"
- : "bg-slate-100 text-muted-foreground hover:text-foreground hover:bg-slate-200"
- )}
- aria-label={`Page ${page}`}
- aria-current={currentPage === page ? 'page' : undefined}
- >
- {page}
- </button>
- </div>
- );
- })}
- </div>
-
- <button
- onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
- disabled={currentPage === totalPages}
- className={cn(
-"flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
- currentPage === totalPages
- ? "bg-slate-100 text-muted-foreground cursor-not-allowed opacity-50"
- : "bg-slate-100 text-foreground hover:bg-slate-200"
- )}
- aria-label="Next page"
- >
- Next
- <ChevronRight className="h-4 w-4"/>
- </button>
- </div>
- )}
-
- {/* Page info */}
- {totalPages > 1 && (
- <div className="text-center text-sm text-muted-foreground mt-4">
- Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, sortedCollections.length)} of {sortedCollections.length} collections
- </div>
- )}
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+      <EditorialPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
+        totalItems={sortedCollections.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        itemLabel="collections"
+      />
+      )}
  </>
  )}
 

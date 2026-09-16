@@ -9,6 +9,7 @@ import {
  PageContainer,
  SearchableDropdownButton,
 } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { DocumentExtractionResult, DocumentProcessingStatus } from "@/types/search";
 import {
@@ -79,7 +80,6 @@ const NOTICE_ERROR = "mb-0 border-l-2 border-l-oxblood";
 const NOTICE_WARN = "mb-0 border-l-2 border-l-gold";
 const TAB_LIST = "h-9 rounded-none border border-rule bg-parchment-deep p-0.5";
 const TAB_TRIGGER = "flex items-center gap-2 rounded-none px-3 data-[state=active]:bg-parchment data-[state=active]:text-ink data-[state=active]:shadow-none";
-
 interface ExtractionJobClientProps {
  jobId: string;
  initialJob: ExtractionJobSnapshot;

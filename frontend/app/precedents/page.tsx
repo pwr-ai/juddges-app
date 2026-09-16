@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, Search, Loader2, ChevronDown, ChevronUp, ExternalLink, Sparkles, Filter } from 'lucide-react';
+import { Scale, Search, Loader2, ChevronDown, ChevronUp, ExternalLink, Filter } from 'lucide-react';
 import {
  PageContainer,
  BaseCard,
@@ -31,12 +31,12 @@ function PrecedentResultCard({
  ((precedent.relevance_score ?? precedent.similarity_score) * 100)
  );
 
- const scoreColor =
+ const scoreTone =
  scorePercent >= 80
- ? 'text-green-600'
+ ? 'text-ink'
  : scorePercent >= 60
- ? 'text-yellow-600'
- : 'text-muted-foreground';
+ ? 'text-gold'
+ : 'text-oxblood';
 
  return (
  <BaseCard clickable={false} variant="light"className="rounded-[16px]">
@@ -73,7 +73,7 @@ function PrecedentResultCard({
 
  {/* Score badge */}
  <div className="flex-shrink-0 text-right">
- <div className={`text-lg font-bold ${scoreColor}`}>
+ <div className={`text-lg font-bold font-mono tabular-nums ${scoreTone}`}>
  {scorePercent}%
  </div>
  <div className="text-xs text-muted-foreground">relevance</div>
@@ -391,7 +391,7 @@ export default function PrecedentsPage() {
  </h2>
  {results.enhanced_query && (
  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
- <Sparkles className="h-3 w-3 text-primary"/>
+
  <span>Enhanced query: &ldquo;{results.enhanced_query}&rdquo;</span>
  </div>
  )}
