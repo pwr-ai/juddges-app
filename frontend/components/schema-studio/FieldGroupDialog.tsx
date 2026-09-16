@@ -22,6 +22,8 @@ import type { SchemaField } from "@/hooks/schema-editor/types";
 let _groupFieldKeyCounter = 0;
 const newGroupFieldKey = () => `gf-${++_groupFieldKeyCounter}`;
 
+const INPUT_STYLE = "rounded-none border border-rule bg-parchment text-ink focus:border-ink focus-visible:ring-0";
+
 interface GroupField {
  _key: string;
  name: string;
@@ -130,293 +132,245 @@ export function FieldGroupDialog({
 
  return (
  <Dialog open={open} onOpenChange={onOpenChange}>
- <DialogContent className={cn(
-"max-w-2xl max-h-[90vh]",
-"bg-white",
-"border border-border",
-"shadow-xl"
- )}>
+      <DialogContent className="max-w-2xl max-h-[90vh] bg-parchment border border-rule">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-display">
+            <FolderTree className="h-5 w-5 text-ink" />
+            {selectedField && selectedField.field_type === "object" ? "Edit Field Group" : "Create Field Group"}
+          </DialogTitle>
+          <DialogDescription className="text-ink-soft">
+            {fieldGroupPhase === 1
+              ? "Step 1: Define the group name and description."
+              : "Step 2: Add fields to this group."}
+          </DialogDescription>
+        </DialogHeader>
 
- <DialogHeader>
- <DialogTitle className="flex items-center gap-2">
- <FolderTree className="h-5 w-5 text-primary"/>
- {selectedField && selectedField.field_type === "object"? "Edit Field Group": "Create Field Group"}
- </DialogTitle>
- <DialogDescription>
- {fieldGroupPhase === 1
- ? "Step 1: Define the group name and description."
- : "Step 2: Add fields to this group."}
- </DialogDescription>
- </DialogHeader>
-
- {/* Phase indicator */}
- <div className={cn(
-"flex items-center justify-center gap-2 mb-3",
-"bg-white/40",
-"backdrop-blur-xl backdrop-saturate-[180%]",
-"border border-primary/20",
-"rounded-xl",
-"p-1",
-"shadow-sm"
- )}>
- <div className={cn(
-"flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-"relative",
- fieldGroupPhase === 1
- ? "bg-white/90 backdrop-blur-md shadow-lg shadow-primary/10 text-foreground ring-1 ring-white/30"
- : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/20"
- )}>
- <span className={cn(
-"w-5 h-5 rounded-full flex items-center justify-center font-semibold",
- fieldGroupPhase === 1
- ? "bg-primary/20 text-primary"
- : "bg-muted text-muted-foreground"
- )}>1</span>
- Group Info
- </div>
- <ChevronRight className="h-4 w-4 text-muted-foreground"/>
- <div className={cn(
-"flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-"relative",
- fieldGroupPhase === 2
- ? "bg-white/90 backdrop-blur-md shadow-lg shadow-primary/10 text-foreground ring-1 ring-white/30"
- : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-white/20"
- )}>
- <span className={cn(
-"w-5 h-5 rounded-full flex items-center justify-center font-semibold",
- fieldGroupPhase === 2
- ? "bg-primary/20 text-primary"
- : "bg-muted text-muted-foreground"
- )}>2</span>
- Add Fields
- </div>
- </div>
+        {/* Phase indicator */}
+        <div className="flex items-center justify-center gap-4 mb-3 border-b border-rule pb-3 font-mono text-xs uppercase tracking-wider">
+          <div className={cn(
+            "flex items-center gap-2",
+            fieldGroupPhase === 1 ? "text-ink font-semibold" : "text-ink-soft"
+          )}>
+            <span className={cn(
+              "w-5 h-5 flex items-center justify-center text-xs border",
+              fieldGroupPhase === 1
+                ? "border-pwr-red bg-pwr-red text-white"
+                : "border-rule text-ink-soft"
+            )}>1</span>
+            Group Info
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 text-ink-soft" />
+          <div className={cn(
+            "flex items-center gap-2",
+            fieldGroupPhase === 2 ? "text-ink font-semibold" : "text-ink-soft"
+          )}>
+            <span className={cn(
+              "w-5 h-5 flex items-center justify-center text-xs border",
+              fieldGroupPhase === 2
+                ? "border-pwr-red bg-pwr-red text-white"
+                : "border-rule text-ink-soft"
+            )}>2</span>
+            Add Fields
+          </div>
+        </div>
 
  <ScrollArea className="max-h-[50vh] pr-4">
  <div className="space-y-4 py-4">
  {fieldGroupPhase === 1 ? (
  /* Phase 1: Group Information */
  <>
- <div className="space-y-2">
- <Label htmlFor="field-group-name">
- Group Name <span className="text-destructive">*</span>
- </Label>
- <Input
- id="field-group-name"
- value={fieldGroupName}
- onChange={(e) => setFieldGroupName(e.target.value)}
- onKeyDown={(e) => {
- if (e.key === "Enter"&& fieldGroupName.trim()) {
- handleFieldGroupNextPhase();
- } else if (e.key === "Escape") {
- onOpenChange(false);
- }
- }}
- placeholder="e.g., address, party_info"
- className={cn(
-"bg-white/60",
-"backdrop-blur-md backdrop-saturate-[180%]",
-"border-primary/20",
-"shadow-sm",
-"rounded-lg"
- )}
- autoFocus
- />
- <p className="text-xs text-muted-foreground">
- Use lowercase with underscores (snake_case)
- </p>
- </div>
- <div className="space-y-2">
- <Label htmlFor="field-group-description">Description (Optional)</Label>
- <Textarea
- id="field-group-description"
- value={fieldGroupDescription}
- onChange={(e) => setFieldGroupDescription(e.target.value)}
- placeholder="Describe what this group represents..."
- rows={2}
- className={cn(
-"bg-white/60",
-"backdrop-blur-md backdrop-saturate-[180%]",
-"border-primary/20",
-"shadow-sm",
-"rounded-lg"
- )}
- />
- </div>
- </>
- ) : (
- /* Phase 2: Add Fields */
- <>
- <div className="space-y-4">
- <div className="flex items-center justify-between">
- <Label>Add Fields to Group</Label>
- <VariantButton intent="secondary"
- onClick={handleAddGroupField}
- size="sm"
- icon={Plus}
- >
- Add Field
- </VariantButton>
- </div>
+                <div className="space-y-2">
+                  <Label htmlFor="field-group-name" className="text-ink text-sm font-semibold">
+                    Group Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="field-group-name"
+                    value={fieldGroupName}
+                    onChange={(e) => setFieldGroupName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && fieldGroupName.trim()) {
+                        handleFieldGroupNextPhase();
+                      } else if (e.key === "Escape") {
+                        onOpenChange(false);
+                      }
+                    }}
+                    placeholder="e.g., address, party_info"
+                    className={INPUT_STYLE}
+                    autoFocus
+                  />
+                  <p className="text-xs text-ink-soft">
+                    Use lowercase with underscores (snake_case)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="field-group-description" className="text-ink text-sm font-semibold">Description (Optional)</Label>
+                  <Textarea
+                    id="field-group-description"
+                    value={fieldGroupDescription}
+                    onChange={(e) => setFieldGroupDescription(e.target.value)}
+                    placeholder="Describe what this group represents..."
+                    rows={2}
+                    className={INPUT_STYLE}
+                  />
+                </div>
+              </>
+            ) : (
+              /* Phase 2: Add Fields */
+              <>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-ink text-sm font-semibold">Add Fields to Group</Label>
+                    <VariantButton
+                      intent="secondary"
+                      onClick={handleAddGroupField}
+                      size="sm"
+                      icon={Plus}
+                    >
+                      Add Field
+                    </VariantButton>
+                  </div>
 
- {/* Tree view of added fields */}
- {groupFields.length > 0 && (
- <div className="space-y-2 border rounded-lg p-3 bg-white/40 backdrop-blur-sm">
- <Label className="text-xs text-muted-foreground">Added Fields ({groupFields.length})</Label>
- <div className="space-y-1.5">
- {groupFields.map((field, index) => (
- <div
- key={field._key}
- className="flex items-center justify-between p-2 rounded-md bg-white/60 border border-primary/10 hover:border-primary/20 transition-colors"
- >
- <div className="flex items-center gap-2 flex-1 min-w-0">
- <FolderTree className="h-3.5 w-3.5 text-primary flex-shrink-0"/>
- <span className="font-medium text-sm truncate">{field.name || `Field ${index + 1}`}</span>
- <span className="text-xs text-muted-foreground">•</span>
- <span className="text-xs text-muted-foreground truncate">
- {(() => {
- if (field.isChoice || (field.type === "string"&& field.enumValues && field.enumValues.trim())) {
- return"choice";
- }
- return getFieldTypeLabel(field.type);
- })()}
- </span>
- </div>
- </div>
- ))}
- </div>
- </div>
- )}
+                  {/* Tree view of added fields */}
+                  {groupFields.length > 0 && (
+                    <div className="space-y-2 border border-rule p-3 bg-muted/20">
+                      <Label className="font-mono text-xs uppercase tracking-wider text-ink-soft">Added Fields ({groupFields.length})</Label>
+                      <div className="space-y-1.5">
+                        {groupFields.map((field, index) => (
+                          <div
+                            key={field._key}
+                            className="flex items-center justify-between p-2 border border-rule bg-parchment text-ink"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <FolderTree className="h-3.5 w-3.5 text-ink-soft flex-shrink-0" />
+                              <span className="font-medium text-sm truncate">{field.name || `Field ${index + 1}`}</span>
+                              <span className="text-xs text-ink-soft">•</span>
+                              <span className="font-mono text-xs text-ink-soft truncate">
+                                {(() => {
+                                  if (field.isChoice || (field.type === "string" && field.enumValues && field.enumValues.trim())) {
+                                    return "choice";
+                                  }
+                                  return getFieldTypeLabel(field.type);
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
- {/* Field forms */}
- <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
- {groupFields.map((field, index) => (
- <div
- key={field._key}
- className="border rounded-lg p-3 bg-white/40 backdrop-blur-sm space-y-2"
- >
- <div className="flex items-start justify-between gap-2">
- <div className="flex-1 space-y-2">
- <div className="flex items-center gap-2">
- <div className="flex-1">
- <Label className="text-xs">
- Field Name <span className="text-destructive">*</span>
- </Label>
- <Input
- value={field.name}
- onChange={(e) => handleUpdateGroupField(index, { name: e.target.value })}
- placeholder="field_name"
- className={cn(
-"h-8 text-xs",
-"bg-white/60",
-"backdrop-blur-md backdrop-saturate-[180%]",
-"border-primary/20",
-"shadow-sm",
-"rounded-lg",
- !field.name.trim() &&"border-destructive/50"
- )}
- />
- </div>
- <div className="w-32">
- <Label className="text-xs">Type</Label>
- <DropdownButton
- icon={<Type className="h-3.5 w-3.5"/>}
- label={(() => {
- // Map stored type back to display type
- if (field.type === "string"&& field.enumValues) {
- return"choice";
- }
- if (field.type === "string") {
- return getFieldTypeLabel("string");
- }
- return getFieldTypeLabel(field.type);
- })()}
- value={(() => {
- // Map stored type to display value
- if (field.isChoice || (field.type === "string"&& field.enumValues && field.enumValues.trim())) {
- return"enum";
- }
- if (field.type === "string") {
- return"string";
- }
- return field.type;
- })()}
- options={[
- { value: "string", label: "text"},
- { value: "number", label: "number"},
- { value: "boolean", label: "yes/no"},
- { value: "array", label: "list"},
- { value: "date", label: "date"},
- { value: "enum", label: "choice"},
- ]}
- onChange={(value) => {
- const actualType = value === "date"? "string": (value === "enum"? "string": value);
- handleUpdateGroupField(index, {
- type: actualType,
- enumValues: value === "enum"? (field.enumValues || "") : "",
- isChoice: value === "enum"
- });
- }}
- align="start"
- className="h-8 text-xs"
- />
- </div>
- </div>
- <div>
- <Label className="text-xs">Description (Optional)</Label>
- <Input
- value={field.description}
- onChange={(e) => handleUpdateGroupField(index, { description: e.target.value })}
- placeholder="Field description..."
- className={cn(
-"h-8 text-xs",
-"bg-white/60",
-"backdrop-blur-md backdrop-saturate-[180%]",
-"border-primary/20",
-"shadow-sm",
-"rounded-lg"
- )}
- />
- </div>
- {(field.isChoice || (field.type === "string"&& field.enumValues && field.enumValues.trim())) && (
- <div>
- <Label className="text-xs">Enum Values (Optional, comma-separated)</Label>
- <Input
- value={field.enumValues || ""}
- onChange={(e) => handleUpdateGroupField(index, { enumValues: e.target.value })}
- placeholder="value1, value2, value3"
- className={cn(
-"h-8 text-xs",
-"bg-white/60",
-"backdrop-blur-md backdrop-saturate-[180%]",
-"border-primary/20",
-"shadow-sm",
-"rounded-lg"
- )}
- />
- </div>
- )}
- </div>
- {groupFields.length > 1 && (
- <VariantButton intent="icon"
- icon={X}
- size="sm"
- variant="error"
- onClick={() => handleRemoveGroupField(index)}
- aria-label="Remove field"
- className="mt-6"
- />
- )}
- </div>
- </div>
- ))}
- </div>
- </div>
- </>
- )}
- </div>
- </ScrollArea>
- <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-border/50">
+                  {/* Field forms */}
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                    {groupFields.map((field, index) => (
+                      <div
+                        key={field._key}
+                        className="border border-rule p-3 bg-parchment space-y-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1">
+                                <Label className="text-xs text-ink">
+                                  Field Name <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                  value={field.name}
+                                  onChange={(e) => handleUpdateGroupField(index, { name: e.target.value })}
+                                  placeholder="field_name"
+                                  className={cn(
+                                    "h-8 text-xs",
+                                    INPUT_STYLE,
+                                    !field.name.trim() && "border-destructive/50"
+                                  )}
+                                />
+                              </div>
+                              <div className="w-32">
+                                <Label className="text-xs text-ink">Type</Label>
+                                <DropdownButton
+                                  icon={<Type className="h-3.5 w-3.5" />}
+                                  label={(() => {
+                                    // Map stored type back to display type
+                                    if (field.type === "string" && field.enumValues) {
+                                      return "choice";
+                                    }
+                                    if (field.type === "string") {
+                                      return getFieldTypeLabel("string");
+                                    }
+                                    return getFieldTypeLabel(field.type);
+                                  })()}
+                                  value={(() => {
+                                    // Map stored type to display value
+                                    if (field.isChoice || (field.type === "string" && field.enumValues && field.enumValues.trim())) {
+                                      return "enum";
+                                    }
+                                    if (field.type === "string") {
+                                      return "string";
+                                    }
+                                    return field.type;
+                                  })()}
+                                  options={[
+                                    { value: "string", label: "text" },
+                                    { value: "number", label: "number" },
+                                    { value: "boolean", label: "yes/no" },
+                                    { value: "array", label: "list" },
+                                    { value: "date", label: "date" },
+                                    { value: "enum", label: "choice" },
+                                  ]}
+                                  onChange={(value) => {
+                                    const actualType = value === "date" ? "string" : (value === "enum" ? "string" : value);
+                                    handleUpdateGroupField(index, {
+                                      type: actualType,
+                                      enumValues: value === "enum" ? (field.enumValues || "") : "",
+                                      isChoice: value === "enum"
+                                    });
+                                  }}
+                                  align="start"
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-ink">Description (Optional)</Label>
+                              <Input
+                                value={field.description}
+                                onChange={(e) => handleUpdateGroupField(index, { description: e.target.value })}
+                                placeholder="Field description..."
+                                className={cn("h-8 text-xs", INPUT_STYLE)}
+                              />
+                            </div>
+                            {(field.isChoice || (field.type === "string" && field.enumValues && field.enumValues.trim())) && (
+                              <div>
+                                <Label className="text-xs text-ink">Enum Values (Optional, comma-separated)</Label>
+                                <Input
+                                  value={field.enumValues || ""}
+                                  onChange={(e) => handleUpdateGroupField(index, { enumValues: e.target.value })}
+                                  placeholder="value1, value2, value3"
+                                  className={cn("h-8 text-xs", INPUT_STYLE)}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          {groupFields.length > 1 && (
+                            <VariantButton
+                              intent="icon"
+                              icon={X}
+                              size="sm"
+                              variant="error"
+                              onClick={() => handleRemoveGroupField(index)}
+                              aria-label="Remove field"
+                              className="mt-6"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+        <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-rule">
  {fieldGroupPhase === 1 ? (
  <>
  <VariantButton intent="secondary"

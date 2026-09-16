@@ -207,72 +207,72 @@ function SchemaStudioPageContent(): React.JSX.Element {
 
  if (!user) {
  return (
- <div className="container mx-auto px-6 py-16 text-center">
- <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
- <p className="text-muted-foreground">Please sign in to access the Schema Studio.</p>
- </div>
- );
- }
+    <div className="container mx-auto px-6 py-16 text-center">
+      <h2 className="font-display text-2xl font-semibold text-ink mb-4">Authentication Required</h2>
+      <p className="text-ink-soft">Please sign in to access the Schema Studio.</p>
+    </div>
+    );
+  }
 
- if (isInitializing) {
- return (
- <div className="container mx-auto px-6 py-16 flex items-center justify-center">
- <Loader2 className="h-8 w-8 animate-spin text-primary"/>
- </div>
- );
- }
+  if (isInitializing) {
+    return (
+      <div className="container mx-auto px-6 py-16 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-ink" />
+      </div>
+    );
+  }
 
- // --- Render ---
+  // --- Render ---
 
- return (
- <>
- <div className="relative w-full bg-background h-[calc(100vh-4rem)] flex flex-col">
- <div className="w-full max-w-page-wide mx-auto px-0 py-0 flex flex-col flex-1 min-h-0">
- <div className="w-full flex flex-col flex-1 min-h-0">
- {/* Toolbar */}
- <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur-sm px-4 sm:px-6 lg:px-8 py-3">
- <div className="flex items-center justify-between gap-4">
- {/* Left side - New, Duplicate, Schema Name, Status */}
- <div className="flex items-center gap-3">
- <TooltipProvider>
- <Tooltip>
- <TooltipTrigger asChild>
- <VariantButton intent="icon"
- icon={Plus}
- size="lg"
- variant="primary"
- onClick={handleNewSession}
- aria-label="New Schema"
- enhancedHover={true}
- disabled={fields.length === 0}
- className="bg-primary/10 border border-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
- />
- </TooltipTrigger>
- <TooltipContent className="bg-white/25 backdrop-blur-xl backdrop-saturate-[180%] border-primary/30">
- <p>{fields.length === 0 ? "Add at least one field to create a new schema": "New Schema"}</p>
- </TooltipContent>
- </Tooltip>
- </TooltipProvider>
+  return (
+    <>
+      <div className="relative w-full bg-parchment h-[calc(100vh-4rem)] flex flex-col">
+        <div className="w-full max-w-page-wide mx-auto px-0 py-0 flex flex-col flex-1 min-h-0">
+          <div className="w-full flex flex-col flex-1 min-h-0">
+            {/* Toolbar */}
+            <div className="flex-shrink-0 border-b border-rule bg-parchment px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex items-center justify-between gap-4">
+                {/* Left side - New, Duplicate, Schema Name, Status */}
+                <div className="flex items-center gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <VariantButton intent="icon"
+                          icon={Plus}
+                          size="lg"
+                          variant="primary"
+                          onClick={handleNewSession}
+                          aria-label="New Schema"
+                          enhancedHover={true}
+                          disabled={fields.length === 0}
+                          className="bg-primary/10 border border-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-parchment border border-rule text-ink shadow-md font-mono text-xs">
+                        <p>{fields.length === 0 ? "Add at least one field to create a new schema" : "New Schema"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
- <TooltipProvider>
- <Tooltip>
- <TooltipTrigger asChild>
- <VariantButton intent="icon"
- icon={Copy}
- size="lg"
- variant="muted"
- onClick={metadataOps.handleDuplicateSchema}
- aria-label="Duplicate Schema"
- enhancedHover={true}
- disabled={fields.length === 0}
- className="disabled:opacity-50 disabled:cursor-not-allowed"
- />
- </TooltipTrigger>
- <TooltipContent className="bg-white/25 backdrop-blur-xl backdrop-saturate-[180%] border-primary/30">
- <p>{fields.length === 0 ? "Add fields first to duplicate": "Duplicate Schema (create your own draft copy)"}</p>
- </TooltipContent>
- </Tooltip>
- </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <VariantButton intent="icon"
+                          icon={Copy}
+                          size="lg"
+                          variant="muted"
+                          onClick={metadataOps.handleDuplicateSchema}
+                          aria-label="Duplicate Schema"
+                          enhancedHover={true}
+                          disabled={fields.length === 0}
+                          className="disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-parchment border border-rule text-ink shadow-md font-mono text-xs">
+                        <p>{fields.length === 0 ? "Add fields first to duplicate" : "Duplicate Schema (create your own draft copy)"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
  {/* Schema Name and Description */}
  <div className="flex flex-col gap-1">
@@ -336,11 +336,11 @@ function SchemaStudioPageContent(): React.JSX.Element {
  onClick={metadataOps.handleToggleVerification}
  disabled={isSaving || !!(schemaId && metadataOps.schemaOwnerId && metadataOps.schemaOwnerId !== user?.id)}
  className={cn(
-"flex items-center gap-1.5 h-7 px-2 rounded-md transition-all duration-200 border",
+ "flex items-center gap-1.5 h-7 px-2 border font-mono text-xs uppercase tracking-wider transition-colors",
  metadataOps.isVerified
- ? "bg-green-50 border-green-200 text-green-700"
- : "bg-muted/50 border-border text-muted-foreground",
-"hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+ ? "border-pwr-red text-pwr-red bg-transparent"
+ : "border-rule text-ink-soft bg-transparent",
+ "disabled:opacity-50 disabled:cursor-not-allowed"
  )}
  aria-label={metadataOps.isVerified ? "Remove verification": "Mark as verified"}
  >
@@ -351,7 +351,7 @@ function SchemaStudioPageContent(): React.JSX.Element {
  )}
  </button>
  </TooltipTrigger>
- <TooltipContent className="bg-white/25 backdrop-blur-xl backdrop-saturate-[180%] border-primary/30">
+ <TooltipContent className="bg-parchment border border-rule text-ink shadow-md font-mono text-xs">
  <p>
  {schemaId && metadataOps.schemaOwnerId && metadataOps.schemaOwnerId !== user?.id
  ? "You can only verify schemas you own. Duplicate this schema to create your own copy."
@@ -399,25 +399,14 @@ function SchemaStudioPageContent(): React.JSX.Element {
  <button
  type="button"
  aria-label="Import Schema"
- className={cn(
-"text-sm h-9 px-4 rounded-xl inline-flex items-center justify-center transition-all duration-300",
-"bg-white/60 backdrop-blur-sm border border-slate-200/50",
-"hover:bg-white/80 hover:scale-105 hover:shadow-md",
-"active:scale-[0.98] active:opacity-90 font-semibold",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
- )}
+ className="text-xs font-mono uppercase tracking-wider rounded-none border border-rule bg-parchment text-ink hover:bg-muted/40 h-8 px-3 inline-flex items-center justify-center font-medium"
  >
  <Upload className="h-4 w-4 mr-2"/>
  Import
  </button>
  </PopoverTrigger>
  <PopoverContent
- className={cn(
-"w-80 p-4 z-[100] bg-white/80 backdrop-blur-xl backdrop-saturate-[180%]",
-"border border-primary/20",
-"shadow-[0_18px_45px_0_rgba(15,23,42,0.15),0_8px_20px_0_rgba(139,92,246,0.1),inset_0_1px_0_0_rgba(255,255,255,0.6)]",
-""
- )}
+ className="w-80 p-4 z-[100] bg-parchment border border-rule shadow-md rounded-none"
  align="end"
  side="bottom"
  sideOffset={8}

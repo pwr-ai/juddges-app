@@ -76,22 +76,13 @@ export function SchemaDialogs({
  return (
  <>
  <Dialog open={showPreviewDialog} onOpenChange={onPreviewOpenChange}>
- <DialogContent
- className={cn(
-"max-w-4xl max-h-[90vh]",
-"bg-white/80",
-"backdrop-blur-xl backdrop-saturate-[180%]",
-"border border-primary/20",
-"shadow-[0_18px_45px_0_rgba(15,23,42,0.15),0_8px_20px_0_rgba(139,92,246,0.1),inset_0_1px_0_0_rgba(255,255,255,0.6)]",
-""
- )}
- >
+ <DialogContent className="max-w-4xl max-h-[90vh] bg-parchment border border-rule">
  <DialogHeader>
- <DialogTitle className="flex items-center gap-2">
- <Eye className="h-5 w-5 text-primary"/>
+ <DialogTitle className="flex items-center gap-2 font-display">
+ <Eye className="h-5 w-5 text-ink"/>
  Extraction Result Preview
  </DialogTitle>
- <DialogDescription>
+ <DialogDescription className="text-ink-soft">
  Preview how extracted data will be displayed based on your schema
  </DialogDescription>
  </DialogHeader>
@@ -100,8 +91,8 @@ export function SchemaDialogs({
  {Object.keys(previewData).length === 0 ? (
  <div className="flex items-center justify-center h-full min-h-[400px]">
  <div className="text-center">
- <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
- <p className="text-sm text-muted-foreground">
+ <Eye className="h-12 w-12 text-ink-soft mx-auto mb-4"/>
+ <p className="text-sm text-ink-soft">
  Add fields to see extraction preview
  </p>
  </div>
@@ -128,17 +119,10 @@ export function SchemaDialogs({
  }
  }}
  >
- <DialogContent
- className={cn(
-"sm:max-w-[500px]",
-"bg-white",
-"border border-border",
-"shadow-xl"
- )}
- >
+ <DialogContent className="sm:max-w-[500px] bg-parchment border border-rule">
  <DialogHeader>
- <DialogTitle>Save Schema</DialogTitle>
- <DialogDescription>
+ <DialogTitle className="font-display text-ink">Save Schema</DialogTitle>
+ <DialogDescription className="text-ink-soft">
  Enter a name and description for your schema. These values will be preserved when you close the dialog.
  </DialogDescription>
  </DialogHeader>
@@ -165,11 +149,11 @@ export function SchemaDialogs({
  }}
  placeholder="Enter schema name..."
  className={cn(
-"rounded-lg",
- saveDialogError &&"border-destructive focus-visible:ring-destructive"
+ "rounded-none border border-rule bg-parchment text-ink",
+ saveDialogError && "border-destructive focus-visible:ring-destructive"
  )}
  onKeyDown={(e) => {
- if (e.key === "Enter"&& saveSchemaName.trim() && !isSaving) {
+ if (e.key === "Enter" && saveSchemaName.trim() && !isSaving) {
  onSave();
  }
  }}
@@ -178,7 +162,7 @@ export function SchemaDialogs({
  </div>
 
  <div className="space-y-2">
- <Label htmlFor="save-schema-description"className="text-sm font-semibold">
+ <Label htmlFor="save-schema-description" className="text-sm font-semibold text-ink">
  Description
  </Label>
  <Textarea
@@ -186,13 +170,13 @@ export function SchemaDialogs({
  value={saveSchemaDescription}
  onChange={(e) => onSaveSchemaDescriptionChange(e.target.value)}
  placeholder="Enter schema description (optional)..."
- className="rounded-lg min-h-[100px]"
+ className="rounded-none border border-rule bg-parchment text-ink min-h-[100px]"
  rows={4}
  />
  </div>
  </div>
 
- <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+ <div className="flex items-center justify-end gap-3 pt-4 border-t border-rule">
  <VariantButton intent="secondary" onClick={() => onSaveOpenChange(false)} disabled={isSaving} size="sm">
  Cancel
  </VariantButton>
@@ -210,21 +194,21 @@ export function SchemaDialogs({
  </Dialog>
 
  <AlertDialog open={showNewSchemaDialog} onOpenChange={onNewSchemaOpenChange}>
- <AlertDialogContent>
+ <AlertDialogContent className="bg-parchment border border-rule">
  <AlertDialogHeader>
- <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
- <AlertDialogDescription>
+ <AlertDialogTitle className="font-display text-ink">Unsaved Changes</AlertDialogTitle>
+ <AlertDialogDescription className="text-ink-soft">
  You have unsaved changes to your current schema. Starting a new schema will discard all unsaved changes. This action cannot be undone.
  <br />
  <br />
  Are you sure you want to start a new schema?
  </AlertDialogDescription>
  </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel>Cancel</AlertDialogCancel>
+ <AlertDialogFooter className="border-t border-rule pt-3">
+ <AlertDialogCancel className="rounded-none border-rule text-ink hover:bg-muted">Cancel</AlertDialogCancel>
  <AlertDialogAction
  onClick={onConfirmNewSchema}
- className="bg-destructive hover:bg-destructive/90"
+ className="rounded-none bg-oxblood hover:bg-oxblood-deep text-white"
  >
  Start New Schema
  </AlertDialogAction>
@@ -233,21 +217,21 @@ export function SchemaDialogs({
  </AlertDialog>
 
  <AlertDialog open={showLoadSchemaDialog} onOpenChange={onLoadSchemaOpenChange}>
- <AlertDialogContent>
+ <AlertDialogContent className="bg-parchment border border-rule">
  <AlertDialogHeader>
- <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
- <AlertDialogDescription>
+ <AlertDialogTitle className="font-display text-ink">Unsaved Changes</AlertDialogTitle>
+ <AlertDialogDescription className="text-ink-soft">
  You have unsaved changes to your current schema. {pendingLoadSchemaId === currentSchemaId ? "Reloading this schema": "Loading another schema"} will discard all unsaved changes. This action cannot be undone.
  <br />
  <br />
  Are you sure you want to {pendingLoadSchemaId === currentSchemaId ? "reload": "load"} this schema?
  </AlertDialogDescription>
  </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel onClick={onCancelLoadSchema}>Cancel</AlertDialogCancel>
+ <AlertDialogFooter className="border-t border-rule pt-3">
+ <AlertDialogCancel onClick={onCancelLoadSchema} className="rounded-none border-rule text-ink hover:bg-muted">Cancel</AlertDialogCancel>
  <AlertDialogAction
  onClick={onConfirmLoadSchema}
- className="bg-destructive hover:bg-destructive/90"
+ className="rounded-none bg-oxblood hover:bg-oxblood-deep text-white"
  >
  {pendingLoadSchemaId === currentSchemaId ? "Reload Schema": "Load Schema"}
  </AlertDialogAction>
@@ -256,21 +240,21 @@ export function SchemaDialogs({
  </AlertDialog>
 
  <AlertDialog open={showNavigationDialog} onOpenChange={onNavigationOpenChange}>
- <AlertDialogContent>
+ <AlertDialogContent className="bg-parchment border border-rule">
  <AlertDialogHeader>
- <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
- <AlertDialogDescription>
+ <AlertDialogTitle className="font-display text-ink">Unsaved Changes</AlertDialogTitle>
+ <AlertDialogDescription className="text-ink-soft">
  You have unsaved changes to your current schema. Navigating away will discard all unsaved changes. This action cannot be undone.
  <br />
  <br />
  Are you sure you want to leave this page?
  </AlertDialogDescription>
  </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel onClick={onCancelNavigation}>Cancel</AlertDialogCancel>
+ <AlertDialogFooter className="border-t border-rule pt-3">
+ <AlertDialogCancel onClick={onCancelNavigation} className="rounded-none border-rule text-ink hover:bg-muted">Cancel</AlertDialogCancel>
  <AlertDialogAction
  onClick={onConfirmNavigation}
- className="bg-destructive hover:bg-destructive/90"
+ className="rounded-none bg-oxblood hover:bg-oxblood-deep text-white"
  >
  Leave Page
  </AlertDialogAction>
