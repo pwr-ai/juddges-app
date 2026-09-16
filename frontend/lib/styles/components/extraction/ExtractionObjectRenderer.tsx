@@ -289,10 +289,10 @@ export function ExtractionObjectRenderer({
  if (fieldType === 'boolean') {
  displayValue = (
  <span className={cn(
-"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+"inline-flex items-center rounded-none px-2 py-0.5 font-mono text-xs uppercase tracking-wider border",
  field.value
- ? "bg-green-100 text-green-700"
- : "bg-red-100 text-red-700"
+ ? "border-rule bg-parchment-deep text-ink"
+ : "border-rule bg-parchment-deep text-oxblood"
  )}>
  {getBooleanLabel(field.value, language)}
  </span>
@@ -427,10 +427,10 @@ export function ExtractionObjectRenderer({
  if (fieldType === 'boolean') {
  displayValue = (
  <span className={cn(
-"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+"inline-flex items-center rounded-none px-2 py-0.5 font-mono text-xs uppercase tracking-wider border",
  field.value
- ? "bg-green-100 text-green-700"
- : "bg-red-100 text-red-700"
+ ? "border-rule bg-parchment-deep text-ink"
+ : "border-rule bg-parchment-deep text-oxblood"
  )}>
  {getBooleanLabel(field.value, language)}
  </span>

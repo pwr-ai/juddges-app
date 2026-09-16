@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/editorial';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -88,13 +88,6 @@ export function ExtractionTableView({ results, schema }: ExtractionTableViewProp
     });
   };
 
-  const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    const normalized = status.toLowerCase();
-    if (normalized === 'completed' || normalized === 'success') return 'default';
-    if (normalized === 'failed' || normalized === 'error') return 'destructive';
-    return 'secondary';
-  };
-
   return (
     <div className="space-y-4">
       {/* Export button */}
@@ -106,40 +99,38 @@ export function ExtractionTableView({ results, schema }: ExtractionTableViewProp
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-none border border-rule bg-parchment overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[250px]">Document</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
+            <TableRow className="border-b border-rule">
+              <TableHead className="w-[250px] font-mono text-xs uppercase tracking-wider text-ink-soft">Document</TableHead>
+              <TableHead className="w-[100px] font-mono text-xs uppercase tracking-wider text-ink-soft">Status</TableHead>
               {fieldNames.map(field => (
-                <TableHead key={field} className="min-w-[150px]">
+                <TableHead key={field} className="min-w-[150px] font-mono text-xs uppercase tracking-wider text-ink-soft">
                   {field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                 </TableHead>
               ))}
-              <TableHead className="w-[80px]">Actions</TableHead>
+              <TableHead className="w-[80px] font-mono text-xs uppercase tracking-wider text-ink-soft">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.map((result, idx) => (
-              <TableRow key={result.document_id || idx}>
-                <TableCell className="font-medium">
+              <TableRow key={result.document_id || idx} className="border-b border-rule hover:bg-parchment-deep/40">
+                <TableCell className="font-medium text-ink">
                   <div className="flex flex-col gap-1">
                     <span className="truncate max-w-[200px]">
                       {result.document_title || result.document_id}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-ink-soft font-mono">
                       {result.document_id.slice(0, 8)}...
                     </span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(result.status)}>
-                    {result.status}
-                  </Badge>
+                  <StatusBadge status={result.status} size="sm" />
                 </TableCell>
                 {fieldNames.map(field => (
-                  <TableCell key={field}>
+                  <TableCell key={field} className="text-ink">
                     {formatValue(result.extracted_data?.[field])}
                   </TableCell>
                 ))}
@@ -152,6 +143,7 @@ export function ExtractionTableView({ results, schema }: ExtractionTableViewProp
                         JSON.stringify(result.extracted_data, null, 2)
                       )}
                       title="Copy data"
+                      className="text-ink-soft hover:text-ink"
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -160,6 +152,7 @@ export function ExtractionTableView({ results, schema }: ExtractionTableViewProp
                       variant="ghost"
                       onClick={() => window.open(`/documents/${result.document_id}`, '_blank')}
                       title="Open document"
+                      className="text-ink-soft hover:text-ink"
                     >
                       <ExternalLink className="h-3 w-3" />
                     </Button>
