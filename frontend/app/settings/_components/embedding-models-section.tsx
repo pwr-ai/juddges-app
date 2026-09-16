@@ -133,7 +133,7 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
     }
   };
 
-  const providerColor = () => "border border-rule text-ink font-mono bg-transparent";
+  const providerColor = (_provider?: string) => "border border-rule text-ink font-mono bg-transparent";
 
   if (loading) {
     return (
