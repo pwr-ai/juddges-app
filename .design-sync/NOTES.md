@@ -53,7 +53,10 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - Tailwind compile scans all of `frontend/` (cwd) — utilities present in the bundle
   track what the app uses plus the `@source inline(...)` safelists in
   `.design-sync/tailwind.css`. A design-agent utility the app never uses is silently
-  absent; extend the safelist rather than the app.
+  absent; extend the safelist rather than the app. Consequence: a peer PR landing
+  mid-resync can move `styleSha` without touching a DS component — after every
+  `git merge origin/main` rebuild + compare, and re-push styling + sidecar if it moved
+  (the driver then anchors no-change and skips render; `--render-sample 0` forces it).
 - `frontend/package.json` `version` becomes the DS version in README.
 - Tenor Sans files are vendored; if the app switches faces, update
   `.design-sync/fonts.css` + `tailwind.css` `:root` vars.
