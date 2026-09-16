@@ -63,13 +63,13 @@ export function ZeroResultsEmptyState({
         role="status"
         aria-live="polite"
       >
-        <div className="rounded-full bg-muted/50 p-4 mb-5">
-          <SearchX className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        <div className="border border-rule bg-card p-3 mb-4 w-10 h-10 flex items-center justify-center">
+          <SearchX className="h-4 w-4 text-ink" aria-hidden="true" />
         </div>
-        <h3 className="text-lg font-semibold mb-2">
+        <h3 className="font-serif font-medium text-lg sm:text-xl text-ink mb-2 text-center">
           Wpisz więcej znaków, aby wyszukać / Type more to search
         </h3>
-        <p className="text-sm text-muted-foreground max-w-sm">
+        <p className="text-sm text-ink-soft max-w-sm">
           Wyszukiwanie wymaga minimum 3 znaków.
           <br />
           Search requires at least 3 characters.
@@ -88,29 +88,29 @@ export function ZeroResultsEmptyState({
       aria-live="polite"
     >
       {/* Icon */}
-      <div className="rounded-full bg-muted/50 p-4 mb-5">
-        <SearchX className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+      <div className="border border-rule bg-card p-3 mb-4 w-10 h-10 flex items-center justify-center">
+        <SearchX className="h-4 w-4 text-ink" aria-hidden="true" />
       </div>
 
       {/* Bilingual title */}
-      <h3 className="text-xl font-semibold mb-2">
+      <h3 className="font-serif font-medium text-lg sm:text-xl text-ink mb-2 text-center">
         Brak wyników / No results
       </h3>
 
       {/* Bilingual description with query */}
-      <p className="text-sm text-muted-foreground mb-1 max-w-md">
+      <p className="text-sm text-ink-soft mb-1 max-w-md">
         Nie znaleziono wyników dla{" "}
-        <span className="font-semibold text-foreground">&quot;{trimmed}&quot;</span>.
+        <span className="font-semibold text-ink">&quot;{trimmed}&quot;</span>.
         {" "}Spróbuj:
       </p>
-      <p className="text-sm text-muted-foreground mb-6 max-w-md">
+      <p className="text-sm text-ink-soft mb-6 max-w-md">
         No results for{" "}
-        <span className="font-semibold text-foreground">&quot;{trimmed}&quot;</span>.
+        <span className="font-semibold text-ink">&quot;{trimmed}&quot;</span>.
         {" "}Try:
       </p>
 
       {/* Suggestions list */}
-      <ul className="text-sm text-muted-foreground mb-6 space-y-1 text-left max-w-xs">
+      <ul className="text-sm text-ink-soft mb-6 space-y-1 text-left max-w-xs">
         <li>• Shorter or more general keywords / Krótsze lub ogólniejsze słowa kluczowe</li>
         <li>• Switch language (PL ↔ EN) / Zmień język</li>
         {activeFilters.length > 0 && (
@@ -121,7 +121,7 @@ export function ZeroResultsEmptyState({
       {/* Active filter chips */}
       {activeFilters.length > 0 && (
         <div className="mb-6 w-full max-w-sm">
-          <p className="text-xs font-medium text-muted-foreground mb-2 text-left">
+          <p className="font-mono text-xs uppercase tracking-wider text-ink-soft mb-2 text-left">
             Active filters / Aktywne filtry:
           </p>
           <div className="flex flex-wrap gap-2 justify-start">
@@ -131,11 +131,11 @@ export function ZeroResultsEmptyState({
                 onClick={filter.onClear}
                 aria-label={`Remove filter: ${filter.label}`}
                 className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full",
-                  "text-xs font-medium",
-                  "bg-primary/10 text-primary border border-primary/20",
-                  "hover:bg-primary/20 transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-none",
+                  "font-mono text-xs",
+                  "bg-parchment-deep text-ink border border-rule",
+                  "hover:border-oxblood hover:text-oxblood transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
                 )}
               >
                 {filter.label}
@@ -147,7 +147,7 @@ export function ZeroResultsEmptyState({
                 variant="ghost"
                 size="sm"
                 onClick={onClearAllFilters}
-                className="text-xs h-auto py-1 px-2.5"
+                className="font-mono text-xs h-auto py-1 px-2.5 rounded-none text-ink-soft hover:text-oxblood"
               >
                 Clear all / Wyczyść wszystkie
               </Button>
@@ -158,7 +158,7 @@ export function ZeroResultsEmptyState({
 
       {/* Sample queries */}
       <div className="w-full max-w-md">
-        <p className="text-xs font-medium text-muted-foreground mb-3">
+        <p className="font-mono text-xs uppercase tracking-wider text-ink-soft mb-3">
           Try a sample query / Spróbuj przykładowego zapytania:
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
@@ -168,13 +168,11 @@ export function ZeroResultsEmptyState({
               onClick={() => onSampleQuery?.(sq)}
               aria-label={`Search for: ${sq}`}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium",
-                "bg-white/60 backdrop-blur-sm",
-                "border border-slate-200/60 text-slate-700",
-                "hover:bg-primary/10 hover:border-primary/30 hover:text-primary",
-                "transition-all duration-150",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
-                "cursor-pointer"
+                "px-3 py-1.5 rounded-none font-mono text-xs",
+                "bg-parchment-deep border border-rule text-ink",
+                "hover:border-oxblood hover:text-oxblood",
+                "transition-colors duration-150 cursor-pointer",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
               )}
             >
               {sq}

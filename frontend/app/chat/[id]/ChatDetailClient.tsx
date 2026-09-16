@@ -116,7 +116,7 @@ export default function ChatDetailClient({ chatId }: { chatId: string }): React.
  animate={{ opacity: 1, y: 0 }}
  exit={{ opacity: 0, y: -10 }}
  transition={{ duration: 0.3 }}
- className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-background via-background to-slate-50/50"
+ className="flex flex-col h-[calc(100vh-4rem)] bg-parchment"
  >
  <div className="flex-1 flex items-center justify-center px-4">
  <EmptyState
@@ -143,7 +143,7 @@ export default function ChatDetailClient({ chatId }: { chatId: string }): React.
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.2 }}
- className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-background via-background to-slate-50/50"
+ className="flex flex-col h-[calc(100vh-4rem)] bg-parchment"
  >
  <div className="flex-1 flex items-center justify-center">
  <div className="text-center space-y-6">
@@ -167,7 +167,7 @@ export default function ChatDetailClient({ chatId }: { chatId: string }): React.
  initial={{ opacity: 0, scale: 0.98 }}
  animate={{ opacity: 1, scale: 1 }}
  transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
- className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-background via-background to-slate-50/50"
+ className="flex flex-col h-[calc(100vh-4rem)] bg-parchment"
  >
  <div className="flex-1 flex items-center justify-center">
  <div className="text-center space-y-6">

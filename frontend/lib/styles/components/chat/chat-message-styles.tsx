@@ -66,64 +66,28 @@ export function Message({
  isUser
  ? isEditing ? 'w-full' : 'w-fit'
  : 'mx-auto',
- isUser ? 'ml-auto max-w-[70%] mb-3' : 'max-w-4xl', // mb-3 = 12px spacing between bubbles
+ isUser ? 'ml-auto max-w-[70%] mb-3' : 'max-w-4xl',
  'break-words',
  'text-justify',
 
- // Geometry - Gemini Style: Pure Capsule (Material 3 super-rounded)
- isUser
- ? 'rounded-[24px]' // Super-rounded, no sharp corners
- : 'rounded-2xl',
+ // Geometry - Editorial: Sharp corners
+ 'rounded-none',
 
- // Background - Gemini"Electric"Indigo-Blue Gradient (defined in components.css)
+ // Surface
  isUser
- ? '' // Gradient applied via data attribute and CSS
+ ? 'bg-parchment-deep border border-rule'
  : isError
- ? 'bg-gradient-to-br from-red-400/30 via-rose-400/20 to-purple-400/15'
- : 'bg-transparent',
+ ? 'bg-parchment-deep border border-oxblood/40'
+ : 'bg-transparent border-0',
 
- // Border - No border in dark mode, subtle top highlight in light mode
- isUser
- ? 'border-0 border-t border-t-white/20' // No border in dark mode
- : isError
- ? 'border border-red-200/50 hover:border-red-300/50'
- : 'border-0',
+ // Padding
+ isUser ? (isEditing ? 'p-0' : 'px-5 py-3') : 'px-5 py-4',
 
- // Shadows - Gemini Satin Glow (defined in components.css)
- isUser
- ? '' // Box-shadow applied via data attribute and CSS
- : isError
- ? 'shadow-lg hover:shadow-2xl hover:shadow-red-500/10'
- : '',
-
- // Transitions
- isUser || isError
- ? 'transition-all duration-300'
- : '',
-
- // Padding - Spacious/Comfortable (Gemini Style)
- // No padding when editing (textarea has its own padding)
- isUser ? (isEditing ? 'p-0' : 'px-6 py-[14px]') : 'px-5 py-4', // px-6 = 24px
-
- // Text color - Pure White (Gemini Style)
- isUser
- ? 'text-white'
- : 'text-foreground',
-
- // Typography - Light and airy (Gemini Style)
- isUser
- ? 'text-[15px] leading-[1.6] tracking-[0.01em] font-normal' // font-normal = 400
- : '',
-
- // Physics - Hardware acceleration
- isUser
- ? '[transform:translateZ(0)]'
- : '',
+ // Typography
+ isUser ? 'text-ink text-sm leading-relaxed' : 'text-foreground',
 
  className
  )}
- data-user-message-gemini={isUser ? '' : undefined}
- data-user-message-shadow={isUser ? '' : undefined}
  >
  <div className="relative">
  {children}
@@ -235,27 +199,27 @@ export function ErrorMessage({
  >
  <div className="mt-4 space-y-3">
  {/* Troubleshooting tips section */}
- <div className="bg-slate-50/50 rounded-lg p-3 border border-slate-200/50">
- <p className="text-sm font-medium text-slate-700 mb-2">
- 💡 Troubleshooting tips:
+ <div className="bg-parchment rounded-none p-3 border border-rule">
+ <p className="font-mono text-xs font-semibold uppercase tracking-wider text-ink mb-2">
+ Troubleshooting tips:
  </p>
- <ul className="text-sm text-slate-600 space-y-1 ml-4 list-disc">
+ <ul className="font-mono text-xs text-ink-soft space-y-1 ml-4 list-disc">
  <li>Check your internet connection</li>
  <li>Wait a moment and try regenerating the message</li>
  </ul>
  </div>
 
  {/* Support message */}
- <div className="pt-3 border-t border-red-200/50">
- <p className="text-sm font-medium text-slate-700 leading-relaxed">
- Still having issues? Please{""}
+ <div className="pt-3 border-t border-rule">
+ <p className="font-mono text-xs text-ink-soft leading-relaxed">
+ Still having issues? Please{" "}
  <a
  href="mailto:lukasz.augustyniak@pwr.edu.pl"
- className="font-semibold text-red-600 hover:text-red-700 underline underline-offset-2 decoration-red-400/50 hover:decoration-red-500 transition-all duration-200"
+ className="font-medium text-oxblood hover:text-oxblood-deep underline underline-offset-2 decoration-oxblood/40 hover:decoration-oxblood transition-colors"
  >
  contact our support team
  </a>
- {""}for assistance.
+ {" "}for assistance.
  </p>
  </div>
  </div>
