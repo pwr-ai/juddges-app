@@ -41,7 +41,6 @@ import { toast } from "sonner";
 import { DocumentExtractionResult } from "@/types/search";
 import { DeleteConfirmationDialog } from "@/lib/styles/components/delete-confirmation-dialog";
 import { EditorialCard, Headline } from "@/components/editorial";
-import { StatusBadge } from "@/components/editorial/StatusBadge";
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -577,9 +576,6 @@ TOOLBAR_BUTTON,
  <div className="flex gap-2 flex-wrap items-center">
  <StatusBadge status={status} label={getStatusDisplayText(job.status)} size="sm" />
  <Badge variant="outline" className="font-mono text-xs px-2 py-0.5 tabular-nums">
- {job.completed_documents || 0}/{job.total_documents || 0} docs
- </Badge>
- </div>
  {job.completed_documents || 0}/{job.total_documents || 0} docs
  </Badge>
  </div>

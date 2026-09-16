@@ -35,7 +35,6 @@ import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import { ExtractionResultsTable } from "@/components/extraction-results-table";
 import { logger } from "@/lib/logger";
 import { EditorialCard } from "@/components/editorial";
-import { StatusBadge } from "@/components/editorial/StatusBadge";
 import {
  isTerminalExtractionStatus,
  mergeExtractionJobUpdate,
