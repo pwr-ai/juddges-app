@@ -44,53 +44,26 @@ export interface TabSelectorProps {
  * ```
  */
 export function TabSelector({
- value,
- onValueChange,
- tabs,
- children,
- className,
+  value,
+  onValueChange,
+  tabs,
+  children,
+  className,
 }: TabSelectorProps): React.JSX.Element {
- return (
- <Tabs value={value} onValueChange={onValueChange} className={cn("relative z-10", className)}>
- <TabsList className={cn(
-"mb-3 w-full",
-"bg-white/40",
-"backdrop-blur-xl backdrop-saturate-[180%]",
-"border border-primary/20",
-"rounded-xl",
-"p-1",
-"h-auto",
-"gap-1",
-"shadow-sm"
- )}>
- {tabs.map((tab) => (
- <TabsTrigger
- key={tab.value}
- value={tab.value}
- className={cn(
-"flex-1",
-"relative",
-"data-[state=active]:bg-white/90",
-"data-[state=active]:backdrop-blur-md",
-"data-[state=active]:shadow-lg",
-"data-[state=active]:shadow-primary/10",
-"data-[state=active]:text-foreground",
-"data-[state=active]:ring-1 data-[state=active]:ring-white/30",
-"data-[state=inactive]:bg-transparent",
-"data-[state=inactive]:text-muted-foreground",
-"data-[state=inactive]:hover:text-foreground",
-"data-[state=inactive]:hover:bg-white/20",
-"rounded-lg",
-"px-4 py-2",
-"font-medium",
-"transition-all duration-200"
- )}
- >
- {tab.label}
- </TabsTrigger>
- ))}
- </TabsList>
- {children}
- </Tabs>
- );
+  return (
+    <Tabs value={value} onValueChange={onValueChange} className={cn("relative z-10", className)}>
+      <TabsList className="mb-3 w-full bg-transparent border-b border-rule rounded-none p-0 h-auto gap-4 justify-start">
+        {tabs.map((tab) => (
+          <TabsTrigger
+            key={tab.value}
+            value={tab.value}
+            className="relative rounded-none px-2 py-2 text-xs font-mono uppercase tracking-wider text-ink-soft hover:text-ink data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent shadow-none"
+          >
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {children}
+    </Tabs>
+  );
 }

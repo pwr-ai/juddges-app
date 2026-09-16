@@ -735,70 +735,42 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
  <div className="flex-1 min-h-0 overflow-hidden">
  <ScrollArea className="h-full bg-background">
  <div>
- {fields.length === 0 ? (
- // Empty state with enhanced glassmorphism 2.0 - vertically centered
- <div className="flex items-center justify-center min-h-full p-6">
- <div className={cn(
-"relative w-full max-w-md rounded-2xl p-8",
- // Enhanced glassmorphism 2.0 base
-"bg-white/30",
-"backdrop-blur-xl backdrop-saturate-[180%]",
- // Enhanced borders with glass effect
-"border border-primary/40",
- // Multi-layered shadows for depth and glass effect
-"shadow-[0_18px_45px_0_rgba(15,23,42,0.15),0_8px_20px_0_rgba(139,92,246,0.2),inset_0_1px_0_0_rgba(255,255,255,0.6)]",
-"",
-"overflow-hidden"
- )}>
- {/* Minimal glass layer without heavy gradients */}
- <div className="absolute inset-0 pointer-events-none rounded-2xl bg-white/30 -z-10"/>
-
- {/* Content */}
- <div className="relative z-10 flex flex-col items-center text-center">
- <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/15 mb-4 backdrop-blur-md border border-primary/30">
- <Inbox className="h-10 w-10 text-primary"/>
- </div>
- <h3 className="text-base font-semibold mb-2">No fields yet</h3>
- <p className="text-sm text-muted-foreground max-w-sm mb-6">
- Start by describing your needs in the chat, or manually add
- fields using the button above.
- </p>
- <VariantButton intent="secondary" onClick={handleAddFieldSimple} size="sm"icon={Plus}>
- Add Your First Field
- </VariantButton>
- </div>
- </div>
- </div>
- ) : (
- // Field cards with glassmorphism container
- <div className="p-6">
- {/* Sticky selection bar - inside the content */}
- {selectedFields.size > 0 && (
- <div className="sticky top-0 z-10 -mx-6 -mt-6 px-6 py-2 flex items-center gap-2 bg-background/95 backdrop-blur-sm border-b border-white/10 mb-3">
- <span className="text-sm text-muted-foreground">
- {selectedFields.size} selected
- </span>
- <VariantButton intent="icon"
- icon={Trash2}
- size="sm"
- variant="error"
- onClick={() => setShowGroupDeleteDialog(true)}
- aria-label="Delete selected fields"
- />
- </div>
- )}
- <div className={cn(
-"relative rounded-xl p-4",
- // Glassmorphism 2.0 for field list container
-"bg-white/20",
-"backdrop-blur-lg backdrop-saturate-[180%]",
-"border border-primary/20",
-"shadow-[0_8px_32px_0_rgba(15,23,42,0.08),0_4px_16px_0_rgba(139,92,246,0.1),inset_0_1px_0_0_rgba(255,255,255,0.4)]",
-"",
-"overflow-hidden"
- )}>
- {/* Minimal glass layer without heavy gradients */}
- <div className="absolute inset-0 pointer-events-none rounded-xl bg-white/20 -z-10"/>
+            {fields.length === 0 ? (
+              // Empty state with editorial styling - vertically centered
+              <div className="flex items-center justify-center min-h-[300px] p-6">
+                <div className="w-full max-w-md border border-dashed border-rule p-8 text-center bg-parchment">
+                  <div className="inline-flex items-center justify-center w-10 h-10 border border-rule bg-muted/40 mb-3 text-ink">
+                    <Inbox className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-display text-base font-semibold text-ink mb-1">No fields yet</h3>
+                  <p className="text-sm text-ink-soft max-w-sm mx-auto mb-5">
+                    Start by describing your needs in the chat, or manually add
+                    fields using the button below.
+                  </p>
+                  <VariantButton intent="secondary" onClick={handleAddFieldSimple} size="sm" icon={Plus}>
+                    Add Your First Field
+                  </VariantButton>
+                </div>
+              </div>
+            ) : (
+              // Field cards container
+              <div className="p-6">
+                {/* Sticky selection bar - inside the content */}
+                {selectedFields.size > 0 && (
+                  <div className="sticky top-0 z-10 -mx-6 -mt-6 px-6 py-2 flex items-center gap-2 bg-parchment border-b border-rule mb-3">
+                    <span className="font-mono text-xs text-ink-soft">
+                      {selectedFields.size} selected
+                    </span>
+                    <VariantButton intent="icon"
+                      icon={Trash2}
+                      size="sm"
+                      variant="error"
+                      onClick={() => setShowGroupDeleteDialog(true)}
+                      aria-label="Delete selected fields"
+                    />
+                  </div>
+                )}
+                <div className="border border-rule bg-parchment p-4">
 
  {/* Field cards with drag and drop */}
  <DndContext
@@ -901,7 +873,7 @@ export function SchemaCanvas({ sessionId, onPreviewClick }: SchemaCanvasProps) {
  >
  {activeField ? (
  <div
- className="shadow-xl rounded-lg ring-2 ring-primary/50 bg-background"
+ className="border border-ink bg-parchment shadow-md"
  style={{
  width: 'max-content',
  minWidth: '300px',

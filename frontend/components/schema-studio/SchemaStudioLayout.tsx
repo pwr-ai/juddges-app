@@ -210,14 +210,20 @@ export function SchemaStudioLayout({
               className="h-full flex flex-col"
             >
               {/* Tab Navigation */}
-              <div className="flex-shrink-0 px-4 pt-3 pb-2 border-b border-border/40 bg-background/50 backdrop-blur-sm">
-                <TabsList className="w-auto">
-                  <TabsTrigger value="fields" className="gap-1.5">
-                    <Layers className="h-4 w-4" />
+              <div className="flex-shrink-0 px-4 pt-3 pb-2 border-b border-rule bg-parchment">
+                <TabsList className="w-auto bg-transparent border-0 p-0 h-auto gap-4">
+                  <TabsTrigger
+                    value="fields"
+                    className="gap-1.5 rounded-none px-2 py-1.5 text-xs font-mono uppercase tracking-wider text-ink-soft hover:text-ink data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent shadow-none"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
                     <span>Fields</span>
                   </TabsTrigger>
-                  <TabsTrigger value="versions" className="gap-1.5">
-                    <History className="h-4 w-4" />
+                  <TabsTrigger
+                    value="versions"
+                    className="gap-1.5 rounded-none px-2 py-1.5 text-xs font-mono uppercase tracking-wider text-ink-soft hover:text-ink data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink data-[state=active]:bg-transparent shadow-none"
+                  >
+                    <History className="h-3.5 w-3.5" />
                     <span>Versions</span>
                   </TabsTrigger>
                 </TabsList>
