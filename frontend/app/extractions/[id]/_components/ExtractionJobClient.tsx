@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
- BaseCard,
  EmptyState,
  VariantButton,
  PageContainer,
@@ -391,99 +390,97 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </div>
  </EditorialCard>
  )}
- <BaseCard
- variant="light"
- title={
- jobData.created_at
- ? `Extraction - ${new Date(jobData.created_at).toLocaleString()}`
- : 'Extraction'
- }
- >
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4 -m-3.5 p-6">
- {/* Job ID and Processed Documents - full width row */}
- <div className="md:col-span-2">
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job ID</div>
- <div className="font-mono text-sm break-all">{jobId}</div>
- </div>
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Processed Documents</div>
- <div className="text-sm">
- {processedCount} / {totalResults}
- {failedCount > 0 && (
- <span className="text-oxblood ml-2">
- ({failedCount} failed)
- </span>
- )}
- </div>
- </div>
- </div>
- </div>
+        <EditorialCard>
+          <h3 className="editorial-display text-lg text-ink mb-4">
+            {jobData.created_at
+              ? `Extraction - ${new Date(jobData.created_at).toLocaleString()}`
+              : 'Extraction'}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Job ID and Processed Documents - full width row */}
+            <div className="md:col-span-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Job ID</div>
+                  <div className="font-mono text-sm break-all text-ink">{jobId}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Processed Documents</div>
+                  <div className="text-sm text-ink">
+                    {processedCount} / {totalResults}
+                    {failedCount > 0 && (
+                      <span className="text-oxblood ml-2">
+                        ({failedCount} failed)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
- {/* Schema Name */}
- {jobData.schema_name && (
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Schema</div>
- <div className="flex items-center gap-1.5 text-sm">
- <Database className="h-4 w-4 text-muted-foreground"/>
- {jobData.schema_id ? (
- <Link
- href={`/schemas/${jobData.schema_id}`}
- className="text-primary hover:underline flex items-center gap-1"
- >
- {jobData.schema_name}
- <ExternalLink className="h-3 w-3"/>
- </Link>
- ) : (
- <span>{jobData.schema_name}</span>
- )}
- </div>
- </div>
- )}
+            {/* Schema Name */}
+            {jobData.schema_name && (
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Schema</div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Database className="h-4 w-4 text-ink-soft" />
+                  {jobData.schema_id ? (
+                    <Link
+                      href={`/schemas/${jobData.schema_id}`}
+                      className="text-oxblood hover:underline flex items-center gap-1"
+                    >
+                      {jobData.schema_name}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <span className="text-ink">{jobData.schema_name}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
- {/* Collection Name */}
- {jobData.collection_name && (
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Collection</div>
- <div className="flex items-center gap-1.5 text-sm">
- <FolderOpen className="h-4 w-4 text-muted-foreground"/>
- {jobData.collection_id ? (
- <Link
- href={`/collections/${jobData.collection_id}`}
- className="text-primary hover:underline flex items-center gap-1"
- >
- {jobData.collection_name}
- <ExternalLink className="h-3 w-3"/>
- </Link>
- ) : (
- <span>{jobData.collection_name}</span>
- )}
- </div>
- </div>
- )}
+            {/* Collection Name */}
+            {jobData.collection_name && (
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Collection</div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <FolderOpen className="h-4 w-4 text-ink-soft" />
+                  {jobData.collection_id ? (
+                    <Link
+                      href={`/collections/${jobData.collection_id}`}
+                      className="text-oxblood hover:underline flex items-center gap-1"
+                    >
+                      {jobData.collection_name}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <span className="text-ink">{jobData.collection_name}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
- {/* Status */}
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</div>
- <StatusBadge
- status={jobStatusKey}
- label={jobData.status.charAt(0).toUpperCase() + jobData.status.slice(1)}
- className="w-fit"
- />
- </div>
+            {/* Status */}
+            <div className="space-y-1">
+              <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Status</div>
+              <StatusBadge
+                status={jobStatusKey}
+                label={jobData.status.charAt(0).toUpperCase() + jobData.status.slice(1)}
+                className="w-fit"
+              />
+            </div>
 
- {/* Completion Time */}
- {jobData.updated_at && (
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
- {jobData.status === 'completed' ? 'Completed' : 'Last Updated'}
- </div>
- <div className="text-sm">{new Date(jobData.updated_at).toLocaleString()}</div>
- </div>
- )}
- </div>
- </BaseCard>
+            {/* Completion Time */}
+            {jobData.updated_at && (
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">
+                  {jobData.status === 'completed' ? 'Completed' : 'Last Updated'}
+                </div>
+                <div className="text-sm text-ink">{new Date(jobData.updated_at).toLocaleString()}</div>
+              </div>
+            )}
+          </div>
+        </EditorialCard>
 
  </div>
 
@@ -645,64 +642,64 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </h3>
  </div>
 
- <BaseCard variant="light"className="p-0">
- <div className="space-y-6 -m-3.5 p-6">
- {/* Tabs and Print button header */}
- <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-4 border-b border-rule">
- <Tabs
- value={viewMode}
- onValueChange={(value) => setViewMode(value as"formatted"|"json")}
- className="flex-1"
- >
- <TabsList className={cn(TAB_LIST, "h-10")}>
- <TabsTrigger
- value="formatted"
- className={cn(TAB_TRIGGER, "px-4")}
- >
- <FileText className="h-4 w-4"/>
- Formatted View
- </TabsTrigger>
- <TabsTrigger
- value="json"
- className={cn(TAB_TRIGGER, "px-4")}
- >
- <Code className="h-4 w-4"/>
- JSON View
- </TabsTrigger>
- </TabsList>
- </Tabs>
- <VariantButton intent="secondary"
- icon={Printer}
- onClick={() => window.print()}
- size="sm"
- >
- Print
- </VariantButton>
- </div>
+          <EditorialCard flat className="p-0 overflow-hidden">
+            <div className="space-y-6">
+              {/* Tabs and Print button header */}
+              <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-4 border-b border-rule">
+                <Tabs
+                  value={viewMode}
+                  onValueChange={(value) => setViewMode(value as "formatted" | "json")}
+                  className="flex-1"
+                >
+                  <TabsList className={cn(TAB_LIST, "h-10")}>
+                    <TabsTrigger
+                      value="formatted"
+                      className={cn(TAB_TRIGGER, "px-4")}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Formatted View
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="json"
+                      className={cn(TAB_TRIGGER, "px-4")}
+                    >
+                      <Code className="h-4 w-4" />
+                      JSON View
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <VariantButton intent="secondary"
+                  icon={Printer}
+                  onClick={() => window.print()}
+                  size="sm"
+                >
+                  Print
+                </VariantButton>
+              </div>
 
- {/* Tab content */}
- <Tabs
- value={viewMode}
- onValueChange={(value) => setViewMode(value as"formatted"|"json")}
- className="w-full"
- >
- <TabsContent value="formatted"className="mt-0 px-6 pb-6">
- <ExtractionDataViewer
- data={selectedResult.extracted_data}
- viewMode="document"
- globalLayout="list"
- />
- </TabsContent>
- <TabsContent value="json"className="mt-0 px-6 pb-6">
- <div className="overflow-auto max-h-[80vh] border border-rule">
- <pre className="text-sm whitespace-pre-wrap font-mono bg-parchment-deep p-6">
- {JSON.stringify(selectedResult.extracted_data, null, 2)}
- </pre>
- </div>
- </TabsContent>
- </Tabs>
- </div>
- </BaseCard>
+              {/* Tab content */}
+              <Tabs
+                value={viewMode}
+                onValueChange={(value) => setViewMode(value as "formatted" | "json")}
+                className="w-full"
+              >
+                <TabsContent value="formatted" className="mt-0 px-6 pb-6">
+                  <ExtractionDataViewer
+                    data={selectedResult.extracted_data}
+                    viewMode="document"
+                    globalLayout="list"
+                  />
+                </TabsContent>
+                <TabsContent value="json" className="mt-0 px-6 pb-6">
+                  <div className="overflow-auto max-h-[80vh] border border-rule">
+                    <pre className="text-sm whitespace-pre-wrap font-mono bg-parchment-deep p-6 text-ink">
+                      {JSON.stringify(selectedResult.extracted_data, null, 2)}
+                    </pre>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </EditorialCard>
  </div>
  );
  })()}

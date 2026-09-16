@@ -34,13 +34,11 @@ import {
  Calendar,
  User,
  Filter,
- ChevronLeft,
- ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DocumentExtractionResult } from "@/types/search";
 import { DeleteConfirmationDialog } from "@/lib/styles/components/delete-confirmation-dialog";
-import { EditorialCard, Headline } from "@/components/editorial";
+import { EditorialCard, EditorialPagination, Headline } from "@/components/editorial";
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -668,77 +666,15 @@ TOOLBAR_BUTTON,
  </div>
 
  {/* Pagination Controls */}
- {totalPages > 1 && (
- <div className="flex items-center justify-center gap-2 mt-8">
- <button
- onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
- disabled={currentPage === 1}
- className={cn(
-TOOLBAR_BUTTON,
- currentPage === 1 ? TOOLBAR_BUTTON_DISABLED : TOOLBAR_BUTTON_IDLE
- )}
- aria-label="Previous page"
- >
- <ChevronLeft className="h-4 w-4"/>
- Previous
- </button>
-
- <div className="flex items-center gap-1">
- {Array.from({ length: totalPages }, (_, i) => i + 1)
- .filter(page => {
- // Show first, last, current, and adjacent pages
- if (page === 1 || page === totalPages) return true;
- if (Math.abs(page - currentPage) <= 1) return true;
- return false;
- })
- .map((page, index, arr) => {
- // Add ellipsis if there's a gap
- const prevPage = arr[index - 1];
- const showEllipsis = prevPage && page - prevPage > 1;
-
- return (
- <React.Fragment key={page}>
- {showEllipsis && (
- <span className="px-2 font-mono text-ink-soft">…</span>
- )}
- <button
- onClick={() => setCurrentPage(page)}
- className={cn(
-"h-9 w-9 justify-center px-0 tabular-nums",
- TOOLBAR_BUTTON,
- currentPage === page ? TOOLBAR_BUTTON_ACTIVE : TOOLBAR_BUTTON_IDLE
- )}
- aria-label={`Page ${page}`}
- aria-current={currentPage === page ? 'page' : undefined}
- >
- {page}
- </button>
- </React.Fragment>
- );
- })}
- </div>
-
- <button
- onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
- disabled={currentPage === totalPages}
- className={cn(
-TOOLBAR_BUTTON,
- currentPage === totalPages ? TOOLBAR_BUTTON_DISABLED : TOOLBAR_BUTTON_IDLE
- )}
- aria-label="Next page"
- >
- Next
- <ChevronRight className="h-4 w-4"/>
- </button>
- </div>
- )}
-
- {/* Page info */}
- {totalPages > 1 && (
- <div className="text-center font-mono text-[11px] uppercase tracking-wider text-ink-soft mt-4">
- Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, sortedJobs.length)} of {sortedJobs.length} extractions
- </div>
- )}
+ <EditorialPagination
+ currentPage={currentPage}
+ totalPages={totalPages}
+ onPageChange={setCurrentPage}
+ totalItems={sortedJobs.length}
+ itemsPerPage={ITEMS_PER_PAGE}
+ itemLabel="extractions"
+ className="mt-8"
+ />
  </>
  )}
  </>
