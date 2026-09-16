@@ -20,14 +20,16 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   (rootDir forbids the shims) — keep the two tsconfigs separate.
 - `components/ui/logo.tsx` is excluded from the entry (renders an app-relative brand
   asset through next/image; also the converter's tsconfig-paths plugin resolves
-  `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` is excluded
-  (originally a duplicate `SkeletonCard` export vs `skeleton-card.tsx`; #635 deleted the
-  latter, so including the barrel is now possible but is a separate decision — it adds
-  `SkeletonCard`/`SkeletonText` as new components).
+  `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` ships via its
+  barrel since #657 (it was excluded while `skeleton-card.tsx` exported a duplicate
+  `SkeletonCard`; #635 deleted that file). Star re-exports drop ambiguous names silently,
+  so a new `ui/*` export must not reuse `SkeletonCard`/`SkeletonText` (the barrel) or
+  `Skeleton` (`ui/skeleton.tsx`). The
+  nested dir makes the converter group them as `skeletons` (last non-generic path segment).
 - `srcDir: ../components` (relative to `.ds-pkg`) gives JSDoc + grouping; `ui` is a
   generic dir name so shadcn primitives land in group `general`, editorial in `editorial`.
 - shadcn sub-parts (`CardHeader`, `DialogTitle`, …) are flat exports, not `Card.Header`,
-  so the converter treats all exports (187 at #629, 162 after #645) as roots — most ship the floor card by design.
+  so the converter treats all exports (187 at #629, 162 after #645, 168 after #657) as roots — most ship the floor card by design.
 
 ## Fonts
 
@@ -51,7 +53,10 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - Tailwind compile scans all of `frontend/` (cwd) — utilities present in the bundle
   track what the app uses plus the `@source inline(...)` safelists in
   `.design-sync/tailwind.css`. A design-agent utility the app never uses is silently
-  absent; extend the safelist rather than the app.
+  absent; extend the safelist rather than the app. Consequence: a peer PR landing
+  mid-resync can move `styleSha` without touching a DS component — after every
+  `git merge origin/main` rebuild + compare, and re-push styling + sidecar if it moved
+  (the driver then anchors no-change and skips render; `--render-sample 0` forces it).
 - `frontend/package.json` `version` becomes the DS version in README.
 - Tenor Sans files are vendored; if the app switches faces, update
   `.design-sync/fonts.css` + `tailwind.css` `:root` vars.
