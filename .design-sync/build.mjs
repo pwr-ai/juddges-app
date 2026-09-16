@@ -37,8 +37,8 @@ for (const [bin, pkg] of [[tsc, "typescript"], [twCli, "@tailwindcss/cli"]]) {
 
 // -- 1. entry: components/editorial + components/ui/*.tsx + ui/skeletons/ ---
 // ui/skeletons/ ships via its barrel (#657). Star re-exports drop ambiguous
-// names silently, so a new ui/* export must not reuse a name from the barrel
-// (Skeleton, SkeletonCard, SkeletonText) — see NOTES.md.
+// names silently, so a new ui/* export must not reuse SkeletonCard or
+// SkeletonText (the barrel) or Skeleton (ui/skeleton.tsx) — see NOTES.md.
 // logo.tsx is left out: it renders a brand asset by app-relative URL through
 // next/image, which has nothing to show outside the app.
 const uiFiles = readdirSync(join(FRONTEND, "components/ui"))

@@ -23,7 +23,8 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` ships via its
   barrel since #657 (it was excluded while `skeleton-card.tsx` exported a duplicate
   `SkeletonCard`; #635 deleted that file). Star re-exports drop ambiguous names silently,
-  so a new `ui/*` export must not reuse `Skeleton`/`SkeletonCard`/`SkeletonText`. The
+  so a new `ui/*` export must not reuse `SkeletonCard`/`SkeletonText` (the barrel) or
+  `Skeleton` (`ui/skeleton.tsx`). The
   nested dir makes the converter group them as `skeletons` (last non-generic path segment).
 - `srcDir: ../components` (relative to `.ds-pkg`) gives JSDoc + grouping; `ui` is a
   generic dir name so shadcn primitives land in group `general`, editorial in `editorial`.
