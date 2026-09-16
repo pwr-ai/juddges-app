@@ -1,7 +1,9 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, Scale, Loader2, Sparkles, MessageSquare, BookOpen } from 'lucide-react';
+import { ChevronDown, ChevronUp, Scale, Loader2, MessageSquare, BookOpen } from 'lucide-react';
 
-import { BaseCard, Button, Badge, AIDisclaimerBadge, ErrorCard } from '@/lib/styles/components';
+import { EditorialCard, StatusBadge } from '@/components/editorial';
+import { Button } from '@/components/ui/button';
+import { AIDisclaimerBadge, ErrorCard } from '@/lib/styles/components';
 import type { ExtractKeyPointsResponse } from '@/lib/api';
 import { AuthRequiredAIActionsNotice } from './AuthRequiredAIActionsNotice';
 import logger from '@/lib/logger';
@@ -37,49 +39,44 @@ export function KeyPointsPanel({
 
   return (
     <div className="mb-6">
-      <BaseCard
-        className="rounded-2xl"
-        clickable={false}
-        variant="light"
-        title={
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <Scale className="h-4 w-4 text-primary" />
-              <h3 className="font-bold text-lg text-foreground">Key Points</h3>
-              <Badge variant="secondary" className="text-xs flex items-center gap-1 bg-emerald-100 text-emerald-700 border-emerald-200">
-                <Sparkles className="h-3 w-3" />
-                AI Analysis
-              </Badge>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className="gap-2"
-            >
-              {isKeyPointsPanelOpen ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  Collapse
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Expand
-                </>
-              )}
-            </Button>
-          </div>
-        }
+      <EditorialCard
+        flat
+        className="p-5 border-rule bg-parchment"
       >
+        <div className="flex items-center justify-between w-full pb-4 border-b border-rule mb-4">
+          <div className="flex items-center gap-2">
+            <Scale className="h-4 w-4 text-oxblood" />
+            <h3 className="font-serif text-lg font-semibold text-ink">Key Points</h3>
+            <StatusBadge status="ai_analysis" label="AI Analysis" tone="gold" />
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggle}
+            className="gap-2 rounded-none font-mono text-xs text-ink hover:bg-parchment-deep"
+          >
+            {isKeyPointsPanelOpen ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Collapse
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Expand
+              </>
+            )}
+          </Button>
+        </div>
+
         <div
-          className={`transition-all duration-300 ease-in-out ${isKeyPointsPanelOpen
+          className={`transition-opacity duration-200 ${isKeyPointsPanelOpen
             ? 'opacity-100'
             : 'opacity-0 max-h-0 overflow-hidden'
             }`}
         >
           {authLoading ? (
-            <p className="text-sm text-muted-foreground">Checking whether AI analysis is available for your account...</p>
+            <p className="font-mono text-xs text-ink-soft">Checking whether AI analysis is available for your account...</p>
           ) : !canUseDocumentAI ? (
             <AuthRequiredAIActionsNotice message="AI key-point extraction is available for signed-in users." />
           ) : (
@@ -89,7 +86,7 @@ export function KeyPointsPanel({
                 <Button
                   onClick={onExtractKeyPoints}
                   disabled={isExtractingKeyPoints}
-                  className="gap-2"
+                  className="gap-2 rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep font-mono text-xs"
                 >
                   {isExtractingKeyPoints ? (
                     <>
@@ -97,10 +94,7 @@ export function KeyPointsPanel({
                       Extracting...
                     </>
                   ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      Extract Key Points
-                    </>
+                    'Extract Key Points'
                   )}
                 </Button>
               </div>
@@ -123,18 +117,20 @@ export function KeyPointsPanel({
                   {keyPointsResult.arguments.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <MessageSquare className="h-4 w-4 text-blue-600" />
-                        <h4 className="text-sm font-semibold text-foreground">Arguments</h4>
-                        <Badge variant="secondary" className="text-xs">{keyPointsResult.arguments.length}</Badge>
+                        <MessageSquare className="h-4 w-4 text-oxblood" />
+                        <h4 className="font-serif text-sm font-semibold text-ink">Arguments</h4>
+                        <span className="px-1.5 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
+                          {keyPointsResult.arguments.length}
+                        </span>
                       </div>
                       <ul className="space-y-3">
                         {keyPointsResult.arguments.map((arg, idx) => (
                           <li key={idx} className="flex items-start gap-3 text-sm">
-                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />
+                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-none bg-oxblood flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <span className="font-medium text-blue-700">{arg.party}:</span>
-                              <span className="text-foreground ml-1">{arg.text}</span>
-                              <span className="ml-2 text-xs text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded">
+                              <span className="font-mono text-xs font-semibold text-oxblood">{arg.party}:</span>
+                              <span className="text-ink ml-1.5">{arg.text}</span>
+                              <span className="ml-2 font-mono text-xs text-ink-soft bg-parchment-deep border border-rule px-1.5 py-0.5 rounded-none">
                                 {arg.source_ref}
                               </span>
                             </div>
@@ -148,17 +144,19 @@ export function KeyPointsPanel({
                   {keyPointsResult.holdings.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <Scale className="h-4 w-4 text-amber-600" />
-                        <h4 className="text-sm font-semibold text-foreground">Holdings</h4>
-                        <Badge variant="secondary" className="text-xs">{keyPointsResult.holdings.length}</Badge>
+                        <Scale className="h-4 w-4 text-gold" />
+                        <h4 className="font-serif text-sm font-semibold text-ink">Holdings</h4>
+                        <span className="px-1.5 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
+                          {keyPointsResult.holdings.length}
+                        </span>
                       </div>
                       <ul className="space-y-3">
                         {keyPointsResult.holdings.map((holding, idx) => (
                           <li key={idx} className="flex items-start gap-3 text-sm">
-                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-none bg-gold flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <span className="text-foreground">{holding.text}</span>
-                              <span className="ml-2 text-xs text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded">
+                              <span className="text-ink">{holding.text}</span>
+                              <span className="ml-2 font-mono text-xs text-ink-soft bg-parchment-deep border border-rule px-1.5 py-0.5 rounded-none">
                                 {holding.source_ref}
                               </span>
                             </div>
@@ -172,22 +170,24 @@ export function KeyPointsPanel({
                   {keyPointsResult.legal_principles.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <BookOpen className="h-4 w-4 text-purple-600" />
-                        <h4 className="text-sm font-semibold text-foreground">Legal Principles</h4>
-                        <Badge variant="secondary" className="text-xs">{keyPointsResult.legal_principles.length}</Badge>
+                        <BookOpen className="h-4 w-4 text-ink" />
+                        <h4 className="font-serif text-sm font-semibold text-ink">Legal Principles</h4>
+                        <span className="px-1.5 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
+                          {keyPointsResult.legal_principles.length}
+                        </span>
                       </div>
                       <ul className="space-y-3">
                         {keyPointsResult.legal_principles.map((principle, idx) => (
                           <li key={idx} className="flex items-start gap-3 text-sm">
-                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-full bg-purple-500 flex-shrink-0" />
+                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-none bg-ink flex-shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <span className="text-foreground">{principle.text}</span>
+                              <span className="text-ink">{principle.text}</span>
                               {principle.legal_basis && (
-                                <span className="ml-2 text-xs font-medium text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                                <span className="ml-2 font-mono text-xs text-oxblood bg-parchment-deep border border-rule px-1.5 py-0.5 rounded-none">
                                   {principle.legal_basis}
                                 </span>
                               )}
-                              <span className="ml-2 text-xs text-muted-foreground bg-slate-100 px-1.5 py-0.5 rounded">
+                              <span className="ml-2 font-mono text-xs text-ink-soft bg-parchment-deep border border-rule px-1.5 py-0.5 rounded-none">
                                 {principle.source_ref}
                               </span>
                             </div>
@@ -197,7 +197,7 @@ export function KeyPointsPanel({
                     </div>
                   )}
 
-                  <div className="pt-3 border-t border-border">
+                  <div className="pt-3 border-t border-rule">
                     <AIDisclaimerBadge showBorder={false} linkText="See disclaimer" />
                   </div>
                 </div>
@@ -205,14 +205,14 @@ export function KeyPointsPanel({
 
               {/* Empty state */}
               {!keyPointsResult && !keyPointsError && !isExtractingKeyPoints && (
-                <p className="text-sm text-muted-foreground">
+                <p className="font-mono text-xs text-ink-soft">
                   Click &quot;Extract Key Points&quot; to identify key arguments, holdings, and legal principles from this document with source paragraph references.
                 </p>
               )}
             </>
           )}
         </div>
-      </BaseCard>
+      </EditorialCard>
     </div>
   );
 }

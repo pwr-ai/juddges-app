@@ -1,8 +1,10 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, FileText, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-import { BaseCard, Button, Badge, AIDisclaimerBadge, ErrorCard } from '@/lib/styles/components';
+import { EditorialCard, StatusBadge } from '@/components/editorial';
+import { Button } from '@/components/ui/button';
+import { AIDisclaimerBadge, ErrorCard } from '@/lib/styles/components';
 import type { SummarizeDocumentsResponse } from '@/lib/api';
 import { AuthRequiredAIActionsNotice } from './AuthRequiredAIActionsNotice';
 import logger from '@/lib/logger';
@@ -46,49 +48,44 @@ export function AISummaryPanel({
 
   return (
     <div className="mb-6">
-      <BaseCard
-        className="rounded-2xl"
-        clickable={false}
-        variant="light"
-        title={
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              <h3 className="font-bold text-lg text-foreground">AI Summary</h3>
-              <Badge variant="secondary" className="text-xs flex items-center gap-1 bg-blue-100 text-blue-700 border-blue-200">
-                <Sparkles className="h-3 w-3" />
-                GPT-4
-              </Badge>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggle}
-              className="gap-2"
-            >
-              {isSummaryPanelOpen ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  Collapse
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Expand
-                </>
-              )}
-            </Button>
-          </div>
-        }
+      <EditorialCard
+        flat
+        className="p-5 border-rule bg-parchment"
       >
+        <div className="flex items-center justify-between w-full pb-4 border-b border-rule mb-4">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-oxblood" />
+            <h3 className="font-serif text-lg font-semibold text-ink">AI Summary</h3>
+            <StatusBadge status="gpt-4" label="GPT-4" tone="gold" />
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggle}
+            className="gap-2 rounded-none font-mono text-xs text-ink hover:bg-parchment-deep"
+          >
+            {isSummaryPanelOpen ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Collapse
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                Expand
+              </>
+            )}
+          </Button>
+        </div>
+
         <div
-          className={`transition-all duration-300 ease-in-out ${isSummaryPanelOpen
+          className={`transition-opacity duration-200 ${isSummaryPanelOpen
             ? 'opacity-100'
             : 'opacity-0 max-h-0 overflow-hidden'
             }`}
         >
           {authLoading ? (
-            <p className="text-sm text-muted-foreground">Checking whether AI analysis is available for your account...</p>
+            <p className="font-mono text-xs text-ink-soft">Checking whether AI analysis is available for your account...</p>
           ) : !canUseDocumentAI ? (
             <AuthRequiredAIActionsNotice message="AI-generated summaries are available for signed-in users." />
           ) : (
@@ -96,13 +93,13 @@ export function AISummaryPanel({
               {/* Summary Controls */}
               <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                  <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft mb-1.5">
                     Summary Type
                   </label>
                   <select
                     value={summaryType}
                     onChange={(e) => onSummaryTypeChange(e.target.value as 'executive' | 'key_findings' | 'synthesis')}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full rounded-none border border-rule bg-parchment px-3 py-2 font-mono text-xs text-ink focus:outline-none focus:border-ink"
                     disabled={isSummarizing}
                   >
                     <option value="executive">Executive Summary</option>
@@ -112,13 +109,13 @@ export function AISummaryPanel({
                 </div>
 
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                  <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft mb-1.5">
                     Length
                   </label>
                   <select
                     value={summaryLength}
                     onChange={(e) => onSummaryLengthChange(e.target.value as 'short' | 'medium' | 'long')}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full rounded-none border border-rule bg-parchment px-3 py-2 font-mono text-xs text-ink focus:outline-none focus:border-ink"
                     disabled={isSummarizing}
                   >
                     <option value="short">Short (~150 words)</option>
@@ -131,7 +128,7 @@ export function AISummaryPanel({
                   <Button
                     onClick={onGenerateSummary}
                     disabled={isSummarizing}
-                    className="gap-2 whitespace-nowrap"
+                    className="gap-2 whitespace-nowrap rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep font-mono text-xs"
                   >
                     {isSummarizing ? (
                       <>
@@ -139,10 +136,7 @@ export function AISummaryPanel({
                         Generating...
                       </>
                     ) : (
-                      <>
-                        <Sparkles className="h-4 w-4" />
-                        Generate Summary
-                      </>
+                      'Generate Summary'
                     )}
                   </Button>
                 </div>
@@ -162,17 +156,17 @@ export function AISummaryPanel({
               {/* Summary Result */}
               {summaryResult && (
                 <div className="space-y-4">
-                  <div className="prose prose-sm max-w-none text-foreground">
+                  <div className="prose prose-sm max-w-none text-ink">
                     <ReactMarkdown>{summaryResult.summary}</ReactMarkdown>
                   </div>
 
                   {summaryResult.key_points && summaryResult.key_points.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <h4 className="text-sm font-semibold text-foreground mb-2">Key Points</h4>
+                    <div className="mt-4 pt-4 border-t border-rule">
+                      <h4 className="font-serif text-sm font-semibold text-ink mb-2">Key Points</h4>
                       <ul className="space-y-1.5">
                         {summaryResult.key_points.map((point, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                          <li key={idx} className="flex items-start gap-2 text-sm text-ink-soft">
+                            <span className="inline-block mt-1.5 h-1.5 w-1.5 rounded-none bg-oxblood flex-shrink-0" />
                             {point}
                           </li>
                         ))}
@@ -180,7 +174,7 @@ export function AISummaryPanel({
                     </div>
                   )}
 
-                  <div className="pt-3 border-t border-border">
+                  <div className="pt-3 border-t border-rule">
                     <AIDisclaimerBadge showBorder={false} linkText="See disclaimer" />
                   </div>
                 </div>
@@ -188,14 +182,14 @@ export function AISummaryPanel({
 
               {/* Empty state */}
               {!summaryResult && !summaryError && !isSummarizing && (
-                <p className="text-sm text-muted-foreground">
+                <p className="font-mono text-xs text-ink-soft">
                   Select summary type and length, then click &quot;Generate Summary&quot; to create an AI-powered analysis of this document.
                 </p>
               )}
             </>
           )}
         </div>
-      </BaseCard>
+      </EditorialCard>
     </div>
   );
 }

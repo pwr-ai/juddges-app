@@ -1,7 +1,9 @@
 import { FC } from "react";
 import { Plus, FileText, Search } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { EmptyState, VariantButton, LightCard } from "@/lib/styles/components";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/lib/styles/components";
+import { EditorialCard } from "@/components/editorial";
 
 interface EmptyCollectionStateProps {
   newDocumentIds: string;
@@ -28,67 +30,55 @@ const EmptyCollectionState: FC<EmptyCollectionStateProps> = ({
         tipPosition="below"
         tip={
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-            <LightCard
-              title={
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Search className="h-6 w-6 text-primary" />
-                  </div>
-                  <span className="text-base font-semibold">Search Documents</span>
-                </div>
-              }
-              padding="lg"
-              showBorder={true}
-              showShadow={false}
-            >
-              <div className="mt-3 space-y-4">
-                <p className="text-base text-muted-foreground leading-relaxed">Search for legal documents and add them directly from the results page.</p>
-                <VariantButton intent="primary"
-                  size="sm"
-                  icon={Search}
-                  onClick={onGoToSearch}
-                  className="w-full"
-                >
-                  Go to Search
-                </VariantButton>
+            <EditorialCard flat className="p-6 border-rule">
+              <div className="flex items-center gap-2.5 mb-3">
+                <Search className="h-5 w-5 text-oxblood shrink-0" />
+                <span className="font-serif text-base font-semibold text-ink">Search Documents</span>
               </div>
-            </LightCard>
-            <LightCard
-              title={
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Plus className="h-6 w-6 text-primary" />
-                  </div>
-                  <span className="text-base font-semibold">Add by ID</span>
-                </div>
-              }
-              padding="lg"
-              showBorder={true}
-              showShadow={false}
-            >
-              <div className="mt-3 space-y-4">
-                <p className="text-base text-muted-foreground leading-relaxed">Have document IDs? Enter them below to add directly.</p>
+              <div className="space-y-4">
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  Search for legal documents and add them directly from the results page.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={onGoToSearch}
+                  className="w-full rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep font-mono text-xs gap-1.5"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  Go to Search
+                </Button>
+              </div>
+            </EditorialCard>
+
+            <EditorialCard flat className="p-6 border-rule">
+              <div className="flex items-center gap-2.5 mb-3">
+                <Plus className="h-5 w-5 text-oxblood shrink-0" />
+                <span className="font-serif text-base font-semibold text-ink">Add by ID</span>
+              </div>
+              <div className="space-y-4">
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  Have document IDs? Enter them below to add directly.
+                </p>
                 <div className="space-y-3">
                   <Textarea
                     placeholder="Enter document IDs (one per line or comma-separated)"
                     value={newDocumentIds}
                     onChange={(e) => setNewDocumentIds(e.target.value)}
                     rows={3}
-                    className="w-full font-mono text-sm resize-none"
+                    className="w-full font-mono text-xs resize-none rounded-none border-rule bg-parchment text-ink focus-visible:border-ink"
                   />
-                  <VariantButton
-                    intent="glass"
+                  <Button
+                    size="sm"
                     onClick={onAddDocuments}
                     disabled={!newDocumentIds.trim() || isAdding}
-                    isLoading={isAdding}
-                    className="w-full"
+                    className="w-full rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep font-mono text-xs gap-1.5"
                   >
-                    <Plus className="h-4 w-4" />
-                    Add Documents
-                  </VariantButton>
+                    <Plus className="h-3.5 w-3.5" />
+                    {isAdding ? "Adding..." : "Add Documents"}
+                  </Button>
                 </div>
               </div>
-            </LightCard>
+            </EditorialCard>
           </div>
         }
       />
