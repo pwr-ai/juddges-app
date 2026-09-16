@@ -2,19 +2,20 @@
 
 import React, { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, FileText, Calendar, Tag, User, Info, FileCode, Hash, List, CheckSquare, Link as LinkIcon } from "lucide-react";
+import { Eye, EyeOff, FileText, Calendar, Tag, User, Info } from "lucide-react";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { BaseCard } from "./base-card";
 import { VariantButton } from './variant-button';
 import { SubsectionHeader } from "./subsection-header";
 import { cn } from "@/lib/utils";
 import { parseSchemaText, getFieldTypeLabel, formatSchemaFieldName } from "@/lib/schema-utils";
+import { FieldTypeBadge } from "@/components/editorial";
 
 /**
  * Format date string to a human-readable format
  */
 const formatDate = (dateString: string | null | undefined): string => {
- if (!dateString) return"N/A";
+ if (!dateString) return "N/A";
  try {
  const date = new Date(dateString);
  if (isNaN(date.getTime())) return dateString; // Return original if invalid
@@ -26,95 +27,6 @@ const formatDate = (dateString: string | null | undefined): string => {
  } catch {
  return dateString;
  }
-};
-
-/**
- * Get type style (color, background, border, icon) for type badges
- * Matches the styling used in SchemaFieldsTable
- */
-const getTypeStyle = (type: string) => {
- const normalizedType = type.toLowerCase();
- const styles: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
- date: {
- color: 'text-blue-700',
- bg: 'bg-blue-100/80',
- border: 'border-blue-200/60',
- icon: <Calendar className="h-3.5 w-3.5"/>
- },
- text: {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- string: {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- list: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- array: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- number: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- integer: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- boolean: {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- 'yes/no': {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- object: {
- color: 'text-indigo-700',
- bg: 'bg-indigo-100/80',
- border: 'border-indigo-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- enum: {
- color: 'text-violet-700',
- bg: 'bg-violet-100/80',
- border: 'border-violet-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- email: {
- color: 'text-cyan-700',
- bg: 'bg-cyan-100/80',
- border: 'border-cyan-200/60',
- icon: <LinkIcon className="h-3.5 w-3.5"/>
- },
- };
-
- return styles[normalizedType] || {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- };
 };
 
 export interface SchemaPreviewProps {
@@ -252,27 +164,7 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <div className="flex items-center justify-between mb-2">
  <span className="font-semibold text-sm">{formatSchemaFieldName(fieldName)}</span>
  <div className="flex gap-1.5">
- {(() => {
- const fieldType = fieldDef?.type || 'string';
- const typeLabel = getFieldTypeLabel(fieldType);
- const style = getTypeStyle(fieldType);
- return (
- <Badge
- variant="outline"
- className={cn(
-"flex items-center justify-start gap-1.5 px-3 py-1.5 text-xs font-semibold",
-"backdrop-blur-sm shadow-sm ring-1",
- style.color,
- style.bg,
- style.border,
-"ring-slate-200/20"
- )}
- >
- {style.icon}
- <span>{typeLabel}</span>
- </Badge>
- );
- })()}
+ <FieldTypeBadge type={fieldDef?.type || 'string'} />
  </div>
  </div>
 

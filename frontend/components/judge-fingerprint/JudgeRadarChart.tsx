@@ -12,13 +12,14 @@ import {
   Tooltip,
 } from 'recharts';
 import type { JudgeProfile, StyleScores } from '@/types/judge-fingerprint';
+import { editorialPalette } from '@/lib/charts/editorial-plot';
 import { useDimensionLabels } from './dimensionLabels';
 
-/** Color palette for up to 3 judges */
+/** Color palette for up to 3 judges using Editorial palette */
 const JUDGE_COLORS = [
-  'hsl(210, 90%, 55%)',   // blue
-  'hsl(340, 80%, 55%)',   // rose
-  'hsl(160, 70%, 45%)',   // teal
+  editorialPalette.ink,
+  editorialPalette.oxblood,
+  editorialPalette.gold,
 ];
 
 interface RadarDataPoint {
@@ -65,15 +66,15 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-          <PolarGrid stroke="hsl(var(--border))" />
+          <PolarGrid stroke={editorialPalette.rule} />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            tick={{ fill: editorialPalette.ink, fontSize: 11, fontFamily: 'monospace' }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 100]}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+            tick={{ fill: editorialPalette.inkSoft, fontSize: 10, fontFamily: 'monospace' }}
             tickCount={5}
           />
 
@@ -85,32 +86,29 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
               stroke={JUDGE_COLORS[idx % JUDGE_COLORS.length]}
               fill={JUDGE_COLORS[idx % JUDGE_COLORS.length]}
               fillOpacity={profiles.length > 1 ? 0.15 : 0.25}
-              strokeWidth={2}
+              strokeWidth={1.5}
             />
           ))}
 
           <Tooltip
             contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '8px',
+              backgroundColor: 'var(--parchment)',
+              border: '1px solid var(--rule)',
+              borderRadius: '0px',
               fontSize: '12px',
+              fontFamily: 'monospace',
+              color: editorialPalette.ink,
             }}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={(value: any) => [`${value}%`]}
           />
-
-          {/* Only show legend when comparing multiple judges */}
-          {profiles.length > 1 && (
-            <Legend
-              wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-            />
-          )}
+          <Legend
+            wrapperStyle={{ fontSize: '12px', fontFamily: 'monospace', paddingTop: '8px' }}
+          />
         </RadarChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-export { JUDGE_COLORS };
-export { useDimensionLabels } from './dimensionLabels';
+export default JudgeRadarChart;

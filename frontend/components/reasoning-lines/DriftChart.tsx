@@ -12,13 +12,13 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { DriftAnalysisResponse, DriftWindow } from '@/types/reasoning-lines';
-import { Badge } from '@/lib/styles/components';
+import { editorialPalette } from '@/lib/charts/editorial-plot';
 
 // ---------------------------------------------------------------------------
 // Custom dot renderer for the Area chart
 // ---------------------------------------------------------------------------
 
-/** Renders peak dots in red and regular dots in blue */
+/** Renders peak dots in oxblood and regular dots in ink */
 function DriftDot({
   cx,
   cy,
@@ -38,7 +38,7 @@ function DriftDot({
         cx={cx}
         cy={cy}
         r={5}
-        fill="#dc2626"
+        fill={editorialPalette.oxblood}
         stroke="#fff"
         strokeWidth={2}
       />
@@ -49,7 +49,7 @@ function DriftDot({
       cx={cx}
       cy={cy}
       r={3}
-      fill="#3b82f6"
+      fill={editorialPalette.ink}
       stroke="#fff"
       strokeWidth={1}
     />
@@ -88,7 +88,7 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
 
   if (data.windows.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+      <div className="flex items-center justify-center py-8 text-sm text-ink-soft">
         Brak danych do analizy dryfu. Wymagane co najmniej 2 okna czasowe.
       </div>
     );
@@ -97,19 +97,19 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
   return (
     <div className="space-y-4">
       {/* Summary stats */}
-      <div className="flex flex-wrap items-center gap-3 text-xs">
-        <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 tabular-nums">
-          Sredni dryf: {data.avg_drift.toFixed(3)}
+      <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+        <span className="px-2 py-1 border border-rule text-ink tabular-nums">
+          Średni dryf: {data.avg_drift.toFixed(3)}
         </span>
-        <span className="px-2 py-1 rounded bg-rose-50 text-rose-700 tabular-nums">
+        <span className="px-2 py-1 border border-rule text-oxblood tabular-nums">
           Maks. dryf: {data.max_drift.toFixed(3)}
         </span>
-        <span className="px-2 py-1 rounded bg-slate-50 text-slate-700 tabular-nums">
+        <span className="px-2 py-1 border border-rule text-ink-soft tabular-nums">
           Analizowanych spraw: {data.total_members_analyzed}
         </span>
         {data.drift_events_created > 0 && (
-          <span className="px-2 py-1 rounded bg-amber-50 text-amber-700 tabular-nums">
-            Wykrytych zdarzen: {data.drift_events_created}
+          <span className="px-2 py-1 border border-rule text-gold tabular-nums">
+            Wykrytych zdarzeń: {data.drift_events_created}
           </span>
         )}
       </div>
@@ -120,31 +120,33 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
           <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id="driftGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3} />
-                <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                <stop offset="5%" stopColor={editorialPalette.oxblood} stopOpacity={0.25} />
+                <stop offset="50%" stopColor={editorialPalette.ink} stopOpacity={0.12} />
+                <stop offset="95%" stopColor={editorialPalette.ink} stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid strokeDasharray="3 3" stroke={editorialPalette.rule} />
             <XAxis
               dataKey="name"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: editorialPalette.ink, fontSize: 10, fontFamily: 'monospace' }}
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: editorialPalette.rule }}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: editorialPalette.ink, fontSize: 10, fontFamily: 'monospace' }}
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: editorialPalette.rule }}
               domain={[0, 'auto']}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
+                backgroundColor: 'var(--parchment)',
+                border: '1px solid var(--rule)',
+                borderRadius: '0px',
                 fontSize: '12px',
+                fontFamily: 'monospace',
+                color: editorialPalette.ink,
               }}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               formatter={(value: any) => [`${Number(value).toFixed(4)}`, 'Dryf']}
@@ -155,13 +157,14 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
             {/* Average drift reference line */}
             <ReferenceLine
               y={data.avg_drift}
-              stroke="#6b7280"
+              stroke={editorialPalette.inkSoft}
               strokeDasharray="4 4"
               label={{
-                value: 'Srednia',
+                value: 'Średnia',
                 position: 'insideTopRight',
-                fill: '#6b7280',
+                fill: editorialPalette.inkSoft,
                 fontSize: 10,
+                fontFamily: 'monospace',
               }}
             />
 
@@ -171,9 +174,9 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
                 <ReferenceLine
                   key={`peak-${idx}`}
                   x={point.name}
-                  stroke="#dc2626"
+                  stroke={editorialPalette.oxblood}
                   strokeDasharray="3 3"
-                  strokeOpacity={0.6}
+                  strokeOpacity={0.7}
                 />
               ) : null
             )}
@@ -181,8 +184,8 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
             <Area
               type="monotone"
               dataKey="drift"
-              stroke="#3b82f6"
-              strokeWidth={2}
+              stroke={editorialPalette.ink}
+              strokeWidth={1.5}
               fill="url(#driftGradient)"
               dot={<DriftDot peakIndices={peakIndices} />}
             />
@@ -193,20 +196,20 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
       {/* Peak detail cards */}
       {data.peaks.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
+          <p className="text-xs font-mono uppercase tracking-wider text-ink-soft">
             Wykryte skoki dryfu ({data.peaks.length})
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {data.peaks.map((peak) => (
               <div
                 key={peak.window_index}
-                className="p-3 rounded-xl border border-rose-100 bg-rose-50/30"
+                className="p-3 rounded-none border border-rule bg-parchment"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium text-foreground">
-                    {peak.period_start.slice(0, 10)} - {peak.period_end.slice(0, 10)}
+                <div className="flex items-center justify-between mb-1.5 font-mono text-xs">
+                  <span className="text-ink">
+                    {peak.period_start.slice(0, 10)} – {peak.period_end.slice(0, 10)}
                   </span>
-                  <span className="text-xs font-semibold text-rose-600 tabular-nums">
+                  <span className="font-semibold text-oxblood tabular-nums">
                     {peak.drift_score.toFixed(3)}
                   </span>
                 </div>
@@ -215,13 +218,12 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
                 {peak.entering_keywords.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1">
                     {peak.entering_keywords.map((kw) => (
-                      <Badge
+                      <span
                         key={kw}
-                        variant="secondary"
-                        className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0"
+                        className="text-[10px] font-mono border border-rule text-ink px-1.5 py-0"
                       >
                         + {kw}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
                 )}
@@ -230,13 +232,12 @@ export function DriftChart({ data, height = 300 }: DriftChartProps) {
                 {peak.exiting_keywords.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {peak.exiting_keywords.map((kw) => (
-                      <Badge
+                      <span
                         key={kw}
-                        variant="secondary"
-                        className="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0"
+                        className="text-[10px] font-mono border border-rule text-oxblood px-1.5 py-0"
                       >
                         - {kw}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
                 )}

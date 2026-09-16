@@ -1,4 +1,4 @@
-import { Wand2, Link as LinkIcon, Sparkles, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
+import { Plus, Link as LinkIcon, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { SchemaPreview } from "@/lib/styles/components/schema-preview";
 import { BaseCard, VariantButton, SearchableDropdownButton, DropdownButton } from "@/lib/styles/components";
@@ -120,7 +120,7 @@ export function ExtractionConfigPanel({
                   <VariantButton intent="secondary"
                     size="sm"
                     onClick={onGenerateSchema}
-                    icon={Wand2}
+                    icon={Plus}
                   >
                     Generate New
                   </VariantButton>
@@ -207,15 +207,11 @@ export function ExtractionConfigPanel({
                   {isLoading ? (
                     <span>Starting Extraction...</span>
                   ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      {isLoadingDocuments
-                        ? "Loading Documents..."
-                        : selectedDocuments.size > 0
-                          ? `Start Extraction (${selectedDocuments.size} ${selectedDocuments.size === 1 ? 'document' : 'documents'})`
-                          : "Start Extraction"
-                      }
-                    </>
+                    isLoadingDocuments
+                      ? "Loading Documents..."
+                      : selectedDocuments.size > 0
+                        ? `Start Extraction (${selectedDocuments.size} ${selectedDocuments.size === 1 ? 'document' : 'documents'})`
+                        : "Start Extraction"
                   )}
                 </VariantButton>
                 <VariantButton intent="secondary"

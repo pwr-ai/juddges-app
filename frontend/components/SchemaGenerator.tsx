@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Wand2, CheckCircle, AlertCircle, FileText, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle, FileText, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SearchDocument } from "@/types/search";
 import { BaseCard, VariantButton, LoadingIndicator, AIBadge } from "@/lib/styles/components";
@@ -308,7 +308,7 @@ export function SchemaGenerator({
  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
  <DialogHeader>
  <DialogTitle className="flex items-center gap-2">
- <Wand2 className="h-5 w-5"/>
+ <FileText className="h-5 w-5"/>
  Generate Extraction Schema
  </DialogTitle>
  </DialogHeader>
@@ -414,7 +414,6 @@ export function SchemaGenerator({
  onClick={handleGenerate}
  className="w-full"
  disabled={isLoadingDocuments}
- icon={Wand2}
  >
  Generate Schema
  {sampleDocuments.length > 0 &&"with Document Context"}

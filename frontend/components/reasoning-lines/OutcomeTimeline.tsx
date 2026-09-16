@@ -18,17 +18,19 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { ReasoningLineTimeline, TimelinePoint } from '@/types/reasoning-lines';
+import { editorialPalette } from '@/lib/charts/editorial-plot';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Color mapping for outcome categories */
+/** Color mapping for outcome categories using Editorial palette */
 const OUTCOME_COLORS = {
-  for_count: '#16a34a',        // green-600
-  against_count: '#dc2626',    // red-600
-  mixed_count: '#d97706',      // amber-600
-  procedural_count: '#6b7280', // gray-500
+  for_count: editorialPalette.ink,
+  against_count: editorialPalette.oxblood,
+  mixed_count: editorialPalette.gold,
+  procedural_count: editorialPalette.ruleStrong,
 } as const;
 
 /** Polish labels for outcome categories */
@@ -42,24 +44,24 @@ const OUTCOME_LABELS: Record<string, string> = {
 /** Polish labels for trend values */
 const TREND_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   emerging_consensus: {
-    label: 'Ksztaltujacy sie konsensus',
+    label: 'Kształtujący się konsensus',
     icon: TrendingUp,
-    color: 'bg-emerald-100 text-emerald-700',
+    color: 'border-rule text-ink',
   },
   stable_split: {
-    label: 'Stabilny podzial',
+    label: 'Stabilny podział',
     icon: Minus,
-    color: 'bg-amber-100 text-amber-700',
+    color: 'border-rule text-gold',
   },
   direction_change: {
     label: 'Zmiana kierunku',
     icon: TrendingDown,
-    color: 'bg-rose-100 text-rose-700',
+    color: 'border-rule text-oxblood',
   },
   insufficient_data: {
-    label: 'Niewystarczajace dane',
+    label: 'Niewystarczające dane',
     icon: AlertTriangle,
-    color: 'bg-slate-100 text-slate-600',
+    color: 'border-rule text-ink-soft',
   },
 };
 
@@ -95,8 +97,8 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
 
   if (data.points.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-        Brak danych do wyswietlenia. Sklasyfikuj orzeczenia, aby zobaczyc os czasu.
+      <div className="flex items-center justify-center py-8 text-sm text-ink-soft">
+        Brak danych do wyświetlenia. Sklasyfikuj orzeczenia, aby zobaczyć oś czasu.
       </div>
     );
   }
@@ -106,13 +108,16 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
       {/* Trend badge */}
       <div className="flex items-center gap-2">
         <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${trendInfo.color}`}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-2.5 py-0.5 border text-xs font-mono uppercase',
+            trendInfo.color
+          )}
         >
           <TrendIcon className="h-3.5 w-3.5" />
           {trendInfo.label}
         </span>
         {data.trend_slope !== 0 && (
-          <span className="text-xs text-muted-foreground tabular-nums">
+          <span className="text-xs font-mono text-ink-soft tabular-nums">
             (nachylenie: {data.trend_slope > 0 ? '+' : ''}
             {data.trend_slope.toFixed(2)})
           </span>
@@ -123,25 +128,27 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
       <div style={{ width: '100%', height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid strokeDasharray="3 3" stroke={editorialPalette.rule} />
             <XAxis
               dataKey="name"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              tick={{ fill: editorialPalette.ink, fontSize: 11, fontFamily: 'monospace' }}
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: editorialPalette.rule }}
             />
             <YAxis
               allowDecimals={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              tick={{ fill: editorialPalette.ink, fontSize: 11, fontFamily: 'monospace' }}
               tickLine={false}
-              axisLine={{ stroke: 'hsl(var(--border))' }}
+              axisLine={{ stroke: editorialPalette.rule }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
+                backgroundColor: 'var(--parchment)',
+                border: '1px solid var(--rule)',
+                borderRadius: '0px',
                 fontSize: '12px',
+                fontFamily: 'monospace',
+                color: editorialPalette.ink,
               }}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               formatter={(value: any) => [`${value}`]}
@@ -149,7 +156,7 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
               labelFormatter={(label: any) => `Okres: ${label}`}
             />
             <Legend
-              wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+              wrapperStyle={{ fontSize: '12px', fontFamily: 'monospace', paddingTop: '8px' }}
             />
             <Bar
               dataKey="Za"
@@ -173,7 +180,7 @@ export function OutcomeTimeline({ data, height = 320 }: OutcomeTimelineProps) {
               dataKey="Proceduralne"
               stackId="outcomes"
               fill={OUTCOME_COLORS.procedural_count}
-              radius={[2, 2, 0, 0]}
+              radius={[0, 0, 0, 0]}
             />
           </BarChart>
         </ResponsiveContainer>

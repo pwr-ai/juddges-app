@@ -8,7 +8,6 @@ import {
   Cpu,
   Globe,
   Loader2,
-  Zap,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -124,7 +123,7 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
   const providerIcon = (provider: string) => {
     switch (provider) {
       case "openai":
-        return <Zap className="h-4 w-4" />;
+        return <Brain className="h-4 w-4" />;
       case "cohere":
         return <Globe className="h-4 w-4" />;
       case "local":
@@ -134,18 +133,7 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
     }
   };
 
-  const providerColor = (provider: string) => {
-    switch (provider) {
-      case "openai":
-        return "bg-green-100 text-green-800";
-      case "cohere":
-        return "bg-purple-100 text-purple-800";
-      case "local":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  const providerColor = () => "border border-rule text-ink font-mono bg-transparent";
 
   if (loading) {
     return (

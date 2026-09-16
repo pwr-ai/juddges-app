@@ -296,107 +296,65 @@ export function FieldCard({
  setIsTypePopoverOpen(false);
  };
 
- // Get color for field type (use choice color for choice types)
- const typeColor = field.visual_metadata.color ||
- (isChoiceType ? '#8b5cf6' : // purple for choice
- isGroupType ? TYPE_COLORS.object : // use object color for groups
- TYPE_COLORS[field.field_type]);
+  // Type color: gold for AI-created, ink for human/default
+  const typeColor = field.created_by === 'ai' ? '#B8954A' : '#1A1A2E';
 
- // Check if this is a group field (object with children)
- const isGroup = hasChildren && field.field_type === "object";
+  // Check if this is a group field (object with children)
+  const isGroup = hasChildren && field.field_type === "object";
 
- // Handle delete confirmation
- const handleDeleteConfirm = () => {
- onDelete(field.id);
- setShowDeleteDialog(false);
- };
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    onDelete(field.id);
+    setShowDeleteDialog(false);
+  };
 
- // Animation variants
- const cardVariants: Variants = {
- hidden: { opacity: 0, y: -20 },
- visible: {
- opacity: 1,
- y: 0,
- transition: { duration: 0.3 },
- },
- exit: {
- opacity: 0,
- x: -100,
- transition: { duration: 0.2 },
- },
- };
+  // Animation variants
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.3 },
+    },
+    exit: {
+      opacity: 0,
+      x: -100,
+      transition: { duration: 0.2 },
+    },
+  };
 
- const pulseVariants: Variants = {
- pulse: {
- scale: [1, 1.02, 1],
- borderColor: [typeColor, `${typeColor}80`, typeColor],
- transition: { duration: 3 },
- },
- };
+  const pulseVariants: Variants = {
+    pulse: {
+      scale: [1, 1.02, 1],
+      borderColor: [typeColor, `${typeColor}80`, typeColor],
+      transition: { duration: 3 },
+    },
+  };
 
- return (
- <>
- <motion.div
- initial="hidden"
- animate={isHighlighted ? "pulse": "visible"}
- exit="exit"
- variants={isHighlighted ? pulseVariants : cardVariants}
- >
- <div
- onClick={handleCardClick}
- className={cn(
-"group relative transition-all duration-200 rounded-lg cursor-pointer",
-"hover:shadow-lg hover:-translate-y-0.5",
- isDragging &&"opacity-50 rotate-2",
- hasError &&"border-destructive",
- isHighlighted &&"border-primary",
- isActionsExpanded &&"ring-2 ring-primary/30"
- )}
- style={{
- borderLeftWidth: "3px",
- borderLeftColor: typeColor,
- // Subtle glassmorphism
- background: "rgba(255, 255, 255, 0.6)",
- backdropFilter: "blur(4px)",
- WebkitBackdropFilter: "blur(4px)",
- // Use separate border properties instead of shorthand to avoid conflict with borderLeftColor
- borderTopWidth: "1px",
- borderTopStyle: "solid",
- borderTopColor: "rgba(0, 0, 0, 0.1)",
- borderRightWidth: "1px",
- borderRightStyle: "solid",
- borderRightColor: "rgba(0, 0, 0, 0.1)",
- borderBottomWidth: "1px",
- borderBottomStyle: "solid",
- borderBottomColor: "rgba(0, 0, 0, 0.1)",
- boxShadow: "0 2px 8px rgba(15, 23, 42, 0.05)",
- }}
- >
- {/* Dark mode glassmorphism */}
- <div
- className="absolute inset-0 rounded-lg opacity-0 transition-opacity pointer-events-none"
- style={{
- background: "rgba(30, 27, 46, 0.6)",
- backdropFilter: "blur(4px)",
- WebkitBackdropFilter: "blur(4px)",
- // Use separate border properties instead of shorthand
- borderTopWidth: "1px",
- borderTopStyle: "solid",
- borderTopColor: "rgba(255, 255, 255, 0.1)",
- borderRightWidth: "1px",
- borderRightStyle: "solid",
- borderRightColor: "rgba(255, 255, 255, 0.1)",
- borderBottomWidth: "1px",
- borderBottomStyle: "solid",
- borderBottomColor: "rgba(255, 255, 255, 0.1)",
- borderLeftWidth: "1px",
- borderLeftStyle: "solid",
- borderLeftColor: "rgba(255, 255, 255, 0.1)",
- boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
- }}
- />
-
- <div className="relative p-3">
+  return (
+    <>
+      <motion.div
+        initial="hidden"
+        animate={isHighlighted ? "pulse" : "visible"}
+        exit="exit"
+        variants={isHighlighted ? pulseVariants : cardVariants}
+      >
+        <div
+          onClick={handleCardClick}
+          className={cn(
+            "group relative transition-all duration-200 rounded-none cursor-pointer bg-parchment border border-rule",
+            "hover:border-rule-strong hover:-translate-y-px",
+            isDragging && "opacity-50 rotate-2",
+            hasError && "border-oxblood",
+            isHighlighted && "border-ink",
+            isActionsExpanded && "ring-1 ring-ink/20"
+          )}
+          style={{
+            borderLeftWidth: "3px",
+            borderLeftColor: typeColor,
+          }}
+        >
+          <div className="relative p-3">
  <div className="flex items-center justify-between gap-3">
  {/* Selection checkbox and field name */}
  <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -443,7 +401,7 @@ export function FieldCard({
  {field.created_by === 'ai' && (
  <Badge
  variant="outline"
- className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 bg-amber-50 border-amber-300 text-amber-700"
+ className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 border-gold text-gold bg-transparent font-mono"
  >
  <Sparkles className="h-3 w-3"/>
  <span className="font-medium">Review</span>

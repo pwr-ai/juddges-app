@@ -231,24 +231,25 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  cell: ({ row }) => {
  const displayType = getDisplayType(row.original);
  const typeLabel = getFieldTypeLabel(displayType);
- const style = getTypeStyle(displayType);
+ const marker = getFieldMarker(displayType);
+ const MarkerIcon = marker.icon;
 
  // Nested and choice types should not be changeable in table view - use field editor instead
- const isComplexType = typeLabel === "nested"|| typeLabel === "choice";
+ const isComplexType = typeLabel === "nested" || typeLabel === "choice";
 
  if (editable && onFieldUpdate && !isComplexType) {
  // Only allow simple types to be changed in table view
  const availableOptions = [
- { value: "text", label: "text"},
- { value: "number", label: "number"},
- { value: "yes/no", label: "yes/no"},
- { value: "list", label: "list"},
+ { value: "text", label: "text" },
+ { value: "number", label: "number" },
+ { value: "yes/no", label: "yes/no" },
+ { value: "list", label: "list" },
  ];
 
  return (
  <div className="py-1">
  <DropdownButton
- icon={style.icon}
+ icon={<MarkerIcon className="h-3.5 w-3.5" />}
  label={typeLabel}
  value={typeLabel}
  options={availableOptions}
@@ -262,20 +263,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
 
  return (
  <div className="py-1">
- <Badge
- variant="outline"
- className={cn(
-"flex items-center justify-start gap-1.5 px-3 py-1.5 text-xs font-semibold",
-"backdrop-blur-sm shadow-sm ring-1 w-24",
- style.color,
- style.bg,
- style.border,
-"ring-slate-200/20"
- )}
- >
- {style.icon}
- <span>{typeLabel}</span>
- </Badge>
+ <FieldTypeBadge type={displayType} />
  </div>
  );
  },

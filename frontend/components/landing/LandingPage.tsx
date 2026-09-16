@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Search,
-  Zap,
+  Layers,
   GraduationCap,
   Landmark,
   BookOpen,
@@ -475,7 +475,7 @@ const capabilities: ReadonlyArray<{
     cta: "Try search",
   },
   {
-    icon: Zap,
+    icon: Layers,
     title: "Schema Extraction",
     description:
       "Define custom data schemas and let AI agents extract structured information from legal documents at scale. Build datasets from raw judgments.",

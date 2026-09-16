@@ -10,8 +10,9 @@ import React, { useRef, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Loader2, Target } from 'lucide-react';
-import { BaseCard } from '@/lib/styles/components';
 import { Button } from '@/components/ui/button';
+import { editorialPalette } from '@/lib/charts/editorial-plot';
+import { Eyebrow } from '@/components/editorial';
 import type { DAGNode, DAGEdge, DAGNodeStatus, DAGEdgeEventType } from '@/types/reasoning-lines';
 
 // Dynamically import ForceGraph2D to avoid SSR issues (canvas-based)
@@ -28,20 +29,20 @@ const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
 // Color maps
 // ---------------------------------------------------------------------------
 
-/** Node fill color keyed by status */
-const NODE_STATUS_COLORS: Record<DAGNodeStatus, string> = {
-  active: '#22c55e',     // green-500
-  merged: '#3b82f6',     // blue-500
-  superseded: '#9ca3af', // gray-400
-  dormant: '#f59e0b',    // amber-500
+/** Node status style: active=oxblood, merged=ink, dormant=gold, superseded=hollow */
+const NODE_STATUS_CONFIG: Record<DAGNodeStatus, { color: string; hollow?: boolean }> = {
+  active: { color: editorialPalette.oxblood },
+  merged: { color: editorialPalette.ink },
+  dormant: { color: editorialPalette.gold },
+  superseded: { color: editorialPalette.ruleStrong, hollow: true },
 };
 
-/** Edge color keyed by event type */
-const EDGE_EVENT_COLORS: Record<DAGEdgeEventType, string> = {
-  branch: '#ef4444',    // red-500
-  merge: '#22c55e',     // green-500
-  influence: '#3b82f6', // blue-500
-  drift: '#f97316',     // orange-500
+/** Edge config keyed by event type: branch=solid oxblood, merge=solid ink, influence=dashed ink-soft, drift=dotted gold */
+const EDGE_EVENT_CONFIG: Record<DAGEdgeEventType, { color: string; dash: number[] }> = {
+  branch: { color: editorialPalette.oxblood, dash: [] },
+  merge: { color: editorialPalette.ink, dash: [] },
+  influence: { color: editorialPalette.inkSoft, dash: [4, 4] },
+  drift: { color: editorialPalette.gold, dash: [2, 3] },
 };
 
 /** Polish labels for legend */
@@ -149,26 +150,26 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
 
       // Radius proportional to case_count (min 4, max 18)
       const radius = Math.max(4, Math.min(18, 4 + Math.sqrt(data.case_count) * 2));
-      const color = NODE_STATUS_COLORS[data.status] ?? '#9ca3af';
+      const config = NODE_STATUS_CONFIG[data.status] ?? { color: editorialPalette.ruleStrong };
 
       ctx.save();
-
-      // Shadow for depth
-      ctx.shadowBlur = 4;
-      ctx.shadowColor = 'rgba(0,0,0,0.12)';
 
       // Circle
       ctx.beginPath();
       ctx.arc(data.x, data.y, radius, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      // Border
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.shadowBlur = 0;
+      if (config.hollow) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = config.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = config.color;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
 
       // Label — only render when zoomed in enough
       if (globalScale >= 0.6) {
@@ -206,7 +207,8 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       const tgt = data.target;
       if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) return;
 
-      const color = EDGE_EVENT_COLORS[data.event_type] ?? '#9ca3af';
+      const edgeConfig = EDGE_EVENT_CONFIG[data.event_type] ?? { color: editorialPalette.ruleStrong, dash: [] };
+      const color = edgeConfig.color;
       // Width proportional to confidence (min 0.8, max 3)
       const width = 0.8 + data.confidence * 2.2;
 
@@ -214,12 +216,14 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
 
       // Line
       ctx.beginPath();
+      ctx.setLineDash(edgeConfig.dash);
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(tgt.x, tgt.y);
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.8;
       ctx.stroke();
+      ctx.setLineDash([]); // reset dash for arrow
 
       // Arrowhead
       const arrowLen = 6;
@@ -250,7 +254,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
   );
 
   return (
-    <BaseCard clickable={false} variant="light" className="rounded-[16px] relative overflow-hidden">
+    <div className="relative border border-rule bg-parchment overflow-hidden">
       {/* Graph canvas */}
       <div style={{ height }} className="w-full">
         {/* eslint-disable @typescript-eslint/no-explicit-any */}
@@ -279,7 +283,7 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
         <Button
           size="icon"
           variant="secondary"
-          className="shadow-lg bg-background/95 backdrop-blur h-8 w-8"
+          className="border border-rule bg-parchment hover:bg-parchment-deep rounded-none h-8 w-8 text-ink"
           onClick={handleCenterGraph}
           title="Wycentruj graf"
         >
@@ -288,36 +292,48 @@ export function ReasoningDAG({ nodes, edges, height = 500 }: ReasoningDAGProps) 
       </div>
 
       {/* Legend — bottom left */}
-      <div className="absolute bottom-3 left-3 bg-background/95 backdrop-blur rounded-xl border p-3 shadow-lg text-xs space-y-2 max-w-[220px]">
+      <div className="absolute bottom-3 left-3 bg-parchment/95 border border-rule p-3 text-xs space-y-2 max-w-[240px]">
         {/* Node statuses */}
-        <p className="font-medium text-foreground">Wezly (status)</p>
+        <Eyebrow className="text-[10px]">Węzły (status)</Eyebrow>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(Object.keys(NODE_STATUS_COLORS) as DAGNodeStatus[]).map((status) => (
-            <div key={status} className="flex items-center gap-1.5">
-              <div
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: NODE_STATUS_COLORS[status] }}
-              />
-              <span className="text-muted-foreground">{STATUS_LABELS[status]}</span>
-            </div>
-          ))}
+          {(Object.keys(NODE_STATUS_CONFIG) as DAGNodeStatus[]).map((status) => {
+            const cfg = NODE_STATUS_CONFIG[status];
+            return (
+              <div key={status} className="flex items-center gap-1.5 font-mono text-[11px]">
+                <div
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{
+                    backgroundColor: cfg.hollow ? '#ffffff' : cfg.color,
+                    border: cfg.hollow ? `1.5px solid ${cfg.color}` : 'none',
+                  }}
+                />
+                <span className="text-ink-soft">{STATUS_LABELS[status]}</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Edge types */}
-        <p className="font-medium text-foreground pt-1">Krawedzie (typ)</p>
+        <Eyebrow className="text-[10px] pt-1">Krawędzie (typ)</Eyebrow>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(Object.keys(EDGE_EVENT_COLORS) as DAGEdgeEventType[]).map((eventType) => (
-            <div key={eventType} className="flex items-center gap-1.5">
-              <div
-                className="w-4 h-0.5 flex-shrink-0 rounded"
-                style={{ backgroundColor: EDGE_EVENT_COLORS[eventType] }}
-              />
-              <span className="text-muted-foreground">{EVENT_LABELS[eventType]}</span>
-            </div>
-          ))}
+          {(Object.keys(EDGE_EVENT_CONFIG) as DAGEdgeEventType[]).map((eventType) => {
+            const cfg = EDGE_EVENT_CONFIG[eventType];
+            return (
+              <div key={eventType} className="flex items-center gap-1.5 font-mono text-[11px]">
+                <div
+                  className="w-4 h-0.5 flex-shrink-0"
+                  style={{
+                    backgroundColor: cfg.color,
+                    borderTop: cfg.dash.length > 0 ? `1px dashed ${cfg.color}` : undefined,
+                  }}
+                />
+                <span className="text-ink-soft">{EVENT_LABELS[eventType]}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </BaseCard>
+    </div>
   );
 }
 
