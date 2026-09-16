@@ -11,16 +11,22 @@ interface ExtractionJobCardProps {
 }
 
 export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardProps) {
+  const statusLabel: Record<typeof job.status, string> = {
+    completed: 'Completed',
+    failed: 'Failed',
+    in_progress: 'In Progress',
+  };
+
   const timeAgo = new Date(job.created_at).toLocaleDateString();
 
-  // Determine progress bar color based on status
+  // Progress bar: ink when done, oxblood when failed, gold while running
   const getProgressBarColor = () => {
-    if (job.status === 'failed') {
+    if (job.status === 'completed') {
+      return 'bg-ink';
+    } else if (job.status === 'failed') {
       return 'bg-oxblood';
-    } else if (job.status === 'in_progress') {
-      return 'bg-gold';
     }
-    return 'bg-ink';
+    return 'bg-gold';
   };
 
   return (
@@ -34,7 +40,9 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
           <h4 className="font-semibold text-base line-clamp-2 flex-1 min-w-0">{job.collection_name}</h4>
           <StatusBadge
             status={job.status}
-            label={job.status === 'in_progress' ? 'In Progress' : undefined}
+            label={statusLabel[job.status]}
+            size="sm"
+            className="shrink-0"
           />
         </div>
 
@@ -59,9 +67,9 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
                   {job.completed_documents} / {job.document_count}
                 </span>
               </div>
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-primary/20">
+              <div className="relative h-1.5 w-full overflow-hidden bg-parchment-deep">
                 <div
-                  className={cn("h-full transition-all", getProgressBarColor())}
+                  className={cn("h-full transition-[width]", getProgressBarColor())}
                   style={{
                     width: `${job.status === 'failed'
                       ? 100
@@ -112,8 +120,7 @@ export function ExtractionJobCard({ job, onOpen, onRetry }: ExtractionJobCardPro
 
           {job.status === 'failed' && (
             <VariantButton
-              intent="glass"
-              variant="white"
+              intent="secondary"
               onClick={() => {
                 onRetry(job);
               }}

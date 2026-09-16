@@ -40,6 +40,7 @@ import {
 import { toast } from "sonner";
 import { DocumentExtractionResult } from "@/types/search";
 import { DeleteConfirmationDialog } from "@/lib/styles/components/delete-confirmation-dialog";
+import { EditorialCard, Headline } from "@/components/editorial";
 import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,11 @@ export const dynamic = 'force-dynamic';
 type StatusFilter = 'all' | 'completed' | 'in_progress' | 'failed';
 type SortOption = 'newest' | 'oldest';
 
+// Shared control styling — sharp edges, hairline rules, mono labels
+const TOOLBAR_BUTTON = "inline-flex items-center gap-1.5 border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors";
+const TOOLBAR_BUTTON_IDLE = "border-rule bg-transparent text-ink-soft hover:border-ink hover:text-ink";
+const TOOLBAR_BUTTON_ACTIVE = "border-ink bg-ink text-parchment";
+const TOOLBAR_BUTTON_DISABLED = "border-rule text-ink-soft opacity-50 cursor-not-allowed";
 interface ExtractionJob {
  job_id: string;
  collection_id?: string;
@@ -404,27 +410,27 @@ function ExtractionsContent() {
  {/* Header Section */}
  <div className="mb-6">
  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
- <div className="flex items-center gap-2">
- <p className="text-base font-medium text-foreground">
- Browse your extraction jobs
- </p>
+ <div className="flex items-center gap-3">
+ <Headline as="h1" size="xs">
+ Browse your <em>extraction jobs</em>
+ </Headline>
  <Popover>
  <PopoverTrigger asChild>
  <button
  type="button"
- className="inline-flex items-center justify-center rounded-full w-5 h-5 text-muted-foreground hover:text-foreground hover:bg-slate-100 transition-colors"
+ className="inline-flex items-center justify-center w-5 h-5 text-ink-soft hover:text-ink transition-colors"
  aria-label="What is an extraction? "
  >
  <Info className="h-4 w-4"/>
  </button>
  </PopoverTrigger>
  <PopoverContent
- className="w-80 p-5 bg-parchment border border-rule shadow-md"
+ className="w-80 rounded-none border border-rule bg-parchment p-5 shadow-none"
  align="start"
  >
  <div className="space-y-3">
- <h4 className="font-semibold text-sm text-foreground">What is an extraction job?</h4>
- <p className="text-sm text-muted-foreground leading-relaxed text-justify">
+ <h4 className="font-semibold text-sm text-ink">What is an extraction job?</h4>
+ <p className="text-sm text-ink-soft leading-relaxed">
  An extraction job processes documents from a collection using a schema to extract structured data.
  Each job tracks progress and stores results for all processed documents.
  </p>
@@ -451,15 +457,14 @@ function ExtractionsContent() {
  onChange={(e) => setSearchQuery(e.target.value)}
  className={cn(
 "w-full pl-10 pr-10 h-12",
-"rounded-xl border-2",
-"focus:border-primary focus:ring-2 focus:ring-primary/20",
-"transition-all duration-200"
+"rounded-none border-rule bg-parchment",
+"focus:border-ink focus-visible:ring-0"
  )}
  />
  {searchQuery && (
  <button
  onClick={() => setSearchQuery('')}
- className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 transition-colors"
+ className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-soft hover:text-ink transition-colors"
  aria-label="Clear search"
  >
  <X className="h-4 w-4 text-muted-foreground hover:text-foreground"/>
@@ -476,20 +481,14 @@ function ExtractionsContent() {
  key={value}
  onClick={() => setStatusFilter(value)}
  className={cn(
-"inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
- statusFilter === value
- ? "bg-primary text-primary-foreground shadow-sm"
- : "bg-slate-100 text-muted-foreground hover:text-foreground hover:bg-slate-200"
+TOOLBAR_BUTTON,
+ statusFilter === value ? TOOLBAR_BUTTON_ACTIVE : TOOLBAR_BUTTON_IDLE
  )}
+ aria-pressed={statusFilter === value}
  >
  <Icon className="h-3.5 w-3.5"/>
  {label}
- <span className={cn(
-"ml-1 px-1.5 py-0.5 rounded-full text-xs",
- statusFilter === value
- ? "bg-primary-foreground/20 text-primary-foreground"
- : "bg-slate-200 text-muted-foreground"
- )}>
+ <span className="ml-1 tabular-nums opacity-70">
  {statusCounts[value]}
  </span>
  </button>
@@ -498,11 +497,11 @@ function ExtractionsContent() {
 
  {/* Sort Dropdown */}
  <div className="flex items-center gap-2">
- <span className="text-xs text-muted-foreground">Sort by:</span>
+ <span className="font-mono text-[11px] uppercase tracking-wider text-ink-soft">Sort by</span>
  <select
  value={sortOption}
  onChange={(e) => setSortOption(e.target.value as SortOption)}
- className="text-xs px-2 py-1 rounded-md border border-slate-200 bg-white text-foreground"
+ className="border border-rule bg-parchment px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-ink"
  >
  <option value="newest">Newest First</option>
  <option value="oldest">Oldest First</option>
@@ -511,14 +510,14 @@ function ExtractionsContent() {
  </div>
 
  {/* Results count */}
- <div className="text-sm font-medium text-foreground/70">
+ <div className="text-sm text-ink-soft">
  {searchQuery || statusFilter !== 'all' ? (
  <>
- Found <span className="text-foreground font-semibold">{sortedJobs.length}</span> extraction{sortedJobs.length !== 1 ? 's' : ''}
+ Found <span className="font-mono tabular-nums text-ink">{sortedJobs.length}</span> extraction{sortedJobs.length !== 1 ? 's' : ''}
  </>
  ) : (
  <>
- <span className="text-foreground font-semibold">{jobs.length}</span> extraction{jobs.length !== 1 ? 's' : ''} total
+ <span className="font-mono tabular-nums text-ink">{jobs.length}</span> extraction{jobs.length !== 1 ? 's' : ''} total
  </>
  )}
  </div>
@@ -551,8 +550,9 @@ function ExtractionsContent() {
  const isRetrying = retryingJobs.has(job.job_id);
 
  return (
- <div
+ <EditorialCard
  key={job.job_id}
+ clickable
  onClick={() => router.push(`/extractions/${job.job_id}`)}
  onKeyDown={(e) => {
  if (e.key === 'Enter' || e.key === ' ') {
@@ -563,31 +563,19 @@ function ExtractionsContent() {
  role="button"
  tabIndex={0}
  className={cn(
- "group relative",
- "flex flex-col",
- "min-h-[280px]",
- "p-5 rounded-none",
- "bg-parchment",
- "border border-rule",
- "border-t-2 border-t-ink",
- "hover:-translate-y-px",
- "transition-transform",
- "cursor-pointer",
- "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
+ "group min-h-[280px]",
+ "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
  )}
  aria-label={`Extraction: ${job.schema_name || 'Unnamed'}. Status: ${getStatusDisplayText(job.status)}. Click to view details.`}
  >
  {/* Header */}
  <div className="flex flex-col gap-2 mb-3">
- <h3 className="text-lg font-semibold text-foreground line-clamp-2 leading-tight">
+ <h3 className="editorial-display text-lg leading-tight line-clamp-2 text-ink">
  {job.schema_name || 'Extraction Job'}
  </h3>
  <div className="flex gap-2 flex-wrap items-center">
- <StatusBadge
- status={job.status}
- label={getStatusDisplayText(job.status)}
- />
- <Badge variant="outline" className="text-xs px-2 py-0.5">
+ <StatusBadge status={status} label={getStatusDisplayText(job.status)} size="sm" />
+ <Badge variant="outline" className="font-mono text-xs px-2 py-0.5 tabular-nums">
  {job.completed_documents || 0}/{job.total_documents || 0} docs
  </Badge>
  </div>
@@ -595,7 +583,7 @@ function ExtractionsContent() {
 
  {/* Collection */}
  <div className="flex-1 min-h-0 mb-4">
- <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+ <div className="flex items-center gap-2 text-sm text-ink-soft mb-2">
  <FolderOpen className="h-4 w-4 shrink-0"/>
  <span className="truncate">
  {job.collection_name || 'Unknown Collection'}
@@ -606,7 +594,7 @@ function ExtractionsContent() {
  {/* Metadata Footer */}
  <div className="flex flex-col gap-3 mt-auto">
  {/* Metadata */}
- <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+ <div className="flex flex-col gap-1.5 text-xs text-ink-soft">
  <div className="flex items-center gap-2">
  <Calendar className="h-3.5 w-3.5 shrink-0"/>
  <span>Created: {formatDateCompact(job.created_at)}</span>
@@ -624,17 +612,16 @@ function ExtractionsContent() {
  </div>
 
  {/* Action Buttons - Revealed on hover */}
- <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pt-2 border-t border-slate-200/50">
+ <div className="flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 pt-2 border-t border-rule">
  <button
  onClick={(e) => {
  e.stopPropagation();
  router.push(`/extractions/${job.job_id}`);
  }}
  className={cn(
-"flex-1 flex items-center justify-center gap-1.5",
-"px-3 py-2 rounded-lg text-xs font-medium",
-"bg-primary/10 hover:bg-primary/20 text-primary",
-"transition-colors duration-200"
+"flex-1 justify-center",
+ TOOLBAR_BUTTON,
+ TOOLBAR_BUTTON_IDLE
  )}
  aria-label="View results"
  >
@@ -649,12 +636,9 @@ function ExtractionsContent() {
  }}
  disabled={isRetrying}
  className={cn(
-"flex items-center justify-center gap-1.5",
-"px-3 py-2 rounded-lg text-xs font-medium",
-"bg-blue-50 hover:bg-blue-100",
-"text-blue-600",
-"transition-colors duration-200",
- isRetrying &&"opacity-50 cursor-not-allowed"
+"justify-center",
+ TOOLBAR_BUTTON,
+ isRetrying ? TOOLBAR_BUTTON_DISABLED : TOOLBAR_BUTTON_IDLE
  )}
  aria-label="Retry extraction"
  >
@@ -668,11 +652,9 @@ function ExtractionsContent() {
  handleDeleteClick(job);
  }}
  className={cn(
-"flex items-center justify-center",
-"px-3 py-2 rounded-lg text-xs font-medium",
-"bg-red-50 hover:bg-red-100",
-"text-red-600",
-"transition-colors duration-200"
+"justify-center",
+ TOOLBAR_BUTTON,
+"border-rule text-oxblood hover:border-oxblood"
  )}
  aria-label="Delete extraction"
  >
@@ -680,7 +662,7 @@ function ExtractionsContent() {
  </button>
  </div>
  </div>
- </div>
+ </EditorialCard>
  );
  })}
  </div>
@@ -692,10 +674,8 @@ function ExtractionsContent() {
  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
  disabled={currentPage === 1}
  className={cn(
-"flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
- currentPage === 1
- ? "bg-slate-100 text-muted-foreground cursor-not-allowed opacity-50"
- : "bg-slate-100 text-foreground hover:bg-slate-200"
+TOOLBAR_BUTTON,
+ currentPage === 1 ? TOOLBAR_BUTTON_DISABLED : TOOLBAR_BUTTON_IDLE
  )}
  aria-label="Previous page"
  >
@@ -719,15 +699,14 @@ function ExtractionsContent() {
  return (
  <React.Fragment key={page}>
  {showEllipsis && (
- <span className="px-2 text-muted-foreground">...</span>
+ <span className="px-2 font-mono text-ink-soft">…</span>
  )}
  <button
  onClick={() => setCurrentPage(page)}
  className={cn(
-"w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200",
- currentPage === page
- ? "bg-primary text-primary-foreground shadow-sm"
- : "bg-slate-100 text-muted-foreground hover:text-foreground hover:bg-slate-200"
+"h-9 w-9 justify-center px-0 tabular-nums",
+ TOOLBAR_BUTTON,
+ currentPage === page ? TOOLBAR_BUTTON_ACTIVE : TOOLBAR_BUTTON_IDLE
  )}
  aria-label={`Page ${page}`}
  aria-current={currentPage === page ? 'page' : undefined}
@@ -743,10 +722,8 @@ function ExtractionsContent() {
  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
  disabled={currentPage === totalPages}
  className={cn(
-"flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
- currentPage === totalPages
- ? "bg-slate-100 text-muted-foreground cursor-not-allowed opacity-50"
- : "bg-slate-100 text-foreground hover:bg-slate-200"
+TOOLBAR_BUTTON,
+ currentPage === totalPages ? TOOLBAR_BUTTON_DISABLED : TOOLBAR_BUTTON_IDLE
  )}
  aria-label="Next page"
  >
@@ -758,7 +735,7 @@ function ExtractionsContent() {
 
  {/* Page info */}
  {totalPages > 1 && (
- <div className="text-center text-sm text-muted-foreground mt-4">
+ <div className="text-center font-mono text-[11px] uppercase tracking-wider text-ink-soft mt-4">
  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, sortedJobs.length)} of {sortedJobs.length} extractions
  </div>
  )}
