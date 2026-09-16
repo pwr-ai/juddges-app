@@ -297,7 +297,7 @@ export function FieldCard({
  };
 
   // Type color: gold for AI-created, ink for human/default
-  const typeColor = field.created_by === 'ai' ? '#B8954A' : '#1A1A2E';
+  const typeColor = field.created_by === 'ai' ? '#B49A5E' : '#000000';
 
   // Check if this is a group field (object with children)
   const isGroup = hasChildren && field.field_type === "object";

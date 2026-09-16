@@ -963,13 +963,13 @@ export function buildFieldPath(...segments: string[]): FieldPath {
  * Default type colors for visual editor
  */
 export const TYPE_COLORS: Record<FieldType, string> = {
-  string: '#1A1A2E',
-  number: '#1A1A2E',
-  integer: '#1A1A2E',
-  boolean: '#1A1A2E',
-  array: '#1A1A2E',
-  object: '#1A1A2E',
-  null: '#1A1A2E',
+  string: '#000000',
+  number: '#000000',
+  integer: '#000000',
+  boolean: '#000000',
+  array: '#000000',
+  object: '#000000',
+  null: '#000000',
 } as const;
 
 /**

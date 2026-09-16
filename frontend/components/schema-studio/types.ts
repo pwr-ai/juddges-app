@@ -98,11 +98,11 @@ export interface SchemaField {
  * Type color mappings for visual representation
  */
 export const TYPE_COLORS: Record<FieldType, string> = {
-  string: '#1A1A2E',
-  number: '#1A1A2E',
-  boolean: '#1A1A2E',
-  array: '#1A1A2E',
-  object: '#1A1A2E',
+  string: '#000000',
+  number: '#000000',
+  boolean: '#000000',
+  array: '#000000',
+  object: '#000000',
 } as const;
 
 /**

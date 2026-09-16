@@ -447,19 +447,19 @@ export const defaultFieldEditorData: FieldEditorFormData = {
  * Field type color mapping for visual consistency
  */
 export const fieldTypeColors: Record<PydanticFieldType, string> = {
-  string: '#1A1A2E',
-  integer: '#1A1A2E',
-  number: '#1A1A2E',
-  boolean: '#1A1A2E',
-  array: '#1A1A2E',
-  object: '#1A1A2E',
-  date: '#1A1A2E',
-  datetime: '#1A1A2E',
-  time: '#1A1A2E',
-  email: '#1A1A2E',
-  url: '#1A1A2E',
-  uuid: '#1A1A2E',
-  enum: '#1A1A2E',
+  string: '#000000',
+  integer: '#000000',
+  number: '#000000',
+  boolean: '#000000',
+  array: '#000000',
+  object: '#000000',
+  date: '#000000',
+  datetime: '#000000',
+  time: '#000000',
+  email: '#000000',
+  url: '#000000',
+  uuid: '#000000',
+  enum: '#000000',
 };
 
 /**
