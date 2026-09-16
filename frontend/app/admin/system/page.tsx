@@ -25,7 +25,7 @@ function InfoRow({ label, value }: InfoRowProps) {
 
 function ServiceCardSkeleton() {
  return (
- <div className="rounded-2xl border border-border bg-card overflow-hidden animate-pulse">
+ <div className="border border-rule bg-card overflow-hidden animate-pulse">
  <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
  <div className="rounded-lg bg-muted size-9"/>
  <div className="flex-1">
@@ -117,7 +117,7 @@ export default function AdminSystemPage() {
  <ServiceCardSkeleton key={i} />
  ))
  ) : isError ? null : services.length === 0 ? (
- <div className="rounded-2xl border border-border bg-card py-16 text-center">
+ <div className="border border-rule bg-card py-16 text-center">
  <p className="text-sm text-muted-foreground">
  The health check ran but reported no services. Confirm the backend is
  running with health reporting enabled, then re-run the check.
@@ -127,12 +127,10 @@ export default function AdminSystemPage() {
  services.map(([key, svc]) => (
  <div
  key={key}
- className="rounded-2xl border border-border bg-card overflow-hidden"
+ className="border border-rule bg-card overflow-hidden"
  >
  <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
- <div className="rounded-lg bg-primary/8 p-2">
- <Activity className="size-5 text-primary"/>
- </div>
+ <Activity className="size-5 text-oxblood"/>
  <div className="flex-1">
  <h2 className="font-serif text-xl text-foreground capitalize">
  {svc.name ?? key}

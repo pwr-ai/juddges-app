@@ -81,7 +81,7 @@ export default function AdminUsersPage() {
  )}
 
  {/* Table */}
- <div className="rounded-2xl border border-border bg-card overflow-hidden">
+ <div className="border border-rule bg-card overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm">
  <thead>
@@ -152,7 +152,7 @@ export default function AdminUsersPage() {
  </td>
  <td className="px-6 py-4">
  {user.is_admin ? (
- <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-purple-50 text-purple-700">
+ <span className="inline-flex border border-rule px-2 py-0.5 font-mono text-xs uppercase tracking-wider text-oxblood">
  admin
  </span>
  ) : (

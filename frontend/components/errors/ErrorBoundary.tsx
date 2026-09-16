@@ -111,29 +111,29 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
  */
 function DefaultErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
  return (
- <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
- <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+ <div className="min-h-screen flex items-center justify-center p-4 bg-parchment-deep">
+ <div className="max-w-md w-full bg-parchment border border-rule border-t-2 border-t-oxblood p-6">
  <div className="flex items-start gap-4">
  <div className="flex-shrink-0">
- <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
- <AlertTriangle className="w-6 h-6 text-red-600"/>
+ <div className="w-12 h-12 border border-oxblood flex items-center justify-center">
+ <AlertTriangle className="w-6 h-6 text-oxblood"/>
  </div>
  </div>
 
  <div className="flex-1">
- <h2 className="text-lg font-semibold text-gray-900 mb-2">
+ <h2 className="text-lg font-semibold text-ink mb-2">
  Something went wrong
  </h2>
- <p className="text-sm text-gray-600 mb-4">
+ <p className="text-sm text-ink-soft mb-4">
  {error.message || 'An unexpected error occurred'}
  </p>
 
  {process.env.NODE_ENV === 'development' && (
  <details className="mb-4">
- <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+ <summary className="text-xs text-ink-soft cursor-pointer hover:text-ink">
  Error details
  </summary>
- <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40">
+ <pre className="mt-2 text-xs bg-parchment-deep border border-rule p-2 overflow-auto max-h-40">
  {error.stack}
  </pre>
  </details>

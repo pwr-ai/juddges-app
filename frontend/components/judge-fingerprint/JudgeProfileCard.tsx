@@ -39,7 +39,7 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
   };
 
   return (
-    <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+    <BaseCard clickable={false} variant="light">
       <div className="space-y-4">
         {/* Header: name + stats */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -65,21 +65,21 @@ export function JudgeProfileCard({ profile }: JudgeProfileCardProps) {
 
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="text-center p-3 rounded-xl bg-primary/5">
+          <div className="text-center p-3 border border-rule bg-parchment-deep">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Scale className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="text-xl font-bold text-primary">{profile.total_cases}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{t('judgeFingerprint.statCases')}</div>
           </div>
-          <div className="text-center p-3 rounded-xl bg-primary/5">
+          <div className="text-center p-3 border border-rule bg-parchment-deep">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Scale className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="text-xl font-bold text-primary">{profile.cases_analyzed}</div>
             <div className="text-xs text-muted-foreground mt-0.5">{t('judgeFingerprint.statAnalyzed')}</div>
           </div>
-          <div className="text-center p-3 rounded-xl bg-primary/5 col-span-2 sm:col-span-1">
+          <div className="text-center p-3 border border-rule bg-parchment-deep col-span-2 sm:col-span-1">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Calendar className="h-3.5 w-3.5 text-primary" />
             </div>

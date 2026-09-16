@@ -152,13 +152,13 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <div className="flex items-center gap-2 border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {error}
         </div>
       )}
 
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+      <div className="flex items-start gap-2 border-l-2 border-l-gold bg-parchment-deep p-3 text-sm text-ink">
         <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
         <span>
           {isAdmin ? (
@@ -205,7 +205,7 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
                 {!model.api_key_configured && (
                   <Badge
                     variant="outline"
-                    className="border-amber-300 text-xs text-amber-600"
+                    className="border-rule font-mono text-xs uppercase tracking-wider text-gold"
                   >
                     <AlertCircle className="mr-1 h-3 w-3" />
                     API key missing
@@ -223,8 +223,8 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
                 <div
                   className={`mt-2 rounded px-2 py-1 text-xs ${
                     testResult.success
-                      ? "bg-green-50 text-green-700"
-                      : "bg-red-50 text-red-700"
+                      ? "border border-rule text-ink"
+                      : "border border-rule text-oxblood"
                   }`}
                 >
                   {testResult.success ? "Test passed" : "Test failed"}: {testResult.message}

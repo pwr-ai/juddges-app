@@ -50,7 +50,28 @@ const CLEAN_FILES = [
   'app/extract/_components/RecentExtractions.tsx',
   'app/extract/_components/DocumentSelector.tsx',
   'app/extract/_components/types.ts',
+  'app/settings/page.tsx',
+  'app/settings/_components/embedding-models-section.tsx',
+  'app/admin/page.tsx',
+  'app/admin/content/page.tsx',
+  'app/admin/documents/page.tsx',
+  'app/admin/system/page.tsx',
+  'app/admin/users/page.tsx',
+  'components/SaveSearchDialog.tsx',
+  'components/errors/ErrorBoundary.tsx',
+  'components/ChunkErrorBoundary.tsx',
+  'components/judge-fingerprint/JudgeProfileCard.tsx',
+  'components/judge-fingerprint/JudgeSearch.tsx',
+  'components/legal/professional-acknowledgment.tsx',
+  'components/status/ServiceCard.tsx',
 ];
+
+/** Emoji used as icons (#641 misc) — lucide glyphs or nothing. */
+const EMOJI_FREE_FILES = [
+  'components/ChunkErrorBoundary.tsx',
+  'lib/styles/components/chat/chat-message-styles.tsx',
+];
+const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 
 /**
  * Recharts writes `stroke`/`fill` as SVG presentation attributes, where
@@ -89,6 +110,12 @@ const CHART_FILES = [...RECHARTS_FILES, 'components/reasoning-lines/ReasoningDAG
 describe('chart components', () => {
   it.each(CHART_FILES)('%s has no colour literals (hex, rgb(), hsl())', (file) => {
     expect(read(file)).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/);
+  });
+});
+
+describe('emoji-free files', () => {
+  it.each(EMOJI_FREE_FILES)('%s uses no emoji as icons', (file) => {
+    expect(read(file)).not.toMatch(EMOJI);
   });
 });
 

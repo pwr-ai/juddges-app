@@ -81,28 +81,28 @@ export function ProfessionalAcknowledgment({
  title: "AI Assistance, Not Legal Advice",
  description:
 "This tool provides AI-powered assistance for research and analysis. It does not provide legal advice and should not be relied upon as a substitute for professional judgment.",
- color: "text-amber-600",
+ color: "text-gold",
  },
  {
  icon: Shield,
  title: "Professional Responsibility",
  description:
 "You are solely responsible for verifying all AI-generated outputs before using them in any professional or legal context. Always apply your professional judgment.",
- color: "text-blue-600",
+ color: "text-ink",
  },
  {
  icon: AlertTriangle,
  title: "No Attorney-Client Privilege",
  description:
 "Use of this tool does not create an attorney-client relationship, and communications through this platform may not be privileged or confidential.",
- color: "text-red-600",
+ color: "text-oxblood",
  },
  {
  icon: CheckCircle2,
  title: "Verification Required",
  description:
 "All AI-generated content must be independently verified. The AI may produce incomplete, incorrect, or outdated information. Professional verification is mandatory.",
- color: "text-green-600",
+ color: "text-ink",
  },
  ];
 

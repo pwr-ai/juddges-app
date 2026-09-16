@@ -237,7 +237,7 @@ export function ErrorMessage({
  {/* Troubleshooting tips section */}
  <div className="bg-slate-50/50 rounded-lg p-3 border border-slate-200/50">
  <p className="text-sm font-medium text-slate-700 mb-2">
- 💡 Troubleshooting tips:
+ Troubleshooting tips:
  </p>
  <ul className="text-sm text-slate-600 space-y-1 ml-4 list-disc">
  <li>Check your internet connection</li>

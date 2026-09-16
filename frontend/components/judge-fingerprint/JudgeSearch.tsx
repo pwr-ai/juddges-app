@@ -84,7 +84,7 @@ export function JudgeSearch({
     <div className="space-y-3">
       {/* Search input */}
       <div ref={containerRef} className="relative">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-border/50 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all">
+        <div className="flex items-center gap-2 px-3 py-2 bg-parchment border border-rule focus-within:border-ink transition-colors">
           {isLoading ? (
             <Loader2 className="h-4 w-4 text-muted-foreground animate-spin flex-shrink-0" />
           ) : (
@@ -113,7 +113,7 @@ export function JudgeSearch({
 
         {/* Dropdown results */}
         {isDropdownOpen && debouncedQuery.length >= 2 && (
-          <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg bg-background border border-border shadow-lg">
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto bg-parchment border border-rule-strong">
             {isLoading && (
               <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />

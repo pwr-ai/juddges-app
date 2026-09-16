@@ -1,6 +1,7 @@
 "use client";
 
 import { BookOpen, CheckCircle2, PenLine, Eye } from "lucide-react";
+import { Stat } from "@/components/editorial";
 import { useAdminContentStats } from "@/lib/api/admin";
 import { ErrorCard } from "@/lib/styles/components";
 import logger from "@/lib/logger";
@@ -10,7 +11,7 @@ const pageLogger = logger.child("AdminContentPage");
 
 function StatCardSkeleton() {
  return (
- <div className="rounded-2xl border border-border bg-card p-6 animate-pulse">
+ <div className="border border-rule bg-card p-6 animate-pulse">
  <div className="mb-4 rounded-lg bg-muted p-2 size-9"/>
  <div className="h-8 w-20 rounded bg-muted mb-1"/>
  <div className="h-4 w-28 rounded bg-muted"/>
@@ -86,15 +87,10 @@ export default function AdminContentPage() {
  return (
  <div
  key={card.label}
- className="rounded-2xl border border-border bg-card p-6"
+ className="border border-rule bg-card p-6"
  >
- <div className="mb-4 rounded-lg bg-primary/8 p-2 w-fit">
- <Icon className="size-5 text-primary"/>
- </div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {card.value}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">{card.label}</p>
+ <Icon className="mb-4 size-5 text-oxblood"/>
+ <Stat static size="sm" value={card.value} label={card.label} />
  </div>
  );
  })}
@@ -102,7 +98,7 @@ export default function AdminContentPage() {
 
  {/* Summary card */}
  {!isLoading && data && (
- <div className="rounded-2xl border border-border bg-card p-6">
+ <div className="border border-rule bg-card p-6">
  <h2 className="font-serif text-xl text-foreground mb-4">
  Publishing Overview
  </h2>
@@ -140,7 +136,7 @@ export default function AdminContentPage() {
  )}
 
  {!isLoading && !isError && !data && (
- <div className="rounded-2xl border border-border bg-card py-16 text-center">
+ <div className="border border-rule bg-card py-16 text-center">
  <p className="text-sm text-muted-foreground">
  No blog posts have been created yet. Publish your first post and its statistics will appear here.
  </p>

@@ -17,7 +17,7 @@ import {
 } from "@/lib/api/admin";
 import { useDashboardStats } from "@/lib/api/dashboard";
 import { ErrorCard } from "@/lib/styles/components";
-import { StatusBadge } from "@/components/editorial";
+import { Stat, StatusBadge } from "@/components/editorial";
 import logger from "@/lib/logger";
 import { useEffect } from "react";
 
@@ -39,9 +39,9 @@ function formatPct(value: number | undefined | null): string {
 
 function StatCardSkeleton() {
  return (
- <div className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4 animate-pulse">
+ <div className="border border-rule bg-card p-6 flex flex-col gap-4 animate-pulse">
  <div className="flex items-start justify-between">
- <div className="rounded-lg bg-muted p-2 size-9"/>
+ <div className="bg-muted size-5"/>
  <div className="h-5 w-14 rounded-full bg-muted"/>
  </div>
  <div>
@@ -137,18 +137,13 @@ export default function AdminDashboardPage() {
  return (
  <div
  key={card.label}
- className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4"
+ className="border border-rule bg-card p-6 flex flex-col gap-4"
  >
  <div className="flex items-start justify-between">
- <div className="rounded-lg bg-primary/8 p-2">
- <Icon className="size-5 text-primary"/>
- </div>
+ <Icon className="size-5 text-oxblood"/>
  </div>
  <div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {card.value}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">{card.label}</p>
+ <Stat static size="sm" value={card.value} label={card.label} />
  </div>
  </div>
  );
@@ -169,31 +164,19 @@ export default function AdminDashboardPage() {
  ) : dashboardStatsQuery.isLoading ? (
  <StatCardSkeleton />
  ) : dashboardStats ? (
- <div className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4">
+ <div className="border border-rule bg-card p-6 flex flex-col gap-4">
  <div className="flex items-start justify-between">
- <div className="rounded-lg bg-primary/8 p-2">
- <ShieldCheck className="size-5 text-primary"/>
- </div>
+ <ShieldCheck className="size-5 text-oxblood"/>
  <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground/70">
  Corpus data quality
  </span>
  </div>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
  <div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {formatPct(embeddingsPct)}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">
- Documents with embeddings
- </p>
+ <Stat static size="sm" value={formatPct(embeddingsPct)} label="Documents with embeddings" />
  </div>
  <div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {formatPct(summaryPct)}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">
- Documents with AI summary
- </p>
+ <Stat static size="sm" value={formatPct(summaryPct)} label="Documents with AI summary" />
  </div>
  </div>
  </div>
@@ -204,7 +187,7 @@ export default function AdminDashboardPage() {
  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
  {/* Recent Activity – spans 2 cols */}
- <div className="lg:col-span-2 rounded-2xl border border-border bg-card">
+ <div className="lg:col-span-2 border border-rule bg-card">
  <div className="px-6 py-5 border-b border-border">
  <h2 className="font-serif text-xl text-foreground">Recent Activity</h2>
  </div>
@@ -293,7 +276,7 @@ export default function AdminDashboardPage() {
  </div>
 
  {/* System Health */}
- <div className="rounded-2xl border border-border bg-card">
+ <div className="border border-rule bg-card">
  <div className="px-6 py-5 border-b border-border">
  <h2 className="font-serif text-xl text-foreground">System Health</h2>
  </div>

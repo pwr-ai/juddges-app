@@ -1,6 +1,7 @@
 "use client";
 
 import { FileText, Globe, Scale, Tag } from "lucide-react";
+import { Stat } from "@/components/editorial";
 import { useAdminDocumentStats } from "@/lib/api/admin";
 import { ErrorCard } from "@/lib/styles/components";
 import logger from "@/lib/logger";
@@ -10,7 +11,7 @@ const pageLogger = logger.child("AdminDocumentsPage");
 
 function StatCardSkeleton() {
  return (
- <div className="rounded-2xl border border-border bg-card p-6 animate-pulse">
+ <div className="border border-rule bg-card p-6 animate-pulse">
  <div className="mb-4 rounded-lg bg-muted p-2 size-9"/>
  <div className="h-8 w-24 rounded bg-muted mb-1"/>
  <div className="h-4 w-32 rounded bg-muted"/>
@@ -20,7 +21,7 @@ function StatCardSkeleton() {
 
 function BreakdownTableSkeleton() {
  return (
- <div className="rounded-2xl border border-border bg-card overflow-hidden animate-pulse">
+ <div className="border border-rule bg-card overflow-hidden animate-pulse">
  <div className="px-6 py-5 border-b border-border">
  <div className="h-6 w-32 rounded bg-muted"/>
  </div>
@@ -45,7 +46,7 @@ function BreakdownTable({
 }) {
  const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
  return (
- <div className="rounded-2xl border border-border bg-card overflow-hidden">
+ <div className="border border-rule bg-card overflow-hidden">
  <div className="px-6 py-5 border-b border-border">
  <h2 className="font-serif text-xl text-foreground">{title}</h2>
  </div>
@@ -158,15 +159,10 @@ export default function AdminDocumentsPage() {
  return (
  <div
  key={card.label}
- className="rounded-2xl border border-border bg-card p-6"
+ className="border border-rule bg-card p-6"
  >
- <div className="mb-4 rounded-lg bg-primary/8 p-2 w-fit">
- <Icon className="size-5 text-primary"/>
- </div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {card.value}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">{card.label}</p>
+ <Icon className="mb-4 size-5 text-oxblood"/>
+ <Stat static size="sm" value={card.value} label={card.label} />
  </div>
  );
  })}
