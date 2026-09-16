@@ -121,11 +121,11 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-xs text-ink-soft">
           {searchQuery
             ? `Showing ${filteredRows.length} of ${rows.length} documents`
             : `${rows.length} ${rows.length === 1 ? "document" : "documents"}`}
-          <span className="ml-2 text-xs">
+          <span className="ml-2">
             — exports the full collection ({rows.length}), not the filtered view
           </span>
         </p>
@@ -135,7 +135,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
               variant="default"
               size="sm"
               disabled={rows.length === 0 || isExporting !== null}
-              className="shrink-0"
+              className="shrink-0 rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep font-mono text-xs"
             >
               {isExporting !== null ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -145,7 +145,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
               Export
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 rounded-none border border-rule bg-parchment font-mono text-xs">
             <DropdownMenuLabel>Columns</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={preset}
@@ -163,7 +163,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-rule" />
             <DropdownMenuLabel>Download as</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => handleExport("xlsx")}
@@ -185,20 +185,20 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
 
       <div
         className={cn(
-          "rounded-lg border border-[var(--rule)] bg-white shadow-sm",
+          "rounded-none border border-rule bg-parchment",
           "overflow-x-auto overflow-y-auto max-h-[70vh]"
         )}
       >
-        <table className="min-w-full text-sm">
-          <thead className="bg-[var(--parchment-deep)] sticky top-0 z-10">
+        <table className="min-w-full text-xs">
+          <thead className="bg-parchment-deep sticky top-0 z-10 font-mono text-xs uppercase tracking-wider">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
                   scope="col"
                   className={cn(
-                    "px-3 py-2 text-left font-semibold text-[var(--ink)]",
-                    "border-b border-[var(--rule)] whitespace-nowrap"
+                    "px-3 py-2 text-left font-semibold text-ink",
+                    "border-b border-rule whitespace-nowrap"
                   )}
                 >
                   {col.label}
@@ -211,7 +211,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-3 py-8 text-center text-muted-foreground"
+                  className="px-3 py-8 text-center font-mono text-xs text-ink-soft"
                 >
                   {searchQuery
                     ? `No documents match "${searchQuery}".`
@@ -223,8 +223,8 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
                 <tr
                   key={`${doc.document_id}-${idx}`}
                   className={cn(
-                    "border-b border-[var(--rule)] last:border-b-0",
-                    idx % 2 === 1 && "bg-[var(--parchment)]/40"
+                    "border-b border-rule last:border-b-0",
+                    idx % 2 === 1 && "bg-parchment-deep/40"
                   )}
                 >
                   {columns.map((col) => {
@@ -235,7 +235,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
                         key={col.key}
                         className={cn(
                           "px-3 py-2 align-top whitespace-pre-wrap break-words",
-                          "max-w-[320px] text-[var(--ink-soft)]"
+                          "max-w-[320px] text-ink-soft"
                         )}
                         title={
                           typeof value === "string" && value.length > MAX_CELL_PREVIEW
@@ -243,7 +243,7 @@ const CollectionDocumentsTable: FC<CollectionDocumentsTableProps> = ({
                             : undefined
                         }
                       >
-                        {display || <span className="text-slate-300">—</span>}
+                        {display || <span className="text-ink-soft/40">—</span>}
                       </td>
                     );
                   })}

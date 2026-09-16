@@ -1,8 +1,9 @@
 import { FC } from "react";
-import { Search, X, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { Search, X, LayoutGrid, Table as TableIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { SectionHeader, VariantButton } from "@/lib/styles/components";
+import { SectionHeader } from "@/lib/styles/components";
 
 interface DocumentsToolbarProps {
   loadedDocumentCount: number;
@@ -54,7 +55,7 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
           <div
             role="tablist"
             aria-label="View mode"
-            className="inline-flex items-center rounded-lg border border-[var(--rule)] bg-white p-1 shadow-sm"
+            className="inline-flex items-center rounded-none border border-rule bg-parchment p-0.5"
           >
             <button
               type="button"
@@ -63,10 +64,10 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
               onClick={() => onViewModeChange('cards')}
               disabled={isLoadingFullTable}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1.5 rounded-none px-3 py-1 font-mono text-xs transition-colors",
                 viewMode === 'cards'
-                  ? "bg-[var(--ink)] text-white"
-                  : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                  ? "bg-ink text-parchment font-semibold"
+                  : "text-ink-soft hover:text-ink"
               )}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -79,14 +80,14 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
               onClick={() => onViewModeChange('table')}
               disabled={isLoadingFullTable}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "inline-flex items-center gap-1.5 rounded-none px-3 py-1 font-mono text-xs transition-colors",
                 viewMode === 'table'
-                  ? "bg-[var(--ink)] text-white"
-                  : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                  ? "bg-ink text-parchment font-semibold"
+                  : "text-ink-soft hover:text-ink"
               )}
             >
               {isLoadingFullTable ? (
-                <span className="animate-spin">⏳</span>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-oxblood" />
               ) : (
                 <TableIcon className="h-3.5 w-3.5" />
               )}
@@ -94,27 +95,28 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
             </button>
           </div>
           {!allDocumentsLoaded && totalDocumentCount > initialLoadLimit && viewMode === 'cards' && (
-            <VariantButton intent="secondary"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onLoadAllDocuments}
               disabled={isLoadingAll}
-              size="sm"
-              className="shrink-0"
+              className="shrink-0 rounded-none border-rule text-ink font-mono text-xs hover:border-ink hover:bg-parchment-deep"
             >
               {isLoadingAll ? (
                 <>
-                  <span className="animate-spin mr-2">⏳</span>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5 text-oxblood" />
                   Loading...
                 </>
               ) : (
                 <>Load All {totalDocumentCount} Documents</>
               )}
-            </VariantButton>
+            </Button>
           )}
         </div>
       </div>
 
       {isLoadingFullTable && fullTableProgress && (
-        <div className="mb-4 text-sm text-[var(--ink-soft)]">
+        <div className="mb-4 text-xs font-mono text-ink-soft">
           Loading documents for table view… {fullTableProgress.loaded} / {fullTableProgress.total}
         </div>
       )}
@@ -123,34 +125,29 @@ const DocumentsToolbar: FC<DocumentsToolbarProps> = ({
       {showSearch && (
         <div className="mb-6">
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-soft" />
             <Input
               type="search"
               placeholder="Search documents by title, ID, or content..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(
-                "w-full pl-10 pr-10 h-11",
-                "rounded-xl border-2",
-                "focus:border-primary focus:ring-2 focus:ring-primary/20",
-                "transition-all duration-200"
-              )}
+              className="w-full pl-10 pr-10 h-10 rounded-none border-rule bg-parchment text-ink font-mono text-xs focus-visible:border-ink"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-soft hover:text-ink transition-colors"
                 aria-label="Clear search"
               >
-                <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
 
           {/* Results count */}
           {searchQuery && (
-            <div className="text-sm text-muted-foreground mt-2">
-              Found <span className="font-semibold text-foreground">{filteredCount}</span> matching document{filteredCount !== 1 ? 's' : ''}
+            <div className="text-xs font-mono text-ink-soft mt-2">
+              Found <span className="font-semibold text-ink">{filteredCount}</span> matching document{filteredCount !== 1 ? 's' : ''}
             </div>
           )}
         </div>

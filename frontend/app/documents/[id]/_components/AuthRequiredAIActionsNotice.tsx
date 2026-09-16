@@ -7,10 +7,10 @@ export function AuthRequiredAIActionsNotice({
   message: string;
 }): React.JSX.Element {
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <div className="rounded-none border border-gold/40 bg-parchment-deep px-4 py-3 font-mono text-xs text-ink">
       <p>
         {message}{' '}
-        <Link href="/auth/login" className="font-medium underline underline-offset-4">
+        <Link href="/auth/login" className="font-semibold text-oxblood underline underline-offset-4 hover:text-oxblood-deep">
           Sign in
         </Link>{' '}
         to use AI analysis on this document.
