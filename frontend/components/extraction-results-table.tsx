@@ -73,12 +73,12 @@ interface SortState {
  */
 function formatBoolean(value: boolean): React.ReactNode {
  return value ? (
- <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-rule text-ink font-mono text-xs">
+ <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border border-rule text-ink font-mono text-xs">
  <Check className="h-3.5 w-3.5"/>
  <span>Yes</span>
  </span>
  ) : (
- <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-rule text-oxblood font-mono text-xs">
+ <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border border-rule text-oxblood font-mono text-xs">
  <XCircle className="h-3.5 w-3.5"/>
  <span>No</span>
  </span>
@@ -90,7 +90,7 @@ function formatBoolean(value: boolean): React.ReactNode {
  */
 function formatLabel(value: string): React.ReactNode {
  return (
- <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule text-ink bg-transparent">
+ <span className="inline-flex items-center px-2 py-0.5 rounded-none text-xs font-mono border border-rule text-ink bg-transparent">
  {value}
  </span>
  );
@@ -115,7 +115,7 @@ function isEnumLike(value: string): boolean {
  */
 function formatCellValue(value: unknown): React.ReactNode {
  if (value === null || value === undefined || value === "") {
- return <span className="text-slate-400 italic">-</span>;
+ return <span className="text-muted-foreground/60 italic">-</span>;
  }
 
  if (typeof value === "boolean") {
@@ -148,7 +148,7 @@ function formatCellValue(value: unknown): React.ReactNode {
  // For arrays
  if (Array.isArray(value)) {
  if (value.length === 0) {
- return <span className="text-slate-400 italic">Empty list</span>;
+ return <span className="text-muted-foreground/60 italic">Empty list</span>;
  }
  // Check if it's an array of simple values that could be labels
  if (value.every(v => typeof v === "string"&& isEnumLike(v))) {
@@ -228,155 +228,155 @@ interface ColumnFilterProps {
 }
 
 function ColumnFilter({
- value,
- onChange,
- placeholder ="Filter...",
+  value,
+  onChange,
+  placeholder = "Filter...",
 }: ColumnFilterProps): React.JSX.Element {
- return (
- <div className="relative mt-1.5">
- <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400"/>
- <input
- type="text"
- value={value}
- onChange={(e) => onChange(e.target.value)}
- placeholder={placeholder}
- onClick={(e) => e.stopPropagation()}
- className="w-full pl-7 pr-7 py-1.5 text-xs border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
- />
- {value && (
- <button
- onClick={(e) => {
- e.stopPropagation();
- onChange("");
- }}
- className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
- >
- <X className="h-3 w-3"/>
- </button>
- )}
- </div>
- );
+  return (
+    <div className="relative mt-1.5">
+      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full pl-7 pr-7 py-1.5 text-xs border border-rule rounded-none bg-parchment text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ink font-mono"
+      />
+      {value && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onChange("");
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 interface PaginationProps {
- currentPage: number;
- totalPages: number;
- pageSize: number;
- totalItems: number;
- pageSizeOptions: number[];
- onPageChange: (page: number) => void;
- onPageSizeChange: (size: number) => void;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  totalItems: number;
+  pageSizeOptions: number[];
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 function Pagination({
- currentPage,
- totalPages,
- pageSize,
- totalItems,
- pageSizeOptions,
- onPageChange,
- onPageSizeChange,
+  currentPage,
+  totalPages,
+  pageSize,
+  totalItems,
+  pageSizeOptions,
+  onPageChange,
+  onPageSizeChange,
 }: PaginationProps): React.JSX.Element {
- const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
- const endItem = Math.min(currentPage * pageSize, totalItems);
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
 
- return (
- <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-slate-200 bg-slate-50/80">
- <div className="flex items-center gap-2 text-sm text-slate-600">
- <span>Show</span>
- <select
- value={pageSize}
- onChange={(e) => onPageSizeChange(Number(e.target.value))}
- className="px-2 py-1.5 border border-slate-200 rounded-md bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
- >
- {pageSizeOptions.map((size) => (
- <option key={size} value={size}>
- {size}
- </option>
- ))}
- </select>
- <span>per page</span>
- </div>
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 border-t border-rule bg-parchment-deep">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
+        <span>Show</span>
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          className="px-2 py-1.5 border border-rule rounded-none bg-parchment text-foreground focus:outline-none focus:border-ink cursor-pointer font-mono"
+        >
+          {pageSizeOptions.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+        <span>per page</span>
+      </div>
 
- <div className="text-sm text-slate-600">
- {totalItems > 0 ? (
- <>
- Showing <span className="font-semibold text-slate-900">{startItem}</span> to{""}
- <span className="font-semibold text-slate-900">{endItem}</span> of{""}
- <span className="font-semibold text-slate-900">{totalItems}</span> results
- </>
- ) : (
-"No results"
- )}
- </div>
+      <div className="text-sm font-mono text-muted-foreground">
+        {totalItems > 0 ? (
+          <>
+            Showing <span className="font-semibold text-foreground tabular-nums">{startItem}</span> to{" "}
+            <span className="font-semibold text-foreground tabular-nums">{endItem}</span> of{" "}
+            <span className="font-semibold text-foreground tabular-nums">{totalItems}</span> results
+          </>
+        ) : (
+          "No results"
+        )}
+      </div>
 
- <div className="flex items-center gap-1">
- <button
- onClick={() => onPageChange(1)}
- disabled={currentPage === 1}
- className="p-2 rounded-md hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
- title="First page"
- >
- <ChevronsLeft className="h-4 w-4"/>
- </button>
- <button
- onClick={() => onPageChange(currentPage - 1)}
- disabled={currentPage === 1}
- className="p-2 rounded-md hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
- title="Previous page"
- >
- <ChevronLeft className="h-4 w-4"/>
- </button>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-none border border-rule hover:bg-parchment disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="First page"
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-none border border-rule hover:bg-parchment disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="Previous page"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
 
- <div className="flex items-center gap-1 mx-2">
- {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
- let pageNum: number;
- if (totalPages <= 5) {
- pageNum = i + 1;
- } else if (currentPage <= 3) {
- pageNum = i + 1;
- } else if (currentPage >= totalPages - 2) {
- pageNum = totalPages - 4 + i;
- } else {
- pageNum = currentPage - 2 + i;
- }
+        <div className="flex items-center gap-1 mx-2">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum: number;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
 
- return (
- <button
- key={pageNum}
- onClick={() => onPageChange(pageNum)}
- className={cn(
-"min-w-[36px] h-9 px-3 rounded-md text-sm font-medium transition-colors",
- currentPage === pageNum
- ? "bg-blue-600 text-white shadow-sm"
- : "hover:bg-slate-200 text-slate-700"
- )}
- >
- {pageNum}
- </button>
- );
- })}
- </div>
+            return (
+              <button
+                key={pageNum}
+                onClick={() => onPageChange(pageNum)}
+                className={cn(
+                  "min-w-[36px] h-9 px-3 rounded-none border border-rule text-sm font-medium font-mono transition-colors",
+                  currentPage === pageNum
+                    ? "bg-ink text-parchment shadow-xs"
+                    : "hover:bg-parchment text-foreground"
+                )}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+        </div>
 
- <button
- onClick={() => onPageChange(currentPage + 1)}
- disabled={currentPage === totalPages || totalPages === 0}
- className="p-2 rounded-md hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
- title="Next page"
- >
- <ChevronRight className="h-4 w-4"/>
- </button>
- <button
- onClick={() => onPageChange(totalPages)}
- disabled={currentPage === totalPages || totalPages === 0}
- className="p-2 rounded-md hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
- title="Last page"
- >
- <ChevronsRight className="h-4 w-4"/>
- </button>
- </div>
- </div>
- );
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className="p-2 rounded-none border border-rule hover:bg-parchment disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="Next page"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className="p-2 rounded-none border border-rule hover:bg-parchment disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="Last page"
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 interface ExportDropdownProps {
@@ -400,61 +400,61 @@ function ExportDropdown({
  json: <FileJson className="h-4 w-4"/>,
  };
 
- const formatLabels: Record<ExportFormat, string> = {
- xlsx: "Excel (.xlsx)",
- csv: "CSV (.csv)",
- json: "JSON (.json)",
- };
+  const formatLabels: Record<ExportFormat, string> = {
+    xlsx: "Excel (.xlsx)",
+    csv: "CSV (.csv)",
+    json: "JSON (.json)",
+  };
 
- return (
- <div className="relative">
- <button
- onClick={() => setIsOpen(!isOpen)}
- disabled={isExporting || itemCount === 0}
- className={cn(
-"inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md border transition-colors",
-"bg-white border-slate-200",
-"hover:bg-slate-50",
-"disabled:opacity-50 disabled:cursor-not-allowed",
-"focus:outline-none focus:ring-2 focus:ring-blue-500/50"
- )}
- >
- {isExporting ? (
- <Loader2 className="h-4 w-4 animate-spin"/>
- ) : (
- <Download className="h-4 w-4"/>
- )}
- <span>{isExporting ? "Exporting...": `Export (${itemCount})`}</span>
- <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen &&"rotate-180")} />
- </button>
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={isExporting || itemCount === 0}
+        className={cn(
+          "inline-flex items-center gap-2 px-3 py-2 text-xs font-mono font-medium rounded-none border transition-colors",
+          "bg-parchment border-rule text-ink",
+          "hover:bg-parchment-deep",
+          "disabled:opacity-50 disabled:cursor-not-allowed",
+          "focus:outline-none focus:border-ink"
+        )}
+      >
+        {isExporting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="h-4 w-4" />
+        )}
+        <span>{isExporting ? "Exporting..." : `Export (${itemCount})`}</span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+      </button>
 
- {isOpen && (
- <>
- {/* Backdrop to close dropdown */}
- <div
- className="fixed inset-0 z-40"
- onClick={() => setIsOpen(false)}
- />
- {/* Dropdown menu */}
- <div className="absolute right-0 mt-1 w-48 py-1 bg-white border border-slate-200 rounded-md shadow-lg z-50">
- {formats.map((format) => (
- <button
- key={format}
- onClick={() => {
- onExport(format);
- setIsOpen(false);
- }}
- className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
- >
- {formatIcons[format]}
- <span>{formatLabels[format]}</span>
- </button>
- ))}
- </div>
- </>
- )}
- </div>
- );
+      {isOpen && (
+        <>
+          {/* Backdrop to close dropdown */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          {/* Dropdown menu */}
+          <div className="absolute right-0 mt-1 w-48 py-1 bg-parchment border border-rule rounded-none shadow-sm z-50">
+            {formats.map((format) => (
+              <button
+                key={format}
+                onClick={() => {
+                  onExport(format);
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-xs font-mono text-ink hover:bg-parchment-deep transition-colors"
+              >
+                {formatIcons[format]}
+                <span>{formatLabels[format]}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ============================================================================
@@ -609,141 +609,132 @@ export function ExtractionResultsTable({
  [sortedRows, rows, columns, exportFilename, exportFiltered]
  );
 
- // Render sort icon
- const renderSortIcon = (columnKey: string): React.JSX.Element => {
- if (sortState.column !== columnKey) {
- return <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400"/>;
- }
- return sortState.direction === "asc"? (
- <ChevronUp className="h-3.5 w-3.5 text-blue-600"/>
- ) : (
- <ChevronDown className="h-3.5 w-3.5 text-blue-600"/>
- );
- };
+  // Render sort icon
+  const renderSortIcon = (columnKey: string): React.JSX.Element => {
+    if (sortState.column !== columnKey) {
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />;
+    }
+    return sortState.direction === "asc" ? (
+      <ChevronUp className="h-3.5 w-3.5 text-ink" />
+    ) : (
+      <ChevronDown className="h-3.5 w-3.5 text-ink" />
+    );
+  };
 
- return (
- <div className={cn("border border-slate-200 rounded-lg overflow-hidden bg-white", className)}>
- {/* Toolbar with export */}
- {exportEnabled && (
- <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50/50">
- <div className="text-sm text-slate-600">
- {sortedRows.length} {sortedRows.length === 1 ? "result": "results"}
- {Object.values(filters).some(Boolean) && (
- <span className="ml-1 text-blue-600">(filtered)</span>
- )}
- </div>
- <ExportDropdown
- formats={exportFormats}
- onExport={handleExport}
- isExporting={isExporting}
- itemCount={exportFiltered ? sortedRows.length : rows.length}
- />
- </div>
- )}
+  return (
+    <div className={cn("border border-rule rounded-none overflow-hidden bg-parchment", className)}>
+      {/* Toolbar with export */}
+      {exportEnabled && (
+        <div className="flex items-center justify-between px-4 py-3 border-b border-rule bg-parchment-deep">
+          <div className="text-sm font-mono text-muted-foreground">
+            {sortedRows.length} {sortedRows.length === 1 ? "result" : "results"}
+            {Object.values(filters).some(Boolean) && (
+              <span className="ml-1 text-oxblood">(filtered)</span>
+            )}
+          </div>
+          <ExportDropdown
+            formats={exportFormats}
+            onExport={handleExport}
+            isExporting={isExporting}
+            itemCount={exportFiltered ? sortedRows.length : rows.length}
+          />
+        </div>
+      )}
 
- <div className="overflow-x-auto">
- <table className="w-full border-collapse">
- <thead className="sticky top-0 z-20">
- <tr className="bg-slate-100">
- {allColumns.map((column, colIndex) => {
- const isDocId = column === "document_id";
- return (
- <th
- key={column}
- className={cn(
-"text-left p-3 font-semibold text-xs uppercase tracking-wide",
-"border-b-2 border-slate-200",
-"border-r border-slate-200 last:border-r-0",
- isDocId &&"sticky left-0 z-30 bg-slate-100 min-w-[200px]",
- !isDocId && colIndex % 2 === 0 &&"bg-slate-50"
- )}
- style={{ minWidth: isDocId ? "200px": "150px"}}
- >
- <div className="space-y-1">
- <div
- className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors select-none"
- onClick={() => handleSort(column)}
- >
- <span>{isDocId ? "Document ID": column}</span>
- {renderSortIcon(column)}
- </div>
- <ColumnFilter
- value={filters[column] || ""}
- onChange={(value) => handleFilterChange(column, value)}
- placeholder={`Filter...`}
- />
- </div>
- </th>
- );
- })}
- </tr>
- </thead>
- <tbody>
- {paginatedRows.length === 0 ? (
- <tr>
- <td
- colSpan={allColumns.length}
- className="text-center py-16 text-slate-500"
- >
- <div className="flex flex-col items-center gap-2">
- <Search className="h-8 w-8 text-slate-300"/>
- <span>{emptyMessage}</span>
- </div>
- </td>
- </tr>
- ) : (
- paginatedRows.map((row, rowIndex) => (
- <tr
- key={row.document_id}
- className={cn(
-"border-b border-slate-100 last:border-b-0",
-"transition-colors",
- rowIndex % 2 === 1 &&"bg-slate-50/70",
-"hover:bg-blue-50"
- )}
- >
- {allColumns.map((column, colIndex) => {
- const isDocId = column === "document_id";
- const value = isDocId ? row.document_id : row.data[column];
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead className="sticky top-0 z-20">
+            <tr className="bg-parchment-deep">
+              {allColumns.map((column) => {
+                const isDocId = column === "document_id";
+                return (
+                  <th
+                    key={column}
+                    className={cn(
+                      "text-left p-3 font-mono font-medium text-xs uppercase tracking-wide",
+                      "border-b border-rule",
+                      "border-r border-rule last:border-r-0",
+                      isDocId && "sticky left-0 z-30 bg-parchment-deep min-w-[200px]"
+                    )}
+                    style={{ minWidth: isDocId ? "200px" : "150px" }}
+                  >
+                    <div className="space-y-1">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer hover:text-ink transition-colors select-none"
+                        onClick={() => handleSort(column)}
+                      >
+                        <span>{isDocId ? "Document ID" : column}</span>
+                        {renderSortIcon(column)}
+                      </div>
+                      <ColumnFilter
+                        value={filters[column] || ""}
+                        onChange={(value) => handleFilterChange(column, value)}
+                        placeholder={`Filter...`}
+                      />
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedRows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={allColumns.length}
+                  className="text-center py-16 text-muted-foreground"
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Search className="h-8 w-8 text-muted-foreground/40" />
+                    <span>{emptyMessage}</span>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              paginatedRows.map((row) => (
+                <tr
+                  key={row.document_id}
+                  className="border-b border-rule last:border-0 hover:bg-parchment-deep/60 transition-colors"
+                >
+                  {allColumns.map((column) => {
+                    const isDocId = column === "document_id";
+                    const value = isDocId ? row.document_id : row.data[column];
 
- return (
- <td
- key={column}
- className={cn(
-"p-3 align-top text-sm",
-"border-r border-slate-100 last:border-r-0",
- isDocId &&"sticky left-0 z-10 bg-white font-mono text-xs",
- isDocId && rowIndex % 2 === 1 &&"bg-slate-50/70",
- !isDocId && colIndex % 2 === 0 &&"bg-slate-50/30",
- !isDocId && colIndex % 2 === 0 && rowIndex % 2 === 1 &&"bg-slate-100/50"
- )}
- onClick={isDocId ? undefined : () => onRowClick?.(row)}
- >
- {isDocId ? (
- <button
- onClick={(e) => {
- e.stopPropagation();
- onDocumentClick?.(row.document_id);
- }}
- className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline transition-colors group"
- >
- <span className="break-all text-left">{row.document_id}</span>
- <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"/>
- </button>
- ) : (
- formatCellValue(value)
- )}
- </td>
- );
- })}
- </tr>
- ))
- )}
- </tbody>
- </table>
- </div>
+                    return (
+                      <td
+                        key={column}
+                        className={cn(
+                          "p-3 align-top text-sm",
+                          "border-r border-rule last:border-r-0",
+                          isDocId && "sticky left-0 z-10 bg-parchment font-mono text-xs"
+                        )}
+                        onClick={isDocId ? undefined : () => onRowClick?.(row)}
+                      >
+                        {isDocId ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDocumentClick?.(row.document_id);
+                            }}
+                            className="flex items-center gap-2 font-mono text-xs text-ink hover:text-oxblood hover:underline transition-colors group"
+                          >
+                            <span className="break-all text-left">{row.document_id}</span>
+                            <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        ) : (
+                          formatCellValue(value)
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
- <Pagination
+      <Pagination
  currentPage={currentPage}
  totalPages={totalPages}
  pageSize={pageSize}

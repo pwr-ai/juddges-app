@@ -366,40 +366,16 @@
     line-height: 1.4 !important;
   }
 
-  /* Status badges in print header - PRESERVE COLORS */
-  div.hidden.print\:block span[class*="bg-green"],
-  div.hidden.print\:block .print\:bg-green-100 {
-    background-color: #d1fae5 !important;
-    color: #065f46 !important;
-    border: 1px solid #6ee7b7 !important;
+  /* Status badges in print header - Monochrome print styles */
+  div.hidden.print\:block span[class*="StatusBadge"],
+  div.hidden.print\:block [data-status] {
+    background-color: transparent !important;
+    color: #000 !important;
+    border: 1px solid #666 !important;
     font-size: 9pt !important;
     font-weight: 600 !important;
     padding: 0.2em 0.5em !important;
-    border-radius: 0.25em !important;
-    display: inline-block !important;
-  }
-
-  div.hidden.print\:block span[class*="bg-blue"],
-  div.hidden.print\:block .print\:bg-blue-100 {
-    background-color: #dbeafe !important;
-    color: #1e40af !important;
-    border: 1px solid #93c5fd !important;
-    font-size: 9pt !important;
-    font-weight: 600 !important;
-    padding: 0.2em 0.5em !important;
-    border-radius: 0.25em !important;
-    display: inline-block !important;
-  }
-
-  div.hidden.print\:block span[class*="bg-red"],
-  div.hidden.print\:block .print\:bg-red-100 {
-    background-color: #fee2e2 !important;
-    color: #991b1b !important;
-    border: 1px solid #fca5a5 !important;
-    font-size: 9pt !important;
-    font-weight: 600 !important;
-    padding: 0.2em 0.5em !important;
-    border-radius: 0.25em !important;
+    border-radius: 0 !important;
     display: inline-block !important;
   }
 
