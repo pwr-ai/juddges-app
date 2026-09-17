@@ -38,8 +38,8 @@ export default function CollectionsError({ error, reset }: ErrorProps) {
         }}
       >
         {process.env.NODE_ENV === "development" && (
-          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 text-left">
-            <p className="text-sm font-mono text-destructive break-all">
+          <div className="rounded-none border border-rule bg-parchment-deep p-4 text-left">
+            <p className="text-xs font-mono text-oxblood break-all">
               {error.message}
             </p>
             {error.digest && (

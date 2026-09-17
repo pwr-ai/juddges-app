@@ -47,6 +47,12 @@
     },
     "SectionHeader": {
       "cardMode": "column"
+    },
+    "EditorialCardSkeleton": {
+      "cardMode": "column"
+    },
+    "EditorialPagination": {
+      "cardMode": "column"
     }
   }
 }

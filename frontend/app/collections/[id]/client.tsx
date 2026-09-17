@@ -2,9 +2,11 @@
 
 import { FC } from "react";
 import { SearchDocument } from "@/types/search";
-import { Pencil, ArrowLeft } from "lucide-react";
+import { Pencil, ArrowLeft, Lightbulb, X } from "lucide-react";
 import CollectionDocumentsTable from "@/components/collection-documents-table";
-import { VariantButton, TipCard, DeleteConfirmationDialog, PageContainer } from "@/lib/styles/components";
+import { Button } from "@/components/ui/button";
+import { EditorialCard } from "@/components/editorial";
+import { DeleteConfirmationDialog, PageContainer } from "@/lib/styles/components";
 import CollectionLoadingSkeleton from "./_components/CollectionLoadingSkeleton";
 import AddDocumentsDialog from "./_components/AddDocumentsDialog";
 import EditCollectionForm from "./_components/EditCollectionForm";
@@ -89,34 +91,38 @@ const CollectionClient: FC<CollectionClientProps> = ({ id, initialCollection }) 
   }
 
   if (!collection) {
-    return <PageContainer width="standard"fillViewport className="flex items-center justify-center">Collection not found</PageContainer>;
+    return <PageContainer width="standard" fillViewport className="flex items-center justify-center">Collection not found</PageContainer>;
   }
 
   return (
-    <PageContainer width="standard"fillViewport>
+    <PageContainer width="standard" fillViewport>
       {/* Return to Collections Button and Add Document Button */}
       <div className="mb-4 flex items-center justify-between gap-4">
-        <VariantButton
-          intent="text"
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => router.push('/collections')}
-          icon={ArrowLeft}
-          iconPosition="left"
+          className="rounded-none font-mono text-xs text-ink-soft hover:text-ink hover:bg-transparent p-0 gap-1.5"
         >
+          <ArrowLeft className="h-4 w-4" />
           Return to Collections
-        </VariantButton>
+        </Button>
         {!isEditing && (
           <div className="flex items-center gap-2">
-            <VariantButton intent="icon"
-              icon={Pencil}
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setEditName(collection.name);
                 setEditDescription(collection.description ?? "");
                 setIsEditing(true);
               }}
-              variant="muted"
-              size="md"
+              className="rounded-none border-rule text-ink font-mono text-xs hover:border-ink hover:bg-parchment-deep gap-1.5"
               aria-label="Edit collection"
-            />
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
             <AddDocumentsDialog
               open={isAddDocumentDialogOpen}
               onOpenChange={setIsAddDocumentDialogOpen}
@@ -228,13 +234,27 @@ const CollectionClient: FC<CollectionClientProps> = ({ id, initialCollection }) 
 
         {/* Help text for small collections */}
         {collection && collection.documents.length > 0 && collection.documents.length < 3 && !isTipDismissed && (
-          <TipCard
-            className="mt-6"
-            title="Tip"
-            description='Add more documents from search results by clicking the"Add to Collection"button, or manually enter document IDs below to build your research collection.'
-            dismissible
-            onDismiss={() => setIsTipDismissed(true)}
-          />
+          <EditorialCard flat className="mt-6 p-4 border-rule bg-parchment-deep relative">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <Lightbulb className="h-4 w-4 text-gold shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="font-serif font-semibold text-sm text-ink">Tip</h4>
+                  <p className="text-xs text-ink-soft leading-relaxed">
+                    Add more documents from search results by clicking the &quot;Add to Collection&quot; button, or manually enter document IDs below to build your research collection.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTipDismissed(true)}
+                className="p-1 text-ink-soft hover:text-ink transition-colors"
+                aria-label="Dismiss tip"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </EditorialCard>
         )}
       </div>
 

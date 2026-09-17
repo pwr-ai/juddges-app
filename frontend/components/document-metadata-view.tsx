@@ -18,10 +18,8 @@ import {
  Clock,
  MapPin
 } from 'lucide-react';
-import { BaseCard } from '@/lib/styles/components';
-import { Badge } from '@/lib/styles/components';
 import { Separator } from '@/components/ui/separator';
-import { getHeaderGradientStyle } from '@/lib/styles/components/headers';
+import { EditorialCard } from '@/components/editorial';
 
 interface DocumentMetadata {
  [key: string]: any;
@@ -208,22 +206,22 @@ const shouldDisplayField = (key: string, value: any): boolean => {
 
 // Helper to render badge or styled div/span based on field type
 const renderBadgeOrSpan = (content: string, key: string | number, isLegalReferences: boolean) => {
- if (isLegalReferences) {
- return (
- <div
- key={key}
- className="block rounded-md border px-2 py-0.5 text-xs font-medium break-words bg-slate-100/60 border-slate-200/30 text-foreground"
- style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
- >
- {content}
- </div>
- );
- }
- return (
- <Badge key={key} variant="secondary"className="text-xs">
- {content}
- </Badge>
- );
+  if (isLegalReferences) {
+    return (
+      <div
+        key={key}
+        className="block rounded-none border border-rule px-2 py-0.5 font-mono text-xs break-words bg-parchment-deep text-ink"
+        style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+      >
+        {content}
+      </div>
+    );
+  }
+  return (
+    <span key={key} className="inline-block px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
+      {content}
+    </span>
+  );
 };
 
 const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
@@ -277,7 +275,7 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
  if (entries.length === 0) return null;
 
  return (
- <div key={idx} className="text-xs bg-muted p-2 rounded space-y-1">
+ <div key={idx} className="text-xs bg-parchment-deep border border-rule p-2 rounded-none space-y-1">
  {entries.map(([k, v]) => {
  const cleanValue = typeof v === 'string' ? v.replace(/<[^>]*>/g, '') : String(v);
  return (
@@ -365,29 +363,29 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
  }
  }
 
- // If no string values found, show as JSON
- return (
- <div className="text-xs bg-muted p-2 rounded font-mono">
- {JSON.stringify(value, null, 2)}
- </div>
- );
- }
+  // If no string values found, show as JSON
+  return (
+    <div className="text-xs bg-parchment-deep border border-rule p-2 rounded-none font-mono">
+      {JSON.stringify(value, null, 2)}
+    </div>
+  );
+  }
 
- if (typeof value === 'string' && isUrl(value)) {
- // Strip HTML tags from URL
- const cleanUrl = value.replace(/<[^>]*>/g, '');
- return (
- <a
- href={cleanUrl}
- target="_blank"
- rel="noopener noreferrer"
- className="text-primary hover:underline flex items-center gap-1"
- >
- {cleanUrl}
- <LinkIcon className="w-3 h-3"/>
- </a>
- );
- }
+  if (typeof value === 'string' && isUrl(value)) {
+    // Strip HTML tags from URL
+    const cleanUrl = value.replace(/<[^>]*>/g, '');
+    return (
+      <a
+        href={cleanUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-oxblood hover:underline flex items-center gap-1 font-mono text-xs"
+      >
+        {cleanUrl}
+        <LinkIcon className="w-3 h-3"/>
+      </a>
+    );
+  }
 
  // Check if it's a JSON string
  if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
@@ -417,7 +415,7 @@ const renderFieldValue = (value: any, fieldKey?: string): React.ReactNode => {
  }
  if (isObject(parsed)) {
  return (
- <div className="text-xs bg-muted p-2 rounded font-mono">
+ <div className="text-xs bg-parchment-deep border border-rule p-2 rounded-none font-mono">
  {JSON.stringify(parsed, null, 2)}
  </div>
  );
@@ -613,73 +611,72 @@ export function DocumentMetadataView({ metadata }: DocumentMetadataViewProps) {
 
 
  return (
- <BaseCard
- className="rounded-2xl"
- clickable={false}
- variant="light"
- title={<h3 className={getHeaderGradientStyle('lg')}>Document Metadata</h3>}
- >
- <div className="space-y-4">
- {/* Document Status & Validation */}
- {statusFields.some(key => shouldDisplayField(key, safeMetadata[key]) || (key === 'status' && shouldDisplayField('interpretation_status', safeMetadata.interpretation_status))) && (
- <div className="space-y-3">
- {(safeMetadata.interpretation_status || (safeMetadata as any).status) && renderField('status', safeMetadata.interpretation_status || (safeMetadata as any).status)}
- </div>
- )}
+    <EditorialCard
+      flat
+      className="p-5 border-rule bg-parchment"
+    >
+      <h3 className="font-serif text-lg font-semibold text-ink mb-4 pb-3 border-b border-rule">Document Metadata</h3>
+      <div className="space-y-4">
+        {/* Document Status & Validation */}
+        {statusFields.some(key => shouldDisplayField(key, safeMetadata[key]) || (key === 'status' && shouldDisplayField('interpretation_status', safeMetadata.interpretation_status))) && (
+          <div className="space-y-3">
+            {(safeMetadata.interpretation_status || (safeMetadata as any).status) && renderField('status', safeMetadata.interpretation_status || (safeMetadata as any).status)}
+          </div>
+        )}
 
- {/* Source & References */}
- {sourceFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
- <>
- <Separator className="my-4"/>
- <div className="space-y-3">
- {safeMetadata.source_url && renderField('source_url', safeMetadata.source_url)}
- {safeMetadata.references && renderField('references', safeMetadata.references)}
- </div>
- </>
- )}
+        {/* Source & References */}
+        {sourceFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
+          <>
+            <Separator className="my-4 bg-rule" />
+            <div className="space-y-3">
+              {safeMetadata.source_url && renderField('source_url', safeMetadata.source_url)}
+              {safeMetadata.references && renderField('references', safeMetadata.references)}
+            </div>
+          </>
+        )}
 
- {/* Historical Dates */}
- {dateFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
- <>
- <Separator className="my-4"/>
- <div className="space-y-3">
- {(safeMetadata as any).submission_date && renderField('submission_date', (safeMetadata as any).submission_date)}
- {safeMetadata.date_issued && renderField('date_issued', safeMetadata.date_issued)}
- {safeMetadata.publication_date && renderField('publication_date', safeMetadata.publication_date)}
- </div>
- </>
- )}
+        {/* Historical Dates */}
+        {dateFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
+          <>
+            <Separator className="my-4 bg-rule" />
+            <div className="space-y-3">
+              {(safeMetadata as any).submission_date && renderField('submission_date', (safeMetadata as any).submission_date)}
+              {safeMetadata.date_issued && renderField('date_issued', safeMetadata.date_issued)}
+              {safeMetadata.publication_date && renderField('publication_date', safeMetadata.publication_date)}
+            </div>
+          </>
+        )}
 
- {/* Administrative Data (Internal Use) */}
- {adminFields.some(key => shouldDisplayField(key, safeMetadata[key]) && (key !== 'processing_status' || String(safeMetadata.processing_status).toLowerCase() !== 'completed')) && (
- <>
- <Separator className="my-4"/>
- <div className="space-y-3">
- {safeMetadata.processing_status && String(safeMetadata.processing_status).toLowerCase() !== 'completed' && renderField('processing_status', safeMetadata.processing_status)}
- </div>
- </>
- )}
+        {/* Administrative Data (Internal Use) */}
+        {adminFields.some(key => shouldDisplayField(key, safeMetadata[key]) && (key !== 'processing_status' || String(safeMetadata.processing_status).toLowerCase() !== 'completed')) && (
+          <>
+            <Separator className="my-4 bg-rule" />
+            <div className="space-y-3">
+              {safeMetadata.processing_status && String(safeMetadata.processing_status).toLowerCase() !== 'completed' && renderField('processing_status', safeMetadata.processing_status)}
+            </div>
+          </>
+        )}
 
- {otherFields.length > 0 && (
- <>
- <Separator className="my-4"/>
- {/* Other Fields */}
- <div className="space-y-3">
- {otherFields.map(key => renderField(key, safeMetadata[key]))}
- </div>
- </>
- )}
+        {otherFields.length > 0 && (
+          <>
+            <Separator className="my-4 bg-rule" />
+            {/* Other Fields */}
+            <div className="space-y-3">
+              {otherFields.map(key => renderField(key, safeMetadata[key]))}
+            </div>
+          </>
+        )}
 
- {/* End Fields - Last Updated */}
- {endFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
- <>
- <Separator className="my-4"/>
- <div className="space-y-3">
- {safeMetadata.last_updated && renderField('last_updated', safeMetadata.last_updated)}
- </div>
- </>
- )}
- </div>
- </BaseCard>
- );
+        {/* End Fields - Last Updated */}
+        {endFields.some(key => shouldDisplayField(key, safeMetadata[key])) && (
+          <>
+            <Separator className="my-4 bg-rule" />
+            <div className="space-y-3">
+              {safeMetadata.last_updated && renderField('last_updated', safeMetadata.last_updated)}
+            </div>
+          </>
+        )}
+      </div>
+    </EditorialCard>
+  );
 }

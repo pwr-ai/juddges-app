@@ -38,6 +38,15 @@ export const WithMarker = () => (
   </Settled>
 );
 
+export const StringValue = () => (
+  <Settled>
+    <div className="flex flex-wrap gap-12">
+      <Stat static value="2012–2024" label="Coverage" detail="Strings render verbatim, no tween" />
+      <Stat static value="3M" suffix="+" label="Tokens indexed" />
+    </div>
+  </Settled>
+);
+
 export const Loading = () => (
   <Settled>
     <div className="flex flex-wrap gap-12">
