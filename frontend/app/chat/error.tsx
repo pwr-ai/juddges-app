@@ -39,19 +39,19 @@ export default function ChatError({ error, reset }: ErrorProps): React.JSX.Eleme
  className="p-8 md:p-12"
  >
  {process.env.NODE_ENV === "development"&& (
- <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 text-left max-w-md mx-auto">
+ <div className="bg-destructive/5 border border-destructive/20 rounded-none p-4 text-left max-w-md mx-auto">
  <p className="text-sm font-mono text-destructive break-all">
  {error.message}
  </p>
  {error.digest && (
- <p className="text-xs text-muted-foreground mt-2">
+ <p className="text-xs font-mono text-ink-soft mt-2">
  Error ID: {error.digest}
  </p>
  )}
  </div>
  )}
  </ErrorCard>
- <p className="text-sm text-slate-600 text-center mt-4">
+ <p className="text-xs font-mono text-ink-soft text-center mt-4">
  If this problem persists, try clearing your browser cache or contact support.
  </p>
  </div>

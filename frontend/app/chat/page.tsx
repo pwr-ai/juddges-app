@@ -11,69 +11,7 @@ import { ChatInterface, ChatInput, LoadingIndicator, PageContainer } from "@/lib
 import { getExampleQuestions } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-/**
- * Typing animation component for header text
- */
-function TypingHeader({
- text,
- className,
- speed = 50
-}: {
- text: string;
- className?: string;
- speed?: number;
-}): React.JSX.Element {
- const [displayedText, setDisplayedText] = useState("");
- const [showCursor, setShowCursor] = useState(true);
- const indexRef = useRef(0);
- const cursorIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
- useEffect(() => {
- setDisplayedText("");
- indexRef.current = 0;
-
- const interval = setInterval(() => {
- if (indexRef.current < text.length) {
- setDisplayedText(text.slice(0, indexRef.current + 1));
- indexRef.current += 1;
- } else {
- clearInterval(interval);
- // Blink cursor after typing is complete
- cursorIntervalRef.current = setInterval(() => {
- setShowCursor((prev) => !prev);
- }, 530);
- }
- }, speed);
-
- return () => {
- clearInterval(interval);
- if (cursorIntervalRef.current) {
- clearInterval(cursorIntervalRef.current);
- cursorIntervalRef.current = null;
- }
- };
- }, [text, speed]);
-
- return (
- <h2 className={className}>
- {displayedText}
- {showCursor && (
- <motion.span
- className="inline-block w-0.5 h-[1.2em] bg-primary ml-1 align-middle"
- animate={{
- opacity: [1, 1, 0, 0],
- }}
- transition={{
- duration: 1,
- repeat: Infinity,
- times: [0, 0.45, 0.5, 1],
- }}
- />
- )}
- </h2>
- );
-}
+import { Eyebrow, Headline } from "@/components/editorial";
 
 export default function ChatPage(): React.JSX.Element {
  const pageLogger = logger.child('ChatPage');
@@ -351,33 +289,24 @@ export default function ChatPage(): React.JSX.Element {
  // Note: Icon backgrounds removed - using tinted glass squircle instead (bg-current/10)
  const currentExamples = useMemo(() => {
  const questions = exampleQuestions.length > 0 ? exampleQuestions : fallbackQuestions;
- const colorSchemes = [
- { icon: BarChart, color: "text-amber-600"},
- { icon: Scale, color: "text-emerald-600"},
- { icon: Gavel, color: "text-indigo-600"},
- { icon: BookOpen, color: "text-purple-600"}
- ];
+ const icons = [BarChart, Scale, Gavel, BookOpen];
 
  return questions.map((q, idx) => {
  const lowerQ = q.toLowerCase();
- let category ="General";
+ let category = "General";
 
  if (lowerQ.includes("vat") || lowerQ.includes("podatk") || lowerQ.includes("tax") || lowerQ.includes("ip box") || lowerQ.includes("ubezpieczen")) {
- category ="Tax Law";
+ category = "Tax Law";
  } else if (lowerQ.includes("sąd") || lowerQ.includes("court") || lowerQ.includes("judgment") || lowerQ.includes("orzeczen") || lowerQ.includes("wyrok")) {
- category ="Court Judgments";
+ category = "Court Judgments";
  } else if (lowerQ.includes("umowa") || lowerQ.includes("contract") || lowerQ.includes("legal")) {
- category ="Legal Regulations";
+ category = "Legal Regulations";
  }
-
- // Use index-based color scheme to ensure unique colors
- const colorScheme = colorSchemes[idx % colorSchemes.length];
 
  return {
  query: q,
  category,
- icon: colorScheme.icon,
- iconColor: colorScheme.color
+ icon: icons[idx % icons.length],
  };
  });
  }, [exampleQuestions, fallbackQuestions]);
@@ -455,33 +384,7 @@ export default function ChatPage(): React.JSX.Element {
  }
 
  return (
- <div className="flex flex-col h-full relative overflow-hidden">
- {/* Dashboard Mesh Background - Clean Room Environment */}
- {/* Light Mode: Off-White (#F8FAFC) + Pale Blue/Steel Blobs */}
- {/* Dark Mode: Deep Slate (#020617) + Indigo/Void Blobs */}
- <div
- className="absolute inset-0 pointer-events-none z-0"
- style={{
- background: `
- radial-gradient(circle at 85% 15%, rgba(219, 234, 254, 0.15) 0, transparent 55%),
- radial-gradient(circle at 80% 85%, rgba(199, 210, 254, 0.10) 0, transparent 55%),
- linear-gradient(135deg, #F8FAFC 0%, #F8FAFC 50%, #F8FAFC 100%)
- `,
- backgroundAttachment: 'fixed',
- }}
- />
- <div
- className="absolute inset-0 pointer-events-none z-0 hidden"
- style={{
- background: `
- radial-gradient(circle at 85% 15%, rgba(30, 58, 138, 0.15) 0, transparent 55%),
- radial-gradient(circle at 80% 85%, rgba(55, 48, 163, 0.10) 0, transparent 55%),
- linear-gradient(135deg, #020617 0%, #020617 50%, #020617 100%)
- `,
- backgroundAttachment: 'fixed',
- }}
- />
-
+ <div className="flex flex-col h-full relative overflow-hidden bg-parchment">
  {/* Content container with AnimatePresence */}
  <AnimatePresence mode="wait">
  {!isTransitioning && (
@@ -502,15 +405,15 @@ export default function ChatPage(): React.JSX.Element {
  1. New Chat button: pathname === '/chat' → always show welcome page
  2. Card click: creates chat → redirects to /chat/${chatId} → shows ChatInterface */}
  {pathname === '/chat' || !chatId || messages.length === 0 ? (
- <PageContainer width="narrow"fillViewport className="flex items-center justify-center">
+ <PageContainer width="narrow" fillViewport className="flex items-center justify-center">
  {/* Content area - centered with proper spacing, max-width 48rem (768px) or 56rem (896px) */}
  <div className="w-full max-w-[56rem] space-y-8">
  {/* Chat Header */}
- <div className="w-full">
- <TypingHeader
- text="What legal question can JuDDGES help you with? "
- className="text-xl md:text-2xl font-semibold leading-relaxed text-black text-left"
- />
+ <div className="w-full space-y-2">
+ <Eyebrow>Judicial AI Assistant</Eyebrow>
+ <h2 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-ink">
+ What legal question can JuDDGES help you with?
+ </h2>
  </div>
 
  {/* Chat Input - centered */}
@@ -519,19 +422,19 @@ export default function ChatPage(): React.JSX.Element {
  </div>
 
  {/* Suggested Queries - Below Chat Input */}
- <div className="w-full">
- <div className="mb-6">
- <h2 className="text-xl font-semibold text-black tracking-wide">
+ <div className="w-full space-y-4">
+ <div>
+ <h3 className="font-serif text-base font-semibold text-ink">
  Example Questions
- </h2>
+ </h3>
  </div>
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
  {isLoadingExamples ? (
  // Show skeleton cards while loading
  Array.from({ length: 4 }).map((_, index) => (
  <div
  key={index}
- className="h-32 bg-slate-100 rounded-2xl animate-pulse"
+ className="h-28 bg-parchment-deep border border-rule rounded-none animate-pulse"
  />
  ))
  ) : (
@@ -539,62 +442,18 @@ export default function ChatPage(): React.JSX.Element {
  <button
  key={example.query}
  onClick={() => handleExampleClick(example.query)}
- className={cn(
- // Base: Floating Card - Glass Tile
-"p-6 rounded-2xl text-left group transition-all duration-300",
- // Surface (Idle)
- // Light Mode: rgba(255, 255, 255, 0.50)
- // Dark Mode: rgba(30, 41, 59, 0.40)
-"bg-white/50",
- // Border
- // Light Mode: #FFFFFF (Solid)
- // Dark Mode: rgba(255, 255, 255, 0.08)
-"border border-white",
- // Shadow (Idle)
-"shadow-sm",
- // Hover: Physical Lift
-"hover:-translate-y-0.5 hover:scale-[1.01]",
- // Surface (Hover)
- // Light Mode: #FFFFFF (Solid Porcelain)
- // Dark Mode: rgba(30, 41, 59, 0.80)
-"hover:bg-white",
- // Shadow (Hover) - Doubles in size/opacity
-"hover:shadow-[0_12px_24px_rgba(0,0,0,0.08)]"
- )}
+ className="p-4 text-left border border-rule bg-parchment hover:bg-parchment-deep hover:border-oxblood rounded-none transition-colors group flex flex-col justify-between"
  >
- <div className="space-y-3">
- <div className="flex items-center gap-2.5">
- {/* Tinted Glass Squircle Icon - No Pastels */}
- <div
- className={cn(
-"p-2 rounded-lg",
- // Background: CurrentColor at 10% opacity
-"bg-current/10",
- // Icon stroke: CurrentColor (inherits text)
- example.iconColor
- )}
- >
- {React.createElement(example.icon, {
- className: cn("size-5", example.iconColor,"stroke-current")
- })}
+ <div className="space-y-2">
+ <div className="flex items-center gap-2">
+ <div className="p-1.5 rounded-none bg-parchment-deep text-oxblood border border-rule">
+ <example.icon className="size-4 stroke-current" />
  </div>
- <h3 className={cn(
-"text-sm font-semibold",
- // Text (Title)
- // Light Mode: #0F172A (Midnight)
- // Dark Mode: #F1F5F9 (White)
-"text-slate-900"
- )}>
+ <span className="font-mono text-xs uppercase tracking-wider text-ink-soft group-hover:text-oxblood transition-colors font-medium">
  {example.category}
- </h3>
+ </span>
  </div>
- <p className={cn(
-"text-sm leading-relaxed",
- // Text (Body)
- // Light Mode: #64748B (Slate)
- // Dark Mode: #94A3B8 (Grey)
-"text-slate-600"
- )}>
+ <p className="font-mono text-xs text-ink leading-relaxed">
  {example.query}
  </p>
  </div>

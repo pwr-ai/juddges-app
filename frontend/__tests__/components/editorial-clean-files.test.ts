@@ -71,6 +71,16 @@ const CLEAN_FILES = [
   'app/documents/[id]/_components/RelatedDocuments.tsx',
   'components/collection-documents-table.tsx',
   'components/document-metadata-view.tsx',
+  'lib/styles/components/search-document-card.tsx',
+  'components/search/ZeroResultsEmptyState.tsx',
+  'components/chat/MessageSources.tsx',
+  'components/chat/ExportChatDialog.tsx',
+  'app/chat/[id]/ChatDetailClient.tsx',
+  'app/chat/error.tsx',
+  'app/chat/page.tsx',
+  'lib/styles/components/chat/chat-interface.tsx',
+  'lib/styles/components/chat/chat-message-styles.tsx',
+  'app/search/page.tsx',
 ];
 
 /**

@@ -68,7 +68,7 @@ export const SearchDocumentCard = React.memo(function SearchDocumentCard({
     : null;
 
   return (
-    <div className="rounded-xl border p-3" data-testid="search-result-card">
+    <div className="rounded-none border border-rule bg-parchment p-3" data-testid="search-result-card">
       <div className="mb-2 flex items-center justify-between gap-2">
         <Checkbox
           checked={isSelected}
