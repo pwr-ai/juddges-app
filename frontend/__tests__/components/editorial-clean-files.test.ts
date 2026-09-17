@@ -96,6 +96,21 @@ const CLEAN_FILES = [
   'components/navbar.tsx',
   'components/app-sidebar.tsx',
   'components/onboarding/welcome-modal.tsx',
+  'app/admin/page.tsx',
+  'app/admin/content/page.tsx',
+  'app/admin/documents/page.tsx',
+  'app/admin/system/page.tsx',
+  'app/admin/users/page.tsx',
+  'app/settings/page.tsx',
+  'app/settings/_components/embedding-models-section.tsx',
+  'components/judge-fingerprint/JudgeProfileCard.tsx',
+  'components/judge-fingerprint/JudgeSearch.tsx',
+  'components/errors/ErrorBoundary.tsx',
+  'components/errors/ChatErrorBoundary.tsx',
+  'components/errors/SearchErrorBoundary.tsx',
+  'components/status/ServiceCard.tsx',
+  'components/legal/professional-acknowledgment.tsx',
+  'components/admin/AdminGuard.tsx',
 ];
 
 /**

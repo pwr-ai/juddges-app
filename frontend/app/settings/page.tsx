@@ -518,18 +518,18 @@ export default function SettingsPage() {
  </CardContent>
  </Card>
 
- <Card className="border-blue-200 bg-blue-50/50">
+ <Card className="rounded-none border border-rule bg-parchment-deep border-l-2 border-l-ink">
  <CardHeader>
- <CardTitle className="text-blue-900 text-sm">
+ <CardTitle className="text-ink text-sm font-serif">
  About Embedding Models
  </CardTitle>
  </CardHeader>
  <CardContent className="space-y-2">
- <p className="text-sm text-blue-800">
+ <p className="text-sm text-ink-soft">
  Embedding models convert text into numerical vectors used for semantic search.
  Switching models affects how new searches are performed but does not re-embed existing documents.
  </p>
- <p className="text-sm text-blue-800">
+ <p className="text-sm text-ink-soft">
  The platform currently uses <strong>BAAI/bge-m3</strong> — a multilingual model that performs
  well on Polish legal texts. Other providers (<strong>OpenAI</strong>, <strong>Cohere</strong>,
  alternative <strong>local</strong> models) are listed for reference and will be evaluated in
@@ -633,14 +633,14 @@ export default function SettingsPage() {
  </CardContent>
  </Card>
 
- <Card className="border-amber-200 bg-amber-50/50">
+ <Card className="rounded-none border border-rule bg-parchment-deep border-l-2 border-l-gold">
  <CardHeader>
- <CardTitle className="text-amber-900">
+ <CardTitle className="text-ink font-serif">
  Research Project Notice
  </CardTitle>
  </CardHeader>
  <CardContent>
- <p className="text-sm text-amber-800">
+ <p className="text-sm text-ink-soft">
  This platform is a research project by Wroclaw University of Science and Technology.
  Some administrative features may require special permissions.
  </p>

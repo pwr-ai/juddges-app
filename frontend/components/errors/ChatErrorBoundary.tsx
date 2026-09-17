@@ -61,10 +61,10 @@ function ChatErrorFallback({ error, reset }: { error: Error; reset: () => void }
 
  {process.env.NODE_ENV === 'development' && (
  <details className="mt-4 max-w-2xl mx-auto">
- <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 text-center">
+ <summary className="text-xs font-mono text-ink-soft cursor-pointer hover:text-ink text-center">
  Error details (development only)
  </summary>
- <pre className="mt-2 text-xs bg-gray-100 p-4 rounded overflow-auto">
+ <pre className="mt-2 text-xs font-mono bg-parchment-deep border border-rule p-4 rounded-none overflow-auto text-ink-soft">
  {error.stack}
  </pre>
  </details>

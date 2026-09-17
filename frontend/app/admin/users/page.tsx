@@ -49,7 +49,7 @@ export default function AdminUsersPage() {
 
  {/* Page heading */}
  <div className="mb-8">
- <h1 className="font-serif text-4xl text-foreground tracking-tight">Users</h1>
+ <h1 className="font-serif text-3xl font-normal text-foreground tracking-tight">Users</h1>
  <p className="mt-1 text-sm text-muted-foreground">Manage platform accounts and roles.</p>
  </div>
 
@@ -64,13 +64,13 @@ export default function AdminUsersPage() {
  setQuery(e.target.value);
  setPage(1);
  }}
- className="w-full rounded-lg border border-border bg-card pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+ className="w-full rounded-none border border-rule bg-parchment pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ink"
  />
  </div>
 
  {/* Error */}
  {isError && (
- <div role="alert"className="mb-6">
+ <div role="alert" className="mb-6">
  <ErrorCard
  title="The user list could not be loaded"
  message={`The admin users endpoint did not respond, so page ${page} of the account list is unavailable. No accounts were changed. Retry, and if it keeps failing check Admin → System for service health.`}
@@ -81,27 +81,27 @@ export default function AdminUsersPage() {
  )}
 
  {/* Table */}
- <div className="rounded-2xl border border-border bg-card overflow-hidden">
+ <div className="rounded-none border border-rule bg-parchment overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm">
  <thead>
- <tr className="border-b border-border">
- <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+ <tr className="border-b border-rule">
+ <th className="px-6 py-3 text-left text-xs font-mono text-muted-foreground uppercase tracking-wider">
  Email
  </th>
- <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+ <th className="px-6 py-3 text-left text-xs font-mono text-muted-foreground uppercase tracking-wider">
  Role
  </th>
- <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+ <th className="px-6 py-3 text-left text-xs font-mono text-muted-foreground uppercase tracking-wider">
  Created
  </th>
- <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+ <th className="px-6 py-3 text-left text-xs font-mono text-muted-foreground uppercase tracking-wider">
  Last Sign In
  </th>
- <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+ <th className="px-6 py-3 text-left text-xs font-mono text-muted-foreground uppercase tracking-wider">
  Confirmed
  </th>
- <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+ <th className="px-6 py-3 text-right text-xs font-mono text-muted-foreground uppercase tracking-wider">
  Actions
  </th>
  </tr>
@@ -109,24 +109,24 @@ export default function AdminUsersPage() {
  <tbody>
  {isLoading ? (
  Array.from({ length: 8 }).map((_, i) => (
- <tr key={i} className="border-b border-border animate-pulse">
+ <tr key={i} className="border-b border-rule animate-pulse">
  <td className="px-6 py-4">
- <div className="h-4 w-48 rounded bg-muted"/>
+ <div className="h-4 w-48 rounded-none bg-parchment-deep"/>
  </td>
  <td className="px-6 py-4">
- <div className="h-5 w-12 rounded-full bg-muted"/>
+ <div className="h-5 w-12 rounded-none bg-parchment-deep"/>
  </td>
  <td className="px-6 py-4">
- <div className="h-4 w-24 rounded bg-muted"/>
+ <div className="h-4 w-24 rounded-none bg-parchment-deep"/>
  </td>
  <td className="px-6 py-4">
- <div className="h-4 w-24 rounded bg-muted"/>
+ <div className="h-4 w-24 rounded-none bg-parchment-deep"/>
  </td>
  <td className="px-6 py-4">
- <div className="h-5 w-16 rounded-full bg-muted"/>
+ <div className="h-5 w-16 rounded-none bg-parchment-deep"/>
  </td>
  <td className="px-6 py-4 text-right">
- <div className="h-7 w-16 rounded-lg bg-muted ml-auto"/>
+ <div className="h-7 w-16 rounded-none bg-parchment-deep ml-auto"/>
  </td>
  </tr>
  ))
@@ -145,18 +145,20 @@ export default function AdminUsersPage() {
  filtered.map((user) => (
  <tr
  key={user.id}
- className="border-b border-border last:border-0"
+ className="border-b border-rule last:border-0"
  >
  <td className="px-6 py-4 font-medium text-foreground">
  {user.email}
  </td>
  <td className="px-6 py-4">
  {user.is_admin ? (
- <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-purple-50 text-purple-700">
- admin
- </span>
+ <StatusBadge
+ status="verified"
+ label="admin"
+ size="sm"
+ />
  ) : (
- <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground">
+ <span className="inline-flex px-2 py-0.5 text-xs font-mono font-medium border border-rule text-ink-soft bg-parchment-deep">
  user
  </span>
  )}
@@ -177,7 +179,7 @@ export default function AdminUsersPage() {
  <td className="px-6 py-4 text-right">
  <button
  type="button"
- className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+ className="inline-flex items-center gap-1.5 rounded-none border border-rule px-3 py-1.5 text-xs font-medium text-foreground hover:bg-parchment-deep transition-colors"
  >
  <Eye className="size-3.5"/>
  View
@@ -191,7 +193,7 @@ export default function AdminUsersPage() {
  </div>
 
  {/* Footer: count + pagination */}
- <div className="px-6 py-3 border-t border-border flex items-center justify-between">
+ <div className="px-6 py-3 border-t border-rule flex items-center justify-between">
  <p className="text-xs text-muted-foreground">
  {isLoading
  ? "Loading…"
@@ -203,19 +205,19 @@ export default function AdminUsersPage() {
  type="button"
  onClick={() => setPage((p) => Math.max(1, p - 1))}
  disabled={page === 1 || isLoading}
- className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+ className="inline-flex items-center gap-1 rounded-none border border-rule px-2 py-1 text-xs font-medium text-foreground hover:bg-parchment-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
  >
  <ChevronLeft className="size-3.5"/>
  Prev
  </button>
- <span className="text-xs text-muted-foreground">
+ <span className="text-xs font-mono text-muted-foreground">
  {page} / {totalPages}
  </span>
  <button
  type="button"
  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
  disabled={page === totalPages || isLoading}
- className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+ className="inline-flex items-center gap-1 rounded-none border border-rule px-2 py-1 text-xs font-medium text-foreground hover:bg-parchment-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
  >
  Next
  <ChevronRight className="size-3.5"/>
