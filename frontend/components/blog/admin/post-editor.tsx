@@ -217,7 +217,7 @@ export function PostEditor({
           </div>
           <div>
             {featuredImage ? (
-              <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
+              <div className="relative aspect-video rounded-none overflow-hidden border border-rule">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={featuredImage}
@@ -234,7 +234,7 @@ export function PostEditor({
                 />
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer">
+              <div className="border border-dashed border-rule rounded-none p-12 text-center hover:border-oxblood transition-colors cursor-pointer bg-parchment-deep">
                 <ImageIcon className="size-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-sm text-muted-foreground mb-2">
                   Drag and drop an image or click to browse
@@ -430,10 +430,10 @@ export function PostEditor({
           </div>
           <div>
             <div className="space-y-2">
-              <div className="text-sm text-blue-600 line-clamp-1">
+              <div className="text-sm font-serif font-semibold text-oxblood line-clamp-1">
                 {title || "Your Post Title Here"}
               </div>
-              <div className="text-xs text-gray-600 line-clamp-2">
+              <div className="text-xs font-mono text-ink-soft line-clamp-2">
                 {excerpt || "Your post excerpt will appear here..."}
               </div>
             </div>
@@ -478,7 +478,7 @@ export function PostEditor({
             {/* Preview Header */}
             <div>
               <div className="mb-4">
-                <Badge className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 border-blue-200">
+                <Badge className="px-2.5 py-0.5 text-xs font-mono font-medium bg-parchment-deep text-ink border-rule rounded-none">
                   {category}
                 </Badge>
               </div>
@@ -490,7 +490,7 @@ export function PostEditor({
 
             {/* Featured Image Preview */}
             {featuredImage && !featuredImage.startsWith("/api/placeholder") && (
-              <div className="relative aspect-video rounded-xl overflow-hidden">
+              <div className="relative aspect-video rounded-none overflow-hidden border border-rule">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={featuredImage}

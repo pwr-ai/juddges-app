@@ -81,6 +81,14 @@ const CLEAN_FILES = [
   'lib/styles/components/chat/chat-interface.tsx',
   'lib/styles/components/chat/chat-message-styles.tsx',
   'app/search/page.tsx',
+  'components/blog/blog-post-card.tsx',
+  'components/publications/publication-card.tsx',
+  'app/blog/page.tsx',
+  'components/blog/markdown-renderer.tsx',
+  'components/blog/admin/post-editor.tsx',
+  'components/publications/admin/publication-form.tsx',
+  'app/blog/admin/[id]/page.tsx',
+  'app/publications/admin/page.tsx',
 ];
 
 /**
