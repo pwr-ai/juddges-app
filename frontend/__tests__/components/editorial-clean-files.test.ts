@@ -111,6 +111,7 @@ const CLEAN_FILES = [
   'components/status/ServiceCard.tsx',
   'components/legal/professional-acknowledgment.tsx',
   'components/admin/AdminGuard.tsx',
+  'components/extraction-results-table.tsx',
 ];
 
 /**
