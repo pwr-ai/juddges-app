@@ -1,10 +1,10 @@
 {
-  "glass": 44,
-  "gradient": 69,
+  "glass": 41,
+  "gradient": 66,
   "hue": 506,
-  "transition-all": 98,
+  "transition-all": 88,
   "radius": 69,
-  "hover-fx": 60,
+  "hover-fx": 57,
   "motion": 4,
   "ai-glyph": 22
 }

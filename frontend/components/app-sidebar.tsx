@@ -137,7 +137,7 @@ export function AppSidebar(): React.JSX.Element {
  <JuddgesLogo
  size="md"
  showText={false}
- className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
+ className="group-hover:opacity-80 transition-opacity duration-200 group-data-[collapsible=icon]:mx-auto"
  />
  </Link>
  </SidebarHeader>
@@ -208,7 +208,7 @@ export function AppSidebar(): React.JSX.Element {
  <JuddgesLogo
  size="md"
  showText={false}
- className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
+ className="group-hover:opacity-80 transition-opacity duration-200 group-data-[collapsible=icon]:mx-auto"
  />
  <span className="ml-3 font-serif text-lg text-ink tracking-tight group-data-[collapsible=icon]:hidden">JuDDGES</span>
  </Link>
@@ -444,11 +444,11 @@ export function AppSidebar(): React.JSX.Element {
  type="text"
  placeholder={t('navigation.quickSearch')}
  readOnly
- className="w-full h-9 px-3 pr-12 rounded-[0.5rem] bg-[rgba(0,0,0,0.04)] border border-[rgba(255,255,255,0.1)] text-[#475569] placeholder:text-[#475569] text-sm font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-[rgba(255,255,255,0.5)] transition-all duration-200"
+ className="w-full h-9 px-3 pr-12 rounded-none bg-parchment border border-rule text-ink placeholder:text-ink-soft text-sm font-medium focus:outline-none focus:border-oxblood transition-colors"
  />
  {/* ⌘K Shortcut Icon - Physical plastic key */}
- <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-white rounded border border-[rgba(0,0,0,0.1)] shadow-sm">
- <kbd className="pointer-events-none text-[10px] font-mono font-medium text-[#475569]">
+ <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-parchment-deep rounded-none border border-rule">
+ <kbd className="pointer-events-none text-[10px] font-mono font-medium text-ink-soft">
  ⌘K
  </kbd>
  </div>

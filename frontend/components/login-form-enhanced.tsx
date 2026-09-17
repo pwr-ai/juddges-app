@@ -147,8 +147,8 @@ export function LoginFormEnhanced({
     },
     {
       icon: Brain,
-      title: 'AI-Powered Analysis',
-      description: 'Get intelligent insights and summaries of complex legal documents',
+      title: 'AI Analysis',
+      description: 'Structured insights and summaries of complex legal documents',
     },
     {
       icon: Shield,
@@ -157,57 +157,49 @@ export function LoginFormEnhanced({
     },
     {
       icon: Clock,
-      title: 'Lightning Fast',
-      description: 'Process thousands of documents in seconds with cutting-edge AI',
+      title: 'Fast Retrieval',
+      description: 'Process documents in seconds with semantic indexing',
     },
   ]
 
   return (
     <div className={cn('flex w-full', className)} {...props}>
-      {/* Left Side - Marketing Content */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5 p-12 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, oklch(var(--primary) / 0.15) 1px, transparent 1px)`,
-            backgroundSize: '32px 32px',
-          }} />
-        </div>
-
+      {/* Left Side - Editorial Context Panel */}
+      <div className="hidden lg:flex lg:w-1/2 bg-parchment-deep border-r border-rule p-12 relative overflow-hidden">
         <div className="relative z-10 flex flex-col justify-between max-w-lg">
           {/* Logo and Tagline */}
-          <div className="space-y-6 animate-fade-in-up">
+          <div className="space-y-6">
             <Logo size="xl" />
             <div className="space-y-3">
-	              <h1 className="text-4xl font-bold tracking-tight text-foreground">
-	                AI-Powered Judgment Analysis
-	              </h1>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Transform how you work with legal documents using advanced AI technology.
-                Access instant insights, automated analysis, and intelligent search.
+              <h1 className="font-serif text-4xl font-bold tracking-tight text-ink">
+                Judicial Decision Research
+              </h1>
+              <p className="text-base text-ink-soft leading-relaxed">
+                Work with legal documents using semantic search and structured extraction.
+                Access instant insights, automated analysis, and case law intelligence.
               </p>
             </div>
           </div>
 
           {/* Features List */}
-          <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <div className="space-y-4">
-              {/* Explore Use Cases Card - First */}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              {/* Explore Use Cases Card */}
               <Link href="/use-cases" className="block group">
-                <div className="flex items-start gap-4 p-4 rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-accent/5 backdrop-blur-sm border-2 border-primary/30 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
-                  <div className="p-2 rounded-lg bg-primary/20 text-primary">
+                <div className="flex items-start gap-4 p-4 rounded-none bg-parchment border border-rule hover:border-oxblood transition-colors">
+                  <div className="p-2 rounded-none bg-parchment-deep text-oxblood border border-rule">
                     <BookOpen className="size-5" />
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm text-foreground">
+                      <h3 className="font-serif font-bold text-sm text-ink group-hover:text-oxblood transition-colors">
                         Explore Use Cases
                       </h3>
-                      <span className="text-xs text-primary font-medium">
+                      <span className="font-mono text-xs text-oxblood font-medium">
                         Open →
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-ink-soft leading-relaxed">
                       Discover examples and tutorials to see how our platform works
                     </p>
                   </div>
@@ -217,16 +209,16 @@ export function LoginFormEnhanced({
               {features.map((feature, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-4 p-4 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-md"
+                  className="flex items-start gap-4 p-4 rounded-none bg-parchment border border-rule hover:border-rule-strong transition-colors"
                 >
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <div className="p-2 rounded-none bg-parchment-deep text-ink-soft border border-rule">
                     <feature.icon className="size-5" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <h3 className="font-semibold text-sm text-foreground">
+                    <h3 className="font-serif font-bold text-sm text-ink">
                       {feature.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-ink-soft leading-relaxed">
                       {feature.description}
                     </p>
                   </div>
@@ -235,9 +227,9 @@ export function LoginFormEnhanced({
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex items-center gap-4 pt-4 border-t border-border/50">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="size-4 text-success" />
+            <div className="flex items-center gap-4 pt-4 border-t border-rule font-mono text-xs text-ink-soft">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-ink-soft" />
                 <span>GDPR Compliant</span>
               </div>
             </div>
@@ -376,12 +368,12 @@ export function LoginFormEnhanced({
             {error && (
               <div
                 id="login-form-error"
-                className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 animate-fade-in-down"
+                className="flex items-center gap-3 p-4 rounded-none bg-parchment-deep border border-oxblood animate-fade-in-down"
                 role="alert"
                 aria-live="assertive"
               >
-                <AlertCircle className="size-5 text-destructive shrink-0" />
-                <p className="text-sm text-destructive font-medium">{error}</p>
+                <AlertCircle className="size-5 text-oxblood shrink-0" />
+                <p className="text-sm text-oxblood font-medium">{error}</p>
               </div>
             )}
 
