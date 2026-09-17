@@ -64,3 +64,36 @@ test('site footer is not covered by the fixed sidebar overlay', async ({ page })
 
   expect(hitsFooter, 'sidebar overlay is painted on top of the footer').toBe(true);
 });
+
+test('design-system fonts resolve instead of falling back to system sans', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => document.fonts.ready);
+
+  // next/font declares --font-geist-sans / --font-tenor-sans on whichever
+  // element carries its generated `.variable` class. The design tokens in
+  // globals.css live on :root and reference those. If the `.variable` classes
+  // land below :root, the tokens reference an undefined variable, which makes
+  // the whole declaration invalid at computed-value time — the token computes
+  // to nothing and every font silently degrades to the system stack. The
+  // trailing families in the token (Optima, system-ui, ...) do NOT rescue it,
+  // because the entire value is invalidated, not one family.
+  const tokens = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return {
+      sans: root.getPropertyValue('--font-sans').trim(),
+      display: root.getPropertyValue('--font-display').trim(),
+      mono: root.getPropertyValue('--font-mono').trim(),
+    };
+  });
+
+  expect(tokens.sans, '--font-sans did not resolve on :root').not.toBe('');
+  expect(tokens.display, '--font-display did not resolve on :root').not.toBe('');
+  expect(tokens.mono, '--font-mono did not resolve on :root').not.toBe('');
+
+  // And the token must actually reach the display headline.
+  const h1Font = await page
+    .locator('h1.editorial-display')
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(h1Font, 'display headline fell back to the system font stack').toContain('Tenor Sans');
+});
