@@ -110,48 +110,48 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
  * Shows error details in development mode.
  */
 function DefaultErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
- return (
- <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
- <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
- <div className="flex items-start gap-4">
- <div className="flex-shrink-0">
- <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
- <AlertTriangle className="w-6 h-6 text-red-600"/>
- </div>
- </div>
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="max-w-md w-full bg-parchment rounded-none border border-rule border-l-2 border-l-oxblood p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 rounded-none border border-rule bg-parchment-deep flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-oxblood" />
+            </div>
+          </div>
 
- <div className="flex-1">
- <h2 className="text-lg font-semibold text-gray-900 mb-2">
- Something went wrong
- </h2>
- <p className="text-sm text-gray-600 mb-4">
- {error.message || 'An unexpected error occurred'}
- </p>
+          <div className="flex-1">
+            <h2 className="font-serif text-lg text-ink mb-2">
+              Something went wrong
+            </h2>
+            <p className="text-sm text-ink-soft mb-4">
+              {error.message || 'An unexpected error occurred'}
+            </p>
 
- {process.env.NODE_ENV === 'development' && (
- <details className="mb-4">
- <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
- Error details
- </summary>
- <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40">
- {error.stack}
- </pre>
- </details>
- )}
+            {process.env.NODE_ENV === 'development' && (
+              <details className="mb-4">
+                <summary className="text-xs font-mono text-ink-soft cursor-pointer hover:text-ink">
+                  Error details
+                </summary>
+                <pre className="mt-2 text-xs font-mono bg-parchment-deep border border-rule p-2 rounded-none overflow-auto max-h-40 text-ink-soft">
+                  {error.stack}
+                </pre>
+              </details>
+            )}
 
- <div className="flex gap-3">
- <Button onClick={reset} size="sm">
- <RefreshCw className="w-4 h-4 mr-2"/>
- Try again
- </Button>
- <Button variant="outline"size="sm"onClick={() => window.location.href = '/'}>
- <Home className="w-4 h-4 mr-2"/>
- Go home
- </Button>
- </div>
- </div>
- </div>
- </div>
- </div>
- );
+            <div className="flex gap-3">
+              <Button onClick={reset} size="sm">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try again
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/'}>
+                <Home className="w-4 h-4 mr-2" />
+                Go home
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

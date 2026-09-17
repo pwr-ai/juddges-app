@@ -152,14 +152,14 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <div className="flex items-center gap-2 rounded-none border border-rule border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 text-oxblood" />
           {error}
         </div>
       )}
 
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-        <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+      <div className="flex items-start gap-2 rounded-none border border-rule border-l-2 border-l-gold bg-parchment-deep p-3 text-sm text-ink-soft">
+        <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold" />
         <span>
           {isAdmin ? (
             <>
@@ -180,10 +180,10 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
       {models.map((model) => (
         <div
           key={model.id}
-          className={`rounded-lg border p-4 transition-colors ${
+          className={`rounded-none border p-4 transition-colors ${
             model.is_active
-              ? "border-primary bg-primary/5"
-              : "border-border hover:border-muted-foreground/30"
+              ? "border-ink bg-parchment-deep"
+              : "border-rule hover:border-rule-strong"
           }`}
         >
           <div className="flex items-start justify-between gap-4">
@@ -191,7 +191,7 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{model.model_name}</span>
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${providerColor(model.provider)}`}
+                  className={`inline-flex items-center gap-1 rounded-none px-2 py-0.5 text-xs font-mono font-medium ${providerColor(model.provider)}`}
                 >
                   {providerIcon(model.provider)}
                   {model.provider}
@@ -205,9 +205,9 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
                 {!model.api_key_configured && (
                   <Badge
                     variant="outline"
-                    className="border-amber-300 text-xs text-amber-600"
+                    className="border-rule text-xs font-mono text-ink-soft"
                   >
-                    <AlertCircle className="mr-1 h-3 w-3" />
+                    <AlertCircle className="mr-1 h-3 w-3 text-gold" />
                     API key missing
                   </Badge>
                 )}
@@ -221,10 +221,10 @@ export function EmbeddingModelsSection({ isAdmin }: { isAdmin: boolean }) {
               </div>
               {testResult?.modelId === model.id && (
                 <div
-                  className={`mt-2 rounded px-2 py-1 text-xs ${
+                  className={`mt-2 rounded-none border px-2 py-1 text-xs font-mono ${
                     testResult.success
-                      ? "bg-green-50 text-green-700"
-                      : "bg-red-50 text-red-700"
+                      ? "border-rule bg-parchment-deep text-ink"
+                      : "border-rule border-l-2 border-l-oxblood bg-parchment-deep text-oxblood"
                   }`}
                 >
                   {testResult.success ? "Test passed" : "Test failed"}: {testResult.message}
