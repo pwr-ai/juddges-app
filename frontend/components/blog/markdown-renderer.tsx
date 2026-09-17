@@ -48,11 +48,11 @@ function CodeBlock({ language, children }: { language: string; children: string 
   return (
     <div className="my-6 relative group">
       {language && (
-        <div className="absolute top-0 right-0 px-3 py-1 text-xs font-mono text-gray-400 bg-gray-800/50 rounded-bl-lg border-l border-b border-gray-700 z-10">
+        <div className="absolute top-0 right-0 px-2.5 py-0.5 text-xs font-mono text-ink-soft bg-parchment-deep rounded-none border-l border-b border-rule z-10">
           {language}
         </div>
       )}
-      <pre className="!bg-[#0d1117] !p-0 rounded-lg overflow-hidden border border-gray-800 shadow-lg">
+      <pre className="!bg-[#0d1117] !p-0 rounded-none overflow-hidden border border-rule">
         <code
           ref={codeRef}
           className={cn(
@@ -204,13 +204,13 @@ const components: Components = {
 
     // Blockquotes
     blockquote: ({ children }) => (
-      <blockquote className="mt-6 border-l-4 border-primary pl-6 italic text-muted-foreground bg-muted/30 py-4 rounded-r-lg">
+      <blockquote className="mt-6 border-l-2 border-oxblood pl-6 italic text-ink-soft bg-parchment-deep py-4 rounded-none">
         {children}
       </blockquote>
     ),
 
     // Horizontal rule
-    hr: () => <hr className="my-8 border-border" />,
+    hr: () => <hr className="my-8 border-rule" />,
 
     // Images
     img: ({ src, alt }) => {
@@ -223,7 +223,7 @@ const components: Components = {
         src.startsWith("http") || src.startsWith("/api/placeholder");
 
       return (
-        <span className="block my-8 rounded-lg overflow-hidden border border-border shadow-sm">
+        <span className="block my-8 rounded-none overflow-hidden border border-rule">
           {isRemoteOrPlaceholder ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -255,7 +255,7 @@ const components: Components = {
     // Tables
     table: ({ children }) => (
       <div className="my-6 w-full overflow-x-auto">
-        <table className="w-full border-collapse border border-border rounded-lg overflow-hidden">
+        <table className="w-full border-collapse border border-border rounded-none overflow-hidden">
           {children}
         </table>
       </div>
@@ -307,7 +307,7 @@ const components: Components = {
 
     // Pre (for code blocks container)
     pre: ({ children }) => (
-      <div className="overflow-hidden rounded-lg">
+      <div className="overflow-hidden rounded-none">
         {children}
       </div>
     ),

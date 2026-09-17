@@ -8,6 +8,7 @@ import type { BlogPost } from "@/types/blog";
 import { fetchAdminPostById, updateAdminPost } from "@/lib/blog/admin-api";
 import { toast } from "sonner";
 import { PageContainer, Header, VariantButton, Badge, LoadingIndicator } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { logger } from "@/lib/logger";
 
 export default function EditPostPage(): React.JSX.Element {
@@ -152,18 +153,7 @@ export default function EditPostPage(): React.JSX.Element {
             <div>
               <div className="flex items-center gap-3">
                 <Header title="Edit Post" size="2xl" />
-                <Badge
-                  variant="outline"
-                  className={
-                    post.status === "published"
-                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                      : post.status === "draft"
-                      ? "bg-amber-100 text-amber-700 border-amber-200"
-                      : "bg-blue-100 text-blue-700 border-blue-200"
-                  }
-                >
-                  {post.status}
-                </Badge>
+                <StatusBadge status={post.status} />
               </div>
               {lastSaved && (
                 <p className="text-sm text-muted-foreground mt-1">
