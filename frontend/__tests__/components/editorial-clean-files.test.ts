@@ -89,6 +89,13 @@ const CLEAN_FILES = [
   'components/publications/admin/publication-form.tsx',
   'app/blog/admin/[id]/page.tsx',
   'app/publications/admin/page.tsx',
+  'components/login-form-enhanced.tsx',
+  'components/sign-up-form.tsx',
+  'components/forgot-password-form.tsx',
+  'components/update-password-form.tsx',
+  'components/navbar.tsx',
+  'components/app-sidebar.tsx',
+  'components/onboarding/welcome-modal.tsx',
 ];
 
 /**

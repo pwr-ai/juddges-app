@@ -168,7 +168,7 @@ export function WelcomeModal({ open, onOpenChange, onComplete }: WelcomeModalPro
  <DialogHeader>
  <div className="flex items-center justify-between mb-2">
  <DialogTitle className="text-2xl font-bold flex items-center gap-3">
- <div className={`p-2 rounded-lg bg-gold-soft/50 ${step.color}`}>
+ <div className={`p-2 rounded-none bg-gold-soft/50 ${step.color}`}>
  <StepIcon className="h-6 w-6"/>
  </div>
  {step.title}
@@ -192,7 +192,7 @@ export function WelcomeModal({ open, onOpenChange, onComplete }: WelcomeModalPro
  {/* Features List */}
  <div className="space-y-3">
  {step.features.map((feature, index) => (
- <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+ <div key={index} className="flex items-start gap-3 p-3 rounded-none bg-muted/30">
  <div className="flex-shrink-0 mt-0.5">
  <Check className={`h-5 w-5 ${step.color}`} />
  </div>
@@ -207,7 +207,7 @@ export function WelcomeModal({ open, onOpenChange, onComplete }: WelcomeModalPro
  <button
  key={index}
  onClick={() => setCurrentStep(index)}
- className={`h-2 rounded-full transition-all duration-300 ${
+ className={`h-1 rounded-none transition-[width,background-color] duration-200 ${
  index === currentStep
  ? "w-8 bg-primary"
  : index < currentStep

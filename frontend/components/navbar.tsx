@@ -211,22 +211,17 @@ export function Navbar(): React.ReactElement {
   return (
     <header className={cn(
       "flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem]",
-      "bg-parchment/95 backdrop-blur-sm border-b border-rule",
+      "bg-parchment border-b border-rule",
       "sticky top-0 z-30",
       isCollectionDetail && collectionData && user ? "relative" : ""
     )}>
       <div className="flex items-center gap-3 md:gap-5">
         {user && (
           <SidebarTrigger className={cn(
-            "h-9 w-9 rounded-lg",
-            // Background without hover color change
-            "bg-muted/50",
-            // Border and shadow
-            "border border-border/30",
-            "shadow-sm hover:shadow-md",
-            // Smooth transitions and subtle scale
-            "transition-all duration-200",
-            "hover:scale-[1.02] active:scale-[0.98]"
+            "h-9 w-9 rounded-none",
+            "bg-parchment-deep text-ink-soft hover:text-ink",
+            "border border-rule",
+            "transition-colors"
           )} />
         )}
         {isDocumentPage && user && (() => {
@@ -569,11 +564,11 @@ export function Navbar(): React.ReactElement {
                   href={item.href}
                   className={cn(
                     "text-sm font-medium relative group",
-                    "text-muted-foreground hover:text-foreground",
+                    "text-ink-soft hover:text-ink",
                     "transition-colors duration-200",
                     "after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0",
-                    "after:bg-gradient-to-r after:from-primary after:to-primary/50",
-                    "after:transition-all after:duration-300",
+                    "after:bg-oxblood",
+                    "after:transition-[width] after:duration-200",
                     "hover:after:w-full"
                   )}
                 >
