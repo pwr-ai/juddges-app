@@ -1,9 +1,8 @@
 import { FC } from "react";
 import { Search, X, AlertTriangle } from "lucide-react";
 import { SearchDocument } from "@/types/search";
-import { cn } from "@/lib/utils";
-import { BaseCard, EmptyState, DocumentCard } from "@/lib/styles/components";
-import { EditorialCardSkeleton, EditorialPagination } from "@/components/editorial";
+import { EmptyState, DocumentCard } from "@/lib/styles/components";
+import { EditorialCard, EditorialCardSkeleton, EditorialPagination } from "@/components/editorial";
 
 interface DocumentsCardGridProps {
   collectionDocumentIds: (string | number)[];
@@ -49,7 +48,6 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
       // If summary mentions database-related issues, it's a database error
       if (doc.summary?.toLowerCase().includes('source information cannot be loaded') ||
         doc.summary?.toLowerCase().includes('database') ||
-        doc.summary?.toLowerCase().includes('database') ||
         doc.summary?.toLowerCase().includes('unavailable')) {
         return true;
       }
@@ -69,15 +67,8 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
   const allLoadedAreErrors = allDocMetadataLoaded && loadedDocuments.length > 0 && loadedDocuments.every((doc: SearchDocument) => {
     if ((doc as any)._isDatabaseError) return true;
     if (doc.document_type === 'error') {
-      if (doc.summary?.toLowerCase().includes('source information cannot be loaded') ||
-        doc.summary?.toLowerCase().includes('database') ||
-        doc.summary?.toLowerCase().includes('database') ||
-        doc.summary?.toLowerCase().includes('unavailable')) {
-        return true;
-      }
-      if (doc.title?.toUpperCase().includes('ERROR') || doc.document_id?.toUpperCase().includes('ERROR')) {
-        return true;
-      }
+      const text = `${doc.title || ''} ${doc.summary || ''}`.toLowerCase();
+      return text.includes('database') || text.includes('cannot be loaded') || text.includes('unavailable');
     }
     return false;
   });
@@ -88,33 +79,19 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
       {/* Single error card for all database errors */}
       {shouldShowErrorCard && (
         <div className="mb-4">
-          <BaseCard
-            clickable={false}
-            className={cn(
-              "rounded-xl",
-              "border-red-200/50",
-              "bg-gradient-to-br from-red-50/50 via-red-50/50 to-orange-50/30",
-              "shadow-lg shadow-red-500/10",
-              "animate-in fade-in slide-in-from-top-2 duration-300"
-            )}
-          >
+          <EditorialCard flat className="p-4 border-oxblood/40 bg-parchment-deep">
             <div className="flex items-start gap-3">
-              <div className="relative flex-shrink-0">
-                <div className="absolute inset-0 bg-red-500/20 rounded-lg blur-sm" />
-                <div className="relative bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-2">
-                  <AlertTriangle className="h-4 w-4 text-white" />
-                </div>
-              </div>
+              <AlertTriangle className="h-5 w-5 text-oxblood shrink-0 mt-0.5" />
               <div className="flex-1 space-y-1">
-                <h3 className="font-semibold text-sm text-red-800">
+                <h3 className="font-serif font-semibold text-sm text-oxblood">
                   Source Information Unavailable
                 </h3>
-                <p className="text-sm text-red-700 leading-relaxed">
+                <p className="text-xs text-ink-soft leading-relaxed">
                   Source information cannot be loaded. The document database is temporarily unavailable.
                 </p>
               </div>
             </div>
-          </BaseCard>
+          </EditorialCard>
         </div>
       )}
 
@@ -128,7 +105,6 @@ const DocumentsCardGrid: FC<DocumentsCardGridProps> = ({
             const isDatabaseError = (document as any)._isDatabaseError ||
               (document.document_type === 'error' && (
                 document.summary?.toLowerCase().includes('source information cannot be loaded') ||
-                document.summary?.toLowerCase().includes('database') ||
                 document.summary?.toLowerCase().includes('database') ||
                 document.summary?.toLowerCase().includes('unavailable') ||
                 document.title?.toUpperCase().includes('ERROR') ||

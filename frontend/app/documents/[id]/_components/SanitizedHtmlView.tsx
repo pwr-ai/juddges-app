@@ -80,22 +80,22 @@ export function SanitizedHtmlView({
 
   if (!htmlString) {
     return (
-      <div className="p-12 text-center text-muted-foreground">
+      <div className="p-12 text-center text-ink-soft">
         <p>Document content not available</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200/50 bg-white/60 backdrop-blur-md">
+    <div className="rounded-none border border-rule bg-parchment">
       <style>{`
         /* Extracted document styles */
         ${extractedStyles}
 
         /* Theme-aware overrides */
         .document-content {
-          background-color: white !important;
-          color: rgb(15 23 42) !important;
+          background-color: var(--parchment, #FFFFFF) !important;
+          color: var(--ink, #000000) !important;
         }
         /* Override white backgrounds in the HTML content */
         .document-content [style*="background"][style*="white"i],
@@ -175,7 +175,7 @@ export function SanitizedHtmlView({
       `}</style>
       {/* Content is sanitized with DOMPurify above before being rendered */}
       <div
-        className="document-content w-full px-6 pt-6 pb-4 prose prose-slate max-w-none text-slate-900"
+        className="document-content w-full px-6 pt-6 pb-4 prose prose-slate max-w-none text-ink"
         role="document"
         aria-label={metadata?.title || 'Document'}
         dangerouslySetInnerHTML={{ __html: purified }}

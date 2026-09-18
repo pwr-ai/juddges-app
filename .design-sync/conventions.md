@@ -30,9 +30,11 @@ Conventions that make it read as *this* brand: **one** red bar per surface (`Mas
 
 - Page furniture: `Masthead` (red nameplate bar with underline), `PaperBackground` (white / `deep` grey panel wrapper), `Section` / `SectionHeader` (eyebrow + red square numeral + title + description; `variant="bar"` for the red header bar), `Rule`.
 - Type: `Headline` (`as`, `size` xs–xl, `tone`), `Eyebrow`, `DropCap`, `Citation` (`marker="¹"`).
-- Cards & data: `EditorialCard` (`eyebrow`, `title`, `action`, `featured`, `flat`, `bare`), `Stat` (`value`, `label`, `suffix`, `marker`, `static`), `DualStatCard` (UK vs PL values), `ChartFigure` (FIG. nn frame around any chart).
+- Cards & data: `EditorialCard` (`eyebrow`, `title`, `action`, `featured`, `flat`, `bare`), `Stat` (`value` number or verbatim string, `label`, `suffix`, `marker`, `static`), `DualStatCard` (UK vs PL values), `ChartFigure` (FIG. nn frame around any chart), `EditorialPagination` (`currentPage`, `totalPages`, `onPageChange`, optional `totalItems`/`itemsPerPage` summary).
+- Status & type markers: `StatusBadge` (`status` → ink/gold/oxblood tone, `size`, `showDot`, `label`), `FieldTypeBadge` (`type`, `isAiCreated` gold outline).
+- Loading placeholders: `EditorialCardSkeleton` (editorial card shape, `lines`, `hasEyebrow`/`hasAction`/`hasFooter`), `SkeletonCard` / `SkeletonText` (plain card and text lines), `Skeleton` (raw bar).
 - Actions: `EditorialButton` (`variant` primary|secondary|ghost, `size`, `arrow`, `href`), `QueryPill`. Use the shadcn `Button` only inside dense app UI (tables, dialogs).
-- App UI (shadcn/Radix, themed with the same tokens; each wrapper accepts every native prop of its element — `placeholder`, `disabled`, `type`, `onClick`, `aria-*` — even though its `.d.ts` lists only the DS-specific ones): `Card*`, `Input`, `Textarea`, `Select*`, `Checkbox`, `Switch`, `Tabs*`, `Table*`, `Dialog*`, `DropdownMenu*`, `Tooltip*`, `Badge`, `Alert*`, `Accordion*`, `Breadcrumb`, `Progress`, `Slider`, `Avatar*`, `Skeleton`, `EmptyState`, `Sidebar*`.
+- App UI (shadcn/Radix, themed with the same tokens; each wrapper accepts every native prop of its element — `placeholder`, `disabled`, `type`, `onClick`, `aria-*` — even though its `.d.ts` lists only the DS-specific ones): `Card*`, `Input`, `Textarea`, `Select*`, `Checkbox`, `Switch`, `Tabs*`, `Table*`, `Dialog*`, `DropdownMenu*`, `Tooltip*`, `Badge`, `Alert*`, `Accordion*`, `Breadcrumb`, `Progress`, `Slider`, `Avatar*`, `Skeleton`, `SkeletonCard`, `SkeletonText`, `EmptyState`, `Sidebar*`.
 
 ## Where the truth lives
 

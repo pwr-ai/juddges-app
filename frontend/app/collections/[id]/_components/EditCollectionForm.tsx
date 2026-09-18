@@ -3,8 +3,8 @@ import { Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { BaseCard, VariantButton } from "@/lib/styles/components";
+import { Button } from "@/components/ui/button";
+import { EditorialCard } from "@/components/editorial";
 
 interface EditCollectionFormProps {
   editName: string;
@@ -22,24 +22,20 @@ const EditCollectionForm: FC<EditCollectionFormProps> = ({
   setEditName,
   editDescription,
   setEditDescription,
-  isClosing,
+  isClosing: _isClosing,
   onSave,
   onCancel,
 }) => {
   return (
-    <BaseCard
-      title="Edit Collection"
-      icon={Pencil}
-      clickable={false}
-      className={cn(
-        "rounded-xl p-6",
-        isClosing ? "animate-fade-out-down" : "animate-scale-in"
-      )}
-    >
-      <div className="space-y-5 mt-4">
-        <div className="space-y-2">
-          <Label htmlFor="edit-name" className="text-sm font-semibold">
-            Collection Name <span className="text-destructive">*</span>
+    <EditorialCard flat className="p-6 border-rule mb-6">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-rule">
+        <Pencil className="h-4 w-4 text-oxblood" />
+        <h3 className="font-serif text-lg font-semibold text-ink">Edit Collection</h3>
+      </div>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-name" className="text-xs font-mono text-ink">
+            Collection Name <span className="text-oxblood">*</span>
             <span className="sr-only"> (required)</span>
           </Label>
           <Input
@@ -51,12 +47,12 @@ const EditCollectionForm: FC<EditCollectionFormProps> = ({
                 onSave();
               }
             }}
-            className="text-lg font-semibold border-slate-200/50 focus:border-primary/30 focus:ring-2 focus:ring-primary/20 hover:border-primary/20 bg-white/80 backdrop-blur-md shadow-lg hover:shadow-xl rounded-xl transition-all duration-300"
+            className="rounded-none border-rule bg-parchment text-ink focus-visible:border-ink font-sans text-sm"
             placeholder="Collection name"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="edit-description" className="text-sm font-semibold">
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-description" className="text-xs font-mono text-ink">
             Description (optional)
           </Label>
           <Textarea
@@ -64,20 +60,30 @@ const EditCollectionForm: FC<EditCollectionFormProps> = ({
             value={editDescription}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
             placeholder="Describe the purpose of this collection, research questions, or scope..."
-            rows={4}
-            className="border-slate-200/50 focus:border-primary/30 focus:ring-2 focus:ring-primary/20 hover:border-primary/20 bg-white/80 backdrop-blur-md shadow-lg hover:shadow-xl rounded-xl transition-all duration-300 resize-none"
+            rows={3}
+            className="rounded-none border-rule bg-parchment text-ink focus-visible:border-ink font-sans text-sm resize-none"
           />
         </div>
         <div className="flex gap-2 pt-2">
-          <VariantButton intent="primary" onClick={onSave} size="sm" disabled={!editName.trim()}>
+          <Button
+            size="sm"
+            onClick={onSave}
+            disabled={!editName.trim()}
+            className="rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep font-mono text-xs"
+          >
             Save Changes
-          </VariantButton>
-          <VariantButton intent="secondary" onClick={onCancel} size="sm">
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            className="rounded-none border-rule text-ink font-mono text-xs hover:border-ink hover:bg-parchment-deep"
+          >
             Cancel
-          </VariantButton>
+          </Button>
         </div>
       </div>
-    </BaseCard>
+    </EditorialCard>
   );
 };
 

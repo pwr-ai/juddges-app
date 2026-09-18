@@ -17,13 +17,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   PageContainer,
-  BaseCard,
   LoadingIndicator,
   EmptyState,
   ErrorCard,
   Badge,
 } from '@/lib/styles/components';
-import { StatusBadge } from '@/components/editorial';
+import { EditorialCard, StatusBadge } from '@/components/editorial';
 import { Button } from '@/components/ui/button';
 import {
   getReasoningLineDetail,
@@ -219,20 +218,20 @@ export default function ReasoningLineDetailPage() {
       </Link>
 
       {/* Header card */}
-      <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+      <EditorialCard flat className="p-5">
         <div className="space-y-4">
           {/* Title row */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 flex-1 min-w-0">
-              <div className="p-2 rounded-xl bg-primary/10 flex-shrink-0">
-                <GitBranch className="h-5 w-5 text-primary" />
+              <div className="w-8 h-8 border border-rule bg-parchment-deep flex items-center justify-center flex-shrink-0">
+                <GitBranch className="h-5 w-5 text-oxblood" />
               </div>
               <div className="space-y-1 min-w-0">
-                <h1 className="text-xl font-bold text-foreground">
+                <h1 className="text-xl font-bold font-serif text-ink">
                   {line.label}
                 </h1>
                 {line.legal_question && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-ink-soft">
                     {line.legal_question}
                   </p>
                 )}
@@ -241,7 +240,7 @@ export default function ReasoningLineDetailPage() {
             <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
               <StatusBadge status={line.status} label={statusLabelMap[line.status] ?? line.status} />
               <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule tabular-nums ${coherenceTone}`}
+                className={`inline-flex items-center px-2 py-0.5 rounded-none text-xs font-mono border border-rule tabular-nums ${coherenceTone}`}
               >
                 {t('reasoningLines.coherenceValue', { percent: coherencePct })}
               </span>
@@ -270,8 +269,8 @@ export default function ReasoningLineDetailPage() {
               {line.keywords.map((keyword) => (
                 <Badge
                   key={keyword}
-                  variant="secondary"
-                  className="text-xs bg-blue-100 text-blue-800"
+                  variant="outline"
+                  className="text-xs rounded-none font-mono border-rule text-ink-soft bg-transparent"
                 >
                   {keyword}
                 </Badge>
@@ -282,13 +281,13 @@ export default function ReasoningLineDetailPage() {
           {/* Legal bases */}
           {line.legal_bases.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <p className="text-xs font-mono uppercase tracking-wider text-ink-soft flex items-center gap-1">
                 <Scale className="h-3 w-3" />
                 {t('reasoningLines.legalBasesLabel')}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {line.legal_bases.map((base) => (
-                  <Badge key={base} variant="outline" className="text-xs">
+                  <Badge key={base} variant="outline" className="text-xs rounded-none font-mono border-rule text-ink-soft">
                     {base}
                   </Badge>
                 ))}
@@ -298,20 +297,20 @@ export default function ReasoningLineDetailPage() {
 
           {/* Deleting a global reasoning line is admin-only. */}
           {isAdmin && (
-            <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-3 pt-2 border-t border-rule">
               {!showDeleteConfirm ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center gap-1.5 text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                  className="flex items-center gap-1.5 text-xs text-oxblood border-oxblood/40 hover:bg-oxblood/10 hover:text-oxblood"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   {t('reasoningLines.deleteLine')}
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-ink-soft font-mono">
                     {t('reasoningLines.deleteConfirmQuestion')}
                   </span>
                   <Button
@@ -319,7 +318,7 @@ export default function ReasoningLineDetailPage() {
                     size="sm"
                     onClick={handleDelete}
                     disabled={deleteMutation.isPending}
-                    className="flex items-center gap-1.5 text-xs"
+                    className="flex items-center gap-1.5 text-xs rounded-none bg-oxblood text-parchment hover:bg-oxblood-deep"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {deleteMutation.isPending
@@ -330,26 +329,26 @@ export default function ReasoningLineDetailPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="text-xs"
+                    className="text-xs rounded-none border-rule"
                   >
                     {t('common.cancel')}
                   </Button>
                 </div>
               )}
               {deleteMutation.isError && (
-                <span className="text-xs text-rose-600">
+                <span className="text-xs font-mono text-oxblood">
                   {t('reasoningLines.deleteError')}
                 </span>
               )}
             </div>
           )}
         </div>
-      </BaseCard>
+      </EditorialCard>
 
       {/* Timeline of member judgments */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-serif font-semibold text-ink flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-oxblood" />
           {t('reasoningLines.membersHeading', { count: sortedMembers.length })}
         </h2>
 
@@ -362,7 +361,7 @@ export default function ReasoningLineDetailPage() {
         ) : (
           <div className="relative">
             {/* Vertical timeline line */}
-            <div className="absolute left-[23px] top-0 bottom-0 w-px bg-slate-200" />
+            <div className="absolute left-[23px] top-0 bottom-0 w-px bg-rule" />
 
             <div className="space-y-3">
               {sortedMembers.map((member, index) => (
@@ -383,8 +382,8 @@ export default function ReasoningLineDetailPage() {
       {/* ----------------------------------------------------------------- */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-serif font-semibold text-ink flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-oxblood" />
             {t('reasoningLines.outcomeHeading')}
           </h2>
           {isAdmin && (
@@ -393,9 +392,9 @@ export default function ReasoningLineDetailPage() {
               size="sm"
               onClick={() => classifyMutation.mutate()}
               disabled={classifyMutation.isPending}
-              className="flex items-center gap-1.5 text-xs"
+              className="flex items-center gap-1.5 text-xs font-mono rounded-none border-rule"
             >
-              <BarChart3 className="h-3.5 w-3.5" />
+              <BarChart3 className="h-3.5 w-3.5 text-oxblood" />
               {classifyMutation.isPending
                 ? t('reasoningLines.classifyPending')
                 : t('reasoningLines.classify')}
@@ -406,23 +405,23 @@ export default function ReasoningLineDetailPage() {
         {/* Classification result feedback */}
         {classifyMutation.isSuccess && classifyMutation.data && (
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700">
+            <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
               {t('reasoningLines.classifyClassified', { count: classifyMutation.data.classified })}
             </span>
             {classifyMutation.data.skipped > 0 && (
-              <span className="px-2 py-1 rounded bg-slate-50 text-slate-600">
+              <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink-soft">
                 {t('reasoningLines.classifySkipped', { count: classifyMutation.data.skipped })}
               </span>
             )}
             {classifyMutation.data.errors > 0 && (
-              <span className="px-2 py-1 rounded bg-rose-50 text-rose-600">
+              <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-oxblood">
                 {t('reasoningLines.classifyErrors', { count: classifyMutation.data.errors })}
               </span>
             )}
           </div>
         )}
         {classifyMutation.isError && (
-          <span className="text-xs text-rose-600">
+          <span className="text-xs font-mono text-oxblood">
             {t('reasoningLines.classifyError')}
           </span>
         )}
@@ -476,8 +475,8 @@ export default function ReasoningLineDetailPage() {
       {/* ----------------------------------------------------------------- */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-serif font-semibold text-ink flex items-center gap-2">
+            <Activity className="h-5 w-5 text-oxblood" />
             {t('reasoningLines.driftHeading')}
           </h2>
           {isAdmin && (
@@ -486,9 +485,9 @@ export default function ReasoningLineDetailPage() {
               size="sm"
               onClick={() => driftMutation.mutate()}
               disabled={driftMutation.isPending}
-              className="flex items-center gap-1.5 text-xs"
+              className="flex items-center gap-1.5 text-xs font-mono rounded-none border-rule"
             >
-              <Activity className="h-3.5 w-3.5" />
+              <Activity className="h-3.5 w-3.5 text-oxblood" />
               {driftMutation.isPending
                 ? t('reasoningLines.driftPending')
                 : t('reasoningLines.driftAnalyze')}
@@ -497,7 +496,7 @@ export default function ReasoningLineDetailPage() {
         </div>
 
         {driftMutation.isError && (
-          <span className="text-xs text-rose-600">
+          <span className="text-xs font-mono text-oxblood">
             {t('reasoningLines.driftError')}
           </span>
         )}
@@ -523,8 +522,8 @@ export default function ReasoningLineDetailPage() {
       {/* Related Lines section (M6)                                         */}
       {/* ----------------------------------------------------------------- */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Link2 className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-serif font-semibold text-ink flex items-center gap-2">
+          <Link2 className="h-5 w-5 text-oxblood" />
           {t('reasoningLines.relatedHeading')}
         </h2>
 
@@ -549,13 +548,13 @@ export default function ReasoningLineDetailPage() {
         )}
 
         {relatedQuery.data && relatedQuery.data.related.length > 0 && (
-          <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+          <EditorialCard flat className="p-4">
             <div className="space-y-3">
               {relatedQuery.data.related.map((related) => (
                 <RelatedLineCard key={related.id} related={related} />
               ))}
             </div>
-          </BaseCard>
+          </EditorialCard>
         )}
       </div>
     </PageContainer>
@@ -592,7 +591,7 @@ function TimelineEntry({
       <div className="relative flex items-start gap-4 pl-0">
         {/* Timeline dot */}
         <div className="relative z-10 flex-shrink-0 flex items-center justify-center w-[47px]">
-          <div className="w-7 h-7 rounded-full bg-parchment border border-rule group-hover:border-ink flex items-center justify-center transition-colors">
+          <div className="w-7 h-7 rounded-none bg-parchment border border-rule group-hover:border-ink flex items-center justify-center transition-colors">
             <span className="text-[10px] font-mono text-ink tabular-nums">
               {member.position_in_line || index + 1}
             </span>
@@ -605,7 +604,7 @@ function TimelineEntry({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 space-y-1">
                 {/* Signature */}
-                <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                <p className="text-sm font-semibold text-ink group-hover:text-oxblood transition-colors">
                   {member.signature}
                 </p>
 
@@ -630,12 +629,12 @@ function TimelineEntry({
                 {/* Extra metadata */}
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   {member.reasoning_pattern && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-rule text-ink bg-transparent">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-none border border-rule text-ink bg-transparent">
                       {member.reasoning_pattern}
                     </span>
                   )}
                   {member.outcome_direction && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full border border-rule text-ink bg-transparent">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-none border border-rule text-ink bg-transparent">
                       {member.outcome_direction}
                     </span>
                   )}
@@ -676,7 +675,7 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
       <div className="flex items-start justify-between gap-3 p-3 rounded-none bg-parchment border border-rule hover:-translate-y-px transition-transform">
         <div className="min-w-0 flex-1 space-y-2">
           {/* Label */}
-          <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+          <p className="text-sm font-semibold text-ink group-hover:text-oxblood transition-colors truncate">
             {related.label}
           </p>
 
@@ -699,7 +698,11 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
           {related.shared_legal_bases.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {related.shared_legal_bases.map((base) => (
-                <Badge key={base} variant="outline" className="text-xs">
+                <Badge
+                  key={base}
+                  variant="outline"
+                  className="text-xs font-mono border-rule text-ink bg-transparent"
+                >
                   {base}
                 </Badge>
               ))}
@@ -725,7 +728,7 @@ function RelatedLineCard({ related }: { related: RelatedLine }) {
         {/* Right side: relatedness score + arrow */}
         <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono border border-rule tabular-nums ${relatednessTone}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-none text-xs font-mono border border-rule tabular-nums ${relatednessTone}`}
           >
             {relatednessPct}%
           </span>

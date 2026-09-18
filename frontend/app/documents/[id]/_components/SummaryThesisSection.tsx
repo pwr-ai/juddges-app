@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Info, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 
-import { BaseCard, Button, Badge, AIDisclaimerBadge } from '@/lib/styles/components';
+import { EditorialCard, StatusBadge } from '@/components/editorial';
+import { Button } from '@/components/ui/button';
+import { AIDisclaimerBadge } from '@/lib/styles/components';
 import { QueryHighlight } from '@/lib/styles/components/query-highlight';
 import type { DocumentMetadata } from './types';
 
@@ -22,72 +24,63 @@ export function SummaryThesisSection({
   return (
     <div className="mb-6 space-y-4">
       {metadata.summary && (
-        <BaseCard
-          className="rounded-2xl"
-          clickable={false}
-          variant="light"
-          title={
-            <div className="flex items-center gap-2">
-              <Info className="h-4 w-4 text-primary" />
-              <h3 className="font-bold text-lg text-foreground">Document Summary</h3>
-              <Badge variant="secondary" className="text-xs flex items-center gap-1 bg-purple-100 text-purple-700 border-purple-200 whitespace-normal break-words">
-                <Sparkles className="h-3 w-3" />
-                AI Generated
-              </Badge>
-            </div>
-          }
+        <EditorialCard
+          flat
+          className="p-5 border-rule bg-parchment"
         >
+          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-rule">
+            <Info className="h-4 w-4 text-oxblood" />
+            <h3 className="font-serif text-lg font-semibold text-ink">Document Summary</h3>
+            <StatusBadge status="ai_generated" label="AI Generated" tone="gold" />
+          </div>
           <div>
-            <p className="text-sm text-slate-700 leading-relaxed text-justify">
+            <p className="text-sm text-ink leading-relaxed text-justify">
               <QueryHighlight as="span" text={metadata.summary} query={queryFromSearch} />
             </p>
-            <div className="mt-3 pt-3 border-t border-border">
+            <div className="mt-3 pt-3 border-t border-rule">
               <AIDisclaimerBadge showBorder={false} linkText="See disclaimer" />
             </div>
           </div>
-        </BaseCard>
+        </EditorialCard>
       )}
 
       {metadata.thesis && (
-        <BaseCard
-          className="rounded-2xl"
-          clickable={false}
-          variant="light"
-          title={
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-foreground">Thesis</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsThesisExpanded(!isThesisExpanded)}
-                className="gap-2"
-              >
-                {isThesisExpanded ? (
-                  <>
-                    <ChevronUp className="w-4 h-4" />
-                    Collapse
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4" />
-                    Expand
-                  </>
-                )}
-              </Button>
-            </div>
-          }
+        <EditorialCard
+          flat
+          className="p-5 border-rule bg-parchment"
         >
+          <div className="flex items-center justify-between pb-3 border-b border-rule mb-3">
+            <h3 className="font-serif text-lg font-semibold text-ink">Thesis</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsThesisExpanded(!isThesisExpanded)}
+              className="gap-2 rounded-none font-mono text-xs text-ink hover:bg-parchment-deep"
+            >
+              {isThesisExpanded ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Collapse
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Expand
+                </>
+              )}
+            </Button>
+          </div>
           <div
-            className={`transition-all duration-300 ease-in-out ${isThesisExpanded
+            className={`transition-opacity duration-200 ${isThesisExpanded
               ? 'opacity-100'
               : 'opacity-0 max-h-0 overflow-hidden'
               }`}
           >
-            <div className="text-foreground text-base leading-7 break-words whitespace-normal">
+            <div className="text-ink text-base leading-7 break-words whitespace-normal font-serif">
               {metadata.thesis}
             </div>
           </div>
-        </BaseCard>
+        </EditorialCard>
       )}
     </div>
   );
