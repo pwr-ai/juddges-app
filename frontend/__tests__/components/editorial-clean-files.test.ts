@@ -97,6 +97,8 @@ const CLEAN_FILES = [
   'components/app-sidebar.tsx',
   'components/onboarding/welcome-modal.tsx',
   'app/admin/page.tsx',
+  'components/SaveSearchDialog.tsx',
+  'components/ChunkErrorBoundary.tsx',
   'app/admin/content/page.tsx',
   'app/admin/documents/page.tsx',
   'app/admin/system/page.tsx',
@@ -219,5 +221,40 @@ describe('app/globals.css', () => {
     expect(css).not.toMatch(/glass-page-background/);
     expect(css).not.toMatch(/@keyframes (shimmer-slide|text-shimmer)/);
     expect(css).not.toMatch(/animate-(shimmer-slide|text-shimmer)/);
+  });
+});
+
+/**
+ * The ratchet's `hue` pattern omits `red` and `yellow` (see HUES in
+ * scripts/assert-no-banned-classes.js), so tinted status blocks in those two
+ * families slip past it. Pin the surfaces that have been migrated off them.
+ */
+describe('legacy red/yellow status tints', () => {
+  const TINT = /\b(bg|text|border|from|to|via|ring)-(red|yellow)-\d/;
+
+  it.each([
+    'app/settings/page.tsx',
+    'components/SaveSearchDialog.tsx',
+    'components/ChunkErrorBoundary.tsx',
+  ])('%s uses editorial tones instead', (file) => {
+    expect(read(file)).not.toMatch(TINT);
+  });
+});
+
+/** Emoji used as icons (#641 misc) — lucide glyphs or nothing. */
+describe('emoji-free files', () => {
+  const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+
+  it.each(['components/ChunkErrorBoundary.tsx'])('%s uses no emoji as icons', (file) => {
+    expect(read(file)).not.toMatch(EMOJI);
+  });
+});
+
+/** #641 asks for the admin figures to render through the <Stat> primitive. */
+describe('app/admin/page.tsx', () => {
+  it('renders its figures with <Stat> rather than hand-rolled numerals', () => {
+    const source = read('app/admin/page.tsx');
+    expect(source).not.toMatch(/text-3xl font-semibold/);
+    expect(source).toMatch(/<Stat\b/);
   });
 });

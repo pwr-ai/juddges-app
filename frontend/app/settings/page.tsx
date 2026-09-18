@@ -175,7 +175,7 @@ function DigestSubscriptionsSection() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+        <div className="flex items-center gap-2 border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {error}
         </div>
