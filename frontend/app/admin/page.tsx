@@ -17,7 +17,7 @@ import {
 } from "@/lib/api/admin";
 import { useDashboardStats } from "@/lib/api/dashboard";
 import { ErrorCard } from "@/lib/styles/components";
-import { StatusBadge } from "@/components/editorial";
+import { Stat, StatusBadge } from "@/components/editorial";
 import logger from "@/lib/logger";
 import { useEffect } from "react";
 
@@ -145,10 +145,7 @@ export default function AdminDashboardPage() {
  </div>
  </div>
  <div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {card.value}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">{card.label}</p>
+ <Stat static size="sm" value={card.value} label={card.label} />
  </div>
  </div>
  );
@@ -180,20 +177,10 @@ export default function AdminDashboardPage() {
  </div>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
  <div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {formatPct(embeddingsPct)}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">
- Documents with embeddings
- </p>
+ <Stat static size="sm" value={formatPct(embeddingsPct)} label="Documents with embeddings" />
  </div>
  <div>
- <p className="text-3xl font-semibold text-foreground tabular-nums">
- {formatPct(summaryPct)}
- </p>
- <p className="mt-0.5 text-sm text-muted-foreground">
- Documents with AI summary
- </p>
+ <Stat static size="sm" value={formatPct(summaryPct)} label="Documents with AI summary" />
  </div>
  </div>
  </div>
