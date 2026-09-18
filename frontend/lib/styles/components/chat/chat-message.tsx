@@ -240,14 +240,14 @@ export function ChatMessage({
  {isEditing ? (
  <textarea
  className={cn(
- 'w-full rounded-[1.5rem] px-4 py-3',
- 'border border-white',
- 'bg-white/60',
- 'focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-0',
- 'placeholder:text-muted-foreground/70 focus:outline-none resize-none',
- 'text-slate-900',
+ 'w-full rounded-none px-3 py-2',
+ 'border border-rule',
+ 'bg-parchment',
+ 'focus:border-rule-strong focus:ring-1 focus:ring-ink focus:ring-offset-0',
+ 'placeholder:text-muted-foreground focus:outline-none resize-none',
+ 'text-ink',
  'text-sm md:text-base leading-relaxed',
- 'transition-all duration-300'
+ 'transition-colors'
  )}
  value={editedContent}
  onChange={(e) => setEditedContent(e.target.value)}
@@ -344,7 +344,7 @@ export function ChatMessage({
  key={button.id}
  onClick={button.onClick}
  className={cn(
- 'text-slate-600 hover:text-slate-900 transition-all duration-200 p-2 rounded-lg hover:bg-slate-100 hover:shadow-sm active:scale-95 border border-transparent',
+ 'text-muted-foreground hover:text-ink transition-colors p-1.5 rounded-none hover:bg-parchment-deep border border-transparent',
  button.className
  )}
  title={button.title}
@@ -388,14 +388,13 @@ export function ChatMessage({
  key={button.id}
  onClick={button.onClick}
  className={cn(
- 'group relative text-slate-600 hover:text-slate-900 transition-all duration-200 p-2 rounded-lg hover:bg-slate-100 hover:shadow-sm hover:shadow-primary/5 active:scale-95 bg-gradient-to-br from-white via-slate-50/80 to-white border border-slate-200/50 hover:border-primary/20',
+ 'group relative text-muted-foreground hover:text-ink transition-colors p-1.5 rounded-none hover:bg-parchment-deep bg-parchment border border-rule hover:border-rule-strong',
  button.className
  )}
  title={button.title}
  aria-label={button.title}
  >
- <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10"/>
- <span className="relative z-10 group-hover:scale-110 transition-transform duration-200">{button.icon}</span>
+ <span className="relative z-10">{button.icon}</span>
  </button>
  ))}
  </div>
@@ -417,7 +416,7 @@ export function ChatMessage({
  setIsEditing(false);
  setEditedContent(content);
  }}
- className="text-slate-600 hover:text-slate-900 transition-all duration-200 p-2 rounded-lg hover:bg-slate-100 hover:shadow-sm active:scale-95"
+ className="text-muted-foreground hover:text-ink transition-colors p-1.5 rounded-none hover:bg-parchment-deep"
  title="Cancel"
  aria-label="Cancel editing"
  >
@@ -427,10 +426,10 @@ export function ChatMessage({
  onClick={handleSaveEdit}
  disabled={editedContent === content}
  className={cn(
- 'transition-all duration-200 p-2 rounded-lg hover:shadow-sm active:scale-95',
+ 'transition-colors p-1.5 rounded-none hover:bg-parchment-deep',
  editedContent === content
- ? 'text-slate-400 cursor-not-allowed opacity-50'
- : 'text-primary hover:text-primary/80 hover:bg-primary/10'
+ ? 'text-muted-foreground cursor-not-allowed opacity-50'
+ : 'text-oxblood hover:text-oxblood-deep'
  )}
  title="Save"
  aria-label="Save changes"
