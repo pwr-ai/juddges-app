@@ -107,14 +107,14 @@ export function SaveSearchDialog({ trigger }: SaveSearchDialogProps) {
  </DialogDescription>
  </DialogHeader>
 
- {saved ? (
- <div className="flex flex-col items-center justify-center py-8">
- <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-3">
- <Check className="h-6 w-6 text-green-600"/>
- </div>
- <p className="text-sm font-medium">Search saved!</p>
- </div>
- ) : (
+      {saved ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="h-10 w-10 border border-rule bg-parchment-deep flex items-center justify-center mb-3">
+            <Check className="h-5 w-5 text-ink" />
+          </div>
+          <p className="text-sm font-medium font-mono">Search saved!</p>
+        </div>
+      ) : (
  <>
  <div className="space-y-3 py-2">
  <div>

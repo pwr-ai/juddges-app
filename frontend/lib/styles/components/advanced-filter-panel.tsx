@@ -117,30 +117,28 @@ function MultiSelectDropdown({
  <button
  type="button"
  className={cn(
-"w-full flex items-center justify-between",
-"px-4 py-3",
-"rounded-xl",
-"bg-white/60 backdrop-blur-sm",
-"border border-slate-200/50",
-"text-sm font-medium",
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
-"hover:bg-white/80",
-"hover:shadow-md",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+ "w-full flex items-center justify-between",
+ "px-3 py-2",
+ "rounded-none",
+ "bg-parchment",
+ "border border-rule",
+ "text-xs font-mono uppercase tracking-wider font-semibold",
+ "cursor-pointer transition-colors",
+ "hover:bg-parchment-deep hover:border-rule-strong",
+ "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
  selected.size > 0
- ? "text-blue-700 border-blue-500/30"
- : "text-slate-600"
+ ? "text-oxblood border-oxblood"
+ : "text-ink"
  )}
  aria-expanded={isOpen}
  aria-haspopup="listbox"
  aria-label={`${label} filter${selected.size > 0 ? `, ${selected.size} selected` : ""}`}
  >
  <div className="flex items-center gap-2.5">
- <Icon className="h-4 w-4 text-primary flex-shrink-0"/>
+ <Icon className="h-4 w-4 text-ink flex-shrink-0"/>
  <span>{label}</span>
  {selected.size > 0 && (
- <Badge className="bg-primary/10 text-primary border-primary/20 text-xs font-bold">
+ <Badge className="bg-parchment-deep text-ink border-rule text-xs font-mono">
  {selected.size}
  </Badge>
  )}
@@ -153,20 +151,20 @@ function MultiSelectDropdown({
  </button>
  </PopoverTrigger>
  <PopoverContent
- className="w-72 p-0 rounded-xl border-slate-200/50 bg-white/95 backdrop-blur-md shadow-xl"
+ className="w-72 p-0 rounded-none border border-rule-strong bg-parchment"
  align="start"
  sideOffset={4}
  >
  {/* Search input for long lists */}
  {options.length > 5 && (
- <div className="p-3 border-b border-slate-200/50">
+ <div className="p-2 border-b border-rule">
  <div className="relative">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"/>
+ <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"/>
  <Input
  placeholder={`Search ${label.toLowerCase()}...`}
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="pl-9 h-9 text-sm rounded-lg bg-slate-50/50 border-slate-200/50"
+ className="pl-8 h-8 text-xs rounded-none bg-parchment border-rule focus-visible:ring-1 focus-visible:ring-ink"
  />
  </div>
  </div>
@@ -190,20 +188,20 @@ function MultiSelectDropdown({
  role="option"
  aria-selected={isSelected}
  className={cn(
-"w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm",
-"transition-all duration-150 cursor-pointer",
+ "w-full flex items-center gap-2.5 px-3 py-2 rounded-none text-xs",
+ "transition-colors cursor-pointer",
  isSelected
- ? "bg-primary/8 text-primary font-medium"
- : "text-slate-700 hover:bg-slate-100/80"
+ ? "bg-parchment-deep text-oxblood font-semibold"
+ : "text-ink hover:bg-parchment-deep"
  )}
  onClick={() => handleToggle(opt)}
  >
  <div
  className={cn(
-"flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
+ "flex-shrink-0 w-4 h-4 rounded-none border flex items-center justify-center transition-colors",
  isSelected
- ? "bg-primary border-primary text-white"
- : "border-slate-300"
+ ? "bg-oxblood border-oxblood text-parchment"
+ : "border-rule bg-parchment"
  )}
  >
  {isSelected && <Check className="h-3 w-3"/>}
@@ -225,10 +223,10 @@ function MultiSelectDropdown({
 
  {/* Clear selection footer */}
  {selected.size > 0 && (
- <div className="p-2 border-t border-slate-200/50">
+ <div className="p-2 border-t border-rule">
  <button
  type="button"
- className="w-full text-xs text-muted-foreground hover:text-destructive transition-colors py-1.5 rounded-md hover:bg-slate-50"
+ className="w-full text-xs font-mono text-muted-foreground hover:text-oxblood transition-colors py-1.5 rounded-none hover:bg-parchment-deep"
  onClick={() => {
  selected.forEach((val) => onToggle(val));
  }}
@@ -269,12 +267,12 @@ function CustomMetadataFilter({
  onClick={() => setIsExpanded(!isExpanded)}
  >
  <div className="flex items-center gap-2">
- <Tag className="h-3.5 w-3.5 text-muted-foreground"/>
- <span className="text-xs font-semibold text-slate-900">
+ <Tag className="h-3.5 w-3.5 text-ink"/>
+ <span className="text-xs font-mono uppercase tracking-wider font-semibold text-ink">
  {formatSnakeCaseToHumanReadable(metadataKey)}
  </span>
  {selectedValues.length > 0 && (
- <Badge className="bg-primary/10 text-primary border-primary/20 text-xs">
+ <Badge className="bg-parchment-deep text-ink border-rule text-xs font-mono">
  {selectedValues.length}
  </Badge>
  )}
@@ -295,23 +293,11 @@ function CustomMetadataFilter({
  key={value}
  type="button"
  className={cn(
-"inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium",
-"cursor-pointer transition-all duration-200 ease-in-out",
-"bg-white/40",
-"border border-white/80",
+ "inline-flex items-center px-2.5 py-1 rounded-none text-xs font-mono",
+ "cursor-pointer transition-colors border",
  isSelected
- ? cn(
-"bg-blue-500/8",
-"border-blue-500",
-"text-blue-700",
-"shadow-sm"
- )
- : cn(
-"text-slate-500",
-"hover:bg-white",
-"hover:text-slate-900",
-"hover:-translate-y-0.5 hover:shadow-sm"
- )
+ ? "bg-oxblood text-parchment border-oxblood font-semibold"
+ : "bg-parchment text-ink border-rule hover:bg-parchment-deep hover:border-rule-strong"
  )}
  onClick={() => onToggle(metadataKey, value)}
  >
@@ -323,7 +309,7 @@ function CustomMetadataFilter({
  {selectedValues.length > 0 && (
  <button
  type="button"
- className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+ className="text-xs font-mono text-muted-foreground hover:text-oxblood transition-colors"
  onClick={() => onClear(metadataKey)}
  >
  Clear
@@ -409,29 +395,25 @@ export function AdvancedFilterPanel({
  <button
  type="button"
  className={cn(
-"w-full flex items-center justify-between",
-"px-4 py-3",
-"rounded-xl",
-"bg-gradient-to-br from-slate-50/60 via-blue-50/20 to-indigo-50/10",
-"",
-"border border-slate-200/50",
-"text-sm font-bold",
-"cursor-pointer",
-"transition-all duration-200 ease-in-out",
-"hover:shadow-md hover:bg-white/80",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+ "w-full flex items-center justify-between",
+ "px-3 py-2",
+ "rounded-none",
+ "bg-parchment",
+ "border border-rule",
+ "text-xs font-mono uppercase tracking-wider font-semibold",
+ "cursor-pointer transition-colors",
+ "hover:bg-parchment-deep hover:border-rule-strong",
+ "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
  )}
  onClick={() => setIsExpanded(!shouldShow)}
  aria-expanded={shouldShow}
  aria-controls="advanced-filters-content"
  >
- <div className="flex items-center gap-2.5">
- <div className="relative bg-gradient-to-br from-primary/10 via-blue-500/10 to-cyan-500/10 rounded-lg p-1.5 border border-primary/20">
- <SlidersHorizontal className="h-3.5 w-3.5 text-primary"/>
- </div>
- <span className="text-slate-900">Advanced Filters</span>
+ <div className="flex items-center gap-2">
+ <SlidersHorizontal className="h-3.5 w-3.5 text-ink"/>
+ <span className="text-ink">Advanced Filters</span>
  {advancedFilterCount > 0 && (
- <Badge className="bg-primary/10 text-primary border-primary/20 font-bold text-xs">
+ <Badge className="bg-parchment-deep text-ink border-rule font-mono text-xs">
  {advancedFilterCount}
  </Badge>
  )}
@@ -447,10 +429,7 @@ export function AdvancedFilterPanel({
  {shouldShow && (
  <div
  id="advanced-filters-content"
- className={cn(
-"space-y-3 pl-1",
-"animate-in fade-in-0 slide-in-from-top-2 duration-200"
- )}
+ className="space-y-3 pl-1"
  >
  {/* Jurisdiction filter */}
  {availableFilters.jurisdictions.length > 0 && (
@@ -490,8 +469,8 @@ export function AdvancedFilterPanel({
 
  {/* Custom Metadata Filters */}
  {availableFilters.customMetadataKeys.length > 0 && (
- <div className="border rounded-xl p-3 bg-white/40 border-slate-200/50 space-y-3">
- <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+ <div className="border rounded-none p-3 bg-parchment border-rule space-y-3">
+ <h4 className="text-xs font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
  <Tag className="h-3 w-3"/>
  Custom Fields
  </h4>
