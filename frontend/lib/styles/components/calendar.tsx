@@ -385,17 +385,16 @@ export function Calendar({
  type="button"
  onClick={handleYearViewClick}
  className={cn(
-"h-8 px-3 text-sm font-medium rounded-lg transition-all duration-300",
-"bg-white/60",
-"border border-slate-200/50",
-"hover:bg-white/80",
-"hover:border-primary/60",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+"h-8 px-3 text-xs font-mono font-medium rounded-none transition-colors",
+"bg-parchment-deep text-ink border border-rule",
+"hover:bg-parchment",
+"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
  )}
  >
  {currentYear}
  </button>
- <VariantButton intent="icon"
+ <VariantButton
+ intent="icon"
  icon={ChevronsRight}
  onClick={() => setYearView((y) => y + 25)}
  aria-label="Next years"
@@ -424,24 +423,16 @@ export function Calendar({
  }}
  disabled={monthDisabled}
  className={cn(
-"px-3 py-2 text-sm rounded-lg transition-all duration-300",
-"bg-white/60",
-"border border-slate-200/50",
-"hover:bg-white/80",
-"hover:border-primary/60",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-"disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
- monthDisabled &&"opacity-50 cursor-not-allowed",
+"px-3 py-2 text-xs font-mono rounded-none transition-colors",
+"bg-parchment text-ink border border-rule",
+"hover:bg-parchment-deep",
+"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+"disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed",
+ monthDisabled &&"opacity-40 cursor-not-allowed",
  currentMonth === idx &&
- cn(
-"bg-gradient-to-br from-primary/30 via-indigo-500/30 to-purple-500/20",
-"",
-"border-primary/30 ring-2 ring-primary/30",
-"text-primary-foreground font-semibold",
-"hover:from-primary/40 hover:via-indigo-500/40 hover:to-purple-500/30"
- )
+"bg-ink text-parchment font-semibold border-ink hover:bg-ink hover:text-parchment"
  )}
- aria-label={`Select ${monthName}${monthDisabled ? "(disabled)": ""}`}
+ aria-label={`Select ${monthName}${monthDisabled ? " (disabled)": ""}`}
  aria-disabled={monthDisabled}
  >
  {monthName.slice(0, 3)}
@@ -515,24 +506,16 @@ export function Calendar({
  }}
  disabled={yearDisabled}
  className={cn(
-"px-3 py-2 text-sm rounded-lg transition-all duration-300",
-"bg-white/60",
-"border border-slate-200/50",
-"hover:bg-white/80",
-"hover:border-primary/60",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-"disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
- yearDisabled &&"opacity-50 cursor-not-allowed",
+"px-3 py-2 text-xs font-mono rounded-none transition-colors",
+"bg-parchment text-ink border border-rule",
+"hover:bg-parchment-deep",
+"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+"disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed",
+ yearDisabled &&"opacity-40 cursor-not-allowed",
  currentYear === year &&
- cn(
-"bg-gradient-to-br from-primary/30 via-indigo-500/30 to-purple-500/20",
-"",
-"border-primary/30 ring-2 ring-primary/30",
-"text-primary-foreground font-semibold",
-"hover:from-primary/40 hover:via-indigo-500/40 hover:to-purple-500/30"
- )
+"bg-ink text-parchment font-semibold border-ink hover:bg-ink hover:text-parchment"
  )}
- aria-label={`Select year ${year}${yearDisabled ? "(disabled)": ""}`}
+ aria-label={`Select year ${year}${yearDisabled ? " (disabled)": ""}`}
  aria-disabled={yearDisabled}
  >
  {year}
@@ -578,11 +561,9 @@ export function Calendar({
  <div
  key={monthIndex}
  className={cn(
-"relative rounded-xl p-4 shadow-sm",
-"bg-gradient-to-br from-white/60 via-blue-50/30 to-indigo-50/20",
-"",
-"backdrop-blur-sm",
-"border border-slate-200/50"
+"relative rounded-none p-4",
+"bg-parchment",
+"border border-rule"
  )}
  >
  {precision === "day"? (
@@ -591,10 +572,9 @@ export function Calendar({
  <div
  ref={pickerRef}
  className={cn(
-"absolute top-full left-0 right-0 z-50 mt-2 rounded-xl shadow-xl p-4",
-"bg-white/95",
-"backdrop-blur-md",
-"border border-slate-200/50"
+"absolute top-full left-0 right-0 z-50 mt-2 rounded-none shadow-sm p-4",
+"bg-parchment",
+"border border-rule"
  )}
  role="dialog"
  aria-label="Month and year picker"
@@ -613,13 +593,10 @@ export function Calendar({
  type="button"
  onClick={handleHeaderClick}
  className={cn(
-"text-sm font-semibold px-3 py-1.5 rounded-lg transition-all duration-300",
-"bg-white/60",
-"border border-slate-200/50",
-"hover:bg-white/80",
-"hover:border-primary/60",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-"text-foreground"
+"text-xs font-mono font-semibold px-3 py-1.5 rounded-none transition-colors",
+"bg-parchment-deep text-ink border border-rule",
+"hover:bg-parchment",
+"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink"
  )}
  aria-label={`Select month and year. Current: ${format(displayMonth,"LLLL yyyy", { locale: enUS })}`}
  >
@@ -665,12 +642,7 @@ export function Calendar({
  key={i}
  className={cn(
 "h-9 flex items-center justify-center",
- inRange && !rangeStart && !rangeEnd && cn(
-"bg-gradient-to-br from-primary/10 via-indigo-500/10 to-purple-500/10",
-""
- ),
- rangeStart &&"rounded-l-md",
- rangeEnd &&"rounded-r-md"
+ inRange && !rangeStart && !rangeEnd &&"bg-gold-soft/30 text-ink"
  )}
  onMouseEnter={() => mode === "range"&& setHoveredDate(date)}
  onMouseLeave={() => mode === "range"&& setHoveredDate(null)}
@@ -680,67 +652,31 @@ export function Calendar({
  onClick={() => handleDateClick(date)}
  disabled={disabled}
  className={cn(
-"size-9 flex items-center justify-center rounded-lg transition-all duration-300",
-"bg-white/40",
-"border border-slate-200/30",
-"hover:bg-gradient-to-br hover:from-primary/20 hover:via-indigo-500/15 hover:to-purple-500/15",
-"hover:border-primary/50",
-"hover:shadow-md hover:shadow-primary/10",
-"hover:scale-105",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-"disabled:pointer-events-none disabled:opacity-50",
- // Selected state - PROMINENT gradient like VariantButton
- selected && cn(
-"bg-gradient-to-br from-blue-400/50 via-indigo-400/50 via-purple-400/50 to-purple-400/30",
-"",
-"!border !border-primary/30 ring-2 ring-primary/30",
-"text-foreground font-bold",
-"shadow-lg shadow-primary/20",
-"hover:from-blue-400/60 hover:via-indigo-400/60 hover:via-purple-400/60 hover:to-purple-400/40",
-"hover:shadow-xl hover:shadow-primary/30",
-"hover:scale-110"
- ),
- // Today state (when not selected) - highlight with gradient
- today && !selected && cn(
-"bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/50",
-"",
-"!border !border-primary/40",
-"ring-1 ring-primary/20",
-"font-bold text-primary",
-"shadow-sm shadow-primary/10"
- ),
+"size-9 flex items-center justify-center rounded-none font-mono text-xs transition-colors",
+"bg-parchment text-ink",
+"border border-transparent",
+"hover:bg-parchment-deep hover:border-rule",
+"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+"disabled:pointer-events-none disabled:opacity-40",
+ // Selected state
+ selected &&
+"bg-ink text-parchment font-semibold border-ink hover:bg-ink hover:text-parchment",
+ // Today state (when not selected)
+ today && !selected &&
+"border-b-2 border-b-oxblood font-semibold text-ink",
  // Outside month
- isOutside &&"text-muted-foreground opacity-50",
- // Range start - PROMINENT gradient
- rangeStart && cn(
-"bg-gradient-to-br from-blue-400/50 via-indigo-400/50 via-purple-400/50 to-purple-400/30",
-"",
-"!border !border-primary/30 ring-2 ring-primary/30",
-"text-foreground font-bold rounded-l-lg",
-"shadow-lg shadow-primary/20",
-"hover:from-blue-400/60 hover:via-indigo-400/60 hover:via-purple-400/60 hover:to-purple-400/40",
-"hover:shadow-xl hover:shadow-primary/30",
-"hover:scale-110"
- ),
- // Range end - PROMINENT gradient
- rangeEnd && cn(
-"bg-gradient-to-br from-blue-400/50 via-indigo-400/50 via-purple-400/50 to-purple-400/30",
-"",
-"!border !border-primary/30 ring-2 ring-primary/30",
-"text-foreground font-bold rounded-r-lg",
-"shadow-lg shadow-primary/20",
-"hover:from-blue-400/60 hover:via-indigo-400/60 hover:via-purple-400/60 hover:to-purple-400/40",
-"hover:shadow-xl hover:shadow-primary/30",
-"hover:scale-110"
- ),
- // In range (but not start/end) - more visible
- inRange && !rangeStart && !rangeEnd && !selected && cn(
-"bg-gradient-to-br from-blue-100/60 via-indigo-100/50 to-purple-100/40",
-"",
-"border border-primary/20"
- )
+ isOutside &&"text-muted-foreground/40",
+ // Range start
+ rangeStart &&
+"bg-ink text-parchment font-semibold border-ink hover:bg-ink hover:text-parchment",
+ // Range end
+ rangeEnd &&
+"bg-ink text-parchment font-semibold border-ink hover:bg-ink hover:text-parchment",
+ // In range (but not start/end)
+ inRange && !rangeStart && !rangeEnd && !selected &&
+"bg-gold-soft/30 text-ink"
  )}
- aria-label={`${format(date,"EEEE, MMMM d, yyyy")}${selected ? "(selected)": ""}${today ? "(today)": ""}`}
+ aria-label={`${format(date,"EEEE, MMMM d, yyyy")}${selected ? " (selected)": ""}${today ? " (today)": ""}`}
  aria-disabled={disabled}
  >
  {day}

@@ -112,6 +112,18 @@ const CLEAN_FILES = [
   'components/legal/professional-acknowledgment.tsx',
   'components/admin/AdminGuard.tsx',
   'components/extraction-results-table.tsx',
+  'lib/styles/components/calendar.tsx',
+  'lib/styles/components/search-filters.tsx',
+  'lib/styles/components/advanced-filter-panel.tsx',
+  'lib/styles/components/search/SearchEmptyState.tsx',
+  'lib/styles/components/search/SearchHeader.tsx',
+  'lib/styles/components/search/SearchForm.tsx',
+  'lib/styles/components/search/SearchResultsSection.tsx',
+  'lib/styles/components/search-input.tsx',
+  'lib/styles/components/search-result-feedback.tsx',
+  'lib/styles/components/document-dialog.tsx',
+  'components/SaveSearchDialog.tsx',
+  'app/saved-searches/page.tsx',
 ];
 
 /**
