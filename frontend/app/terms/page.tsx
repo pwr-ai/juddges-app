@@ -22,32 +22,32 @@ export default function TermsPage(): React.ReactElement {
  </div>
 
  {/* Introduction */}
- <LightCard padding="lg"className="mb-8">
- <p className="text-base leading-relaxed text-muted-foreground">
- These Terms of Service (&quot;Terms&quot;) govern your access to and use of the JuDDGES platform operated by
- Wrocław University of Science and Technology and collaborators. By accessing or using our platform, you agree to be
- bound by these Terms.
- </p>
- </LightCard>
+      <LightCard padding="lg" className="mb-8 rounded-none border border-rule">
+        <p className="text-base leading-relaxed text-muted-foreground">
+          These Terms of Service (&quot;Terms&quot;) govern your access to and use of the JuDDGES platform operated by
+          Wrocław University of Science and Technology and collaborators. By accessing or using our platform, you agree to be
+          bound by these Terms.
+        </p>
+      </LightCard>
 
- {/* Important Legal Notice */}
- <LightCard
- padding="lg"
- className="mb-8 border-2 border-amber-500 bg-amber-500/20 ring-2 ring-amber-500/20 shadow-lg [&>div:first-child]:bg-gradient-to-br [&>div:first-child]:from-amber-500/15 [&>div:first-child]:via-amber-400/8 [&>div:first-child]:via-transparent [&>div:first-child]:to-amber-500/10"
- >
- <div className="flex items-start gap-3 relative z-10">
- <AlertTriangle className="size-6 text-amber-600 mt-0.5 flex-shrink-0"/>
- <div className="space-y-2">
- <h3 className="font-semibold text-amber-900">Important Legal Notice</h3>
- <p className="text-sm text-amber-800">
- JuDDGES is a research platform providing AI-powered legal information for educational and research
- purposes only. This platform does not provide legal advice and should not be used as a substitute
- for consultation with a qualified attorney. Always consult a licensed legal professional for advice
- regarding your specific legal matters.
- </p>
- </div>
- </div>
- </LightCard>
+      {/* Important Legal Notice */}
+      <LightCard
+        padding="lg"
+        className="mb-8 border border-gold/60 bg-sand/15 rounded-none shadow-none"
+      >
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="size-6 text-gold mt-0.5 shrink-0" />
+          <div className="space-y-2">
+            <h3 className="font-semibold text-ink font-display">Important Legal Notice</h3>
+            <p className="text-sm text-ink-soft leading-relaxed">
+              JuDDGES is a research platform providing AI-powered legal information for educational and research
+              purposes only. This platform does not provide legal advice and should not be used as a substitute
+              for consultation with a qualified attorney. Always consult a licensed legal professional for advice
+              regarding your specific legal matters.
+            </p>
+          </div>
+        </div>
+      </LightCard>
 
  <div className="space-y-8">
  {/* Section 1: Acceptance of Terms */}

@@ -37,20 +37,20 @@ export default function DisclaimerPage() {
  </div>
  </div>
 
- {/* Critical Warning */}
- <Alert className="mb-8 border-amber-500/50 bg-amber-500/10">
- <AlertTriangle className="h-5 w-5 text-amber-600"/>
- <AlertDescription className="text-sm">
- <span className="font-semibold text-amber-900 block mb-2">
- Critical Professional Notice
- </span>
- <p className="text-amber-800">
- This platform uses artificial intelligence to assist with legal and tax research. All
- AI-generated content must be independently verified by qualified professionals before
- being relied upon. This tool does not provide legal or tax advice.
- </p>
- </AlertDescription>
- </Alert>
+      {/* Critical Warning */}
+      <Alert className="mb-8 border-gold/60 bg-sand/15 rounded-none">
+        <AlertTriangle className="h-5 w-5 text-gold" />
+        <AlertDescription className="text-sm">
+          <span className="font-semibold text-ink block mb-2 font-display">
+            Critical Professional Notice
+          </span>
+          <p className="text-ink-soft leading-relaxed">
+            This platform uses artificial intelligence to assist with legal and tax research. All
+            AI-generated content must be independently verified by qualified professionals before
+            being relied upon. This tool does not provide legal or tax advice.
+          </p>
+        </AlertDescription>
+      </Alert>
 
  {/* Main Content */}
  <div className="space-y-8">
@@ -101,7 +101,7 @@ export default function DisclaimerPage() {
  <li>Maintaining appropriate professional liability insurance</li>
  <li>Exercising independent professional judgment in all matters</li>
  </ul>
- <div className="bg-muted p-4 rounded-lg border border-border mt-4">
+ <div className="bg-parchment-deep/40 p-4 rounded-none border border-rule mt-4">
  <p className="font-semibold mb-2">For Legal Professionals:</p>
  <p className="text-sm">
  Use of this tool does not diminish your professional responsibilities under
