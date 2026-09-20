@@ -7,6 +7,7 @@ monkeypatched so no RPC is touched.
 from __future__ import annotations
 
 import pytest
+from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from juddges_search.db.supabase_db import get_collections_db
 
@@ -26,6 +27,9 @@ class _StubDb:
     def __init__(self):
         self.bulk_calls: list[list[str]] = []
         self.created: list[dict] = []
+        self.deleted: list[str] = []
+        self.fail_on_chunk: int | None = None
+        self.delete_should_fail: bool = False
 
     async def create_collection(self, user_id, name, description=None):
         row = {
@@ -40,8 +44,17 @@ class _StubDb:
         return row
 
     async def bulk_add_documents(self, collection_id, judgment_ids, user_id):
+        chunk_index = len(self.bulk_calls)
         self.bulk_calls.append(list(judgment_ids))
+        if self.fail_on_chunk is not None and chunk_index == self.fail_on_chunk:
+            raise HTTPException(status_code=500, detail="Failed to add judgment: boom")
         return {"added": list(judgment_ids), "failed": []}
+
+    async def delete_collection(self, collection_id, user_id):
+        if self.delete_should_fail:
+            raise RuntimeError("delete boom")
+        self.deleted.append(collection_id)
+        return True
 
 
 def _ids(n: int) -> list[str]:
@@ -114,6 +127,34 @@ async def test_creates_collection_and_bulk_adds_in_chunks(
     )
     assert [len(c) for c in stub_db.bulk_calls] == [1000, 1000, 500]
     assert stub_db.created[0]["name"].startswith("kobiety")
+
+
+async def test_bulk_add_failure_deletes_collection_and_propagates(
+    client, override_deps, stub_db, monkeypatch
+):
+    """A chunk failing mid-way must not leave a partial collection visible."""
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(2500))
+    stub_db.fail_on_chunk = 1  # second of three chunks (1000, 1000, 500) raises
+    resp = await client.post(
+        "/collections/from-filter", json={"name": "x", "filters": {}}, headers=_HEADERS
+    )
+    assert resp.status_code == 500
+    assert stub_db.deleted == [_COLLECTION_ID]
+
+
+async def test_bulk_add_failure_with_failing_delete_still_propagates_original_error(
+    client, override_deps, stub_db, monkeypatch
+):
+    """A failed compensating delete must not mask the original bulk-add error."""
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1500))
+    stub_db.fail_on_chunk = 1  # second of two chunks (1000, 500) raises
+    stub_db.delete_should_fail = True
+    resp = await client.post(
+        "/collections/from-filter", json={"name": "x", "filters": {}}, headers=_HEADERS
+    )
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "Failed to add judgment: boom"
+    assert stub_db.deleted == []
 
 
 async def test_empty_result_is_400_and_creates_nothing(

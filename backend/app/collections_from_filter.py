@@ -71,14 +71,36 @@ def _db_unavailable() -> HTTPException:
 async def create_collection_from_ids(
     db: Any, *, user_id: str, name: str, description: str | None, ids: list[str]
 ) -> tuple[dict[str, Any], int]:
-    """Create one collection and bulk-add `ids` in chunks. Returns (collection row, added count)."""
+    """Create one collection and bulk-add `ids` in chunks. Returns (collection row, added count).
+
+    No partial collection survives a failed bulk add: if any chunk raises, the
+    collection just created is deleted (best-effort) before the original
+    exception propagates, so a bulk-add failure never leaves the user with a
+    collection that silently holds only some of `ids`.
+    """
     collection = await db.create_collection(user_id, name, description)
     added = 0
-    for start in range(0, len(ids), BULK_ADD_CHUNK):
-        result = await db.bulk_add_documents(
-            collection["id"], ids[start : start + BULK_ADD_CHUNK], user_id
+    try:
+        for start in range(0, len(ids), BULK_ADD_CHUNK):
+            result = await db.bulk_add_documents(
+                collection["id"], ids[start : start + BULK_ADD_CHUNK], user_id
+            )
+            added += len(result["added"])
+    except Exception:
+        logger.warning(
+            "bulk add failed for collection {} ({} of {} judgments added); deleting it",
+            collection["id"],
+            added,
+            len(ids),
         )
-        added += len(result["added"])
+        try:
+            await db.delete_collection(collection["id"], user_id)
+        except Exception:
+            logger.exception(
+                "compensating delete failed for collection {}; a partial collection may remain",
+                collection["id"],
+            )
+        raise
     logger.info(
         "collection {} created with {} of {} judgments",
         collection["id"],
