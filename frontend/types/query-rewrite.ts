@@ -1,4 +1,6 @@
-export type Jurisdiction = 'PL' | 'UK';
+import type { Jurisdiction } from './base-schema-filter';
+
+export type { Jurisdiction } from './base-schema-filter';
 export type CourtLevel =
   | 'supreme'
   | 'constitutional'
