@@ -402,66 +402,6 @@ function SearchPageContent(): React.JSX.Element | null {
  chunks={selectedChunks}
  />
 
- {/* Clean Room Mesh Gradient Background */}
- <div
- className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
- aria-hidden="true"
- >
- {/* Base background */}
- <div
- className="absolute inset-0"
- style={{
- background: '#F8FAFC',
- backgroundAttachment: 'fixed',
- }}
- />
- {/* Top-left blob: Sky 100 with blur */}
- <div
- className="absolute top-0 left-0 w-[600px] h-[600px] -translate-x-1/4 -translate-y-1/4"
- style={{
- background: 'radial-gradient(circle, rgba(224, 242, 254, 1) 0%, transparent 70%)',
- filter: 'blur(100px)',
- }}
- />
- {/* Bottom-right blob: Slate 100 with blur */}
- <div
- className="absolute bottom-0 right-0 w-[600px] h-[600px] translate-x-1/4 translate-y-1/4"
- style={{
- background: 'radial-gradient(circle, rgba(241, 245, 249, 1) 0%, transparent 70%)',
- filter: 'blur(100px)',
- }}
- />
- </div>
- <div
- className="fixed inset-0 pointer-events-none z-0 hidden overflow-hidden"
- aria-hidden="true"
- >
- {/* Base background - Deep Slate */}
- <div
- className="absolute inset-0"
- style={{
- background: '#020617',
- backgroundAttachment: 'fixed',
- }}
- />
- {/* Top-left blob: Darker with blur */}
- <div
- className="absolute top-0 left-0 w-[600px] h-[600px] -translate-x-1/4 -translate-y-1/4"
- style={{
- background: 'radial-gradient(circle, rgba(15, 23, 42, 0.6) 0%, transparent 70%)',
- filter: 'blur(100px)',
- }}
- />
- {/* Bottom-right blob: Darker with blur */}
- <div
- className="absolute bottom-0 right-0 w-[600px] h-[600px] translate-x-1/4 translate-y-1/4"
- style={{
- background: 'radial-gradient(circle, rgba(30, 41, 59, 0.6) 0%, transparent 70%)',
- filter: 'blur(100px)',
- }}
- />
- </div>
-
  <PageContainer width={showExpanded ? 'compact' : 'full'} fillViewport={showExpanded} className="py-6 relative z-10">
  {showExpanded ? (
  /* Expanded view - IMPROVED LAYOUT */
