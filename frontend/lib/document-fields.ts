@@ -28,7 +28,8 @@ import {
   Database,
   Layers,
   Link as LinkIcon,
-  Sparkles,
+  Cpu,
+  Star,
   MessageSquare,
 } from 'lucide-react';
 
@@ -70,7 +71,7 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   processing_status:     { label: 'Processing Status',     icon: Activity },
   interpretation_status: { label: 'Interpretation Status', icon: Activity },
   case_type:             { label: 'Case Type',             icon: Layers },
-  decision_type:         { label: 'Decision Type',         icon: Sparkles },
+  decision_type:         { label: 'Decision Type',         icon: Gavel },
   court_level:           { label: 'Court Level',           icon: Scale },
   jurisdiction:          { label: 'Jurisdiction',          icon: MapPin },
   x:                     { label: 'Embedding X',           icon: Database },
@@ -82,7 +83,7 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   // collisions with regular metadata).
   // ---------------------------------------------------------------------------
   base_extraction_status:                              { label: 'Extraction Status',          icon: Activity },
-  base_extraction_model:                               { label: 'Extraction Model',           icon: Sparkles },
+  base_extraction_model:                               { label: 'Extraction Model',           icon: Cpu },
   base_extracted_at:                                   { label: 'Extracted At',               icon: Clock },
   base_schema_key:                                     { label: 'Base Schema',                icon: Layers },
   base_schema_version:                                 { label: 'Base Schema Version',        icon: Hash },
@@ -153,7 +154,7 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   // surfaced under the original `structure_*` keys. Raw JSONB is never exposed.
   // ---------------------------------------------------------------------------
   structure_extraction_status:           { label: 'Structure Status',           icon: Activity },
-  structure_extraction_model:            { label: 'Structure Model',            icon: Sparkles },
+  structure_extraction_model:            { label: 'Structure Model',            icon: Cpu },
   structure_extracted_at:                { label: 'Structure Extracted At',     icon: Clock },
   structure_section_count:               { label: 'Section Count',              icon: Hash },
   structure_confidence:                  { label: 'Structure Confidence',       icon: Activity },
@@ -168,7 +169,7 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   // the original `deep_*` keys.
   // ---------------------------------------------------------------------------
   deep_analysis_status:                  { label: 'Deep Analysis Status',       icon: Activity },
-  deep_analysis_model:                   { label: 'Deep Analysis Model',        icon: Sparkles },
+  deep_analysis_model:                   { label: 'Deep Analysis Model',        icon: Cpu },
   deep_analysed_at:                      { label: 'Deep Analysed At',           icon: Clock },
   deep_complexity_score:                 { label: 'Complexity Score',           icon: Activity },
   deep_factual_complexity:               { label: 'Factual Complexity',         icon: Activity },
@@ -178,7 +179,7 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   deep_reasoning_patterns:               { label: 'Reasoning Patterns',         icon: BookOpen,    wide: true },
   deep_judicial_tone:                    { label: 'Judicial Tone',              icon: MessageSquare },
   deep_precedential_value:               { label: 'Precedential Value',         icon: Scale },
-  deep_research_value:                   { label: 'Research Value',             icon: Sparkles },
+  deep_research_value:                   { label: 'Research Value',             icon: Star },
   deep_text_quality:                     { label: 'Text Quality',               icon: Activity },
   deep_analysis_confidence:              { label: 'Deep Analysis Confidence',   icon: Activity },
 };

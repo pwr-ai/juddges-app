@@ -136,20 +136,10 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
  ),
  // Focus states - add ring for subtle emphasis
 "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink focus-visible:ring-offset-0",
- // Background and blur - based on variant
- variant === 'transparent' ? (
- cn(
-"!bg-transparent", // Force transparent to override Input's default
- searchInputColors.backdropBlur
- )
- ) : (
- cn(
- searchInputColors.background.light,
- searchInputColors.backdropBlur
- )
- ),
- // Shadow - based on variant
- variant === 'transparent' ? searchInputColors.shadowTransparent : searchInputColors.shadow,
+ // Background - based on variant
+ variant === 'transparent'
+ ? "!bg-transparent" // Force transparent to override Input's default
+ : searchInputColors.background.light,
  // Border radius
 "rounded-none",
  // Transitions

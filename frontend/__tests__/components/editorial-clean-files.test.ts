@@ -133,6 +133,9 @@ const CLEAN_FILES = [
   'lib/styles/components/chat/chat-message-list.tsx',
   'lib/styles/components/chat/chat-interface.tsx',
   'lib/styles/components/chat/chat-message-styles.tsx',
+  'lib/styles/colors/surfaces.ts',
+  'lib/styles/components/buttons.ts',
+  'lib/document-fields.ts',
 ];
 
 /**
