@@ -64,7 +64,7 @@ export const getInactiveButtonStyle = (
     'group relative',
     // `!` overrides the ghost variant's transparent background and hover fill.
     'border !bg-transparent border-rule text-ink-soft',
-    '!hover:bg-transparent hover:border-ink hover:!text-ink',
+    'hover:!bg-transparent hover:border-ink hover:!text-ink',
     'transition-colors duration-150',
     FOCUS_RING,
     additionalClasses

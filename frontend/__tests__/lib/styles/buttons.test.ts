@@ -38,6 +38,14 @@ describe('getInactiveButtonStyle', () => {
     expect(cls).toContain('text-ink-soft');
   });
 
+  it('beats the ghost variant hover fill with a valid important modifier', () => {
+    // Tailwind's important modifier goes on the utility, not the variant:
+    // `!hover:bg-transparent` compiles to nothing and lets `hover:bg-accent` win.
+    const cls = getInactiveButtonStyle();
+    expect(cls).toContain('hover:!bg-transparent');
+    expect(cls).not.toMatch(/!hover:/);
+  });
+
   it('emits no banned classes', () => {
     expect(getInactiveButtonStyle()).not.toMatch(BANNED);
   });
