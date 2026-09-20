@@ -1,10 +1,8 @@
 # Base-schema filter API (reference)
 
-Shared filter contract used by `/search/extractions`, "save filter as
-collection", and (planned) the NL-question-to-filter flow and the PL/UK
-comparison. This page documents the code as it landed on `feat/shared-foundation`
-(the "Foundation" plan), not the original task-brief template — a few details
-below were corrected during implementation review.
+Shared filter contract used by `/search/extractions` and "save filter as
+collection", designed to also support the planned NL-question-to-filter flow
+and PL/UK comparison.
 
 ## RPC `public.list_extracted_filter_matches(p_filters JSONB, p_text_query TEXT)`
 
@@ -171,11 +169,15 @@ a hand-edited URL) by treating `min`/`max` as `from`/`to` before converting.
 
 ## Completeness helpers (backend)
 
-`backend/app/extraction_domain/completeness.py` — shared by
-`extraction_domain/summary.py`, `extraction_domain/dataset_export.py`,
-`compare/layout.py` and `compare/schema_tally.py` so the sample review, the
-dataset export and the PL/UK comparison cannot disagree about what counts as
-"empty" or "done":
+`backend/app/extraction_domain/completeness.py` exists today, with its own
+test coverage (`tests/app/test_completeness.py`), but has no consumers in
+this repo yet. Its docstring names four **intended consumers that do not
+exist yet** — they belong to planned work, not this Foundation change:
+`extraction_domain/summary.py` and `extraction_domain/dataset_export.py`
+(research-flow, #685), and `compare/layout.py` and `compare/schema_tally.py`
+(PL/UK compare, #684). The module was written now, ahead of those
+consumers, so the sample review, the dataset export and the PL/UK
+comparison won't disagree later about what counts as "empty" or "done".
 
 - `COMPLETED_STATUSES: frozenset[str]` — `{"completed", "success", "partially_completed"}`.
 - `EMPTY_MARKERS: frozenset[str]` — lowercase, stripped marker strings (`""`, `"n/a"`, `"na"`, `"not available"`, `"none"`, `"null"`, `"unknown"`, `"brak"`, `"brak danych"`, `"nie dotyczy"`, `"not applicable"`).
@@ -184,16 +186,17 @@ dataset export and the PL/UK comparison cannot disagree about what counts as
 - `completed_rows(results) -> list[dict]` — rows whose `status` (case-insensitive) is in `COMPLETED_STATUSES`; rows with a missing/`None`/empty status are excluded.
 - `coverage_ratio(covered, total) -> float | None` — `covered / total` rounded to 4 decimals, or `None` when `total == 0`.
 
-**Two definitions of "empty" coexist by design, not by accident:**
+**Two definitions of "empty" are intended to coexist, not to converge:**
 Python-side `is_empty_value` (above) is for free-text LLM output in
 `extraction_jobs.results` and includes LLM markers such as `"n/a"` /
-`"brak danych"`. SQL-side `covered` in the facet-count RPCs
-(`get_extracted_facet_counts_by_jurisdiction` and similar) treats only SQL
+`"brak danych"`. The module's docstring records a contract for the SQL side
+that **planned** facet-count RPCs (e.g. `get_extracted_facet_counts_by_jurisdiction`,
+part of #684 — not present in this repo yet) must follow: treat only SQL
 `NULL`/`''` as empty, because the `base_*` columns are enum-coded and cannot
-contain an LLM marker string. The two scopes don't overlap in practice — one
-reads JSON results, the other reads typed columns — but a caller mixing them
-would get different coverage numbers for what looks like the same "empty"
-concept.
+contain an LLM marker string. The two scopes aren't expected to overlap —
+one reads JSON results, the other reads typed columns — but a caller mixing
+them would get different coverage numbers for what looks like the same
+"empty" concept.
 
 ## Testing helper: `frontend/tests/route-contract-e2e/synthetic-session.ts`
 
