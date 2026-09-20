@@ -264,7 +264,7 @@ export function ChatMessage({
  'prose-slate',
  // ErrorMessage wrapper handles all error styling, so keep content neutral
  'prose-headings:text-foreground prose-strong:text-foreground',
- isErrorMessage ? 'prose-a:text-red-700' : 'prose-a:text-primary',
+ isErrorMessage ? 'prose-a:text-oxblood' : 'prose-a:text-primary',
  'prose-h1:text-xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-6 prose-h1:border-b prose-h1:border-border prose-h1:pb-2',
  'prose-h2:text-lg prose-h2:font-semibold prose-h2:mb-3 prose-h2:mt-5',
  'prose-h3:text-base prose-h3:font-medium prose-h3:mb-2 prose-h3:mt-4',
