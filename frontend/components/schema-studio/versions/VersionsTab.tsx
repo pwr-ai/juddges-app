@@ -20,7 +20,7 @@ import {
  Loader2,
  History,
  RotateCcw,
- Sparkles,
+ Bot,
  Edit,
  Code,
  Plus,
@@ -42,9 +42,9 @@ interface VersionsTabProps {
 
 // Icon mapping for change types
 const CHANGE_TYPE_ICONS: Record<SchemaChangeType, React.ReactNode> = {
- create: <Plus className="h-3.5 w-3.5"/>,
- ai_update: <Sparkles className="h-3.5 w-3.5"/>,
- visual_edit: <Edit className="h-3.5 w-3.5"/>,
+  create: <Plus className="h-3.5 w-3.5"/>,
+  ai_update: <Bot className="h-3.5 w-3.5"/>,
+  visual_edit: <Edit className="h-3.5 w-3.5"/>,
  code_edit: <Code className="h-3.5 w-3.5"/>,
  import: <Download className="h-3.5 w-3.5"/>,
  bulk_import: <Download className="h-3.5 w-3.5"/>,

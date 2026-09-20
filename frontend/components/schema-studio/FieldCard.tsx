@@ -24,7 +24,7 @@ import {
  GripVertical,
  AlertCircle,
  CheckCircle2,
- Sparkles,
+ Bot,
  FolderTree,
  Type,
  Hash,
@@ -403,7 +403,7 @@ export function FieldCard({
  variant="outline"
  className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 border-gold text-gold bg-transparent font-mono"
  >
- <Sparkles className="h-3 w-3"/>
+ <Bot className="h-3 w-3"/>
  <span className="font-medium">Review</span>
  </Badge>
  )}
@@ -571,7 +571,7 @@ export function FieldCard({
  * [x] Add edit and delete actions
  * [x] Implement delete confirmation dialog
  * [x] Add drag handle for reordering
- * [x] Add AI-created indicator (Sparkles icon)
+ * [x] Add AI-created indicator (Bot icon)
  * [x] Add validation rule indicators
  * [x] Add error state visualization
  * [x] Implement animations with framer-motion

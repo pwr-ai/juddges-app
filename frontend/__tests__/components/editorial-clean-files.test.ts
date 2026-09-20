@@ -153,6 +153,13 @@ const CLEAN_FILES = [
   'app/judge-fingerprint/page.tsx',
   'app/auth/error/page.tsx',
   'app/auth/login/page.tsx',
+  'lib/document-fields.ts',
+  'components/schema-studio/FieldCard.tsx',
+  'components/schema-studio/FieldEditor.tsx',
+  'components/schema-studio/versions/VersionsTab.tsx',
+  'lib/schema-editor/rjsf/custom-widgets/DescriptionWidget.tsx',
+  'lib/schema-editor/rjsf/rjsf-config.ts',
+  'types/schema-playground.ts',
 ];
 
 /**

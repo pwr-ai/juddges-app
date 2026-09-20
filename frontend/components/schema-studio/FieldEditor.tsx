@@ -16,7 +16,7 @@ import { DropdownButton } from "@/lib/styles/components";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, AlertCircle, Type, Hash, ToggleLeft, List, Calendar, ListChecks } from "lucide-react";
+import { Bot, AlertCircle, Type, Hash, ToggleLeft, List, Calendar, ListChecks } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VariantButton } from "@/lib/styles/components";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -184,13 +184,13 @@ export function FieldEditor({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] bg-parchment border border-rule shadow-xl rounded-none p-6">
+      <DialogContent className="max-w-2xl max-h-[90vh] bg-parchment border border-rule shadow-md rounded-none p-6">
         <DialogHeader className="relative z-10">
           <DialogTitle className="flex items-center gap-2 font-display text-ink text-lg">
             {field ? `Edit Field: ${field.field_name}` : "Create New Field"}
             {field?.created_by === "ai" && (
               <Badge variant="secondary" className="text-xs rounded-none border border-rule bg-parchment-deep text-ink">
-                <Sparkles className="h-3 w-3 mr-1" />
+                <Bot className="h-3 w-3 mr-1" />
                 AI-created
               </Badge>
             )}

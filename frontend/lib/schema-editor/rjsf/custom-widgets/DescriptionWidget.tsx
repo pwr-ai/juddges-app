@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Sparkles, Info } from 'lucide-react';
+import { Lightbulb, Info } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -131,7 +131,7 @@ export function DescriptionWidget(props: DescriptionWidgetProps): React.JSX.Elem
               onClick={handleUseExample}
               disabled={disabled || readonly}
             >
-              <Sparkles className="h-3 w-3" />
+              <Lightbulb className="h-3 w-3" />
               <span className="text-xs">Example</span>
             </Button>
           </div>
