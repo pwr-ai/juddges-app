@@ -42,9 +42,9 @@ const REASONING_PATTERN_LABELS: Record<string, { label: string; description: str
 };
 
 const STRENGTH_CONFIG: Record<string, { icon: React.ElementType; color: string; bgColor: string }> = {
- strong: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
- moderate: { icon: Shield, color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
- weak: { icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-100' },
+  strong: { icon: CheckCircle, color: 'text-ink', bgColor: 'bg-parchment-deep' },
+  moderate: { icon: Shield, color: 'text-gold', bgColor: 'bg-sand/20' },
+  weak: { icon: AlertTriangle, color: 'text-oxblood', bgColor: 'bg-oxblood/10' },
 };
 
 const ArgumentCard = React.memo(function ArgumentCard({
@@ -67,7 +67,7 @@ const ArgumentCard = React.memo(function ArgumentCard({
  };
 
  return (
- <BaseCard clickable={false} variant="light"className="rounded-[16px]">
+ <BaseCard clickable={false} variant="light"className="rounded-none border border-rule">
  <div className="space-y-3">
  {/* Header row */}
  <div className="flex items-start justify-between gap-3">
@@ -228,23 +228,23 @@ function OverallAnalysisCard({
  argumentCount: number;
 }) {
  return (
- <BaseCard clickable={false} variant="light"className="rounded-[16px]">
+ <BaseCard clickable={false} variant="light"className="rounded-none border border-rule">
  <div className="space-y-4">
  <h3 className="font-semibold text-base text-foreground">Overall Analysis</h3>
 
  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
- <div className="text-center p-3 rounded-xl bg-primary/5">
- <div className="text-2xl font-bold text-primary">{argumentCount}</div>
+ <div className="text-center p-3 rounded-none bg-parchment-deep/40 border border-rule">
+ <div className="text-2xl font-bold text-ink font-display">{argumentCount}</div>
  <div className="text-xs text-muted-foreground mt-0.5">Arguments Found</div>
  </div>
- <div className="text-center p-3 rounded-xl bg-primary/5">
- <div className="text-sm font-semibold text-primary capitalize">
+ <div className="text-center p-3 rounded-none bg-parchment-deep/40 border border-rule">
+ <div className="text-sm font-semibold text-ink capitalize font-display">
  {REASONING_PATTERN_LABELS[analysis.dominant_reasoning_pattern]?.label || analysis.dominant_reasoning_pattern}
  </div>
  <div className="text-xs text-muted-foreground mt-0.5">Dominant Pattern</div>
  </div>
- <div className="text-center p-3 rounded-xl bg-primary/5 col-span-2">
- <div className="text-sm font-semibold text-primary">
+ <div className="text-center p-3 rounded-none bg-parchment-deep/40 border border-rule col-span-2">
+ <div className="text-sm font-semibold text-ink font-display">
  {analysis.key_disputes.length}
  </div>
  <div className="text-xs text-muted-foreground mt-0.5">Key Disputes</div>
@@ -383,11 +383,11 @@ export default function ArgumentationAnalysisPage() {
  {/* Header */}
  <div className="space-y-2">
  <div className="flex items-center gap-3">
- <div className="p-2 rounded-xl bg-primary/10">
- <GitBranch className="h-6 w-6 text-primary"/>
+ <div className="p-2 rounded-none bg-parchment-deep border border-rule">
+ <GitBranch className="h-6 w-6 text-oxblood"/>
  </div>
  <div>
- <h1 className="text-2xl font-bold text-foreground">
+ <h1 className="text-2xl font-bold text-ink font-display">
  Argumentation Analysis
  </h1>
  <p className="text-sm text-muted-foreground">
@@ -401,7 +401,7 @@ export default function ArgumentationAnalysisPage() {
  {/* Configuration */}
  <div className="space-y-4">
  {/* Document IDs input */}
- <BaseCard clickable={false} variant="light"className="rounded-[16px]">
+ <BaseCard clickable={false} variant="light"className="rounded-none border border-rule">
  <div className="space-y-3">
  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
  Document IDs to Analyze
@@ -413,7 +413,7 @@ export default function ArgumentationAnalysisPage() {
  onChange={(e) => setCurrentDocId(e.target.value)}
  onKeyDown={handleKeyDownDocId}
  placeholder="Enter a document ID and press Enter..."
- className="flex-1 px-3 py-2 rounded-lg bg-background border border-border/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+ className="flex-1 px-3 py-2 rounded-none bg-background border border-rule text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-oxblood transition-colors"
  />
  <Button
  onClick={handleAddDocumentId}
@@ -428,13 +428,13 @@ export default function ArgumentationAnalysisPage() {
  {documentIds.map((id) => (
  <Badge
  key={id}
- variant="secondary"
- className="text-xs flex items-center gap-1 pr-1"
+ variant="outline"
+ className="text-xs flex items-center gap-1 pr-1 rounded-none border-rule"
  >
- <span className="max-w-[200px] truncate">{id}</span>
+ {id}
  <button
  onClick={() => handleRemoveDocumentId(id)}
- className="p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
+ className="p-0.5 rounded-none hover:bg-muted-foreground/20 transition-colors"
  >
  <X className="h-3 w-3"/>
  </button>
@@ -449,7 +449,7 @@ export default function ArgumentationAnalysisPage() {
  </BaseCard>
 
  {/* Focus areas and detail level */}
- <BaseCard clickable={false} variant="light"className="rounded-[16px]">
+ <BaseCard clickable={false} variant="light"className="rounded-none border border-rule">
  <div className="space-y-4">
  {/* Focus areas */}
  <div className="space-y-2">
@@ -463,7 +463,7 @@ export default function ArgumentationAnalysisPage() {
  onChange={(e) => setCurrentFocusArea(e.target.value)}
  onKeyDown={handleKeyDownFocusArea}
  placeholder="e.g., VAT deductions, transfer pricing..."
- className="flex-1 px-3 py-2 rounded-lg bg-background border border-border/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+ className="flex-1 px-3 py-2 rounded-none bg-background border border-rule text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-oxblood transition-colors"
  />
  <Button
  onClick={handleAddFocusArea}
@@ -480,12 +480,12 @@ export default function ArgumentationAnalysisPage() {
  <Badge
  key={area}
  variant="outline"
- className="text-xs flex items-center gap-1 pr-1"
+ className="text-xs flex items-center gap-1 pr-1 rounded-none border-rule"
  >
  {area}
  <button
  onClick={() => handleRemoveFocusArea(area)}
- className="p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
+ className="p-0.5 rounded-none hover:bg-muted-foreground/20 transition-colors"
  >
  <X className="h-3 w-3"/>
  </button>
@@ -505,10 +505,10 @@ export default function ArgumentationAnalysisPage() {
  <button
  key={level}
  onClick={() => setDetailLevel(level)}
- className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+ className={`px-3 py-1.5 rounded-none text-xs font-medium border transition-colors ${
  detailLevel === level
- ? 'bg-primary text-primary-foreground'
- : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+ ? 'bg-oxblood text-white border-oxblood'
+ : 'bg-parchment-deep text-ink-soft border-rule hover:bg-parchment-deep/80'
  }`}
  >
  {level === 'basic' ? 'Basic (main arguments)' : 'Detailed (full analysis)'}
@@ -623,7 +623,7 @@ export default function ArgumentationAnalysisPage() {
  />
 
  {/* How it works */}
- <BaseCard clickable={false} variant="light"className="rounded-[16px]">
+ <BaseCard clickable={false} variant="light"className="rounded-none border border-rule">
  <div className="space-y-3">
  <h3 className="text-sm font-medium text-foreground">How it works</h3>
  <div className="grid gap-3 sm:grid-cols-2">

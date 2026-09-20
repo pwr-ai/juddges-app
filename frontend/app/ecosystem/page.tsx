@@ -6,7 +6,7 @@ import {
   Users,
   Database,
   GitBranch,
-  Sparkles,
+  Compass,
   ExternalLink,
   FlaskConical,
   BookOpen,
@@ -161,7 +161,7 @@ export default function EcosystemPage(): React.JSX.Element {
             href="https://juddges.org"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-primary/30 bg-background hover:bg-primary/5 text-sm font-medium text-primary transition-colors duration-200"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-none border border-rule bg-background hover:bg-parchment-deep text-sm font-medium text-ink transition-colors duration-200"
           >
             <Globe className="size-4" />
             juddges.org
@@ -171,7 +171,7 @@ export default function EcosystemPage(): React.JSX.Element {
             href="https://huggingface.co/JuDDGES"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-background hover:bg-muted/50 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-none border border-rule bg-background hover:bg-parchment-deep text-sm font-medium text-ink-soft hover:text-ink transition-colors duration-200"
           >
             <BookOpen className="size-4" />
             Hugging Face datasets
@@ -209,9 +209,9 @@ export default function EcosystemPage(): React.JSX.Element {
       </div>
 
       {/* Narrative intro */}
-      <LightCard padding="lg" className="mb-10">
+      <LightCard padding="lg" className="mb-10 rounded-none border border-rule">
         <SecondaryHeader
-          icon={Sparkles}
+          icon={Compass}
           title="A collaboration, not a monolith"
           className="mb-3"
         />
@@ -310,7 +310,7 @@ export default function EcosystemPage(): React.JSX.Element {
         </p>
 
         {/* Pipeline diagram */}
-        <div className="mb-8 rounded-2xl border border-border bg-background/50 p-4 md:p-6 overflow-x-auto">
+        <div className="mb-8 rounded-none border border-rule bg-parchment-deep/30 p-4 md:p-6 overflow-x-auto">
           <MermaidDiagram
             chart={ECOSYSTEM_FLOW}
             className="flex justify-center [&_svg]:max-w-full [&_svg]:h-auto"

@@ -114,8 +114,8 @@ export default function ContactPage() {
 
             {status === "success" ? (
               <div className="flex flex-col items-center py-8 text-center gap-3">
-                <CheckCircle className="size-10 text-green-500" />
-                <p className="font-medium text-base">Message sent!</p>
+                <CheckCircle className="size-10 text-ink" />
+                <p className="font-medium text-base font-display">Message sent!</p>
                 <p className="text-sm text-muted-foreground">
                   Thank you for reaching out. We&apos;ll get back to you within 2-3 business days.
                 </p>

@@ -141,6 +141,18 @@ const CLEAN_FILES = [
   'app/schemas/page.tsx',
   'app/schemas/[id]/client.tsx',
   'app/schemas/base/page.tsx',
+  'app/status/page.tsx',
+  'app/help/page.tsx',
+  'app/terms/page.tsx',
+  'app/argumentation-analysis/page.tsx',
+  'app/legal/disclaimer/page.tsx',
+  'app/ecosystem/page.tsx',
+  'app/team/page.tsx',
+  'app/contact/page.tsx',
+  'app/history/page.tsx',
+  'app/judge-fingerprint/page.tsx',
+  'app/auth/error/page.tsx',
+  'app/auth/login/page.tsx',
 ];
 
 /**
