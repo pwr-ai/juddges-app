@@ -694,8 +694,11 @@ contract, error codes and the shared filter-key semantics are documented in
 }
 ```
 
-**Errors:** `400 FILTER_EMPTY` (filter matches nothing), `413 FILTER_TOO_LARGE`
-(above `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default 5000), `503
+**Errors:** `400 INVALID_COLLECTION_ID` (`filters.collection_ids` has a
+non-UUID entry), `404 COLLECTION_NOT_FOUND` (`filters.collection_ids`
+references a collection the caller does not own), `400 FILTER_EMPTY` (filter
+matches nothing), `413 FILTER_TOO_LARGE` (above
+`SAVE_FROM_FILTER_MAX_DOCUMENTS`, default 5000), `503
 DATABASE_UNAVAILABLE`.
 
 ### Analytics

@@ -10,6 +10,7 @@ SAVE_FROM_FILTER_MAX_DOCUMENTS cap (5 000 per collection).
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -68,6 +69,61 @@ def _db_unavailable() -> HTTPException:
     )
 
 
+def _invalid_collection_id() -> HTTPException:
+    return HTTPException(
+        status_code=400,
+        detail={
+            "error": "Invalid Collection ID",
+            "message": "filters.collection_ids must be a list of UUID strings.",
+            "code": "INVALID_COLLECTION_ID",
+        },
+    )
+
+
+def _collection_not_found() -> HTTPException:
+    return HTTPException(
+        status_code=404,
+        detail={
+            "error": "Collection Not Found",
+            "message": "One or more collections in filters.collection_ids were not found.",
+            "code": "COLLECTION_NOT_FOUND",
+        },
+    )
+
+
+async def _check_collection_ids_ownership(
+    db: Any, filters: dict[str, Any], *, user_id: str
+) -> None:
+    """Reject `filters.collection_ids` entries that are malformed or not owned by `user_id`.
+
+    `resolve_filter_ids` calls `list_extracted_filter_matches` with the
+    service-role client, which bypasses the RPC's own RLS (it is
+    `SECURITY INVOKER`, scoped to `auth.uid()` over PostgREST) -- so this
+    endpoint must enforce ownership itself before the filter ever reaches the
+    RPC. An empty list mirrors the RPC's own "no filter" semantics and skips
+    the check entirely (see docs/reference/base-schema-filter-api.md).
+    Which id(s) are missing is never revealed -- foreign and malformed ids
+    alike collapse into one 404/400 message.
+    """
+    raw = filters.get("collection_ids")
+    if not raw:
+        return
+    collection_ids = raw if isinstance(raw, list) else [raw]
+
+    for collection_id in collection_ids:
+        if not isinstance(collection_id, str):
+            raise _invalid_collection_id()
+        try:
+            uuid.UUID(collection_id)
+        except ValueError:
+            raise _invalid_collection_id() from None
+
+    owned = await db.get_user_collections(user_id)
+    owned_ids = {row["id"] for row in owned}
+    if any(cid not in owned_ids for cid in collection_ids):
+        raise _collection_not_found()
+
+
 async def create_collection_from_ids(
     db: Any, *, user_id: str, name: str, description: str | None, ids: list[str]
 ) -> tuple[dict[str, Any], int]:
@@ -124,6 +180,7 @@ async def create_collection_from_filter(
 ) -> CollectionFromFilterResponse:
     if not supabase_client:
         raise _db_unavailable()
+    await _check_collection_ids_ownership(db, request.filters, user_id=user.id)
     resolved = resolve_filter_ids(supabase_client, request.filters, request.text_query)
     if resolved.total == 0:
         raise HTTPException(

@@ -21,6 +21,8 @@ pytestmark = [pytest.mark.anyio, pytest.mark.unit, pytest.mark.collections]
 
 _HEADERS = {"X-API-Key": "test-api-key-12345"}
 _COLLECTION_ID = "00000000-0000-4000-a000-000000000001"
+_OWNED_COLLECTION_ID = "00000000-0000-4000-a000-00000000c001"
+_FOREIGN_COLLECTION_ID = "00000000-0000-4000-a000-00000000c0ff"
 
 
 class _StubDb:
@@ -30,6 +32,12 @@ class _StubDb:
         self.deleted: list[str] = []
         self.fail_on_chunk: int | None = None
         self.delete_should_fail: bool = False
+        self.owned_collection_ids: list[str] = []
+        self.get_user_collections_calls: list[str] = []
+
+    async def get_user_collections(self, user_id):
+        self.get_user_collections_calls.append(user_id)
+        return [{"id": cid} for cid in self.owned_collection_ids]
 
     async def create_collection(self, user_id, name, description=None):
         row = {
@@ -220,6 +228,84 @@ async def test_batch_cap_of_100_on_documents_batch_is_untouched(client, override
         headers=_HEADERS,
     )
     assert resp.status_code == 422
+
+
+async def test_collection_ids_filter_with_foreign_id_is_404(
+    client, override_deps, stub_db, monkeypatch
+):
+    """A collection_ids entry the caller does not own must 404, without
+    revealing which id was the problem, and must never reach resolve_filter_ids.
+    """
+    stub_db.owned_collection_ids = [_OWNED_COLLECTION_ID]
+    resolve_calls: list[object] = []
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *a, **k: resolve_calls.append((a, k)) or _result(5),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": "x",
+            "filters": {
+                "collection_ids": [_OWNED_COLLECTION_ID, _FOREIGN_COLLECTION_ID]
+            },
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "COLLECTION_NOT_FOUND"
+    assert resolve_calls == []
+    assert stub_db.created == []
+
+
+async def test_collection_ids_filter_with_non_uuid_is_400(
+    client, override_deps, stub_db, monkeypatch
+):
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(5))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {"collection_ids": ["not-a-uuid"]}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["code"] == "INVALID_COLLECTION_ID"
+    assert stub_db.created == []
+
+
+async def test_collection_ids_filter_with_owned_ids_passes_through_unchanged(
+    client, override_deps, stub_db, monkeypatch
+):
+    stub_db.owned_collection_ids = [_OWNED_COLLECTION_ID]
+    seen: dict[str, object] = {}
+
+    def _resolve(_client, filters, _text_query):
+        seen["filters"] = filters
+        return _result(3)
+
+    monkeypatch.setattr(cff, "resolve_filter_ids", _resolve)
+    filters = {"collection_ids": [_OWNED_COLLECTION_ID], "jurisdiction": ["PL"]}
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": filters},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert seen["filters"] == filters
+
+
+async def test_collection_ids_empty_list_skips_ownership_check(
+    client, override_deps, stub_db, monkeypatch
+):
+    """Mirrors the RPC's own semantics: an empty collection_ids list is 'no filter'."""
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(2))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "x", "filters": {"collection_ids": []}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert stub_db.get_user_collections_calls == []
 
 
 async def test_create_collection_from_ids_is_reusable_without_http(stub_db):

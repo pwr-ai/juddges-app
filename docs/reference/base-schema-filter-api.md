@@ -96,12 +96,25 @@ Errors:
 
 | Status | `detail.code` | When |
 |---|---|---|
+| `400` | `INVALID_COLLECTION_ID` | `filters.collection_ids` contains a non-string or non-UUID entry — checked before `resolve_filter_ids` runs |
+| `404` | `COLLECTION_NOT_FOUND` | `filters.collection_ids` contains an id the caller does not own; which one is never revealed |
 | `400` | `FILTER_EMPTY` | `resolve_filter_ids` returns zero ids |
 | `413` | `FILTER_TOO_LARGE` | match count exceeds the cap; body also carries `total`, `cap`, `jurisdiction` (`null` when not split) |
 | `503` | `DATABASE_UNAVAILABLE` | `supabase_client` is not configured |
 
 The `413` uses `starlette.status.HTTP_413_CONTENT_TOO_LARGE` directly (verified
 present in the installed Starlette version — no fallback needed).
+
+**`collection_ids` ownership check:** before `resolve_filter_ids` runs,
+`_check_collection_ids_ownership()` (`backend/app/collections_from_filter.py`)
+validates `filters.collection_ids` (a no-op when the key is absent or an
+empty list, matching the RPC's own "no filter" semantics): every entry must
+be a UUID string (else `400 INVALID_COLLECTION_ID`), and every id must
+belong to the authenticated caller, checked in one call to
+`db.get_user_collections(user.id)` (else `404 COLLECTION_NOT_FOUND`,
+without saying which id was foreign). This is required because
+`resolve_filter_ids` calls `list_extracted_filter_matches` with the
+service-role client, which bypasses the RPC's own RLS.
 
 Cap: `SAVE_FROM_FILTER_MAX_DOCUMENTS` (env var, default `5000`), enforced per
 collection by `check_cap()` in `backend/app/extraction_domain/filter_ids.py`
