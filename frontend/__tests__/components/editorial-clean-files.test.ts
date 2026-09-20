@@ -168,6 +168,9 @@ const CLEAN_FILES = [
   'lib/styles/components/toggle-button.tsx',
   'lib/styles/components/dropdown-button.tsx',
   'lib/styles/components/searchable-dropdown-button.tsx',
+  'components/error-boundary.tsx',
+  'app/publications/admin/[id]/page.tsx',
+  'lib/styles/components/highlighted-text.tsx',
 ];
 
 /**
