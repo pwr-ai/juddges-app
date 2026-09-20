@@ -78,15 +78,12 @@ export function SchemaActionsBar({
  }
  }}
  className={cn(
-"pl-10 pr-10 !h-10 !rounded-xl transition-all duration-150 ease-out",
- // More visible background
-"!bg-slate-100/80",
-"!border border-slate-200/50",
-"!shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]",
-"focus:!ring-2 focus:!ring-primary/30 focus:!bg-white",
-"focus:!border-primary/30",
-"placeholder:!text-slate-400",
-"hover:!bg-slate-200/80"
+ "pl-10 pr-10 !h-10 !rounded-none transition-colors",
+ "!bg-parchment",
+ "!border !border-rule",
+ "focus:!ring-1 focus:!ring-ink focus:!border-rule-strong",
+ "placeholder:!text-muted-foreground",
+ "hover:!bg-parchment-deep"
  )}
  />
  {searchValue && (
@@ -97,15 +94,13 @@ export function SchemaActionsBar({
  searchInputRef.current?.focus();
  }}
  className={cn(
-"absolute right-3 top-1/2 transform -translate-y-1/2 z-20",
-"h-6 w-6 flex items-center justify-center rounded-md",
-"text-slate-600",
-"bg-slate-200/60",
-"hover:bg-slate-300/80",
-"hover:text-slate-900",
-"transition-all duration-150 ease-out",
-"focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1",
-"shadow-sm"
+ "absolute right-3 top-1/2 transform -translate-y-1/2 z-20",
+ "h-6 w-6 flex items-center justify-center rounded-none",
+ "text-muted-foreground",
+ "bg-parchment-deep",
+ "hover:text-ink",
+ "transition-colors",
+ "focus:outline-none focus:ring-1 focus:ring-ink"
  )}
  aria-label="Clear search"
  >

@@ -1,9 +1,9 @@
 {
-  "glass": 32,
-  "gradient": 34,
-  "hue": 224,
-  "transition-all": 53,
-  "radius": 30,
+  "glass": 28,
+  "gradient": 33,
+  "hue": 131,
+  "transition-all": 46,
+  "radius": 29,
   "hover-fx": 32,
   "motion": 4,
   "ai-glyph": 20
