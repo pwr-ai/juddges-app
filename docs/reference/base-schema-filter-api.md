@@ -30,6 +30,25 @@ jurisdiction TEXT)`. Always restricted to `base_extraction_status =
   returns `NULL` (not an empty array) — so `v_collection_ids IS NULL` is
   true and the collection-membership clause is skipped entirely.
 
+**`collection_ids` and RLS:** the RPC is `SECURITY INVOKER`, so PostgREST
+callers get row-level security enforced against the caller's own JWT — a
+user can only match ids in collections they own. That protection does not
+exist for backend code paths that call this RPC (directly, or through
+`filter_documents_by_extracted_data`) with the **service-role** client,
+which bypasses RLS entirely. Two such paths exist and both guard
+`collection_ids` themselves rather than relying on the database:
+
+- `POST /extractions/base-schema/filter`
+  (`backend/app/extraction_domain/results_router.py::filter_by_extracted_data`)
+  has no `get_current_user` dependency at all (see the auth-deferral note in
+  that file) and rejects any request whose `filters` contains
+  `collection_ids` with `400 COLLECTION_IDS_NOT_ALLOWED` — the endpoint has
+  no caller identity to scope the check to, so the key is refused outright.
+- `POST /collections/from-filter`
+  (`backend/app/collections_from_filter.py::create_collection_from_filter`)
+  is authenticated and validates `collection_ids` against the caller before
+  calling `resolve_filter_ids` — see the errors table below.
+
 ## RPC `public.filter_documents_by_extracted_data(p_filters, p_text_query, p_limit, p_offset)`
 
 Thin wrapper over `list_extracted_filter_matches` — same signature and columns
