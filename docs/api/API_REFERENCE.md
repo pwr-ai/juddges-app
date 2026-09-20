@@ -680,10 +680,11 @@ contract, error codes and the shared filter-key semantics are documented in
       "jurisdiction": null,
       "collection": {
         "id": "990e8400-e29b-41d4-a716-446655440004",
+        "user_id": "770e8400-e29b-41d4-a716-446655440001",
         "name": "UK sentencing appeals 2023",
         "description": "Optional, ≤1000 chars",
-        "document_count": 42,
-        "created_at": "2024-02-13T16:00:00Z"
+        "created_at": "2024-02-13T16:00:00Z",
+        "updated_at": "2024-02-13T16:00:00Z"
       },
       "added_count": 42
     }
