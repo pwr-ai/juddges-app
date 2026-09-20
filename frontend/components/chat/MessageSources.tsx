@@ -282,7 +282,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  <div ref={sourcesContainerRef} className="mt-2 space-y-3">
  {/* Error state */}
  {error && (
- <div className="flex items-center gap-2 text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-200 animate-in fade-in slide-in-from-top-2 duration-300">
+ <div className="flex items-center gap-2 border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
  <AlertCircle className="h-4 w-4 shrink-0"/>
  <span>Failed to load sources. Please try again.</span>
  </div>

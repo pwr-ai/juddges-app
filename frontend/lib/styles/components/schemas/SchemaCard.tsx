@@ -239,7 +239,7 @@ export function SchemaCard({
  <Copy className="mr-2 h-4 w-4"/>
  <span>Duplicate</span>
  </DropdownMenuItem>
- <DropdownMenuItem onClick={handleDeleteClick} className="text-red-600 focus:text-red-600">
+ <DropdownMenuItem onClick={handleDeleteClick} className="text-oxblood focus:text-oxblood">
  <Trash2 className="mr-2 h-4 w-4"/>
  <span>Delete</span>
  </DropdownMenuItem>
