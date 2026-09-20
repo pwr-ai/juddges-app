@@ -1,9 +1,11 @@
+import { expect, test, type APIRequestContext } from '@playwright/test';
+
 import {
-  expect,
-  test,
-  type APIRequestContext,
-  type BrowserContext,
-} from '@playwright/test';
+  ADAPTER_BASE_URL,
+  APP_BASE_URL,
+  expectNoUnexpectedStubRequests,
+  setSyntheticSession,
+} from './synthetic-session';
 
 /**
  * The extraction path, end to end, on every pull request (#579).
@@ -29,10 +31,6 @@ import {
  * (issue #575): no `.catch(() => false)`, no assertion that cannot fail, and
  * the closing assertion is extracted data rendered on the page.
  */
-
-const APP_BASE_URL = 'http://127.0.0.1:3006';
-const ADAPTER_BASE_URL = 'http://127.0.0.1:4311';
-const USER_ID = '11111111-1111-4111-8111-111111111111';
 
 /** Mirrors `IDS.extraction.sequenced` in `stub-services.mjs`. */
 const SEQUENCED_JOB_ID = '30000000-0000-4000-8000-000000000007';
@@ -88,46 +86,6 @@ async function extractionSequence(
   return payload.served;
 }
 
-/**
- * Same synthetic session the route-status contract uses: the stub answers
- * `GET /auth/v1/user` for the `route-contract-valid` token, so the middleware,
- * the BFF routes and the browser Supabase client all see one signed-in user
- * without a real Supabase project.
- */
-async function setSyntheticSession(context: BrowserContext): Promise<void> {
-  const expiresAt = Math.floor(Date.now() / 1000) + 3_600;
-  const session = {
-    access_token: 'route-contract-valid',
-    refresh_token: 'route-contract-valid-refresh',
-    expires_in: 3_600,
-    expires_at: expiresAt,
-    token_type: 'bearer',
-    user: {
-      id: USER_ID,
-      aud: 'authenticated',
-      role: 'authenticated',
-      email: 'route-contract@example.test',
-      app_metadata: {},
-      user_metadata: {},
-      created_at: '2026-08-06T00:00:00.000Z',
-    },
-  };
-  const encoded = Buffer.from(JSON.stringify(session)).toString('base64url');
-
-  await context.clearCookies();
-  await context.addCookies([
-    {
-      name: 'sb-127-auth-token',
-      value: `base64-${encoded}`,
-      url: APP_BASE_URL,
-      expires: expiresAt,
-      httpOnly: false,
-      secure: false,
-      sameSite: 'Lax',
-    },
-  ]);
-}
-
 test.describe.serial('extraction path contract', () => {
   test.beforeEach(async ({ context, request }) => {
     await context.clearCookies();
@@ -135,8 +93,7 @@ test.describe.serial('extraction path contract', () => {
   });
 
   test.afterEach(async ({ request }) => {
-    const requests = await adapterRequests(request);
-    expect(requests.filter(({ unexpected }) => unexpected)).toEqual([]);
+    await expectNoUnexpectedStubRequests(request);
   });
 
   test('submits an extraction and shows the extracted data once the job completes', async ({
