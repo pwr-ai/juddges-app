@@ -239,7 +239,7 @@ export function AppSidebar(): React.JSX.Element {
  <SidebarMenuItem key={step.href}>
  <ConditionalTooltip content={label} isIconMode={isIconMode}>
  <SidebarMenuButton asChild isActive={isStepActive(step, pathname)}>
- <Link href={step.href} prefetch={step.href === "/search" ? false : undefined}>
+ <Link href={step.href}>
  <Icon />
  <span>{label}</span>
  </Link>
@@ -255,9 +255,9 @@ export function AppSidebar(): React.JSX.Element {
  })}
 
  {/* Administration — only rendered for admins; AdminGuard enforces the same
-    app_metadata.is_admin check server-side on every /admin page. Research
-    tools (#607) sit here too: they work, but need a raw document ID or a
-    judge-rich corpus, so they are not part of the user workflow. */}
+    app_metadata.is_admin check server-side on every /admin page. The
+    admin-gated research tools (#607) now live in the Case flow as
+    adminOnly steps of lib/navigation/flows.ts. */}
  {isAdmin && (
  <SidebarGroup className="p-0">
  <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.administration')}</SidebarGroupLabel>
