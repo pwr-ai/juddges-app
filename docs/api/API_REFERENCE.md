@@ -649,6 +649,54 @@ Get collection details with all documents.
 }
 ```
 
+#### Create Collection From Filter
+
+```http
+POST /collections/from-filter
+```
+
+Create a collection from every judgment matching a base-schema filter (server
+resolves and bulk-adds the ids — no client-side paging). Full RPC/response
+contract, error codes and the shared filter-key semantics are documented in
+[Base-schema filter API](../reference/base-schema-filter-api.md).
+
+**Request Body:**
+
+```json
+{
+  "name": "UK sentencing appeals 2023",
+  "description": "Optional, ≤1000 chars",
+  "filters": { "jurisdiction": ["UK"], "decision_date": { "from": "2023-01-01", "to": "2023-12-31" } },
+  "text_query": "sentencing guideline"
+}
+```
+
+**Example Response (201):**
+
+```json
+{
+  "collections": [
+    {
+      "jurisdiction": null,
+      "collection": {
+        "id": "990e8400-e29b-41d4-a716-446655440004",
+        "name": "UK sentencing appeals 2023",
+        "description": "Optional, ≤1000 chars",
+        "document_count": 42,
+        "created_at": "2024-02-13T16:00:00Z"
+      },
+      "added_count": 42
+    }
+  ],
+  "total_matched": 42,
+  "pair_id": null
+}
+```
+
+**Errors:** `400 FILTER_EMPTY` (filter matches nothing), `413 FILTER_TOO_LARGE`
+(above `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default 5000), `503
+DATABASE_UNAVAILABLE`.
+
 ### Analytics
 
 #### Get Statistics
