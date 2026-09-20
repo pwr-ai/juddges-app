@@ -13,6 +13,7 @@ from app.extraction_domain.filter_ids import (
 )
 from app.models import JURISDICTIONS
 from tests.app._fakes import FakeRpcClient
+from tests.app.test_db_contract_static import _declared_functions, _migration_sql
 
 pytestmark = pytest.mark.unit
 
@@ -75,3 +76,14 @@ def test_check_cap_per_jurisdiction_names_the_offending_side():
     with pytest.raises(FilterTooLargeError) as exc:
         check_cap(result, cap=5, per_jurisdiction=True)
     assert (exc.value.total, exc.value.cap, exc.value.jurisdiction) == (6, 5, "PL")
+
+
+def test_filter_ids_rpc_name_matches_a_declared_migration_function():
+    """`client.rpc(FILTER_IDS_RPC, ...)` passes the RPC name as a module
+    constant, not an inline string literal, so the AST-based guard in
+    test_db_contract_static.py (`_string_arg` only recognises `ast.Constant`
+    as the first positional arg) never collects this call site — renaming the
+    migration function without updating this constant (or vice versa) would
+    pass that guard silently. This test closes that gap directly.
+    """
+    assert FILTER_IDS_RPC in _declared_functions(_migration_sql())
