@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FlowStepper } from "@/components/editorial/FlowStepper";
 import { Navbar } from "@/components/navbar";
 import { CompactFooter } from "@/components/footer/CompactFooter";
 import { CommandPalette } from "@/components/command-palette";
@@ -109,6 +110,7 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
                 <div className="flex-1 flex flex-col bg-background overflow-hidden">
                   <NavbarWithSuspense />
                   <div className="flex-1 overflow-y-auto">
+                    <FlowStepper />
                     <main className="bg-background">
                       {children}
                     </main>
