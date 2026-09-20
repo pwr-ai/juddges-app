@@ -159,7 +159,7 @@ export function ChatMessageList({
           if (onRegenerateMessage) {
             actionButtons.push({
               id: 'regenerate',
-              icon: <RotateCcw size={16} className="transition-colors hover:text-blue-500" />,
+              icon: <RotateCcw size={16} className="transition-colors hover:text-ink" />,
               onClick: () => onRegenerateMessage(message.id),
               title: 'Regenerate answer',
               position: 'inside' as const,
@@ -168,7 +168,7 @@ export function ChatMessageList({
           if (onForkFromMessage) {
             actionButtons.push({
               id: 'fork',
-              icon: <GitFork size={16} className="transition-colors hover:text-indigo-500" />,
+              icon: <GitFork size={16} className="transition-colors hover:text-oxblood" />,
               onClick: () => onForkFromMessage(message.id),
               title: 'Fork conversation from here',
               position: 'inside' as const,

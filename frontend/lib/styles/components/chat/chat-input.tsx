@@ -207,98 +207,80 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  if (!hasTools) {
  return (
  <div className={cn('relative w-full max-w-[800px] mx-auto', className)}>
- <form onSubmit={handleSendMessage} className="relative">
- <ChatContainer>
- {/* Subtle gradient overlay */}
- <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/10 opacity-0 focus-within:opacity-50 transition-opacity duration-300 rounded-2xl -z-10"/>
+        <form onSubmit={handleSendMessage} className="relative">
+          <ChatContainer>
+            <div className="flex items-end gap-2 px-4 py-3">
+              <textarea
+                ref={mergedRef}
+                placeholder={placeholder}
+                className={cn(
+                  "flex-1 border-none bg-transparent focus:outline-none focus-visible:outline-none focus-visible:!border-none focus-visible:!ring-0 resize-none text-sm md:text-base leading-relaxed min-h-[24px] overflow-hidden",
+                  "text-ink",
+                  "placeholder:text-muted-foreground"
+                )}
+                value={currentValue || ''}
+                onChange={(e) => {
+                  if (isControlled && onChange) {
+                    onChange(e.target.value);
+                  } else {
+                    setInput(e.target.value);
+                  }
+                  // Trigger height adjustment after state update
+                  requestAnimationFrame(adjustTextareaHeight);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+                    e.preventDefault();
+                    handleSendMessage(e);
+                  }
+                }}
+                rows={1}
+                disabled={disabled}
+                autoComplete="off"
+                spellCheck="true"
+                lang={browserLang}
+                {...props}
+              />
 
- <div className="flex items-end gap-2 px-4 py-3">
- <textarea
- ref={mergedRef}
- placeholder={placeholder}
- className={cn(
-"flex-1 border-none bg-transparent focus:outline-none focus-visible:outline-none focus-visible:!border-none focus-visible:!ring-0 resize-none text-sm md:text-base leading-relaxed min-h-[24px] overflow-hidden",
- // Text Color
- // Light Mode: #0F172A (Midnight)
- // Dark Mode: #F8FAFC (Off-White)
-"text-slate-900",
- // Placeholder
- // Light Mode: #94A3B8 (Slate 400)
- // Dark Mode: #64748B (Slate 500)
-"placeholder:text-slate-400"
- )}
- value={currentValue || ''}
- onChange={(e) => {
- if (isControlled && onChange) {
- onChange(e.target.value);
- } else {
- setInput(e.target.value);
- }
- // Trigger height adjustment after state update
- requestAnimationFrame(adjustTextareaHeight);
- }}
- onKeyDown={(e) => {
- if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
- e.preventDefault();
- handleSendMessage(e);
- }
- }}
- rows={1}
- disabled={disabled}
- autoComplete="off"
- spellCheck="true"
- lang={browserLang}
- {...props}
- />
-
- {/* Send button next to textarea */}
- <div className="flex-shrink-0">
- {isLoading ? (
- <div className="flex items-center gap-2">
- <Loader size="sm"variant="ghost"/>
- {onStopGeneration && (
- <Button
- type="button"
- onClick={onStopGeneration}
- size="sm"
- variant="ghost"
- className={getIconButtonStyle('destructive', 'h-11 w-11', 'flex items-center justify-center')}
- >
- <div className="absolute inset-0 rounded-full transition-opacity duration-200"/>
- <Square size={18} className="fill-destructive relative z-10 group-hover:scale-110 transition-transform duration-200"/>
- <span className="sr-only">Stop generation</span>
- </Button>
- )}
- </div>
- ) : (
- <Button
- type="submit"
- size="sm"
- variant="ghost"
- disabled={!currentValue?.trim() || isLoading}
- className={cn(
- currentValue?.trim()
- ? getIconButtonStyle('primary', 'h-11 w-11', 'flex items-center justify-center')
- : 'h-11 w-11 rounded-full flex-shrink-0 p-0 text-muted-foreground cursor-not-allowed transition-all duration-200'
- )}
- >
- <div className={cn(
- 'absolute inset-0 rounded-full transition-opacity duration-200',
- currentValue?.trim()
- ? 'opacity-0 group-hover:opacity-80'
- : ''
- )} />
- <Send size={18} className={cn(
- 'relative z-10 transition-transform duration-200',
- currentValue?.trim() && 'group-hover:scale-110 group-hover:translate-x-0.5'
- )} />
- <span className="sr-only">Send message</span>
- </Button>
- )}
- </div>
- </div>
- </ChatContainer>
- </form>
+              {/* Send button next to textarea */}
+              <div className="flex-shrink-0">
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader size="sm" variant="ghost" />
+                    {onStopGeneration && (
+                      <Button
+                        type="button"
+                        onClick={onStopGeneration}
+                        size="sm"
+                        variant="ghost"
+                        className="group relative rounded-none text-oxblood hover:text-oxblood flex-shrink-0 p-0 h-9 w-9 flex items-center justify-center transition-colors hover:bg-parchment-deep"
+                      >
+                        <Square size={16} className="fill-oxblood relative z-10" />
+                        <span className="sr-only">Stop generation</span>
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="ghost"
+                    disabled={!currentValue?.trim() || isLoading}
+                    className={cn(
+                      'group relative h-9 w-9 rounded-none flex-shrink-0 p-0 transition-colors',
+                      currentValue?.trim()
+                        ? 'text-ink hover:text-ink hover:bg-parchment-deep'
+                        : 'text-muted-foreground cursor-not-allowed'
+                    )}
+                  >
+                    <Send size={16} className="relative z-10" />
+                    <span className="sr-only">Send message</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </ChatContainer>
+        </form>
  {helpText && (
  <p className="text-xs text-muted-foreground mt-2">
  {helpText}
@@ -311,140 +293,116 @@ export const ChatInput = React.forwardRef<HTMLTextAreaElement, ChatInputProps>(
  // Full layout (with tools) - like chat page
  return (
  <div className={cn('relative w-full max-w-[800px] mx-auto', className)}>
- <form onSubmit={handleSendMessage} className="relative">
- <ChatContainer>
- {/* Subtle gradient overlay */}
- <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/10 opacity-0 focus-within:opacity-50 transition-opacity duration-300 rounded-2xl -z-10"/>
+      <form onSubmit={handleSendMessage} className="relative">
+        <ChatContainer>
+          <textarea
+            ref={mergedRef}
+            placeholder={placeholder}
+            className={cn(
+              "w-full border-none pt-4 !pb-3 !px-6 focus:outline-none focus-visible:outline-none focus-visible:!border-none focus-visible:!ring-0 resize-none mb-12 bg-transparent text-sm md:text-base leading-relaxed min-h-[24px] overflow-hidden",
+              "text-ink",
+              "placeholder:text-muted-foreground"
+            )}
+            value={currentValue || ''}
+            onChange={(e) => {
+              if (isControlled && onChange) {
+                onChange(e.target.value);
+              } else {
+                setInput(e.target.value);
+              }
+              // Trigger height adjustment after state update
+              requestAnimationFrame(adjustTextareaHeight);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+                e.preventDefault();
+                handleSendMessage(e);
+              }
+            }}
+            rows={1}
+            disabled={disabled}
+            autoComplete="off"
+            spellCheck="true"
+            lang={browserLang}
+            {...props}
+          />
 
- <textarea
- ref={mergedRef}
- placeholder={placeholder}
- className={cn(
-"w-full border-none pt-4 !pb-3 !px-6 focus:outline-none focus-visible:outline-none focus-visible:!border-none focus-visible:!ring-0 resize-none mb-12 bg-transparent text-sm md:text-base leading-relaxed min-h-[24px] overflow-hidden",
- // Text Color
- // Light Mode: #0F172A (Midnight)
- // Dark Mode: #F8FAFC (Off-White)
-"text-slate-900",
- // Placeholder
- // Light Mode: #94A3B8 (Slate 400)
- // Dark Mode: #64748B (Slate 500)
-"placeholder:text-slate-400"
- )}
- value={currentValue || ''}
- onChange={(e) => {
- if (isControlled && onChange) {
- onChange(e.target.value);
- } else {
- setInput(e.target.value);
- }
- // Trigger height adjustment after state update
- requestAnimationFrame(adjustTextareaHeight);
- }}
- onKeyDown={(e) => {
- if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
- e.preventDefault();
- handleSendMessage(e);
- }
- }}
- rows={1}
- disabled={disabled}
- autoComplete="off"
- spellCheck="true"
- lang={browserLang}
- {...props}
- />
+          <div
+            ref={toolbarRef}
+            className="absolute bottom-0 left-0 right-0 flex items-center px-3 py-2 border-t border-rule bg-parchment"
+          >
+            <div className="flex flex-wrap gap-1">
+              {tools.map((tool) => (
+                <React.Fragment key={tool.id}>
+                  {tool.type === 'dropdown' ? (
+                    <DropdownButton
+                      icon={tool.icon}
+                      label={tool.label}
+                      value={tool.value}
+                      options={tool.options || []}
+                      onChange={tool.onChange}
+                      disabled={isLoading}
+                    />
+                  ) : (
+                    <Toggle
+                      pressed={activeTools.includes(tool.id)}
+                      onPressedChange={() => toggleTool(tool.id)}
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        'group relative h-7 rounded-none px-2 flex items-center gap-1 text-xs font-mono me-2 transition-colors',
+                        activeTools.includes(tool.id)
+                          ? 'bg-parchment-deep text-oxblood font-semibold border-rule-strong'
+                          : 'text-muted-foreground hover:bg-parchment-deep hover:text-ink border-rule'
+                      )}
+                      disabled={isLoading}
+                    >
+                      <span>{tool.icon}</span>
+                      <span className="hidden sm:inline">{tool.label}</span>
+                    </Toggle>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
 
- <div
- ref={toolbarRef}
- className="absolute bottom-0 left-0 right-0 flex border-none items-center px-3 py-2 pb-3 border-t border-border/50 bg-gradient-to-t from-background/80 via-transparent to-transparent"
- >
- <div className="flex flex-wrap gap-1">
- {tools.map((tool) => (
- <React.Fragment key={tool.id}>
- {tool.type === 'dropdown' ? (
- <DropdownButton
- icon={tool.icon}
- label={tool.label}
- value={tool.value}
- options={tool.options || []}
- onChange={tool.onChange}
- disabled={isLoading}
- />
- ) : (
- <Toggle
- pressed={activeTools.includes(tool.id)}
- onPressedChange={() => toggleTool(tool.id)}
- size="sm"
- variant="outline"
- className={cn(
- 'group relative h-7 rounded-md px-2 flex items-center gap-1 text-xs me-2 transition-all duration-300',
- activeTools.includes(tool.id)
- ? 'bg-gradient-to-br from-primary/20 via-indigo-400/10 to-transparent text-foreground shadow-sm shadow-primary/10 border-primary/30 hover:scale-105 hover:shadow-md hover:shadow-primary/20'
- : 'text-muted-foreground hover:bg-muted/50 hover:scale-105 hover:shadow-sm border-border/50'
- )}
- disabled={isLoading}
- >
- <span className={cn(
- 'transition-transform duration-300',
- activeTools.includes(tool.id) && 'scale-110'
- )}>
- {tool.icon}
- </span>
- <span className="hidden sm:inline">{tool.label}</span>
- </Toggle>
- )}
- </React.Fragment>
- ))}
- </div>
-
- <div className="ml-auto">
- {isLoading ? (
- <div className="flex items-center gap-2">
- <Loader size="sm"variant="ghost"/>
- {onStopGeneration && (
- <Button
- type="button"
- onClick={onStopGeneration}
- size="sm"
- variant="ghost"
- className="group relative rounded-full text-destructive hover:text-destructive flex-shrink-0 p-0 h-11 w-11 flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-destructive/20"
- >
- <div className="absolute inset-0 rounded-full bg-destructive/10 opacity-0 group-hover:opacity-80 transition-opacity duration-200"/>
- <Square size={18} className="fill-destructive relative z-10 group-hover:scale-110 transition-transform duration-200"/>
- <span className="sr-only">Stop generation</span>
- </Button>
- )}
- </div>
- ) : (
- <Button
- type="submit"
- size="sm"
- variant="ghost"
- disabled={!currentValue?.trim() || isLoading}
- className={cn(
- 'group relative h-11 w-11 rounded-full flex-shrink-0 p-0 transition-all duration-200',
- currentValue?.trim()
- ? 'text-primary hover:text-primary hover:scale-110 hover:shadow-lg hover:shadow-primary/20'
- : 'text-muted-foreground cursor-not-allowed'
- )}
- >
- <div className={cn(
- 'absolute inset-0 rounded-full transition-opacity duration-200',
- currentValue?.trim()
- ? 'bg-primary/10 opacity-0 group-hover:opacity-80'
- : ''
- )} />
- <Send size={18} className={cn(
- 'relative z-10 transition-transform duration-200',
- currentValue?.trim() && 'group-hover:scale-110 group-hover:translate-x-0.5'
- )} />
- <span className="sr-only">Send message</span>
- </Button>
- )}
- </div>
- </div>
- </ChatContainer>
- </form>
+            <div className="ml-auto">
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader size="sm" variant="ghost" />
+                  {onStopGeneration && (
+                    <Button
+                      type="button"
+                      onClick={onStopGeneration}
+                      size="sm"
+                      variant="ghost"
+                      className="group relative rounded-none text-oxblood hover:text-oxblood flex-shrink-0 p-0 h-9 w-9 flex items-center justify-center transition-colors hover:bg-parchment-deep"
+                    >
+                      <Square size={16} className="fill-oxblood relative z-10" />
+                      <span className="sr-only">Stop generation</span>
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!currentValue?.trim() || isLoading}
+                  className={cn(
+                    'group relative h-9 w-9 rounded-none flex-shrink-0 p-0 transition-colors',
+                    currentValue?.trim()
+                      ? 'text-ink hover:text-ink hover:bg-parchment-deep'
+                      : 'text-muted-foreground cursor-not-allowed'
+                  )}
+                >
+                  <Send size={16} className="relative z-10" />
+                  <span className="sr-only">Send message</span>
+                </Button>
+              )}
+            </div>
+          </div>
+        </ChatContainer>
+      </form>
  </div>
  );
  }

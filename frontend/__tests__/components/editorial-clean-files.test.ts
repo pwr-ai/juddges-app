@@ -126,6 +126,13 @@ const CLEAN_FILES = [
   'lib/styles/components/document-dialog.tsx',
   'components/SaveSearchDialog.tsx',
   'app/saved-searches/page.tsx',
+  'lib/styles/components/chat/chat-message.tsx',
+  'lib/styles/components/chat/chat-input.tsx',
+  'lib/styles/components/chat/chat-history.tsx',
+  'lib/styles/components/chat/chat-container.tsx',
+  'lib/styles/components/chat/chat-message-list.tsx',
+  'lib/styles/components/chat/chat-interface.tsx',
+  'lib/styles/components/chat/chat-message-styles.tsx',
 ];
 
 /**

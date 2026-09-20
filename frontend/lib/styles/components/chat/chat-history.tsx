@@ -593,11 +593,11 @@ export function ChatHistory(): React.JSX.Element {
  }}
  disabled={(!messages || messages.length === 0) && !currentChatId}
  className={cn(
-"group/plus relative h-8 w-8 p-0 rounded-lg transition-all duration-200",
-"bg-transparent border-0",
-"text-[#64748B] font-bold",
-"disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:grayscale-[0.3]",
-"hover:scale-[1.2] hover:bg-transparent hover:text-[#0F172A] hover: "
+ "group/plus relative h-8 w-8 p-0 rounded-none transition-colors",
+ "bg-transparent border-0",
+ "text-muted-foreground font-bold",
+ "disabled:opacity-40 disabled:cursor-not-allowed",
+ "hover:bg-parchment-deep hover:text-ink"
  )}
  >
  <Plus className="h-4 w-4 relative z-10 stroke-[2.5]"/>
@@ -615,12 +615,12 @@ export function ChatHistory(): React.JSX.Element {
  placeholder="Search chats..."
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
- className="h-8 pl-8 pr-8 text-xs bg-slate-50/50 border-slate-200/50 focus-visible:ring-1 focus-visible:ring-primary/50"
+ className="h-8 pl-8 pr-8 text-xs bg-parchment border-rule focus-visible:ring-1 focus-visible:ring-ink rounded-none"
  />
  {searchQuery && (
  <button
  onClick={() => setSearchQuery("")}
- className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 flex items-center justify-center rounded hover:bg-slate-200/50 transition-colors"
+ className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 flex items-center justify-center rounded-none hover:bg-parchment-deep transition-colors"
  >
  <X className="h-3 w-3 text-muted-foreground"/>
  </button>
@@ -651,7 +651,7 @@ export function ChatHistory(): React.JSX.Element {
  </SidebarMenuSubItem>
  ) : filteredChatHistory.length === 0 ? (
  <SidebarMenuSubItem>
- <div className="px-3 py-2.5 rounded-lg bg-slate-50/50 border border-slate-200/50">
+ <div className="px-3 py-2.5 rounded-none bg-parchment border border-rule">
  <span className="text-xs text-muted-foreground">
  {searchQuery ? "No chats found": "No chat history"}
  </span>
@@ -709,7 +709,7 @@ export function ChatHistory(): React.JSX.Element {
  onClick={handleConfirmRename}
  className="h-7 w-7 p-0 shrink-0"
  >
- <Check className="h-3.5 w-3.5 text-green-600"/>
+ <Check className="h-3.5 w-3.5 text-ink"/>
  </Button>
  <Button
  variant="ghost"
@@ -740,7 +740,7 @@ export function ChatHistory(): React.JSX.Element {
  onClick={(e) => handleStartRename(e, chat)}
  title="Rename chat"
  data-testid="rename-chat-button"
- className="h-7 w-7 p-0 rounded-md transition-all duration-200 hover:scale-110 text-slate-500 hover:text-slate-700 relative z-10"
+ className="h-7 w-7 p-0 rounded-none transition-colors text-muted-foreground hover:text-ink hover:bg-parchment-deep relative z-10"
  >
  <Pencil className="h-3.5 w-3.5"/>
  </Button>
@@ -750,7 +750,7 @@ export function ChatHistory(): React.JSX.Element {
  onClick={(e) => handleForkChat(e, chat.id)}
  title="Fork conversation"
  data-testid="fork-chat-button"
- className="h-7 w-7 p-0 rounded-md transition-all duration-200 hover:scale-110 text-slate-500 hover:text-blue-600 relative z-10"
+ className="h-7 w-7 p-0 rounded-none transition-colors text-muted-foreground hover:text-ink hover:bg-parchment-deep relative z-10"
  >
  <GitFork className="h-3.5 w-3.5"/>
  </Button>
@@ -764,7 +764,7 @@ export function ChatHistory(): React.JSX.Element {
  }}
  title="Delete chat"
  data-testid="delete-chat-button"
- className="h-7 w-7 p-0 rounded-md transition-all duration-200 hover:scale-110 text-slate-500 hover:text-red-600 relative z-10"
+ className="h-7 w-7 p-0 rounded-none transition-colors text-muted-foreground hover:text-oxblood hover:bg-parchment-deep relative z-10"
  >
  <Trash2 className="h-3.5 w-3.5"/>
  </Button>
