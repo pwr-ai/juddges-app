@@ -158,7 +158,6 @@ cython_debug/
 .context/
 .codex/
 .playwright-mcp/
-docs/superpowers/
 frontend/app/test-supabase/
 
 # Celery
