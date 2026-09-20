@@ -5,8 +5,8 @@
 // /compare (Spec C) and Spec B's ScopeFilters share ONE conversion. Dates: the
 // RPC speaks ISO `{from,to}`; the controls speak epoch-second `{min,max}`
 // (DateRangeControl.tsx, via lib/extractions/epoch-date.ts). The old page
-// adapter passed strings through and produced `'1735689600'::DATE` casts in
-// Postgres.
+// adapter passed those epoch-second numbers straight through into `from`/`to`
+// and produced `'1735689600'::DATE` casts in Postgres.
 // =============================================================================
 
 import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
@@ -21,18 +21,6 @@ const SUBSTRING_FIELDS = new Set([
   "appeal_court_judges_names",
   "offender_representative_name",
 ]);
-
-/** Re-exported under the adapter's own naming for ISO<->epoch date conversion. */
-export function isoToEpochSeconds(iso: string | undefined): number | undefined {
-  if (!iso) return undefined;
-  return dateToEpochSeconds(iso);
-}
-
-export function epochSecondsToIso(s: number | undefined): string | undefined {
-  if (typeof s !== "number" || !Number.isFinite(s)) return undefined;
-  const iso = epochSecondsToDate(s);
-  return iso === "" ? undefined : iso;
-}
 
 /**
  * Normalise the two date-range shapes the RPC accepts. `{from,to}` is what the
@@ -56,7 +44,7 @@ function toDrawerValue(value: unknown): BaseFilterValue | undefined {
   if (typeof value === "number") return { kind: "numeric_range", range: { min: value, max: value } };
   if (typeof value === "string") {
     // scalar ISO date (RPC also accepts a bare "YYYY-MM-DD" for eq).
-    const epoch = isoToEpochSeconds(value);
+    const epoch = dateToEpochSeconds(value);
     return epoch === undefined ? undefined : { kind: "date_range", range: { min: epoch, max: epoch } };
   }
   if (typeof value === "object") {
@@ -70,7 +58,7 @@ function toDrawerValue(value: unknown): BaseFilterValue | undefined {
         return { kind: "numeric_range", range: { min: v.min as number | undefined, max: v.max as number | undefined } };
       }
       const { from, to } = normaliseDateRange(v);
-      return { kind: "date_range", range: { min: isoToEpochSeconds(from), max: isoToEpochSeconds(to) } };
+      return { kind: "date_range", range: { min: dateToEpochSeconds(from), max: dateToEpochSeconds(to) } };
     }
   }
   return undefined;
@@ -115,7 +103,7 @@ function fromDrawerValue(value: BaseFilterValue): unknown {
         ? value.range.min
         : { min: value.range.min, max: value.range.max };
     case "date_range":
-      return { from: epochSecondsToIso(value.range.min), to: epochSecondsToIso(value.range.max) };
+      return { from: epochSecondsToDate(value.range.min) || undefined, to: epochSecondsToDate(value.range.max) || undefined };
   }
 }
 

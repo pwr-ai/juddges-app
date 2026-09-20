@@ -2,32 +2,35 @@ import {
   applyCoreChange,
   applyDrawerChange,
   coreToDrawerValue,
-  epochSecondsToIso,
-  isoToEpochSeconds,
   toDrawerFilters,
 } from "@/lib/extractions/drawer-adapter";
+import { dateToEpochSeconds, epochSecondsToDate } from "@/lib/extractions/epoch-date";
 
 describe("drawer-adapter dates", () => {
   it("maps ISO from/to into epoch-second min/max for DateRangeControl", () => {
     const out = toDrawerFilters({ date_of_appeal_court_judgment: { from: "2025-01-01", to: "2025-12-31" } });
     expect(out.date_of_appeal_court_judgment).toEqual({
       kind: "date_range",
-      range: { min: isoToEpochSeconds("2025-01-01"), max: isoToEpochSeconds("2025-12-31") },
+      range: { min: dateToEpochSeconds("2025-01-01"), max: dateToEpochSeconds("2025-12-31") },
     });
   });
 
   it("writes epoch seconds back as ISO from/to (never raw numbers)", () => {
     const next = applyDrawerChange({}, "date_of_appeal_court_judgment", {
       kind: "date_range",
-      range: { min: isoToEpochSeconds("2024-06-01") },
+      range: { min: dateToEpochSeconds("2024-06-01") },
     });
     expect(next.date_of_appeal_court_judgment).toEqual({ from: "2024-06-01", to: undefined });
   });
 
   it("round-trips epoch <-> iso", () => {
-    expect(epochSecondsToIso(isoToEpochSeconds("2015-01-01"))).toBe("2015-01-01");
-    expect(isoToEpochSeconds(undefined)).toBeUndefined();
-    expect(epochSecondsToIso(undefined)).toBeUndefined();
+    expect(epochSecondsToDate(dateToEpochSeconds("2015-01-01"))).toBe("2015-01-01");
+    expect(dateToEpochSeconds(undefined)).toBeUndefined();
+    // epochSecondsToDate feeds a controlled <input type="date">, so it
+    // returns "" (not undefined) for a missing value — applyDrawerChange is
+    // what turns that back into `undefined` for the RPC's {from,to}, covered
+    // by "writes epoch seconds back as ISO from/to" above.
+    expect(epochSecondsToDate(undefined)).toBe("");
   });
 });
 
@@ -45,7 +48,7 @@ describe("drawer-adapter core fields", () => {
     expect(coreToDrawerValue("jurisdiction", ["PL", "UK"])).toEqual({ kind: "enum_multi", values: ["PL", "UK"] });
     expect(coreToDrawerValue("decision_date", { from: "2015-01-01", to: "2024-12-31" })).toEqual({
       kind: "date_range",
-      range: { min: isoToEpochSeconds("2015-01-01"), max: isoToEpochSeconds("2024-12-31") },
+      range: { min: dateToEpochSeconds("2015-01-01"), max: dateToEpochSeconds("2024-12-31") },
     });
     const next = applyCoreChange({ offender_gender: ["gender_female"] }, "jurisdiction", { kind: "enum_multi", values: ["UK"] });
     expect(next).toEqual({ offender_gender: ["gender_female"], jurisdiction: ["UK"] });
@@ -69,14 +72,14 @@ describe("drawer-adapter {min,max} date variant (ruling 3)", () => {
     });
     expect(out.date_of_appeal_court_judgment).toEqual({
       kind: "date_range",
-      range: { min: isoToEpochSeconds("2015-01-01"), max: isoToEpochSeconds("2024-12-31") },
+      range: { min: dateToEpochSeconds("2015-01-01"), max: dateToEpochSeconds("2024-12-31") },
     });
 
     expect(
       coreToDrawerValue("decision_date", { min: "2015-01-01", max: "2024-12-31" } as unknown as { from?: string; to?: string }),
     ).toEqual({
       kind: "date_range",
-      range: { min: isoToEpochSeconds("2015-01-01"), max: isoToEpochSeconds("2024-12-31") },
+      range: { min: dateToEpochSeconds("2015-01-01"), max: dateToEpochSeconds("2024-12-31") },
     });
   });
 });
