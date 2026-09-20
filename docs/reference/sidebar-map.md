@@ -1,39 +1,63 @@
 # Sidebar reference
 
-The left sidebar is the entry point to every primary workflow in the app.
-This page is the canonical map of what each item does and which step of
-the [First 30 minutes](../tutorials/first-30-minutes.md) tutorial covers
-it.
+The signed-in sidebar is rendered from one config,
+`frontend/lib/navigation/flows.ts` (#690). It shows the **Dashboard**, four
+**persona flows**, and — for admins only — an **Administration** group. A
+`FlowStepper` row under the top bar tells you which flow and which step the
+current page belongs to. This page mirrors that config; a Jest test
+(`frontend/__tests__/docs/sidebar-map.test.ts`) fails when the two drift.
 
-![JUDDGES sidebar with Dashboard, Search Judgments, Research Collections, Base Coding Schema, and Compare Datasets items visible.](../assets/onboarding/dashboard.png)
+Design: `docs/superpowers/specs/2026-09-20-persona-flows-design.md` §2, §4.
 
-| Item | Route | What it does | Tutorial reference |
-|---|---|---|---|
-| **Dashboard** | `/` | Headline corpus statistics, popular topics, and entry points to the main flows. The on-screen banner links into the in-app onboarding tour. | — |
-| **Search Judgments** | `/search` | Hybrid semantic + full-text search over the corpus, with filters for jurisdiction, language, date, and issuing body. | [Step 01 — Search the corpus](../tutorials/first-30-minutes.md#step-01--search-the-corpus) |
-| **Saved Searches** | `/saved-searches` | Persisted queries and filters. Visible to admin users only at present; will be opened up to all logged-in users as the feature matures. | (referenced under Step 01: *Save the search*) |
-| **Research Collections** | `/collections` | Named sets of judgments — the working folder for a research question. Feeds into extraction pipelines. | [Step 02 — Build a research collection](../tutorials/first-30-minutes.md#step-02--build-a-research-collection) |
-| **Base Coding Schema** | `/schemas/base` | The canonical 51-field extraction template, with EN/PL descriptions, JSON export, and a searchable field table. | [Step 03 — Read the base coding schema](../tutorials/first-30-minutes.md#step-03--read-the-base-coding-schema) |
-| **Compare Datasets** | `/dataset-comparison` | Cross-jurisdiction analytics — corpus-level comparisons of PL vs UK judgment populations. | — |
+| Item | Route | What it does |
+|---|---|---|
+| **Dashboard** | `/` | Corpus statistics, recent work, entry points to every flow (#646). |
 
-## Routes reachable by URL but currently hidden from the sidebar
+## Ask — find and read judgments
 
-These pages exist and work, but are not surfaced as sidebar entries while
-their UX is being refined. They become relevant once you've completed the
-four-step tour.
+| Step | Route | What it does |
+|---|---|---|
+| 1. Search Judgments | `/search` | Keyword (Meilisearch) and semantic (pgvector) search over the corpus; anonymous. |
+| 2. Chat | `/chat` | RAG chat over retrieved judgments, with citations. |
+| 3. Search History | `/history` | Your past queries. |
 
-| Route | What it does |
-|---|---|
-| `/chat` | Retrieval-augmented chat with cited sources — currently a preview feature not yet covered by the onboarding tour. |
-| `/extract` | Configure and launch an extraction job over a collection using a coding schema. |
-| `/extractions` | Browse extraction job results and inspect the structured output table. |
-| `/statistics` | Corpus-wide statistics: counts, completeness, decision types, date ranges. |
+## Explore — cohorts and statistics
 
-## How to find anything else
+| Step | Route | What it does |
+|---|---|---|
+| 1. Search Extracted Data | `/search/extractions` | Filter the corpus on the 51 pre-extracted base fields (facets, NL filter, CSV export). Rows open the reader at `/documents/[id]`. |
+| 2. Research Collections | `/collections` | Named judgment sets — the working folder for a research question. |
+| 3. Topic Trends | `/topics` | Popular and trending search topics. |
 
-- Press <kbd>⌘ K</kbd> / <kbd>Ctrl K</kbd> anywhere in the app to open
-  the command palette and search by page name.
-- The footer of every page exposes a flat list of links to About, Team,
-  Publications, Help, Contact, Privacy, and Terms.
-- The bottom-left search box in the sidebar is reserved for the future
-  in-app quick-search palette.
+## Code — your own extraction schema
+
+| Step | Route | What it does |
+|---|---|---|
+| 1. Schemas | `/schemas` | Schema library, including the base coding schema and the LLM schema builder. |
+| 2. Run Extraction | `/extract` | Pick a collection and a schema, start an extraction job. |
+| 3. Extraction Jobs | `/extractions` | Job list and per-job results. |
+
+## Case — from a fact pattern to a memo
+
+| Step | Route | What it does |
+|---|---|---|
+| 1. Precedent Search | `/precedents` | Describe a fact pattern; get similar judgments with matching factors. |
+| 2. Reasoning Lines | `/reasoning-lines` | Lines of judicial reasoning across the selected judgments. |
+| 3. Judge Fingerprint *(admin)* | `/judge-fingerprint` | Per-judge statistics. |
+| 4. Argumentation Analysis *(admin)* | `/argumentation-analysis` | LLM analysis of argument structure. |
+
+## Administration (admins only)
+
+| Item | Route | What it does |
+|---|---|---|
+| Saved Searches | `/saved-searches` | Persisted queries and filters. |
+| Topic Modeling | `/topic-modeling` | UMAP topic map (empty until `judgments.umap_x` is populated). |
+| Admin Panel | `/admin` | Users, stats, system, content. |
+
+## Not in the sidebar
+
+Reachable by URL or in-page link only: `/documents/[id]` (the reader — every
+result row links here), the static PL/UK comparison, `/schema-chat`,
+`/settings`, `/statistics`, `/help`, `/about`, `/changelog`. The Statistics
+view over a cohort (spec Phase B) will be added to the Explore flow when it
+ships.

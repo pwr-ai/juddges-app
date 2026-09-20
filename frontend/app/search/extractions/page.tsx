@@ -98,7 +98,7 @@ function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
   const date = row.decision_date ? new Date(row.decision_date) : null;
   return (
     <Link
-      href={`/judgments/${row.id}`}
+      href={`/documents/${row.id}`}
       className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
