@@ -359,8 +359,8 @@ function renderIcon(props: IconProps): React.JSX.Element {
       <Icon
         className={cn(
           iconSizes[size],
-          "transition-transform duration-200",
-          iconHover === "scale" && "group-hover:scale-125",
+          "transition-opacity duration-150",
+          iconHover === "scale" && "group-hover:opacity-80",
           iconHover === "rotate" && "group-hover:rotate-15",
           iconHover === "none" && "",
         )}

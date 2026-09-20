@@ -70,15 +70,15 @@ export function ToggleButton({
  isActive,
  className,
  disabled = false,
- type ="button",
+ type = "button",
  icon: ActiveIcon,
  inactiveIcon: InactiveIcon,
- size ="sm",
+ size = "sm",
 }: ToggleButtonProps): React.JSX.Element {
  const sizeClasses = {
- sm: "text-xs h-9 px-4 rounded-xl",
- md: "text-sm h-10 px-5 rounded-xl",
- lg: "text-base h-11 px-6 rounded-xl",
+ sm: "text-xs h-8 px-3 rounded-none font-mono uppercase tracking-wider",
+ md: "text-xs h-9 px-4 rounded-none font-mono uppercase tracking-wider",
+ lg: "text-sm h-10 px-5 rounded-none font-mono uppercase tracking-wider",
  };
 
  const iconSizes = {
@@ -94,24 +94,18 @@ export function ToggleButton({
  type={type}
  onClick={onClick}
  disabled={disabled}
- variant={isActive ? "default": "outline"}
+ variant={isActive ? "default" : "outline"}
  className={cn(
  sizeClasses[size],
-"transition-all duration-300",
+ "transition-colors duration-150 shadow-none",
  isActive
  ? getActiveButtonStyle(sizeClasses[size])
  : getInactiveButtonStyle(sizeClasses[size]),
- // Active state for tactile feedback
-"active:scale-[0.98] active:opacity-90",
- // Focus state for accessibility
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- // Colorblind accessibility: add border/ring changes for state
- isActive &&"ring-2 ring-primary/30",
- !isActive &&"ring-1 ring-slate-200/30",
+ "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
  className
  )}
  >
- {Icon && <Icon className={cn(iconSizes[size],"mr-1.5")} />}
+ {Icon && <Icon className={cn(iconSizes[size], "mr-1.5")} />}
  {children}
  </Button>
  );
