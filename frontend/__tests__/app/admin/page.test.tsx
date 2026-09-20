@@ -1,3 +1,4 @@
+import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +10,16 @@ import {
   useAdminSystemHealth,
 } from '@/lib/api/admin';
 import { useDashboardStats } from '@/lib/api/dashboard';
+
+// The editorial <Stat> figure animates in via framer-motion's viewport
+// observer, which jsdom does not provide; render it as a plain div here.
+jest.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, className }: { children?: React.ReactNode; className?: string }) =>
+      React.createElement('div', { className }, children),
+  },
+  useInView: () => true,
+}));
 
 jest.mock('@/lib/api/admin', () => ({
   useAdminActivity: jest.fn(),
