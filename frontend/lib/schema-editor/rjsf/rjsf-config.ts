@@ -353,7 +353,7 @@ export const rjsfClassNames = {
   help: 'text-xs text-muted-foreground mt-1',
 
   // Button
-  button: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50',
+  button: 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50',
   buttonPrimary: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2',
   buttonSecondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 h-9 px-4 py-2',
 

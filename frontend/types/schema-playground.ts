@@ -313,14 +313,13 @@ export interface DocumentSelectorOption {
   type?: string;
   selected: boolean;
 }
-
-// Change type display configuration
+// Change type display configuration
 export const CHANGE_TYPE_CONFIG: Record<
   SchemaChangeType,
   { label: string; color: string; icon: string }
 > = {
   create: { label: 'Created', color: 'green', icon: 'Plus' },
-  ai_update: { label: 'AI Update', color: 'purple', icon: 'Sparkles' },
+  ai_update: { label: 'AI Update', color: 'gold', icon: 'Bot' },
   visual_edit: { label: 'Visual Edit', color: 'blue', icon: 'Edit' },
   code_edit: { label: 'Code Edit', color: 'gray', icon: 'Code' },
   import: { label: 'Imported', color: 'cyan', icon: 'Download' },
