@@ -29,7 +29,6 @@ import {
   Layers,
   Link as LinkIcon,
   Cpu,
-  Star,
   MessageSquare,
 } from 'lucide-react';
 
@@ -179,7 +178,7 @@ export const FIELD_LABELS: Record<string, FieldMeta> = {
   deep_reasoning_patterns:               { label: 'Reasoning Patterns',         icon: BookOpen,    wide: true },
   deep_judicial_tone:                    { label: 'Judicial Tone',              icon: MessageSquare },
   deep_precedential_value:               { label: 'Precedential Value',         icon: Scale },
-  deep_research_value:                   { label: 'Research Value',             icon: Star },
+  deep_research_value:                   { label: 'Research Value',             icon: BookOpen },
   deep_text_quality:                     { label: 'Text Quality',               icon: Activity },
   deep_analysis_confidence:              { label: 'Deep Analysis Confidence',   icon: Activity },
 };

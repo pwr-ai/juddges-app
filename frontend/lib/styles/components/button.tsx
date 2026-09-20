@@ -42,7 +42,7 @@ export interface ButtonProps extends React.ComponentProps<typeof BaseButton> {
  * <Button
  *   variant="outline"
  *   size="sm"
- *   className="bg-gradient-to-r from-primary/10 to-purple-500/10"
+ *   className="bg-parchment text-ink border border-rule"
  * >
  *   <Icon className="mr-1.5 h-3.5 w-3.5" /> Action
  * </Button>
@@ -60,9 +60,9 @@ export function Button({
       size={size}
       className={cn(
         // Design system base enhancements
-        "transition-all duration-300",
+        "transition-colors duration-150",
         // Enhanced focus state for accessibility
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
         className
       )}
       {...props}

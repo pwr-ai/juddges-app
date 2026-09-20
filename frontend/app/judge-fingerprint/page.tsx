@@ -81,11 +81,11 @@ export default function JudgeFingerprintPage() {
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <Fingerprint className="h-6 w-6 text-primary" />
+          <div className="p-2 rounded-none bg-parchment-deep border border-rule">
+            <Fingerprint className="h-6 w-6 text-oxblood" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold text-ink font-display">
               {t('judgeFingerprint.pageTitle')}
             </h1>
             <p className="text-sm text-muted-foreground">

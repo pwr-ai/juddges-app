@@ -73,7 +73,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
  onError={() => setImageError(true)}
  />
  ) : (
- <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
+ <div className="w-full h-full rounded-full bg-parchment-deep border border-rule flex items-center justify-center text-2xl font-bold text-ink">
  {initials}
  </div>
  )}
@@ -139,8 +139,8 @@ export default function TeamPage() {
 
  {/* Join Section */}
  <LightCard padding="lg"className="text-center">
- <div className="flex flex-col items-center justify-center text-center py-6">
- <h2 className="text-3xl font-bold mb-6 bg-gradient-to-br from-foreground via-primary to-primary bg-clip-text text-transparent">
+ <div className="flex flex-col items-center justify-center text-center">
+ <h2 className="text-3xl font-bold mb-6 text-ink font-display">
  Join Our Team
  </h2>
  <p className="text-muted-foreground mb-8 max-w-2xl mx-auto text-base leading-relaxed text-justify">

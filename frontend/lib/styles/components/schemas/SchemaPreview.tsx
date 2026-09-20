@@ -142,7 +142,7 @@ export function SchemaPreview({ schema }: SchemaPreviewProps) {
  }
 
  return (
- <div className="pt-4 border-t border-slate-200/50">
+ <div className="pt-4 border-t border-rule">
  <div className="mb-4">
  <h3 className="font-bold text-lg text-foreground mb-2">Extraction Preview</h3>
  <p className="text-sm text-muted-foreground">

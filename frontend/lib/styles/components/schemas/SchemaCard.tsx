@@ -185,15 +185,12 @@ export function SchemaCard({
  // element the types are stable and React just updates it.
  const actionButtons = (
  <div
- className={cn(
-"shrink-0 flex items-center justify-center -space-x-1",
-"rounded-lg",
- // Enhanced glass effect - more visible blur
-"bg-white/70",
-"backdrop-blur-[24px] backdrop-saturate-[200%]",
-"border border-white/40",
-"transition-all duration-200"
- )}
+    className={cn(
+      "shrink-0 flex items-center justify-center -space-x-1",
+      "rounded-none",
+      "bg-parchment border border-rule",
+      "transition-colors"
+    )}
  onClick={(e) => e.stopPropagation()}
  >
  <Tooltip>
@@ -242,7 +239,7 @@ export function SchemaCard({
  <Copy className="mr-2 h-4 w-4"/>
  <span>Duplicate</span>
  </DropdownMenuItem>
- <DropdownMenuItem onClick={handleDeleteClick} className="text-red-600 focus:text-red-600">
+ <DropdownMenuItem onClick={handleDeleteClick} className="text-oxblood focus:text-oxblood">
  <Trash2 className="mr-2 h-4 w-4"/>
  <span>Delete</span>
  </DropdownMenuItem>
@@ -263,7 +260,7 @@ export function SchemaCard({
  onClick={onClick}
  variant="light"
  className={cn(
-"group relative rounded-[24px] transition-all duration-200 h-full",
+"group relative rounded-none transition-colors h-full",
  // Legal Glassmorphism 2.0 is applied by BaseCard with variant="light"
  // Remove any overrides that conflict with glass styling
  isListMode ? "w-full": "",
@@ -286,10 +283,10 @@ export function SchemaCard({
  {/* Author */}
  {schema.user?.email && (
  <div className="flex items-center gap-2 mb-2.5">
- <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-600 border border-slate-200">
+ <div className="w-4 h-4 rounded-none bg-parchment-deep flex items-center justify-center text-[8px] font-mono font-bold text-ink border border-rule">
  {getInitials(schema.user.email)}
  </div>
- <span className="text-xs text-slate-600 font-medium truncate">
+ <span className="text-xs text-muted-foreground font-mono truncate">
  {schema.user.email}
  </span>
  </div>
@@ -298,7 +295,7 @@ export function SchemaCard({
  {/* Title with Status and Verified Badge */}
  <div className="mb-3">
  <div className="flex items-center gap-2">
- <h3 className="font-semibold text-slate-900 leading-tight group-hover:text-primary transition-colors tracking-tight text-base line-clamp-2 flex-1">
+ <h3 className="font-serif font-medium text-ink leading-tight group-hover:text-oxblood transition-colors tracking-tight text-base line-clamp-2 flex-1">
  {schema.name}
  </h3>
  <div className="flex items-center gap-1.5 shrink-0">
@@ -313,7 +310,7 @@ export function SchemaCard({
  </div>
 
  {/* Metrics: Fields & Extractions */}
- <div className="flex items-center gap-6 text-xs text-slate-500 font-medium mb-4">
+ <div className="flex items-center gap-6 text-xs text-muted-foreground font-mono mb-4">
  <div className="flex items-center gap-1.5"title="Field Count">
  <Database className="h-3.5 w-3.5 opacity-60"/>
  <span>{fieldCount} {fieldCount === 1 ? 'Field' : 'Fields'}</span>
@@ -330,7 +327,7 @@ export function SchemaCard({
  <TooltipProvider>
  <Tooltip>
  <TooltipTrigger asChild>
- <p className="text-sm text-slate-700 font-normal leading-relaxed cursor-default line-clamp-4">
+ <p className="text-sm text-ink font-normal leading-relaxed cursor-default line-clamp-4">
  {schema.description}
  </p>
  </TooltipTrigger>
@@ -345,14 +342,14 @@ export function SchemaCard({
  </Tooltip>
  </TooltipProvider>
  ) : (
- <p className="text-sm text-slate-400 font-normal italic line-clamp-4 min-h-[5.6rem]">
+ <p className="text-sm text-muted-foreground font-normal italic line-clamp-4 min-h-[5.6rem]">
  No description
  </p>
  )}
  </div>
 
  {/* Footer: Action Buttons */}
- <div className="mt-auto pt-0.5 border-t border-slate-100">
+ <div className="mt-auto pt-0.5 border-t border-rule">
  <div className="flex justify-center">
  {actionButtons}
  </div>
@@ -364,10 +361,10 @@ export function SchemaCard({
  {/* 2. Author */}
  {schema.user?.email && (
  <div className="flex items-center gap-2 mb-2">
- <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-600 border border-slate-200">
+ <div className="w-4 h-4 rounded-none bg-parchment-deep flex items-center justify-center text-[8px] font-mono font-bold text-ink border border-rule">
  {getInitials(schema.user.email)}
  </div>
- <span className="text-xs text-slate-600 font-medium truncate">
+ <span className="text-xs text-muted-foreground font-mono truncate">
  {schema.user.email}
  </span>
  </div>
@@ -376,7 +373,7 @@ export function SchemaCard({
  {/* 3. Title with Status and Verified Badge */}
  <div className="flex items-center justify-between gap-2 mb-1">
  <div className="flex items-center gap-2 min-w-0 flex-1">
- <h3 className="font-semibold text-slate-900 leading-tight group-hover:text-primary transition-colors tracking-tight text-sm line-clamp-2">
+ <h3 className="font-serif font-medium text-ink leading-tight group-hover:text-oxblood transition-colors tracking-tight text-sm line-clamp-2">
  {schema.name}
  </h3>
  <div className="flex items-center gap-1.5 shrink-0">
@@ -392,27 +389,27 @@ export function SchemaCard({
  </div>
 
  {/* 4. Metadata Block: Created • Updated • Fields • Extractions */}
- <div className="flex items-center gap-3 text-xs text-slate-500 font-medium mb-3">
+ <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono mb-3">
  <div className="flex items-center gap-1.5"title={`Created: ${formatDateShort(schema.created_at)}`}>
  <Calendar className="h-3.5 w-3.5 opacity-60"/>
  <span>{formatDateShort(schema.created_at)}</span>
  </div>
 
- <span className="text-slate-300">•</span>
+ <span className="text-muted-foreground">•</span>
 
  <div className="flex items-center gap-1.5"title={`Updated: ${formatDateShort(schema.updated_at)}`}>
  <Clock className="h-3.5 w-3.5 opacity-60"/>
  <span>{formatDateShort(schema.updated_at)}</span>
  </div>
 
- <span className="text-slate-300">•</span>
+ <span className="text-muted-foreground">•</span>
 
  <div className="flex items-center gap-1.5"title="Field Count">
  <Database className="h-3.5 w-3.5 opacity-60"/>
  <span>{fieldCount} {fieldCount === 1 ? 'Field' : 'Fields'}</span>
  </div>
 
- <span className="text-slate-300">•</span>
+ <span className="text-muted-foreground">•</span>
 
  <div className="flex items-center gap-1.5"title="Extractions">
  <Play className="h-3.5 w-3.5 opacity-60"/>
@@ -426,7 +423,7 @@ export function SchemaCard({
  <TooltipProvider>
  <Tooltip>
  <TooltipTrigger asChild>
- <p className="text-sm text-slate-700 font-normal leading-relaxed cursor-default line-clamp-2">
+ <p className="text-sm text-ink font-normal leading-relaxed cursor-default line-clamp-2">
  {schema.description}
  </p>
  </TooltipTrigger>
@@ -441,7 +438,7 @@ export function SchemaCard({
  </Tooltip>
  </TooltipProvider>
  ) : (
- <p className="text-sm text-slate-400 font-normal italic line-clamp-2">
+ <p className="text-sm text-muted-foreground font-normal italic line-clamp-2">
  No description
  </p>
  )}
@@ -451,7 +448,7 @@ export function SchemaCard({
 
  {/* 6b. Stats for List mode only */}
  {isListMode && (
- <div className="flex items-center gap-4 text-xs text-slate-500 font-medium pt-2 border-t border-slate-100">
+ <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono pt-2 border-t border-rule">
  <div className="flex items-center gap-1.5"title="Field Count">
  <Database className="h-3.5 w-3.5 opacity-60"/>
  <span>{fieldCount} {fieldCount === 1 ? 'Field' : 'Fields'}</span>
