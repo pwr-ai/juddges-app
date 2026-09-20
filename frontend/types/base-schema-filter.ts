@@ -9,6 +9,8 @@
 // FastAPI proxy, and the RPC interprets them.
 // =============================================================================
 
+import type { Collection } from "@/types/collection";
+
 export type Appellant = "offender" | "attorney_general" | "other";
 
 export type PleaPoint =
@@ -213,3 +215,30 @@ export interface NumericHistogramResponse {
   buckets: HistogramBucket[];
   total: number;
 }
+
+// -----------------------------------------------------------------------------
+// Save-as-collection (POST /api/collections/from-filter). List-shaped so Spec C
+// can add `split_by_jurisdiction` and return two collections + pair_id.
+// -----------------------------------------------------------------------------
+
+export interface CreateCollectionFromFilterRequest {
+  name: string;
+  description?: string;
+  filters: BaseSchemaFilters;
+  text_query?: string | null;
+}
+
+export interface CreatedCollection {
+  jurisdiction: Jurisdiction | null;
+  collection: Collection;
+  added_count: number;
+}
+
+export interface CollectionFromFilterResponse {
+  collections: CreatedCollection[];
+  total_matched: number;
+  pair_id: string | null;
+}
+
+/** Max documents per collection created from a filter (mirrors backend SAVE_FROM_FILTER_MAX_DOCUMENTS). */
+export const SAVE_FROM_FILTER_MAX_DOCUMENTS = 5000;
