@@ -37,13 +37,6 @@ const SEQUENCED_JOB_ID = '30000000-0000-4000-8000-000000000007';
 const COLLECTION_NAME = 'Route contract extraction collection';
 const SCHEMA_NAME = 'Route contract schema';
 
-interface AdapterRequest {
-  method: string;
-  path: string;
-  query: Record<string, string | string[]>;
-  unexpected?: boolean;
-}
-
 interface ServedExtractionState {
   status: string;
   completed_documents: number;
@@ -55,17 +48,6 @@ async function resetAdapter(request: APIRequestContext): Promise<void> {
     `${ADAPTER_BASE_URL}/__route-contract/reset`,
   );
   expect(response.status()).toBe(204);
-}
-
-async function adapterRequests(
-  request: APIRequestContext,
-): Promise<AdapterRequest[]> {
-  const response = await request.get(
-    `${ADAPTER_BASE_URL}/__route-contract/requests`,
-  );
-  expect(response.status()).toBe(200);
-  const payload = (await response.json()) as { requests: AdapterRequest[] };
-  return payload.requests;
 }
 
 /**

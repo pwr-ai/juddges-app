@@ -12,6 +12,13 @@ export const APP_BASE_URL = 'http://127.0.0.1:3006';
 export const ADAPTER_BASE_URL = 'http://127.0.0.1:4311';
 export const USER_ID = '11111111-1111-4111-8111-111111111111';
 
+export interface AdapterRequest {
+  method: string;
+  path: string;
+  query: Record<string, string | string[]>;
+  unexpected?: boolean;
+}
+
 export async function setSyntheticSession(context: BrowserContext): Promise<void> {
   const expiresAt = Math.floor(Date.now() / 1000) + 3_600;
   const session = {
@@ -49,6 +56,6 @@ export async function setSyntheticSession(context: BrowserContext): Promise<void
 /** The stub marks any unrouted request `unexpected: true`; a spec must leave none behind. */
 export async function expectNoUnexpectedStubRequests(request: APIRequestContext): Promise<void> {
   const response = await request.get(`${ADAPTER_BASE_URL}/__route-contract/requests`);
-  const { requests } = (await response.json()) as { requests: Array<{ unexpected?: boolean; method?: string; url?: string }> };
+  const { requests } = (await response.json()) as { requests: AdapterRequest[] };
   expect(requests.filter((r) => r.unexpected)).toEqual([]);
 }
