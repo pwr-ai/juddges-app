@@ -133,6 +133,14 @@ const CLEAN_FILES = [
   'lib/styles/components/chat/chat-message-list.tsx',
   'lib/styles/components/chat/chat-interface.tsx',
   'lib/styles/components/chat/chat-message-styles.tsx',
+  'lib/styles/components/schema-status-selector.tsx',
+  'lib/styles/components/schemas/SchemaActionsBar.tsx',
+  'lib/styles/components/schemas/SchemaCard.tsx',
+  'lib/styles/components/schemas/SchemaPreview.tsx',
+  'lib/styles/components/schema-preview.tsx',
+  'app/schemas/page.tsx',
+  'app/schemas/[id]/client.tsx',
+  'app/schemas/base/page.tsx',
 ];
 
 /**

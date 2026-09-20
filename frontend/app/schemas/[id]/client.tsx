@@ -138,7 +138,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  padding="lg"
  showBorder={true}
  showShadow={false}
- className="hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50 transition-all duration-200"
+ className="hover:border-rule-strong transition-colors"
  >
  <div className="space-y-4">
  {/* Header */}
@@ -186,7 +186,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  size="sm"
  icon={Trash2}
  onClick={handleDeleteClick}
- className="text-red-600 hover:text-red-700 hover:bg-red-50"
+ className="text-oxblood hover:bg-parchment-deep"
  >
  Delete
  </VariantButton>
@@ -207,7 +207,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  )}
 
  {/* Metadata */}
- <div className="rounded-lg border border-slate-200/50 backdrop-blur-sm bg-gradient-to-br from-white/40 via-white/30 to-white/20 p-4 space-y-4">
+ <div className="border border-rule bg-parchment-deep/30 p-4 space-y-4">
  <div className="flex flex-wrap gap-6 text-sm">
  <div className="flex items-center gap-2 text-foreground/70">
  <Calendar className="h-4 w-4 text-muted-foreground"/>
@@ -230,7 +230,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  </div>
 
  {/* Schema Content */}
- <div className="pt-4 border-t border-slate-200/50">
+ <div className="pt-4 border-t border-rule">
  <div className="mb-4">
  <h2 className="font-bold text-lg text-foreground">Schema Content</h2>
  </div>
@@ -263,7 +263,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  </TabsContent>
 
  <TabsContent value="json"className="mt-4">
- <ScrollArea className="h-[400px] max-h-[50vh] w-full border rounded-md bg-slate-50/50 border-slate-200/50">
+ <ScrollArea className="h-[400px] max-h-[50vh] w-full border border-rule bg-parchment-deep/30">
  <pre className="text-sm whitespace-pre-wrap p-4 font-mono">
  {JSON.stringify(schema.text, null, 2)}
  </pre>
@@ -271,7 +271,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  </TabsContent>
 
  <TabsContent value="yaml"className="mt-4">
- <ScrollArea className="h-[400px] max-h-[50vh] w-full border rounded-md bg-slate-50/50 border-slate-200/50">
+ <ScrollArea className="h-[400px] max-h-[50vh] w-full border border-rule bg-parchment-deep/30">
  <pre className="text-sm whitespace-pre-wrap p-4 font-mono">
  {YAML.stringify(schema.text)}
  </pre>

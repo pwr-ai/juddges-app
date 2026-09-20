@@ -103,10 +103,10 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <p className="text-sm text-muted-foreground">{schema.description}</p>
  </div>
  <div className="flex flex-wrap gap-2">
- <Badge variant="outline"className="text-xs">
+ <Badge variant="outline" className="text-xs rounded-none border-rule">
  {schema.type}
  </Badge>
- <Badge variant="outline"className="text-xs">
+ <Badge variant="outline" className="text-xs rounded-none border-rule">
  {schema.category}
  </Badge>
  </div>
@@ -131,23 +131,8 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  </div>
  <div className="relative">
  <div className={cn(
-"space-y-2 max-h-[400px] overflow-y-auto",
-"border border-slate-200/50 rounded-lg p-2 pr-2",
- // Custom scrollbar styling - highly visible and prominent scrollbar
-"[&::-webkit-scrollbar]:w-4",
-"[&::-webkit-scrollbar-track]:bg-slate-300/80 [&::-webkit-scrollbar-track]: ",
-"[&::-webkit-scrollbar-track]:rounded-full",
-"[&::-webkit-scrollbar-track]:my-1",
-"[&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-thumb]: ",
-"[&::-webkit-scrollbar-thumb]:rounded-full",
-"[&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-slate-300/80 [&::-webkit-scrollbar-thumb]: ",
-"[&::-webkit-scrollbar-thumb]:hover:bg-slate-600 [&::-webkit-scrollbar-thumb]: ",
-"[&::-webkit-scrollbar-thumb]:active:bg-slate-700 [&::-webkit-scrollbar-thumb]: ",
-"[&::-webkit-scrollbar-thumb]:transition-colors",
-"[&::-webkit-scrollbar-thumb]:shadow-sm",
- // Firefox scrollbar - more visible
-"scrollbar-thin scrollbar-thumb-slate-500 scrollbar-thumb-rounded-full",
-"scrollbar-track-slate-300/80"
+ "space-y-2 max-h-[400px] overflow-y-auto",
+ "border border-rule rounded-none p-2 pr-2"
  )}>
  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
  {fieldEntries.map(([fieldName, fieldDef]: [string, any]) => {
@@ -155,10 +140,10 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <div
  key={fieldName}
  className={cn(
-"rounded-lg p-3 border",
-"bg-slate-50/50",
-"border-slate-200/50",
-"hover:border-primary/30 transition-colors"
+ "rounded-none p-3 border",
+ "bg-parchment-deep/40",
+ "border-rule",
+ "hover:border-oxblood/30 transition-colors"
  )}
  >
  <div className="flex items-center justify-between mb-2">
@@ -187,9 +172,9 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <div className="flex items-center gap-2 text-xs">
  <span className="text-muted-foreground font-medium min-w-[80px]">Default:</span>
  <code className={cn(
-"px-2 py-0.5 rounded bg-slate-100",
-"text-slate-900",
-"border border-slate-200"
+ "px-2 py-0.5 rounded-none bg-parchment-deep",
+ "text-ink font-mono",
+ "border border-rule"
  )}>
  {typeof fieldDef.default === 'object'
  ? JSON.stringify(fieldDef.default)
@@ -203,9 +188,9 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <div className="flex items-center gap-2 text-xs">
  <span className="text-muted-foreground font-medium min-w-[80px]">Example:</span>
  <code className={cn(
-"px-2 py-0.5 rounded bg-blue-50",
-"text-blue-900",
-"border border-blue-200"
+ "px-2 py-0.5 rounded-none bg-parchment-deep",
+ "text-ink font-mono",
+ "border border-rule"
  )}>
  {typeof fieldDef.example === 'object'
  ? JSON.stringify(fieldDef.example)
@@ -218,7 +203,7 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  {fieldDef.format && (
  <div className="flex items-center gap-2 text-xs">
  <span className="text-muted-foreground font-medium min-w-[80px]">Format:</span>
- <Badge variant="outline"className="text-xs">
+ <Badge variant="outline" className="text-xs rounded-none border-rule">
  {fieldDef.format}
  </Badge>
  </div>
@@ -265,10 +250,10 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <div className="flex items-start gap-2 text-xs">
  <span className="text-muted-foreground font-medium min-w-[80px] shrink-0">Pattern:</span>
  <code className={cn(
-"px-2 py-0.5 rounded bg-purple-50",
-"text-purple-900",
-"border border-purple-200",
-"break-all font-mono text-[10px]"
+ "px-2 py-0.5 rounded-none bg-parchment-deep",
+ "text-ink font-mono",
+ "border border-rule",
+ "break-all text-[10px]"
  )}>
  {fieldDef.pattern}
  </code>
@@ -277,14 +262,14 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
 
  {/* Enum values */}
  {fieldDef.enum && (
- <div className="pt-2 border-t border-slate-200/50">
+ <div className="pt-2 border-t border-rule">
  <span className="text-xs text-muted-foreground font-medium block mb-1.5">Permitted values:</span>
  <div className="flex gap-1.5 flex-wrap">
  {fieldDef.enum.map((value: string | number | boolean, idx: number) => (
  <Badge
  key={idx}
  variant="secondary"
- className="text-xs bg-indigo-400/15 text-indigo-900 border-indigo-400/30"
+ className="text-xs bg-parchment-deep text-ink border-rule rounded-none"
  >
  {String(value)}
  </Badge>
@@ -308,7 +293,7 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <span className="text-muted-foreground">up to {fieldDef.maxItems} items</span>
  )}
  {fieldDef.uniqueItems && (
- <Badge variant="outline"className="text-xs ml-1">
+ <Badge variant="outline" className="text-xs ml-1 rounded-none border-rule">
  no duplicates
  </Badge>
  )}
@@ -331,10 +316,10 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  <SubsectionHeader title="Raw Schema"/>
  <pre
  className={cn(
-"p-4 rounded-lg text-sm overflow-auto max-h-96",
-"bg-slate-50/50",
-"border border-slate-200/50",
-"font-mono"
+ "p-4 rounded-none text-sm overflow-auto max-h-96",
+ "bg-parchment-deep/40 text-ink",
+ "border border-rule",
+ "font-mono"
  )}
  role="text"
  aria-label="Raw schema JSON definition"
@@ -346,15 +331,15 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
 
  {/* Schema Dates */}
  {schema.dates && Object.keys(schema.dates).length > 0 && (
- <div className="space-y-3 pt-2 border-t border-slate-200/50">
+ <div className="space-y-3 pt-2 border-t border-rule">
  <SubsectionHeader title="Important Dates"/>
  <div className="space-y-2">
  {Object.entries(schema.dates).map(([key, value]) => (
  <div
  key={key}
  className={cn(
-"flex items-center justify-between p-2 rounded-md",
-"bg-slate-50/50"
+ "flex items-center justify-between p-2 rounded-none",
+ "bg-parchment-deep/40 border border-rule"
  )}
  >
  <div className="flex items-center gap-2">
@@ -371,8 +356,8 @@ export function SchemaPreview({ schema, onGenerateNew, className }: SchemaPrevie
  {/* Schema Metadata Footer */}
  {schema.user?.email && (
  <div className={cn(
-"pt-4 border-t border-slate-200/50",
-"flex items-center gap-4 text-xs text-muted-foreground"
+ "pt-4 border-t border-rule",
+ "flex items-center gap-4 text-xs text-muted-foreground"
  )}>
  <div className="flex items-center gap-1.5">
  <User className="h-3.5 w-3.5"/>
