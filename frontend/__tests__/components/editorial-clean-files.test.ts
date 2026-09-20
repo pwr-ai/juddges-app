@@ -160,6 +160,15 @@ const CLEAN_FILES = [
   'lib/schema-editor/rjsf/custom-widgets/DescriptionWidget.tsx',
   'lib/schema-editor/rjsf/rjsf-config.ts',
   'types/schema-playground.ts',
+  'lib/styles/colors/surfaces.ts',
+  'lib/button-utils.ts',
+  'lib/styles/components/buttons.ts',
+  'lib/styles/components/button.tsx',
+  'lib/styles/components/variant-button.tsx',
+  'lib/styles/components/delete-button.tsx',
+  'lib/styles/components/toggle-button.tsx',
+  'lib/styles/components/dropdown-button.tsx',
+  'lib/styles/components/searchable-dropdown-button.tsx',
 ];
 
 /**

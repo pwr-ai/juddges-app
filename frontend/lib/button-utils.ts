@@ -1,69 +1,53 @@
 /**
  * Utility functions for button styling
- * Provides consistent button styles across the application
+ * Provides consistent Editorial button styles across the application
  */
 
 import { cn } from "@/lib/utils";
 
 /**
- * Standard gradient for primary buttons across the application
- * Uses: from-primary to-primary/90 (single color, no multiple colors)
+ * Standard styling for primary buttons across the application
  */
-export const PRIMARY_GRADIENT ="bg-gradient-to-r from-primary to-primary/90";
-export const PRIMARY_GRADIENT_HOVER ="hover:from-primary/90 hover:to-primary/80";
+export const PRIMARY_GRADIENT = "bg-oxblood text-parchment";
+export const PRIMARY_GRADIENT_HOVER = "hover:bg-oxblood-deep";
 
 /**
- * Standard gradient for active/selected state buttons
- * Same as primary gradient for consistency
+ * Standard styling for active/selected state buttons
  */
-export const ACTIVE_GRADIENT = PRIMARY_GRADIENT;
-export const ACTIVE_GRADIENT_HOVER = PRIMARY_GRADIENT_HOVER;
+export const ACTIVE_GRADIENT = "bg-parchment-deep text-ink border border-ink";
+export const ACTIVE_GRADIENT_HOVER = "hover:bg-parchment-deep";
 
 /**
  * Get the enhanced button style classes for primary buttons
- * Includes shadow effects, transitions, and group animations
  *
  * @param additionalClasses - Optional additional classes to merge
  * @returns Combined className string
- *
- * @example
- * <Button className={getEnhancedButtonStyle()}>
- * Click me
- * </Button>
  */
 export const getEnhancedButtonStyle = (additionalClasses?: string): string => {
- return cn(
-"shadow-lg hover:shadow-xl group/btn transition-all",
- additionalClasses
- );
+  return cn(
+    "bg-oxblood hover:bg-oxblood-deep text-parchment rounded-none shadow-none transition-colors duration-150",
+    additionalClasses
+  );
 };
 
 /**
- * Get standardized primary button style with gradient
+ * Get standardized primary button style
  * Use for main action buttons (Submit, Search, Save, etc.)
  *
  * @param size - Button size class (default: "h-9")
  * @param additionalClasses - Optional additional classes to merge
  * @returns Combined className string
- *
- * @example
- * <Button className={getPrimaryButtonStyle()}>
- * Submit
- * </Button>
  */
 export const getPrimaryButtonStyle = (
- size: string ="h-9",
- additionalClasses?: string
+  size: string = "h-9",
+  additionalClasses?: string
 ): string => {
- return cn(
- size,
- PRIMARY_GRADIENT,
- PRIMARY_GRADIENT_HOVER,
-"text-white shadow-lg hover:shadow-xl",
-"transition-all duration-300",
-"group/btn",
- additionalClasses
- );
+  return cn(
+    size,
+    "bg-oxblood hover:bg-oxblood-deep text-parchment font-mono text-xs uppercase tracking-wider rounded-none shadow-none transition-colors duration-150 border-0",
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+    additionalClasses
+  );
 };
 
 /**
@@ -73,26 +57,17 @@ export const getPrimaryButtonStyle = (
  * @param size - Button size class (default: "h-8")
  * @param additionalClasses - Optional additional classes to merge
  * @returns Combined className string
- *
- * @example
- * <Button className={getActiveButtonStyle()}>
- * Selected
- * </Button>
  */
 export const getActiveButtonStyle = (
- size: string ="h-8",
- additionalClasses?: string
+  size: string = "h-8",
+  additionalClasses?: string
 ): string => {
- return cn(
- size,
- ACTIVE_GRADIENT,
-"text-white shadow-sm",
-"hover:shadow-lg hover:scale-105",
-"hover:-translate-y-0.5",
-"active:scale-100 active:translate-y-0",
-"transition-all duration-300 ease-out",
- additionalClasses
- );
+  return cn(
+    size,
+    "bg-parchment-deep text-ink border border-ink font-mono text-xs uppercase tracking-wider rounded-none shadow-none transition-colors duration-150",
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+    additionalClasses
+  );
 };
 
 /**
@@ -102,86 +77,61 @@ export const getActiveButtonStyle = (
  * @param size - Button size class (default: "h-8")
  * @param additionalClasses - Optional additional classes to merge
  * @returns Combined className string
- *
- * @example
- * <Button variant="ghost"className={getInactiveButtonStyle()}>
- * Not Selected
- * </Button>
  */
 export const getInactiveButtonStyle = (
- size: string ="h-8",
- additionalClasses?: string
+  size: string = "h-8",
+  additionalClasses?: string
 ): string => {
- return cn(
- size,
-"bg-transparent",
-"hover:bg-slate-100 hover: ",
-"hover:text-foreground",
-"[&:hover]:!bg-slate-100",
-"[&:hover]:!text-foreground",
-"hover:scale-105 hover:shadow-md",
-"hover:-translate-y-0.5",
-"active:scale-100 active:translate-y-0",
-"transition-all duration-300 ease-out",
- additionalClasses
- );
+  return cn(
+    size,
+    "bg-parchment text-ink-soft hover:text-ink hover:bg-parchment-deep border border-rule font-mono text-xs uppercase tracking-wider rounded-none shadow-none transition-colors duration-150",
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+    additionalClasses
+  );
 };
 
 /**
  * Get icon animation classes for buttons
- * Provides scale and rotation effects on hover
  *
- * @param rotateDegrees - Degrees to rotate on hover (default: 90 for Plus icons, 12 for ExternalLink)
+ * @param rotateDegrees - Degrees to rotate on hover
  * @param additionalClasses - Optional additional classes to merge
  * @returns Combined className string
- *
- * @example
- * <Plus className={cn("h-4 w-4 mr-2", getIconAnimationStyle())} />
  */
 export const getIconAnimationStyle = (
- rotateDegrees: number = 90,
- additionalClasses?: string
+  rotateDegrees: number = 90,
+  additionalClasses?: string
 ): string => {
- // Map common rotation values to Tailwind classes
- const rotationClassMap: Record<number, string> = {
- 12: "group-hover/btn:rotate-12",
- 45: "group-hover/btn:rotate-45",
- 90: "group-hover/btn:rotate-90",
- 180: "group-hover/btn:rotate-180",
- };
+  const rotationClassMap: Record<number, string> = {
+    12: "group-hover/btn:rotate-12",
+    45: "group-hover/btn:rotate-45",
+    90: "group-hover/btn:rotate-90",
+    180: "group-hover/btn:rotate-180",
+  };
 
- const rotationClass = rotationClassMap[rotateDegrees] || "group-hover/btn:rotate-90";
+  const rotationClass = rotationClassMap[rotateDegrees] || "group-hover/btn:rotate-90";
 
- return cn(
-"group-hover/btn:scale-110 transition-all",
- rotationClass,
- additionalClasses
- );
+  return cn(
+    "transition-transform duration-150",
+    rotationClass,
+    additionalClasses
+  );
 };
 
 /**
  * Get complete button style with icon animation
- * Combines button and icon styles for convenience
  *
  * @param iconRotateDegrees - Degrees to rotate icon on hover (default: 90)
  * @param buttonClasses - Optional additional button classes
  * @param iconClasses - Optional additional icon classes
  * @returns Object with buttonClassName and iconClassName
- *
- * @example
- * const { buttonClassName, iconClassName } = getCompleteButtonStyle();
- * <Button className={buttonClassName}>
- * <Plus className={iconClassName} />
- * New Item
- * </Button>
  */
 export const getCompleteButtonStyle = (
- iconRotateDegrees: number = 90,
- buttonClasses?: string,
- iconClasses?: string
+  iconRotateDegrees: number = 90,
+  buttonClasses?: string,
+  iconClasses?: string
 ) => {
- return {
- buttonClassName: getEnhancedButtonStyle(buttonClasses),
- iconClassName: getIconAnimationStyle(iconRotateDegrees, iconClasses)
- };
+  return {
+    buttonClassName: getEnhancedButtonStyle(buttonClasses),
+    iconClassName: getIconAnimationStyle(iconRotateDegrees, iconClasses),
+  };
 };
