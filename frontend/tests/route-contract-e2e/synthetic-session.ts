@@ -56,6 +56,7 @@ export async function setSyntheticSession(context: BrowserContext): Promise<void
 /** The stub marks any unrouted request `unexpected: true`; a spec must leave none behind. */
 export async function expectNoUnexpectedStubRequests(request: APIRequestContext): Promise<void> {
   const response = await request.get(`${ADAPTER_BASE_URL}/__route-contract/requests`);
+  expect(response.status()).toBe(200);
   const { requests } = (await response.json()) as { requests: AdapterRequest[] };
   expect(requests.filter((r) => r.unexpected)).toEqual([]);
 }
