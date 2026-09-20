@@ -112,7 +112,7 @@ loop, whereas `/collections/from-filter` runs the loop server-side.
 ### `backend/app/extraction_domain/filter_ids.py`
 
 - `FILTER_IDS_RPC = "list_extracted_filter_matches"`
-- `SAVE_FROM_FILTER_MAX_DOCUMENTS: int` — read from env `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default `5000`.
+- `SAVE_FROM_FILTER_MAX_DOCUMENTS: int` — alias of `app.config.settings.SAVE_FROM_FILTER_MAX_DOCUMENTS` (env var `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default `5000`); kept importable from here so existing callers/tests don't break.
 - `class FilterTooLargeError(Exception)` — carries `.total`, `.cap`, `.jurisdiction` (`None` unless raised per-jurisdiction).
 - `class FilterIdsResult` (frozen dataclass) — `ids: list[str]`, `by_jurisdiction: dict[str, list[str]]`, plus a `.total` property.
 - `resolve_filter_ids(client, filters, text_query) -> FilterIdsResult` — calls the RPC once and buckets ids by `jurisdiction` in the same pass (used for the future PL/UK split).

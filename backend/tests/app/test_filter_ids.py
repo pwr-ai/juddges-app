@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import pytest
 
+from app.config import settings
 from app.extraction_domain.filter_ids import (
     FILTER_IDS_RPC,
+    SAVE_FROM_FILTER_MAX_DOCUMENTS,
     FilterIdsResult,
     FilterTooLargeError,
     check_cap,
@@ -16,6 +18,14 @@ from tests.app._fakes import FakeRpcClient
 from tests.app.test_db_contract_static import _declared_functions, _migration_sql
 
 pytestmark = pytest.mark.unit
+
+
+def test_save_from_filter_max_documents_is_read_from_settings():
+    """The cap now lives in `app.config.settings`; `filter_ids` re-exports the
+    same value under its historical name so existing importers keep working.
+    """
+    assert SAVE_FROM_FILTER_MAX_DOCUMENTS == settings.SAVE_FROM_FILTER_MAX_DOCUMENTS
+    assert SAVE_FROM_FILTER_MAX_DOCUMENTS == 5000
 
 
 def _rows(pl: int, uk: int) -> list[dict]:

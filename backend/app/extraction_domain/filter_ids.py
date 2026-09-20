@@ -10,18 +10,18 @@ the RPC here, not at the call sites.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
 
+from app.config import settings
 from app.models import JURISDICTIONS
 
 FILTER_IDS_RPC = "list_extracted_filter_matches"
-SAVE_FROM_FILTER_MAX_DOCUMENTS: int = int(
-    os.getenv("SAVE_FROM_FILTER_MAX_DOCUMENTS", "5000")
-)
+# Alias kept importable from here (historical name; env var and default are
+# declared once, in app.config.settings) so existing callers/tests don't break.
+SAVE_FROM_FILTER_MAX_DOCUMENTS: int = settings.SAVE_FROM_FILTER_MAX_DOCUMENTS
 
 
 class FilterTooLargeError(Exception):

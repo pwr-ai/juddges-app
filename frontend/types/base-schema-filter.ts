@@ -239,6 +239,3 @@ export interface CollectionFromFilterResponse {
   total_matched: number;
   pair_id: string | null;
 }
-
-/** Max documents per collection created from a filter (mirrors backend SAVE_FROM_FILTER_MAX_DOCUMENTS). */
-export const SAVE_FROM_FILTER_MAX_DOCUMENTS = 5000;
