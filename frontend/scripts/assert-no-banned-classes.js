@@ -20,7 +20,7 @@ const SCAN_EXTENSIONS = new Set(['.tsx', '.ts', '.css']);
 const ALLOWLIST_PREFIXES = ['components/editorial/', 'components/ui/skeleton.tsx'];
 
 const HUES =
-  'purple|indigo|violet|fuchsia|blue|sky|cyan|teal|emerald|green|amber|orange|rose|pink|slate|gray';
+  'purple|indigo|violet|fuchsia|blue|sky|cyan|teal|emerald|green|amber|orange|rose|pink|slate|gray|red|yellow';
 
 // Name → regex. Keep in sync with DESIGN.md "Avoid" and the #638 issue body.
 const PATTERNS = {

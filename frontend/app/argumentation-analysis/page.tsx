@@ -181,7 +181,7 @@ const ArgumentCard = React.memo(function ArgumentCard({
  <ul className="mt-1.5 space-y-1">
  {argument.counter_arguments.map((counter, idx) => (
  <li key={idx} className="text-sm text-foreground flex items-start gap-2">
- <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 mt-0.5 flex-shrink-0"/>
+ <AlertTriangle className="h-3.5 w-3.5 text-gold mt-0.5 flex-shrink-0"/>
  <span>{counter}</span>
  </li>
  ))}

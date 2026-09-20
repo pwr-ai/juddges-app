@@ -203,10 +203,8 @@ export function FilterToggleGroup<T = string>({
  <div className={cn(
 "flex items-center gap-0.5 p-0.5 rounded-lg",
  filterToggleContainerColors.background.light,
- filterToggleContainerColors.backdropBlur,
 "border",
  filterToggleContainerColors.border.light,
- filterToggleContainerColors.shadow,
  containerClassName
  )}>
  {options.map(renderButton)}
