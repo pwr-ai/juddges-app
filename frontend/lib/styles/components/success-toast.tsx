@@ -65,7 +65,7 @@ export function showSuccessToast({
  primaryAction,
  secondaryAction,
  icon: Icon,
- iconClassName ="text-green-500",
+ iconClassName = "text-oxblood",
  duration = 5000,
  onDismiss,
 }: SuccessToastProps): string | number {
