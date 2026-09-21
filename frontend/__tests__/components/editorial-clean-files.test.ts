@@ -161,7 +161,6 @@ const CLEAN_FILES = [
   'lib/schema-editor/rjsf/rjsf-config.ts',
   'types/schema-playground.ts',
   'lib/styles/colors/surfaces.ts',
-  'lib/button-utils.ts',
   'lib/styles/components/buttons.ts',
   'lib/styles/components/button.tsx',
   'lib/styles/components/variant-button.tsx',
@@ -184,6 +183,9 @@ const CLEAN_FILES = [
   'lib/styles/components/document-field-card.tsx',
   'lib/styles/components/user-card.tsx',
   'lib/styles/components/user-avatar.tsx',
+  'components/error-boundary.tsx',
+  'app/publications/admin/[id]/page.tsx',
+  'lib/styles/components/highlighted-text.tsx',
 ];
 
 /**

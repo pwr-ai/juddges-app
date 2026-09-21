@@ -14,7 +14,6 @@ import { Toggle } from '@/components/ui/toggle';
 import { Loader } from '@/components/ui/loader';
 import { ChatContainer } from './chat-container';
 import { DropdownButton } from '../dropdown-button';
-import { getIconButtonStyle } from '../buttons';
 
 export interface ChatInputProps {
  // Controlled mode (for studio)

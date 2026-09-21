@@ -152,7 +152,7 @@ export function DescriptionWidget(props: DescriptionWidgetProps): React.JSX.Elem
           className={cn(
             'min-h-[80px] resize-y',
             hasError && 'border-destructive focus-visible:ring-destructive',
-            isTooShort && 'border-yellow-500 focus-visible:ring-yellow-500'
+            isTooShort && 'border-gold focus-visible:ring-gold'
           )}
           rows={3}
         />
@@ -160,7 +160,7 @@ export function DescriptionWidget(props: DescriptionWidgetProps): React.JSX.Elem
         {/* Character counter */}
         <div className="absolute bottom-2 right-2 flex items-center gap-2">
           {isTooShort && (
-            <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">
+            <Badge variant="outline" className="text-xs border-gold text-gold">
               Too short
             </Badge>
           )}
@@ -168,7 +168,7 @@ export function DescriptionWidget(props: DescriptionWidgetProps): React.JSX.Elem
             variant="outline"
             className={cn(
               'text-xs',
-              isNearLimit && 'border-yellow-500 text-yellow-600',
+              isNearLimit && 'border-gold text-gold',
               remainingChars < 0 && 'border-destructive text-destructive'
             )}
           >

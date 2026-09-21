@@ -299,7 +299,7 @@ export default function SchemaDetailClient({ initialSchema }: SchemaDetailClient
  <AlertDialogAction
  onClick={handleDeleteConfirm}
  disabled={isDeleting}
- className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+ className="bg-oxblood hover:bg-oxblood-deep focus:ring-oxblood"
  >
  {isDeleting ? 'Deleting...' : 'Delete'}
  </AlertDialogAction>

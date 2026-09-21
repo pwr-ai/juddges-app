@@ -67,7 +67,7 @@ export const HighlightedText = ({ text, chunks }: HighlightedTextProps): React.J
  );
  }
  elements.push(
- <span key={`highlight-${index}`} className="bg-yellow-100 font-medium">
+ <span key={`highlight-${index}`} className="bg-gold-soft font-medium">
  {chunk.chunk_text}
  </span>
  );
