@@ -494,6 +494,12 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (request.method === 'GET' && url.pathname === '/dashboard/stats') {
+    logRequest(request, url);
+    sendJson(response, 200, { total_judgments: 12907 });
+    return;
+  }
+
   if (request.method === 'POST' && url.pathname === '/documents/batch') {
     logRequest(request, url);
     request.resume();
@@ -510,6 +516,55 @@ const server = createServer((request, response) => {
       job_id: IDS.extraction.sequenced,
       status: 'accepted',
       message: 'Extraction job created successfully',
+    });
+    return;
+  }
+
+  if (
+    request.method === 'POST' &&
+    url.pathname === '/extractions/base-schema/aggregate'
+  ) {
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 200, {
+      total: 320,
+      sample_n: 100,
+      seed: 7,
+      fields: {
+        appeal_outcome: {
+          kind: 'categorical',
+          multi: true,
+          values: [
+            { value: 'dismissed', count: 60 },
+            { value: 'allowed', count: 30 },
+          ],
+          other: 0,
+          null: 10,
+          covered: 90,
+        },
+        decision_date: {
+          kind: 'year',
+          values: [{ value: '2019', count: 100 }],
+          null: 0,
+          covered: 100,
+        },
+      },
+    });
+    return;
+  }
+
+  if (
+    request.method === 'POST' &&
+    url.pathname === '/extractions/base-schema/filter'
+  ) {
+    logRequest(request, url);
+    request.resume();
+    sendJson(response, 200, {
+      documents: [],
+      total_count: 320,
+      limit: 20,
+      offset: 0,
+      has_more: false,
     });
     return;
   }
