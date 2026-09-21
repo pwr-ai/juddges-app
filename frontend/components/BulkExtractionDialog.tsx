@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { VariantButton, LoadingIndicator, BaseCard, Badge } from "@/lib/styles/components";
+import { VariantButton, LoadingIndicator, Badge } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import {
  Layers,
- Sparkles,
+ Info,
  CheckCircle2,
  XCircle,
  Clock,
@@ -237,40 +238,40 @@ export function BulkExtractionDialog({
  const getJobStatusIcon = (status: string) => {
  const normalized = status.toUpperCase();
  if (['COMPLETED', 'SUCCESS'].includes(normalized)) {
- return <CheckCircle2 className="h-4 w-4 text-green-500"/>;
+ return <CheckCircle2 className="h-4 w-4 text-ink"/>;
  }
  if (['FAILED', 'FAILURE', 'CANCELLED'].includes(normalized)) {
- return <XCircle className="h-4 w-4 text-red-500"/>;
+ return <XCircle className="h-4 w-4 text-oxblood"/>;
  }
  if (normalized === 'PARTIALLY_COMPLETED') {
- return <AlertCircle className="h-4 w-4 text-yellow-500"/>;
+ return <AlertCircle className="h-4 w-4 text-gold"/>;
  }
- return <Loader2 className="h-4 w-4 text-blue-500 animate-spin"/>;
+ return <Loader2 className="h-4 w-4 text-gold animate-spin"/>;
  };
 
  const getJobStatusColor = (status: string): string => {
  const normalized = status.toUpperCase();
- if (['COMPLETED', 'SUCCESS'].includes(normalized)) return 'bg-green-500';
- if (['FAILED', 'FAILURE'].includes(normalized)) return 'bg-red-500';
- if (normalized === 'PARTIALLY_COMPLETED') return 'bg-yellow-500';
- return 'bg-blue-500';
+ if (['COMPLETED', 'SUCCESS'].includes(normalized)) return 'bg-ink';
+ if (['FAILED', 'FAILURE'].includes(normalized)) return 'bg-oxblood';
+ if (normalized === 'PARTIALLY_COMPLETED') return 'bg-gold';
+ return 'bg-gold';
  };
 
  return (
  <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
- <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+ <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-parchment border border-rule rounded-none shadow-lg p-6">
  <DialogHeader>
- <DialogTitle className="flex items-center gap-2">
- <Layers className="h-5 w-5"/>
+ <DialogTitle className="flex items-center gap-2 font-display text-ink text-lg">
+ <Layers className="h-5 w-5 text-oxblood"/>
  Bulk Extraction
  </DialogTitle>
  </DialogHeader>
 
  <div className="space-y-6">
  {/* Summary */}
- <div className="flex items-center gap-4 text-sm text-muted-foreground">
- <span>Collection: <span className="font-medium text-foreground">{collectionName}</span></span>
- <span>Documents: <span className="font-medium text-foreground">{documentCount}</span></span>
+ <div className="flex items-center gap-4 text-sm text-ink-soft">
+ <span>Collection: <span className="font-medium text-ink">{collectionName}</span></span>
+ <span>Documents: <span className="font-medium text-ink">{documentCount}</span></span>
  </div>
 
  {!bulkResult ? (
@@ -278,9 +279,9 @@ export function BulkExtractionDialog({
  {/* Schema Selection */}
  <div className="space-y-3">
  <div className="flex items-center justify-between">
- <label className="text-sm font-medium">Select Schemas to Apply</label>
+ <label className="text-sm font-medium text-ink">Select Schemas to Apply</label>
  <div className="flex items-center gap-2">
- <span className="text-xs text-muted-foreground">
+ <span className="text-xs font-mono text-ink-soft">
  {selectedSchemas.size} selected (max 10)
  </span>
  <VariantButton intent="text" onClick={handleSelectAll} className="text-xs">
@@ -289,9 +290,9 @@ export function BulkExtractionDialog({
  </div>
  </div>
 
- <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3">
+ <div className="space-y-2 max-h-64 overflow-y-auto border border-rule rounded-none p-3 bg-parchment">
  {publishedSchemas.length === 0 ? (
- <p className="text-sm text-muted-foreground text-center py-4">
+ <p className="text-sm text-ink-soft text-center py-4">
  No published schemas available. Create a schema first.
  </p>
  ) : (
@@ -305,10 +306,9 @@ export function BulkExtractionDialog({
  <div
  key={schema.id}
  className={cn(
-"flex items-center gap-3 p-3 rounded-md transition-colors cursor-pointer",
-"hover:bg-slate-100/50",
- selectedSchemas.has(schema.id) &&"bg-primary/5 border-primary/20",
-"border border-slate-200/50"
+ "flex items-center gap-3 p-3 rounded-none transition-colors cursor-pointer border",
+ "hover:bg-parchment-deep",
+ selectedSchemas.has(schema.id) ? "bg-parchment-deep border-ink" : "bg-parchment border-rule"
  )}
  onClick={() => handleToggleSchema(schema.id)}
  >
@@ -324,9 +324,7 @@ export function BulkExtractionDialog({
  {formatName(schema.name)}
  </span>
  {schema.is_verified && (
- <Badge className="text-xs px-1.5 py-0 bg-green-100 text-green-700">
- Verified
- </Badge>
+ <StatusBadge status="verified" size="sm"/>
  )}
  </div>
  {schema.description && (
@@ -362,25 +360,16 @@ export function BulkExtractionDialog({
 
  {/* Summary of what will happen */}
  {selectedSchemas.size > 0 && (
- <BaseCard
- clickable={false}
- className={cn(
-"p-3",
-"bg-blue-50/50",
-"border-blue-200/50"
- )}
- >
- <div className="flex items-start gap-2.5 w-full">
- <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-blue-500"/>
- <span className="text-sm text-muted-foreground leading-relaxed">
- This will create <span className="font-semibold text-foreground">{selectedSchemas.size}</span> extraction
+ <div className="p-3 bg-parchment border border-rule flex items-start gap-2.5 w-full">
+ <Info className="h-4 w-4 shrink-0 mt-0.5 text-ink"/>
+ <span className="text-sm text-ink-soft leading-relaxed">
+ This will create <span className="font-semibold text-ink">{selectedSchemas.size}</span> extraction
  {selectedSchemas.size > 1 ? ' jobs' : ' job'}, each processing{' '}
- <span className="font-semibold text-foreground">{documentCount}</span> document{documentCount > 1 ? 's' : ''},
+ <span className="font-semibold text-ink">{documentCount}</span> document{documentCount > 1 ? 's' : ''},
  for a total of{' '}
- <span className="font-semibold text-foreground">{selectedSchemas.size * documentCount}</span> extractions.
+ <span className="font-semibold text-ink">{selectedSchemas.size * documentCount}</span> extractions.
  </span>
  </div>
- </BaseCard>
  )}
 
  {/* Actions */}
@@ -388,7 +377,7 @@ export function BulkExtractionDialog({
  <VariantButton intent="secondary" onClick={onClose}>
  Cancel
  </VariantButton>
- <VariantButton intent="glass"
+ <VariantButton intent="primary"
  onClick={handleSubmit}
  disabled={selectedSchemas.size === 0 || isSubmitting}
  isLoading={isSubmitting}
@@ -396,10 +385,7 @@ export function BulkExtractionDialog({
  {isSubmitting ? (
  'Starting...'
  ) : (
- <>
- <Sparkles className="h-4 w-4"/>
- Start Bulk Extraction ({selectedSchemas.size} schema{selectedSchemas.size > 1 ? 's' : ''})
- </>
+ `Start Bulk Extraction (${selectedSchemas.size} schema{selectedSchemas.size > 1 ? 's' : ''})`
  )}
  </VariantButton>
  </div>
@@ -429,9 +415,9 @@ export function BulkExtractionDialog({
  <div
  key={job.schema_id}
  className={cn(
-"p-4 rounded-lg border",
-"bg-white/60",
-"border-slate-200/50"
+ "p-4 rounded-none border",
+ "bg-parchment",
+ "border-rule"
  )}
  >
  <div className="flex items-center justify-between mb-2">

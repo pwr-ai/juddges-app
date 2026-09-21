@@ -33,13 +33,25 @@
     "Breadcrumb": {
       "cardMode": "column"
     },
-    "Pagination": {
-      "cardMode": "column"
-    },
-    "PaginationEllipsis": {
-      "cardMode": "column"
-    },
     "Tabs": {
+      "cardMode": "column"
+    },
+    "DualStatCard": {
+      "cardMode": "column"
+    },
+    "Headline": {
+      "cardMode": "column"
+    },
+    "Section": {
+      "cardMode": "column"
+    },
+    "SectionHeader": {
+      "cardMode": "column"
+    },
+    "EditorialCardSkeleton": {
+      "cardMode": "column"
+    },
+    "EditorialPagination": {
       "cardMode": "column"
     }
   }

@@ -7,29 +7,17 @@
  * AFTER: Search-first navigation with only core workflow links
  *
  * Navigation Philosophy:
- * - Primary actions always visible (Search, Chat, Collections, Extraction)
- * - Saved Searches and the Admin Panel are visible for admins only
- * - Secondary/discovery features moved out of main sidebar
- * - Quick access via Command Palette (Cmd+K)
+ * - Signed-in groups are the four persona flows from lib/navigation/flows.ts (#690)
  */
 
 import {
  Search,
- FolderOpen,
  Bookmark,
- FileJson,
- TrendingUp,
  Layers,
  LogIn,
  UserPlus,
  LayoutDashboard,
- MessageSquare,
- Scale,
- GitBranch,
- Fingerprint,
- Waypoints,
  ShieldCheck,
- History,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +25,7 @@ import { usePathname } from "next/navigation";
 import { useCommandPaletteSafe } from "@/contexts/CommandPaletteContext";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { LanguageSwitcherMinimal } from "@/components/language-switcher";
+import { FLOWS, isStepActive, visibleSteps } from "@/lib/navigation/flows";
 
 import {
  Sidebar,
@@ -133,15 +122,11 @@ export function AppSidebar(): React.JSX.Element {
  <TooltipProvider delayDuration={300}>
  <Sidebar collapsible="offcanvas">
  <SidebarHeader className="px-4 py-4 border-b border-border relative overflow-visible">
- {/* Subtle background shimmer animation */}
- <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none"/>
-
  <Link href="/" aria-label={t('navigation.homeLinkLabel')} className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
  <JuddgesLogo
  size="md"
  showText={false}
- showGlow={true}
- className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
+ className="group-hover:opacity-80 transition-opacity duration-200 group-data-[collapsible=icon]:mx-auto"
  />
  </Link>
  </SidebarHeader>
@@ -208,15 +193,11 @@ export function AppSidebar(): React.JSX.Element {
  <TooltipProvider delayDuration={300}>
  <Sidebar collapsible="offcanvas">
  <SidebarHeader className="px-4 py-4 border-b border-border relative overflow-visible">
- {/* Subtle background shimmer animation */}
- <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full animate-shimmer-slide pointer-events-none"/>
-
  <Link href="/" aria-label={t('navigation.homeLinkLabel')} className="hover:opacity-80 transition-opacity group relative z-10 flex items-center justify-center group-data-[collapsible=icon]:justify-center">
  <JuddgesLogo
  size="md"
  showText={false}
- showGlow={true}
- className="group-hover:scale-105 transition-transform duration-300 group-data-[collapsible=icon]:mx-auto"
+ className="group-hover:opacity-80 transition-opacity duration-200 group-data-[collapsible=icon]:mx-auto"
  />
  <span className="ml-3 font-serif text-lg text-ink tracking-tight group-data-[collapsible=icon]:hidden">JuDDGES</span>
  </Link>
@@ -240,133 +221,43 @@ export function AppSidebar(): React.JSX.Element {
  </SidebarGroupContent>
  </SidebarGroup>
 
- {/* Phase 1 — Plan: create a research collection, define the coding schema */}
- <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phasePlan')}</SidebarGroupLabel>
+ {/* Persona flows — groups and items come from lib/navigation/flows.ts (#690) */}
+ {FLOWS.map((flow) => {
+ const steps = visibleSteps(flow, isAdmin);
+ if (steps.length === 0) return null;
+ return (
+ <SidebarGroup key={flow.id} className="p-0">
+ <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+ {t(flow.labelKey)}
+ </SidebarGroupLabel>
  <SidebarGroupContent className="px-0">
  <SidebarMenu className="space-y-1">
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.researchCollections')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname.startsWith("/collections")}>
- <Link href="/collections">
- <FolderOpen />
- <span>{t('navigation.researchCollections')}</span>
+ {steps.map((step) => {
+ const Icon = step.icon;
+ const label = t(step.labelKey);
+ return (
+ <SidebarMenuItem key={step.href}>
+ <ConditionalTooltip content={label} isIconMode={isIconMode}>
+ <SidebarMenuButton asChild isActive={isStepActive(step, pathname)}>
+ <Link href={step.href}>
+ <Icon />
+ <span>{label}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
  </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.schemas')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname.startsWith("/schemas")}>
- <Link href="/schemas">
- <FileJson />
- <span>{t('navigation.schemas')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
+ );
+ })}
  </SidebarMenu>
  </SidebarGroupContent>
  </SidebarGroup>
-
- {/* Phase 2 — Search: multi-session search and adding judgments to collections */}
- <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseSearch')}</SidebarGroupLabel>
- <SidebarGroupContent className="px-0">
- <SidebarMenu className="space-y-1">
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.searchJudgments')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/search"}>
- <Link href="/search">
- <Search />
- <span>{t('navigation.searchJudgments')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.searchExtractedData')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/search/extractions"}>
- <Link href="/search/extractions">
- <FileJson />
- <span>{t('navigation.searchExtractedData')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.chat')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/chat" || pathname.startsWith("/chat/")}>
- <Link href="/chat">
- <MessageSquare />
- <span>{t('navigation.chat')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.topicTrends')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/topics"}>
- <Link href="/topics">
- <TrendingUp />
- <span>{t('navigation.topicTrends')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
-   <ConditionalTooltip content="Search History" isIconMode={isIconMode}>
-     <SidebarMenuButton asChild isActive={pathname === "/history"}>
-       <Link href="/history">
-         <History />
-         <span>Search History</span>
-       </Link>
-     </SidebarMenuButton>
-   </ConditionalTooltip>
- </SidebarMenuItem>
- </SidebarMenu>
- </SidebarGroupContent>
- </SidebarGroup>
-
- {/* Phase 3 — Analyze: AI analysis surfaces over the judgments already found */}
- <SidebarGroup className="p-0">
- <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.phaseAnalyze')}</SidebarGroupLabel>
- <SidebarGroupContent className="px-0">
- <SidebarMenu className="space-y-1">
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.precedentSearch')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/precedents"}>
- <Link href="/precedents">
- <Scale />
- <span>{t('navigation.precedentSearch')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.reasoningLines')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname.startsWith("/reasoning-lines")}>
- <Link href="/reasoning-lines">
- <Waypoints />
- <span>{t('navigation.reasoningLines')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
- </SidebarMenu>
- </SidebarGroupContent>
- </SidebarGroup>
+ );
+ })}
 
  {/* Administration — only rendered for admins; AdminGuard enforces the same
-    app_metadata.is_admin check server-side on every /admin page. Research
-    tools (#607) sit here too: they work, but need a raw document ID or a
-    judge-rich corpus, so they are not part of the user workflow. */}
+    app_metadata.is_admin check server-side on every /admin page. The
+    admin-gated research tools (#607) now live in the Case flow as
+    adminOnly steps of lib/navigation/flows.ts. */}
  {isAdmin && (
  <SidebarGroup className="p-0">
  <SidebarGroupLabel className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('navigation.administration')}</SidebarGroupLabel>
@@ -389,28 +280,6 @@ export function AppSidebar(): React.JSX.Element {
  <Link href="/topic-modeling">
  <Layers />
  <span>{t('navigation.topicModeling')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.argumentationAnalysis')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/argumentation-analysis"}>
- <Link href="/argumentation-analysis">
- <GitBranch />
- <span>{t('navigation.argumentationAnalysis')}</span>
- </Link>
- </SidebarMenuButton>
- </ConditionalTooltip>
- </SidebarMenuItem>
-
- <SidebarMenuItem>
- <ConditionalTooltip content={t('navigation.judgeFingerprint')} isIconMode={isIconMode}>
- <SidebarMenuButton asChild isActive={pathname === "/judge-fingerprint"}>
- <Link href="/judge-fingerprint">
- <Fingerprint />
- <span>{t('navigation.judgeFingerprint')}</span>
  </Link>
  </SidebarMenuButton>
  </ConditionalTooltip>
@@ -452,11 +321,11 @@ export function AppSidebar(): React.JSX.Element {
  type="text"
  placeholder={t('navigation.quickSearch')}
  readOnly
- className="w-full h-9 px-3 pr-12 rounded-[0.5rem] bg-[rgba(0,0,0,0.04)] border border-[rgba(255,255,255,0.1)] text-[#475569] placeholder:text-[#475569] text-sm font-medium shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-[rgba(255,255,255,0.5)] transition-all duration-200"
+ className="w-full h-9 px-3 pr-12 rounded-none bg-parchment border border-rule text-ink placeholder:text-ink-soft text-sm font-medium focus:outline-none focus:border-oxblood transition-colors"
  />
  {/* ⌘K Shortcut Icon - Physical plastic key */}
- <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-white rounded border border-[rgba(0,0,0,0.1)] shadow-sm">
- <kbd className="pointer-events-none text-[10px] font-mono font-medium text-[#475569]">
+ <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-parchment-deep rounded-none border border-rule">
+ <kbd className="pointer-events-none text-[10px] font-mono font-medium text-ink-soft">
  ⌘K
  </kbd>
  </div>

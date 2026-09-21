@@ -50,7 +50,7 @@ export const DocumentDialog = ({ isOpen, onClose, document, chunks }: DocumentDi
  </DialogTitle>
  </DialogHeader>
 
- <div className="overflow-y-auto flex-1 p-4 mt-2 bg-slate-50 text-sm rounded">
+ <div className="overflow-y-auto flex-1 p-4 mt-2 bg-parchment-deep text-sm rounded-none border border-rule">
  <HighlightedText text={document.full_text || ""} chunks={chunks} />
  </div>
  </>

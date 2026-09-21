@@ -1,7 +1,7 @@
 import React from "react";
 import "@/app/globals.css";
 import localFont from "next/font/local";
-import { Instrument_Serif } from "next/font/google";
+import { Tenor_Sans } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -27,12 +27,13 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
+// Display face: Tenor Sans is the open substitute for Zapf Humanist / Optima,
+// the PWr identity typeface (SIW 2025-12). Single weight, no italic.
+const tenorSans = Tenor_Sans({
+  subsets: ["latin", "latin-ext"],
   weight: "400",
-  display: "swap", // Avoid invisible text (FOIT) while the serif loads
-  variable: "--font-instrument-serif",
-  preload: false, // Only used on admin and landing pages, not globally
+  display: "swap", // Avoid invisible text (FOIT) while the display face loads
+  variable: "--font-tenor-sans",
 });
 
 // Get brand configuration at build/render time
@@ -141,7 +142,22 @@ export default function RootLayout({
   `;
 
   return (
-    <html lang="en" data-scroll-behavior="smooth" data-brand={currentBrand}>
+    // The next/font `.variable` classes must sit on <html>, not <body>. They are
+    // what declares --font-geist-sans / --font-geist-mono / --font-tenor-sans,
+    // and the design tokens in globals.css (--font-sans, --font-display,
+    // --font-serif, --font-mono) are declared on :root and reference them. A
+    // custom property that references an undefined variable is invalid at
+    // computed-value time, so with these classes one level below :root every
+    // token computed to nothing and the whole app silently fell back to the
+    // system font stack. The trailing families inside each token (Optima,
+    // system-ui, Georgia) do not rescue it — the entire value is invalidated,
+    // not a single family.
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      data-brand={currentBrand}
+      className={`${geistSans.variable} ${geistMono.variable} ${tenorSans.variable}`}
+    >
       <head>
         {/*
           Global Chunk Error Handler
@@ -166,7 +182,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: runtimeConfig }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <JsonLd data={getSiteStructuredData()} />
         <ChunkErrorBoundary>
           <QueryProvider>

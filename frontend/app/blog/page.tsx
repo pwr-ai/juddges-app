@@ -8,7 +8,6 @@ import {
   BookOpen,
   GraduationCap,
   ArrowRight,
-  Sparkles,
   TrendingUp,
   Grid3x3,
   List,
@@ -16,6 +15,7 @@ import {
 import type { BlogCategory, BlogPost } from "@/types/blog";
 import { cn } from "@/lib/utils";
 import { Header, Badge, PageContainer, SearchInput, EmptyState, VariantButton, LightCard, FilterToggleGroup } from "@/lib/styles/components";
+import { EditorialCardSkeleton } from "@/components/editorial";
 import { logger } from "@/lib/logger";
 
 interface BlogPagination {
@@ -245,10 +245,10 @@ export default function BlogPage(): React.JSX.Element {
         {/* Credibility Badge */}
         <LightCard padding="sm" className="mb-6">
           <div className="flex items-center gap-3 text-sm">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <GraduationCap className="size-5 text-primary" />
+            <div className="p-2 rounded-none bg-parchment-deep text-oxblood border border-rule">
+              <GraduationCap className="size-5" />
             </div>
-            <span className="text-muted-foreground font-medium">
+            <span className="text-ink-soft font-medium">
               Research Blog by Wrocław University of Science and Technology
             </span>
           </div>
@@ -257,11 +257,11 @@ export default function BlogPage(): React.JSX.Element {
         {/* Title Section */}
         <div className="mb-8">
           <Badge variant="outline" className="mb-4 flex items-center gap-1.5 w-fit">
-            <Sparkles className="size-3" />
+            <BookOpen className="size-3" />
             Latest Insights
           </Badge>
           <Header
-            icon={Sparkles}
+            icon={BookOpen}
             title="Research & Insights"
             size="4xl"
             description={
@@ -341,7 +341,7 @@ export default function BlogPage(): React.JSX.Element {
               </span>
             </div>
 
-            <div className="flex items-center gap-1 border rounded-lg p-1">
+            <div className="flex items-center gap-1 border border-rule rounded-none p-0.5 bg-parchment">
               <VariantButton intent="icon"
                 icon={Grid3x3}
                 onClick={() => setViewMode("grid")}
@@ -365,24 +365,13 @@ export default function BlogPage(): React.JSX.Element {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             <span className="sr-only">Loading blog posts…</span>
             {[...Array(6)].map((_, i) => (
-              <LightCard key={i} className="h-full min-h-[400px] p-0">
-                <div className="relative h-64 bg-gradient-to-br from-muted/50 to-muted/30 animate-pulse" />
-                <div className="p-6 space-y-4">
-                  <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-                  <div className="space-y-2">
-                    <div className="h-5 w-full rounded bg-muted animate-pulse" />
-                    <div className="h-5 w-3/4 rounded bg-muted animate-pulse" />
-                  </div>
-                  <div className="h-4 w-full rounded bg-muted animate-pulse" />
-                  <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
-                </div>
-              </LightCard>
+              <EditorialCardSkeleton key={i} minHeight="400px" lines={4} />
             ))}
           </div>
         ) : error ? (
-          <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
-            <h2 className="text-xl font-semibold text-foreground">Unable to load blog posts</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <div role="alert" className="rounded-none border border-oxblood/40 bg-parchment-deep p-8 text-center">
+            <h2 className="font-serif text-xl font-semibold text-ink">Unable to load blog posts</h2>
+            <p className="mt-2 text-sm text-ink-soft">{error}</p>
             <VariantButton
               intent="secondary"
               className="mt-5"
@@ -449,10 +438,10 @@ export default function BlogPage(): React.JSX.Element {
 
       {/* CTA Section */}
       <LightCard padding="lg" className="mt-16 text-center">
-        <h2 className="text-3xl font-bold mb-4 bg-gradient-to-br from-foreground via-primary to-primary bg-clip-text text-transparent">
+        <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4 text-ink">
           Stay Updated
         </h2>
-        <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+        <p className="text-ink-soft mb-8 max-w-2xl mx-auto">
           Get notified when we publish new research insights and tutorials
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">

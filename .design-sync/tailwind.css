@@ -17,9 +17,12 @@
 @source inline("{p,px,py,pt,pb,pl,pr,m,mx,my,mt,mb,ml,mr,gap,gap-x,gap-y,space-y,space-x}-{0,0.5,1,1.5,2,2.5,3,4,5,6,7,8,9,10,11,12,14,16,20,24,28,32,40,48}");
 @source inline("{w,h,max-w,min-h}-{full,screen,auto,px,fit,min,max} max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,prose} {sm,md,lg,xl,2xl}:grid-cols-{1,2,3,4,6,12} grid-cols-{1,2,3,4,5,6,12} col-span-{1,2,3,4,5,6,7,8,9,10,11,12} {sm,md,lg,xl}:col-span-{1,2,3,4,5,6,7,8,9,10,11,12}");
 @source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,8xl} leading-{none,tight,snug,normal,relaxed,loose} {sm,md,lg}:text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,8xl} rounded-{none,sm,md,full} border-{0,t,b,l,r,x,y} divide-{x,y} {flex,grid,block,inline,inline-flex,hidden,items-{start,center,end,baseline,stretch},justify-{start,center,end,between,around},flex-{row,col,wrap,1,none},shrink-0,grow}");
+@source inline("{bg,text,border,border-t,border-b,border-l,border-r,ring,fill,stroke,decoration,outline,divide,from,to}-pwr-{red,red-deep,sand,gold,black,grey,paper,panel,line,line-strong}");
+@source inline("{hover,focus}:{bg,text,border}-pwr-{red,red-deep,sand,gold,black,grey,paper,panel,line,line-strong}");
+@source inline("font-display pwr-bar");
 
 :root {
   --font-geist-sans: "Geist";
   --font-geist-mono: "Geist Mono";
-  --font-instrument-serif: "Instrument Serif";
+  --font-tenor-sans: "Tenor Sans";
 }

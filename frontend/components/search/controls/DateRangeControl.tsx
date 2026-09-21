@@ -1,17 +1,7 @@
 "use client";
 import React from "react";
 import type { BaseFilterValue, BaseNumericRange } from "@/lib/store/searchStore";
-
-function dateToEpochSeconds(iso: string): number | undefined {
-  if (!iso) return undefined;
-  const t = Date.parse(`${iso}T00:00:00Z`);
-  return Number.isFinite(t) ? Math.floor(t / 1000) : undefined;
-}
-function epochSecondsToDate(s: number | undefined): string {
-  if (typeof s !== "number") return "";
-  const d = new Date(s * 1000);
-  return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
-}
+import { dateToEpochSeconds, epochSecondsToDate } from "@/lib/extractions/epoch-date";
 
 export interface DateRangeControlProps {
   label: string;

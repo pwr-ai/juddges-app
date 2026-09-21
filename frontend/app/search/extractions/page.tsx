@@ -7,6 +7,8 @@ import { ActiveFilterChips } from "@/components/filters/extracted-search-filters
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { SaveAsCollectionDialog } from "@/components/search/SaveAsCollectionDialog";
+import { ScopeFilters } from "@/components/search/ScopeFilters";
 import { Eyebrow, Headline } from "@/components/editorial";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
@@ -20,104 +22,18 @@ import {
   useExtractionResults,
 } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
+import type { FilterUrlState } from "@/lib/extractions/use-extracted-data-filters";
+import { buildDocumentHref } from "@/lib/extractions/document-href";
+import { applyDrawerChange, toDrawerFilters } from "@/lib/extractions/drawer-adapter";
+import { isCoreFilterField } from "@/lib/extractions/base-schema-filter-config";
 import type {
   BaseSchemaFilterRequest,
   BaseSchemaFilterResultRow,
   BaseSchemaFilters,
 } from "@/types/base-schema-filter";
-import type { BaseFilters, BaseFilterValue } from "@/lib/store/searchStore";
+import type { BaseFilterValue } from "@/lib/store/searchStore";
 
 const pageLogger = logger.child("ExtractionSearchPage");
-
-// =============================================================================
-// Adapter: BaseSchemaFilters (PG RPC) ↔ BaseFilters (drawer's union)
-// =============================================================================
-
-function toDrawerFilters(s: BaseSchemaFilters): BaseFilters {
-  const out: BaseFilters = {};
-  for (const [field, value] of Object.entries(s)) {
-    if (value === undefined || value === null) continue;
-
-    // Skip substring fields - they're handled separately above the drawer
-    if (field === "case_name" ||
-        field === "appeal_court_judges_names" ||
-        field === "offender_representative_name") {
-      continue;
-    }
-
-    // Convert to BaseFilterValue shape based on value type
-    if (Array.isArray(value)) {
-      if (value.length === 0) continue;
-      // Could be enum_multi or tag_array - both use array format
-      out[field] = { kind: "tag_array", values: value };
-    } else if (typeof value === "boolean") {
-      out[field] = { kind: "boolean_tri", value };
-    } else if (typeof value === "number") {
-      out[field] = { kind: "numeric_range", range: { min: value, max: value } };
-    } else if (typeof value === "object" && value !== null) {
-      if ("min" in value || "max" in value) {
-        out[field] = {
-          kind: "numeric_range",
-          range: {
-            min: (value as { min?: number }).min,
-            max: (value as { max?: number }).max,
-          },
-        };
-      } else if ("from" in value || "to" in value) {
-        out[field] = {
-          kind: "date_range",
-          range: {
-            min: (value as { from?: number }).from,
-            max: (value as { to?: number }).to,
-          },
-        };
-      }
-    }
-  }
-  return out;
-}
-
-function applyDrawerChange(
-  s: BaseSchemaFilters,
-  field: string,
-  value: BaseFilterValue | undefined,
-): BaseSchemaFilters {
-  const next = { ...s };
-
-  if (value === undefined) {
-    delete (next as Record<string, unknown>)[field];
-    return next;
-  }
-
-  // Convert back to BaseSchemaFilters shape
-  switch (value.kind) {
-    case "tag_array":
-    case "enum_multi":
-      (next as Record<string, unknown>)[field] = value.values;
-      break;
-    case "boolean_tri":
-      (next as Record<string, unknown>)[field] = value.value;
-      break;
-    case "numeric_range":
-      if (value.range.min === value.range.max && value.range.min !== undefined) {
-        (next as Record<string, unknown>)[field] = value.range.min;
-      } else {
-        (next as Record<string, unknown>)[field] = {
-          min: value.range.min,
-          max: value.range.max,
-        };
-      }
-      break;
-    case "date_range":
-      (next as Record<string, unknown>)[field] = {
-        from: value.range.min,
-        to: value.range.max,
-      };
-      break;
-  }
-
-  return next;
-}
 
 // =============================================================================
 // Substring inputs component - sits above the drawer
@@ -182,11 +98,17 @@ function SubstringInputs({
   );
 }
 
-function ResultRow({ row }: { row: BaseSchemaFilterResultRow }) {
+function ResultRow({
+  row,
+  urlState,
+}: {
+  row: BaseSchemaFilterResultRow;
+  urlState: FilterUrlState;
+}) {
   const date = row.decision_date ? new Date(row.decision_date) : null;
   return (
     <Link
-      href={`/judgments/${row.id}`}
+      href={buildDocumentHref(row.id, urlState)}
       className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -222,11 +144,13 @@ export function ResultList({
   isLoading,
   hasActiveFilters,
   onClearAll,
+  urlState,
 }: {
   rows: BaseSchemaFilterResultRow[];
   isLoading: boolean;
   hasActiveFilters: boolean;
   onClearAll: () => void;
+  urlState: FilterUrlState;
 }) {
   if (isLoading && rows.length === 0) {
     return (
@@ -260,7 +184,7 @@ export function ResultList({
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <ResultRow key={row.id} row={row} />
+        <ResultRow key={row.id} row={row} urlState={urlState} />
       ))}
     </div>
   );
@@ -275,9 +199,11 @@ function ExtractionSearchPage() {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,
+    nlQuestion,
   } = useExtractedDataFilters();
 
   const request = useMemo<BaseSchemaFilterRequest>(
@@ -342,18 +268,22 @@ function ExtractionSearchPage() {
   const applyNlFilters = (
     nextFilters: BaseSchemaFilters,
     nextTextQuery: string,
+    question: string,
   ) => {
     setFilters(nextFilters);
     setTextQuery(nextTextQuery);
+    setNlQuestion(question);
   };
 
   const resetDrawerFilters = () => {
-    // Reset only non-substring fields
+    // Reset only non-substring, non-core fields — a drawer reset must not
+    // clear jurisdiction/decision_date, which live outside the drawer.
     const next = { ...filters };
     Object.keys(filters).forEach(field => {
       if (field !== "case_name" &&
           field !== "appeal_court_judges_names" &&
-          field !== "offender_representative_name") {
+          field !== "offender_representative_name" &&
+          !isCoreFilterField(field)) {
         delete (next as Record<string, unknown>)[field];
       }
     });
@@ -390,6 +320,8 @@ function ExtractionSearchPage() {
           onChange={setSubstringFilter}
         />
 
+        <ScopeFilters filters={filters} onChange={setFilters} />
+
         <QuickFilters
           filters={drawerFilters}
           onChange={setDrawerFilter}
@@ -422,11 +354,20 @@ function ExtractionSearchPage() {
                 : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
             {isFetching && !isLoading && " (updating…)"}
           </p>
-          {error && (
-            <Button variant="ghost" size="sm" onClick={() => clearAll()}>
-              Reset
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <SaveAsCollectionDialog
+              filters={filters}
+              textQuery={textQuery}
+              total={total}
+              defaultName={nlQuestion ?? ""}
+              disabled={isLoading || Boolean(error)}
+            />
+            {error && (
+              <Button variant="ghost" size="sm" onClick={() => clearAll()}>
+                Reset
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -456,6 +397,7 @@ function ExtractionSearchPage() {
           isLoading={isLoading}
           hasActiveFilters={activeCount > 0 || textQuery.trim().length > 0}
           onClearAll={clearAll}
+          urlState={{ filters, textQuery, page, nlQuestion }}
         />
       )}
 

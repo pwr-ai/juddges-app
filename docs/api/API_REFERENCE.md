@@ -649,6 +649,104 @@ Get collection details with all documents.
 }
 ```
 
+#### Create Collection From Filter
+
+```http
+POST /collections/from-filter
+```
+
+Create a collection from every judgment matching a base-schema filter (server
+resolves and bulk-adds the ids — no client-side paging). Full RPC/response
+contract, error codes and the shared filter-key semantics are documented in
+[Base-schema filter API](../reference/base-schema-filter-api.md).
+
+**Request Body:**
+
+```json
+{
+  "name": "UK sentencing appeals 2023",
+  "description": "Optional, ≤1000 chars",
+  "filters": { "jurisdiction": ["UK"], "decision_date": { "from": "2023-01-01", "to": "2023-12-31" } },
+  "text_query": "sentencing guideline"
+}
+```
+
+**Example Response (201):**
+
+```json
+{
+  "collections": [
+    {
+      "jurisdiction": null,
+      "collection": {
+        "id": "990e8400-e29b-41d4-a716-446655440004",
+        "user_id": "770e8400-e29b-41d4-a716-446655440001",
+        "name": "UK sentencing appeals 2023",
+        "description": "Optional, ≤1000 chars",
+        "created_at": "2024-02-13T16:00:00Z",
+        "updated_at": "2024-02-13T16:00:00Z"
+      },
+      "added_count": 42
+    }
+  ],
+  "total_matched": 42,
+  "pair_id": null
+}
+```
+
+**Errors:** `400 INVALID_COLLECTION_ID` (`filters.collection_ids` has a
+non-UUID entry), `404 COLLECTION_NOT_FOUND` (`filters.collection_ids`
+references a collection the caller does not own), `400 FILTER_EMPTY` (filter
+matches nothing), `413 FILTER_TOO_LARGE` (above
+`SAVE_FROM_FILTER_MAX_DOCUMENTS`, default 5000), `503
+DATABASE_UNAVAILABLE`.
+
+#### Natural-Language Filter
+
+```http
+POST /extractions/base-schema/nl-filter
+```
+
+Translate a plain-language question (English or Polish) into the structured
+`{filters, text_query}` payload accepted by `POST
+/extractions/base-schema/filter` and `POST /collections/from-filter`. Opt-in
+"paste your question" shortcut on `/search/extractions` — it only pre-fills
+the filter form for review, it never runs a search or creates a collection
+itself. Requires `Authorization: Bearer <JWT>`. Model, prompt rules and date
+semantics are documented in the ["NL filter generator" section of the
+Base-schema filter API reference](../reference/base-schema-filter-api.md#post-extractionsbase-schemanl-filter).
+
+**Request Body:**
+
+```json
+{ "query": "kobiety skazane za oszustwo z wyrokiem w zawieszeniu, PL i UK, 2015–2024" }
+```
+
+**Example Response (200):**
+
+```json
+{
+  "filters": {
+    "offender_gender": ["gender_female"],
+    "convict_offences": ["fraud"],
+    "sentences_received": ["suspended sentence"],
+    "jurisdiction": ["PL", "UK"],
+    "decision_date": { "from": "2015-01-01", "to": "2024-12-31" }
+  },
+  "text_query": null
+}
+```
+
+The output can include the same `jurisdiction`/`decision_date` core-column
+keys as `POST /collections/from-filter` above. `case_type` and `court_level`
+are never emitted — excluded on purpose (`NL_EXCLUDED_CORE_FIELDS`) because
+the underlying data is wrong for UK criminal appeals (see
+`docs/reference/APP_STATUS_2026-08-21.md` §4).
+
+**Errors:** `422 NL_FILTER_INVALID` (the LLM produced a value outside the
+allowed enums; rephrase the question), `502 NL_FILTER_FAILED` (translation
+failed for another reason).
+
 ### Analytics
 
 #### Get Statistics

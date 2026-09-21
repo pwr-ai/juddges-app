@@ -1,4 +1,4 @@
-import { BaseCard } from "@/lib/styles/components";
+import { EditorialCard } from "@/components/editorial";
 import { ExtractionJob } from "./types";
 import { ExtractionJobCard } from "./ExtractionJobCard";
 
@@ -11,7 +11,7 @@ interface RecentExtractionsProps {
 export function RecentExtractions({ jobs, onOpen, onRetry }: RecentExtractionsProps) {
   return (
     <div className="mb-8 -mt-4">
-      <h3 className="text-sm md:text-base font-semibold text-foreground mb-6">
+      <h3 className="editorial-display text-lg text-ink mb-6">
         Recent Extractions
       </h3>
       {jobs.length > 0 ? (
@@ -26,16 +26,11 @@ export function RecentExtractions({ jobs, onOpen, onRetry }: RecentExtractionsPr
           ))}
         </div>
       ) : (
-        <BaseCard
-          variant="light"
-          className="text-center"
-        >
-          <div className="-m-3.5 p-6">
-            <p className="text-sm text-muted-foreground">
-              Your recent extractions will appear here once you start extracting data from documents.
-            </p>
-          </div>
-        </BaseCard>
+        <EditorialCard flat className="text-center">
+          <p className="text-sm text-ink-soft">
+            Your recent extractions will appear here once you start extracting data from documents.
+          </p>
+        </EditorialCard>
       )}
     </div>
   );

@@ -20,7 +20,7 @@ import {
  Loader2,
  History,
  RotateCcw,
- Sparkles,
+ Bot,
  Edit,
  Code,
  Plus,
@@ -42,9 +42,9 @@ interface VersionsTabProps {
 
 // Icon mapping for change types
 const CHANGE_TYPE_ICONS: Record<SchemaChangeType, React.ReactNode> = {
- create: <Plus className="h-3.5 w-3.5"/>,
- ai_update: <Sparkles className="h-3.5 w-3.5"/>,
- visual_edit: <Edit className="h-3.5 w-3.5"/>,
+  create: <Plus className="h-3.5 w-3.5"/>,
+  ai_update: <Bot className="h-3.5 w-3.5"/>,
+  visual_edit: <Edit className="h-3.5 w-3.5"/>,
  code_edit: <Code className="h-3.5 w-3.5"/>,
  import: <Download className="h-3.5 w-3.5"/>,
  bulk_import: <Download className="h-3.5 w-3.5"/>,
@@ -52,16 +52,16 @@ const CHANGE_TYPE_ICONS: Record<SchemaChangeType, React.ReactNode> = {
  merge: <GitMerge className="h-3.5 w-3.5"/>,
 };
 
-// Color mapping for change types
+// Style mapping for change types
 const CHANGE_TYPE_COLORS: Record<SchemaChangeType, string> = {
- create: "bg-green-100 text-green-700",
- ai_update: "bg-purple-100 text-purple-700",
- visual_edit: "bg-blue-100 text-blue-700",
- code_edit: "bg-gray-100 text-gray-700",
- import: "bg-cyan-100 text-cyan-700",
- bulk_import: "bg-cyan-100 text-cyan-700",
- rollback: "bg-orange-100 text-orange-700",
- merge: "bg-indigo-100 text-indigo-700",
+  create: "text-ink border-rule",
+  ai_update: "text-gold border-rule",
+  visual_edit: "text-ink border-rule",
+  code_edit: "text-ink border-rule",
+  import: "text-ink border-rule",
+  bulk_import: "text-ink border-rule",
+  rollback: "text-oxblood border-rule",
+  merge: "text-ink border-rule",
 };
 
 // Label mapping for change types
@@ -278,16 +278,16 @@ function VersionCard({
  <div className="flex-1 min-w-0">
  {/* Version header */}
  <div className="flex items-center gap-2 mb-2">
- <Badge variant="outline"className="font-mono">
+ <Badge variant="outline" className="font-mono">
  v{version.version_number}
  </Badge>
- <Badge className={cn("gap-1", colorClass)}>
+ <Badge variant="outline" className={cn("gap-1 font-mono text-xs border bg-transparent", colorClass)}>
  {icon}
  {label}
  </Badge>
  {isCurrent && (
- <Badge variant="default"className="gap-1 bg-green-500">
- <Check className="h-3 w-3"/>
+ <Badge variant="outline" className="gap-1 font-mono text-xs border border-rule text-ink bg-transparent">
+ <Check className="h-3 w-3" />
  Current
  </Badge>
  )}

@@ -36,7 +36,7 @@ const PL_SOFT = editorialSeries.plSoft;
 
 /**
  * Ranked editorial list — replaces a horizontal-bar Plot for top-N rankings.
- * Renders each entry as: rank · italic serif name with hairline progress rule
+ * Renders each entry as: rank · display-face name with hairline progress rule
  * · tabular numeral. Designed for the "Most Active Judges" figures.
  */
 function RankedList({ items, color }: {
@@ -57,7 +57,7 @@ function RankedList({ items, color }: {
               {String(i + 1).padStart(2, '0')}
             </span>
             <span className="min-w-0">
-              <span className="block truncate font-serif text-[15px] italic leading-snug text-[color:var(--ink)]">
+              <span className="block truncate font-serif text-[15px] leading-snug text-[color:var(--ink)]">
                 {item.name}
               </span>
               <span aria-hidden className="mt-1 block h-px bg-[color:var(--rule)]">
@@ -477,12 +477,12 @@ export default function DatasetComparisonPage() {
               hole: 0.45,
               marker: {
                 colors: editorialCategorical,
-                line: { color: '#F5F1E8', width: 2 },
+                line: { color: '#FFFFFF', width: 2 },
               },
               textinfo: 'label+percent',
               textposition: 'outside',
-              textfont: { family: 'Geist, system-ui, sans-serif', size: 11, color: '#1A1A2E' },
-              hoverlabel: { font: { family: 'Geist, system-ui, sans-serif', size: 12, color: '#F5F1E8' } },
+              textfont: { family: 'Geist, system-ui, sans-serif', size: 11, color: '#000000' },
+              hoverlabel: { font: { family: 'Geist, system-ui, sans-serif', size: 12, color: '#FFFFFF' } },
             }]}
             layout={{
               ...editorialPlotLayout,

@@ -281,11 +281,11 @@ export function CanvasPane({ sessionId, collectionId, onPreviewClick }: CanvasPa
       {/* Validation feedback */}
       {saveSuccess && (
         <div className="px-6 pt-4">
-          <Alert className="border-green-600 bg-green-50">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <Alert className="rounded-none border-rule bg-parchment text-ink">
+            <CheckCircle2 className="h-4 w-4 text-ink" />
             <AlertDescription>
-              <div className="text-sm text-green-900">
-                <p className="font-medium">Schema saved successfully!</p>
+              <div className="text-sm font-medium">
+                Schema saved
               </div>
             </AlertDescription>
           </Alert>

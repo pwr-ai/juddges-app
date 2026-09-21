@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Search,
-  Zap,
+  Layers,
   GraduationCap,
   Landmark,
   BookOpen,
@@ -51,7 +51,7 @@ interface LandingPageProps {
 function StatsUnavailable() {
   return (
     <div role="alert" className="border-l-2 border-oxblood pl-4">
-      <p className="font-serif text-lg italic text-oxblood">
+      <p className="font-serif text-lg text-oxblood">
         Statistics are temporarily unavailable
       </p>
       <p className="mt-1 text-sm text-[color:var(--ink-soft)]">
@@ -475,7 +475,7 @@ const capabilities: ReadonlyArray<{
     cta: "Try search",
   },
   {
-    icon: Zap,
+    icon: Layers,
     title: "Schema Extraction",
     description:
       "Define custom data schemas and let AI agents extract structured information from legal documents at scale. Build datasets from raw judgments.",
@@ -732,7 +732,7 @@ function HowItWorksSection() {
                 {/* Marginalia numeral */}
                 <span
                   aria-hidden
-                  className="text-7xl font-serif italic text-[color:var(--oxblood)]/30 leading-[0.85] tabular-nums select-none"
+                  className="text-7xl font-serif text-[color:var(--oxblood)]/30 leading-[0.85] tabular-nums select-none"
                 >
                   {step.number}
                 </span>

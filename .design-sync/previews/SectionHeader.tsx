@@ -37,3 +37,13 @@ export const WithAction = () => (
 );
 
 export const TitleOnly = () => <SectionHeader title="Sąd Apelacyjny we Wrocławiu" />;
+
+export const Bar = () => (
+  <SectionHeader
+    variant="bar"
+    eyebrow="Coverage"
+    numeral="02"
+    title={<>Two jurisdictions, <em>one</em> archive</>}
+    description="Polish common courts alongside the England and Wales Court of Appeal."
+  />
+);

@@ -3,25 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
- HelpCircle,
- Search,
- BookOpen,
- MessageSquare,
- Database,
- Sparkles,
- FileText,
- Settings,
- Shield,
- Mail,
+  HelpCircle,
+  Search,
+  BookOpen,
+  MessageSquare,
+  Database,
+  Compass,
+  Layers,
+  FileText,
+  Settings,
+  Shield,
+  Mail,
 } from "lucide-react";
 
 import { PageContainer, Header, Badge, LightCard, SecondaryHeader, VariantButton } from "@/lib/styles/components";
 import { SearchInput } from "@/lib/styles/components/search-input";
 import {
- Accordion,
- AccordionContent,
- AccordionItem,
- AccordionTrigger,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
 } from "@/lib/styles/components/accordion";
 import { useTourStore } from "@/lib/store/tourStore";
 
@@ -106,7 +107,7 @@ export default function HelpPage() {
  {
  id: "features",
  title: "Platform Features",
- icon: Sparkles,
+ icon: Layers,
  questions: [
  {
  q: "What are Collections? ",
@@ -201,123 +202,140 @@ export default function HelpPage() {
 
  {/* Search */}
  <div className="max-w-2xl mx-auto mt-10">
- <SearchInput
- placeholder="Search help articles..."
- value={searchQuery}
- onChange={(e) => setSearchQuery(e.target.value)}
- size="xl"
- showGlow={true}
- />
- </div>
- </div>
+        <SearchInput
+          placeholder="Search help articles..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="xl"
+          showGlow={false}
+        />
+      </div>
+    </div>
 
- {/* Quick Links */}
- <div className="grid md:grid-cols-3 gap-6 mb-16">
- <LightCard padding="lg"className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"onClick={() => window.location.href = '/contact'}>
- <div className="flex flex-col h-full">
- <MessageSquare className="size-10 text-primary mb-4"/>
- <h3 className="font-semibold text-lg mb-3">Contact Support</h3>
- <p className="text-sm text-muted-foreground leading-relaxed">
- Get personalized help from our team
- </p>
- </div>
- </LightCard>
+    {/* Quick Links */}
+    <div className="grid md:grid-cols-3 gap-6 mb-16">
+      <LightCard
+        padding="lg"
+        className="hover:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
+        onClick={() => (window.location.href = '/contact')}
+      >
+        <div className="flex flex-col h-full">
+          <MessageSquare className="size-10 text-oxblood mb-4" />
+          <h3 className="font-semibold text-lg mb-3 font-display">Contact Support</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Get personalized help from our team
+          </p>
+        </div>
+      </LightCard>
 
- <LightCard padding="lg"className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"onClick={() => window.location.href = '/about'}>
- <div className="flex flex-col h-full">
- <BookOpen className="size-10 text-primary mb-4"/>
- <h3 className="font-semibold text-lg mb-3">About the Project</h3>
- <p className="text-sm text-muted-foreground leading-relaxed">
- Learn about the JuDDGES research project
- </p>
- </div>
- </LightCard>
+      <LightCard
+        padding="lg"
+        className="hover:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
+        onClick={() => (window.location.href = '/about')}
+      >
+        <div className="flex flex-col h-full">
+          <BookOpen className="size-10 text-oxblood mb-4" />
+          <h3 className="font-semibold text-lg mb-3 font-display">About the Project</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Learn about the JuDDGES research project
+          </p>
+        </div>
+      </LightCard>
 
- <LightCard padding="lg"className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20 cursor-pointer"onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}>
- <div className="flex flex-col h-full">
- <FileText className="size-10 text-primary mb-4"/>
- <h3 className="font-semibold text-lg mb-3">Documentation</h3>
- <p className="text-sm text-muted-foreground leading-relaxed">
- View technical documentation on GitHub
- </p>
- </div>
- </LightCard>
- </div>
+      <LightCard
+        padding="lg"
+        className="hover:border-rule-strong transition-colors border border-rule cursor-pointer rounded-none"
+        onClick={() => window.open('https://github.com/pwr-ai/juddges-app', '_blank')}
+      >
+        <div className="flex flex-col h-full">
+          <FileText className="size-10 text-oxblood mb-4" />
+          <h3 className="font-semibold text-lg mb-3 font-display">Documentation</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            View technical documentation on GitHub
+          </p>
+        </div>
+      </LightCard>
+    </div>
 
- {/* FAQ Sections */}
- <div className="space-y-12">
- {filteredCategories.length === 0 ? (
- <LightCard padding="lg"className="text-center">
- <Search className="size-12 text-muted-foreground mx-auto mb-4"/>
- <h3 className="text-xl font-semibold mb-3">No results found</h3>
- <p className="text-muted-foreground">
- Try different keywords or{""}
- <Link href="/contact"className="text-primary hover:underline">
- contact support
- </Link>
- </p>
- </LightCard>
- ) : (
- filteredCategories.map((category) => (
- <div key={category.id}>
- <SecondaryHeader
- icon={category.icon}
- title={category.title}
- className="mb-6"
- showBorder={false}
- />
+    {/* FAQ Sections */}
+    <div className="space-y-12">
+      {filteredCategories.length === 0 ? (
+        <LightCard padding="lg" className="text-center rounded-none border border-rule">
+          <Search className="size-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-3 font-display">No results found</h3>
+          <p className="text-muted-foreground">
+            Try different keywords or{" "}
+            <Link href="/contact" className="text-oxblood hover:underline">
+              contact support
+            </Link>
+          </p>
+        </LightCard>
+      ) : (
+        filteredCategories.map((category) => (
+          <div key={category.id}>
+            <SecondaryHeader
+              icon={category.icon}
+              title={category.title}
+              className="mb-6"
+              showBorder={false}
+            />
 
- <Accordion type="multiple"className="space-y-3">
- {category.questions.map((question, idx) => (
- <AccordionItem
- key={idx}
- value={`${category.id}-${idx}`}
- className="border rounded-xl bg-gradient-to-br from-blue-50/60 via-indigo-50/30 to-purple-50/20 backdrop-blur-sm border-blue-200/50 shadow-sm px-6 py-2 transition-all duration-300"
- >
- <AccordionTrigger className="hover:no-underline hover:bg-transparent text-left py-5 group">
- <span className="font-medium text-base group-hover:text-primary transition-colors">{question.q}</span>
- </AccordionTrigger>
- <AccordionContent className="text-muted-foreground pt-2 pb-5 text-base leading-relaxed">
- {question.a}
- </AccordionContent>
- </AccordionItem>
- ))}
- </Accordion>
- </div>
- ))
- )}
- </div>
+            <Accordion type="multiple" className="space-y-3">
+              {category.questions.map((question, idx) => (
+                <AccordionItem
+                  key={idx}
+                  value={`${category.id}-${idx}`}
+                  className="border border-rule rounded-none bg-parchment-deep/40 px-6 py-2 transition-colors"
+                >
+                  <AccordionTrigger className="hover:no-underline hover:bg-transparent text-left py-5 group">
+                    <span className="font-medium text-base group-hover:text-oxblood transition-colors">
+                      {question.q}
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pt-2 pb-5 text-base leading-relaxed">
+                    {question.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        ))
+      )}
+    </div>
 
- {/* Still Need Help */}
- <LightCard padding="lg"className="mt-16 bg-muted/30 text-center">
- <h2 className="text-3xl font-semibold mb-4">Still need help?</h2>
- <p className="text-muted-foreground mb-8 max-w-2xl mx-auto text-lg leading-relaxed">
- Can&apos;t find what you&apos;re looking for? Our support team is ready to assist you with
- any questions or issues you may have.
- </p>
- <div className="flex flex-wrap justify-center gap-4">
- <VariantButton intent="primary"
- size="lg"
- onClick={() => window.location.href = '/contact'}
- >
- Contact Support
- </VariantButton>
- <VariantButton intent="secondary"
- size="lg"
- icon={Sparkles}
- onClick={() => openTour()}
- >
- Show tour
- </VariantButton>
- <VariantButton intent="secondary"
- size="lg"
- icon={Mail}
- onClick={() => window.location.href = 'mailto:lukasz.augustyniak@pwr.edu.pl'}
- >
- Email Us
- </VariantButton>
- </div>
- </LightCard>
+    {/* Still Need Help */}
+    <LightCard padding="lg" className="mt-16 bg-parchment-deep/30 border border-rule rounded-none text-center">
+      <h2 className="text-3xl font-semibold mb-4 font-display">Still need help?</h2>
+      <p className="text-muted-foreground mb-8 max-w-2xl mx-auto text-lg leading-relaxed">
+        Can&apos;t find what you&apos;re looking for? Our support team is ready to assist you with
+        any questions or issues you may have.
+      </p>
+      <div className="flex flex-wrap justify-center gap-4">
+        <VariantButton
+          intent="primary"
+          size="lg"
+          onClick={() => (window.location.href = '/contact')}
+        >
+          Contact Support
+        </VariantButton>
+        <VariantButton
+          intent="secondary"
+          size="lg"
+          icon={Compass}
+          onClick={() => openTour()}
+        >
+          Show tour
+        </VariantButton>
+        <VariantButton
+          intent="secondary"
+          size="lg"
+          icon={Mail}
+          onClick={() => (window.location.href = 'mailto:lukasz.augustyniak@pwr.edu.pl')}
+        >
+          Email Us
+        </VariantButton>
+      </div>
+    </LightCard>
  </PageContainer>
  );
 }

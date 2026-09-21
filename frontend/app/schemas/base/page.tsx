@@ -161,88 +161,88 @@ export default function BaseSchemaPage(): React.JSX.Element {
  <VariantButton intent="secondary" size="sm"icon={Copy} onClick={handleCopyJson}>
  Copy JSON
  </VariantButton>
- <VariantButton intent="secondary" size="sm"icon={Download} onClick={handleDownloadJson}>
+ <VariantButton intent="secondary" size="sm" icon={Download} onClick={handleDownloadJson}>
  Download JSON
  </VariantButton>
  </div>
  </div>
 
- <LightCard
- padding="lg"
- showBorder={true}
- showShadow={false}
- className="hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50 transition-all duration-200"
- >
- <div className="space-y-5">
- <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
- <div>
- <h1 className="text-2xl font-semibold">Base Judgment Extraction Schema</h1>
- <p className="mt-1 text-sm text-foreground/80">
- This is the canonical schema used to extract structured information from all judgments added to the app.
- </p>
- </div>
- <Badge variant="outline"className="w-fit">
- {definition.schema_key}
- </Badge>
- </div>
+      <LightCard
+        padding="lg"
+        showBorder={true}
+        showShadow={false}
+        className="hover:border-rule-strong transition-colors"
+      >
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">Base Judgment Extraction Schema</h1>
+              <p className="mt-1 text-sm text-foreground/80">
+                This is the canonical schema used to extract structured information from all judgments added to the app.
+              </p>
+            </div>
+            <Badge variant="outline" className="w-fit rounded-none border-rule">
+              {definition.schema_key}
+            </Badge>
+          </div>
 
- <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200/50 p-3">
- <Globe className="h-4 w-4 text-muted-foreground"/>
- <span className="text-sm text-muted-foreground mr-1">Schema language:</span>
- <button
- type="button"
- onClick={() => setActiveLocale('en')}
- className={cn(
- 'rounded-md border px-3 py-1 text-sm transition-colors',
- activeLocale === 'en'
- ? 'bg-primary text-primary-foreground border-primary'
- : 'border-slate-300 hover:bg-muted'
- )}
- >
- English
- </button>
- <button
- type="button"
- onClick={() => setActiveLocale('pl')}
- className={cn(
- 'rounded-md border px-3 py-1 text-sm transition-colors',
- activeLocale === 'pl'
- ? 'bg-primary text-primary-foreground border-primary'
- : 'border-slate-300 hover:bg-muted'
- )}
- >
- Polish
- </button>
- <div className="ml-auto flex items-center gap-2 text-xs md:text-sm">
- <Badge variant="secondary">{fieldStats.total} fields</Badge>
- <Badge variant="secondary">{fieldStats.required} required</Badge>
- </div>
- </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-none border border-rule p-3">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground mr-1">Schema language:</span>
+            <button
+              type="button"
+              onClick={() => setActiveLocale('en')}
+              className={cn(
+                'rounded-none border px-3 py-1 text-sm transition-colors',
+                activeLocale === 'en'
+                  ? 'bg-oxblood text-white border-oxblood'
+                  : 'border-rule hover:bg-parchment-deep text-ink'
+              )}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveLocale('pl')}
+              className={cn(
+                'rounded-none border px-3 py-1 text-sm transition-colors',
+                activeLocale === 'pl'
+                  ? 'bg-oxblood text-white border-oxblood'
+                  : 'border-rule hover:bg-parchment-deep text-ink'
+              )}
+            >
+              Polish
+            </button>
+            <div className="ml-auto flex items-center gap-2 text-xs md:text-sm">
+              <Badge variant="secondary" className="rounded-none bg-parchment-deep text-ink border-rule border">{fieldStats.total} fields</Badge>
+              <Badge variant="secondary" className="rounded-none bg-parchment-deep text-ink border-rule border">{fieldStats.required} required</Badge>
+            </div>
+          </div>
 
- <Tabs defaultValue="table"className="w-full">
- <TabsList className="grid w-full grid-cols-2 max-w-sm">
- <TabsTrigger value="table"className="flex items-center gap-2">
- <TableIcon className="h-4 w-4"/>
- Table
- </TabsTrigger>
- <TabsTrigger value="json"className="flex items-center gap-2">
- <FileJson className="h-4 w-4"/>
- JSON
- </TabsTrigger>
- </TabsList>
+          <Tabs defaultValue="table" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 max-w-sm">
+              <TabsTrigger value="table" className="flex items-center gap-2">
+                <TableIcon className="h-4 w-4" />
+                Table
+              </TabsTrigger>
+              <TabsTrigger value="json" className="flex items-center gap-2">
+                <FileJson className="h-4 w-4" />
+                JSON
+              </TabsTrigger>
+            </TabsList>
 
- <TabsContent value="table"className="mt-4">
- <SchemaFieldsTable fields={flattenedFields} />
- </TabsContent>
+            <TabsContent value="table" className="mt-4">
+              <SchemaFieldsTable fields={flattenedFields} />
+            </TabsContent>
 
- <TabsContent value="json"className="mt-4">
- <ScrollArea className="h-[540px] w-full rounded-md border bg-slate-50/50 border-slate-200/50">
- <pre className="p-4 text-sm whitespace-pre-wrap font-mono">{schemaJson}</pre>
- </ScrollArea>
- </TabsContent>
- </Tabs>
- </div>
- </LightCard>
+            <TabsContent value="json" className="mt-4">
+              <ScrollArea className="h-[540px] w-full rounded-none border border-rule bg-parchment-deep/30">
+                <pre className="p-4 text-sm whitespace-pre-wrap font-mono">{schemaJson}</pre>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </LightCard>
  </PageContainer>
  );
 }

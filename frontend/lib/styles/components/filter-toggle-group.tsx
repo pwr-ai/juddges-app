@@ -154,14 +154,14 @@ export function FilterToggleGroup<T = string>({
  ? getActiveButtonStyle(buttonSize)
  : !isOptionDisabled && getInactiveButtonStyle(buttonSize),
  // Minimalist styling - subtle and clean
- !isOptionDisabled && !selected &&"!text-foreground/70 hover:!text-foreground hover:bg-slate-100/50",
+ !isOptionDisabled && !selected &&"!text-foreground/70 hover:!text-foreground hover:bg-parchment-deep",
  // Active state for tactile feedback
  !isOptionDisabled &&"active:scale-[0.98] active:opacity-90",
  // Focus state for accessibility
  !isOptionDisabled &&"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
  // Minimalist border - subtle ring only when selected
  !isOptionDisabled && selected &&"ring-1 ring-primary/20",
- !isOptionDisabled && !selected &&"ring-0 border border-slate-200/50"
+ !isOptionDisabled && !selected &&"ring-0 border border-rule"
  )}
  title={!Tooltip && option.tooltip ? option.tooltip : undefined}
  >
@@ -203,10 +203,8 @@ export function FilterToggleGroup<T = string>({
  <div className={cn(
 "flex items-center gap-0.5 p-0.5 rounded-lg",
  filterToggleContainerColors.background.light,
- filterToggleContainerColors.backdropBlur,
 "border",
  filterToggleContainerColors.border.light,
- filterToggleContainerColors.shadow,
  containerClassName
  )}>
  {options.map(renderButton)}

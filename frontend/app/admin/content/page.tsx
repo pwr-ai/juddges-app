@@ -10,10 +10,10 @@ const pageLogger = logger.child("AdminContentPage");
 
 function StatCardSkeleton() {
  return (
- <div className="rounded-2xl border border-border bg-card p-6 animate-pulse">
- <div className="mb-4 rounded-lg bg-muted p-2 size-9"/>
- <div className="h-8 w-20 rounded bg-muted mb-1"/>
- <div className="h-4 w-28 rounded bg-muted"/>
+ <div className="rounded-none border border-rule bg-parchment p-6 animate-pulse">
+ <div className="mb-4 rounded-none bg-parchment-deep p-2 size-9"/>
+ <div className="h-8 w-20 rounded-none bg-parchment-deep mb-1"/>
+ <div className="h-4 w-28 rounded-none bg-parchment-deep"/>
  </div>
  );
 }
@@ -57,7 +57,7 @@ export default function AdminContentPage() {
 
  {/* Page heading */}
  <div className="mb-8">
- <h1 className="font-serif text-4xl text-foreground tracking-tight">Content</h1>
+ <h1 className="font-serif text-3xl font-normal text-foreground tracking-tight">Content</h1>
  <p className="mt-1 text-sm text-muted-foreground">
  Blog publishing statistics.
  </p>
@@ -86,10 +86,10 @@ export default function AdminContentPage() {
  return (
  <div
  key={card.label}
- className="rounded-2xl border border-border bg-card p-6"
+ className="rounded-none border border-rule bg-parchment p-6"
  >
- <div className="mb-4 rounded-lg bg-primary/8 p-2 w-fit">
- <Icon className="size-5 text-primary"/>
+ <div className="mb-4 rounded-none border border-rule bg-parchment-deep p-2 w-fit">
+ <Icon className="size-5 text-ink"/>
  </div>
  <p className="text-3xl font-semibold text-foreground tabular-nums">
  {card.value}
@@ -102,12 +102,12 @@ export default function AdminContentPage() {
 
  {/* Summary card */}
  {!isLoading && data && (
- <div className="rounded-2xl border border-border bg-card p-6">
+ <div className="rounded-none border border-rule bg-parchment p-6">
  <h2 className="font-serif text-xl text-foreground mb-4">
  Publishing Overview
  </h2>
  <div className="flex flex-col gap-3">
- <div className="flex items-center justify-between border-b border-border pb-3">
+ <div className="flex items-center justify-between border-b border-rule pb-3">
  <span className="text-sm text-muted-foreground">
  Publication rate
  </span>
@@ -117,7 +117,7 @@ export default function AdminContentPage() {
  : "—"}
  </span>
  </div>
- <div className="flex items-center justify-between border-b border-border pb-3">
+ <div className="flex items-center justify-between border-b border-rule pb-3">
  <span className="text-sm text-muted-foreground">
  Avg views per published post
  </span>
@@ -140,7 +140,7 @@ export default function AdminContentPage() {
  )}
 
  {!isLoading && !isError && !data && (
- <div className="rounded-2xl border border-border bg-card py-16 text-center">
+ <div className="rounded-none border border-rule bg-parchment py-16 text-center">
  <p className="text-sm text-muted-foreground">
  No blog posts have been created yet. Publish your first post and its statistics will appear here.
  </p>

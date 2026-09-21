@@ -28,85 +28,85 @@ export function ExtractionFieldRenderer({
  const fieldLabel = label || getFieldLabel(fieldKey);
  const fieldType = detectValueType(value);
 
- // Handle null/undefined
- if (value === null || value === undefined) {
- return (
- <DocumentFieldCard className={className}>
- <div className="flex-1">
- <ItemHeader title={fieldLabel} className="mb-1"/>
- <p className="text-sm text-slate-500 italic">—</p>
- </div>
- </DocumentFieldCard>
- );
- }
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return (
+      <DocumentFieldCard className={className}>
+        <div className="flex-1">
+          <ItemHeader title={fieldLabel} className="mb-1" />
+          <p className="text-sm text-ink-soft italic">—</p>
+        </div>
+      </DocumentFieldCard>
+    );
+  }
 
- // Handle boolean
- if (fieldType === 'boolean') {
- return (
- <DocumentFieldCard className={className}>
- <div className="flex-1">
- <ItemHeader title={fieldLabel} className="mb-3"/>
- <Badge
- variant={value ? "default": "secondary"}
- className={cn(
-"rounded-full px-3 py-1.5 font-semibold text-xs",
- value
- ? "bg-green-100 text-green-700 border-green-300"
- : "bg-red-100 text-red-700 border-red-300"
- )}
- >
- {getBooleanLabel(value, language)}
- </Badge>
- </div>
- </DocumentFieldCard>
- );
- }
+  // Handle boolean
+  if (fieldType === 'boolean') {
+    return (
+      <DocumentFieldCard className={className}>
+        <div className="flex-1">
+          <ItemHeader title={fieldLabel} className="mb-3" />
+          <Badge
+            variant="outline"
+            className={cn(
+              "rounded-none px-2 py-0.5 font-mono text-xs uppercase tracking-wider",
+              value
+                ? "border-rule bg-parchment-deep text-ink"
+                : "border-rule bg-parchment-deep text-oxblood"
+            )}
+          >
+            {getBooleanLabel(value, language)}
+          </Badge>
+        </div>
+      </DocumentFieldCard>
+    );
+  }
 
- // Handle string
- if (fieldType === 'string') {
- return (
- <DocumentFieldCard className={className}>
- <div className="flex-1">
- <ItemHeader title={fieldLabel} className="mb-3"/>
- <p className="text-sm text-slate-900 whitespace-pre-wrap break-words leading-relaxed">{value}</p>
- </div>
- </DocumentFieldCard>
- );
- }
+  // Handle string
+  if (fieldType === 'string') {
+    return (
+      <DocumentFieldCard className={className}>
+        <div className="flex-1">
+          <ItemHeader title={fieldLabel} className="mb-3" />
+          <p className="text-sm text-ink whitespace-pre-wrap break-words leading-relaxed">{value}</p>
+        </div>
+      </DocumentFieldCard>
+    );
+  }
 
- // Handle number
- if (fieldType === 'number') {
- const formattedValue = formatFieldValue(value, 'number');
+  // Handle number
+  if (fieldType === 'number') {
+    const formattedValue = formatFieldValue(value, 'number');
 
- return (
- <DocumentFieldCard className={className}>
- <div className="flex-1">
- <ItemHeader title={fieldLabel} className="mb-3"/>
- <p className="text-sm font-medium text-slate-900">{formattedValue}</p>
- </div>
- </DocumentFieldCard>
- );
- }
+    return (
+      <DocumentFieldCard className={className}>
+        <div className="flex-1">
+          <ItemHeader title={fieldLabel} className="mb-3" />
+          <p className="text-sm font-medium text-ink font-mono tabular-nums">{formattedValue}</p>
+        </div>
+      </DocumentFieldCard>
+    );
+  }
 
- // Handle date
- if (fieldType === 'date') {
- return (
- <DocumentFieldCard className={className}>
- <div className="flex-1">
- <ItemHeader title={fieldLabel} className="mb-3"/>
- <p className="text-sm text-slate-900">{formatFieldValue(value, 'date')}</p>
- </div>
- </DocumentFieldCard>
- );
- }
+  // Handle date
+  if (fieldType === 'date') {
+    return (
+      <DocumentFieldCard className={className}>
+        <div className="flex-1">
+          <ItemHeader title={fieldLabel} className="mb-3" />
+          <p className="text-sm text-ink font-mono">{formatFieldValue(value, 'date')}</p>
+        </div>
+      </DocumentFieldCard>
+    );
+  }
 
- // Default fallback
- return (
- <DocumentFieldCard className={className}>
- <div className="flex-1">
- <ItemHeader title={fieldLabel} className="mb-3"/>
- <p className="text-sm text-slate-900">{String(value)}</p>
- </div>
- </DocumentFieldCard>
- );
+  // Default fallback
+  return (
+    <DocumentFieldCard className={className}>
+      <div className="flex-1">
+        <ItemHeader title={fieldLabel} className="mb-3" />
+        <p className="text-sm text-ink">{String(value)}</p>
+      </div>
+    </DocumentFieldCard>
+  );
 }

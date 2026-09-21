@@ -4,7 +4,6 @@ export interface JuddgesLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   className?: string;
-  showGlow?: boolean;
 }
 
 const iconSizeMap = {
@@ -25,7 +24,6 @@ export function JuddgesLogo({
   size = 'md',
   showText = true,
   className = '',
-  showGlow = true,
 }: JuddgesLogoProps): React.JSX.Element {
   const iconSize = iconSizeMap[size];
   const textSize = textSizeMap[size];
@@ -51,21 +49,10 @@ export function JuddgesLogo({
           <path d="M12 3v18"></path>
           <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path>
         </svg>
-        {/* Pulsing glow effect on the indicator dot */}
-        {showGlow && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-80 animate-pulse">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full animate-ping opacity-75" />
-          </div>
-        )}
       </div>
       {showText && (
-        <h1 className={cn(
-          "font-semibold text-foreground transition-colors duration-300 relative",
-          textSize
-        )}>
-          <span className="bg-gradient-to-r from-foreground via-primary to-primary bg-clip-text text-transparent animate-text-shimmer bg-[length:200%_auto]">
-            JuDDGES
-          </span>
+        <h1 className={cn("font-serif font-normal text-ink relative", textSize)}>
+          JuDDGES
         </h1>
       )}
     </div>

@@ -3,9 +3,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-// import { SourcesBadge } from './SourcesBadge'; // DISABLED: Replaced with CollapsibleButton
-import { SourceCard } from './SourceCard'; // KEPT: Functionality preserved but rendering disabled
-import { CollapsibleButton, DocumentCard, BaseCard } from '@/lib/styles/components';
+import { CollapsibleButton, DocumentCard } from '@/lib/styles/components';
+import { EditorialCard } from '@/components/editorial';
 import { BookOpen } from 'lucide-react';
 import { useSourceDocuments } from '@/hooks/useSourceDocuments';
 import { SearchDocument } from '@/types/search';
@@ -155,7 +154,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  <div ref={sourcesContainerRef} className="mt-3 space-y-3">
  {/* Error state */}
  {error && (
- <div className="flex items-center gap-2 text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-200 animate-in fade-in slide-in-from-top-2 duration-300">
+ <div className="flex items-center gap-2 font-mono text-xs text-oxblood p-3 bg-parchment-deep rounded-none border border-oxblood/40">
  <AlertCircle className="h-4 w-4 shrink-0"/>
  <span>Failed to load sources. Please try again.</span>
  </div>
@@ -167,22 +166,22 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  {cleanedDocumentIds.slice(0, 3).map((id, index) => (
  <div
  key={id}
- className="border rounded-lg p-4 bg-slate-50 animate-pulse opacity-0"
+ className="border border-rule rounded-none p-4 bg-parchment-deep animate-pulse opacity-0"
  style={{
  animation: `fadeInSlide 500ms ease-out forwards, pulse 2s ease-in-out infinite`,
  animationDelay: `${index * 150}ms, ${index * 150}ms`,
  }}
  >
  <div className="flex items-start gap-3 mb-3">
- <div className="w-9 h-9 bg-slate-200 rounded-md"/>
+ <div className="w-9 h-9 bg-rule rounded-none"/>
  <div className="flex-1 space-y-2">
- <div className="h-4 bg-slate-200 rounded w-3/4"/>
- <div className="h-3 bg-slate-200 rounded w-1/2"/>
+ <div className="h-4 bg-rule rounded-none w-3/4"/>
+ <div className="h-3 bg-rule rounded-none w-1/2"/>
  </div>
  </div>
  <div className="space-y-2">
- <div className="h-3 bg-slate-200 rounded w-full"/>
- <div className="h-3 bg-slate-200 rounded w-5/6"/>
+ <div className="h-3 bg-rule rounded-none w-full"/>
+ <div className="h-3 bg-rule rounded-none w-5/6"/>
  </div>
  </div>
  ))}
@@ -201,33 +200,22 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  {hasDatabaseErrors && (
  <div className="grid grid-cols-2 gap-2 items-center">
  <div className="flex justify-start">
- <BaseCard
- clickable={false}
- className={cn(
-"rounded-xl",
-"border-red-200/50",
-"bg-gradient-to-br from-red-50/50 via-red-50/50 to-orange-50/30",
-"shadow-lg shadow-red-500/10",
-"animate-in fade-in slide-in-from-top-2 duration-300"
- )}
- >
- <div className="flex items-start gap-3">
- <div className="relative flex-shrink-0">
- <div className="absolute inset-0 bg-red-500/20 rounded-lg blur-sm"/>
- <div className="relative bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-2">
- <AlertTriangle className="h-4 w-4 text-white"/>
- </div>
- </div>
- <div className="flex-1 space-y-1 min-w-0">
- <h3 className="font-semibold text-sm text-red-800">
- Source Information Unavailable
- </h3>
- <p className="text-sm text-red-700 leading-relaxed">
- Source information cannot be loaded. The document database is temporarily unavailable.
- </p>
- </div>
- </div>
- </BaseCard>
+ <EditorialCard
+							flat
+							className="p-4 border-oxblood/40 bg-parchment-deep"
+						>
+							<div className="flex items-start gap-3">
+								<AlertTriangle className="h-5 w-5 text-oxblood shrink-0 mt-0.5" />
+								<div className="flex-1 space-y-1 min-w-0">
+									<h4 className="font-serif font-semibold text-sm text-oxblood">
+										Source Information Unavailable
+									</h4>
+									<p className="text-xs font-mono text-ink-soft leading-relaxed">
+										Source information cannot be loaded. The document database is temporarily unavailable.
+									</p>
+								</div>
+							</div>
+						</EditorialCard>
  </div>
  </div>
  )}
@@ -264,7 +252,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
 
  {/* Empty state (shouldn't happen but handle it) */}
  {!isLoading && documents && documents.length === 0 && (
- <div className="text-sm text-muted-foreground text-center p-4 border border-dashed rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+ <div className="font-mono text-xs text-ink-soft text-center p-4 border border-dashed border-rule rounded-none">
  No document details available
  </div>
  )}
@@ -294,7 +282,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  <div ref={sourcesContainerRef} className="mt-2 space-y-3">
  {/* Error state */}
  {error && (
- <div className="flex items-center gap-2 text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-200 animate-in fade-in slide-in-from-top-2 duration-300">
+ <div className="flex items-center gap-2 border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
  <AlertCircle className="h-4 w-4 shrink-0"/>
  <span>Failed to load sources. Please try again.</span>
  </div>
@@ -306,22 +294,22 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  {cleanedDocumentIds.slice(0, 3).map((id, index) => (
  <div
  key={id}
- className="border rounded-lg p-4 bg-slate-50 animate-pulse opacity-0"
+ className="border border-rule rounded-none p-4 bg-parchment-deep animate-pulse opacity-0"
  style={{
  animation: `fadeInSlide 500ms ease-out forwards, pulse 2s ease-in-out infinite`,
  animationDelay: `${index * 150}ms, ${index * 150}ms`,
  }}
  >
  <div className="flex items-start gap-3 mb-3">
- <div className="w-9 h-9 bg-slate-200 rounded-md"/>
+ <div className="w-9 h-9 bg-rule rounded-none"/>
  <div className="flex-1 space-y-2">
- <div className="h-4 bg-slate-200 rounded w-3/4"/>
- <div className="h-3 bg-slate-200 rounded w-1/2"/>
+ <div className="h-4 bg-rule rounded-none w-3/4"/>
+ <div className="h-3 bg-rule rounded-none w-1/2"/>
  </div>
  </div>
  <div className="space-y-2">
- <div className="h-3 bg-slate-200 rounded w-full"/>
- <div className="h-3 bg-slate-200 rounded w-5/6"/>
+ <div className="h-3 bg-rule rounded-none w-full"/>
+ <div className="h-3 bg-rule rounded-none w-5/6"/>
  </div>
  </div>
  ))}
@@ -340,33 +328,22 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
  {hasDatabaseErrors && (
  <div className="grid grid-cols-2 gap-2 items-center">
  <div className="flex justify-start">
- <BaseCard
- clickable={false}
- className={cn(
-"rounded-xl",
-"border-red-200/50",
-"bg-gradient-to-br from-red-50/50 via-red-50/50 to-orange-50/30",
-"shadow-lg shadow-red-500/10",
-"animate-in fade-in slide-in-from-top-2 duration-300"
- )}
- >
- <div className="flex items-start gap-3">
- <div className="relative flex-shrink-0">
- <div className="absolute inset-0 bg-red-500/20 rounded-lg blur-sm"/>
- <div className="relative bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-2">
- <AlertTriangle className="h-4 w-4 text-white"/>
- </div>
- </div>
- <div className="flex-1 space-y-1 min-w-0">
- <h3 className="font-semibold text-sm text-red-800">
- Source Information Unavailable
- </h3>
- <p className="text-sm text-red-700 leading-relaxed">
- Source information cannot be loaded. The document database is temporarily unavailable.
- </p>
- </div>
- </div>
- </BaseCard>
+ <EditorialCard
+							flat
+							className="p-4 border-oxblood/40 bg-parchment-deep"
+						>
+							<div className="flex items-start gap-3">
+								<AlertTriangle className="h-5 w-5 text-oxblood shrink-0 mt-0.5" />
+								<div className="flex-1 space-y-1 min-w-0">
+									<h4 className="font-serif font-semibold text-sm text-oxblood">
+										Source Information Unavailable
+									</h4>
+									<p className="text-xs font-mono text-ink-soft leading-relaxed">
+										Source information cannot be loaded. The document database is temporarily unavailable.
+									</p>
+								</div>
+							</div>
+						</EditorialCard>
  </div>
  </div>
  )}
@@ -403,7 +380,7 @@ export function MessageSources({ documentIds, renderBadgeOnly = false, renderExp
 
  {/* Empty state (shouldn't happen but handle it) */}
  {!isLoading && documents && documents.length === 0 && (
- <div className="text-sm text-muted-foreground text-center p-4 border border-dashed rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+ <div className="font-mono text-xs text-ink-soft text-center p-4 border border-dashed border-rule rounded-none">
  No document details available
  </div>
  )}

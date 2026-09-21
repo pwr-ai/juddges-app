@@ -20,6 +20,8 @@ const FRONTEND_ROOT = process.cwd();
 /** The chrome a user can click through without already knowing a URL. */
 const PRIMARY_NAV_SURFACES = [
   'components/app-sidebar.tsx',
+  // The signed-in sidebar renders its workflow groups from this config (#690).
+  'lib/navigation/flows.ts',
   'components/command-palette.tsx',
   'components/footer/CompactFooter.tsx',
   'components/navbar.tsx',

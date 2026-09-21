@@ -13,13 +13,10 @@ import {
 } from 'recharts';
 import type { JudgeProfile, StyleScores } from '@/types/judge-fingerprint';
 import { useDimensionLabels } from './dimensionLabels';
+import { JUDGE_SERIES, rechartsTheme } from '@/lib/charts/reasoning-palette';
 
-/** Color palette for up to 3 judges */
-const JUDGE_COLORS = [
-  'hsl(210, 90%, 55%)',   // blue
-  'hsl(340, 80%, 55%)',   // rose
-  'hsl(160, 70%, 45%)',   // teal
-];
+/** Color palette for up to 3 judges — see lib/charts/reasoning-palette.ts */
+const JUDGE_COLORS = JUDGE_SERIES;
 
 interface RadarDataPoint {
   dimension: string;
@@ -65,15 +62,15 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-          <PolarGrid stroke="hsl(var(--border))" />
+          <PolarGrid stroke={rechartsTheme.grid} />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+            tick={{ fill: rechartsTheme.tick, fontSize: 12 }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 100]}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+            tick={{ fill: rechartsTheme.tick, fontSize: 10 }}
             tickCount={5}
           />
 
@@ -90,12 +87,7 @@ export function JudgeRadarChart({ profiles, height = 350 }: JudgeRadarChartProps
           ))}
 
           <Tooltip
-            contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '8px',
-              fontSize: '12px',
-            }}
+            contentStyle={rechartsTheme.tooltip}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={(value: any) => [`${value}%`]}
           />

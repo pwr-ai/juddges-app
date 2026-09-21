@@ -27,6 +27,7 @@ import { Search, FileCode, Calendar, List, Hash, CheckSquare, Link as LinkIcon, 
 import { useState } from "react";
 import { FlatField, formatSchemaFieldName, getFieldTypeLabel } from "@/lib/schema-utils";
 import { Badge, VariantButton, DropdownButton } from "@/lib/styles/components";
+import { FieldTypeBadge, getFieldMarker } from "@/components/editorial/FieldTypeBadge";
 import { cn } from "@/lib/utils";
 
 interface SchemaFieldsTableProps {
@@ -66,86 +67,6 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  return 'enum';
  }
  return field.type;
- };
-
- // Get type color and icon
- const getTypeStyle = (type: string) => {
- const normalizedType = type.toLowerCase();
- const styles: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
- date: {
- color: 'text-blue-700',
- bg: 'bg-blue-100/80',
- border: 'border-blue-200/60',
- icon: <Calendar className="h-3.5 w-3.5"/>
- },
- text: {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- list: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- array: {
- color: 'text-purple-700',
- bg: 'bg-purple-100/80',
- border: 'border-purple-200/60',
- icon: <List className="h-3.5 w-3.5"/>
- },
- number: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- integer: {
- color: 'text-emerald-700',
- bg: 'bg-emerald-100/80',
- border: 'border-emerald-200/60',
- icon: <Hash className="h-3.5 w-3.5"/>
- },
- boolean: {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- 'yes/no': {
- color: 'text-amber-700',
- bg: 'bg-amber-100/80',
- border: 'border-amber-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- object: {
- color: 'text-indigo-700',
- bg: 'bg-indigo-100/80',
- border: 'border-indigo-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- },
- enum: {
- color: 'text-violet-700',
- bg: 'bg-violet-100/80',
- border: 'border-violet-200/60',
- icon: <CheckSquare className="h-3.5 w-3.5"/>
- },
- email: {
- color: 'text-cyan-700',
- bg: 'bg-cyan-100/80',
- border: 'border-cyan-200/60',
- icon: <LinkIcon className="h-3.5 w-3.5"/>
- },
- };
-
- return styles[normalizedType] || {
- color: 'text-slate-700',
- bg: 'bg-slate-100/80',
- border: 'border-slate-200/60',
- icon: <FileCode className="h-3.5 w-3.5"/>
- };
  };
 
  // Handle cell edit
@@ -212,13 +133,13 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  <div
  className={cn(
 "flex items-center gap-2 py-1 w-full min-w-[250px] max-w-[500px]",
- isNested &&"border-l-2 border-l-primary/30 pl-3 ml-2 backdrop-blur-sm bg-primary/5 rounded-r-md pr-2"
- )}
- style={{ paddingLeft: isNested ? undefined : `${level * 20}px` }}
- >
- {isNested && (
- <span className="text-primary/70 text-sm shrink-0 font-mono drop-shadow-sm">└</span>
- )}
+        isNested && "border-l-2 border-l-rule-strong pl-3 ml-2 pr-2"
+      )}
+      style={{ paddingLeft: isNested ? undefined : `${level * 20}px` }}
+    >
+      {isNested && (
+        <span className="text-ink-soft text-sm shrink-0 font-mono">└</span>
+      )}
  {isEditing ? (
  <div className="flex flex-col gap-2 w-full min-w-[250px] max-w-[500px]"onClick={(e) => e.stopPropagation()}>
  <Input
@@ -310,24 +231,25 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  cell: ({ row }) => {
  const displayType = getDisplayType(row.original);
  const typeLabel = getFieldTypeLabel(displayType);
- const style = getTypeStyle(displayType);
+ const marker = getFieldMarker(displayType);
+ const MarkerIcon = marker.icon;
 
  // Nested and choice types should not be changeable in table view - use field editor instead
- const isComplexType = typeLabel === "nested"|| typeLabel === "choice";
+ const isComplexType = typeLabel === "nested" || typeLabel === "choice";
 
  if (editable && onFieldUpdate && !isComplexType) {
  // Only allow simple types to be changed in table view
  const availableOptions = [
- { value: "text", label: "text"},
- { value: "number", label: "number"},
- { value: "yes/no", label: "yes/no"},
- { value: "list", label: "list"},
+ { value: "text", label: "text" },
+ { value: "number", label: "number" },
+ { value: "yes/no", label: "yes/no" },
+ { value: "list", label: "list" },
  ];
 
  return (
  <div className="py-1">
  <DropdownButton
- icon={style.icon}
+ icon={<MarkerIcon className="h-3.5 w-3.5" />}
  label={typeLabel}
  value={typeLabel}
  options={availableOptions}
@@ -341,20 +263,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
 
  return (
  <div className="py-1">
- <Badge
- variant="outline"
- className={cn(
-"flex items-center justify-start gap-1.5 px-3 py-1.5 text-xs font-semibold",
-"backdrop-blur-sm shadow-sm ring-1 w-24",
- style.color,
- style.bg,
- style.border,
-"ring-slate-200/20"
- )}
- >
- {style.icon}
- <span>{typeLabel}</span>
- </Badge>
+ <FieldTypeBadge type={displayType} />
  </div>
  );
  },
@@ -487,36 +396,36 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  placeholder="Search all fields..."
  value={globalFilter ?? ""}
  onChange={(event) => setGlobalFilter(event.target.value)}
- className="pl-10 h-10 backdrop-blur-xl bg-white/60 border-slate-200/50 shadow-lg shadow-slate-200/20 ring-1 ring-slate-200/20 transition-all hover:bg-white/80 focus:ring-2 focus:ring-primary/20"
+ className="pl-10 h-10 rounded-none border border-rule bg-parchment text-ink focus:border-ink focus-visible:ring-0"
  />
  </div>
  {/* Stats - next to search input */}
- <div className="text-sm font-medium text-foreground/70 backdrop-blur-sm bg-white/40 rounded-lg px-4 py-2 border border-slate-200/30 shadow-sm">
- Showing <span className="text-foreground font-semibold">{table.getFilteredRowModel().rows.length}</span> of{""}
- <span className="text-foreground font-semibold">{fields.length}</span> fields
+ <div className="text-sm font-mono text-ink-soft rounded-none px-4 py-2 border border-rule bg-parchment">
+ Showing <span className="text-ink font-semibold tabular-nums">{table.getFilteredRowModel().rows.length}</span> of{" "}
+ <span className="text-ink font-semibold tabular-nums">{fields.length}</span> fields
  </div>
  </div>
 
  {/* Table */}
- <div className="rounded-xl border border-slate-200/40 overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-white/80 via-white/70 to-white/60 shadow-2xl shadow-slate-200/20 ring-1 ring-white/20">
+ <div className="rounded-none border border-rule bg-parchment overflow-hidden">
  <Table>
  <TableHeader>
  {table.getHeaderGroups().map((headerGroup) => (
  <TableRow
  key={headerGroup.id}
- className="backdrop-blur-xl bg-gradient-to-r from-slate-50/90 via-slate-50/80 to-slate-50/90 border-b border-slate-200/40 shadow-sm"
+ className="bg-parchment-deep border-b border-rule"
  >
  {headerGroup.headers.map((header) => {
  return (
  <TableHead
  key={header.id}
- className="whitespace-nowrap font-semibold text-sm text-foreground py-4 px-6"
+ className="whitespace-nowrap font-mono text-xs uppercase tracking-wider text-ink-soft py-3 px-6"
  >
  {header.isPlaceholder ? null : (
  <div
  className={
  header.column.getCanSort()
- ? "cursor-pointer select-none flex items-center gap-2 hover:text-foreground transition-all hover:scale-[1.02]"
+ ? "cursor-pointer select-none flex items-center gap-1.5 hover:text-ink transition-colors"
  : ""
  }
  onClick={header.column.getToggleSortingHandler()}
@@ -526,8 +435,8 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  header.getContext()
  )}
  {{
- asc: "🔼",
- desc: "🔽",
+ asc: " ↑",
+ desc: " ↓",
  }[header.column.getIsSorted() as string] ?? null}
  </div>
  )}
@@ -544,16 +453,16 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  return (
  <TableRow
  key={row.id}
- data-state={row.getIsSelected() &&"selected"}
+ data-state={row.getIsSelected() && "selected"}
  className={cn(
- onRowClick && !editingCell &&"cursor-pointer transition-all duration-200",
-"border-b border-slate-100/30",
+ onRowClick && !editingCell && "cursor-pointer transition-colors",
+ "border-b border-rule",
  isNested
- ? "backdrop-blur-sm bg-primary/3"
+ ? "bg-muted/20"
  : index % 2 === 0
- ? "backdrop-blur-sm bg-white/50"
- : "backdrop-blur-sm bg-slate-50/40",
- !editingCell &&"hover:bg-gradient-to-r hover:from-primary/5 hover:via-primary/3 hover:to-transparent hover:backdrop-blur-md hover:shadow-sm hover:border-primary/20 transition-all duration-200"
+ ? "bg-parchment"
+ : "bg-parchment-deep/30",
+ !editingCell && "hover:bg-parchment-deep/60"
  )}
  onClick={() => {
  if (!editingCell) {
@@ -579,7 +488,7 @@ export function SchemaFieldsTable({ fields, onRowClick, onFieldUpdate, editable 
  <TableRow>
  <TableCell
  colSpan={columns.length}
- className="h-24 text-center text-muted-foreground backdrop-blur-sm bg-white/30"
+ className="h-24 text-center font-mono text-xs text-ink-soft bg-parchment"
  >
  No fields found.
  </TableCell>

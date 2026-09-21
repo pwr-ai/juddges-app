@@ -214,7 +214,7 @@ export function ExtractionDataViewer({
  variant="ghost"
  size="sm"
  onClick={() => handleCopySection(section)}
- className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700"
+ className="h-8 w-8 p-0 text-ink-soft hover:text-ink"
  title="Copy section"
  >
  <Copy className="h-4 w-4"/>
@@ -272,10 +272,10 @@ export function ExtractionDataViewer({
 
  return (
  <div key={field.key} className="flex gap-5 items-start py-1">
- <dt className="text-sm font-semibold text-slate-700 shrink-0 min-w-[160px]">
+ <dt className="text-sm font-semibold text-ink shrink-0 min-w-[160px]">
  {fieldLabel}:
  </dt>
- <dd className="text-sm text-slate-900 flex-1 break-words leading-relaxed">
+ <dd className="text-sm text-ink flex-1 break-words leading-relaxed">
  {formattedItems.join(', ')}
  </dd>
  </div>
@@ -285,10 +285,10 @@ export function ExtractionDataViewer({
  // Empty array
  return (
  <div key={field.key} className="flex gap-5 items-start py-1">
- <dt className="text-sm font-semibold text-slate-700 shrink-0 min-w-[160px]">
+ <dt className="text-sm font-semibold text-ink shrink-0 min-w-[160px]">
  {fieldLabel}:
  </dt>
- <dd className="text-sm text-slate-500 flex-1 italic">
+ <dd className="text-sm text-ink-soft flex-1 italic">
  —
  </dd>
  </div>
@@ -301,10 +301,10 @@ export function ExtractionDataViewer({
  if (fieldType === 'boolean') {
  displayValue = (
  <span className={cn(
-"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+"inline-flex items-center rounded-none px-2 py-0.5 font-mono text-xs uppercase tracking-wider border",
  field.value
- ? "bg-green-100 text-green-700"
- : "bg-red-100 text-red-700"
+ ? "border-rule bg-parchment-deep text-ink"
+ : "border-rule bg-parchment-deep text-oxblood"
  )}>
  {getBooleanLabel(field.value, detectedLanguage)}
  </span>
@@ -315,10 +315,10 @@ export function ExtractionDataViewer({
 
  return (
  <div key={field.key} className="flex gap-5 items-start py-1">
- <dt className="text-sm font-semibold text-slate-700 shrink-0 min-w-[160px]">
+ <dt className="text-sm font-semibold text-ink shrink-0 min-w-[160px]">
  {fieldLabel}:
  </dt>
- <dd className="text-sm text-slate-900 flex-1 break-words leading-relaxed">
+ <dd className="text-sm text-ink flex-1 break-words leading-relaxed">
  {displayValue}
  </dd>
  </div>
@@ -428,8 +428,8 @@ export function ExtractionDataViewer({
 
  return (
  <div key={field.key} className="flex gap-5 items-start py-1 print:!block print:!py-2">
- <dt className="text-sm font-semibold text-slate-700 shrink-0 min-w-[160px] print:!text-black print:!font-bold print:!min-w-0 print:!mb-1">{fieldLabel}:</dt>
- <dd className="text-sm text-slate-900 flex-1 break-words leading-relaxed print:!text-black print:!ml-0">
+ <dt className="text-sm font-semibold text-ink shrink-0 min-w-[160px] print:!text-black print:!font-bold print:!min-w-0 print:!mb-1">{fieldLabel}:</dt>
+ <dd className="text-sm text-ink flex-1 break-words leading-relaxed print:!text-black print:!ml-0">
  {formattedItems.join(', ')}
  </dd>
  </div>
@@ -439,8 +439,8 @@ export function ExtractionDataViewer({
  // Empty array
  return (
  <div key={field.key} className="flex gap-5 items-start py-1 print:!block print:!py-2">
- <dt className="text-sm font-semibold text-slate-700 shrink-0 min-w-[160px] print:!text-black print:!font-bold print:!min-w-0 print:!mb-1">{fieldLabel}:</dt>
- <dd className="text-sm text-slate-500 flex-1 italic print:!text-black print:!ml-0">—</dd>
+ <dt className="text-sm font-semibold text-ink shrink-0 min-w-[160px] print:!text-black print:!font-bold print:!min-w-0 print:!mb-1">{fieldLabel}:</dt>
+ <dd className="text-sm text-ink-soft flex-1 italic print:!text-black print:!ml-0">—</dd>
  </div>
  );
  }
@@ -456,8 +456,8 @@ export function ExtractionDataViewer({
 
  return (
  <div key={field.key} className="flex gap-5 items-start py-1 print:!block print:!py-2">
- <dt className="text-sm font-semibold text-slate-700 shrink-0 min-w-[160px] print:!text-black print:!font-bold print:!min-w-0 print:!mb-1">{fieldLabel}:</dt>
- <dd className="text-sm text-slate-900 flex-1 break-words leading-relaxed print:!text-black print:!ml-0">{displayValue}</dd>
+ <dt className="text-sm font-semibold text-ink shrink-0 min-w-[160px] print:!text-black print:!font-bold print:!min-w-0 print:!mb-1">{fieldLabel}:</dt>
+ <dd className="text-sm text-ink flex-1 break-words leading-relaxed print:!text-black print:!ml-0">{displayValue}</dd>
  </div>
  );
  })}

@@ -254,7 +254,7 @@ export const SearchForm = forwardRef<HTMLInputElement, SearchFormProps>(function
   return (
     <form
       onSubmit={handleSubmit}
-      className={`rounded-xl border bg-background/80 px-4 py-3 ${hasError ? "pb-2" : ""}`}
+      className={`rounded-none border border-rule bg-parchment px-4 py-3 ${hasError ? "pb-2" : ""}`}
     >
       <label htmlFor="search-query-input" className="sr-only">
         {searchInputLabel}

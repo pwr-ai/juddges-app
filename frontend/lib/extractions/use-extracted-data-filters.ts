@@ -7,6 +7,7 @@
 //   ?q=<text>           — full-text query (mirrors RPC `text_query`)
 //   ?f=<base64-json>    — opaque blob holding the structured filters
 //   ?page=<n>           — 1-based page (default 1)
+//   ?nl=<text>          — optional: the natural-language question a filter came from (Spec B)
 //
 // The blob is opaque on purpose: the field set is wide (42 keys) and any
 // schema growth would force a URL-format migration if we encoded each field
@@ -27,6 +28,7 @@ interface FilterState {
   filters: BaseSchemaFilters;
   textQuery: string;
   page: number;
+  nlQuestion?: string;
 }
 
 interface UseExtractedDataFiltersResult extends FilterState {
@@ -34,6 +36,7 @@ interface UseExtractedDataFiltersResult extends FilterState {
   setFilters: (next: BaseSchemaFilters) => void;
   setTextQuery: (next: string) => void;
   setPage: (page: number) => void;
+  setNlQuestion: (next: string | undefined) => void;
   removeFilter: (field: keyof BaseSchemaFilters) => void;
   clearAll: () => void;
   /** Active filter count (excludes empty arrays / empty strings). */
@@ -99,6 +102,36 @@ export function countActive(filters: BaseSchemaFilters): number {
 }
 
 // -----------------------------------------------------------------------------
+// URL codec — the ONE place that writes ?f / ?q / ?page / ?nl. Used by this
+// hook (/search/extractions and any page mounting it, e.g. /compare) and by
+// href builders (document links, compare permalinks).
+// -----------------------------------------------------------------------------
+
+export interface FilterUrlState {
+  filters: BaseSchemaFilters;
+  textQuery?: string;
+  page?: number;
+  nlQuestion?: string;
+}
+
+export function buildFilterSearchParams(state: FilterUrlState): URLSearchParams {
+  const params = new URLSearchParams();
+  const blob = encodeFilters(state.filters);
+  if (blob) params.set("f", blob);
+  const q = (state.textQuery ?? "").trim();
+  if (q !== "") params.set("q", q);
+  if ((state.page ?? 1) > 1) params.set("page", String(state.page));
+  const nl = (state.nlQuestion ?? "").trim();
+  if (nl !== "") params.set("nl", nl.slice(0, 255));
+  return params;
+}
+
+export function buildFilterHref(pathname: string, state: FilterUrlState, origin = ""): string {
+  const qs = buildFilterSearchParams(state).toString();
+  return `${origin}${pathname}${qs ? `?${qs}` : ""}`;
+}
+
+// -----------------------------------------------------------------------------
 // Hook
 // -----------------------------------------------------------------------------
 
@@ -111,6 +144,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
       filters: decodeFilters(searchParams.get("f")),
       textQuery: searchParams.get("q") ?? "",
       page: Math.max(1, Number(searchParams.get("page") ?? "1") || 1),
+      nlQuestion: searchParams.get("nl") ?? undefined,
     }),
     // intentionally only on mount; later updates use writeUrl
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,12 +155,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
 
   const writeUrl = useCallback(
     (next: FilterState) => {
-      const params = new URLSearchParams();
-      const blob = encodeFilters(next.filters);
-      if (blob) params.set("f", blob);
-      if (next.textQuery.trim() !== "") params.set("q", next.textQuery.trim());
-      if (next.page > 1) params.set("page", String(next.page));
-      const queryString = params.toString();
+      const queryString = buildFilterSearchParams(next).toString();
       const url = queryString ? `?${queryString}` : window.location.pathname;
       router.replace(url, { scroll: false });
     },
@@ -151,6 +180,10 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setState((prev) => ({ ...prev, page: Math.max(1, page) }));
   }, []);
 
+  const setNlQuestion = useCallback((next: string | undefined) => {
+    setState((prev) => ({ ...prev, nlQuestion: next }));
+  }, []);
+
   const removeFilter = useCallback((field: keyof BaseSchemaFilters) => {
     setState((prev) => {
       const nextFilters = { ...prev.filters };
@@ -160,7 +193,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
   }, []);
 
   const clearAll = useCallback(() => {
-    setState((prev) => ({ ...prev, filters: {}, textQuery: "", page: 1 }));
+    setState((prev) => ({ ...prev, filters: {}, textQuery: "", page: 1, nlQuestion: undefined }));
   }, []);
 
   const activeCount = useMemo(() => countActive(state.filters), [state.filters]);
@@ -171,6 +204,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
     setFilters,
     setTextQuery,
     setPage,
+    setNlQuestion,
     removeFilter,
     clearAll,
     activeCount,

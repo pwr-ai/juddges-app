@@ -73,7 +73,7 @@ export function SearchResultsSection({
   // Empty state when filters narrow results to zero
   if (filteredCount === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-8 text-center">
+      <div className="rounded-none border border-dashed border-rule bg-parchment p-8 text-center">
         <Filter className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" />
         <p className="text-sm font-medium">No matching documents</p>
         {activeFilterCount > 0 ? (

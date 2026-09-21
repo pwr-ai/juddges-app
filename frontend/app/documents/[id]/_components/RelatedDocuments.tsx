@@ -2,7 +2,8 @@ import React from 'react';
 import { ExternalLink, FileSearch } from 'lucide-react';
 
 import { cleanDocumentIdForUrl } from '@/lib/document-utils';
-import { BaseCard, Badge, EmptyState } from '@/lib/styles/components';
+import { EditorialCard } from '@/components/editorial';
+import { EmptyState } from '@/lib/styles/components';
 import type { SimilarDocument } from './types';
 
 interface RelatedDocumentsProps {
@@ -22,7 +23,7 @@ export function RelatedDocuments({
   if (similarDocs.length === 0) {
     return (
       <div className="mb-6 bg-transparent">
-        <h3 className="font-bold text-lg text-foreground mb-4">Similar Documents</h3>
+        <h3 className="font-serif text-lg font-semibold text-ink mb-4">Similar Documents</h3>
         <EmptyState
           icon={FileSearch}
           title="No similar documents found"
@@ -38,7 +39,7 @@ export function RelatedDocuments({
 
   return (
     <div className="mb-6 bg-transparent">
-      <h3 className="font-bold text-lg text-foreground mb-4">Similar Documents</h3>
+      <h3 className="font-serif text-lg font-semibold text-ink mb-4">Similar Documents</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(enrichedSimilarDocs.length > 0 ? enrichedSimilarDocs : similarDocs).map((doc) => {
           // Format document type for display
@@ -104,22 +105,22 @@ export function RelatedDocuments({
           const hasAnyMetadata = hasCourtInfo || hasDepartmentInfo || hasPresidingJudge || hasJudges || hasParties || hasOutcome || hasDocumentNumber || hasCountry || hasLanguage;
 
           return (
-            <BaseCard
+            <EditorialCard
               key={doc.document_id}
-              className="rounded-xl border border-border/50 hover:border-primary/50 transition-all duration-200 hover:shadow-md"
-              clickable={true}
-              variant="light"
+              flat
+              clickable
+              className="group p-4 border-rule bg-parchment hover:border-oxblood/60 transition-colors"
               onClick={() => onNavigate(`/documents/${cleanDocumentIdForUrl(doc.document_id)}`)}
             >
-              <div className="flex flex-col gap-4 p-1">
+              <div className="flex flex-col gap-4">
                 {/* Header */}
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-base font-semibold text-foreground leading-tight line-clamp-2 mb-1.5 group-hover:text-primary transition-colors">
+                    <h4 className="font-serif text-base font-semibold text-ink leading-tight line-clamp-2 mb-1.5 group-hover:text-oxblood transition-colors">
                       {displayText}
                     </h4>
                     {hasDocumentNumber && (
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <p className="font-mono text-xs text-ink-soft">
                         {doc.document_number}
                       </p>
                     )}
@@ -129,29 +130,29 @@ export function RelatedDocuments({
                 {/* Primary metadata badges */}
                 <div className="flex items-center gap-2 flex-wrap">
                   {documentType && (
-                    <Badge variant="secondary" className="text-xs font-medium bg-slate-100 text-slate-700 border-slate-200">
+                    <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
                       {documentType}
-                    </Badge>
+                    </span>
                   )}
                   {dateStr && (
-                    <Badge variant="secondary" className="text-xs font-medium bg-slate-100 text-slate-700 border-slate-200">
+                    <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
                       {dateStr}
-                    </Badge>
+                    </span>
                   )}
                   {hasCountry && (
-                    <Badge variant="secondary" className="text-xs font-medium bg-slate-100 text-slate-700 border-slate-200">
+                    <span className="px-2 py-0.5 rounded-none font-mono text-xs border border-rule bg-parchment-deep text-ink">
                       {doc.country}
-                    </Badge>
+                    </span>
                   )}
                 </div>
 
                 {/* Additional metadata - only show if there's meaningful content */}
                 {hasAnyMetadata && (
-                  <div className="space-y-2 pt-3 border-t border-border/50">
+                  <div className="space-y-2 pt-3 border-t border-rule">
                     {(hasCourtInfo || hasDepartmentInfo) && (
                       <div className="text-xs">
-                        <span className="font-semibold text-foreground">Court:</span>
-                        <span className="text-muted-foreground ml-1.5">
+                        <span className="font-mono text-xs uppercase tracking-wider text-ink-soft">Court:</span>
+                        <span className="text-ink ml-1.5">
                           {courtDisplayName || ''}
                           {hasCourtInfo && hasDepartmentInfo && ` - `}
                           {hasDepartmentInfo && doc.department_name}
@@ -160,40 +161,40 @@ export function RelatedDocuments({
                     )}
                     {hasPresidingJudge && (
                       <div className="text-xs">
-                        <span className="font-semibold text-foreground">Presiding Judge:</span>
-                        <span className="text-muted-foreground ml-1.5">{doc.presiding_judge}</span>
+                        <span className="font-mono text-xs uppercase tracking-wider text-ink-soft">Presiding Judge:</span>
+                        <span className="text-ink ml-1.5">{doc.presiding_judge}</span>
                       </div>
                     )}
                     {hasJudges && !hasPresidingJudge && (
                       <div className="text-xs">
-                        <span className="font-semibold text-foreground">Judges:</span>
-                        <span className="text-muted-foreground ml-1.5">{judgesText}</span>
+                        <span className="font-mono text-xs uppercase tracking-wider text-ink-soft">Judges:</span>
+                        <span className="text-ink ml-1.5">{judgesText}</span>
                       </div>
                     )}
                     {hasParties && (
                       <div className="text-xs">
-                        <span className="font-semibold text-foreground">Parties:</span>
-                        <span className="text-muted-foreground ml-1.5 line-clamp-2">{partiesValue}</span>
+                        <span className="font-mono text-xs uppercase tracking-wider text-ink-soft">Parties:</span>
+                        <span className="text-ink ml-1.5 line-clamp-2">{partiesValue}</span>
                       </div>
                     )}
                     {hasOutcome && (
                       <div className="text-xs">
-                        <span className="font-semibold text-foreground">Outcome:</span>
-                        <span className="text-muted-foreground ml-1.5 line-clamp-2">{doc.outcome}</span>
+                        <span className="font-mono text-xs uppercase tracking-wider text-ink-soft">Outcome:</span>
+                        <span className="text-ink ml-1.5 line-clamp-2">{doc.outcome}</span>
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* Footer with link indicator */}
-                <div className="flex items-center justify-end pt-2 border-t border-border/30">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                <div className="flex items-center justify-end pt-2 border-t border-rule">
+                  <div className="flex items-center gap-1.5 font-mono text-xs text-ink-soft group-hover:text-oxblood transition-colors">
                     <span className="font-medium">View document</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>
-            </BaseCard>
+            </EditorialCard>
           );
         })}
       </div>

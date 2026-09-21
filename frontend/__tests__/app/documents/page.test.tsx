@@ -31,10 +31,6 @@ jest.mock('@/lib/api', () => ({
   extractKeyPoints: jest.fn(),
 }));
 
-jest.mock('@/components/VersionHistory', () => ({
-  VersionHistory: () => null,
-}));
-
 jest.mock('react-markdown', () => ({
   __esModule: true,
   default: ({ children }: any) => <>{children}</>,

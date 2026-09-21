@@ -84,7 +84,7 @@ export function JudgeSearch({
     <div className="space-y-3">
       {/* Search input */}
       <div ref={containerRef} className="relative">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-border/50 focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-none bg-parchment border border-rule focus-within:border-ink transition-colors">
           {isLoading ? (
             <Loader2 className="h-4 w-4 text-muted-foreground animate-spin flex-shrink-0" />
           ) : (
@@ -113,7 +113,7 @@ export function JudgeSearch({
 
         {/* Dropdown results */}
         {isDropdownOpen && debouncedQuery.length >= 2 && (
-          <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-lg bg-background border border-border shadow-lg">
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-auto rounded-none bg-parchment border border-rule shadow-sm">
             {isLoading && (
               <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -132,13 +132,13 @@ export function JudgeSearch({
                 <button
                   key={judge.name}
                   onClick={() => handleSelect(judge.name)}
-                  className="flex items-center justify-between w-full px-3 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors border-b border-border/30 last:border-b-0"
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-left text-sm hover:bg-parchment-deep transition-colors border-b border-rule last:border-b-0"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <UserRound className="h-4 w-4 text-primary flex-shrink-0" />
+                    <UserRound className="h-4 w-4 text-ink flex-shrink-0" />
                     <span className="text-foreground truncate">{judge.name}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                  <span className="text-xs font-mono text-muted-foreground flex-shrink-0 ml-2">
                     {t('judgeFingerprint.caseCount', { count: judge.case_count })}
                   </span>
                 </button>
@@ -154,13 +154,13 @@ export function JudgeSearch({
             <Badge
               key={name}
               variant="secondary"
-              className="text-xs flex items-center gap-1.5 pr-1 py-1"
+              className="text-xs flex items-center gap-1.5 pr-1 py-1 rounded-none border border-rule font-mono"
             >
               <UserRound className="h-3 w-3" />
               <span className="max-w-[200px] truncate">{name}</span>
               <button
                 onClick={() => onRemoveJudge(name)}
-                className="p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
+                className="p-0.5 rounded-none hover:bg-parchment-deep transition-colors"
                 aria-label={t('judgeFingerprint.removeJudge', { name })}
               >
                 <X className="h-3 w-3" />

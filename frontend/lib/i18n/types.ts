@@ -182,6 +182,19 @@ export interface NavigationTranslations {
   phasePlan: string;
   phaseSearch: string;
   phaseAnalyze: string;
+
+  // Persona flows (#690) — group labels and stepper copy
+  flowAsk: string;
+  flowExplore: string;
+  flowCode: string;
+  flowCase: string;
+  /** Stepper: "Step {{n}} of {{m}}" */
+  flowStep: string;
+  /** aria-label of the stepper <nav> */
+  flowLabel: string;
+  searchHistory: string;
+  runExtraction: string;
+  extractionJobs: string;
 }
 
 /**
@@ -403,7 +416,7 @@ export interface ErrorTranslations {
 export interface DashboardTranslations {
   title: string;
   databaseOverview: string;
-  recentJudgments: string;
+  judgments: string;
   popularLegalTopics: string;
   researchCollections: string;
   viewAll: string;

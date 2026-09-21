@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Wand2, CheckCircle, AlertCircle, FileText, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle, FileText, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { SearchDocument } from "@/types/search";
 import { BaseCard, VariantButton, LoadingIndicator, AIBadge } from "@/lib/styles/components";
@@ -252,8 +252,8 @@ export function SchemaGenerator({
 
  toast.success(
  result.session_id || result.agent_id
- ? `Schema generated successfully! (Session: ${(result.session_id || result.agent_id).substring(0, 8)}...)`
- : "Schema generated successfully!"
+ ? `Schema generated (Session: ${(result.session_id || result.agent_id).substring(0, 8)}...)`
+ : "Schema generated"
  );
 
  } catch (error) {
@@ -290,25 +290,26 @@ export function SchemaGenerator({
  }
  };
 
+ // Step icon helper
  const getStepIcon = (status: GenerationStep["status"]) => {
  switch (status) {
- case"completed":
- return <CheckCircle className="h-5 w-5 text-green-500"/>;
- case"in_progress":
- return <Loader2 className="h-5 w-5 animate-spin text-blue-500"/>;
- case"failed":
- return <AlertCircle className="h-5 w-5 text-red-500"/>;
+ case "completed":
+ return <CheckCircle className="h-5 w-5 text-ink" />;
+ case "in_progress":
+ return <Loader2 className="h-5 w-5 animate-spin text-ink" />;
+ case "failed":
+ return <AlertCircle className="h-5 w-5 text-oxblood" />;
  default:
- return <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30"/>;
+ return <div className="h-5 w-5 rounded-full border-2 border-rule" />;
  }
  };
 
  return (
  <Dialog open={isOpen} onOpenChange={handleClose}>
- <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+ <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-parchment border border-rule">
  <DialogHeader>
- <DialogTitle className="flex items-center gap-2">
- <Wand2 className="h-5 w-5"/>
+ <DialogTitle className="flex items-center gap-2 font-display text-ink">
+ <FileText className="h-5 w-5 text-ink"/>
  Generate Extraction Schema
  </DialogTitle>
  </DialogHeader>
@@ -318,10 +319,7 @@ export function SchemaGenerator({
  {isLoadingDocuments && (
  <BaseCard
  clickable={false}
- className={cn(
-"bg-blue-50/50",
-"border-blue-200/50"
- )}
+ className="bg-parchment border border-rule"
  >
  <LoadingIndicator
  message="Loading sample documents..."
@@ -337,17 +335,13 @@ export function SchemaGenerator({
  {!isLoadingDocuments && documentsFetchError && (
  <BaseCard
  clickable={false}
- className={cn(
-"p-3",
-"bg-amber-50/50",
-"border-amber-200/50"
- )}
+ className="p-3 bg-parchment border border-rule"
  >
  <div className="flex items-start gap-2.5 w-full">
- <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground"/>
+ <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-ink-soft"/>
  <div className="flex-1">
- <p className="text-sm font-medium text-muted-foreground mb-1">No Document Context Available</p>
- <p className="text-sm text-muted-foreground leading-relaxed">{documentsFetchError}</p>
+ <p className="text-sm font-medium text-ink mb-1">No Document Context Available</p>
+ <p className="text-sm text-ink-soft leading-relaxed">{documentsFetchError}</p>
  </div>
  </div>
  </BaseCard>
@@ -357,11 +351,7 @@ export function SchemaGenerator({
  {!isLoadingDocuments && sampleDocuments.length > 0 && !isGenerating && !generatedSchema && (
  <BaseCard
  clickable={false}
- className={cn(
-"p-3",
-"bg-green-50/50",
-"border-green-200/50"
- )}
+ className="p-3 bg-parchment border border-rule"
  >
  <div className="space-y-3">
  <div className="flex items-center gap-2">
@@ -405,8 +395,8 @@ export function SchemaGenerator({
  <Textarea
  value={userInput}
  onChange={(e) => setUserInput(e.target.value)}
-	 placeholder="Example: I want to extract key legal concepts, dates, parties involved, holdings, and cited provisions from appellate judgments..."
- className="min-h-32"
+ placeholder="Example: I want to extract key legal concepts, dates, parties involved, holdings, and cited provisions from appellate judgments..."
+ className="min-h-32 rounded-none border border-rule bg-parchment text-ink"
  disabled={isLoadingDocuments}
  />
  </div>
@@ -414,10 +404,9 @@ export function SchemaGenerator({
  onClick={handleGenerate}
  className="w-full"
  disabled={isLoadingDocuments}
- icon={Wand2}
  >
  Generate Schema
- {sampleDocuments.length > 0 &&"with Document Context"}
+ {sampleDocuments.length > 0 && " with Document Context"}
  </VariantButton>
  </div>
  )}
@@ -426,7 +415,7 @@ export function SchemaGenerator({
  {isGenerating && (
  <BaseCard clickable={false}>
  <div className="space-y-4">
- <h3 className="text-base font-semibold mb-4">Generating Schema...</h3>
+ <h3 className="font-display text-base font-semibold text-ink mb-4">Generating Schema...</h3>
  <div className="space-y-4">
  {generationSteps.map((step) => (
  <div key={step.id} className="flex items-start gap-3">
@@ -440,7 +429,7 @@ export function SchemaGenerator({
  size="sm"
  />
  </div>
- <p className="text-sm text-muted-foreground">
+ <p className="text-sm text-ink-soft">
  {step.description}
  </p>
  </div>
@@ -455,17 +444,13 @@ export function SchemaGenerator({
  {generatedSchema && (
  <BaseCard clickable={false}>
  <div className="space-y-4">
- <h3 className="text-base font-semibold text-green-600 mb-4">
- Schema Generated Successfully!
+ <h3 className="font-display text-base font-semibold text-ink mb-4">
+ Schema Generated
  </h3>
  <div className="space-y-4">
  <div>
  <h4 className="text-sm font-medium mb-2">Generated Schema:</h4>
- <pre className={cn(
-"bg-slate-50/50",
-"border border-slate-200/50",
-"p-3 rounded-lg text-sm overflow-auto max-h-64"
- )}>
+ <pre className="bg-parchment border border-rule p-3 text-xs font-mono overflow-auto max-h-64">
  {JSON.stringify(generatedSchema?.schema || generatedSchema, null, 2)}
  </pre>
  {(generatedSchema?.confidence || generatedSchema?.schema_id) && (

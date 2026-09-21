@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
- BaseCard,
  EmptyState,
  VariantButton,
- Badge,
  PageContainer,
  SearchableDropdownButton,
 } from "@/lib/styles/components";
+import { StatusBadge } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { DocumentExtractionResult, DocumentProcessingStatus } from "@/types/search";
 import {
@@ -34,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cleanDocumentIdForUrl } from "@/lib/document-utils";
 import { ExtractionResultsTable } from "@/components/extraction-results-table";
 import { logger } from "@/lib/logger";
+import { EditorialCard } from "@/components/editorial";
 import {
  isTerminalExtractionStatus,
  mergeExtractionJobUpdate,
@@ -73,13 +73,11 @@ function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string
 
 export const dynamic = 'force-dynamic';
 
-// Status badge colors
-const STATUS_COLORS = {
- completed: "bg-green-100 text-green-800 border-green-200",
- processing: "bg-blue-100 text-blue-800 border-blue-200",
- failed: "bg-red-100 text-red-800 border-red-200",
-};
-
+// Notice cards — oxblood rule for errors, gold rule for warnings
+const NOTICE_ERROR = "mb-0 border-l-2 border-l-oxblood";
+const NOTICE_WARN = "mb-0 border-l-2 border-l-gold";
+const TAB_LIST = "h-9 rounded-none border border-rule bg-parchment-deep p-0.5";
+const TAB_TRIGGER = "flex items-center gap-2 rounded-none px-3 data-[state=active]:bg-parchment data-[state=active]:text-ink data-[state=active]:shadow-none";
 interface ExtractionJobClientProps {
  jobId: string;
  initialJob: ExtractionJobSnapshot;
@@ -229,6 +227,16 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  const processedCount = completedResults.length;
  const failedCount = failedResults.length;
 
+ // Job-level status collapsed onto the shared tone keys; raw backend spellings
+ // (SUCCESS, FAILURE, REVOKED, QUEUED) would otherwise fall through to ink.
+ const jobStatusKey = (() => {
+ const raw = jobData.status?.toLowerCase() ?? '';
+ if (['completed', 'success', 'partially_completed'].includes(raw)) return 'completed';
+ if (['failed', 'failure', 'cancelled', 'revoked'].includes(raw)) return 'failed';
+ if (['pending', 'queued'].includes(raw)) return 'pending';
+ return 'processing';
+ })();
+
  // `attempts` counts worker claims on this job, so anything above 1 means a
  // worker died or was restarted mid-run and a later one picked the job back
  // up. Documents already recorded COMPLETED are skipped on that second pass,
@@ -284,12 +292,12 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  const getStatusBadge = (result: DocumentExtractionResult) => {
  const status = normalizeStatus(result.status);
  if (status === DocumentProcessingStatus.COMPLETED || status === 'completed' || status === 'success') {
- return { className: STATUS_COLORS.completed, label: 'Completed', icon: CheckCircle2 };
+ return { label: 'Completed', icon: CheckCircle2 };
  }
  if (status === DocumentProcessingStatus.FAILED || status === 'failed' || status === 'failure') {
- return { className: STATUS_COLORS.failed, label: 'Failed', icon: XCircle };
+ return { label: 'Failed', icon: XCircle };
  }
- return { className: STATUS_COLORS.processing, label: 'In Progress', icon: RefreshCw };
+ return { label: 'In Progress', icon: RefreshCw };
  };
 
  // Create document options for selector
@@ -336,20 +344,20 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  return (
  <PageContainer fillViewport={true}>
  {pollError && (
- <BaseCard variant="light" className="mb-6 border-red-200">
- <div className="flex items-start gap-3 -m-3.5 p-6" role="alert">
- <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+ <EditorialCard flat className={cn(NOTICE_ERROR, "mb-6")}>
+ <div className="flex items-start gap-3" role="alert">
+ <XCircle className="h-5 w-5 text-oxblood flex-shrink-0 mt-0.5" />
  <div>
- <h2 className="font-semibold text-red-900">
+ <h2 className="font-semibold text-ink">
  Extraction service error ({pollError.status})
  </h2>
- <p className="text-sm text-red-800">{pollError.message}</p>
- <p className="mt-1 text-xs text-red-700">
+ <p className="text-sm text-ink-soft">{pollError.message}</p>
+ <p className="mt-1 text-xs text-ink-soft">
  The last verified job data remains visible while the service recovers.
  </p>
  </div>
  </div>
- </BaseCard>
+ </EditorialCard>
  )}
  {/* Back button */}
  <div className="flex items-center gap-4 mb-6 print:hidden">
@@ -363,126 +371,116 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
 
  <div className="space-y-4">
  {resumedAttempts !== null && (
- <BaseCard variant="light" className="border-amber-200">
- <div className="flex items-start gap-3 -m-3.5 p-6" role="status">
- <History className="h-5 w-5 text-amber-700 flex-shrink-0 mt-0.5" />
+ <EditorialCard flat className={NOTICE_WARN}>
+ <div className="flex items-start gap-3" role="status">
+ <History className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
  <div>
- <h2 className="font-semibold text-amber-900">
+ <h2 className="font-semibold text-ink">
  This job was interrupted and resumed
  </h2>
- <p className="text-sm text-amber-800">
+ <p className="text-sm text-ink-soft">
  {resumeProgress
  ? `Documents already finished were not re-processed. ${resumeProgress.completed} of ${resumeProgress.total} documents are complete.`
  : "Documents already finished were not re-processed."}
  </p>
- <p className="mt-1 text-xs text-amber-700">
+ <p className="mt-1 text-xs text-ink-soft">
  Attempt {resumedAttempts}.
  </p>
  </div>
  </div>
- </BaseCard>
+ </EditorialCard>
  )}
- <BaseCard
- variant="light"
- title={
- jobData.created_at
- ? `Extraction - ${new Date(jobData.created_at).toLocaleString()}`
- : 'Extraction'
- }
- >
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4 -m-3.5 p-6">
- {/* Job ID and Processed Documents - full width row */}
- <div className="md:col-span-2">
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Job ID</div>
- <div className="font-mono text-sm break-all">{jobId}</div>
- </div>
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Processed Documents</div>
- <div className="text-sm">
- {processedCount} / {totalResults}
- {failedCount > 0 && (
- <span className="text-red-600 ml-2">
- ({failedCount} failed)
- </span>
- )}
- </div>
- </div>
- </div>
- </div>
+        <EditorialCard>
+          <h3 className="editorial-display text-lg text-ink mb-4">
+            {jobData.created_at
+              ? `Extraction - ${new Date(jobData.created_at).toLocaleString()}`
+              : 'Extraction'}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Job ID and Processed Documents - full width row */}
+            <div className="md:col-span-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Job ID</div>
+                  <div className="font-mono text-sm break-all text-ink">{jobId}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Processed Documents</div>
+                  <div className="text-sm text-ink">
+                    {processedCount} / {totalResults}
+                    {failedCount > 0 && (
+                      <span className="text-oxblood ml-2">
+                        ({failedCount} failed)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
 
- {/* Schema Name */}
- {jobData.schema_name && (
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Schema</div>
- <div className="flex items-center gap-1.5 text-sm">
- <Database className="h-4 w-4 text-muted-foreground"/>
- {jobData.schema_id ? (
- <Link
- href={`/schemas/${jobData.schema_id}`}
- className="text-primary hover:underline flex items-center gap-1"
- >
- {jobData.schema_name}
- <ExternalLink className="h-3 w-3"/>
- </Link>
- ) : (
- <span>{jobData.schema_name}</span>
- )}
- </div>
- </div>
- )}
+            {/* Schema Name */}
+            {jobData.schema_name && (
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Schema</div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Database className="h-4 w-4 text-ink-soft" />
+                  {jobData.schema_id ? (
+                    <Link
+                      href={`/schemas/${jobData.schema_id}`}
+                      className="text-oxblood hover:underline flex items-center gap-1"
+                    >
+                      {jobData.schema_name}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <span className="text-ink">{jobData.schema_name}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
- {/* Collection Name */}
- {jobData.collection_name && (
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Collection</div>
- <div className="flex items-center gap-1.5 text-sm">
- <FolderOpen className="h-4 w-4 text-muted-foreground"/>
- {jobData.collection_id ? (
- <Link
- href={`/collections/${jobData.collection_id}`}
- className="text-primary hover:underline flex items-center gap-1"
- >
- {jobData.collection_name}
- <ExternalLink className="h-3 w-3"/>
- </Link>
- ) : (
- <span>{jobData.collection_name}</span>
- )}
- </div>
- </div>
- )}
+            {/* Collection Name */}
+            {jobData.collection_name && (
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Collection</div>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <FolderOpen className="h-4 w-4 text-ink-soft" />
+                  {jobData.collection_id ? (
+                    <Link
+                      href={`/collections/${jobData.collection_id}`}
+                      className="text-oxblood hover:underline flex items-center gap-1"
+                    >
+                      {jobData.collection_name}
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <span className="text-ink">{jobData.collection_name}</span>
+                  )}
+                </div>
+              </div>
+            )}
 
- {/* Status */}
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</div>
- <Badge
- variant={jobData.status?.toLowerCase() === 'failed' || jobData.status?.toLowerCase() === 'failure' ? 'destructive' : 'outline'}
- className={cn(
-"font-medium w-fit",
- (jobData.status?.toLowerCase() === 'completed' || jobData.status?.toLowerCase() === 'success') &&"bg-green-100 text-green-800 border-green-200",
- jobData.status?.toLowerCase() === 'processing' &&"bg-blue-100 text-blue-800 border-blue-200"
- )}
- >
- {jobData.status?.toLowerCase() === 'processing' && <RefreshCw className="h-3 w-3 mr-1 animate-spin"/>}
- {(jobData.status?.toLowerCase() === 'completed' || jobData.status?.toLowerCase() === 'success') && <CheckCircle2 className="h-3 w-3 mr-1"/>}
- {(jobData.status?.toLowerCase() === 'failed' || jobData.status?.toLowerCase() === 'failure') && <XCircle className="h-3 w-3 mr-1"/>}
- {jobData.status.charAt(0).toUpperCase() + jobData.status.slice(1)}
- </Badge>
- </div>
+            {/* Status */}
+            <div className="space-y-1">
+              <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">Status</div>
+              <StatusBadge
+                status={jobStatusKey}
+                label={jobData.status.charAt(0).toUpperCase() + jobData.status.slice(1)}
+                className="w-fit"
+              />
+            </div>
 
- {/* Completion Time */}
- {jobData.updated_at && (
- <div className="space-y-1">
- <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
- {jobData.status === 'completed' ? 'Completed' : 'Last Updated'}
- </div>
- <div className="text-sm">{new Date(jobData.updated_at).toLocaleString()}</div>
- </div>
- )}
- </div>
- </BaseCard>
+            {/* Completion Time */}
+            {jobData.updated_at && (
+              <div className="space-y-1">
+                <div className="text-xs font-mono text-ink-soft uppercase tracking-wider">
+                  {jobData.status === 'completed' ? 'Completed' : 'Last Updated'}
+                </div>
+                <div className="text-sm text-ink">{new Date(jobData.updated_at).toLocaleString()}</div>
+              </div>
+            )}
+          </div>
+        </EditorialCard>
 
  </div>
 
@@ -494,17 +492,17 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </div>
  <div className="flex items-center gap-2">
  <Tabs value={resultsView} onValueChange={(v) => setResultsView(v as 'document' | 'table')}>
- <TabsList className="bg-slate-100/60 border border-slate-200/50 h-9">
+ <TabsList className={TAB_LIST}>
  <TabsTrigger
  value="table"
- className="flex items-center gap-2 px-3 data-[state=active]:bg-white/80 data-[state=active]:shadow-sm"
+ className={TAB_TRIGGER}
  >
  <Table2 className="h-4 w-4"/>
  Table
  </TabsTrigger>
  <TabsTrigger
  value="document"
- className="flex items-center gap-2 px-3 data-[state=active]:bg-white/80 data-[state=active]:shadow-sm"
+ className={TAB_TRIGGER}
  >
  <LayoutList className="h-4 w-4"/>
  Document
@@ -575,24 +573,24 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  {/* Failed Documents Summary */}
  {failedCount > 0 && (
  <div className="mb-6">
- <BaseCard variant="light"className="border-red-200">
- <div className="flex items-start gap-3 -m-3.5 p-6">
- <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"/>
+ <EditorialCard flat className={NOTICE_ERROR}>
+ <div className="flex items-start gap-3">
+ <XCircle className="h-5 w-5 text-oxblood flex-shrink-0 mt-0.5"/>
  <div className="flex-1 min-w-0">
- <h3 className="text-sm font-semibold text-red-900 mb-2">
+ <h3 className="text-sm font-semibold text-ink mb-2">
  {failedCount} Document{failedCount !== 1 ? 's' : ''} Failed
  </h3>
  <div className="space-y-2">
  {failedResults.map((result) => (
  <div
  key={result.document_id}
- className="text-sm p-2 bg-red-50 rounded border border-red-200"
+ className="text-sm p-2 border border-rule bg-parchment-deep"
  >
- <div className="font-mono text-xs text-red-900 mb-1">
+ <div className="font-mono text-xs text-ink mb-1">
  {result.document_id}
  </div>
  {result.error_message && (
- <div className="text-xs text-red-800 whitespace-pre-wrap break-words">
+ <div className="text-xs text-ink-soft whitespace-pre-wrap break-words">
  {result.error_message}
  </div>
  )}
@@ -601,7 +599,7 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </div>
  </div>
  </div>
- </BaseCard>
+ </EditorialCard>
  </div>
  )}
 
@@ -644,64 +642,64 @@ export function ExtractionJobClient({ jobId, initialJob }: ExtractionJobClientPr
  </h3>
  </div>
 
- <BaseCard variant="light"className="p-0">
- <div className="space-y-6 -m-3.5 p-6">
- {/* Tabs and Print button header */}
- <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-4 border-b border-slate-200/50">
- <Tabs
- value={viewMode}
- onValueChange={(value) => setViewMode(value as"formatted"|"json")}
- className="flex-1"
- >
- <TabsList className="bg-slate-100/60 border border-slate-200/50 h-10">
- <TabsTrigger
- value="formatted"
- className="flex items-center gap-2 px-4 data-[state=active]:bg-white/80 data-[state=active]:shadow-sm data-[state=active]:text-foreground"
- >
- <FileText className="h-4 w-4"/>
- Formatted View
- </TabsTrigger>
- <TabsTrigger
- value="json"
- className="flex items-center gap-2 px-4 data-[state=active]:bg-white/80 data-[state=active]:shadow-sm data-[state=active]:text-foreground"
- >
- <Code className="h-4 w-4"/>
- JSON View
- </TabsTrigger>
- </TabsList>
- </Tabs>
- <VariantButton intent="secondary"
- icon={Printer}
- onClick={() => window.print()}
- size="sm"
- >
- Print
- </VariantButton>
- </div>
+          <EditorialCard flat className="p-0 overflow-hidden">
+            <div className="space-y-6">
+              {/* Tabs and Print button header */}
+              <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-4 border-b border-rule">
+                <Tabs
+                  value={viewMode}
+                  onValueChange={(value) => setViewMode(value as "formatted" | "json")}
+                  className="flex-1"
+                >
+                  <TabsList className={cn(TAB_LIST, "h-10")}>
+                    <TabsTrigger
+                      value="formatted"
+                      className={cn(TAB_TRIGGER, "px-4")}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Formatted View
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="json"
+                      className={cn(TAB_TRIGGER, "px-4")}
+                    >
+                      <Code className="h-4 w-4" />
+                      JSON View
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <VariantButton intent="secondary"
+                  icon={Printer}
+                  onClick={() => window.print()}
+                  size="sm"
+                >
+                  Print
+                </VariantButton>
+              </div>
 
- {/* Tab content */}
- <Tabs
- value={viewMode}
- onValueChange={(value) => setViewMode(value as"formatted"|"json")}
- className="w-full"
- >
- <TabsContent value="formatted"className="mt-0 px-6 pb-6">
- <ExtractionDataViewer
- data={selectedResult.extracted_data}
- viewMode="document"
- globalLayout="list"
- />
- </TabsContent>
- <TabsContent value="json"className="mt-0 px-6 pb-6">
- <div className="overflow-auto max-h-[80vh] rounded-lg border border-slate-200/50">
- <pre className="text-sm whitespace-pre-wrap font-mono bg-slate-50/60 p-6 rounded-lg">
- {JSON.stringify(selectedResult.extracted_data, null, 2)}
- </pre>
- </div>
- </TabsContent>
- </Tabs>
- </div>
- </BaseCard>
+              {/* Tab content */}
+              <Tabs
+                value={viewMode}
+                onValueChange={(value) => setViewMode(value as "formatted" | "json")}
+                className="w-full"
+              >
+                <TabsContent value="formatted" className="mt-0 px-6 pb-6">
+                  <ExtractionDataViewer
+                    data={selectedResult.extracted_data}
+                    viewMode="document"
+                    globalLayout="list"
+                  />
+                </TabsContent>
+                <TabsContent value="json" className="mt-0 px-6 pb-6">
+                  <div className="overflow-auto max-h-[80vh] border border-rule">
+                    <pre className="text-sm whitespace-pre-wrap font-mono bg-parchment-deep p-6 text-ink">
+                      {JSON.stringify(selectedResult.extracted_data, null, 2)}
+                    </pre>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </EditorialCard>
  </div>
  );
  })()}

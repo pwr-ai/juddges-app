@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { VariantButton, UserAvatar, UserCard, Badge } from "@/lib/styles/components";
-import { AIBadge } from "@/lib/styles/components/ai-badge";
 
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -212,29 +211,17 @@ export function Navbar(): React.ReactElement {
   return (
     <header className={cn(
       "flex items-center justify-between px-4 md:px-8 h-16 min-h-[4rem]",
-      // Modern gradient background with blur
-      "bg-gradient-to-r from-background via-background/95 to-background",
-      "backdrop-blur-md",
-      // Enhanced border with gradient
-      "border-b border-border/50",
-      // Subtle shadow for depth
-      "shadow-[0_1px_2px_rgba(0,0,0,0.02)]",
+      "bg-parchment border-b border-rule",
       "sticky top-0 z-30",
-      "transition-all duration-300",
       isCollectionDetail && collectionData && user ? "relative" : ""
     )}>
       <div className="flex items-center gap-3 md:gap-5">
         {user && (
           <SidebarTrigger className={cn(
-            "h-9 w-9 rounded-lg",
-            // Background without hover color change
-            "bg-muted/50",
-            // Border and shadow
-            "border border-border/30",
-            "shadow-sm hover:shadow-md",
-            // Smooth transitions and subtle scale
-            "transition-all duration-200",
-            "hover:scale-[1.02] active:scale-[0.98]"
+            "h-9 w-9 rounded-none",
+            "bg-parchment-deep text-ink-soft hover:text-ink",
+            "border border-rule",
+            "transition-colors"
           )} />
         )}
         {isDocumentPage && user && (() => {
@@ -309,18 +296,10 @@ export function Navbar(): React.ReactElement {
           <NavbarHeading>Dashboard</NavbarHeading>
         )}
         {isChat && user && (
-          <div className="flex items-center gap-3">
-            <NavbarHeading>Assistant</NavbarHeading>
-            <AIBadge text="AI" size="sm" className="scale-150" />
-          </div>
+          <NavbarHeading>Assistant</NavbarHeading>
         )}
         {isSearch && user && (
-          <div className="flex items-center gap-3">
-            <NavbarHeading>Search</NavbarHeading>
-            {searchType === 'thinking' && (
-              <AIBadge text="AI-powered" size="sm" />
-            )}
-          </div>
+          <NavbarHeading>Search</NavbarHeading>
         )}
         {isCollections && user && !isCollectionDetail && (
           <NavbarHeading>Collections</NavbarHeading>
@@ -332,10 +311,7 @@ export function Navbar(): React.ReactElement {
           <NavbarHeading>Schemas</NavbarHeading>
         )}
         {isPrecedents && user && (
-          <div className="flex items-center gap-3">
-            <NavbarHeading>Precedent Finder</NavbarHeading>
-            <AIBadge text="AI" size="sm" />
-          </div>
+          <NavbarHeading>Precedent Finder</NavbarHeading>
         )}
       </div>
 
@@ -588,11 +564,11 @@ export function Navbar(): React.ReactElement {
                   href={item.href}
                   className={cn(
                     "text-sm font-medium relative group",
-                    "text-muted-foreground hover:text-foreground",
+                    "text-ink-soft hover:text-ink",
                     "transition-colors duration-200",
                     "after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0",
-                    "after:bg-gradient-to-r after:from-primary after:to-primary/50",
-                    "after:transition-all after:duration-300",
+                    "after:bg-oxblood",
+                    "after:transition-[width] after:duration-200",
                     "hover:after:w-full"
                   )}
                 >

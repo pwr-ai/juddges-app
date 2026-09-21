@@ -75,82 +75,82 @@ export function ProfessionalAcknowledgment({
  }
  };
 
- const terms = [
- {
- icon: AlertTriangle,
- title: "AI Assistance, Not Legal Advice",
- description:
-"This tool provides AI-powered assistance for research and analysis. It does not provide legal advice and should not be relied upon as a substitute for professional judgment.",
- color: "text-amber-600",
- },
- {
- icon: Shield,
- title: "Professional Responsibility",
- description:
-"You are solely responsible for verifying all AI-generated outputs before using them in any professional or legal context. Always apply your professional judgment.",
- color: "text-blue-600",
- },
- {
- icon: AlertTriangle,
- title: "No Attorney-Client Privilege",
- description:
-"Use of this tool does not create an attorney-client relationship, and communications through this platform may not be privileged or confidential.",
- color: "text-red-600",
- },
- {
- icon: CheckCircle2,
- title: "Verification Required",
- description:
-"All AI-generated content must be independently verified. The AI may produce incomplete, incorrect, or outdated information. Professional verification is mandatory.",
- color: "text-green-600",
- },
- ];
+  const terms = [
+    {
+      icon: AlertTriangle,
+      title: "AI Assistance, Not Legal Advice",
+      description:
+        "This tool provides AI-powered assistance for research and analysis. It does not provide legal advice and should not be relied upon as a substitute for professional judgment.",
+      color: "text-ink",
+    },
+    {
+      icon: Shield,
+      title: "Professional Responsibility",
+      description:
+        "You are solely responsible for verifying all AI-generated outputs before using them in any professional or legal context. Always apply your professional judgment.",
+      color: "text-ink",
+    },
+    {
+      icon: AlertTriangle,
+      title: "No Attorney-Client Privilege",
+      description:
+        "Use of this tool does not create an attorney-client relationship, and communications through this platform may not be privileged or confidential.",
+      color: "text-oxblood",
+    },
+    {
+      icon: CheckCircle2,
+      title: "Verification Required",
+      description:
+        "All AI-generated content must be independently verified. The AI may produce incomplete, incorrect, or outdated information. Professional verification is mandatory.",
+      color: "text-ink",
+    },
+  ];
 
- return (
- <Dialog open={open} onOpenChange={onOpenChange}>
- <DialogContent
- className="max-w-3xl max-h-[90vh] overflow-y-auto"
- onInteractOutside={(e) => e.preventDefault()}
- onEscapeKeyDown={(e) => e.preventDefault()}
- >
- <DialogHeader>
- <DialogTitle className="text-2xl font-bold flex items-center gap-2">
- <Shield className="h-6 w-6 text-primary"/>
- Professional Use Acknowledgment
- </DialogTitle>
- <DialogDescription className="text-base pt-2">
- Before using JuDDGES, please review and acknowledge these important
- professional responsibility terms.
- </DialogDescription>
- </DialogHeader>
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-none border border-rule bg-parchment"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl font-normal text-foreground flex items-center gap-2">
+            <Shield className="h-6 w-6 text-oxblood" />
+            Professional Use Acknowledgment
+          </DialogTitle>
+          <DialogDescription className="text-base pt-2 text-muted-foreground">
+            Before using JuDDGES, please review and acknowledge these important
+            professional responsibility terms.
+          </DialogDescription>
+        </DialogHeader>
 
- <div className="space-y-4 py-4">
- {terms.map((term, index) => (
- <div
- key={index}
- className="flex gap-4 p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
- >
- <div className="flex-shrink-0 mt-0.5">
- <term.icon className={`h-5 w-5 ${term.color}`} />
- </div>
- <div className="space-y-1">
- <h4 className="font-semibold text-sm text-foreground">{term.title}</h4>
- <p className="text-sm text-muted-foreground leading-relaxed">
- {term.description}
- </p>
- </div>
- </div>
- ))}
+        <div className="space-y-4 py-4">
+          {terms.map((term, index) => (
+            <div
+              key={index}
+              className="flex gap-4 p-4 rounded-none border border-rule bg-parchment-deep"
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                <term.icon className={`h-5 w-5 ${term.color}`} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-serif text-sm font-medium text-foreground">{term.title}</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {term.description}
+                </p>
+              </div>
+            </div>
+          ))}
 
- <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-6">
- <p className="text-sm text-foreground font-medium mb-2">Important Reminders:</p>
- <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
- <li>AI outputs are for research and reference only</li>
- <li>Always verify information with primary sources</li>
- <li>Maintain professional liability insurance</li>
- <li>Follow your jurisdiction&apos;s professional conduct rules</li>
- </ul>
- </div>
+          <div className="bg-parchment-deep border border-rule border-l-2 border-l-oxblood rounded-none p-4 mt-6">
+            <p className="text-sm text-foreground font-medium mb-2">Important Reminders:</p>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              <li>AI outputs are for research and reference only</li>
+              <li>Always verify information with primary sources</li>
+              <li>Maintain professional liability insurance</li>
+              <li>Follow your jurisdiction&apos;s professional conduct rules</li>
+            </ul>
+          </div>
 
  <div className="flex items-start gap-3 pt-4">
  <Checkbox

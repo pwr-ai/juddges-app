@@ -5,7 +5,6 @@ import {
   VariantButton,
   LoadingIndicator,
   EmptyState,
-  AIBadge,
 } from "@/lib/styles/components";
 import { cn } from "@/lib/utils";
 import { CollectionDocument, getDocumentTypeBadge } from "./types";
@@ -35,9 +34,8 @@ export function DocumentSelector({
 }: DocumentSelectorProps) {
   return (
     <div className={cn(
-      "rounded-lg border",
-      "bg-slate-50/50",
-      "border-slate-200/50",
+      "border border-rule",
+      "bg-parchment-deep",
       "overflow-hidden"
     )}>
       {collectionDocuments.length > 0 && (
@@ -46,9 +44,9 @@ export function DocumentSelector({
           onClick={onToggleExpanded}
           className={cn(
             "w-full flex items-center justify-between gap-2 p-3",
-            "hover:bg-slate-100/50",
+            "hover:bg-parchment",
             "transition-colors",
-            "border-b border-slate-200/50"
+            "border-b border-rule"
           )}
         >
           <div className="flex items-center gap-2">
@@ -57,12 +55,10 @@ export function DocumentSelector({
           </div>
           <div className="flex items-center gap-2">
             {!isLoadingDocuments && !documentsError && selectedDocuments.size > 0 && (
-              <AIBadge
-                text={String(selectedDocuments.size)}
-                icon={FileText}
-                size="sm"
-                className="font-mono"
-              />
+              <Badge variant="outline" className="gap-1 font-mono text-xs tabular-nums">
+                <FileText className="h-3 w-3" />
+                {selectedDocuments.size}
+              </Badge>
             )}
             {isLoadingDocuments ? (
               <div className="h-3.5 w-3.5 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
@@ -128,10 +124,10 @@ export function DocumentSelector({
                     <div
                       key={doc.id}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-md transition-colors cursor-pointer",
-                        "bg-slate-50/50",
-                        "hover:bg-slate-100/50",
-                        "border border-slate-200/50"
+                        "flex items-center gap-3 p-3 transition-colors cursor-pointer",
+                        "bg-parchment",
+                        "hover:bg-parchment-deep",
+                        "border border-rule"
                       )}
                       onClick={() => onToggleDocument(doc.document_id)}
                     >
@@ -151,7 +147,7 @@ export function DocumentSelector({
                           {doc.document_type && (
                             <Badge
                               className={cn(
-                                "text-xs font-medium shrink-0 px-2.5 py-1 rounded-md backdrop-blur-sm",
+                                "text-xs font-medium shrink-0 px-2.5 py-1",
                                 typeClassName
                               )}
                             >

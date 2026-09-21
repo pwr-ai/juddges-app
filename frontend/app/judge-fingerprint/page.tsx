@@ -81,11 +81,11 @@ export default function JudgeFingerprintPage() {
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <Fingerprint className="h-6 w-6 text-primary" />
+          <div className="p-2 rounded-none bg-parchment-deep border border-rule">
+            <Fingerprint className="h-6 w-6 text-oxblood" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold text-ink font-display">
               {t('judgeFingerprint.pageTitle')}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -97,7 +97,7 @@ export default function JudgeFingerprintPage() {
       </div>
 
       {/* Search section */}
-      <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+      <BaseCard clickable={false} variant="light">
         <div className="space-y-3">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t('judgeFingerprint.searchLabel')}
@@ -131,7 +131,7 @@ export default function JudgeFingerprintPage() {
 
       {/* Comparison radar chart (shown when 2+ profiles loaded) */}
       {showComparison && !isLoading && (
-        <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+        <BaseCard clickable={false} variant="light">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
@@ -171,7 +171,7 @@ export default function JudgeFingerprintPage() {
           />
 
           {/* How it works */}
-          <BaseCard clickable={false} variant="light" className="rounded-[16px]">
+          <BaseCard clickable={false} variant="light">
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-foreground">
                 {t('judgeFingerprint.howItWorks')}

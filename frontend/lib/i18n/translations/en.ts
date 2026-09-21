@@ -138,6 +138,15 @@ export const en: Translations = {
     phasePlan: '1. Plan',
     phaseSearch: '2. Search',
     phaseAnalyze: '3. Analyze',
+    flowAsk: 'Ask',
+    flowExplore: 'Explore',
+    flowCode: 'Code',
+    flowCase: 'Case',
+    flowStep: 'Step {{n}} of {{m}}',
+    flowLabel: 'Workflow steps',
+    searchHistory: 'Search History',
+    runExtraction: 'Run Extraction',
+    extractionJobs: 'Extraction Jobs',
   },
 
   chat: {
@@ -366,7 +375,7 @@ export const en: Translations = {
   dashboard: {
     title: 'Dashboard',
     databaseOverview: 'Database Overview',
-    recentJudgments: 'Recent Judgments',
+    judgments: 'Judgments',
     popularLegalTopics: 'Popular Legal Topics',
     researchCollections: 'Research Collections',
     viewAll: 'View all',

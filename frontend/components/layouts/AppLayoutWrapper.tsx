@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FlowStepper } from "@/components/editorial/FlowStepper";
 import { Navbar } from "@/components/navbar";
 import { CompactFooter } from "@/components/footer/CompactFooter";
 import { CommandPalette } from "@/components/command-palette";
@@ -109,18 +110,26 @@ export function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
                 <div className="flex-1 flex flex-col bg-background overflow-hidden">
                   <NavbarWithSuspense />
                   <div className="flex-1 overflow-y-auto">
+                    <FlowStepper />
                     <main className="bg-background">
                       {children}
                     </main>
                   </div>
+                  {/* Footer sits inside the content column, below the scroll
+                      area. It must not be a sibling of the sidebar row: the
+                      sidebar reserves its width with an in-flow `sidebar-gap`
+                      element scoped to that row, while the visible sidebar is a
+                      `fixed inset-y-0 z-50` overlay spanning the full viewport
+                      height. A footer outside the row gets no gap to push it
+                      right, so the overlay painted over its left edge and
+                      clipped the copyright line. */}
+                  <CompactFooter />
                 </div>
               </div>
-              {/* Compact footer at bottom, outside scroll area */}
-              <CompactFooter />
             </div>
             {/* Command Palette - Available globally via Cmd/Ctrl+K */}
             <CommandPalette />
-            {/* PWA: Service worker registration + install prompt */}
+            {/* PWA: Service worker registration */}
             <PWAProvider />
           </LegalComplianceWrapper>
         </ChatProvider>

@@ -10,7 +10,7 @@ export default function Page({ searchParams }: { searchParams: Promise<{ error: 
   const router = useRouter();
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-gradient-to-b from-background to-muted/20">
+    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-parchment">
       <div className="w-full max-w-md">
         <ErrorCard
           title="Authentication Error"

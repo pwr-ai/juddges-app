@@ -1,7 +1,8 @@
-import { Wand2, Link as LinkIcon, Sparkles, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
+import { Plus, Link as LinkIcon, FolderOpen, FileCode, Globe, AlertCircle, Layers } from "lucide-react";
 import { ExtractionSchema } from "@/types/extraction_schemas";
 import { SchemaPreview } from "@/lib/styles/components/schema-preview";
-import { BaseCard, VariantButton, SearchableDropdownButton, DropdownButton } from "@/lib/styles/components";
+import { VariantButton, SearchableDropdownButton, DropdownButton } from "@/lib/styles/components";
+import { EditorialCard } from "@/components/editorial";
 import { cn } from "@/lib/utils";
 import { Collection, CollectionDocument, formatName } from "./types";
 import { DocumentSelector } from "./DocumentSelector";
@@ -64,13 +65,11 @@ export function ExtractionConfigPanel({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Configuration Panel */}
         <div>
-          <BaseCard
-            variant="light"
-            title="New Extraction"
-          >
-            <div className="space-y-6 -mt-3 -m-3.5 p-8">
+          <EditorialCard>
+            <h3 className="editorial-display text-lg text-ink mb-6">New Extraction</h3>
+            <div className="space-y-6">
               {hasUrlPreselection && (
-                <div className="flex items-center gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2 text-xs text-ink-soft">
                   <LinkIcon className="h-3.5 w-3.5" />
                   <span>Pre-selected from URL</span>
                 </div>
@@ -120,7 +119,7 @@ export function ExtractionConfigPanel({
                   <VariantButton intent="secondary"
                     size="sm"
                     onClick={onGenerateSchema}
-                    icon={Wand2}
+                    icon={Plus}
                   >
                     Generate New
                   </VariantButton>
@@ -171,26 +170,17 @@ export function ExtractionConfigPanel({
               </div>
 
               {selectedCollection && selectedSchema && collectionDocuments.length > 0 && selectedDocuments.size === 0 && (
-                <BaseCard
-                  clickable={false}
-                  className={cn(
-                    "p-3",
-                    "bg-amber-50/50",
-                    "border-amber-200/50"
-                  )}
-                >
-                  <div className="flex items-start gap-2.5 w-full">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground leading-relaxed">
-                      Please select at least one document to start extraction
-                    </span>
-                  </div>
-                </BaseCard>
+                <div className="p-3 border-l-2 border-l-gold bg-parchment-deep flex items-start gap-2.5 w-full">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-gold" />
+                  <span className="text-sm font-medium text-ink-soft leading-relaxed">
+                    Please select at least one document to start extraction
+                  </span>
+                </div>
               )}
 
               <div className="flex gap-2">
                 <VariantButton
-                  intent="glass"
+                  intent="primary"
                   onClick={onExtract}
                   disabled={
                     !selectedCollection ||
@@ -207,15 +197,11 @@ export function ExtractionConfigPanel({
                   {isLoading ? (
                     <span>Starting Extraction...</span>
                   ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      {isLoadingDocuments
-                        ? "Loading Documents..."
-                        : selectedDocuments.size > 0
-                          ? `Start Extraction (${selectedDocuments.size} ${selectedDocuments.size === 1 ? 'document' : 'documents'})`
-                          : "Start Extraction"
-                      }
-                    </>
+                    isLoadingDocuments
+                      ? "Loading Documents..."
+                      : selectedDocuments.size > 0
+                        ? `Start Extraction (${selectedDocuments.size} ${selectedDocuments.size === 1 ? 'document' : 'documents'})`
+                        : "Start Extraction"
                   )}
                 </VariantButton>
                 <VariantButton intent="secondary"
@@ -234,7 +220,7 @@ export function ExtractionConfigPanel({
                 </VariantButton>
               </div>
             </div>
-          </BaseCard>
+          </EditorialCard>
         </div>
 
         {/* Schema Preview Panel */}

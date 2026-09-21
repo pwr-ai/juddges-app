@@ -32,7 +32,7 @@ function LoginFormFallback() {
       <span className="sr-only">Loading the sign-in form…</span>
 
       {/* Left: marketing panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between gap-12 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5 p-12">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between gap-12 bg-parchment-deep/40 border-r border-rule p-12">
         <div className="space-y-6">
           <Skeleton className="h-12 w-40" />
           <Skeleton className="h-10 w-4/5" />

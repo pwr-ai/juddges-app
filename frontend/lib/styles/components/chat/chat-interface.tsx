@@ -164,28 +164,22 @@ export function ChatInterface(): React.JSX.Element {
  }
  }, [messages, isLoading, isLoadingChat]);
 
- return (
- <div className="relative flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-background via-background to-slate-50/50">
- {/* Export button - top right of chat area */}
- {chatId && messages.length > 0 && !isLoading && (
- <div className="absolute top-2 right-4 z-10">
- <button
- onClick={() => setShowExportDialog(true)}
- className={cn(
-"flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
-"text-slate-500",
-"hover:text-slate-700",
-"hover:bg-slate-100/80",
-"border border-transparent hover:border-slate-200/50"
- )}
- title="Export conversation"
- data-testid="export-chat-button"
- >
- <Download size={14} />
- <span className="hidden sm:inline">Export</span>
- </button>
- </div>
- )}
+ 	return (
+		<div className="relative flex flex-col h-[calc(100vh-4rem)] bg-parchment">
+			{/* Export button - top right of chat area */}
+			{chatId && messages.length > 0 && !isLoading && (
+				<div className="absolute top-2 right-4 z-10">
+					<button
+						onClick={() => setShowExportDialog(true)}
+						className="flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-mono font-medium transition-colors text-ink-soft hover:text-ink hover:bg-parchment-deep border border-rule"
+						title="Export conversation"
+						data-testid="export-chat-button"
+					>
+						<Download size={14} />
+						<span className="hidden sm:inline">Export</span>
+					</button>
+				</div>
+			)}
 
  {/* Export dialog */}
  {chatId && (
@@ -238,7 +232,7 @@ export function ChatInterface(): React.JSX.Element {
  </div>
 
  {/* Chat Input - fixed at bottom */}
- <div className="w-full px-4 md:px-6 flex-shrink-0 border-t border-slate-200/50 py-4">
+ <div className="w-full px-4 md:px-6 flex-shrink-0 border-t border-rule py-4 bg-parchment">
  <div className="container mx-auto max-w-3xl">
  <ChatInput
  onSend={handleSendMessage}

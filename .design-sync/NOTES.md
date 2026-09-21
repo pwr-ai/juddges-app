@@ -7,8 +7,8 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 
 - The frontend is a Next.js app, not a published package: no `dist/`, no `.d.ts`.
   `cfg.buildCmd` (`node .design-sync/build.mjs`) materialises `frontend/.ds-pkg/`
-  (gitignored) — entry re-exporting `components/editorial` + `components/ui/*.tsx`
-  (+ `ui/toast`), `tsc --emitDeclarationOnly` declarations, and a Tailwind 4 compile
+  (gitignored) — entry re-exporting `components/editorial` + `components/ui/*.tsx`,
+  `tsc --emitDeclarationOnly` declarations, and a Tailwind 4 compile
   of `.design-sync/tailwind.css` into `dist/styles.css`. Run it before the converter.
 - Converter invocation (from repo root):
   `node .ds-sync/package-build.mjs --config .design-sync/config.json --node-modules frontend/node_modules --entry frontend/.ds-pkg/dist/index.js --out ./ds-bundle`
@@ -20,24 +20,30 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   (rootDir forbids the shims) — keep the two tsconfigs separate.
 - `components/ui/logo.tsx` is excluded from the entry (renders an app-relative brand
   asset through next/image; also the converter's tsconfig-paths plugin resolves
-  `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` is excluded
-  (duplicate `SkeletonCard` export vs `skeleton-card.tsx`).
+  `@/lib/brand` to the directory before `index.ts`). `ui/skeletons/` ships via its
+  barrel since #657 (it was excluded while `skeleton-card.tsx` exported a duplicate
+  `SkeletonCard`; #635 deleted that file). Star re-exports drop ambiguous names silently,
+  so a new `ui/*` export must not reuse `SkeletonCard`/`SkeletonText` (the barrel) or
+  `Skeleton` (`ui/skeleton.tsx`). The
+  nested dir makes the converter group them as `skeletons` (last non-generic path segment).
 - `srcDir: ../components` (relative to `.ds-pkg`) gives JSDoc + grouping; `ui` is a
   generic dir name so shadcn primitives land in group `general`, editorial in `editorial`.
 - shadcn sub-parts (`CardHeader`, `DialogTitle`, …) are flat exports, not `Card.Header`,
-  so the converter treats all 187 exports as roots — most ship the floor card by design.
+  so the converter treats all exports (187 at #629, 162 after #645, 168 after #657) as roots — most ship the floor card by design.
 
 ## Fonts
 
-- `next/font` sets `--font-geist-sans/--font-geist-mono/--font-instrument-serif` at
+- `next/font` sets `--font-geist-sans/--font-geist-mono/--font-tenor-sans` at
   runtime; the bundle defines them in `.design-sync/tailwind.css` `:root` and ships
   `@font-face` via `cfg.extraFonts` → `.design-sync/fonts.css`. Geist from
-  `frontend/app/fonts/*.woff`; Instrument Serif (SIL OFL 1.1, Google Fonts v5,
-  latin + latin-ext) committed under `.design-sync/fonts/` — user chose to vendor it.
+  `frontend/app/fonts/*.woff`; Tenor Sans (SIL OFL 1.1, Google Fonts, latin + latin-ext,
+  single weight 400, no italic) committed under `.design-sync/fonts/` as
+  `TenorSans-Regular-{latin,latin-ext}.woff2` — the open substitute for the PWr
+  identity face (Zapf Humanist / Optima), see #629.
 
 ## Known render warns (validate)
 
-- `[FONT_MISSING] "JetBrains Mono", "Iowan Old Style"` — these are the app's own
+- `[FONT_MISSING] "JetBrains Mono", Optima, "URW Classico", "Gill Sans"` — these are the app's own
   *fallback* families in `--font-mono` / `--font-serif` stacks, never shipped by the
   app either. Accepted; nothing to source.
 - `tokens: 1 missing, below threshold` — informational.
@@ -47,13 +53,17 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
 - Tailwind compile scans all of `frontend/` (cwd) — utilities present in the bundle
   track what the app uses plus the `@source inline(...)` safelists in
   `.design-sync/tailwind.css`. A design-agent utility the app never uses is silently
-  absent; extend the safelist rather than the app.
+  absent; extend the safelist rather than the app. Consequence: a peer PR landing
+  mid-resync can move `styleSha` without touching a DS component — after every
+  `git merge origin/main` rebuild + compare, and re-push styling + sidecar if it moved
+  (the driver then anchors no-change and skips render; `--render-sample 0` forces it).
 - `frontend/package.json` `version` becomes the DS version in README.
-- Instrument Serif files are vendored; if the app switches faces, update
+- Tenor Sans files are vendored; if the app switches faces, update
   `.design-sync/fonts.css` + `tailwind.css` `:root` vars.
-- Grades follow the preview `.tsx`, not the CSS. When #622 lands the four skeleton previews will
-  carry forward as `unchanged` with nobody prompted to look — re-grade them explicitly:
-  `node .ds-sync/package-capture.mjs --out ./ds-bundle --components Skeleton,SidebarMenuSkeleton,SkeletonExtractionCard,SkeletonSearch --spot-check-components Skeleton,SidebarMenuSkeleton,SkeletonExtractionCard,SkeletonSearch`
+- Grades follow the preview `.tsx`, not the CSS (driver keys on `sourceKeys`; a `styleSha`
+  change alone keeps grades). A CSS-only change that could move a preview is not re-graded
+  automatically — spot-check explicitly:
+  `node .ds-sync/package-capture.mjs --out ./ds-bundle --components Button,Alert,Badge,Skeleton,Stat --spot-check-components Button,Alert,Badge,Skeleton,Stat`
 - `guidelines/DESIGN.md` (= `docs/reference/DESIGN.md`) §4 lists 12 of the 15 editorial
   primitives (missing `ChartFigure`, `DualStatCard`, `Section`) and calls `EditorialButton`
   "primary or outline" (actual `primary|secondary|ghost`). Docs drift, fix in the repo doc.
@@ -80,7 +90,7 @@ Repo-specific gotchas for the claude.ai/design sync. Project: `JuDDGES Design Sy
   rule (~1103) that kills `bg-gradient-*`, every Skeleton (`Skeleton`, `SidebarMenuSkeleton`,
   `SkeletonExtractionCard`, `SkeletonSearch`) renders fully transparent — in the app
   too (verified in headless Chromium). Fix in the app: `color-mix(in oklab, var(--muted) 30%, transparent)`.
-  Until then those four previews grade `needs-work` (faithful, not hacked). Tracked in #622; user chose to defer and upload as-is on 2026-09-15.
+  Those four previews graded `needs-work` on 2026-09-15 (faithful, not hacked). Fixed in #622 / synced via #627; `SkeletonExtractionCard` and `SkeletonSearch` were later deleted with `skeleton-card.tsx` in #635 (resynced in #653).
 
 ## Preview-authoring conventions used
 

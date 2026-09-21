@@ -10,7 +10,6 @@
 // search: the "review before run" step is the UX guard against LLM hallucination.
 // =============================================================================
 
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -34,10 +33,11 @@ interface NlFilterResponse {
 interface NlFilterDialogProps {
   /**
    * Called when the user accepts the translated filters. Receives the structured
-   * filters plus the free-text query (already split out by the backend). The
-   * parent should populate form state — it must NOT trigger a search.
+   * filters plus the free-text query (already split out by the backend), plus
+   * the original question so the page can keep it in the URL. The parent
+   * should populate form state — it must NOT trigger a search.
    */
-  onApply: (filters: BaseSchemaFilters, textQuery: string) => void;
+  onApply: (filters: BaseSchemaFilters, textQuery: string, question: string) => void;
   disabled?: boolean;
 }
 
@@ -105,7 +105,7 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
 
   const handleApply = () => {
     if (!preview) return;
-    onApply(preview.filters, preview.text_query ?? "");
+    onApply(preview.filters, preview.text_query ?? "", query.trim());
     handleOpenChange(false);
   };
 
@@ -121,9 +121,8 @@ export function NlFilterDialog({ onApply, disabled }: NlFilterDialogProps) {
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="gap-1.5"
+          className="gap-1.5 border-gold text-gold hover:text-gold"
         >
-          <Sparkles className="size-4 text-[color:var(--gold)]" aria-hidden />
           Describe your search
         </Button>
       </DialogTrigger>

@@ -36,3 +36,64 @@ test('homepage renders a non-empty app shell', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('body')).not.toBeEmpty();
 });
+
+test('site footer is not covered by the fixed sidebar overlay', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const footer = page.locator('footer[role="contentinfo"]');
+  await expect(footer).toBeVisible();
+
+  // The sidebar is a `fixed inset-y-0 z-50` overlay spanning the full viewport
+  // height, and it only renders from the `md` breakpoint up. Below that there
+  // is nothing to collide with, so the assertion has no subject.
+  const sidebar = page.locator('[data-slot="sidebar-container"]');
+  test.skip((await sidebar.count()) === 0, 'sidebar overlay not rendered at this viewport');
+  await expect(sidebar).toBeVisible();
+
+  // Hit-test the leftmost piece of footer content rather than comparing
+  // rectangles: what matters is that a visitor can actually see and click it,
+  // whichever way the layout keeps the overlay off it.
+  const label = footer.getByText('WUST Research Project');
+  const box = await label.boundingBox();
+  expect(box, 'footer label has no layout box').not.toBeNull();
+
+  const hitsFooter = await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.closest('footer[role="contentinfo"]') !== null,
+    { x: box!.x + 2, y: box!.y + box!.height / 2 },
+  );
+
+  expect(hitsFooter, 'sidebar overlay is painted on top of the footer').toBe(true);
+});
+
+test('design-system fonts resolve instead of falling back to system sans', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => document.fonts.ready);
+
+  // next/font declares --font-geist-sans / --font-tenor-sans on whichever
+  // element carries its generated `.variable` class. The design tokens in
+  // globals.css live on :root and reference those. If the `.variable` classes
+  // land below :root, the tokens reference an undefined variable, which makes
+  // the whole declaration invalid at computed-value time — the token computes
+  // to nothing and every font silently degrades to the system stack. The
+  // trailing families in the token (Optima, system-ui, ...) do NOT rescue it,
+  // because the entire value is invalidated, not one family.
+  const tokens = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return {
+      sans: root.getPropertyValue('--font-sans').trim(),
+      display: root.getPropertyValue('--font-display').trim(),
+      mono: root.getPropertyValue('--font-mono').trim(),
+    };
+  });
+
+  expect(tokens.sans, '--font-sans did not resolve on :root').not.toBe('');
+  expect(tokens.display, '--font-display did not resolve on :root').not.toBe('');
+  expect(tokens.mono, '--font-mono did not resolve on :root').not.toBe('');
+
+  // And the token must actually reach the display headline.
+  const h1Font = await page
+    .locator('h1.editorial-display')
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(h1Font, 'display headline fell back to the system font stack').toContain('Tenor Sans');
+});

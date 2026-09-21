@@ -108,28 +108,12 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
 
  return (
  <div className={cn("relative flex-1 group", containerClassName)}>
- {/* Glow effect on focus - only for default variant */}
- {showGlow && variant === 'default' && (
- <>
- <div className={cn(
-"absolute inset-0 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 blur-md -z-10",
-"bg-gradient-to-r from-primary/20 via-indigo-400/20 to-purple-400/20",
-""
- )} />
- <div className={cn(
-"absolute inset-0 rounded-2xl opacity-0 group-focus-within:opacity-50 transition-opacity duration-300 blur-xl -z-20",
-"bg-gradient-to-r from-primary/15 via-indigo-400/15 to-purple-400/15",
-""
- )} />
- </>
- )}
-
  {/* Search icon */}
  <Icon className={cn(
 "absolute top-1/2 -translate-y-1/2 z-10 transition-colors",
  sizeConfig.iconSize,
  iconPositionClass,
-"text-muted-foreground group-focus-within:text-primary"
+"text-muted-foreground group-focus-within:text-ink"
  )} />
 
  <Input
@@ -151,25 +135,15 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
  )
  ),
  // Focus states - add ring for subtle emphasis
-"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:ring-offset-1",
- // Background and blur - based on variant
- variant === 'transparent' ? (
- cn(
-"!bg-transparent", // Force transparent to override Input's default
- searchInputColors.backdropBlur
- )
- ) : (
- cn(
- searchInputColors.background.light,
- searchInputColors.backdropBlur
- )
- ),
- // Shadow - based on variant
- variant === 'transparent' ? searchInputColors.shadowTransparent : searchInputColors.shadow,
+"focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink focus-visible:ring-offset-0",
+ // Background - based on variant
+ variant === 'transparent'
+ ? "!bg-transparent" // Force transparent to override Input's default
+ : searchInputColors.background.light,
  // Border radius
-"rounded-2xl",
+"rounded-none",
  // Transitions
-"transition-all duration-300",
+"transition-colors",
  className
  )}
  {...props}

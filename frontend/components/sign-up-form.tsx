@@ -141,7 +141,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   value={inviteCode}
                   onChange={(event) => setInviteCode(event.target.value)}
                   disabled={isLoading}
-                  className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
                 />
               </div>
               <div className="grid gap-2">
@@ -160,7 +159,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   }}
                   onBlur={(e) => validateEmail(e.target.value)}
                   disabled={isLoading}
-                  className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
                   aria-invalid={!!emailError}
                   aria-describedby={emailError ? 'signup-email-error' : undefined}
                 />
@@ -185,7 +183,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   }}
                   onBlur={(e) => validatePassword(e.target.value)}
                   disabled={isLoading}
-                  className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
                   aria-invalid={!!passwordError}
                   aria-describedby={passwordError ? 'signup-password-error' : undefined}
                 />
@@ -210,7 +207,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   }}
                   onBlur={(e) => validateRepeatPassword(e.target.value, password)}
                   disabled={isLoading}
-                  className="transition-all duration-200 hover:border-primary/50 focus:border-primary"
                   aria-invalid={!!repeatPasswordError}
                   aria-describedby={
                     repeatPasswordError ? 'signup-repeat-password-error' : undefined

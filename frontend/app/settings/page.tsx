@@ -49,17 +49,17 @@ const CHANNEL_CONFIG: Record<string, { label: string; icon: React.ReactNode; col
   email: {
     label: "Email",
     icon: <Mail className="h-3 w-3" />,
-    color: "bg-blue-100 text-blue-800",
+    color: "border border-rule text-ink bg-transparent font-mono",
   },
   in_app: {
     label: "In-App",
     icon: <Bell className="h-3 w-3" />,
-    color: "bg-green-100 text-green-800",
+    color: "border border-rule text-ink bg-transparent font-mono",
   },
   webhook: {
     label: "Webhook",
     icon: <Webhook className="h-3 w-3" />,
-    color: "bg-purple-100 text-purple-800",
+    color: "border border-rule text-ink bg-transparent font-mono",
   },
 };
 
@@ -175,7 +175,7 @@ function DigestSubscriptionsSection() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+        <div className="flex items-center gap-2 border-l-2 border-l-oxblood bg-parchment-deep p-3 text-sm text-ink">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           {error}
         </div>
@@ -518,18 +518,18 @@ export default function SettingsPage() {
  </CardContent>
  </Card>
 
- <Card className="border-blue-200 bg-blue-50/50">
+ <Card className="rounded-none border border-rule bg-parchment-deep border-l-2 border-l-ink">
  <CardHeader>
- <CardTitle className="text-blue-900 text-sm">
+ <CardTitle className="text-ink text-sm font-serif">
  About Embedding Models
  </CardTitle>
  </CardHeader>
  <CardContent className="space-y-2">
- <p className="text-sm text-blue-800">
+ <p className="text-sm text-ink-soft">
  Embedding models convert text into numerical vectors used for semantic search.
  Switching models affects how new searches are performed but does not re-embed existing documents.
  </p>
- <p className="text-sm text-blue-800">
+ <p className="text-sm text-ink-soft">
  The platform currently uses <strong>BAAI/bge-m3</strong> — a multilingual model that performs
  well on Polish legal texts. Other providers (<strong>OpenAI</strong>, <strong>Cohere</strong>,
  alternative <strong>local</strong> models) are listed for reference and will be evaluated in
@@ -633,14 +633,14 @@ export default function SettingsPage() {
  </CardContent>
  </Card>
 
- <Card className="border-amber-200 bg-amber-50/50">
+ <Card className="rounded-none border border-rule bg-parchment-deep border-l-2 border-l-gold">
  <CardHeader>
- <CardTitle className="text-amber-900">
+ <CardTitle className="text-ink font-serif">
  Research Project Notice
  </CardTitle>
  </CardHeader>
  <CardContent>
- <p className="text-sm text-amber-800">
+ <p className="text-sm text-ink-soft">
  This platform is a research project by Wroclaw University of Science and Technology.
  Some administrative features may require special permissions.
  </p>

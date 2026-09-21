@@ -89,18 +89,7 @@ export function SaveActions({
  onExport(value);
  }
  }}
- className={cn(
-"text-sm h-9 px-4 rounded-xl",
-"inline-flex items-center justify-center",
-"transition-all duration-300",
-"bg-white/60 backdrop-blur-sm",
-"border border-slate-200/50",
-"hover:bg-white/80",
-"hover:scale-105 hover:shadow-md",
-"active:scale-[0.98] active:opacity-90",
-"font-semibold",
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
- )}
+ className="text-xs font-mono uppercase tracking-wider rounded-none border border-rule bg-parchment text-ink hover:bg-muted/40 h-8 px-3 inline-flex items-center justify-center font-medium"
  align="end"
  />
 
@@ -120,7 +109,7 @@ export function SaveActions({
  )} */}
 
  {/* Save button */}
- <VariantButton intent="glass"
+ <VariantButton intent="primary"
  onClick={onSave}
  disabled={!isDirty || isSaving}
  isLoading={isSaving}
@@ -143,19 +132,19 @@ export function SaveActions({
 
  {/* Discard confirmation dialog */}
  <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
- <AlertDialogContent>
+ <AlertDialogContent className="bg-parchment border border-rule">
  <AlertDialogHeader>
- <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
- <AlertDialogDescription>
+ <AlertDialogTitle className="font-display text-ink">Discard unsaved changes?</AlertDialogTitle>
+ <AlertDialogDescription className="text-ink-soft">
  You have unsaved changes to this schema. Discarding will revert
  all changes since your last save. This action cannot be undone.
  </AlertDialogDescription>
  </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel>Cancel</AlertDialogCancel>
+ <AlertDialogFooter className="border-t border-rule pt-3">
+ <AlertDialogCancel className="rounded-none border-rule text-ink hover:bg-muted">Cancel</AlertDialogCancel>
  <AlertDialogAction
  onClick={handleDiscardConfirm}
- className="bg-destructive hover:bg-destructive/90"
+ className="rounded-none bg-oxblood hover:bg-oxblood-deep text-white"
  >
  Discard Changes
  </AlertDialogAction>

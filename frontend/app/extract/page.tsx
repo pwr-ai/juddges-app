@@ -3,7 +3,6 @@
 import { Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wand2 } from "lucide-react";
 import { SchemaGenerator } from "@/components/SchemaGenerator";
 import { BulkExtractionDialog } from "@/components/BulkExtractionDialog";
 import {
@@ -64,7 +63,6 @@ function ExtractPageContent() {
         <LoadingIndicator
           message="Loading extraction page..."
           subtitle="Fetching collections and schemas"
-          subtitleIcon={Wand2}
           variant="centered"
           size="lg"
         />
@@ -82,7 +80,7 @@ function ExtractPageContent() {
       />
 
       {/* Subtle visual separator */}
-      <div className="my-8 border-t border-slate-200/30" />
+      <div className="my-8 border-t border-rule" />
 
       {/* Extraction Configuration Section */}
       <ExtractionConfigPanel
@@ -150,7 +148,6 @@ function ExtractPageLoading() {
       <LoadingIndicator
         message="Loading extraction page..."
         subtitle="Preparing document extraction tools"
-        subtitleIcon={Wand2}
         variant="centered"
         size="lg"
       />

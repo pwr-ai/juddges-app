@@ -15,8 +15,17 @@ import {
   GROUP_LABELS,
   GROUP_ORDER,
   formatEnumLabel,
+  CORE_FILTER_FIELDS,
+  CORE_FILTER_FIELD_BY_NAME,
+  ALL_FILTER_FIELD_BY_NAME,
+  isCoreFilterField,
 } from "@/lib/extractions/base-schema-filter-config";
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
+
+// Core judgments.* columns filtered by the RPC (migration 20260920000001) but kept
+// OUT of FILTER_FIELDS so BaseFiltersDrawer / QuickFilters / Meili mapping stay as
+// they are. They get chips (+ Spec B's ScopeFilters strip) instead.
+const CORE_KEYS = new Set<string>(["jurisdiction", "decision_date"]);
 
 // Sentinel object pinning every BaseSchemaFilters key. Matches the Pydantic
 // model in backend/app/extraction_domain/nl_filter_generator.py.
@@ -63,6 +72,8 @@ const REQUIRED_KEYS: Record<keyof BaseSchemaFilters, true> = {
   neutral_citation_number: true,
   appeal_court_judges_names: true,
   offender_representative_name: true,
+  jurisdiction: true,
+  decision_date: true,
 };
 
 // Fields registered in the UI registry but not (yet) mirrored in the
@@ -90,7 +101,7 @@ const RUNTIME_DISCOVERED_ENUM_FIELDS = new Set<string>([
 describe("base-schema filter registry", () => {
   it("covers every BaseSchemaFilters key (registry may be a superset)", () => {
     const fields = new Set(FILTER_FIELDS.map((c) => c.field));
-    const required = new Set(Object.keys(REQUIRED_KEYS));
+    const required = new Set(Object.keys(REQUIRED_KEYS).filter((k) => !CORE_KEYS.has(k)));
 
     const missing = [...required].filter((k) => !fields.has(k));
     const extra = [...fields].filter(
@@ -166,5 +177,37 @@ describe("base-schema-filter-config — operational group + new fields", () => {
     expect(cfg).toBeDefined();
     expect(cfg!.group).toBe(group);
     expect(cfg!.control).toBe(control);
+  });
+});
+
+describe("core filter fields (jurisdiction, decision_date)", () => {
+  it("are registered separately and never leak into FILTER_FIELDS", () => {
+    expect(CORE_FILTER_FIELDS.map((c) => c.field).sort()).toEqual(["decision_date", "jurisdiction"]);
+    for (const c of CORE_FILTER_FIELDS) {
+      expect(FILTER_FIELD_BY_NAME[c.field]).toBeUndefined();
+      expect(CORE_FILTER_FIELD_BY_NAME[c.field]).toBe(c);
+      expect(ALL_FILTER_FIELD_BY_NAME[c.field]).toBe(c);
+      expect(isCoreFilterField(c.field)).toBe(true);
+    }
+    expect(isCoreFilterField("offender_gender")).toBe(false);
+  });
+
+  it("jurisdiction is an enum_multi over exactly PL and UK", () => {
+    const cfg = CORE_FILTER_FIELD_BY_NAME.jurisdiction;
+    expect(cfg.control).toBe("enum_multi");
+    expect([...(cfg.enumValues ?? [])].sort()).toEqual(["PL", "UK"]);
+  });
+
+  it("decision_date is a date_range", () => {
+    expect(CORE_FILTER_FIELD_BY_NAME.decision_date.control).toBe("date_range");
+  });
+
+  it("ALL_FILTER_FIELD_BY_NAME still resolves every FILTER_FIELDS entry", () => {
+    for (const c of FILTER_FIELDS) expect(ALL_FILTER_FIELD_BY_NAME[c.field]).toBe(c);
+  });
+
+  it("formatEnumLabel leaves two-letter country codes alone", () => {
+    expect(formatEnumLabel("PL")).toBe("PL");
+    expect(formatEnumLabel("gender_female")).not.toBe("gender_female");
   });
 });

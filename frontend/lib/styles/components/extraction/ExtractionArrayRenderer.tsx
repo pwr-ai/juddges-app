@@ -107,12 +107,12 @@ export function ExtractionArrayRenderer({
  if (type === 'boolean') {
  return (
  <Badge
- variant={cellValue ? "default": "secondary"}
+ variant="outline"
  className={cn(
-"rounded-full px-3 py-1 font-semibold",
+ "rounded-none px-2 py-0.5 font-mono text-xs uppercase tracking-wider",
  cellValue
- ? "bg-green-100 text-green-700 border-green-300"
- : "bg-red-100 text-red-700 border-red-300"
+ ? "border-rule bg-parchment-deep text-ink"
+ : "border-rule bg-parchment-deep text-oxblood"
  )}
  >
  {getBooleanLabel(cellValue, language)}
@@ -203,14 +203,14 @@ export function ExtractionArrayRenderer({
  variant="ghost"
  size="sm"
  onClick={handleCopy}
- className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700"
+ className="h-8 w-8 p-0 text-ink-soft hover:text-ink"
  title="Copy table data"
  >
  <Copy className="h-4 w-4"/>
  </Button>
  </div>
  )}
- <div className="rounded-lg border border-slate-200/60 bg-slate-50/50 shadow-sm overflow-hidden">
+ <div className="rounded-none border border-rule bg-parchment overflow-hidden">
  <DataTable data={value} columns={columns} />
  </div>
  </div>
@@ -249,7 +249,7 @@ export function ExtractionArrayRenderer({
  }
 
  return (
- <li key={index} className="text-sm text-slate-900 leading-relaxed">
+ <li key={index} className="text-sm text-ink leading-relaxed">
  • {displayValue}
  </li>
  );

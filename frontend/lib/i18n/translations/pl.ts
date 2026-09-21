@@ -138,6 +138,15 @@ export const pl: Translations = {
     phasePlan: '1. Zaplanuj',
     phaseSearch: '2. Wyszukaj',
     phaseAnalyze: '3. Analizuj',
+    flowAsk: 'Zapytaj',
+    flowExplore: 'Zbadaj',
+    flowCode: 'Koduj',
+    flowCase: 'Sprawa',
+    flowStep: 'Krok {{n}} z {{m}}',
+    flowLabel: 'Kroki przepływu',
+    searchHistory: 'Historia wyszukiwań',
+    runExtraction: 'Uruchom ekstrakcję',
+    extractionJobs: 'Zadania ekstrakcji',
   },
 
   chat: {
@@ -366,7 +375,7 @@ export const pl: Translations = {
   dashboard: {
     title: 'Pulpit',
     databaseOverview: 'Przegląd bazy danych',
-    recentJudgments: 'Ostatnie orzeczenia',
+    judgments: 'Orzeczenia',
     popularLegalTopics: 'Popularne tematy prawne',
     researchCollections: 'Kolekcje badawcze',
     viewAll: 'Zobacz wszystko',

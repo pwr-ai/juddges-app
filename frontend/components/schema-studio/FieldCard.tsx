@@ -24,7 +24,7 @@ import {
  GripVertical,
  AlertCircle,
  CheckCircle2,
- Sparkles,
+ Bot,
  FolderTree,
  Type,
  Hash,
@@ -39,6 +39,8 @@ import {
 } from "lucide-react";
 import {
  AlertDialog,
+ AlertDialogAction,
+ AlertDialogCancel,
  AlertDialogContent,
  AlertDialogDescription,
  AlertDialogFooter,
@@ -296,107 +298,63 @@ export function FieldCard({
  setIsTypePopoverOpen(false);
  };
 
- // Get color for field type (use choice color for choice types)
- const typeColor = field.visual_metadata.color ||
- (isChoiceType ? '#8b5cf6' : // purple for choice
- isGroupType ? TYPE_COLORS.object : // use object color for groups
- TYPE_COLORS[field.field_type]);
+  // Type color: gold for AI-created, ink for human/default
+  const typeColor = field.created_by === 'ai' ? '#B49A5E' : '#000000';
 
- // Check if this is a group field (object with children)
- const isGroup = hasChildren && field.field_type === "object";
+  // Check if this is a group field (object with children)
+  const isGroup = hasChildren && field.field_type === "object";
 
- // Handle delete confirmation
- const handleDeleteConfirm = () => {
- onDelete(field.id);
- setShowDeleteDialog(false);
- };
+  // Handle delete confirmation
+  const handleDeleteConfirm = () => {
+    onDelete(field.id);
+    setShowDeleteDialog(false);
+  };
 
- // Animation variants
- const cardVariants: Variants = {
- hidden: { opacity: 0, y: -20 },
- visible: {
- opacity: 1,
- y: 0,
- transition: { duration: 0.3 },
- },
- exit: {
- opacity: 0,
- x: -100,
- transition: { duration: 0.2 },
- },
- };
+  // Animation variants
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.3 },
+    },
+    exit: {
+      opacity: 0,
+      x: -100,
+      transition: { duration: 0.2 },
+    },
+  };
 
- const pulseVariants: Variants = {
- pulse: {
- scale: [1, 1.02, 1],
- borderColor: [typeColor, `${typeColor}80`, typeColor],
- transition: { duration: 3 },
- },
- };
+  const pulseVariants: Variants = {
+    pulse: {
+      borderColor: typeColor,
+    },
+  };
 
- return (
- <>
- <motion.div
- initial="hidden"
- animate={isHighlighted ? "pulse": "visible"}
- exit="exit"
- variants={isHighlighted ? pulseVariants : cardVariants}
- >
- <div
- onClick={handleCardClick}
- className={cn(
-"group relative transition-all duration-200 rounded-lg cursor-pointer",
-"hover:shadow-lg hover:-translate-y-0.5",
- isDragging &&"opacity-50 rotate-2",
- hasError &&"border-destructive",
- isHighlighted &&"border-primary",
- isActionsExpanded &&"ring-2 ring-primary/30"
- )}
- style={{
- borderLeftWidth: "3px",
- borderLeftColor: typeColor,
- // Subtle glassmorphism
- background: "rgba(255, 255, 255, 0.6)",
- backdropFilter: "blur(4px)",
- WebkitBackdropFilter: "blur(4px)",
- // Use separate border properties instead of shorthand to avoid conflict with borderLeftColor
- borderTopWidth: "1px",
- borderTopStyle: "solid",
- borderTopColor: "rgba(0, 0, 0, 0.1)",
- borderRightWidth: "1px",
- borderRightStyle: "solid",
- borderRightColor: "rgba(0, 0, 0, 0.1)",
- borderBottomWidth: "1px",
- borderBottomStyle: "solid",
- borderBottomColor: "rgba(0, 0, 0, 0.1)",
- boxShadow: "0 2px 8px rgba(15, 23, 42, 0.05)",
- }}
- >
- {/* Dark mode glassmorphism */}
- <div
- className="absolute inset-0 rounded-lg opacity-0 transition-opacity pointer-events-none"
- style={{
- background: "rgba(30, 27, 46, 0.6)",
- backdropFilter: "blur(4px)",
- WebkitBackdropFilter: "blur(4px)",
- // Use separate border properties instead of shorthand
- borderTopWidth: "1px",
- borderTopStyle: "solid",
- borderTopColor: "rgba(255, 255, 255, 0.1)",
- borderRightWidth: "1px",
- borderRightStyle: "solid",
- borderRightColor: "rgba(255, 255, 255, 0.1)",
- borderBottomWidth: "1px",
- borderBottomStyle: "solid",
- borderBottomColor: "rgba(255, 255, 255, 0.1)",
- borderLeftWidth: "1px",
- borderLeftStyle: "solid",
- borderLeftColor: "rgba(255, 255, 255, 0.1)",
- boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
- }}
- />
-
- <div className="relative p-3">
+  return (
+    <>
+      <motion.div
+        initial="hidden"
+        animate={isHighlighted ? "pulse" : "visible"}
+        exit="exit"
+        variants={isHighlighted ? pulseVariants : cardVariants}
+      >
+        <div
+          onClick={handleCardClick}
+          className={cn(
+            "group relative transition-[color,background-color,border-color,box-shadow,transform] duration-180 rounded-none cursor-pointer bg-parchment border border-rule",
+            "hover:border-rule-strong hover:-translate-y-px",
+            isDragging && "opacity-50 rotate-2",
+            hasError && "border-oxblood",
+            isHighlighted && "border-ink",
+            isActionsExpanded && "ring-1 ring-ink/20"
+          )}
+          style={{
+            borderLeftWidth: "2px",
+            borderLeftColor: typeColor,
+          }}
+        >
+          <div className="relative p-3">
  <div className="flex items-center justify-between gap-3">
  {/* Selection checkbox and field name */}
  <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -410,7 +368,7 @@ export function FieldCard({
  }
  }}
  className={cn(
-"h-6 w-6 rounded-lg bg-white/50 border border-slate-400 data-[state=checked]:bg-primary hover:border-primary transition-all duration-200 shrink-0",
+ "h-4 w-4 rounded-none border border-rule data-[state=checked]:bg-pwr-red data-[state=checked]:text-white shrink-0",
  isSelectionDisabled
  ? "cursor-not-allowed opacity-50"
  : "cursor-pointer"
@@ -443,9 +401,9 @@ export function FieldCard({
  {field.created_by === 'ai' && (
  <Badge
  variant="outline"
- className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 bg-amber-50 border-amber-300 text-amber-700"
+ className="text-xs shrink-0 px-2 py-0.5 h-6 flex items-center gap-1 border-gold text-gold bg-transparent font-mono"
  >
- <Sparkles className="h-3 w-3"/>
+ <Bot className="h-3 w-3"/>
  <span className="font-medium">Review</span>
  </Badge>
  )}
@@ -470,86 +428,63 @@ export function FieldCard({
  <span className="font-medium capitalize">{getTypeLabel()}</span>
  </Badge>
  </PopoverTrigger>
- <PopoverContent
- className={cn(
-"w-56 p-0 border-0 shadow-xl",
- // Glassmorphism 2.0
-"bg-white/80",
-"backdrop-blur-xl backdrop-saturate-[180%]",
-"border border-primary/20",
-"shadow-[0_18px_45px_0_rgba(15,23,42,0.15),0_8px_20px_0_rgba(139,92,246,0.1),inset_0_1px_0_0_rgba(255,255,255,0.6)]",
-""
- )}
- onClick={(e) => e.stopPropagation()}
- >
- <div className="p-3 space-y-1.5">
- <div className="text-xs font-semibold text-muted-foreground px-2 py-1 mb-1">
- Select Field Type
- </div>
- <div className="text-xs text-muted-foreground px-2 py-1 mb-2 -mt-1">
- Note: Use the full editor for choice and group types
- </div>
- {([
- { type: 'string' as FieldType, label: 'text', icon: Type, color: TYPE_COLORS.string },
- { type: 'number' as FieldType, label: 'number', icon: Hash, color: TYPE_COLORS.number },
- { type: 'boolean' as FieldType, label: 'yes/no', icon: ToggleLeft, color: TYPE_COLORS.boolean },
- { type: 'array' as FieldType, label: 'list', icon: List, color: TYPE_COLORS.array },
- { type: 'object' as FieldType, label: 'group', icon: FolderTree, color: TYPE_COLORS.object },
- ]).map(({ type, label, icon: IconComponent, color }) => {
- // Don't allow changing to object/group if it's already a group (has children)
- const isSelected = field.field_type === type && !(type === 'object' && isGroupType);
- const isDisabled = type === 'object' && isGroupType;
+            <PopoverContent
+              className="w-56 p-0 border border-rule bg-parchment shadow-md rounded-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-3 space-y-1.5">
+                <div className="text-xs font-mono uppercase tracking-wider text-ink-soft px-2 py-1 mb-1">
+                  Select Field Type
+                </div>
+                <div className="text-[11px] text-ink-soft px-2 py-1 mb-2 -mt-1">
+                  Note: Use the full editor for choice and group types
+                </div>
+                {([
+                  { type: 'string' as FieldType, label: 'text', icon: Type, color: TYPE_COLORS.string },
+                  { type: 'number' as FieldType, label: 'number', icon: Hash, color: TYPE_COLORS.number },
+                  { type: 'boolean' as FieldType, label: 'yes/no', icon: ToggleLeft, color: TYPE_COLORS.boolean },
+                  { type: 'array' as FieldType, label: 'list', icon: List, color: TYPE_COLORS.array },
+                  { type: 'object' as FieldType, label: 'group', icon: FolderTree, color: TYPE_COLORS.object },
+                ]).map(({ type, label, icon: IconComponent, color }) => {
+                  // Don't allow changing to object/group if it's already a group (has children)
+                  const isSelected = field.field_type === type && !(type === 'object' && isGroupType);
+                  const isDisabled = type === 'object' && isGroupType;
 
- return (
- <button
- key={type}
- onClick={() => !isDisabled && handleTypeChange(type)}
- disabled={isDisabled}
- className={cn(
-"w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center gap-3 group",
- !isDisabled &&"hover:bg-primary/10 hover:shadow-sm hover:scale-[1.02]",
- isDisabled &&"opacity-50 cursor-not-allowed",
- isSelected && cn(
-"bg-primary/15",
-"border border-primary/30",
-"shadow-sm shadow-primary/10"
- )
- )}
- >
- <div
- className={cn(
-"h-8 w-8 rounded-lg flex items-center justify-center transition-all",
-"bg-white/60",
-"backdrop-blur-sm border",
- isSelected
- ? "border-primary/40 shadow-sm"
- : "border-slate-200/60 group-hover:border-primary/30"
- )}
- style={isSelected ? {
- backgroundColor: `${color}15`,
- borderColor: color
- } : {}}
- >
- {type === 'string' ? (
- <span className="text-xs font-semibold"style={{ color }}>Abc</span>
- ) : (
- <IconComponent className="h-4 w-4"style={{ color }} />
- )}
- </div>
- <div className="flex-1 min-w-0">
- <div className="font-medium text-foreground">{label}</div>
- </div>
- {isSelected && (
- <Check className="h-4 w-4 text-primary shrink-0"/>
- )}
- {isDisabled && (
- <span className="text-xs text-muted-foreground">(locked)</span>
- )}
- </button>
- );
- })}
- </div>
- </PopoverContent>
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => !isDisabled && handleTypeChange(type)}
+                      disabled={isDisabled}
+                      className={cn(
+                        "w-full text-left px-2.5 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors flex items-center gap-2",
+                        !isDisabled && "hover:bg-muted/60 text-ink",
+                        isDisabled && "opacity-50 cursor-not-allowed text-ink-soft",
+                        isSelected && "bg-muted/40 font-semibold text-ink"
+                      )}
+                    >
+                      <div
+                        className="h-6 w-6 rounded-none flex items-center justify-center border border-rule bg-parchment"
+                      >
+                        {type === 'string' ? (
+                          <span className="text-xs font-semibold text-ink">Abc</span>
+                        ) : (
+                          <IconComponent className="h-3.5 w-3.5 text-ink" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate">{label}</div>
+                      </div>
+                      {isSelected && (
+                        <Check className="h-3.5 w-3.5 text-ink shrink-0" />
+                      )}
+                      {isDisabled && (
+                        <span className="text-[10px] text-ink-soft lowercase">(locked)</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
  </Popover>
  </div>
 
@@ -598,35 +533,29 @@ export function FieldCard({
 
  {/* Delete confirmation dialog */}
  <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
- <AlertDialogContent className={cn(
-"bg-white",
-"border border-border",
-"shadow-xl"
- )}>
- <AlertDialogHeader>
- <AlertDialogTitle className="text-foreground font-semibold">Delete field?</AlertDialogTitle>
- <AlertDialogDescription className="text-foreground/90">
- Are you sure you want to delete the field &quot;{field.field_name}&quot;?
- This action cannot be undone.
- </AlertDialogDescription>
- </AlertDialogHeader>
- <AlertDialogFooter className="gap-3 sm:gap-3">
- <VariantButton intent="secondary"
- onClick={() => setShowDeleteDialog(false)}
- size="sm"
- className="min-w-[80px]"
- >
- Cancel
- </VariantButton>
- <VariantButton intent="primary"
- onClick={handleDeleteConfirm}
- size="sm"
- className="bg-destructive hover:bg-destructive/90 text-destructive-foreground min-w-[80px]"
- >
- Delete
- </VariantButton>
- </AlertDialogFooter>
- </AlertDialogContent>
+        <AlertDialogContent className="bg-parchment border border-rule">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-ink">Delete field?</AlertDialogTitle>
+            <AlertDialogDescription className="text-ink-soft">
+              Are you sure you want to delete the field &quot;{field.field_name}&quot;?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 sm:gap-3 border-t border-rule pt-3">
+            <AlertDialogCancel
+              onClick={() => setShowDeleteDialog(false)}
+              className="h-8 px-3 text-xs font-mono uppercase tracking-wider border border-rule bg-parchment text-ink hover:bg-parchment-deep rounded-none"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="h-8 px-3 text-xs font-mono uppercase tracking-wider bg-oxblood hover:bg-oxblood-deep text-parchment rounded-none border-0"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
  </AlertDialog>
  </>
  );
@@ -642,7 +571,7 @@ export function FieldCard({
  * [x] Add edit and delete actions
  * [x] Implement delete confirmation dialog
  * [x] Add drag handle for reordering
- * [x] Add AI-created indicator (Sparkles icon)
+ * [x] Add AI-created indicator (Bot icon)
  * [x] Add validation rule indicators
  * [x] Add error state visualization
  * [x] Implement animations with framer-motion

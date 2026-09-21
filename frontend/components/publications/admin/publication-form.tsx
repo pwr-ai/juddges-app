@@ -372,7 +372,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  return (
  <form onSubmit={handleSubmit} className="space-y-6">
  {error && (
- <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+ <div className="border-l-2 border-l-oxblood bg-parchment-deep px-4 py-3 text-sm text-ink">
  {error}
  </div>
  )}
@@ -598,7 +598,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  {/* Schemas Section */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <FileText className="h-4 w-4 text-blue-500"/>
+ <FileText className="h-4 w-4 text-oxblood"/>
  <Label className="text-base font-semibold">Extraction Schemas</Label>
  </div>
 
@@ -608,7 +608,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  {linkedSchemas.map((schema) => (
  <div
  key={schema.schemaId}
- className="flex items-center justify-between p-3 bg-blue-50 rounded-lg"
+ className="flex items-center justify-between p-3 bg-parchment-deep border border-rule rounded-none"
  >
  <div>
  <span className="font-medium">{schema.schemaName || schema.schemaId}</span>
@@ -668,7 +668,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  {/* Collections Section */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <Database className="h-4 w-4 text-green-500"/>
+ <Database className="h-4 w-4 text-oxblood"/>
  <Label className="text-base font-semibold">Document Collections</Label>
  </div>
 
@@ -678,7 +678,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  {linkedCollections.map((collection) => (
  <div
  key={collection.collectionId}
- className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
+ className="flex items-center justify-between p-3 bg-parchment-deep border border-rule rounded-none"
  >
  <div>
  <span className="font-medium">
@@ -740,7 +740,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  {/* Extraction Jobs Section */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <Briefcase className="h-4 w-4 text-purple-500"/>
+ <Briefcase className="h-4 w-4 text-oxblood"/>
  <Label className="text-base font-semibold">Extraction Jobs</Label>
  </div>
 
@@ -750,7 +750,7 @@ export function PublicationForm({ publication, onSuccess }: PublicationFormProps
  {linkedJobs.map((job) => (
  <div
  key={job.jobId}
- className="flex items-center justify-between p-3 bg-purple-50 rounded-lg"
+ className="flex items-center justify-between p-3 bg-parchment-deep border border-rule rounded-none"
  >
  <div>
  <span className="font-medium">{job.jobId}</span>

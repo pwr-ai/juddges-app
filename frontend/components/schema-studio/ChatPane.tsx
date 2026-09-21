@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge, UserMessage, AssistantMessage, AIBadge } from "@/lib/styles/components";
-import { Loader2, User, Bot, FileJson, Sparkles } from "lucide-react";
+import { Loader2, User, Bot, FileJson } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatInput } from "@/lib/styles/components";
 import type { SchemaMessage } from "./types";
@@ -208,107 +208,107 @@ export function ChatPane({
  const hasSchema = messages.some((m) => m.schema);
 
  return (
- <div className="h-full w-full flex flex-col relative overflow-hidden">
- {/* Glassmorphism 2.0 Background */}
- <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/20 to-white/10 backdrop-blur-2xl border-l border-white/20 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"/>
+    <div className="h-full w-full flex flex-col relative overflow-hidden">
+      {/* Editorial Background */}
+      <div className="absolute inset-0 bg-parchment border-l border-rule" />
 
- {/* Content */}
- <div className="relative z-10 h-full flex flex-col">
- {/* Header */}
- <div className="flex-shrink-0 px-4 py-3 border-b border-white/20">
- <div className="flex items-center gap-2">
- <h3 className="text-base font-semibold text-foreground">
- AI Schema Generator
- </h3>
- <AIBadge text="AI"/>
- </div>
- </div>
+      {/* Content */}
+      <div className="relative z-10 h-full flex flex-col">
+        {/* Header */}
+        <div className="flex-shrink-0 px-4 py-3 border-b border-rule">
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-base font-semibold text-ink">
+              AI Schema Generator
+            </h3>
+            <AIBadge text="AI" />
+          </div>
+        </div>
 
- {/* Scrollable content area - messages + input together */}
- <div ref={scrollAreaRef} className="flex-1 overflow-hidden">
- <ScrollArea className="h-full">
- <div className="px-3 py-4 flex flex-col min-h-full">
- {/* Messages from top */}
- <div className="flex-1">
- {messages.length === 0 ? (
- /* Empty state hint */
- <div className="mb-4 p-3 rounded-lg bg-muted/30 border border-border/50">
- <div className="flex items-start gap-2">
- <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0"/>
- <p className="text-xs text-muted-foreground leading-relaxed">
- Describe what information to extract. Use questions like
- {""}
- &quot;Is there a penalty?&quot;
- {""}
- for boolean fields, or specify field types directly.
- </p>
- </div>
- </div>
- ) : (
- /* Message list */
- <div className="space-y-3 mb-4">
- {messages.map((message) => (
- <div
- key={message.id}
- className={cn(
-"flex gap-2",
- message.role === "user"? "justify-end": "justify-start"
- )}
- >
- {message.role === "assistant"&& (
- <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/20 to-purple-400/20 flex items-center justify-center mt-0.5">
- <Bot className="h-3.5 w-3.5 text-primary"/>
- </div>
- )}
- {message.role === "user"? (
- <UserMessage className="max-w-[90%]">
- <p className="text-xs leading-relaxed whitespace-pre-wrap">{message.content}</p>
- </UserMessage>
- ) : (
- <AssistantMessage className="max-w-[90%]">
- <p className="text-xs leading-relaxed whitespace-pre-wrap">{message.content}</p>
- {message.schema && (
- <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-2">
- <Badge variant="secondary"className="text-[10px] px-1.5 py-0.5">
- <FileJson className="h-2.5 w-2.5 mr-1"/>
- Schema Updated
- </Badge>
- {message.affected_fields && message.affected_fields.length > 0 && (
- <span className="text-[10px] text-muted-foreground">
- {message.affected_fields.length} field(s)
- </span>
- )}
- </div>
- )}
- </AssistantMessage>
- )}
- {message.role === "user"&& (
- <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary flex items-center justify-center mt-0.5">
- <User className="h-3.5 w-3.5 text-primary-foreground"/>
- </div>
- )}
- </div>
- ))}
+        {/* Scrollable content area - messages + input together */}
+        <div ref={scrollAreaRef} className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="px-3 py-4 flex flex-col min-h-full">
+              {/* Messages from top */}
+              <div className="flex-1">
+                {messages.length === 0 ? (
+                  /* Empty state hint */
+                  <div className="mb-4 p-3 rounded-none bg-muted/30 border border-rule">
+                    <div className="flex items-start gap-2">
+                      <Bot className="h-4 w-4 text-ink-soft mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-ink-soft leading-relaxed">
+                        Describe what information to extract. Use questions like
+                        {" "}
+                        &quot;Is there a penalty?&quot;
+                        {" "}
+                        for boolean fields, or specify field types directly.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Message list */
+                  <div className="space-y-3 mb-4">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex gap-2",
+                          message.role === "user" ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        {message.role === "assistant" && (
+                          <div className="flex-shrink-0 w-6 h-6 border border-rule bg-muted/40 flex items-center justify-center mt-0.5 text-ink">
+                            <Bot className="h-3.5 w-3.5" />
+                          </div>
+                        )}
+                        {message.role === "user" ? (
+                          <UserMessage className="max-w-[90%]">
+                            <p className="text-xs leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                          </UserMessage>
+                        ) : (
+                          <AssistantMessage className="max-w-[90%]">
+                            <p className="text-xs leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                            {message.schema && (
+                              <div className="mt-2 pt-2 border-t border-rule flex items-center gap-2">
+                                <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0.5">
+                                  <FileJson className="h-2.5 w-2.5 mr-1" />
+                                  Schema Updated
+                                </Badge>
+                                {message.affected_fields && message.affected_fields.length > 0 && (
+                                  <span className="font-mono text-[10px] text-ink-soft">
+                                    {message.affected_fields.length} field(s)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </AssistantMessage>
+                        )}
+                        {message.role === "user" && (
+                          <div className="flex-shrink-0 w-6 h-6 border border-rule bg-ink flex items-center justify-center mt-0.5 text-white">
+                            <User className="h-3.5 w-3.5" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
- {/* Loading indicator */}
- {isGenerating && (
- <div className="flex gap-2 justify-start">
- <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/20 to-purple-400/20 flex items-center justify-center mt-0.5">
- <Bot className="h-3.5 w-3.5 text-primary animate-pulse"/>
- </div>
- <div className="rounded-lg bg-white/80 border border-slate-200/60 shadow-sm px-3 py-2">
- <div className="flex items-center gap-2">
- <Loader2 className="h-3 w-3 animate-spin text-primary"/>
- <span className="text-xs text-muted-foreground">Generating schema...</span>
- </div>
- </div>
- </div>
- )}
- </div>
- )}
- </div>
+                    {/* Loading indicator */}
+                    {isGenerating && (
+                      <div className="flex gap-2 justify-start">
+                        <div className="flex-shrink-0 w-6 h-6 border border-rule bg-muted/40 flex items-center justify-center mt-0.5 text-ink">
+                          <Bot className="h-3.5 w-3.5 animate-pulse" />
+                        </div>
+                        <div className="border border-rule bg-parchment px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-3 w-3 animate-spin text-ink" />
+                            <span className="font-mono text-xs text-ink-soft">Generating schema...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
- {/* Input area - right after messages */}
+              {/* Input area - right after messages */}
  <div className="sticky bottom-0 pt-2">
  {/* Extraction Instructions - collapsible */}
  <ExtractionInstructionsPanel

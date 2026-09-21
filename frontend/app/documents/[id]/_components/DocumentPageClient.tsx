@@ -6,7 +6,9 @@ import { ArrowLeft } from 'lucide-react';
 
 import { LoadingIndicator, Breadcrumb, PageContainer, ErrorCard } from '@/lib/styles/components';
 import { KeyInformation } from '@/lib/styles/components/key-information';
-import { VersionHistory } from '@/components/VersionHistory';
+import { buildFilterHref, decodeFilters } from '@/lib/extractions/use-extracted-data-filters';
+import { matchedMetadataKeys } from '@/lib/extractions/filter-match';
+import { BASE_FIELDS_ANCHOR } from '@/lib/extractions/document-href';
 
 import { DocumentHeader } from './DocumentHeader';
 import { RelatedDocuments } from './RelatedDocuments';
@@ -29,6 +31,26 @@ export function DocumentPageClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryFromSearch = searchParams.get("q");
+  const filterBlobFromSearch = searchParams.get("f");
+  const filtersFromSearch = useMemo(
+    () => decodeFilters(filterBlobFromSearch),
+    [filterBlobFromSearch],
+  );
+
+  // Breadcrumb back to /search/extractions: rebuilt from the same URL state
+  // (filters, text query, page, NL question) so the user returns to the same
+  // result set instead of a blank filter. Falls back to a bare
+  // /search/extractions when nothing is present.
+  const searchBreadcrumbHref = useMemo(() => {
+    const rawPage = Number(searchParams.get("page"));
+    const pageFromSearch = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : undefined;
+    return buildFilterHref("/search/extractions", {
+      filters: filtersFromSearch,
+      textQuery: searchParams.get("q") ?? undefined,
+      nlQuestion: searchParams.get("nl") ?? undefined,
+      page: pageFromSearch,
+    });
+  }, [filtersFromSearch, searchParams]);
 
   const {
     authLoading,
@@ -85,6 +107,11 @@ export function DocumentPageClient({
     // Check if it looks like actual HTML or document content
     return trimmed.includes('<') || trimmed.length > 100;
   }, [htmlString]);
+
+  const highlightKeys = useMemo(
+    () => (metadata ? matchedMetadataKeys(filtersFromSearch, metadata) : new Set<string>()),
+    [filtersFromSearch, metadata],
+  );
 
   if (loading) {
     return (
@@ -146,7 +173,10 @@ export function DocumentPageClient({
           <div className="mb-4">
             <Breadcrumb
               items={[
-                { label: 'Search', href: '/search' },
+                {
+                  label: 'Search',
+                  href: searchBreadcrumbHref,
+                },
                 { label: breadcrumbTitle },
               ]}
             />
@@ -177,6 +207,13 @@ export function DocumentPageClient({
                     layout="grid"
                     showAll
                     title="Extracted Schema Fields"
+                    id={BASE_FIELDS_ANCHOR}
+                    highlightKeys={highlightKeys}
+                    highlightCaption={
+                      highlightKeys.size > 0
+                        ? `${highlightKeys.size} field${highlightKeys.size === 1 ? '' : 's'} matched your filter`
+                        : undefined
+                    }
                   />
                 </div>
               )}
@@ -220,12 +257,6 @@ export function DocumentPageClient({
                 keyPointsError={keyPointsError}
                 keyPointsResult={keyPointsResult}
                 onExtractKeyPoints={handleExtractKeyPoints}
-              />
-
-              {/* Version History */}
-              <VersionHistory
-                documentId={documentId}
-                onRevert={fetchDocumentData}
               />
 
               {/* Main Content - Document HTML or Fallback */}

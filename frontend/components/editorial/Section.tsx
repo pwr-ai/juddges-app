@@ -3,15 +3,15 @@ import { cn } from "@/lib/utils";
 import { SectionHeader } from "./SectionHeader";
 
 interface SectionProps {
-  /** Auto-numbered marker, e.g. `01`, `02`, … rendered as a watermark. */
+  /** Auto-numbered marker, e.g. `01`, `02`, … rendered as a red square numeral. */
   numeral?: string;
   /** Small-caps category kicker. */
   eyebrow?: string;
-  /** Section title — may include `<em>` for italic-oxblood emphasis. */
+  /** Section title — may include `<em>` for red upright emphasis. */
   title: React.ReactNode;
   /**
    * Body lede rendered between the header and the section content. Rendered at
-   * full `--ink` (not `--ink-soft`) so it stays AAA-readable on parchment for
+   * full `--ink` (not `--ink-soft`) so it stays readable on white paper for
    * long-form editorial dashboards.
    */
   description?: React.ReactNode;
@@ -21,8 +21,9 @@ interface SectionProps {
 
 /**
  * Editorial dashboard section — wraps `SectionHeader` and content in a single
- * vertically-spaced block with the numeral as a watermark and a high-contrast
- * description lede. Used for any numbered editorial dashboard surface.
+ * vertically-spaced block with the numeral as a red square numeral and a
+ * high-contrast description lede. Used for any numbered editorial dashboard
+ * surface.
  *
  * @example
  *   <Section
