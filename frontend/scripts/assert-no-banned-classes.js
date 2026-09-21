@@ -37,7 +37,7 @@ const PATTERNS = {
   'hover-fx': /hover:scale-|(?<!-)shadow-(xl|2xl)\b/g,
   // Targets the sweep, not the repeat count: a blinking caret and a skeleton
   // pulse both loop forever and are both permitted (DESIGN.md 4a, 6).
-  motion: /animate-(ping|bounce|shimmer)\b|repeat:\s*Infinity|(?:@keyframes|animation:)[^;{]*shimmer/g,
+  motion: /animate-(ping|bounce|shimmer)\b|repeat:\s*Infinity|(?:@keyframes|animation:)[^;{}]*shimmer/g,
   'ai-glyph': /\bSparkles\b|\bWand2\b/g,
 };
 

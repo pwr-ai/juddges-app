@@ -168,6 +168,18 @@ describe('raw CSS, not just Tailwind class names (#713)', () => {
     expect(counts.motion).toBe(0);
   });
 
+  it('does not let the shimmer match run past a rule boundary', () => {
+    // A declaration with no trailing semicolon is legal CSS, so `[^;{]*` would
+    // have run past the closing brace into the next rule and matched there.
+    const counts = countBannedPatterns([
+      {
+        path: 'app/globals.css',
+        content: ['.x { animation: caret-blink 1s infinite }', '.y::after { content: "shimmer" }'].join('\n'),
+      },
+    ]);
+    expect(counts.motion).toBe(0);
+  });
+
   it('counts an arbitrary radius that ends a string literal', () => {
     // `rounded-(...)\b` never matched here: between `]` and `"` there are two
     // non-word characters, so there is no boundary to anchor against.
