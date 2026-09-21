@@ -1,7 +1,8 @@
-"""HTTP surface of the PL/UK comparison: `/compare/facets`, `/compare/export`.
+"""HTTP surface of the PL/UK comparison: `/compare/facets`, `/compare/export`,
+`/compare/pairs/{pair_id}`.
 
-Both endpoints take the same body (`CompareRequest`) and share `_run_compare`;
-export only changes the serialisation. Order of checks, and why:
+The two POST endpoints take the same body (`CompareRequest`) and share
+`_run_compare`; export only changes the serialisation. Order of checks, and why:
 
 1. `supabase_client` configured, else 503 `DATABASE_UNAVAILABLE`.
 2. Requested `fields` resolved against the base comparable registry
@@ -22,6 +23,14 @@ export only changes the serialisation. Order of checks, and why:
 `select_base_fields`, so one request can never cost more RPC calls than there
 are comparable fields.
 
+`GET /compare/pairs/{pair_id}` takes **no filter input at all**. The pair row is
+looked up with `find_pair(pair_id, user.id)` (404 otherwise, before any data
+read) and the base fields are computed over `{"collection_ids": [pl, uk]}`
+built server-side from that row -- the ownership check is the lookup itself.
+The extension-schema tally (`app.compare.schema_tally`) is best-effort: if it
+fails the base fields are still returned with `extension_reason =
+"extension_failed"`.
+
 Every endpoint requires a Bearer user (`get_current_user`) on top of the
 router-level API key: they read collection membership, so there is no
 anonymous mode.
@@ -40,10 +49,12 @@ from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.collection_pairs import _require_uuid, get_collection_pairs_db
 from app.collections_from_filter import check_collection_ids_ownership
 from app.compare.csv_export import csv_bytes, to_csv_rows
 from app.compare.fields import FieldSpec, base_compare_fields, select_base_fields
-from app.compare.models import CompareResponse
+from app.compare.models import CompareResponse, PairCompareResponse, PairSummary
+from app.compare.schema_tally import ExtensionOutcome, extension_for_pair
 from app.compare.service import CompareService, FieldNotComparableError
 from app.core.auth_jwt import AuthenticatedUser, get_current_user
 from app.core.supabase import supabase_client
@@ -123,15 +134,7 @@ async def _run_compare(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("compare failed: {}", exc)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "Compare Failed",
-                "message": f"Failed to compute the comparison: {exc!s}",
-                "code": "COMPARE_FAILED",
-            },
-        ) from exc
+        raise _compare_failed(exc) from exc
 
 
 @router.post(
@@ -170,4 +173,75 @@ async def compare_export(
             "Content-Disposition": f'attachment; filename="{filename}"',
             "X-Rows-Count": str(len(rows)),
         },
+    )
+
+
+def _compare_failed(exc: Exception) -> HTTPException:
+    logger.exception("compare failed: {}", exc)
+    return HTTPException(
+        status_code=500,
+        detail={
+            "error": "Compare Failed",
+            "message": f"Failed to compute the comparison: {exc!s}",
+            "code": "COMPARE_FAILED",
+        },
+    )
+
+
+def _pair_compare_blocking(
+    client: Any, pl_id: str, uk_id: str, *, user_id: str
+) -> tuple[CompareResponse, ExtensionOutcome]:
+    """Runs in a worker thread: base facet RPCs, then the best-effort extension."""
+    base = CompareService(client).compare_collections(
+        pl_id, uk_id, base_compare_fields()
+    )
+    try:
+        outcome = extension_for_pair(client, pl_id, uk_id, user_id=user_id)
+    except Exception as exc:  # the base comparison is still worth returning
+        logger.exception("pair extension tally failed: {}", exc)
+        outcome = ExtensionOutcome(reason="extension_failed")
+    return base, outcome
+
+
+@router.get(
+    "/pairs/{pair_id}",
+    response_model=PairCompareResponse,
+    summary="Comparison of a saved PL/UK collection pair (base + extension schema fields)",
+)
+async def compare_pair(
+    pair_id: str,
+    pairs_db=Depends(get_collection_pairs_db),
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> PairCompareResponse:
+    """Base fields over the pair's two collections, plus the extension tally.
+
+    No request filters are accepted: the membership is the pair's own
+    `pl_collection_id`/`uk_collection_id`, and the pair must belong to the
+    caller (`find_pair` scopes by user; anything else is a 404). `filters` in
+    the response is the server-built `{"collection_ids": [pl, uk]}`, which
+    `POST /compare/export` accepts for the CSV of the same numbers.
+    """
+    client = _require_db()
+    pair = await pairs_db.find_pair(_require_uuid(pair_id), user.id)
+    if pair is None:
+        raise HTTPException(status_code=404, detail="Collection pair not found")
+    pl_id, uk_id = str(pair["pl_collection_id"]), str(pair["uk_collection_id"])
+    try:
+        base, outcome = await asyncio.to_thread(
+            _pair_compare_blocking, client, pl_id, uk_id, user_id=user.id
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _compare_failed(exc) from exc
+    return PairCompareResponse(
+        **base.model_dump(exclude={"pair"}),
+        pair=PairSummary(
+            id=str(pair["id"]),
+            name=pair["name"],
+            pl_collection_id=pl_id,
+            uk_collection_id=uk_id,
+        ),
+        extension=outcome.extension,
+        extension_reason=outcome.reason,
     )

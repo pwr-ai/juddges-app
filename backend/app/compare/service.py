@@ -163,3 +163,17 @@ class CompareService:
             filters=clean,
             text_query=text_query,
         )
+
+    def compare_collections(
+        self, pl_collection_id: str, uk_collection_id: str, specs: list[FieldSpec]
+    ) -> CompareResponse:
+        """Base fields over a pair's actual membership.
+
+        The only filter is the two collection ids (the RPC honours
+        `collection_ids` via `collection_judgments`); the jurisdiction split
+        comes from the rows themselves. The pair's stored filter/text query are
+        not re-applied: membership already reflects them, and re-running them
+        could disagree with what was saved.
+        """
+        filters = {"collection_ids": [pl_collection_id, uk_collection_id]}
+        return self.compare(filters, None, specs)
