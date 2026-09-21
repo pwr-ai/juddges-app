@@ -129,8 +129,15 @@ EXPECTED_RPC_ARGS = {
         "p_limit",
         "p_offset",
     ],
-    # backend/app/extraction_domain/filter_ids.py
+    # backend/app/extraction_domain/filter_ids.py, backend/app/compare/service.py,
+    # backend/app/collection_pairs.py
     "list_extracted_filter_matches": ["p_filters", "p_text_query"],
+    # backend/app/compare/service.py
+    "get_extracted_facet_counts_by_jurisdiction": [
+        "p_filters",
+        "field_path",
+        "p_text_query",
+    ],
 }
 
 
