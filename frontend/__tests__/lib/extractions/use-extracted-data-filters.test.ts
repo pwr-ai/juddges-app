@@ -9,6 +9,8 @@
  */
 
 import {
+  buildFilterHref,
+  buildFilterSearchParams,
   countActive,
   decodeFilters,
   encodeFilters,
@@ -99,5 +101,39 @@ describe("countActive", () => {
         did_offender_confess: true,
       }),
     ).toBe(2);
+  });
+});
+
+describe("core fields round-trip through the opaque blob unchanged", () => {
+  it("keeps jurisdiction and decision_date", () => {
+    const filters = { jurisdiction: ["PL", "UK"] as ("PL" | "UK")[], decision_date: { from: "2015-01-01", to: "2024-12-31" } };
+    expect(decodeFilters(encodeFilters(filters))).toEqual(filters);
+  });
+});
+
+describe("buildFilterSearchParams / buildFilterHref (one codec for every filter-bearing page)", () => {
+  it("writes f, q, page and nl only when set", () => {
+    const params = buildFilterSearchParams({
+      filters: { jurisdiction: ["PL"] },
+      textQuery: "fraud",
+      page: 2,
+      nlQuestion: "kobiety skazane za oszustwo, PL, 2015–2024",
+    });
+    expect(params.get("f")).toBe(encodeFilters({ jurisdiction: ["PL"] }));
+    expect(params.get("q")).toBe("fraud");
+    expect(params.get("page")).toBe("2");
+    expect(params.get("nl")).toBe("kobiety skazane za oszustwo, PL, 2015–2024");
+  });
+
+  it("omits empty values and page 1", () => {
+    expect(buildFilterSearchParams({ filters: {}, textQuery: "  ", page: 1, nlQuestion: "" }).toString()).toBe("");
+  });
+
+  it("builds hrefs for /search/extractions, /compare and /documents alike", () => {
+    const filters = { appellant: ["offender" as const] };
+    expect(buildFilterHref("/compare", { filters, textQuery: "fraud" }, "https://juddges.com"))
+      .toBe(`https://juddges.com/compare?f=${encodeFilters(filters)}&q=fraud`);
+    expect(buildFilterHref("/compare", { filters: {} }, "https://juddges.com")).toBe("https://juddges.com/compare");
+    expect(buildFilterHref("/documents/a%20b", { filters })).toBe(`/documents/a%20b?f=${encodeFilters(filters)}`);
   });
 });

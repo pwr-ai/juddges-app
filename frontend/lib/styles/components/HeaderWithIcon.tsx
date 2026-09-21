@@ -85,9 +85,8 @@ export function Header({
 "relative flex-shrink-0",
  !hasAdditionalContent &&"mt-1"// Only add top margin when no description/children
  )}>
- <div className="absolute inset-0 bg-gradient-to-br from-blue-400/15 via-indigo-400/15 to-purple-400/15 rounded-full blur-lg"/>
- <div className="relative bg-gradient-to-br from-blue-400/50 via-indigo-400/30 to-purple-400/50 rounded-full p-2.5">
- <Icon className="h-5 w-5 text-primary"/>
+ <div className="border border-rule bg-parchment-deep rounded-none p-2 flex items-center justify-center">
+ <Icon className="h-5 w-5 text-oxblood"/>
  </div>
  </div>
  )}

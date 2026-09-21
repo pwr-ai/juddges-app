@@ -1,11 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import {
-  adapterRequests,
-  extractionSequence,
-  resetAdapter,
+  ADAPTER_BASE_URL,
+  APP_BASE_URL,
+  expectNoUnexpectedStubRequests,
   setSyntheticSession,
-} from './support';
+} from './synthetic-session';
 
 /**
  * The extraction path, end to end, on every pull request (#579).
@@ -32,12 +32,41 @@ import {
  * the closing assertion is extracted data rendered on the page.
  */
 
-const APP_BASE_URL = 'http://127.0.0.1:3006';
-
 /** Mirrors `IDS.extraction.sequenced` in `stub-services.mjs`. */
 const SEQUENCED_JOB_ID = '30000000-0000-4000-8000-000000000007';
 const COLLECTION_NAME = 'Route contract extraction collection';
 const SCHEMA_NAME = 'Route contract schema';
+
+interface ServedExtractionState {
+  status: string;
+  completed_documents: number;
+  total_documents: number;
+}
+
+async function resetAdapter(request: APIRequestContext): Promise<void> {
+  const response = await request.post(
+    `${ADAPTER_BASE_URL}/__route-contract/reset`,
+  );
+  expect(response.status()).toBe(204);
+}
+
+/**
+ * What the stub answered for `GET /extractions/{sequenced}` on each poll, in
+ * order. Snapshot reads (`include_results=false`, made by the middleware) are
+ * not recorded — they observe the current step without consuming one.
+ */
+async function extractionSequence(
+  request: APIRequestContext,
+): Promise<ServedExtractionState[]> {
+  const response = await request.get(
+    `${ADAPTER_BASE_URL}/__route-contract/extraction-sequence`,
+  );
+  expect(response.status()).toBe(200);
+  const payload = (await response.json()) as {
+    served: ServedExtractionState[];
+  };
+  return payload.served;
+}
 
 test.describe.serial('extraction path contract', () => {
   test.beforeEach(async ({ context, request }) => {
@@ -46,8 +75,7 @@ test.describe.serial('extraction path contract', () => {
   });
 
   test.afterEach(async ({ request }) => {
-    const requests = await adapterRequests(request);
-    expect(requests.filter(({ unexpected }) => unexpected)).toEqual([]);
+    await expectNoUnexpectedStubRequests(request);
   });
 
   test('submits an extraction and shows the extracted data once the job completes', async ({

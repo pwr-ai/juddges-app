@@ -41,6 +41,12 @@ def _scalar(conn, sql: str, params: tuple = ()):
         return row[0] if row else None
 
 
+def _row(conn, sql: str, params: tuple = ()):
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchone()
+
+
 def test_chain_applied_and_expected_tables_exist(conn) -> None:
     """The fixture applying the chain is itself the first assertion.
 
@@ -114,6 +120,17 @@ EXPECTED_RPC_ARGS = {
         "p_extracted_data",
         "p_reject_duplicate_content",
     ],
+    # backend/app/extraction_domain/results_router.py:483 — jurisdiction/decision_date/
+    # collection_ids travel INSIDE p_filters, so this list must never grow (a second
+    # overload makes PostgREST answer 300 for every caller).
+    "filter_documents_by_extracted_data": [
+        "p_filters",
+        "p_text_query",
+        "p_limit",
+        "p_offset",
+    ],
+    # backend/app/extraction_domain/filter_ids.py
+    "list_extracted_filter_matches": ["p_filters", "p_text_query"],
 }
 
 
@@ -121,20 +138,42 @@ EXPECTED_RPC_ARGS = {
 def test_rpc_exists_with_the_argument_names_postgrest_matches_by(
     conn, function: str, expected: list[str]
 ) -> None:
-    names = _scalar(
+    # `RETURNS TABLE (...)` appends each output column to proargnames/proargmodes
+    # as a trailing OUT parameter, so a function like `list_extracted_filter_matches`
+    # mixes caller-facing IN names with result-shape OUT names in the same arrays.
+    # PostgREST resolves RPC calls by the IN names only (the JSON payload keys),
+    # so that is what this wire contract pins; filter OUT names out rather than
+    # asserting on the mixed array.
+    row = _row(
         conn,
         """
-        SELECT p.proargnames FROM pg_proc p
+        SELECT p.proargnames, p.proargmodes FROM pg_proc p
         JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'public' AND p.proname = %s
         """,
         (function,),
     )
-    assert names is not None, f"{function} does not exist after the migrations"
-    assert list(names) == expected, (
-        f"{function} argument names drifted: {list(names)} != {expected}. "
+    assert row is not None, f"{function} does not exist after the migrations"
+    names, modes = row
+    modes = modes if modes is not None else ["i"] * len(names)
+    in_names = [name for name, mode in zip(names, modes, strict=True) if mode == "i"]
+    assert in_names == expected, (
+        f"{function} argument names drifted: {in_names} != {expected}. "
         "PostgREST matches by name, so this is a 404 for every caller."
     )
+
+
+@pytest.mark.parametrize("function", sorted(EXPECTED_RPC_ARGS))
+def test_rpc_has_exactly_one_overload(conn, function: str) -> None:
+    """CREATE OR REPLACE with a changed parameter list adds an overload instead of
+    replacing the function; PostgREST then cannot pick one and answers 300."""
+    count = _scalar(
+        conn,
+        "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
+        "WHERE n.nspname = 'public' AND p.proname = %s",
+        (function,),
+    )
+    assert count == 1, f"{function} has {count} overloads; expected exactly 1"
 
 
 def test_blog_rpcs_exist(conn) -> None:

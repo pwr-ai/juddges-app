@@ -58,14 +58,14 @@ export function SectionHeader({
  <div className={cn(
 "section-header", // Added for print styling
 "flex items-center",
- showBorder &&"mt-6 pt-6 border-t border-slate-200/30",
+ showBorder && "mt-6 pt-6 border-t border-rule",
  className
  )}>
  <h3 className={cn(
-"text-sm md:text-base text-muted-foreground/80 leading-relaxed text-left",
+ "text-sm md:text-base text-ink-soft leading-relaxed text-left",
  headerClassName
  )}>
- <span className="font-semibold text-foreground">
+ <span className="font-semibold text-ink">
  {title}
  </span>
  {description && (

@@ -1,13 +1,12 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 import {
   ADAPTER_BASE_URL,
   APP_BASE_URL,
-  adapterRequests,
-  extractionSequence,
-  resetAdapter,
+  expectNoUnexpectedStubRequests,
   setSyntheticSession,
-} from './support';
+  type AdapterRequest,
+} from './synthetic-session';
 
 /**
  * The research flow a user actually performs, as one PR-gated spec (#692):
@@ -51,8 +50,50 @@ interface FlowCollectionState {
   submitted_document_ids: string[] | null;
 }
 
+interface ServedExtractionState {
+  status: string;
+  completed_documents: number;
+  total_documents: number;
+}
+
+async function resetAdapter(request: APIRequestContext): Promise<void> {
+  const response = await request.post(
+    `${ADAPTER_BASE_URL}/__route-contract/reset`,
+  );
+  expect(response.status()).toBe(204);
+}
+
+async function adapterRequests(
+  request: APIRequestContext,
+): Promise<AdapterRequest[]> {
+  const response = await request.get(
+    `${ADAPTER_BASE_URL}/__route-contract/requests`,
+  );
+  expect(response.status()).toBe(200);
+  const payload = (await response.json()) as { requests: AdapterRequest[] };
+  return payload.requests;
+}
+
+/**
+ * What the stub answered for `GET /extractions/{flow job}` on each poll, in
+ * order. Snapshot reads (`include_results=false`, made by the middleware) are
+ * not recorded — they observe the current step without consuming one.
+ */
+async function extractionSequence(
+  request: APIRequestContext,
+): Promise<ServedExtractionState[]> {
+  const response = await request.get(
+    `${ADAPTER_BASE_URL}/__route-contract/extraction-sequence?job_id=${FLOW_JOB_ID}`,
+  );
+  expect(response.status()).toBe(200);
+  const payload = (await response.json()) as {
+    served: ServedExtractionState[];
+  };
+  return payload.served;
+}
+
 async function flowCollection(
-  request: Parameters<typeof resetAdapter>[0],
+  request: APIRequestContext,
 ): Promise<FlowCollectionState> {
   const response = await request.get(
     `${ADAPTER_BASE_URL}/__route-contract/flow-collection`,
@@ -68,8 +109,7 @@ test.describe.serial('collection → extraction flow contract', () => {
   });
 
   test.afterEach(async ({ request }) => {
-    const requests = await adapterRequests(request);
-    expect(requests.filter(({ unexpected }) => unexpected)).toEqual([]);
+    await expectNoUnexpectedStubRequests(request);
   });
 
   test('search → select 5 → save to collection → extract → results', async ({
@@ -201,7 +241,7 @@ test.describe.serial('collection → extraction flow contract', () => {
 
       // Progression, not a finished answer on the first read — same reasoning
       // as extraction-path.spec.ts step 6.
-      expect(await extractionSequence(request, FLOW_JOB_ID)).toEqual([
+      expect(await extractionSequence(request)).toEqual([
         { status: 'PENDING', completed_documents: 0, total_documents: 5 },
         { status: 'IN_PROGRESS', completed_documents: 3, total_documents: 5 },
         { status: 'COMPLETED', completed_documents: 5, total_documents: 5 },

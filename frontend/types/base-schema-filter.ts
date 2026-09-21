@@ -9,6 +9,8 @@
 // FastAPI proxy, and the RPC interprets them.
 // =============================================================================
 
+import type { Collection } from "@/types/collection";
+
 export type Appellant = "offender" | "attorney_general" | "other";
 
 export type PleaPoint =
@@ -74,6 +76,9 @@ export type AppealOutcome =
   | "outcome_other"
   | "outcome_unknown";
 
+/** Core `judgments.jurisdiction` — CHECK (jurisdiction IN ('PL','UK')). */
+export type Jurisdiction = "PL" | "UK";
+
 // -----------------------------------------------------------------------------
 // Range helpers — match the JSONB shapes the RPC accepts.
 // -----------------------------------------------------------------------------
@@ -96,6 +101,11 @@ export interface DateRange {
 // -----------------------------------------------------------------------------
 
 export interface BaseSchemaFilters {
+  // core judgment columns (judgments.jurisdiction / judgments.decision_date;
+  // read by list_extracted_filter_matches since 20260920000001). Not base_* fields.
+  jurisdiction?: Jurisdiction[];
+  decision_date?: string | DateRange;
+
   // scalar enums (IN-list)
   appellant?: Appellant[];
   plea_point?: PleaPoint[];
@@ -204,4 +214,28 @@ export interface NumericHistogramResponse {
   field: string;
   buckets: HistogramBucket[];
   total: number;
+}
+
+// -----------------------------------------------------------------------------
+// Save-as-collection (POST /api/collections/from-filter). List-shaped so Spec C
+// can add `split_by_jurisdiction` and return two collections + pair_id.
+// -----------------------------------------------------------------------------
+
+export interface CreateCollectionFromFilterRequest {
+  name: string;
+  description?: string;
+  filters: BaseSchemaFilters;
+  text_query?: string | null;
+}
+
+export interface CreatedCollection {
+  jurisdiction: Jurisdiction | null;
+  collection: Collection;
+  added_count: number;
+}
+
+export interface CollectionFromFilterResponse {
+  collections: CreatedCollection[];
+  total_matched: number;
+  pair_id: string | null;
 }

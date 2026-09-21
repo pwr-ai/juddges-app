@@ -116,7 +116,7 @@ export function AccordionTrigger({
     <BaseAccordionTrigger
       className={cn(
         // Design system hover effects - no hover background
-        "hover:no-underline transition-all duration-300",
+        "hover:no-underline transition-colors duration-150",
         "hover:!bg-transparent",
         // Focus state for accessibility
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",

@@ -268,6 +268,34 @@ class TestFilterByExtractedData:
             assert data["documents"] == []
             assert data["total_count"] == 0
 
+    @pytest.mark.unit
+    async def test_collection_ids_filter_is_rejected(
+        self, client, valid_api_headers
+    ) -> None:
+        """This endpoint has no get_current_user and calls the RPC with the
+        service-role client, so `collection_ids` (RLS-gated on
+        `list_extracted_filter_matches`) must never reach it from here —
+        it would let any caller enumerate membership of any collection.
+        """
+        mock_supabase = MagicMock()
+
+        with patch("app.extraction_domain.results_router.supabase", mock_supabase):
+            response = await client.post(
+                "/extractions/base-schema/filter",
+                json={
+                    "filters": {
+                        "collection_ids": ["00000000-0000-4000-a000-000000000001"]
+                    },
+                    "limit": 10,
+                    "offset": 0,
+                },
+                headers=valid_api_headers,
+            )
+        assert response.status_code == 400
+        detail = response.json()["detail"]
+        assert detail["code"] == "COLLECTION_IDS_NOT_ALLOWED"
+        mock_supabase.rpc.assert_not_called()
+
 
 # =============================================================================
 # GET /extractions/base-schema/facets/{field}

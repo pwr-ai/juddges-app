@@ -30,10 +30,20 @@ describe("production child process runner", () => {
         "process.on('SIGTERM', () => undefined); process.stdout.write('ready'); setInterval(() => undefined, 1000)",
       ],
       label: "hung child",
-      timeoutMs: 100,
+      // The timeout clock starts at spawn(), but the child only ignores SIGTERM
+      // once Node has finished booting and run the -e script. With a 100ms
+      // budget a loaded machine could deliver SIGTERM to a process that had not
+      // installed its handler yet, killing it outright and reporting SIGTERM
+      // where this test expects the SIGKILL escalation. Wait for the child to
+      // announce itself below, and leave enough budget for that to happen.
+      timeoutMs: 1_000,
       terminationGraceMs: 20,
     });
     const pid = handle.child.pid;
+
+    // Proves the SIGTERM handler is installed, so what is under test is the
+    // escalation path rather than a race against process startup.
+    await waitForOutput(handle, "ready");
 
     await expect(handle.completed).resolves.toMatchObject({
       timedOut: true,
