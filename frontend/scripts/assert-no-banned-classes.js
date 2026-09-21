@@ -23,15 +23,21 @@ const HUES =
 
 // Name → regex. Keep in sync with DESIGN.md "Avoid" and the #638 issue body.
 const PATTERNS = {
-  glass: /backdrop-blur|\bglass-/g,
-  gradient: /bg-gradient-to-|bg-linear-to-|bg-clip-text/g,
+  // `backdrop-filter` catches the CSS property; the utility alone missed a
+  // live blur on every toast (#713).
+  glass: /backdrop-blur|backdrop-filter|\bglass-/g,
+  gradient: /bg-gradient-to-|bg-linear-to-|bg-clip-text|(?:linear|radial|conic)-gradient\(/g,
   hue: new RegExp(`\\b(bg|text|border|from|to|via|ring)-(${HUES})-\\d`, 'g'),
   'transition-all': /transition-all/g,
-  radius: /rounded-(xl|2xl|3xl|\[\d+px\]|\[[\d.]+rem\])\b/g,
+  // The `\b` belongs only on the bare sizes: an arbitrary value is already
+  // self-delimiting, and `rounded-[24px]"` has no word boundary to match.
+  radius: /rounded-(?:(?:xl|2xl|3xl)\b|\[\d+px\]|\[[\d.]+rem\])/g,
   // `(?<!-)` keeps this on utility classes: `--shadow-xl: var(--shadow-lg)` in
   // globals.css is the cap that neutralises the oversized shadow, not a use of it.
   'hover-fx': /hover:scale-|(?<!-)shadow-(xl|2xl)\b/g,
-  motion: /animate-(ping|bounce|shimmer)\b|repeat:\s*Infinity/g,
+  // Targets the sweep, not the repeat count: a blinking caret and a skeleton
+  // pulse both loop forever and are both permitted (DESIGN.md 4a, 6).
+  motion: /animate-(ping|bounce|shimmer)\b|repeat:\s*Infinity|(?:@keyframes|animation:)[^;{]*shimmer/g,
   'ai-glyph': /\bSparkles\b|\bWand2\b/g,
 };
 

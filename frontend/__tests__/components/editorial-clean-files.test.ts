@@ -198,6 +198,11 @@ const CLEAN_FILES = [
   'components/ui/empty-state.tsx',
   'components/ui/switch.tsx',
   'components/ui/skeletons/SkeletonText.tsx',
+  // #713 - surfaced by the CSS-property patterns and the radius boundary fix
+  'lib/styles/components.css',
+  'lib/styles/components/collapsible-button.tsx',
+  'components/ui/checkbox.tsx',
+  'components/ui/tooltip.tsx',
 ];
 
 /**

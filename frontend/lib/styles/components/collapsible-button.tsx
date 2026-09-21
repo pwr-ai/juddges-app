@@ -76,36 +76,24 @@ export function CollapsibleButton({
  type={type}
  onClick={onClick}
  disabled={disabled}
+ aria-expanded={isExpanded}
  className={cn(
-"group relative overflow-hidden",
- // SPECIFICATION A: THE DROPDOWN TRIGGER (The Photonic Switch)
- // Architecture: Full Pill, 36px height, 16px padding, centered flexbox, 8px gap
-"rounded-[9999px] h-9 px-4",
-"inline-flex items-center justify-center gap-2 whitespace-nowrap",
-"cursor-pointer",
- // IDLE STATE (The Glass Capsule): Milky glass background, white border, slate text, micro shadow
-"bg-[rgba(255,255,255,0.60)]",
-"border border-white",
-"text-[#475569]", // Slate 600 | Light Grey
-"shadow-[0_1px_2px_rgba(0,0,0,0.05)]",
- // HOVER STATE (The Lift): Solid white, darker text, physical lift
-"hover:bg-white",
-"hover:text-[#0F172A]", // Midnight Navy | Pure White
-"hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]",
-"hover:-translate-y-[1px]",
- // ACTIVE/OPEN STATE (The Laser Focus): Clinical white, royal blue border, blue photonic shadow
- isExpanded &&"bg-white",
- isExpanded &&"border-[#2563EB]", // Royal Blue
- isExpanded &&"text-[#1E40AF]", // Deep Royal Blue | Light Blue
- isExpanded &&"shadow-[0_0_0_3px_rgba(37,99,235,0.15)]", // Blue Photonic Shadow
- // Active state for tactile feedback
-"active:scale-[0.98] active:opacity-90",
- // Focus state (required)
-"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
- // Transitions
-"transition-[transform,shadow,border-color,background-color,color] duration-300 ease-out",
- // Disabled state
- disabled &&"opacity-50 cursor-not-allowed",
+ "group relative",
+ // Editorial control: sharp edges, hairline rule, mono label (DESIGN.md 5a)
+ "h-9 px-4 rounded-none",
+ "inline-flex items-center justify-center gap-2 whitespace-nowrap",
+ "cursor-pointer",
+ "font-mono text-xs uppercase tracking-wider",
+ // Idle
+ "bg-parchment text-ink-soft border border-rule",
+ // Hover
+ "hover:bg-parchment-deep hover:text-ink",
+ // Open: inverted, so the state reads without a colour change
+ isExpanded && "bg-parchment-deep text-ink border-ink",
+ // Focus
+ "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
+ "transition-colors duration-150",
+ disabled && "opacity-50 cursor-not-allowed",
  className
  )}
  >
@@ -113,13 +101,7 @@ export function CollapsibleButton({
  <span className="relative z-10 flex items-center gap-2 w-full min-w-0 overflow-hidden">
  {/* Leading icon - optional */}
  {LeadingIcon && (
- <LeadingIcon className={cn(
-"h-4 w-4 shrink-0 transition-transform duration-200",
- // Icon color matches text color
-"text-[#475569]",
-"group-hover:text-[#0F172A]",
- isExpanded &&"text-[#1E40AF] rotate-180"
- )} />
+ <LeadingIcon className="h-4 w-4 shrink-0" />
  )}
 
  {/* Button content */}
@@ -127,20 +109,11 @@ export function CollapsibleButton({
 
  {/* Trailing icon - conditional rendering */}
  {isLoading ? (
- <div className="h-3.5 w-3.5 border-2 border-[#475569]/30 border-t-[#475569] rounded-full animate-spin shrink-0"/>
+ <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-rule border-t-ink" />
  ) : isExpanded ? (
- <ChevronUp className={cn(
-"h-4 w-4 transition-transform duration-200 shrink-0",
-"text-[#475569]",
-"group-hover:text-[#0F172A]",
- isExpanded &&"text-[#1E40AF]"
- )} />
+ <ChevronUp className="h-4 w-4 shrink-0" />
  ) : (
- <ChevronDown className={cn(
-"h-4 w-4 transition-transform duration-200 shrink-0",
-"text-[#475569]",
-"group-hover:text-[#0F172A]"
- )} />
+ <ChevronDown className="h-4 w-4 shrink-0" />
  )}
  </span>
  </Button>
