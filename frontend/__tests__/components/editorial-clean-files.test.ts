@@ -169,7 +169,6 @@ const CLEAN_FILES = [
   'lib/styles/components/dropdown-button.tsx',
   'lib/styles/components/searchable-dropdown-button.tsx',
   'lib/styles/components/HeaderWithIcon.tsx',
-  'lib/styles/components/headers.tsx',
   'lib/styles/components/secondary-header.tsx',
   'lib/styles/components/item-header.tsx',
   'lib/styles/components/section-header.tsx',
