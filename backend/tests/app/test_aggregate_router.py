@@ -59,7 +59,7 @@ class TestAggregate:
         assert name == "aggregate_extracted_data"
         assert params["p_filters"] == {"appeal_outcome": ["allowed"]}
         assert params["p_text_query"] is None
-        assert params["p_fields"][:2] == ["offender_age_offence", "offender_gender"]
+        assert params["p_fields"][:2] == ["offender_gender", "convict_offences"]
         assert (
             params["p_sample_size"] is None
             and params["p_seed"] is None
@@ -110,6 +110,18 @@ class TestAggregate:
             )
         assert r.status_code == 422
         assert "seed" in r.text
+
+    @pytest.mark.asyncio
+    async def test_seed_out_of_int4_range_is_422(self, client, valid_api_headers):
+        with patch(
+            "app.extraction_domain.results_router.supabase", _supabase(RPC_RESULT)
+        ):
+            r = await client.post(
+                URL,
+                json={"sample_size": 10, "seed": 2**31},
+                headers=valid_api_headers,
+            )
+        assert r.status_code == 422
 
     @pytest.mark.asyncio
     async def test_unknown_field_is_422_and_names_it(self, client, valid_api_headers):

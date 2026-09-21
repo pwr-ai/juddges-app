@@ -18,7 +18,7 @@
     "deep_reasoning_patterns", "deep_judicial_tone", "deep_precedential_value"
   ],
   "default": [
-    "offender_age_offence", "offender_gender", "convict_offences", "sentences_received",
+    "offender_gender", "convict_offences", "sentences_received",
     "appeal_outcome", "did_offender_confess", "court_name", "decision_date"
   ],
   "core": ["jurisdiction", "decision_date", "court_name"]

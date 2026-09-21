@@ -15,7 +15,10 @@ from collections import Counter
 
 import pytest
 
-from app.extraction_domain.aggregate_fields import AGGREGABLE_FIELDS
+from app.extraction_domain.aggregate_fields import (
+    AGGREGABLE_FIELDS,
+    DEFAULT_AGGREGATE_FIELDS,
+)
 from tests.db.test_extracted_filter_contract import _exec, _seed
 
 pytestmark = pytest.mark.db
@@ -155,6 +158,16 @@ def test_null_top_n_is_rejected(conn, cohort):
         _agg(conn, {"keywords": [cohort["token"]]}, p_top_n=None)
 
 
+def test_too_many_fields_is_rejected(conn, cohort):
+    with pytest.raises(Exception, match="p_fields"):
+        _agg(conn, {"keywords": [cohort["token"]]}, p_fields=["keywords"] * 51)
+
+
+def test_empty_fields_list_is_rejected(conn, cohort):
+    with pytest.raises(Exception, match="p_fields"):
+        _agg(conn, {"keywords": [cohort["token"]]}, p_fields=[])
+
+
 def test_every_allowlisted_field_aggregates(conn, cohort):
     out = _agg(
         conn, {"keywords": [cohort["token"]]}, p_fields=sorted(AGGREGABLE_FIELDS)
@@ -244,6 +257,59 @@ def test_numeric_and_year_shapes(conn, cohort):
     conf = out["fields"]["did_offender_confess"]
     assert conf["kind"] == "categorical" and conf["multi"] is False
     assert sorted(v["value"] for v in conf["values"]) == ["false", "true"]
+
+
+def test_default_field_set_kinds(conn, cohort):
+    out = _agg(conn, {"keywords": [cohort["token"]]}, p_fields=None)
+    assert set(out["fields"]) == set(DEFAULT_AGGREGATE_FIELDS)
+    assert {f: out["fields"][f]["kind"] for f in DEFAULT_AGGREGATE_FIELDS} == {
+        "offender_gender": "categorical",
+        "convict_offences": "categorical",
+        "sentences_received": "categorical",
+        "appeal_outcome": "categorical",
+        "did_offender_confess": "categorical",
+        "court_name": "categorical",
+        "decision_date": "year",
+    }
+
+
+def test_empty_cohort_yields_zeroed_shapes(conn):
+    token = f"agg-{uuid.uuid4()}"  # seeded by nobody: zero matches
+    out = _agg(
+        conn,
+        {"keywords": [token]},
+        p_fields=["victim_age_offence", "convict_offences"],
+    )
+    assert out["total"] == 0 and out["sample_n"] == 0
+    assert out["fields"]["victim_age_offence"] == {
+        "kind": "numeric",
+        "buckets": [],
+        "min": None,
+        "max": None,
+        "null": 0,
+        "covered": 0,
+    }
+    assert out["fields"]["convict_offences"]["values"] == []
+
+
+def test_all_null_numeric_field_yields_empty_buckets(conn):
+    token = f"agg-{uuid.uuid4()}"
+    ids = [
+        _seed(conn, token, "PL", "2020-01-01"),
+        _seed(conn, token, "PL", "2020-01-02"),
+    ]
+    try:
+        out = _agg(conn, {"keywords": [token]}, p_fields=["victim_age_offence"])
+        va = out["fields"]["victim_age_offence"]
+        assert va["buckets"] == []
+        assert va["min"] is None and va["max"] is None
+        assert va["null"] == len(ids) and va["covered"] == 0
+    finally:
+        _exec(
+            conn,
+            "DELETE FROM public.judgments WHERE id = ANY(%s::uuid[])",
+            (ids,),
+        )
 
 
 def test_grants_exclude_anon_and_public(conn):

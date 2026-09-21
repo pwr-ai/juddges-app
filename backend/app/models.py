@@ -400,7 +400,10 @@ class AggregateRequest(BaseModel):
         description="Seeded random sample size; null = whole cohort",
     )
     seed: int | None = Field(
-        default=None, description="Required when sample_size is set"
+        default=None,
+        ge=-(2**31),
+        le=2**31 - 1,
+        description="Required when sample_size is set",
     )
     top_n: int = Field(
         default=20,

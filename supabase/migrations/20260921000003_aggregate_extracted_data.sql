@@ -40,7 +40,7 @@ SET search_path = public
 AS $$
 DECLARE
     v_fields   TEXT[] := COALESCE(p_fields, ARRAY[
-        'offender_age_offence', 'offender_gender', 'convict_offences', 'sentences_received',
+        'offender_gender', 'convict_offences', 'sentences_received',
         'appeal_outcome', 'did_offender_confess', 'court_name', 'decision_date']);
     v_ids      UUID[];
     v_total    BIGINT := 0;
@@ -60,6 +60,9 @@ BEGIN
     -- NULL would slip past the range check and then `rn <= NULL` would empty every list.
     IF p_top_n IS NULL OR p_top_n < 1 OR p_top_n > 100 THEN
         RAISE EXCEPTION 'p_top_n must be between 1 and 100' USING ERRCODE = '22023';
+    END IF;
+    IF COALESCE(array_length(v_fields, 1), 0) NOT BETWEEN 1 AND 50 THEN
+        RAISE EXCEPTION 'p_fields must contain between 1 and 50 fields' USING ERRCODE = '22023';
     END IF;
 
     -- Cohort + deterministic order. Same cohort and seed => same sample.

@@ -77,7 +77,7 @@ Return shape:
   "sample_n": 1000,
   "seed": 42,
   "fields": {
-    "base_offender_age_offence": {"kind": "numeric", "buckets": [{"lo": 10, "hi": 15, "count": 12}, ...]},
+    "base_offender_gender":      {"kind": "categorical", "multi": false, "values": [{"value": "male", "count": 41}, ...], "other": 0, "null": 3, "covered": 47},
     "base_convict_offences":     {"kind": "categorical", "values": [{"value": "possession", "count": 812}, ...], "other": 44, "null": 130},
     "decision_date":             {"kind": "year", "values": [{"value": "2019", "count": 301}, ...]},
     "court_name":                {"kind": "categorical", "values": [...]}
@@ -86,12 +86,12 @@ Return shape:
 ```
 
 - The cohort is `list_extracted_filter_matches(p_filters, p_text_query)` from #682 (`supabase/migrations/20260920000001_shared_extracted_filter_matches.sql`): the aggregate function selects its ids in a CTE, orders them by `md5(id::text || p_seed::text)`, keeps the first `p_sample_size`, and runs one dynamic per-field aggregate over `judgments WHERE id = ANY(sample)`. No predicate is re-implemented; a Database Contract test asserts `aggregate_extracted_data(...)->>'total'` equals `filter_documents_by_extracted_data(...).total_count` for a fixed set of filter payloads, so the two cannot disagree on the cohort.
-- `collection_ids` is rejected by the aggregate endpoint exactly as `/base-schema/filter` rejects it (`results_router.py:475-487`, HTTP 400 `COLLECTION_IDS_NOT_ALLOWED`): the RPC is SECURITY INVOKER and the backend calls it with the service-role client, so honouring the key would let any signed-in caller probe any collection's membership. "Statistics over a saved collection" is therefore a named gap, owned by #685 together with the auth deferral. The spec's earlier "accept a collection" wording in §5.2 is withdrawn.
+- `collection_ids` is rejected by the aggregate endpoint exactly as `/base-schema/filter` rejects it (`results_router.py:475-487`, HTTP 400 `COLLECTION_IDS_NOT_ALLOWED`): the RPC is SECURITY INVOKER and the backend calls it with the service-role client, so honouring the key would let any signed-in caller probe any collection's membership. "Statistics over a saved collection" is therefore a named gap, owned by #685 together with the auth deferral.
 - Aggregable fields are one allowlist in three places — `frontend/lib/extractions/aggregable-fields.json` (canonical), `backend/app/extraction_domain/aggregate_fields.py`, and the SQL kind dispatch — with a test that the Python set equals the JSON. Free-text fields and extraction metadata are never aggregable.
 - Most `base_*` fields are `text[]` columns; categorical aggregation `unnest`s them, so a judgment with two convict offences counts once per offence and the card says "counts are per value, a judgment can appear in more than one bar".
 - Sampling is `ORDER BY md5(id::text || p_seed::text) LIMIT p_sample_size` inside a CTE: deterministic, exact-n, no `TABLESAMPLE` (block-level, inexact). Same cohort + same seed = same sample, which is what a methods section needs.
 - Field kinds come from `_base_field_to_column` + column type: `text[]`/enum → categorical (arrays are `unnest`ed), numeric → `width_bucket` histogram (reusing the bucket logic in `get_numeric_histogram`), `date` → year, free text → not aggregable (rejected with an error listing aggregable fields).
-- Default field set (when `p_fields` is null): `base_offender_age_offence`, `base_offender_gender`, `base_convict_offences`, `base_sentences_received`, `base_appeal_outcome`, `base_did_offender_confess`, `court_name`, `decision_date`.
+- Default field set (when `p_fields` is null): `base_offender_gender`, `base_convict_offences`, `base_sentences_received`, `base_appeal_outcome`, `base_did_offender_confess`, `court_name`, `decision_date`.
 - `deep_*` 1–5 scores are aggregable and labelled "model score" in the UI (research note §5).
 - Grants: the migration runs `REVOKE ALL ON FUNCTION aggregate_extracted_data(...) FROM PUBLIC` **before** `GRANT EXECUTE … TO authenticated, service_role`. Postgres grants EXECUTE to PUBLIC by default, and the neighbouring `get_extracted_facet_counts` grants `anon` explicitly (`…:847`); a grant without the revoke changes nothing. `/search/extractions` is login-gated and stays so while #565 is open.
 - Performance target: whole-corpus aggregation of the default 8 fields **≤ 1.5 s p95** on the production instance. Verified with `EXPLAIN ANALYZE` in the PR; if a field is slow, it is dropped from the default set rather than the target relaxed.

@@ -78,7 +78,6 @@ AGGREGABLE_FIELDS: frozenset[str] = frozenset(
 )
 
 DEFAULT_AGGREGATE_FIELDS: tuple[str, ...] = (
-    "offender_age_offence",
     "offender_gender",
     "convict_offences",
     "sentences_received",
