@@ -62,7 +62,10 @@ export function matchedMetadataKeys(
   metadata: Record<string, unknown>,
 ): Set<string> {
   const hits = new Set<string>();
-  for (const [field, filterValue] of Object.entries(filters)) {
+  for (const [field, filterValue] of Object.entries(filters) as [
+    keyof BaseSchemaFilters,
+    unknown,
+  ][]) {
     if (filterValue === undefined || filterValue === null) continue;
     const key = metadataKeyFor(field);
     if (matches(filterValue, metadata[key])) hits.add(key);

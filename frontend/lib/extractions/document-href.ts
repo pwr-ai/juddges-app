@@ -10,7 +10,7 @@
 
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
 
-import { buildFilterHref, encodeFilters } from "./use-extracted-data-filters";
+import { buildFilterHref } from "./use-extracted-data-filters";
 
 /** Anchor id of the base-schema fields grid on /documents/[id]. */
 export const BASE_FIELDS_ANCHOR = "base-fields";
@@ -20,6 +20,10 @@ export const BASE_FIELDS_ANCHOR = "base-fields";
  * with decodeFilters() and highlights the base_* cells that satisfied it.
  */
 export function buildDocumentHref(id: string, filters: BaseSchemaFilters): string {
+  // buildFilterHref appends "?f=<blob>" only when the filters blob is
+  // non-empty (no other FilterUrlState fields are passed here), so the
+  // presence of a query string is exactly "the filter carried something" —
+  // no need to call encodeFilters(filters) a second time to decide the anchor.
   const href = buildFilterHref(`/documents/${encodeURIComponent(id)}`, { filters });
-  return encodeFilters(filters) ? `${href}#${BASE_FIELDS_ANCHOR}` : href;
+  return href.includes("?") ? `${href}#${BASE_FIELDS_ANCHOR}` : href;
 }
