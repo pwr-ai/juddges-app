@@ -73,13 +73,14 @@ describe("useExtractedDataFilters stats state", () => {
     expect(result.current.statsFields).toEqual(["court_name"]);
   });
 
-  it("defaults to list / all / default fields, and reshuffle assigns a new seed", () => {
+  it("defaults to list / all / default fields, and reshuffle assigns a new seed once in the statistics view", () => {
     search = "";
     const { result } = renderHook(() => useExtractedDataFilters());
     expect(result.current.view).toBe("list");
     expect(result.current.sampleSize).toBeUndefined();
     expect(result.current.statsFields.length).toBe(7);
     const before = result.current.seed;
+    act(() => result.current.setView("stats"));
     act(() => result.current.reshuffle());
     expect(result.current.seed).not.toBe(before);
     expect(replace).toHaveBeenLastCalledWith(expect.stringContaining("seed="), { scroll: false });
@@ -92,5 +93,24 @@ describe("useExtractedDataFilters stats state", () => {
     expect(result.current.view).toBe("stats");
     expect(result.current.sampleSize).toBe(100);
     expect(result.current.page).toBe(1);
+  });
+
+  it("emits view/n/seed only while the statistics view is active, and drops them on switching back to list", () => {
+    search = "";
+    const { result } = renderHook(() => useExtractedDataFilters());
+
+    act(() => result.current.setView("stats"));
+    act(() => result.current.setSampling(50));
+    let lastUrl = replace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).toContain("view=stats");
+    expect(lastUrl).toContain("n=50");
+    expect(lastUrl).toMatch(/seed=\d+/);
+
+    act(() => result.current.setView("list"));
+    lastUrl = replace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).not.toContain("view=");
+    expect(lastUrl).not.toContain("n=");
+    expect(lastUrl).not.toContain("seed=");
+    expect(lastUrl).not.toContain("fields=");
   });
 });

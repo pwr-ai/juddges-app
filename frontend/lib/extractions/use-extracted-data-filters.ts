@@ -10,7 +10,7 @@
 //   ?nl=<text>          — optional: the natural-language question a filter came from (Spec B)
 //   ?view=stats         — statistics view instead of the list (#708; omitted for list)
 //   ?n=<int>            — sample size for the statistics view (omitted for "all")
-//   ?seed=<int>         — sampling seed, written whenever it is set
+//   ?seed=<int>         — sampling seed, only emitted while the statistics view is active
 //   ?fields=a,b,c       — statistics fields (omitted when equal to the default set)
 //
 // The blob is opaque on purpose: the field set is wide (42 keys) and any
@@ -60,7 +60,7 @@ interface FilterState {
   /** Statistics view state (#708). */
   view: ResultView;
   sampleSize?: number;
-  seed?: number;
+  seed: number;
   statsFields: string[];
 }
 
@@ -195,7 +195,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
       nlQuestion: searchParams.get("nl") ?? undefined,
       view: searchParams.get("view") === "stats" ? "stats" : "list",
       sampleSize: parseInt1(searchParams.get("n")),
-      seed: parseInt1(searchParams.get("seed")),
+      seed: parseInt1(searchParams.get("seed")) ?? newSeed(),
       statsFields: parseFields(searchParams.get("fields")),
     }),
     // intentionally only on mount; later updates use writeUrl
@@ -207,7 +207,12 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
 
   const writeUrl = useCallback(
     (next: FilterState) => {
-      const queryString = buildFilterSearchParams({ ...next, fields: next.statsFields }).toString();
+      const queryString = buildFilterSearchParams({
+        ...next,
+        seed: next.view === "stats" ? next.seed : undefined,
+        fields: next.view === "stats" ? next.statsFields : undefined,
+        sampleSize: next.view === "stats" ? next.sampleSize : undefined,
+      }).toString();
       const url = queryString ? `?${queryString}` : window.location.pathname;
       router.replace(url, { scroll: false });
     },
@@ -253,7 +258,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
   }, []);
 
   const setSampling = useCallback((sampleSize: number | undefined, seed?: number) => {
-    setState((prev) => ({ ...prev, sampleSize, seed: seed ?? prev.seed ?? newSeed() }));
+    setState((prev) => ({ ...prev, sampleSize, seed: seed ?? prev.seed }));
   }, []);
 
   const reshuffle = useCallback(() => {
