@@ -114,8 +114,18 @@ Creates two collections from one filter — `"<name> — PL"` and `"<name> — U
   deleted (best-effort, logged) before the original error propagates — the
   user never ends up with half a pair.
 - `collection_ids` ownership is checked exactly as for the single path.
+- `name` is limited to **200 characters** in split mode (`PAIR_NAME_MAX_LENGTH`,
+  a `model_validator` on the request → `422`): `collection_pairs.name` is
+  `CHECK`ed at 1–200 and each side's collection name adds `" — PL"`/`" — UK"`
+  under the 255-char `collections.name` bound. Checked before any query, so a
+  too-long name never creates and fills two collections only to fail the pair
+  insert.
 - Audit: `collection_created` + `collection_document_added` per side plus one
   `collection_pair_created` (`resource_type: collection_pair`).
+- Not transactional across processes: a crash between the PL and UK writes
+  (or before the pair insert) can leave an ordinary orphan collection
+  `"<name> — PL"` with no pair row; it shows up in `GET /collections` and is
+  deletable like any other collection.
 
 ```json
 {

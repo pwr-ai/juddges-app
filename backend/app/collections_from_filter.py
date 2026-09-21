@@ -17,7 +17,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.collection_pairs import get_collection_pairs_db
 from app.collections import Collection
@@ -42,6 +42,9 @@ from app.services.audit_service import log_audit_background
 router = APIRouter(prefix="/collections", tags=["collections"])
 
 BULK_ADD_CHUNK = 1000
+# collection_pairs.name is CHECKed at 1..200 chars (migration 20260921000002) and
+# each side's collection name adds " — PL"/" — UK" under collections' 255 bound.
+PAIR_NAME_MAX_LENGTH = 200
 
 
 class CreateCollectionFromFilterRequest(BaseModel):
@@ -56,9 +59,25 @@ class CreateCollectionFromFilterRequest(BaseModel):
         description=(
             'Create one collection per jurisdiction ("<name> — PL", '
             '"<name> — UK") linked as a pair. `filters.jurisdiction` is ignored '
-            "(echoed in `ignored_filter_keys`); the size cap applies per side."
+            "(echoed in `ignored_filter_keys`); the size cap applies per side; "
+            f"`name` is limited to {PAIR_NAME_MAX_LENGTH} characters."
         ),
     )
+
+    @model_validator(mode="after")
+    def _pair_name_fits_the_pair_row(self) -> CreateCollectionFromFilterRequest:
+        """Reject a too-long pair name at the door, not after both sides are filled.
+
+        Without this a 201-250-char name creates and bulk-fills both collections
+        and only then fails the CHECK on collection_pairs.name (500 + rollback).
+        """
+        if self.split_by_jurisdiction and len(self.name.strip()) > PAIR_NAME_MAX_LENGTH:
+            raise ValueError(
+                f"name must be at most {PAIR_NAME_MAX_LENGTH} characters when "
+                "split_by_jurisdiction is true (the pair name is stored as-is and "
+                "each side is suffixed with ' — PL' / ' — UK')"
+            )
+        return self
 
 
 class CreatedCollection(BaseModel):

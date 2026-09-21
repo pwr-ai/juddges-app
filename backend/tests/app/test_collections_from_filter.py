@@ -496,6 +496,55 @@ async def test_split_with_nothing_matching_is_400_without_blaming_a_side(
     assert stub_db.created == []
 
 
+async def test_split_name_is_bounded_to_the_pair_limit_before_any_db_call(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    """collection_pairs.name is CHECKed at 200 chars and each side adds ' — PL'/' — UK'
+    on top of the 255-char collections bound; a 201-char name would otherwise create
+    and fill both collections before the pair insert fails the CHECK."""
+    resolve_calls: list[object] = []
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *a, **k: resolve_calls.append(a) or _split_result(2, 2),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "n" * 201, "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422, resp.text
+    assert "200" in resp.text
+    assert resolve_calls == []
+    assert stub_db.created == [] and stub_db.get_user_collections_calls == []
+    assert stub_pairs_db.rows == []
+
+
+async def test_split_name_of_exactly_200_chars_is_accepted(
+    client, override_deps, stub_db, monkeypatch
+):
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(1, 1)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "n" * 200, "filters": {}, "split_by_jurisdiction": True},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert [len(c["name"]) for c in stub_db.created] == [205, 205]
+
+
+async def test_unsplit_name_keeps_the_255_bound(client, override_deps, monkeypatch):
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": "n" * 255, "filters": {}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+
+
 async def test_split_uk_failure_rolls_back_the_pl_collection(
     client, override_deps, stub_db, stub_pairs_db, monkeypatch
 ):

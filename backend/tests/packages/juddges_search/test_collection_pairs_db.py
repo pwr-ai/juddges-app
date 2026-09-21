@@ -155,7 +155,8 @@ async def test_find_pair_returns_none_when_not_owned(pairs_db, fake_client):
 async def test_delete_pair_filters_by_user_and_reports_outcome(pairs_db, fake_client):
     fake_client.set_responder(lambda t, c: SimpleNamespace(data=[_row()]))
     assert await pairs_db.delete_pair(PAIR, USER) is True
-    _, chain = fake_client.operations[0]
+    table, chain = fake_client.operations[0]
+    assert table == "collection_pairs"
     assert _ops(chain)[0] == "delete"
     assert _eqs(chain) == {"id": PAIR, "user_id": USER}
 

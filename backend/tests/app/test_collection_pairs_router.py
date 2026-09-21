@@ -27,6 +27,7 @@ UK_COL = "55555555-5555-4555-8555-555555555555"
 class _StubPairsDb:
     def __init__(self):
         self.rows: list[dict] = []
+        self.calls: list[str] = []
 
     async def create_pair(
         self, user_id, name, filters, text_query, pl_collection_id, uk_collection_id
@@ -46,15 +47,18 @@ class _StubPairsDb:
         return row
 
     async def list_pairs(self, user_id):
+        self.calls.append("list_pairs")
         return [r for r in self.rows if r["user_id"] == user_id]
 
     async def find_pair(self, pair_id, user_id):
+        self.calls.append("find_pair")
         return next(
             (r for r in self.rows if r["id"] == pair_id and r["user_id"] == user_id),
             None,
         )
 
     async def delete_pair(self, pair_id, user_id):
+        self.calls.append("delete_pair")
         before = len(self.rows)
         self.rows = [
             r for r in self.rows if not (r["id"] == pair_id and r["user_id"] == user_id)
@@ -132,9 +136,11 @@ async def test_get_pair_not_owned_is_404(client, override_deps, pairs_db):
 
 
 async def test_get_pair_with_non_uuid_id_is_404_without_touching_db(
-    client, override_deps
+    client, override_deps, pairs_db
 ):
     assert (await client.get("/collections/pairs/not-a-uuid")).status_code == 404
+    assert (await client.delete("/collections/pairs/not-a-uuid")).status_code == 404
+    assert pairs_db.calls == []
 
 
 async def test_delete_pair_unlinks_only(client, override_deps, pairs_db):
