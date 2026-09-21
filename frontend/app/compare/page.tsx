@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { CompareContent } from "./_components/CompareContent";
+import { ComparePageBody } from "./_components/ComparePageBody";
 
 export const metadata = { title: "Compare PL / UK" };
 
@@ -19,7 +19,7 @@ export default function ComparePage() {
         </div>
       }
     >
-      <CompareContent />
+      <ComparePageBody />
     </Suspense>
   );
 }
