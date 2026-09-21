@@ -71,7 +71,8 @@ Request body:
   "name": "string, 1–255 chars",
   "description": "string, ≤1000 chars, optional",
   "filters": { "...": "BaseSchemaFilters" },
-  "text_query": "string, ≤1000 chars, optional"
+  "text_query": "string, ≤1000 chars, optional",
+  "split_by_jurisdiction": false
 }
 ```
 
@@ -83,15 +84,50 @@ Success — `201 Created`:
     { "jurisdiction": null, "collection": { "...": "Collection" }, "added_count": 42 }
   ],
   "total_matched": 42,
-  "pair_id": null
+  "pair_id": null,
+  "ignored_filter_keys": []
 }
 ```
 
-The response is list-shaped (`collections: []`, not a single `collection`) on
-purpose: the PL/UK comparison feature is expected to extend the same request
-with `split_by_jurisdiction` to create two collections in one call
-(`collections: [PL, UK]` + a non-null `pair_id`). Today `collections` always
-has exactly one entry with `jurisdiction: null`.
+The response is list-shaped (`collections: []`, not a single `collection`)
+because the same request serves both shapes. With the default
+`split_by_jurisdiction: false`, `collections` has exactly one entry with
+`jurisdiction: null` and `pair_id` is `null`.
+
+### `split_by_jurisdiction: true` — a PL/UK pair
+
+Creates two collections from one filter — `"<name> — PL"` and `"<name> — UK"`
+(both with the request's `description`) — and links them in
+`public.collection_pairs` (migration `20260921000002`). There is no separate
+"create pair" endpoint. Differences from the single-collection path:
+
+- `filters.jurisdiction` is dropped by `strip_ignored()` before the RPC runs
+  (honouring it would blank one side) and echoed back as
+  `ignored_filter_keys: ["jurisdiction"]`. The pair row stores the cleaned
+  filter.
+- The cap applies **per side** (`check_cap(..., per_jurisdiction=True)`), so
+  `413 FILTER_TOO_LARGE` names the offending side in `detail.jurisdiction`.
+- A side with zero matches is `400 FILTER_EMPTY` with `detail.jurisdiction`
+  set to that side (`null` when neither side matches anything).
+- All-or-nothing: `create_pair_from_ids()` creates PL, then UK, then the pair
+  row inside one `try`; if any step fails every collection created so far is
+  deleted (best-effort, logged) before the original error propagates — the
+  user never ends up with half a pair.
+- `collection_ids` ownership is checked exactly as for the single path.
+- Audit: `collection_created` + `collection_document_added` per side plus one
+  `collection_pair_created` (`resource_type: collection_pair`).
+
+```json
+{
+  "collections": [
+    { "jurisdiction": "PL", "collection": { "name": "Fraud — PL", "...": "" }, "added_count": 312 },
+    { "jurisdiction": "UK", "collection": { "name": "Fraud — UK", "...": "" }, "added_count": 87 }
+  ],
+  "total_matched": 399,
+  "pair_id": "uuid",
+  "ignored_filter_keys": ["jurisdiction"]
+}
+```
 
 Errors:
 
@@ -99,9 +135,44 @@ Errors:
 |---|---|---|
 | `400` | `INVALID_COLLECTION_ID` | `filters.collection_ids` contains a non-string or non-UUID entry — checked before `resolve_filter_ids` runs |
 | `404` | `COLLECTION_NOT_FOUND` | `filters.collection_ids` contains an id the caller does not own; which one is never revealed |
-| `400` | `FILTER_EMPTY` | `resolve_filter_ids` returns zero ids |
-| `413` | `FILTER_TOO_LARGE` | match count exceeds the cap; body also carries `total`, `cap`, `jurisdiction` (`null` when not split) |
+| `400` | `FILTER_EMPTY` | `resolve_filter_ids` returns zero ids (split: zero ids on one side — `detail.jurisdiction` names it, `null` when both are empty) |
+| `413` | `FILTER_TOO_LARGE` | match count exceeds the cap (split: per side); body also carries `total`, `cap`, `jurisdiction` (`null` when not split) |
 | `503` | `DATABASE_UNAVAILABLE` | `supabase_client` is not configured |
+
+## `GET /collections/pairs`, `GET /collections/pairs/{pair_id}`, `DELETE /collections/pairs/{pair_id}`
+
+Implemented in `backend/app/collection_pairs.py` (router registered before
+`collections_router` so `/collections/{collection_id}` does not swallow the
+literal `pairs` segment). DB layer:
+`backend/packages/juddges_search/juddges_search/db/collection_pairs_db.py::CollectionPairsDB`
+(`create_pair`, `list_pairs`, `find_pair`, `delete_pair`,
+`pairs_by_collection`) — service-role client, so every query filters by
+`user_id` itself.
+
+`CollectionPair`:
+
+```json
+{
+  "id": "uuid", "user_id": "uuid", "name": "Fraud",
+  "filters": { "appellant": ["offender"] }, "text_query": "fraud",
+  "created_at": "…", "updated_at": "…",
+  "sides": [
+    { "jurisdiction": "PL", "collection_id": "uuid" },
+    { "jurisdiction": "UK", "collection_id": "uuid" }
+  ]
+}
+```
+
+`sides` carries no `document_count` — the read path cannot compute it cheaply;
+`GET /collections` already returns per-collection counts.
+
+- `GET /collections/pairs` → `200 [CollectionPair]`, newest first, caller's own.
+- `GET /collections/pairs/{pair_id}` → `200 CollectionPair`; `404` when the id
+  is not a UUID, does not exist, or belongs to someone else (indistinguishable).
+- `DELETE /collections/pairs/{pair_id}` → `204`; **unlinks only** — the pair
+  row is deleted, both collections survive as ordinary collections. Deleting
+  either collection via `DELETE /collections/{id}` cascades the pair row
+  instead (`ON DELETE CASCADE`). `404` as for `GET`.
 
 The `413` uses `starlette.status.HTTP_413_CONTENT_TOO_LARGE` directly (verified
 present in the installed Starlette version — no fallback needed).

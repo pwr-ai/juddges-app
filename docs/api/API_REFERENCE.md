@@ -701,6 +701,48 @@ matches nothing), `413 FILTER_TOO_LARGE` (above
 `SAVE_FROM_FILTER_MAX_DOCUMENTS`, default 5000), `503
 DATABASE_UNAVAILABLE`.
 
+**PL/UK pair:** add `"split_by_jurisdiction": true` to create `"<name> — PL"`
+and `"<name> — UK"` from the same filter and link them as a pair. The
+response then has two `collections` entries (`jurisdiction` set), a non-null
+`pair_id`, and `ignored_filter_keys: ["jurisdiction"]` when the request
+carried a jurisdiction filter (it is dropped — the split replaces it). The
+cap and `FILTER_EMPTY` apply per side (`detail.jurisdiction` names it); if
+either side or the pair insert fails, every collection created in the call is
+rolled back.
+
+#### Collection Pairs
+
+```http
+GET /collections/pairs
+GET /collections/pairs/{pair_id}
+DELETE /collections/pairs/{pair_id}
+```
+
+Read back or unlink PL/UK pairs created by `POST /collections/from-filter`
+with `split_by_jurisdiction: true`. `DELETE` removes the pair row only — both
+collections are kept. Full model in
+[Base-schema filter API](../reference/base-schema-filter-api.md).
+
+**Example Response (200):**
+
+```json
+{
+  "id": "aa0e8400-e29b-41d4-a716-446655440010",
+  "user_id": "770e8400-e29b-41d4-a716-446655440001",
+  "name": "Fraud, suspended sentence",
+  "filters": { "appellant": ["offender"] },
+  "text_query": "fraud",
+  "created_at": "2026-09-21T10:00:00Z",
+  "updated_at": "2026-09-21T10:00:00Z",
+  "sides": [
+    { "jurisdiction": "PL", "collection_id": "990e8400-e29b-41d4-a716-446655440004" },
+    { "jurisdiction": "UK", "collection_id": "990e8400-e29b-41d4-a716-446655440005" }
+  ]
+}
+```
+
+**Errors:** `404` when the pair does not exist or is not the caller's.
+
 #### Natural-Language Filter
 
 ```http
