@@ -7,6 +7,7 @@ import { ActiveFilterChips } from "@/components/filters/extracted-search-filters
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { ScopeFilters } from "@/components/search/ScopeFilters";
 import { Eyebrow, Headline } from "@/components/editorial";
 import { Pagination } from "@/lib/styles/components";
 import { Badge } from "@/components/ui/badge";
@@ -303,6 +304,8 @@ function ExtractionSearchPage() {
           offenderRepresentativeName={filters.offender_representative_name}
           onChange={setSubstringFilter}
         />
+
+        <ScopeFilters filters={filters} onChange={setFilters} />
 
         <QuickFilters
           filters={drawerFilters}
