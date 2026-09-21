@@ -50,6 +50,13 @@ def test_prompt_lists_date_phrasings(phrase: str):
     assert phrase in SYSTEM_PROMPT
 
 
+def test_prompt_maps_po_to_the_following_year_not_the_named_year():
+    # "po 2020 r." ("after 2020") is strictly after 2020 → from 2021-01-01,
+    # unlike "od"/"since 2020" which is inclusive → from 2020-01-01.
+    assert '"po 2020" → from 2021-01-01' in SYSTEM_PROMPT
+    assert '"od 2020" → from 2020-01-01' in SYSTEM_PROMPT
+
+
 def test_prompt_makes_decision_date_the_default_date_field():
     idx_default = SYSTEM_PROMPT.index("default to `decision_date`")
     idx_appeal = SYSTEM_PROMPT.index("`date_of_appeal_court_judgment` only when")

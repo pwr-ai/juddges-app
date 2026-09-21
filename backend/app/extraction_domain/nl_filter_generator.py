@@ -148,7 +148,7 @@ class BaseSchemaFilter(BaseModel):
         default=None,
         description=(
             "Date the judgment was handed down (judgments.decision_date). Use for "
-            "'from 2015 to 2024', 'w latach 2015-2024', 'since 2020', 'po 2020 r.'."
+            "'from 2015 to 2024', 'w latach 2015–2024', 'since 2020', 'po 2020 r.'."
         ),
     )
 
@@ -248,9 +248,11 @@ You MUST follow these rules:
    "no more than N" → {"max": N}; "between N and M" → {"min": N, "max": M};
    "exactly N" → equality (just a number).
 4. Dates: use ISO YYYY-MM-DD. "in 2024" / "w 2024 r." → from 2024-01-01 to
-   2024-12-31. "since 2020" / "od 2020" / "po 2020" → from 2020-01-01.
-   "before 2010" / "przed 2010" → to 2009-12-31. "between 2015 and 2024" /
-   "2015–2024" / "w latach 2015–2024" → from 2015-01-01 to 2024-12-31.
+   2024-12-31. "since 2020" / "od 2020" → from 2020-01-01 (inclusive of 2020).
+   "after 2020" / "po 2020" → from 2021-01-01 (strictly after 2020, exclusive).
+   "before 2010" / "przed 2010" → to 2009-12-31 (strictly before 2010,
+   exclusive). "between 2015 and 2024" / "2015–2024" / "w latach 2015–2024" →
+   from 2015-01-01 to 2024-12-31.
    When the user talks about *when the judgment was given*, default to `decision_date`
    — it exists for every PL and UK judgment. Use `date_of_appeal_court_judgment` only when the user explicitly names the appeal court judgment date.
 5. `text_query` is for free-text search across case name, judges, charges,
