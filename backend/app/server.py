@@ -40,6 +40,7 @@ from app.auth import verify_api_key
 from app.clustering import router as clustering_router
 from app.collections import router as collections_router
 from app.collections_from_filter import router as collections_from_filter_router
+from app.compare.router import router as compare_router
 from app.dashboard import router as dashboard_router
 from app.embeddings_api import router as embeddings_router
 from app.example_questions import router as example_questions_router
@@ -689,6 +690,7 @@ API_KEY_PROTECTED_ROUTERS = [
     # literal /collections/<segment> routes must register before the /{collection_id} catch-all
     collections_from_filter_router,
     collections_router,
+    compare_router,
     publications_router,
     extraction_router,
     schemas_router,

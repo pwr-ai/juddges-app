@@ -107,7 +107,8 @@ The `413` uses `starlette.status.HTTP_413_CONTENT_TOO_LARGE` directly (verified
 present in the installed Starlette version — no fallback needed).
 
 **`collection_ids` ownership check:** before `resolve_filter_ids` runs,
-`_check_collection_ids_ownership()` (`backend/app/collections_from_filter.py`)
+`check_collection_ids_ownership()` (`backend/app/collections_from_filter.py`, also
+used by the `/compare/*` endpoints in `backend/app/compare/router.py`)
 validates `filters.collection_ids` (a no-op when the key is absent or an
 empty list, matching the RPC's own "no filter" semantics): every entry must
 be a UUID string (else `400 INVALID_COLLECTION_ID`), and every id must

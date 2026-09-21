@@ -10,9 +10,9 @@ Contracts this module relies on but does not enforce:
 
 * **Ownership of `filters["collection_ids"]`** is the router's job. The
   service runs with the service-role client, which bypasses RLS, so it
-  forwards the filter verbatim and trusts that the caller (Task 7,
-  `_check_collection_ids_ownership`) has already verified every id belongs to
-  the requesting user.
+  forwards the filter verbatim and trusts that the caller
+  (`app.compare.router`, via `check_collection_ids_ownership`) has already
+  verified every id belongs to the requesting user.
 * **`jurisdiction` in `filters`** is dropped, not honoured (`strip_ignored`,
   shared with pair creation in `app.extraction_domain.filter_ids`); the
   response echoes it in `ignored_filter_keys`.

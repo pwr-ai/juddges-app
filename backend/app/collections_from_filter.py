@@ -91,19 +91,21 @@ def _collection_not_found() -> HTTPException:
     )
 
 
-async def _check_collection_ids_ownership(
+async def check_collection_ids_ownership(
     db: Any, filters: dict[str, Any], *, user_id: str
 ) -> None:
     """Reject `filters.collection_ids` entries that are malformed or not owned by `user_id`.
 
     `resolve_filter_ids` calls `list_extracted_filter_matches` with the
     service-role client, which bypasses the RPC's own RLS (it is
-    `SECURITY INVOKER`, scoped to `auth.uid()` over PostgREST) -- so this
-    endpoint must enforce ownership itself before the filter ever reaches the
-    RPC. An empty list mirrors the RPC's own "no filter" semantics and skips
-    the check entirely (see docs/reference/base-schema-filter-api.md).
-    Which id(s) are missing is never revealed -- foreign and malformed ids
-    alike collapse into one 404/400 message.
+    `SECURITY INVOKER`, scoped to `auth.uid()` over PostgREST) -- so every
+    endpoint that forwards a user-supplied filter to that RPC (this one, and
+    `/compare/*` in `app.compare.router`) must enforce ownership itself before
+    the filter ever reaches it. An empty list mirrors the RPC's own "no
+    filter" semantics and skips the check entirely (see
+    docs/reference/base-schema-filter-api.md). Which id(s) are missing is
+    never revealed -- foreign and malformed ids alike collapse into one
+    404/400 message.
     """
     raw = filters.get("collection_ids")
     if not raw:
@@ -122,6 +124,10 @@ async def _check_collection_ids_ownership(
     owned_ids = {row["id"] for row in owned}
     if any(cid not in owned_ids for cid in collection_ids):
         raise _collection_not_found()
+
+
+# Pre-#684 name, kept so existing call sites and docs keep resolving.
+_check_collection_ids_ownership = check_collection_ids_ownership
 
 
 async def create_collection_from_ids(
@@ -180,7 +186,7 @@ async def create_collection_from_filter(
 ) -> CollectionFromFilterResponse:
     if not supabase_client:
         raise _db_unavailable()
-    await _check_collection_ids_ownership(db, request.filters, user_id=user.id)
+    await check_collection_ids_ownership(db, request.filters, user_id=user.id)
     resolved = resolve_filter_ids(supabase_client, request.filters, request.text_query)
     if resolved.total == 0:
         raise HTTPException(
