@@ -7,6 +7,7 @@ import { ActiveFilterChips } from "@/components/filters/extracted-search-filters
 import { BaseFiltersDrawer } from "@/components/search/BaseFiltersDrawer";
 import { NlFilterDialog } from "@/components/search/NlFilterDialog";
 import { QuickFilters } from "@/components/search/QuickFilters";
+import { SaveAsCollectionDialog } from "@/components/search/SaveAsCollectionDialog";
 import { ScopeFilters } from "@/components/search/ScopeFilters";
 import { Eyebrow, Headline } from "@/components/editorial";
 import { Pagination } from "@/lib/styles/components";
@@ -201,6 +202,7 @@ function ExtractionSearchPage() {
     removeFilter,
     clearAll,
     activeCount,
+    nlQuestion,
   } = useExtractedDataFilters();
 
   const request = useMemo<BaseSchemaFilterRequest>(
@@ -351,11 +353,20 @@ function ExtractionSearchPage() {
                 : `${total.toLocaleString()} judgment${total === 1 ? "" : "s"}`}
             {isFetching && !isLoading && " (updating…)"}
           </p>
-          {error && (
-            <Button variant="ghost" size="sm" onClick={() => clearAll()}>
-              Reset
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <SaveAsCollectionDialog
+              filters={filters}
+              textQuery={textQuery}
+              total={total}
+              defaultName={nlQuestion ?? ""}
+              disabled={isLoading || Boolean(error)}
+            />
+            {error && (
+              <Button variant="ghost" size="sm" onClick={() => clearAll()}>
+                Reset
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
