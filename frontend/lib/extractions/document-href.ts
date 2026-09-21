@@ -8,7 +8,7 @@
 // identical between /search/extractions and /documents/[id].
 // =============================================================================
 
-import type { BaseSchemaFilters } from "@/types/base-schema-filter";
+import type { FilterUrlState } from "@/lib/extractions/use-extracted-data-filters";
 
 import { buildFilterHref } from "./use-extracted-data-filters";
 
@@ -16,14 +16,16 @@ import { buildFilterHref } from "./use-extracted-data-filters";
 export const BASE_FIELDS_ANCHOR = "base-fields";
 
 /**
- * Result-row link for /search/extractions. The judgment page reads `?f=` back
- * with decodeFilters() and highlights the base_* cells that satisfied it.
+ * Result-row link for /search/extractions. Carries the page's full URL state
+ * (filters, text query, page, NL question) so that navigating back from the
+ * judgment reader lands on the same result set instead of a blank filter.
+ * The judgment page reads `?f=` back with decodeFilters() and highlights the
+ * base_* cells that satisfied it.
  */
-export function buildDocumentHref(id: string, filters: BaseSchemaFilters): string {
-  // buildFilterHref appends "?f=<blob>" only when the filters blob is
-  // non-empty (no other FilterUrlState fields are passed here), so the
-  // presence of a query string is exactly "the filter carried something" —
-  // no need to call encodeFilters(filters) a second time to decide the anchor.
-  const href = buildFilterHref(`/documents/${encodeURIComponent(id)}`, { filters });
+export function buildDocumentHref(id: string, state: FilterUrlState): string {
+  const href = buildFilterHref(`/documents/${encodeURIComponent(id)}`, state);
+  // buildFilterHref appends a query string only when state carries something
+  // (filters, text query, page > 1, or an NL question), so the presence of a
+  // query string is exactly "there's something to anchor to".
   return href.includes("?") ? `${href}#${BASE_FIELDS_ANCHOR}` : href;
 }

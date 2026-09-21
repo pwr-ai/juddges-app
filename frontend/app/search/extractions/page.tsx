@@ -22,6 +22,7 @@ import {
   useExtractionResults,
 } from "@/lib/extractions/base-schema-filter-api";
 import { useExtractedDataFilters } from "@/lib/extractions/use-extracted-data-filters";
+import type { FilterUrlState } from "@/lib/extractions/use-extracted-data-filters";
 import { buildDocumentHref } from "@/lib/extractions/document-href";
 import { applyDrawerChange, toDrawerFilters } from "@/lib/extractions/drawer-adapter";
 import { isCoreFilterField } from "@/lib/extractions/base-schema-filter-config";
@@ -99,15 +100,15 @@ function SubstringInputs({
 
 function ResultRow({
   row,
-  filters,
+  urlState,
 }: {
   row: BaseSchemaFilterResultRow;
-  filters: BaseSchemaFilters;
+  urlState: FilterUrlState;
 }) {
   const date = row.decision_date ? new Date(row.decision_date) : null;
   return (
     <Link
-      href={buildDocumentHref(row.id, filters)}
+      href={buildDocumentHref(row.id, urlState)}
       className="block border border-[color:var(--rule)] bg-white p-4 transition-colors hover:bg-[color:var(--parchment-deep)]"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -143,13 +144,13 @@ export function ResultList({
   isLoading,
   hasActiveFilters,
   onClearAll,
-  filters,
+  urlState,
 }: {
   rows: BaseSchemaFilterResultRow[];
   isLoading: boolean;
   hasActiveFilters: boolean;
   onClearAll: () => void;
-  filters: BaseSchemaFilters;
+  urlState: FilterUrlState;
 }) {
   if (isLoading && rows.length === 0) {
     return (
@@ -183,7 +184,7 @@ export function ResultList({
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <ResultRow key={row.id} row={row} filters={filters} />
+        <ResultRow key={row.id} row={row} urlState={urlState} />
       ))}
     </div>
   );
@@ -396,7 +397,7 @@ function ExtractionSearchPage() {
           isLoading={isLoading}
           hasActiveFilters={activeCount > 0 || textQuery.trim().length > 0}
           onClearAll={clearAll}
-          filters={filters}
+          urlState={{ filters, textQuery, page, nlQuestion }}
         />
       )}
 

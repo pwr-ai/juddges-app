@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { LoadingIndicator, Breadcrumb, PageContainer, ErrorCard } from '@/lib/styles/components';
 import { KeyInformation } from '@/lib/styles/components/key-information';
-import { decodeFilters } from '@/lib/extractions/use-extracted-data-filters';
+import { buildFilterHref, decodeFilters } from '@/lib/extractions/use-extracted-data-filters';
 import { matchedMetadataKeys } from '@/lib/extractions/filter-match';
 import { BASE_FIELDS_ANCHOR } from '@/lib/extractions/document-href';
 
@@ -36,6 +36,21 @@ export function DocumentPageClient({
     () => decodeFilters(filterBlobFromSearch),
     [filterBlobFromSearch],
   );
+
+  // Breadcrumb back to /search/extractions: rebuilt from the same URL state
+  // (filters, text query, page, NL question) so the user returns to the same
+  // result set instead of a blank filter. Falls back to a bare
+  // /search/extractions when nothing is present.
+  const searchBreadcrumbHref = useMemo(() => {
+    const rawPage = Number(searchParams.get("page"));
+    const pageFromSearch = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : undefined;
+    return buildFilterHref("/search/extractions", {
+      filters: filtersFromSearch,
+      textQuery: searchParams.get("q") ?? undefined,
+      nlQuestion: searchParams.get("nl") ?? undefined,
+      page: pageFromSearch,
+    });
+  }, [filtersFromSearch, searchParams]);
 
   const {
     authLoading,
@@ -160,9 +175,7 @@ export function DocumentPageClient({
               items={[
                 {
                   label: 'Search',
-                  href: filterBlobFromSearch
-                    ? `/search/extractions?f=${filterBlobFromSearch}`
-                    : '/search',
+                  href: searchBreadcrumbHref,
                 },
                 { label: breadcrumbTitle },
               ]}

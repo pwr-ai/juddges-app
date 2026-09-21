@@ -21,7 +21,7 @@ function renderList(
       isLoading={false}
       hasActiveFilters={false}
       onClearAll={() => {}}
-      filters={{}}
+      urlState={{ filters: {} }}
       {...overrides}
     />
   );

@@ -127,6 +127,30 @@ describe("DocumentPageClient highlight wiring", () => {
     expect(consoleWarnSpy).not.toHaveBeenCalled();
   });
 
+  it("rebuilds the Search breadcrumb from f/q/page/nl so back-navigation restores the result set", () => {
+    const blob = encodeFilters({ jurisdiction: ["PL"] });
+    setSearchParams({ f: blob, q: "fraud", page: "3", nl: "women convicted of fraud" });
+
+    render(<DocumentPageClient documentId="doc-1" initialMetadata={metadata as any} />);
+
+    const searchLink = screen.getByRole("link", { name: "Search" });
+    expect(searchLink).toHaveAttribute(
+      "href",
+      `/search/extractions?f=${blob}&q=fraud&page=3&nl=women+convicted+of+fraud`,
+    );
+  });
+
+  it("falls back to a bare /search/extractions breadcrumb when nothing is present", () => {
+    setSearchParams({});
+
+    render(<DocumentPageClient documentId="doc-1" initialMetadata={metadata as any} />);
+
+    expect(screen.getByRole("link", { name: "Search" })).toHaveAttribute(
+      "href",
+      "/search/extractions",
+    );
+  });
+
   it("renders no caption and no highlights when ?f= is absent", () => {
     setSearchParams({});
 
