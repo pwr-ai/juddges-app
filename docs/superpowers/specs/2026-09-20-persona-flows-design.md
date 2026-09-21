@@ -94,7 +94,7 @@ Return shape:
 - Default field set (when `p_fields` is null): `base_offender_gender`, `base_convict_offences`, `base_sentences_received`, `base_appeal_outcome`, `base_did_offender_confess`, `court_name`, `decision_date`.
 - `deep_*` 1–5 scores are aggregable and labelled "model score" in the UI (research note §5).
 - Grants: the migration runs `REVOKE ALL ON FUNCTION aggregate_extracted_data(...) FROM PUBLIC` **before** `GRANT EXECUTE … TO authenticated, service_role`. Postgres grants EXECUTE to PUBLIC by default, and the neighbouring `get_extracted_facet_counts` grants `anon` explicitly (`…:847`); a grant without the revoke changes nothing. `/search/extractions` is login-gated and stays so while #565 is open.
-- Performance target: whole-corpus aggregation of the default 8 fields **≤ 1.5 s p95** on the production instance. Verified with `EXPLAIN ANALYZE` in the PR; if a field is slow, it is dropped from the default set rather than the target relaxed.
+- Performance target: whole-corpus aggregation of the default 7 fields **≤ 1.5 s p95** on the production instance. Verified with `EXPLAIN ANALYZE` in the PR; if a field is slow, it is dropped from the default set rather than the target relaxed.
 
 Backend: `POST /extractions/base-schema/aggregate` in `backend/app/extraction_domain/results_router.py`, Pydantic request/response models in `backend/app/models.py`, BFF proxy `frontend/app/api/extractions/base-schema/aggregate/route.ts`, client hook `useExtractionAggregate` beside `useExtractionResults` in `frontend/lib/extractions/`.
 
