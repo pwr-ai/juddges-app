@@ -185,12 +185,9 @@ export function Pagination({
  <div
  className={cn(
 "flex items-center justify-between w-full px-6 py-4",
- // Legal Glassmorphism 2.0 - Heavy Glass Card
-"bg-[rgba(255,255,255,0.9)]",
-"backdrop-blur-[32px] backdrop-saturate-[200%]",
-"border-[1px] border-solid border-[#FFFFFF]",
-"shadow-[0_8px_30px_rgba(148,163,184,0.15)]",
-"rounded-[24px]",
+ // Editorial bar: parchment surface on a hairline rule
+"bg-parchment",
+"border border-rule",
  className
  )}
  >
@@ -236,23 +233,18 @@ export function Pagination({
  min={1}
  max={totalPages}
  className={cn(
-"h-9 w-16 rounded-lg text-sm text-center",
- // Glass morphism effects
-"bg-white/50",
-"backdrop-blur-sm backdrop-saturate-150",
-"border border-slate-200/50",
- // Enhanced hover - more visible per styling guide
-"hover:border-primary/50",
-"hover:bg-white/60",
-"hover:shadow-md hover:shadow-primary/20",
- // Enhanced focus - more visible
+"h-9 w-16 rounded-none text-sm text-center",
+"bg-parchment",
+"border border-rule",
+ // Hover
+"hover:border-ink",
+ // Focus
 "focus-visible:outline-none",
-"focus-visible:ring-4 focus-visible:ring-primary/80 focus-visible:ring-offset-4",
-"focus-visible:border-primary",
-"focus-visible:shadow-lg focus-visible:shadow-primary/40",
- // Enhanced active - more visible
-"active:border-primary/70",
-"transition-all duration-200"
+"focus-visible:ring-1 focus-visible:ring-ink",
+"focus-visible:border-ink",
+ // Active
+"active:border-ink",
+"transition-colors duration-150"
  )}
  />
  </form>
