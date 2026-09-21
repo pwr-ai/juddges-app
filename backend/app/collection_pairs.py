@@ -88,11 +88,12 @@ def _not_found() -> HTTPException:
     return HTTPException(status_code=404, detail="Collection pair not found")
 
 
-def _require_uuid(pair_id: str) -> str:
+def require_pair_uuid(pair_id: str) -> str:
     """A pair id is a UUID; anything else cannot exist, so it is a plain 404.
 
     Checked before the query so a malformed id never reaches PostgREST (which
     would answer ``22P02 invalid input syntax for type uuid`` as a 500).
+    Shared with ``GET /compare/pairs/{pair_id}`` (``app.compare.router``).
     """
     try:
         uuid.UUID(pair_id)
@@ -123,7 +124,7 @@ async def get_pair(
     pairs_db=Depends(get_collection_pairs_db),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> CollectionPair:
-    row = await pairs_db.find_pair(_require_uuid(pair_id), user.id)
+    row = await pairs_db.find_pair(require_pair_uuid(pair_id), user.id)
     if row is None:
         raise _not_found()
     return pair_to_model(row)
@@ -139,7 +140,7 @@ async def delete_pair(
     pairs_db=Depends(get_collection_pairs_db),
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> Response:
-    if not await pairs_db.delete_pair(_require_uuid(pair_id), user.id):
+    if not await pairs_db.delete_pair(require_pair_uuid(pair_id), user.id):
         raise _not_found()
     logger.info("collection pair {} unlinked by user {}", pair_id, user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -49,7 +49,7 @@ from juddges_search.db.supabase_db import get_collections_db
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.collection_pairs import _require_uuid, get_collection_pairs_db
+from app.collection_pairs import get_collection_pairs_db, require_pair_uuid
 from app.collections_from_filter import check_collection_ids_ownership
 from app.compare.csv_export import csv_bytes, to_csv_rows
 from app.compare.fields import FieldSpec, base_compare_fields, select_base_fields
@@ -222,7 +222,7 @@ async def compare_pair(
     `POST /compare/export` accepts for the CSV of the same numbers.
     """
     client = _require_db()
-    pair = await pairs_db.find_pair(_require_uuid(pair_id), user.id)
+    pair = await pairs_db.find_pair(require_pair_uuid(pair_id), user.id)
     if pair is None:
         raise HTTPException(status_code=404, detail="Collection pair not found")
     pl_id, uk_id = str(pair["pl_collection_id"]), str(pair["uk_collection_id"])
