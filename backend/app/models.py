@@ -17,6 +17,11 @@ from werkzeug.utils import secure_filename
 
 from app.config import settings
 
+# Core judgments.jurisdiction — mirrors the CHECK constraint in
+# supabase/migrations/20260209000001_create_judgments_table.sql:23.
+Jurisdiction = Literal["PL", "UK"]
+JURISDICTIONS: tuple[Jurisdiction, ...] = ("PL", "UK")
+
 # ===== Pagination Models =====
 
 

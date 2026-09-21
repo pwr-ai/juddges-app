@@ -1942,6 +1942,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/collections/from-filter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a collection from a base-schema filter result */
+        post: operations["create_collection_from_filter_collections_from_filter_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/collections/{collection_id}": {
         parameters: {
             query?: never;
@@ -6431,6 +6448,15 @@ export interface components {
             /** User Id */
             user_id: string;
         };
+        /** CollectionFromFilterResponse */
+        CollectionFromFilterResponse: {
+            /** Collections */
+            collections: components["schemas"]["CreatedCollection"][];
+            /** Pair Id */
+            pair_id?: string | null;
+            /** Total Matched */
+            total_matched: number;
+        };
         /** CollectionLink */
         CollectionLink: {
             /** Collection Id */
@@ -6689,6 +6715,22 @@ export interface components {
              */
             user_id: string;
         };
+        /**
+         * CreateCollectionFromFilterRequest
+         * @description Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.
+         */
+        CreateCollectionFromFilterRequest: {
+            /** Description */
+            description?: string | null;
+            /** Filters */
+            filters?: {
+                [key: string]: unknown;
+            };
+            /** Name */
+            name: string;
+            /** Text Query */
+            text_query?: string | null;
+        };
         /** CreateCollectionRequest */
         CreateCollectionRequest: {
             /** Description */
@@ -6823,6 +6865,14 @@ export interface components {
              * @enum {string}
              */
             change_type: "initial" | "amendment" | "correction" | "consolidation" | "repeal";
+        };
+        /** CreatedCollection */
+        CreatedCollection: {
+            /** Added Count */
+            added_count: number;
+            collection: components["schemas"]["Collection"];
+            /** Jurisdiction */
+            jurisdiction?: ("PL" | "UK") | null;
         };
         /**
          * DAGEdge
@@ -15245,6 +15295,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Collection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_collection_from_filter_collections_from_filter_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCollectionFromFilterRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionFromFilterResponse"];
                 };
             };
             /** @description Validation Error */

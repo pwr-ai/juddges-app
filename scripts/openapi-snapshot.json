@@ -2063,6 +2063,38 @@
         "title": "Collection",
         "type": "object"
       },
+      "CollectionFromFilterResponse": {
+        "properties": {
+          "collections": {
+            "items": {
+              "$ref": "#/components/schemas/CreatedCollection"
+            },
+            "title": "Collections",
+            "type": "array"
+          },
+          "pair_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair Id"
+          },
+          "total_matched": {
+            "title": "Total Matched",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collections",
+          "total_matched"
+        ],
+        "title": "CollectionFromFilterResponse",
+        "type": "object"
+      },
       "CollectionLink": {
         "properties": {
           "collection_id": {
@@ -2554,6 +2586,51 @@
         "title": "ConvertGuestResponse",
         "type": "object"
       },
+      "CreateCollectionFromFilterRequest": {
+        "description": "Same `filters`/`text_query` shape as POST /extractions/base-schema/filter.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "text_query": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Query"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateCollectionFromFilterRequest",
+        "type": "object"
+      },
       "CreateCollectionRequest": {
         "properties": {
           "description": {
@@ -2934,6 +3011,38 @@
           }
         },
         "title": "CreateVersionRequest",
+        "type": "object"
+      },
+      "CreatedCollection": {
+        "properties": {
+          "added_count": {
+            "title": "Added Count",
+            "type": "integer"
+          },
+          "collection": {
+            "$ref": "#/components/schemas/Collection"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PL",
+                  "UK"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction"
+          }
+        },
+        "required": [
+          "collection",
+          "added_count"
+        ],
+        "title": "CreatedCollection",
         "type": "object"
       },
       "DAGEdge": {
@@ -19866,6 +19975,55 @@
           }
         ],
         "summary": "Create Collection",
+        "tags": [
+          "collections"
+        ]
+      }
+    },
+    "/collections/from-filter": {
+      "post": {
+        "operationId": "create_collection_from_filter_collections_from_filter_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCollectionFromFilterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionFromFilterResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a collection from a base-schema filter result",
         "tags": [
           "collections"
         ]

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   FILTER_FIELD_BY_NAME,
+  ALL_FILTER_FIELD_BY_NAME,
   FIELDS_BY_GROUP,
   GROUP_LABELS,
   GROUP_ORDER,
@@ -410,7 +411,11 @@ interface FieldRowProps {
 function describeActive(config: FilterFieldConfig, value: unknown): string | null {
   if (value === undefined || value === null) return null;
   if (Array.isArray(value)) {
-    return value.length > 0 ? `${value.length}` : null;
+    if (value.length === 0) return null;
+    if (config.control === "enum_multi" && value.length <= 3) {
+      return value.map((v) => formatEnumLabel(String(v))).join(", ");
+    }
+    return `${value.length}`;
   }
   if (typeof value === "string") return value.trim() === "" ? null : "•";
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -614,7 +619,7 @@ export function ActiveFilterChips({
         </Badge>
       )}
       {entries.map(([field, value]) => {
-        const config = FILTER_FIELD_BY_NAME[field];
+        const config = ALL_FILTER_FIELD_BY_NAME[field];
         const desc = config ? describeActive(config, value) : null;
         if (!desc) return null;
         return (

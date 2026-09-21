@@ -1,3 +1,7 @@
+import type {
+  CollectionFromFilterResponse,
+  CreateCollectionFromFilterRequest,
+} from "@/types/base-schema-filter";
 import { Collection, CollectionWithDocuments } from "@/types/collection";
 import { SearchDocument } from "@/types/search";
 import { track } from "../analytics/track";
@@ -222,5 +226,51 @@ export async function addDocumentsToCollection(
     collection_id: collectionId,
     count: result.added.length,
   });
+  return result;
+}
+
+export class CollectionFromFilterError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly status: number,
+    public readonly total?: number,
+    public readonly cap?: number,
+    public readonly jurisdiction?: string | null,
+  ) {
+    super(message);
+    this.name = "CollectionFromFilterError";
+  }
+}
+
+/** Unwraps FastAPI's `{detail: {...}}` or the BFF's flat `{error}` into one error type. */
+async function throwCollectionFromFilterError(response: Response): Promise<never> {
+  const data = await response.json().catch(() => ({}));
+  const d = (data && typeof data === "object" && "detail" in data && data.detail && typeof data.detail === "object")
+    ? (data.detail as Record<string, unknown>)
+    : (data as Record<string, unknown>);
+  throw new CollectionFromFilterError(
+    String(d.message ?? d.error ?? "Failed to save collection"),
+    String(d.code ?? "COLLECTION_FROM_FILTER_FAILED"),
+    response.status,
+    typeof d.total === "number" ? d.total : undefined,
+    typeof d.cap === "number" ? d.cap : undefined,
+    typeof d.jurisdiction === "string" || d.jurisdiction === null ? (d.jurisdiction as string | null) : undefined,
+  );
+}
+
+export async function createCollectionFromFilter(
+  request: CreateCollectionFromFilterRequest,
+): Promise<CollectionFromFilterResponse> {
+  const response = await fetch("/api/collections/from-filter", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) await throwCollectionFromFilterError(response);
+  const result = (await response.json()) as CollectionFromFilterResponse;
+  for (const created of result.collections) {
+    track("collection_created", { collection_id: created.collection.id, source: "base_schema_filter", count: created.added_count });
+  }
   return result;
 }
