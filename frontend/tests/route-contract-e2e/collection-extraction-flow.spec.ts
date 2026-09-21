@@ -44,15 +44,21 @@ const SELECTED = [1, 2, 3, 4, 5] as const;
 const flowDocumentId = (n: number): string => `route-contract-flow-document-${n}`;
 const flowTitle = (n: number): string => `Route contract flow judgment ${n}`;
 
-async function flowCollectionDocumentIds(
+interface FlowCollectionState {
+  /** What the save popover POSTed to the collection, in arrival order. */
+  document_ids: string[];
+  /** What the extract page POSTed to `/extractions/db`; null until it did. */
+  submitted_document_ids: string[] | null;
+}
+
+async function flowCollection(
   request: Parameters<typeof resetAdapter>[0],
-): Promise<string[]> {
+): Promise<FlowCollectionState> {
   const response = await request.get(
     `${ADAPTER_BASE_URL}/__route-contract/flow-collection`,
   );
   expect(response.status()).toBe(200);
-  const payload = (await response.json()) as { document_ids: string[] };
-  return payload.document_ids;
+  return (await response.json()) as FlowCollectionState;
 }
 
 test.describe.serial('collection → extraction flow contract', () => {
@@ -80,6 +86,13 @@ test.describe.serial('collection → extraction flow contract', () => {
       await expect(
         page.getByRole('checkbox', { name: `Select ${flowTitle(6)}` }),
       ).toBeVisible();
+      // The stub answers the same six hits for any query, so the results
+      // rendering does not prove the typed text left the search box. The
+      // stub's request log does.
+      const searches = (await adapterRequests(request)).filter(
+        ({ path }) => path === '/api/search/documents',
+      );
+      expect(searches.map(({ query }) => query.q)).toEqual([SEARCH_QUERY]);
     });
 
     await test.step('select five of the six results', async () => {
@@ -114,7 +127,7 @@ test.describe.serial('collection → extraction flow contract', () => {
 
       // Asserted from the stub's own record: the BFF forwarded exactly the
       // five selected ids, and nothing for the unselected sixth.
-      expect((await flowCollectionDocumentIds(request)).sort()).toEqual(
+      expect((await flowCollection(request)).document_ids.sort()).toEqual(
         SELECTED.map(flowDocumentId).sort(),
       );
     });
@@ -164,6 +177,12 @@ test.describe.serial('collection → extraction flow contract', () => {
       // job back proves the extract page submitted the collection picked above.
       expect(body.job_id).toBe(FLOW_JOB_ID);
       jobId = body.job_id as string;
+      // And it submitted exactly the collection's five documents — the stub's
+      // job totals are derived from this list, so the sequence assertion
+      // below would otherwise pass on an empty or over-full submission.
+      expect(
+        (await flowCollection(request)).submitted_document_ids?.sort(),
+      ).toEqual(SELECTED.map(flowDocumentId).sort());
     });
 
     await test.step('the job is watched to completion and the data renders', async () => {

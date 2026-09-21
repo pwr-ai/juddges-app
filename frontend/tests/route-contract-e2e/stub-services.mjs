@@ -7,6 +7,7 @@ const USER_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
 const LOGGABLE_QUERY_KEYS = new Set([
   'chat_id',
+  'q',
   'id',
   'include_results',
   'job_id',
@@ -95,18 +96,31 @@ let shuttingDown = false;
 let sequencedPolls = 0;
 let sequencedServed = [];
 let flowDocumentIds = [];
+let flowSubmittedDocumentIds = null;
 let flowPolls = 0;
 let flowServed = [];
 
+/**
+ * Resolves to the request's JSON object, or `{}` for anything that is not one
+ * (aborted body, invalid JSON, a JSON scalar or array). Never rejects, so the
+ * handlers built on it always answer.
+ */
 function readJsonBody(request) {
   return new Promise((resolve) => {
     const chunks = [];
+    const done = (parsed) =>
+      resolve(
+        parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+          ? parsed
+          : {},
+      );
     request.on('data', (chunk) => chunks.push(chunk));
+    request.on('error', () => done(null));
     request.on('end', () => {
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+        done(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
       } catch {
-        resolve({});
+        done(null);
       }
     });
   });
@@ -439,19 +453,20 @@ function sequencedExtractionResponse(url, response) {
 
 /**
  * Same one-step-per-poll contract as `sequencedExtractionResponse`, for the
- * flow job. Totals come from what the save popover actually POSTed, so a
- * dropped save shows up here as the wrong `total_documents`, not just as a
- * missing row.
+ * flow job. Totals and results come from the `document_ids` the extract page
+ * POSTed to `/extractions/db`, not from the collection: an extract page that
+ * submits the wrong set shows up here as the wrong `total_documents`.
  */
 function flowExtractionResponse(url, response) {
-  const total = flowDocumentIds.length;
+  const submitted = flowSubmittedDocumentIds ?? [];
+  const total = submitted.length;
   const steps = [
     { status: 'PENDING', completed: 0, results: null },
     { status: 'IN_PROGRESS', completed: Math.ceil(total / 2), results: null },
     {
       status: 'COMPLETED',
       completed: total,
-      results: flowDocumentIds.map((documentId) => {
+      results: submitted.map((documentId) => {
         const hit = FLOW.hits.find(({ id }) => id === documentId);
         const n = documentId.replace(/^.*-/, '');
         return {
@@ -535,6 +550,7 @@ const server = createServer((request, response) => {
     sequencedPolls = 0;
     sequencedServed = [];
     flowDocumentIds = [];
+    flowSubmittedDocumentIds = null;
     flowPolls = 0;
     flowServed = [];
     response.writeHead(204);
@@ -551,9 +567,16 @@ const server = createServer((request, response) => {
     request.method === 'GET' &&
     url.pathname === `${CONTROL_PREFIX}extraction-sequence`
   ) {
-    const served =
-      url.searchParams.get('job_id') === FLOW.jobId ? flowServed : sequencedServed;
-    sendJson(response, 200, { served });
+    const jobId = url.searchParams.get('job_id') ?? IDS.extraction.sequenced;
+    const servedByJob = new Map([
+      [IDS.extraction.sequenced, sequencedServed],
+      [FLOW.jobId, flowServed],
+    ]);
+    if (!servedByJob.has(jobId)) {
+      sendJson(response, 404, { error: 'no sequenced job with that id', jobId });
+      return;
+    }
+    sendJson(response, 200, { served: servedByJob.get(jobId) });
     return;
   }
 
@@ -561,7 +584,10 @@ const server = createServer((request, response) => {
     request.method === 'GET' &&
     url.pathname === `${CONTROL_PREFIX}flow-collection`
   ) {
-    sendJson(response, 200, { document_ids: flowDocumentIds });
+    sendJson(response, 200, {
+      document_ids: flowDocumentIds,
+      submitted_document_ids: flowSubmittedDocumentIds,
+    });
     return;
   }
 
@@ -706,11 +732,14 @@ const server = createServer((request, response) => {
   if (request.method === 'POST' && url.pathname === '/extractions/db') {
     logRequest(request, url);
     readJsonBody(request).then((body) => {
+      const isFlow = body.collection_id === FLOW.collectionId;
+      if (isFlow) {
+        flowSubmittedDocumentIds = Array.isArray(body.document_ids)
+          ? body.document_ids
+          : [];
+      }
       sendJson(response, 202, {
-        job_id:
-          body.collection_id === FLOW.collectionId
-            ? FLOW.jobId
-            : IDS.extraction.sequenced,
+        job_id: isFlow ? FLOW.jobId : IDS.extraction.sequenced,
         status: 'accepted',
         message: 'Extraction job created successfully',
       });
