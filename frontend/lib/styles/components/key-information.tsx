@@ -58,6 +58,12 @@ export interface KeyInformationProps {
   showAll?: boolean;
   /** Optional heading rendered inside the card. */
   title?: string;
+  /** DOM id for deep links (e.g. "base-fields"). */
+  id?: string;
+  /** Metadata keys to visually emphasise (came from a matching search filter). */
+  highlightKeys?: ReadonlySet<string>;
+  /** Small caption under the title explaining the highlight, e.g. "3 fields matched your filter". */
+  highlightCaption?: string;
 }
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -137,9 +143,11 @@ const buildFields = (
 const FieldCell = memo(function FieldCell({
   field,
   wide,
+  matched,
 }: {
   field: ResolvedField;
   wide?: boolean;
+  matched: boolean;
 }) {
   const { config, display, key } = field;
   const Icon = config.icon;
@@ -147,9 +155,12 @@ const FieldCell = memo(function FieldCell({
 
   return (
     <div
+      data-matched={matched ? 'true' : 'false'}
       className={cn(
         'flex items-start gap-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 backdrop-blur-sm',
         wide && 'sm:col-span-2 lg:col-span-2 xl:col-span-2 2xl:col-span-3',
+        matched &&
+          'border-[color:var(--gold)] bg-[color:var(--gold-soft)]/40 ring-1 ring-[color:var(--gold)]',
       )}
     >
       <div className="flex-shrink-0 mt-0.5">
@@ -193,6 +204,9 @@ export const KeyInformation = memo(function KeyInformation({
   layout = 'sidebar',
   showAll = false,
   title,
+  id,
+  highlightKeys,
+  highlightCaption,
 }: KeyInformationProps) {
   const fields = buildFields(metadata, showAll);
 
@@ -204,6 +218,7 @@ export const KeyInformation = memo(function KeyInformation({
 
   return (
     <section
+      id={id}
       className={cn(
         'rounded-2xl border border-slate-200/50 bg-white/60 backdrop-blur-md p-6',
         className,
@@ -219,6 +234,12 @@ export const KeyInformation = memo(function KeyInformation({
         </div>
       )}
 
+      {highlightCaption && (
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-wider text-[color:var(--gold)]">
+          {highlightCaption}
+        </p>
+      )}
+
       <div
         className={cn(
           'grid gap-3',
@@ -232,6 +253,7 @@ export const KeyInformation = memo(function KeyInformation({
             key={field.key}
             field={field}
             wide={isGrid && field.config.wide}
+            matched={highlightKeys?.has(field.key) ?? false}
           />
         ))}
       </div>

@@ -6,6 +6,9 @@ import { ArrowLeft } from 'lucide-react';
 
 import { LoadingIndicator, Breadcrumb, PageContainer, ErrorCard } from '@/lib/styles/components';
 import { KeyInformation } from '@/lib/styles/components/key-information';
+import { decodeFilters } from '@/lib/extractions/use-extracted-data-filters';
+import { matchedMetadataKeys } from '@/lib/extractions/filter-match';
+import { BASE_FIELDS_ANCHOR } from '@/lib/extractions/document-href';
 
 import { DocumentHeader } from './DocumentHeader';
 import { RelatedDocuments } from './RelatedDocuments';
@@ -28,6 +31,11 @@ export function DocumentPageClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryFromSearch = searchParams.get("q");
+  const filterBlobFromSearch = searchParams.get("f");
+  const filtersFromSearch = useMemo(
+    () => decodeFilters(filterBlobFromSearch),
+    [filterBlobFromSearch],
+  );
 
   const {
     authLoading,
@@ -84,6 +92,14 @@ export function DocumentPageClient({
     // Check if it looks like actual HTML or document content
     return trimmed.includes('<') || trimmed.length > 100;
   }, [htmlString]);
+
+  const highlightKeys = useMemo(
+    () =>
+      metadata
+        ? matchedMetadataKeys(filtersFromSearch, metadata as Record<string, unknown>)
+        : new Set<string>(),
+    [filtersFromSearch, metadata],
+  );
 
   if (loading) {
     return (
@@ -145,7 +161,12 @@ export function DocumentPageClient({
           <div className="mb-4">
             <Breadcrumb
               items={[
-                { label: 'Search', href: '/search' },
+                {
+                  label: 'Search',
+                  href: filterBlobFromSearch
+                    ? `/search/extractions?f=${filterBlobFromSearch}`
+                    : '/search',
+                },
                 { label: breadcrumbTitle },
               ]}
             />
@@ -176,6 +197,13 @@ export function DocumentPageClient({
                     layout="grid"
                     showAll
                     title="Extracted Schema Fields"
+                    id={BASE_FIELDS_ANCHOR}
+                    highlightKeys={highlightKeys}
+                    highlightCaption={
+                      highlightKeys.size > 0
+                        ? `${highlightKeys.size} field${highlightKeys.size === 1 ? '' : 's'} matched your filter`
+                        : undefined
+                    }
                   />
                 </div>
               )}
