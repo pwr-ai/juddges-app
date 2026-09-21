@@ -708,9 +708,9 @@ response then has two `collections` entries (`jurisdiction` set), a non-null
 carried a jurisdiction filter (it is dropped — the split replaces it). The
 cap and `FILTER_EMPTY` apply per side (`detail.jurisdiction` names it); if
 either side or the pair insert fails, every collection created in the call is
-rolled back. In split mode `name` is limited to 200 characters (`422`
-otherwise) because the pair row is `CHECK`ed at 200 and each side's
-collection name gets a 5-char suffix.
+rolled back. `name` is whitespace-stripped before validation and storage; in
+split mode it is limited to 200 characters (`422` otherwise) because the pair
+row is `CHECK`ed at 200 and each side's collection name gets a 5-char suffix.
 
 #### Collection Pairs
 

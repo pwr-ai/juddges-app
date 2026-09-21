@@ -535,6 +535,79 @@ async def test_split_name_of_exactly_200_chars_is_accepted(
     assert [len(c["name"]) for c in stub_db.created] == [205, 205]
 
 
+async def test_split_name_is_stripped_once_and_the_stripped_value_is_persisted(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    """Validator and persistence must see the same name: a padded 200-char name
+    is accepted and the pair row / side names carry the stripped value."""
+    monkeypatch.setattr(
+        cff, "resolve_filter_ids", lambda *_a, **_k: _split_result(1, 1)
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": "  " + "n" * 200 + "  ",
+            "filters": {},
+            "split_by_jurisdiction": True,
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert stub_pairs_db.rows[0]["name"] == "n" * 200
+    assert [c["name"] for c in stub_db.created] == [
+        "n" * 200 + " — PL",
+        "n" * 200 + " — UK",
+    ]
+
+
+async def test_split_padded_name_over_the_bound_is_422_before_any_db_call(
+    client, override_deps, stub_db, stub_pairs_db, monkeypatch
+):
+    resolve_calls: list[object] = []
+    monkeypatch.setattr(
+        cff,
+        "resolve_filter_ids",
+        lambda *a, **k: resolve_calls.append(a) or _split_result(1, 1),
+    )
+    resp = await client.post(
+        "/collections/from-filter",
+        json={
+            "name": " " + "n" * 201 + " ",
+            "filters": {},
+            "split_by_jurisdiction": True,
+        },
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 422, resp.text
+    assert resolve_calls == [] and stub_db.get_user_collections_calls == []
+    assert stub_db.created == [] and stub_pairs_db.rows == []
+
+
+async def test_whitespace_only_name_is_422(client, override_deps, stub_db):
+    for payload in (
+        {"name": "   ", "filters": {}},
+        {"name": "   ", "filters": {}, "split_by_jurisdiction": True},
+    ):
+        resp = await client.post(
+            "/collections/from-filter", json=payload, headers=_HEADERS
+        )
+        assert resp.status_code == 422, resp.text
+    assert stub_db.created == []
+
+
+async def test_unsplit_name_is_stripped_too(
+    client, override_deps, stub_db, monkeypatch
+):
+    monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1))
+    resp = await client.post(
+        "/collections/from-filter",
+        json={"name": " " + "n" * 253 + " ", "filters": {}},
+        headers=_HEADERS,
+    )
+    assert resp.status_code == 201, resp.text
+    assert stub_db.created[0]["name"] == "n" * 253
+
+
 async def test_unsplit_name_keeps_the_255_bound(client, override_deps, monkeypatch):
     monkeypatch.setattr(cff, "resolve_filter_ids", lambda *_a, **_k: _result(1))
     resp = await client.post(

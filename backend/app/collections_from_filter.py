@@ -65,13 +65,20 @@ class CreateCollectionFromFilterRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _pair_name_fits_the_pair_row(self) -> CreateCollectionFromFilterRequest:
-        """Reject a too-long pair name at the door, not after both sides are filled.
+    def _normalise_name(self) -> CreateCollectionFromFilterRequest:
+        """Strip `name` once so validation and persistence see the same value,
+        and reject a too-long pair name at the door, not after both sides are filled.
 
-        Without this a 201-250-char name creates and bulk-fills both collections
-        and only then fails the CHECK on collection_pairs.name (500 + rollback).
+        The stripped value is what `create_collection_from_ids` (side names) and
+        `create_pair` receive; checking `len(name.strip())` while persisting the
+        raw name would let a whitespace-padded 201-255-char name create and
+        bulk-fill both collections and only then fail the CHECK on
+        collection_pairs.name (500 + rollback).
         """
-        if self.split_by_jurisdiction and len(self.name.strip()) > PAIR_NAME_MAX_LENGTH:
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValueError("name must not be blank")
+        if self.split_by_jurisdiction and len(self.name) > PAIR_NAME_MAX_LENGTH:
             raise ValueError(
                 f"name must be at most {PAIR_NAME_MAX_LENGTH} characters when "
                 "split_by_jurisdiction is true (the pair name is stored as-is and "

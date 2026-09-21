@@ -114,9 +114,11 @@ Creates two collections from one filter — `"<name> — PL"` and `"<name> — U
   deleted (best-effort, logged) before the original error propagates — the
   user never ends up with half a pair.
 - `collection_ids` ownership is checked exactly as for the single path.
-- `name` is limited to **200 characters** in split mode (`PAIR_NAME_MAX_LENGTH`,
-  a `model_validator` on the request → `422`): `collection_pairs.name` is
-  `CHECK`ed at 1–200 and each side's collection name adds `" — PL"`/`" — UK"`
+- `name` is stripped of surrounding whitespace once, in the request's
+  `model_validator` (blank after strip → `422`), and that stripped value is
+  what both side names and the pair row receive. In split mode it is limited
+  to **200 characters** (`PAIR_NAME_MAX_LENGTH` → `422`): `collection_pairs.name`
+  is `CHECK`ed at 1–200 and each side's collection name adds `" — PL"`/`" — UK"`
   under the 255-char `collections.name` bound. Checked before any query, so a
   too-long name never creates and fills two collections only to fail the pair
   insert.
