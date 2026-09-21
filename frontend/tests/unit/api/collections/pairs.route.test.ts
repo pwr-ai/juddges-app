@@ -1,8 +1,6 @@
 /**
  * @jest-environment node
  */
-import { NextRequest } from "next/server";
-
 const mockGetUser = jest.fn();
 const mockGetSession = jest.fn();
 
@@ -18,10 +16,6 @@ global.fetch = jest.fn();
 
 import { GET } from "@/app/api/collections/pairs/route";
 
-function req() {
-  return new NextRequest("http://localhost:3026/api/collections/pairs");
-}
-
 describe("GET /api/collections/pairs (via proxyToBackend)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,7 +27,7 @@ describe("GET /api/collections/pairs (via proxyToBackend)", () => {
 
   it("401s without a session and never calls the backend", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-    const res = await GET(req());
+    const res = await GET();
     expect(res.status).toBe(401);
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -43,7 +37,7 @@ describe("GET /api/collections/pairs (via proxyToBackend)", () => {
     (global.fetch as jest.Mock).mockResolvedValue(
       new Response(JSON.stringify(upstream), { status: 200, headers: { "content-type": "application/json" } }),
     );
-    const res = await GET(req());
+    const res = await GET();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(upstream);
     const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
