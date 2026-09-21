@@ -1,7 +1,7 @@
 /**
- * Glass Tabs Component
- * Custom tab component with proper glass morphism styling, rounded corners, and smooth animations
- * Follows Legal Glassmorphism 2.0 design system
+ * Editorial Tabs Component
+ * Tab component on the Editorial Jurisprudence surface: ruled container,
+ * parchment active indicator, ink type.
  */
 
 "use client";
@@ -12,39 +12,39 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Context to share active state with triggers for animation
-type GlassTabsContextValue = {
+type EditorialTabsContextValue = {
  value?: string;
  onValueChange?: (value: string) => void;
 };
 
-const GlassTabsContext = React.createContext<GlassTabsContextValue>({});
+const EditorialTabsContext = React.createContext<EditorialTabsContextValue>({});
 
-export interface GlassTabsProps extends React.ComponentProps<typeof TabsPrimitive.Root> {
+export interface EditorialTabsProps extends React.ComponentProps<typeof TabsPrimitive.Root> {
  className?: string;
 }
 
-export interface GlassTabsListProps extends React.ComponentProps<typeof TabsPrimitive.List> {
+export interface EditorialTabsListProps extends React.ComponentProps<typeof TabsPrimitive.List> {
  className?: string;
 }
 
-export interface GlassTabsTriggerProps extends React.ComponentProps<typeof TabsPrimitive.Trigger> {
+export interface EditorialTabsTriggerProps extends React.ComponentProps<typeof TabsPrimitive.Trigger> {
  className?: string;
 }
 
-export interface GlassTabsContentProps extends React.ComponentProps<typeof TabsPrimitive.Content> {
+export interface EditorialTabsContentProps extends React.ComponentProps<typeof TabsPrimitive.Content> {
  className?: string;
 }
 
 /**
- * Glass Tabs Root Component
+ * Editorial Tabs Root Component
  */
-export function GlassTabs({
+export function EditorialTabs({
  className,
  value,
  defaultValue,
  onValueChange,
  ...props
-}: GlassTabsProps): React.JSX.Element {
+}: EditorialTabsProps): React.JSX.Element {
  const [activeTab, setActiveTab] = React.useState<string | undefined>(
  value || defaultValue
  );
@@ -64,16 +64,16 @@ export function GlassTabs({
  };
 
  return (
- <GlassTabsContext.Provider value={{ value: activeTab }}>
+ <EditorialTabsContext.Provider value={{ value: activeTab }}>
  <TabsPrimitive.Root
- data-slot="glass-tabs"
+ data-slot="editorial-tabs"
  className={cn("flex flex-col gap-4", className)}
  value={value}
  defaultValue={defaultValue}
  onValueChange={handleValueChange}
  {...props}
  />
- </GlassTabsContext.Provider>
+ </EditorialTabsContext.Provider>
  );
 }
 
@@ -81,13 +81,13 @@ export function GlassTabs({
  * Tabs List Component
  * Clean editorial container with rule border
  */
-export function GlassTabsList({
+export function EditorialTabsList({
   className,
   ...props
-}: GlassTabsListProps): React.JSX.Element {
+}: EditorialTabsListProps): React.JSX.Element {
   return (
     <TabsPrimitive.List
-      data-slot="glass-tabs-list"
+      data-slot="editorial-tabs-list"
       className={cn(
         "inline-flex h-10 w-fit items-center justify-center border border-rule bg-parchment-deep/40 p-1 gap-1 text-ink-soft",
         className
@@ -101,19 +101,19 @@ export function GlassTabsList({
  * Tabs Trigger Component
  * Editorial tab trigger with ink text and parchment indicator
  */
-export function GlassTabsTrigger({
+export function EditorialTabsTrigger({
   className,
   value,
   children,
   ...props
-}: GlassTabsTriggerProps): React.JSX.Element {
-  const context = React.useContext(GlassTabsContext);
+}: EditorialTabsTriggerProps): React.JSX.Element {
+  const context = React.useContext(EditorialTabsContext);
   const isActive = context.value === value;
 
   return (
     <TabsPrimitive.Trigger
       value={value}
-      data-slot="glass-tabs-trigger"
+      data-slot="editorial-tabs-trigger"
       className={cn(
         // Base styles
         "relative inline-flex h-full flex-1 items-center justify-center",
@@ -140,7 +140,7 @@ export function GlassTabsTrigger({
     >
       {isActive && (
         <motion.div
-          layoutId="glass-tabs-indicator"
+          layoutId="editorial-tabs-indicator"
           className={cn(
             "absolute inset-0",
             "bg-parchment",
@@ -161,15 +161,15 @@ export function GlassTabsTrigger({
 }
 
 /**
- * Glass Tabs Content Component
+ * Editorial Tabs Content Component
  * With proper fade and slide animations when switching tabs
  */
-export function GlassTabsContent({
+export function EditorialTabsContent({
  className,
  children,
  value,
  ...props
-}: GlassTabsContentProps): React.JSX.Element {
+}: EditorialTabsContentProps): React.JSX.Element {
  // We can't easily use AnimatePresence here because TabsPrimitive.Content
  // controls visibility via `hidden` attribute or unmounting.
  // However, we can use simple CSS animations or a motion div wrapper if we want exit animations.
@@ -178,7 +178,7 @@ export function GlassTabsContent({
  return (
  <TabsPrimitive.Content
  value={value}
- data-slot="glass-tabs-content"
+ data-slot="editorial-tabs-content"
  asChild
  className={cn(
 "flex-1 outline-none mt-2",

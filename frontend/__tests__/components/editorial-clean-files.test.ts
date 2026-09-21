@@ -171,6 +171,19 @@ const CLEAN_FILES = [
   'components/error-boundary.tsx',
   'app/publications/admin/[id]/page.tsx',
   'lib/styles/components/highlighted-text.tsx',
+  // #676 slice 3 — remaining lib primitives
+  'lib/styles/components/data-table.tsx',
+  'lib/styles/components/ai-disclaimer-badge.tsx',
+  'lib/styles/components/editorial-tabs.tsx',
+  'lib/styles/components/legal-reference-badge.tsx',
+  'lib/styles/components/pagination.tsx',
+  'lib/styles/components/checkbox.tsx',
+  'lib/styles/components/filter-toggle-group.tsx',
+  'lib/styles/components/accordion.tsx',
+  'lib/styles/components/index.ts',
+  'components/ui/empty-state.tsx',
+  'components/ui/switch.tsx',
+  'components/ui/skeletons/SkeletonText.tsx',
 ];
 
 /**
