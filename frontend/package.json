@@ -98,7 +98,7 @@
     "jspdf": "^4.2.0",
     "lowlight": "^3.1.0",
     "lucide-react": "^1.45.0",
-    "mermaid": "^11.17.2",
+    "mermaid": "^12.0.0",
     "next": "^16.3.4",
     "plotly.js-dist": "^4.1.0",
     "react": "^19.0.0",
