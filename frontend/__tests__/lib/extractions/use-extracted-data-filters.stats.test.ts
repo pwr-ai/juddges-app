@@ -11,9 +11,12 @@ import { act, renderHook } from "@testing-library/react";
 import { buildFilterHref, buildFilterSearchParams } from "@/lib/extractions/use-extracted-data-filters";
 
 const replace = jest.fn();
+// One router object for the whole file: Next's router is referentially stable
+// across renders, and the hook's writeUrl effect depends on that.
+const router = { replace };
 let search = "";
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ replace }),
+  useRouter: () => router,
   useSearchParams: () => new URLSearchParams(search),
 }));
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -112,5 +115,59 @@ describe("useExtractedDataFilters stats state", () => {
     expect(lastUrl).not.toContain("n=");
     expect(lastUrl).not.toContain("seed=");
     expect(lastUrl).not.toContain("fields=");
+  });
+});
+
+/**
+ * The FlowStepper and sidebar link to `/search/extractions?view=stats` from the
+ * list view of the same route: a soft navigation, no remount. The hook must
+ * adopt `view` from the URL then, without ping-ponging with its own writes.
+ */
+describe("useExtractedDataFilters follows external view navigation", () => {
+  beforeEach(() => {
+    replace.mockClear();
+  });
+
+  it("adopts view=stats from a bare stepper href and re-emits the current cohort", () => {
+    search = "q=judge";
+    const { result, rerender } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.view).toBe("list");
+    expect(result.current.textQuery).toBe("judge");
+
+    search = "view=stats";
+    rerender();
+
+    expect(result.current.view).toBe("stats");
+    expect(result.current.textQuery).toBe("judge");
+    const lastUrl = replace.mock.calls.at(-1)?.[0] as string;
+    expect(lastUrl).toContain("view=stats");
+    expect(lastUrl).toContain("q=judge");
+  });
+
+  it("adopts view=list when the plain route link is followed from the statistics view", () => {
+    search = "view=stats&seed=4";
+    const { result, rerender } = renderHook(() => useExtractedDataFilters());
+    expect(result.current.view).toBe("stats");
+
+    search = "";
+    rerender();
+
+    expect(result.current.view).toBe("list");
+  });
+
+  it("does not re-write the URL when its own write lands", () => {
+    search = "";
+    const { result, rerender } = renderHook(() => useExtractedDataFilters());
+    replace.mockClear();
+
+    act(() => result.current.setView("stats"));
+    expect(replace).toHaveBeenCalledTimes(1);
+    const emitted = (replace.mock.calls[0][0] as string).replace(/^\?/, "");
+
+    search = emitted;
+    rerender();
+
+    expect(result.current.view).toBe("stats");
+    expect(replace).toHaveBeenCalledTimes(1);
   });
 });

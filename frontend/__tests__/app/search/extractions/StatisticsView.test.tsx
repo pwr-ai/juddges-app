@@ -44,10 +44,10 @@ describe("StatisticsView", () => {
     expect(p.onDrillBack).toHaveBeenCalledWith(undefined);
   });
 
-  it("a bar click drills back adding that value to the field's filter", () => {
+  it("a bar click drills back narrowing the field's filter to that value (any-of semantics)", () => {
     const p = renderView({ filters: { appeal_outcome: ["allowed"] } });
     fireEvent.click(screen.getByRole("button", { name: "dismissed" }));
-    expect(p.onDrillBack).toHaveBeenCalledWith({ appeal_outcome: ["allowed", "dismissed"] });
+    expect(p.onDrillBack).toHaveBeenCalledWith({ appeal_outcome: ["dismissed"] });
   });
 
   it("a boolean bar drills back with a scalar boolean filter", () => {

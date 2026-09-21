@@ -386,7 +386,7 @@ function ExtractionSearchPage() {
                 disabled={isLoading || Boolean(error)}
               />
             )}
-            {error && (
+            {view === "list" && error && (
               <Button variant="ghost" size="sm" onClick={() => clearAll()}>
                 Reset
               </Button>
@@ -403,7 +403,12 @@ function ExtractionSearchPage() {
         onClearAll={clearAll}
       />
 
-      {error && (
+      {/*
+        The list query is disabled behind the statistics view but React Query
+        keeps its last error, so every list-only surface below is gated on the
+        view, not on `error` alone.
+      */}
+      {view === "list" && error && (
         <div role="alert">
         <ErrorCard
           title="Results could not be loaded"
@@ -415,7 +420,7 @@ function ExtractionSearchPage() {
         </div>
       )}
 
-      {!error && view === "stats" && (
+      {view === "stats" && (
         <StatisticsView
           filters={filters}
           textQuery={textQuery}
@@ -432,7 +437,7 @@ function ExtractionSearchPage() {
         />
       )}
 
-      {!error && view === "list" && (
+      {view === "list" && !error && (
         <ResultList
           rows={rows}
           isLoading={isLoading}

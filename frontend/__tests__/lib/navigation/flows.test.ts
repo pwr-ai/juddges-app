@@ -18,7 +18,7 @@ describe("FLOWS inventory", () => {
     expect(FLOWS.map((f) => f.id)).toEqual(["ask", "explore", "code", "case"]);
   });
 
-  it("keeps every route the sidebar rendered before #690, plus the two extraction routes", () => {
+  it("keeps every route the sidebar rendered before #690, plus the three extraction routes", () => {
     const expected = [
       "/search", "/chat", "/history",
       "/search/extractions", "/search/extractions?view=stats", "/collections", "/topics",

@@ -43,17 +43,15 @@ function download(name: string, mime: string, body: string) {
  * filter predicate the value can be turned into (core fields like
  * `court_name`, numeric/year/date fields). Only enum/tag arrays and the
  * tri-state booleans map cleanly from a bar value onto `BaseSchemaFilters`.
+ *
+ * Array filters REPLACE any existing value for the field: the RPC applies
+ * them as any-of (`&&` / `= ANY`), so appending would widen the cohort
+ * instead of narrowing it to the clicked bar.
  */
-function drillBackPatch(
-  filters: BaseSchemaFilters,
-  field: string,
-  value: string,
-): Partial<BaseSchemaFilters> | null {
+function drillBackPatch(field: string, value: string): Partial<BaseSchemaFilters> | null {
   const control = ALL_FILTER_FIELD_BY_NAME[field]?.control;
   if (control === "enum_multi" || control === "tag_array") {
-    const current = (filters as Record<string, unknown>)[field];
-    const next = Array.isArray(current) ? [...(current as string[]), value] : [value];
-    return { [field]: Array.from(new Set(next)) } as Partial<BaseSchemaFilters>;
+    return { [field]: [value] } as Partial<BaseSchemaFilters>;
   }
   if (control === "boolean_tri") {
     return { [field]: value === "true" } as Partial<BaseSchemaFilters>;
@@ -87,7 +85,7 @@ export function StatisticsView(props: StatisticsViewProps) {
   const { data, isLoading, error } = useExtractionAggregate(request);
 
   const addValue = (field: string, value: string) => {
-    const patch = drillBackPatch(filters, field, value);
+    const patch = drillBackPatch(field, value);
     if (patch) onDrillBack(patch);
   };
 
@@ -146,7 +144,7 @@ export function StatisticsView(props: StatisticsViewProps) {
       <div className="flex flex-wrap items-center gap-3 border-t border-[color:var(--rule)] pt-3">
         <label className="font-mono text-xs text-[color:var(--ink-soft)]">
           {t("extraction.statsAddField")}{" "}
-          <select className="border border-[color:var(--rule)] bg-white px-2 py-1" value="" onChange={(e) => e.target.value && onFields([...fields, e.target.value])}>
+          <select className="border border-[color:var(--rule)] bg-[color:var(--parchment)] px-2 py-1" value="" onChange={(e) => e.target.value && onFields([...fields, e.target.value])}>
             <option value="">—</option>
             {addable.map((f) => (
               <option key={f} value={f}>{aggregateFieldLabel(f)}</option>

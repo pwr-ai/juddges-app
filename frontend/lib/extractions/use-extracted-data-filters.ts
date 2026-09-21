@@ -22,7 +22,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BaseSchemaFilters } from "@/types/base-schema-filter";
 
@@ -205,6 +205,26 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
 
   const [state, setState] = useState<FilterState>(initial);
 
+  // Query strings this hook wrote itself and has not yet seen land in
+  // `searchParams`. Anything else arriving in the URL is an external
+  // navigation (FlowStepper / sidebar link to `?view=stats` on this same
+  // route — no remount) and `view` is adopted from it. The rest of the state
+  // is then re-emitted by writeUrl, so a bare `?view=stats` href ends up
+  // carrying the current cohort again.
+  const emitted = useRef<Set<string>>(new Set());
+  const urlQuery = searchParams.toString();
+  const lastUrlQuery = useRef(urlQuery);
+
+  // Declared before the writeUrl effect so lastUrlQuery is current when that
+  // effect decides whether its write will ever land (a write equal to the
+  // current URL produces no searchParams change, so it must not be recorded).
+  useEffect(() => {
+    lastUrlQuery.current = urlQuery;
+    if (emitted.current.delete(urlQuery)) return; // our own write landing
+    const urlView: ResultView = new URLSearchParams(urlQuery).get("view") === "stats" ? "stats" : "list";
+    setState((prev) => (prev.view === urlView ? prev : { ...prev, view: urlView }));
+  }, [urlQuery]);
+
   const writeUrl = useCallback(
     (next: FilterState) => {
       const queryString = buildFilterSearchParams({
@@ -213,6 +233,7 @@ export function useExtractedDataFilters(): UseExtractedDataFiltersResult {
         fields: next.view === "stats" ? next.statsFields : undefined,
         sampleSize: next.view === "stats" ? next.sampleSize : undefined,
       }).toString();
+      if (queryString !== lastUrlQuery.current) emitted.current.add(queryString);
       const url = queryString ? `?${queryString}` : window.location.pathname;
       router.replace(url, { scroll: false });
     },
