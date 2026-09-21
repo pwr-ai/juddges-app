@@ -287,6 +287,28 @@ export const en: Translations = {
     extractedData: 'Extracted data',
     exportToExcel: 'Export to Excel',
     exportToJson: 'Export to JSON',
+
+    // Statistics view (#708)
+    statsView: 'Statistics',
+    listView: 'List',
+    statsCohortLine: '{{matched}} of {{corpus}} judgments match',
+    statsSampleLine: 'showing a random sample of {{n}} (seed {{seed}})',
+    statsShowJudgments: 'Show judgments',
+    statsScale: 'Sample size',
+    statsAll: 'all',
+    statsReshuffle: 'Reshuffle',
+    statsYAxisCount: 'Count',
+    statsYAxisPercent: '% of sample',
+    statsOther: 'other',
+    statsMissing: 'missing',
+    statsMultiNote: 'Counts are per value; a judgment can appear in more than one bar.',
+    statsModelScore: 'model score',
+    statsAddField: 'Add field',
+    statsRemoveField: 'Remove',
+    statsExportCsv: 'Export CSV',
+    statsExportCohort: 'Export cohort definition',
+    statsEmpty: 'No judgments match these filters.',
+    statsError: 'Statistics could not be computed.',
   },
 
   auth: {

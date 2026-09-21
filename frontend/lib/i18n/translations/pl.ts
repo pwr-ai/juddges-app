@@ -287,6 +287,28 @@ export const pl: Translations = {
     extractedData: 'Wyodrębnione dane',
     exportToExcel: 'Eksportuj do Excel',
     exportToJson: 'Eksportuj do JSON',
+
+    // Statistics view (#708)
+    statsView: 'Statystyki',
+    listView: 'Lista',
+    statsCohortLine: '{{matched}} z {{corpus}} orzeczeń pasuje',
+    statsSampleLine: 'losowa próbka {{n}} (seed {{seed}})',
+    statsShowJudgments: 'Pokaż orzeczenia',
+    statsScale: 'Wielkość próbki',
+    statsAll: 'wszystkie',
+    statsReshuffle: 'Losuj ponownie',
+    statsYAxisCount: 'Liczba',
+    statsYAxisPercent: '% próbki',
+    statsOther: 'inne',
+    statsMissing: 'brak danych',
+    statsMultiNote: 'Liczby dotyczą wartości; orzeczenie może wystąpić w kilku słupkach.',
+    statsModelScore: 'ocena modelu',
+    statsAddField: 'Dodaj pole',
+    statsRemoveField: 'Usuń',
+    statsExportCsv: 'Eksport CSV',
+    statsExportCohort: 'Eksport definicji kohorty',
+    statsEmpty: 'Żadne orzeczenie nie pasuje do filtrów.',
+    statsError: 'Nie udało się policzyć statystyk.',
   },
 
   auth: {

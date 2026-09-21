@@ -38,6 +38,10 @@ export interface HorizontalBarChartProps {
   showCounts?: boolean;
   /** Color of the outside count labels (defaults to `color`). */
   countColor?: string;
+  /** Called with the item name when a bar is clicked (#708 drill-back). */
+  onBarClick?: (name: string) => void;
+  /** Per-item colour override; falls back to `color`. Same order as `items`. */
+  colors?: string[];
 }
 
 /**
@@ -53,6 +57,8 @@ export function HorizontalBarChart({
   height = 320,
   showCounts = false,
   countColor,
+  onBarClick,
+  colors,
 }: HorizontalBarChartProps) {
   const reversed = [...items].reverse();
 
@@ -61,7 +67,8 @@ export function HorizontalBarChart({
     x: reversed.map(item => item.count),
     type: 'bar',
     orientation: 'h',
-    marker: { color },
+    marker: { color: colors ? [...colors].reverse() : color },
+    hovertemplate: '%{y}: %{x:,}<extra></extra>',
   };
 
   if (showCounts) {
@@ -86,6 +93,10 @@ export function HorizontalBarChart({
         showlegend: false,
       }}
       config={editorialPlotConfig}
+      onClick={(e: { points?: { y?: unknown }[] }) => {
+        const p = e.points?.[0];
+        if (p && onBarClick) onBarClick(String(p.y));
+      }}
       className="w-full"
       useResizeHandler
       style={{ width: '100%' }}
