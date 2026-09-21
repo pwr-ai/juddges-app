@@ -28,6 +28,7 @@ Design: `docs/superpowers/specs/2026-09-20-persona-flows-design.md` §2, §4.
 | 1. Search Extracted Data | `/search/extractions` | Filter the corpus on the 51 pre-extracted base fields (facets, NL filter, CSV export). Rows open the reader at `/documents/[id]`. |
 | 2. Research Collections | `/collections` | Named judgment sets — the working folder for a research question. |
 | 3. Topic Trends | `/topics` | Popular and trending search topics. |
+| 4. Compare PL / UK | `/compare` | One structured filter run against both jurisdictions side by side; saved pairs open at `/compare/[pairId]`. |
 
 ## Code — your own extraction schema
 

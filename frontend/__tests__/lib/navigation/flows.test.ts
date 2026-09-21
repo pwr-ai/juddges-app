@@ -21,7 +21,7 @@ describe("FLOWS inventory", () => {
   it("keeps every route the sidebar rendered before #690, plus the two extraction routes", () => {
     const expected = [
       "/search", "/chat", "/history",
-      "/search/extractions", "/collections", "/topics",
+      "/search/extractions", "/collections", "/topics", "/compare",
       "/schemas", "/extract", "/extractions",
       "/precedents", "/reasoning-lines", "/judge-fingerprint", "/argumentation-analysis",
     ];

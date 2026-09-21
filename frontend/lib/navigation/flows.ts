@@ -14,6 +14,7 @@ import {
   Fingerprint,
   FolderOpen,
   GitBranch,
+  GitCompareArrows,
   History,
   ListChecks,
   MessageSquare,
@@ -62,6 +63,7 @@ export const FLOWS: readonly Flow[] = [
       { href: "/search/extractions", labelKey: "navigation.searchExtractedData", icon: FileJson, match: "exact" },
       { href: "/collections", labelKey: "navigation.researchCollections", icon: FolderOpen, match: "prefix" },
       { href: "/topics", labelKey: "navigation.topicTrends", icon: TrendingUp, match: "exact" },
+      { href: "/compare", labelKey: "navigation.compare", icon: GitCompareArrows, match: "prefix" },
     ],
   },
   {
