@@ -80,15 +80,21 @@ export function SaveAsCollectionDialog({
         text_query: trimmedQuery === "" ? undefined : trimmedQuery,
       });
       const created = result.collections[0];
+      if (!created) {
+        throw new Error("Collection was not created");
+      }
       router.push(`/collections/${created.collection.id}`);
+      // router.push doesn't always unmount this component (e.g. same-route
+      // navigation, or a test that mocks the router) — without this the
+      // dialog would stay stuck un-closable, showing "Saving…" forever.
+      setSaving(false);
     } catch (e) {
-      const message = e instanceof CollectionFromFilterError
-        ? e.total !== undefined && e.cap !== undefined
-          ? `${e.message} (${e.total.toLocaleString()} matched, limit ${e.cap.toLocaleString()}.)`
-          : e.message
-        : e instanceof Error
+      const message =
+        e instanceof CollectionFromFilterError
           ? e.message
-          : "Could not save the collection.";
+          : e instanceof Error
+            ? e.message
+            : "Could not save the collection.";
       setError(message);
       setSaving(false);
     }
@@ -109,7 +115,9 @@ export function SaveAsCollectionDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Save {total.toLocaleString()} judgments as a collection</DialogTitle>
+          <DialogTitle>
+            Save {total.toLocaleString()} judgment{total === 1 ? "" : "s"} as a collection
+          </DialogTitle>
           <DialogDescription>
             Every judgment matching the current filters is added. You can extract, sample and
             export from the collection page.
