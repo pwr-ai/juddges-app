@@ -1,3 +1,12 @@
+import type { Jurisdiction } from "@/types/base-schema-filter";
+
+export interface CollectionPairRef {
+  id: string;
+  name: string;
+  role: Jurisdiction;
+  partner_collection_id: string;
+}
+
 export interface Collection {
   id: string;
   user_id: string;
@@ -15,4 +24,5 @@ export interface CollectionDocument {
 export interface CollectionWithDocuments extends Collection {
   documents: number[]; // Array of document IDs
   document_count?: number; // Total count of documents in collection (may not be present on newly created collections)
-} 
+  pair?: CollectionPairRef | null; // The PL/UK pair this collection belongs to, if any (mirrors backend CollectionPairRef)
+}
